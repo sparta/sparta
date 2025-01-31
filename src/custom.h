@@ -31,11 +31,13 @@ class Custom : protected Pointers {
   Custom(class SPARTA *);
   void command(int, char **);
 
+  int read_file(int, int, int, int, char *, int);
+
  private:
   int mode,action,groupbit;
   int ctype,csize,cindex,ccol;
   int vindex,vstyle;
-  char *aname,*vname;
+  char *aname,*vname,*fname;
 
   class Variable *variable;
   class Mixture *mixture;

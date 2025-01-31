@@ -31,9 +31,12 @@
 using namespace SPARTA_NS;
 using namespace MathConst;
 
-enum{SET,REMOVE};
+enum{SET,FILESTYLE,REMOVE};
 enum{EQUAL,PARTICLE,GRID,SURF};
 enum{INT,DOUBLE};                       // several files
+
+#define MAXLINE 256
+#define CHUNK 4     // make this larger after debugging
 
 /* ---------------------------------------------------------------------- */
 
@@ -76,6 +79,7 @@ void Custom::command(int narg, char **arg)
   // action
 
   if (strcmp(arg[2],"set") == 0) action = SET;
+  else if (strcmp(arg[2],"file") == 0) action = FILESTYLE;
   else if (strcmp(arg[2],"remove") == 0) action = REMOVE;
   else error->all(FLERR,"Illegal set command");
 
@@ -102,60 +106,87 @@ void Custom::command(int narg, char **arg)
     return;
   }
 
-  // set a custom attribute using remaining args
-  // variable name
+  // read args to reset a custom attribute via a variable
 
-  variable = input->variable;
+  int iarg;
+  vname = fname = NULL;
+  
+  if (action == SET) {
 
-  if (strncmp(arg[3],"v_",2) == 0) {
+    if (narg < 6) error->all(FLERR,"Illegal custom command");
+    
+    // variable name
+
+    variable = input->variable;
+
+    if (strncmp(arg[3],"v_",2) == 0) {
+      int n = strlen(arg[3]);
+      vname = new char[n];
+      strcpy(vname,&arg[3][2]);
+
+      vindex = variable->find(vname);
+      if (vindex < 0) error->all(FLERR,"Custom variable name does not exist");
+      if (variable->equal_style(vindex)) vstyle = EQUAL;
+      else if (variable->particle_style(vindex)) vstyle = PARTICLE;
+      else if (variable->grid_style(vindex)) vstyle = GRID;
+      else if (variable->surf_style(vindex)) vstyle = SURF;
+      else error->all(FLERR,"Custom variable style is invalid");
+      if (vstyle != EQUAL && vstyle != mode)
+        error->all(FLERR,"Custom variable style is invalid");
+      
+    } else error->all(FLERR,"Custom variable name is invalid");
+
+    // mixture or group ID
+
+    if (mode == PARTICLE) {
+      int imix = particle->find_mixture(arg[4]);
+      if (imix < 0) error->all(FLERR,"Custom mixture ID does not exist");
+      mixture = particle->mixture[imix];
+      mixture->init();
+    } else if (mode == GRID) {
+      int igroup = grid->find_group(arg[4]);
+      if (igroup < 0) error->all(FLERR,"Custom grid group ID does not exist");
+      groupbit = grid->bitmask[igroup];
+    } else if (mode == SURF) {
+      int igroup = surf->find_group(arg[4]);
+      if (igroup < 0) error->all(FLERR,"Custom surf group ID does not exist");
+      groupbit = surf->bitmask[igroup];
+    }
+
+    // region ID
+
+    if (strcmp(arg[5],"NULL") == 0) region = NULL;
+    else {
+      int iregion = domain->find_region(arg[5]);
+      if (iregion < 0) error->all(FLERR,"Custom region ID does not exist");
+      region = domain->regions[iregion];
+    }
+
+    iarg = 6;
+  }
+
+  // read args to reset a custom attribute via a file
+
+  if (action == FILESTYLE) {
+
+    if (narg < 4) error->all(FLERR,"Illegal custom command");
+    if (mode == PARTICLE)
+      error->all(FLERR,"Custom command cannot use action file with style particle");
+
+    // file name
+    
     int n = strlen(arg[3]);
-    vname = new char[n];
-    strcpy(vname,&arg[3][2]);
+    fname = new char[n];
+    strcpy(fname,arg[3]);
 
-    vindex = variable->find(vname);
-    if (vindex < 0) error->all(FLERR,"Custom variable name does not exist");
-    if (variable->equal_style(vindex)) vstyle = EQUAL;
-    else if (variable->particle_style(vindex)) vstyle = PARTICLE;
-    else if (variable->grid_style(vindex)) vstyle = GRID;
-    else if (variable->surf_style(vindex)) vstyle = SURF;
-    else error->all(FLERR,"Custom variable style is invalid");
-    if (vstyle != EQUAL && vstyle != mode)
-      error->all(FLERR,"Custom variable style is invalid");
-
-  } else error->all(FLERR,"Custom variable name is invalid");
-
-  // mixture or group ID
-
-  if (mode == PARTICLE) {
-    int imix = particle->find_mixture(arg[4]);
-    if (imix < 0) error->all(FLERR,"Custom mixture ID does not exist");
-    mixture = particle->mixture[imix];
-    mixture->init();
-  } else if (mode == GRID) {
-    int igroup = grid->find_group(arg[4]);
-    if (igroup < 0) error->all(FLERR,"Custom grid group ID does not exist");
-    groupbit = grid->bitmask[igroup];
-  } else if (mode == SURF) {
-    int igroup = surf->find_group(arg[4]);
-    if (igroup < 0) error->all(FLERR,"Custom surf group ID does not exist");
-    groupbit = surf->bitmask[igroup];
-  }
-
-  // region ID
-
-  if (strcmp(arg[5],"NULL") == 0) region = NULL;
-  else {
-    int iregion = domain->find_region(arg[5]);
-    if (iregion < 0) error->all(FLERR,"Custom region ID does not exist");
-    region = domain->regions[iregion];
-  }
+    iarg = 4;
+  }  
 
   // optional keywords
 
   ctype = DOUBLE;
   csize = 0;
 
-  int iarg = 6;
   while (iarg < narg) {
     if (strcmp(arg[iarg],"type") == 0) {
       if (iarg+2 > narg) error->all(FLERR,"Invalid custom command");
@@ -173,8 +204,8 @@ void Custom::command(int narg, char **arg)
 
   // cindex = index of existing custom attribute
   // otherwise create custom attribute if it does not exist
-  // error check that name or name[] matches new or existing attribute
-
+  // add_custom() initializes all values to zero
+  
   if (mode == PARTICLE) {
     cindex = particle->find_custom(aname);
     if (cindex >= 0) {
@@ -182,6 +213,7 @@ void Custom::command(int narg, char **arg)
       csize = particle->esize[cindex];
     } else {
       cindex = particle->add_custom(aname,ctype,csize);
+      
     }
 
   } else if (mode == GRID) {
@@ -203,41 +235,53 @@ void Custom::command(int narg, char **arg)
     }
   }
 
+  // error check that name or name[] matches new or existing attribute
+
   int eflag = 0;
   if (csize == 0 && ccol != 0) eflag = 1;
   if (csize != 0 && ccol == 0) eflag = 1;
   if (csize != 0 && ccol > csize) eflag = 1;
   if (eflag) error->all(FLERR,"Custom name does not match new or existing custom attribute");
 
-  // evaluate variable
+  // for action SET, evaluate variable
   // store result as floating point scalar or vector
-
-  double scalar = 0.0;
-  double *vector = NULL;
-
-  if (vstyle == EQUAL) {
-    scalar = variable->compute_equal(vindex);
-  } else if (vstyle == PARTICLE) {
-    memory->create(vector,particle->nlocal,"custom:vector");
-    variable->compute_particle(vindex,vector,1,0);
-  } else if (vstyle == GRID) {
-    memory->create(vector,grid->nlocal,"custom:vector");
-    variable->compute_grid(vindex,vector,1,0);
-  } else if (vstyle == SURF) {
-    memory->create(vector,surf->nown,"custom:vector");
-    variable->compute_surf(vindex,vector,1,0);
-  }
-
-  // assign value(s) to custom attribute
-  // convert to integer if necessary
-  // assign zero value if particle/grid/surf not in mixture or group or region
+  // count = # of changed attributes
 
   int count;
+  double *vector = NULL;
 
-  if (mode == PARTICLE) count = set_particle(scalar,vector);
-  else if (mode == GRID) count = set_grid(scalar,vector);
-  else if (mode == SURF) count = set_surf(scalar,vector);
+  if (action == SET) {
+    double scalar = 0.0;
 
+    if (vstyle == EQUAL) {
+      scalar = variable->compute_equal(vindex);
+    } else if (vstyle == PARTICLE) {
+      memory->create(vector,particle->nlocal,"custom:vector");
+      variable->compute_particle(vindex,vector,1,0);
+    } else if (vstyle == GRID) {
+      memory->create(vector,grid->nlocal,"custom:vector");
+      variable->compute_grid(vindex,vector,1,0);
+    } else if (vstyle == SURF) {
+      memory->create(vector,surf->nown,"custom:vector");
+      variable->compute_surf(vindex,vector,1,0);
+    }
+
+    // assign value(s) to custom attribute
+    // convert to integer if necessary
+    // no assignment if particle/grid/surf not in mixture or group or region
+    
+    if (mode == PARTICLE) count = set_particle(scalar,vector);
+    else if (mode == GRID) count = set_grid(scalar,vector);
+    else if (mode == SURF) count = set_surf(scalar,vector);
+  }
+
+  // for action FILESTYLE, read file and set attributes
+  // count = # of changed attributes
+
+  if (action = FILESTYLE) {
+    count = read_file(mode,cindex,ctype,csize,fname,0);
+  }
+    
   // print stats
 
   bigint bcount = count;
@@ -262,6 +306,7 @@ void Custom::command(int narg, char **arg)
 
   delete [] aname;
   delete [] vname;
+  delete [] fname;
   memory->destroy(vector);
 }
 
@@ -302,12 +347,10 @@ int Custom::set_particle(double scalar, double *vector)
       if (vector) {
 	for (int i = 0 ; i < nlocal; i++) {
 	  if (choose[i]) cvector[i] = static_cast<int> (vector[i]);
-	  else cvector[i] = 0;
 	}
       } else {
 	for (int i = 0 ; i < nlocal; i++) {
 	  if (choose[i]) cvector[i] = iscalar;
-	  else cvector[i] = 0;
 	}
       }
 
@@ -317,12 +360,10 @@ int Custom::set_particle(double scalar, double *vector)
       if (vector) {
 	for (int i = 0 ; i < nlocal; i++) {
 	  if (choose[i]) carray[i][ccol] = static_cast<int> (vector[i]);
-	  else carray[i][ccol] = 0;
 	}
       } else {
 	for (int i = 0 ; i < nlocal; i++) {
 	  if (choose[i]) carray[i][ccol] = iscalar;
-	  else carray[i][ccol] = 0;
 	}
       }
     }
@@ -333,12 +374,10 @@ int Custom::set_particle(double scalar, double *vector)
       if (vector) {
 	for (int i = 0 ; i < nlocal; i++) {
 	  if (choose[i]) cvector[i] = vector[i];
-	  else cvector[i] = 0.0;
 	}
       } else {
 	for (int i = 0 ; i < nlocal; i++) {
 	  if (choose[i]) cvector[i] = scalar;
-	  else cvector[i] = 0.0;
 	}
       }
 
@@ -348,12 +387,10 @@ int Custom::set_particle(double scalar, double *vector)
       if (vector) {
 	for (int i = 0 ; i < nlocal; i++) {
 	  if (choose[i]) carray[i][ccol] = vector[i];
-	  else carray[i][ccol] = 0.0;
 	}
       } else {
 	for (int i = 0 ; i < nlocal; i++) {
 	  if (choose[i]) carray[i][ccol] = scalar;
-	  else carray[i][ccol] = 0.0;
 	}
       }
     }
@@ -362,6 +399,172 @@ int Custom::set_particle(double scalar, double *vector)
   memory->destroy(choose);
 
   return count;
+}
+
+/* ----------------------------------------------------------------------
+   read a custom attribute file for fmode = GRID or SURF
+   assign values to custom grid or surf vectors/arrays
+   return count of attributes assigned by this proc
+   external = 1 when called from fix custom
+---------------------------------------------------------------------- */
+
+int Custom::read_file(int fmode, int cindex, int ctype, int csize, char *filename, int external)
+{
+  // setup read buffers
+  // NOTE: should these be created ?
+  
+  char *line = new char[MAXLINE];
+  char *buffer = new char[CHUNK*MAXLINE];
+
+  // set ivec,dvec,iarray,darray pointers
+  // NOTE: what about when setting one column of an array
+  
+  int *ivec;
+  double *dvec;
+  int **iarray;
+  double **darray;
+  
+  // nwords_required = # of words per line
+
+  //int nwords_required = 1 + nvalues_custom;   // NOTE: need to set this
+  int nwords_required = 2;
+  
+  // read file
+
+  MPI_Barrier(world);
+  double time1 = MPI_Wtime();
+
+  int me = comm->me;
+  int nprocs = comm->nprocs;
+  FILE *fp;
+
+  // NOTE: support compressed files like read_grid ?
+  
+  if (me == 0) {
+    if (!external && screen)
+      fprintf(screen,"Reading custom grid file ... %s\n",filename);
+    fp = fopen(filename,"r");
+  }
+
+  // read header portion of file
+  // nfile = count of attribute lines in file
+
+  // NOTE: allow for nfile to be a bigint ?
+  
+  int nfile;
+  
+  if (me == 0) {
+    char *eof,*ptr;
+    
+    while (1) {
+      eof = fgets(line,MAXLINE,fp);
+      if (eof == NULL) error->one(FLERR,"Unexpected end of custom attribute file");
+
+      // trim anything from '#' onward
+      // if line is blank, continue
+      // else break and read nfile
+
+      if ((ptr = strchr(line,'#'))) *ptr = '\0';
+      if (strspn(line," \t\n\r") == strlen(line)) continue;
+      break;
+    }
+
+    sscanf(line,"%d",&nfile);
+    //sscanf(line,BIGINT_FORMAT,&nfile);
+  }
+
+  MPI_Bcast(&nfile,1,MPI_INT,0,world);
+  
+  // read and broadcast one CHUNK of lines at a time
+
+  bigint nread = 0;
+  int i,m,nchunk;
+  char *next,*idptr;
+  cellint id;
+  
+  bigint fcount = 0;
+  while (nread < nfile) {
+    if (nfile-nread > CHUNK) nchunk = CHUNK;
+    else nchunk = nfile-nread;
+    if (me == 0) {
+      char *eof;
+      m = 0;
+      for (i = 0; i < nchunk; i++) {
+        eof = fgets(&buffer[m],MAXLINE,fp);
+        if (eof == NULL) error->one(FLERR,"Unexpected end of custom attribute file");
+        m += strlen(&buffer[m]);
+      }
+      if (buffer[m-1] != '\n') strcpy(&buffer[m++],"\n");
+      m++;
+    }
+    MPI_Bcast(&m,1,MPI_INT,0,world);
+    MPI_Bcast(buffer,m,MPI_CHAR,0,world);
+
+    // add occasional barrier to prevent issues from having too many
+    //  outstanding MPI recv requests (from the broadcast above)
+
+    if (fcount % 1024 == 0) MPI_Barrier(world);
+
+    // process nchunk lines and assign attribute value(s) if I own grid cell ID
+
+    for (i = 0; i < nchunk; i++) {
+      next = strchr(buffer,'\n');
+
+      *next = '\0';
+      int nwords = input->count_words(buffer);
+      *next = '\n';
+      
+      if (nwords != nwords_required)
+	error->all(FLERR,"Incorrect line format in custom attribute file");
+      
+      idptr = strtok(buffer," \t\n\r\f");
+      id = ATOCELLINT(idptr);
+      if (id < 0) error->all(FLERR,"Invalid cell ID in custom attribute grid file");
+
+      // NOTE: need to look up grid cell ID on my proc to get local index
+      int index;
+      
+      if (ctype == INT) {
+        if (csize == 0)
+          ivec[index] = input->inumeric(FLERR,strtok(NULL," \t\n\r\f"));
+        else
+          for (int iv = 0; iv < csize; iv++)
+            iarray[index][iv] = input->inumeric(FLERR,strtok(NULL," \t\n\r\f"));
+      } else if (ctype == DOUBLE) {
+        if (csize == 0)
+          dvec[index] = input->numeric(FLERR,strtok(NULL," \t\n\r\f"));
+        else
+          for (int iv = 0; iv < csize; iv++)
+            darray[index][iv] = input->numeric(FLERR,strtok(NULL," \t\n\r\f"));
+      }
+    }
+
+    // increment nread and fcount and continue to next chunck
+    
+    nread += nchunk;
+    fcount++;
+  }
+  
+  // close file
+
+  if (me == 0) {
+    //if (compressed) pclose(fp);
+    //else fclose(fp);
+    fclose(fp);
+  }
+
+  
+  int count = 0;
+
+
+  return count;
+
+  // free read buffers
+  
+  delete [] line;
+  delete [] buffer;
+
+  // NOTE: print stats if not external ?
 }
 
 /* ---------------------------------------------------------------------- */
@@ -405,12 +608,10 @@ int Custom::set_grid(double scalar, double *vector)
       if (vector) {
 	for (int i = 0 ; i < nglocal; i++) {
 	  if (choose[i]) cvector[i] = static_cast<int> (vector[i]);
-	  else cvector[i] = 0;
 	}
       } else {
 	for (int i = 0 ; i < nglocal; i++) {
 	  if (choose[i]) cvector[i] = iscalar;
-	  else cvector[i] = 0;
 	}
       }
 
@@ -420,12 +621,10 @@ int Custom::set_grid(double scalar, double *vector)
       if (vector) {
 	for (int i = 0 ; i < nglocal; i++) {
 	  if (choose[i]) carray[i][ccol] = static_cast<int> (vector[i]);
-	  else carray[i][ccol] = 0;
 	}
       } else {
 	for (int i = 0 ; i < nglocal; i++) {
 	  if (choose[i]) carray[i][ccol] = iscalar;
-	  else carray[i][ccol] = 0;
 	}
       }
     }
@@ -436,12 +635,10 @@ int Custom::set_grid(double scalar, double *vector)
       if (vector) {
 	for (int i = 0 ; i < nglocal; i++) {
 	  if (choose[i]) cvector[i] = vector[i];
-	  else cvector[i] = 0.0;
 	}
       } else {
 	for (int i = 0 ; i < nglocal; i++) {
 	  if (choose[i]) cvector[i] = scalar;
-	  else cvector[i] = 0.0;
 	}
       }
 
@@ -451,12 +648,10 @@ int Custom::set_grid(double scalar, double *vector)
       if (vector) {
 	for (int i = 0 ; i < nglocal; i++) {
 	  if (choose[i]) carray[i][ccol] = vector[i];
-	  else carray[i][ccol] = 0.0;
 	}
       } else {
 	for (int i = 0 ; i < nglocal; i++) {
 	  if (choose[i]) carray[i][ccol] = scalar;
-	  else carray[i][ccol] = 0.0;
 	}
       }
     }
@@ -538,12 +733,10 @@ int Custom::set_surf(double scalar, double *vector)
       if (vector) {
 	for (int i = 0 ; i < nsown; i++) {
 	  if (choose[i]) cvector[i] = static_cast<int> (vector[i]);
-	  else cvector[i] = 0;
 	}
       } else {
 	for (int i = 0 ; i < nsown; i++) {
 	  if (choose[i]) cvector[i] = iscalar;
-	  else cvector[i] = 0;
 	}
       }
 
@@ -553,12 +746,10 @@ int Custom::set_surf(double scalar, double *vector)
       if (vector) {
 	for (int i = 0 ; i < nsown; i++) {
 	  if (choose[i]) carray[i][ccol] = static_cast<int> (vector[i]);
-	  else carray[i][ccol] = 0;
 	}
       } else {
 	for (int i = 0 ; i < nsown; i++) {
 	  if (choose[i]) carray[i][ccol] = iscalar;
-	  else carray[i][ccol] = 0;
 	}
       }
     }
@@ -569,12 +760,10 @@ int Custom::set_surf(double scalar, double *vector)
       if (vector) {
 	for (int i = 0 ; i < nsown; i++) {
 	  if (choose[i]) cvector[i] = vector[i];
-	  else cvector[i] = 0.0;
 	}
       } else {
 	for (int i = 0 ; i < nsown; i++) {
 	  if (choose[i]) cvector[i] = scalar;
-	  else cvector[i] = 0.0;
 	}
       }
 
@@ -584,12 +773,10 @@ int Custom::set_surf(double scalar, double *vector)
       if (vector) {
 	for (int i = 0 ; i < nsown; i++) {
 	  if (choose[i]) carray[i][ccol] = vector[i];
-	  else carray[i][ccol] = 0.0;
 	}
       } else {
 	for (int i = 0 ; i < nsown; i++) {
 	  if (choose[i]) carray[i][ccol] = scalar;
-	  else carray[i][ccol] = 0.0;
 	}
       }
     }
