@@ -36,7 +36,7 @@ enum{EQUAL,PARTICLE,GRID,SURF};
 enum{INT,DOUBLE};                       // several files
 
 #define MAXLINE 256
-#define CHUNK 4     // make this larger after debugging
+#define CHUNK 4     // NOTE: make this larger after debugging
 
 /* ---------------------------------------------------------------------- */
 
@@ -68,6 +68,7 @@ void Custom::command(int narg, char **arg)
   aname = new char[n];
   strcpy(aname,arg[1]);
 
+  int ccol;
   char *ptr = strchr(aname,'[');
   if (ptr) {
     if (aname[strlen(aname)-1] != ']')
@@ -184,8 +185,8 @@ void Custom::command(int narg, char **arg)
 
   // optional keywords
 
-  ctype = DOUBLE;
-  csize = 0;
+  int ctype = DOUBLE;
+  int csize = 0;
 
   while (iarg < narg) {
     if (strcmp(arg[iarg],"type") == 0) {
@@ -205,7 +206,8 @@ void Custom::command(int narg, char **arg)
   // cindex = index of existing custom attribute
   // otherwise create custom attribute if it does not exist
   // add_custom() initializes all values to zero
-  
+
+  int cindex;
   if (mode == PARTICLE) {
     cindex = particle->find_custom(aname);
     if (cindex >= 0) {
@@ -213,7 +215,6 @@ void Custom::command(int narg, char **arg)
       csize = particle->esize[cindex];
     } else {
       cindex = particle->add_custom(aname,ctype,csize);
-      
     }
 
   } else if (mode == GRID) {
@@ -270,16 +271,16 @@ void Custom::command(int narg, char **arg)
     // convert to integer if necessary
     // no assignment if particle/grid/surf not in mixture or group or region
     
-    if (mode == PARTICLE) count = set_particle(scalar,vector);
-    else if (mode == GRID) count = set_grid(scalar,vector);
-    else if (mode == SURF) count = set_surf(scalar,vector);
+    if (mode == PARTICLE) count = set_particle(cindex,ctype,csize,ccol,scalar,vector);
+    else if (mode == GRID) count = set_grid(cindex,ctype,csize,ccol,scalar,vector);
+    else if (mode == SURF) count = set_surf(cindex,ctype,csize,ccol,scalar,vector);
   }
 
   // for action FILESTYLE, read file and set attributes
   // count = # of changed attributes
 
   if (action = FILESTYLE) {
-    count = read_file(mode,cindex,ctype,csize,fname,0);
+    count = read_file(mode,cindex,ctype,csize,ccol,fname,0);
   }
     
   // print stats
@@ -312,7 +313,7 @@ void Custom::command(int narg, char **arg)
 
 /* ---------------------------------------------------------------------- */
 
-int Custom::set_particle(double scalar, double *vector)
+int Custom::set_particle(int cindex, int ctype, int csize, int ccol, double scalar, double *vector)
 {
   Particle::OnePart *particles = particle->particles;
   int *species2species = mixture->species2species;
@@ -401,175 +402,9 @@ int Custom::set_particle(double scalar, double *vector)
   return count;
 }
 
-/* ----------------------------------------------------------------------
-   read a custom attribute file for fmode = GRID or SURF
-   assign values to custom grid or surf vectors/arrays
-   return count of attributes assigned by this proc
-   external = 1 when called from fix custom
----------------------------------------------------------------------- */
-
-int Custom::read_file(int fmode, int cindex, int ctype, int csize, char *filename, int external)
-{
-  // setup read buffers
-  // NOTE: should these be created ?
-  
-  char *line = new char[MAXLINE];
-  char *buffer = new char[CHUNK*MAXLINE];
-
-  // set ivec,dvec,iarray,darray pointers
-  // NOTE: what about when setting one column of an array
-  
-  int *ivec;
-  double *dvec;
-  int **iarray;
-  double **darray;
-  
-  // nwords_required = # of words per line
-
-  //int nwords_required = 1 + nvalues_custom;   // NOTE: need to set this
-  int nwords_required = 2;
-  
-  // read file
-
-  MPI_Barrier(world);
-  double time1 = MPI_Wtime();
-
-  int me = comm->me;
-  int nprocs = comm->nprocs;
-  FILE *fp;
-
-  // NOTE: support compressed files like read_grid ?
-  
-  if (me == 0) {
-    if (!external && screen)
-      fprintf(screen,"Reading custom grid file ... %s\n",filename);
-    fp = fopen(filename,"r");
-  }
-
-  // read header portion of file
-  // nfile = count of attribute lines in file
-
-  // NOTE: allow for nfile to be a bigint ?
-  
-  int nfile;
-  
-  if (me == 0) {
-    char *eof,*ptr;
-    
-    while (1) {
-      eof = fgets(line,MAXLINE,fp);
-      if (eof == NULL) error->one(FLERR,"Unexpected end of custom attribute file");
-
-      // trim anything from '#' onward
-      // if line is blank, continue
-      // else break and read nfile
-
-      if ((ptr = strchr(line,'#'))) *ptr = '\0';
-      if (strspn(line," \t\n\r") == strlen(line)) continue;
-      break;
-    }
-
-    sscanf(line,"%d",&nfile);
-    //sscanf(line,BIGINT_FORMAT,&nfile);
-  }
-
-  MPI_Bcast(&nfile,1,MPI_INT,0,world);
-  
-  // read and broadcast one CHUNK of lines at a time
-
-  bigint nread = 0;
-  int i,m,nchunk;
-  char *next,*idptr;
-  cellint id;
-  
-  bigint fcount = 0;
-  while (nread < nfile) {
-    if (nfile-nread > CHUNK) nchunk = CHUNK;
-    else nchunk = nfile-nread;
-    if (me == 0) {
-      char *eof;
-      m = 0;
-      for (i = 0; i < nchunk; i++) {
-        eof = fgets(&buffer[m],MAXLINE,fp);
-        if (eof == NULL) error->one(FLERR,"Unexpected end of custom attribute file");
-        m += strlen(&buffer[m]);
-      }
-      if (buffer[m-1] != '\n') strcpy(&buffer[m++],"\n");
-      m++;
-    }
-    MPI_Bcast(&m,1,MPI_INT,0,world);
-    MPI_Bcast(buffer,m,MPI_CHAR,0,world);
-
-    // add occasional barrier to prevent issues from having too many
-    //  outstanding MPI recv requests (from the broadcast above)
-
-    if (fcount % 1024 == 0) MPI_Barrier(world);
-
-    // process nchunk lines and assign attribute value(s) if I own grid cell ID
-
-    for (i = 0; i < nchunk; i++) {
-      next = strchr(buffer,'\n');
-
-      *next = '\0';
-      int nwords = input->count_words(buffer);
-      *next = '\n';
-      
-      if (nwords != nwords_required)
-	error->all(FLERR,"Incorrect line format in custom attribute file");
-      
-      idptr = strtok(buffer," \t\n\r\f");
-      id = ATOCELLINT(idptr);
-      if (id < 0) error->all(FLERR,"Invalid cell ID in custom attribute grid file");
-
-      // NOTE: need to look up grid cell ID on my proc to get local index
-      int index;
-      
-      if (ctype == INT) {
-        if (csize == 0)
-          ivec[index] = input->inumeric(FLERR,strtok(NULL," \t\n\r\f"));
-        else
-          for (int iv = 0; iv < csize; iv++)
-            iarray[index][iv] = input->inumeric(FLERR,strtok(NULL," \t\n\r\f"));
-      } else if (ctype == DOUBLE) {
-        if (csize == 0)
-          dvec[index] = input->numeric(FLERR,strtok(NULL," \t\n\r\f"));
-        else
-          for (int iv = 0; iv < csize; iv++)
-            darray[index][iv] = input->numeric(FLERR,strtok(NULL," \t\n\r\f"));
-      }
-    }
-
-    // increment nread and fcount and continue to next chunck
-    
-    nread += nchunk;
-    fcount++;
-  }
-  
-  // close file
-
-  if (me == 0) {
-    //if (compressed) pclose(fp);
-    //else fclose(fp);
-    fclose(fp);
-  }
-
-  
-  int count = 0;
-
-
-  return count;
-
-  // free read buffers
-  
-  delete [] line;
-  delete [] buffer;
-
-  // NOTE: print stats if not external ?
-}
-
 /* ---------------------------------------------------------------------- */
 
-int Custom::set_grid(double scalar, double *vector)
+int Custom::set_grid(int cindex, int ctype, int csize, int ccol, double scalar, double *vector)
 {
   Grid::ChildCell *cells = grid->cells;
   Grid::ChildInfo *cinfo = grid->cinfo;
@@ -585,6 +420,7 @@ int Custom::set_grid(double scalar, double *vector)
   int count = 0;
   for (int i = 0; i < nglocal; i++) {
     flag = 1;
+    if (cells[i].nsplit < 0) flag = 0;
     if (!(cinfo[i].mask & groupbit)) flag = 0;
     if (flag && region) {
       point[0] = 0.5 * (cells[i].lo[0] + cells[i].hi[0]);
@@ -664,7 +500,7 @@ int Custom::set_grid(double scalar, double *vector)
 
 /* ---------------------------------------------------------------------- */
 
-int Custom::set_surf(double scalar, double *vector)
+int Custom::set_surf(int cindex, int ctype, int csize, int ccol, double scalar, double *vector)
 {
   int dim = domain->dimension;
   int distributed = surf->distributed;
@@ -786,3 +622,212 @@ int Custom::set_surf(double scalar, double *vector)
 
   return count;
 }
+
+/* ----------------------------------------------------------------------
+   read a custom attribute file for fmode = GRID or SURF
+   assign values to custom grid or surf vectors/arrays
+   return count of attributes assigned by this proc
+   external = 1 when called from fix custom
+---------------------------------------------------------------------- */
+
+int Custom::read_file(int fmode, int cindex, int ctype, int csize, int ccol,
+                      char *filename, int external)
+{
+  // setup read buffers
+  // NOTE: should these be created by Memory class ?
+  
+  char *line = new char[MAXLINE];
+  char *buffer = new char[CHUNK*MAXLINE];
+
+  // set ivec,dvec,iarray,darray pointers
+  // only one will be active
+  
+  int *ivec;
+  double *dvec;
+  int **iarray;
+  double **darray;
+
+  if (fmode == GRID) {
+    ivec = grid->eivec[cindex];
+    iarray = grid->eiarray[cindex];
+    dvec = grid->edvec[cindex];
+    darray = grid->edarray[cindex];
+  } else if (fmode == SURF) {
+    ivec = surf->eivec[cindex];
+    iarray = surf->eiarray[cindex];
+    dvec = surf->edvec[cindex];
+    darray = surf->edarray[cindex];
+  }
+  
+  // nwords_required = # of words per line
+
+  int nwords_required;
+  if (csize == 0 || ccol > 1) nwords_required = 1 + 1;
+  else nwords_required = 1 + csize;
+
+  // ensure grid cell IDs are hashed
+  
+  Grid::MyHash *hash;
+
+  if (fmode == GRID) {
+    if (!grid->hashfilled) grid->rehash();
+    hash = grid->hash;
+  }
+  
+  // read file
+
+  MPI_Barrier(world);
+  double time1 = MPI_Wtime();
+
+  // NOTE: support compressed files like read_grid ?
+
+  int me = comm->me;
+  int nprocs = comm->nprocs;
+  FILE *fp;
+
+  if (me == 0) {
+    if (!external && screen)
+      fprintf(screen,"Reading custom file ... %s\n",filename);
+    fp = fopen(filename,"r");
+  }
+
+  // read header portion of file
+  // comments or blank lines are allowed
+  // nfile = count of attribute lines in file
+  // NOTE: allow for nfile to be a bigint ?
+  
+  int nfile;
+  
+  if (me == 0) {
+    char *eof,*ptr;
+    
+    while (1) {
+      eof = fgets(line,MAXLINE,fp);
+      if (eof == NULL) error->one(FLERR,"Unexpected end of custom attribute file");
+
+      // trim anything from '#' onward
+      // if line is blank, continue
+      // else break and read nfile
+
+      if ((ptr = strchr(line,'#'))) *ptr = '\0';
+      if (strspn(line," \t\n\r") == strlen(line)) continue;
+      break;
+    }
+
+    sscanf(line,"%d",&nfile);
+    //sscanf(line,BIGINT_FORMAT,&nfile);
+  }
+
+  MPI_Bcast(&nfile,1,MPI_INT,0,world);
+  
+  // read and broadcast one CHUNK of lines at a time
+
+  int count = 0;
+  bigint nread = 0;
+  int i,m,nchunk,index;
+  char *next,*idptr;
+  cellint id;
+  
+  bigint fcount = 0;
+  while (nread < nfile) {
+    if (nfile-nread > CHUNK) nchunk = CHUNK;
+    else nchunk = nfile-nread;
+    if (me == 0) {
+      char *eof;
+      m = 0;
+      for (i = 0; i < nchunk; i++) {
+        eof = fgets(&buffer[m],MAXLINE,fp);
+        if (eof == NULL) error->one(FLERR,"Unexpected end of custom attribute file");
+        m += strlen(&buffer[m]);
+      }
+      if (buffer[m-1] != '\n') strcpy(&buffer[m++],"\n");
+      m++;
+    }
+    MPI_Bcast(&m,1,MPI_INT,0,world);
+    MPI_Bcast(buffer,m,MPI_CHAR,0,world);
+
+    // add occasional barrier to prevent issues from having too many
+    //  outstanding MPI recv requests (from the broadcast above)
+
+    if (fcount % 1024 == 0) MPI_Barrier(world);
+
+    // process nchunk lines and assign attribute value(s) if I own grid/surf ID
+
+    for (i = 0; i < nchunk; i++) {
+      next = strchr(buffer,'\n');
+
+      *next = '\0';
+      int nwords = input->count_words(buffer);
+      *next = '\n';
+      
+      if (nwords != nwords_required)
+	error->all(FLERR,"Incorrect line format in custom attribute file");
+
+      if (fmode == GRID) {
+        idptr = strtok(buffer," \t\n\r\f");
+        id = ATOCELLINT(idptr);
+        if (id < 0) error->all(FLERR,"Invalid cell ID in custom attribute grid file");
+
+        if (hash->find(id) == hash->end()) continue;
+        index = (*hash)[id];
+
+      } else if (fmode == SURF) {
+        idptr = strtok(buffer," \t\n\r\f");
+        id = ATOSURFINT(idptr);
+        if (id < 0) error->all(FLERR,"Invalid surf ID in custom attribute surf file");
+
+        // NOTE: how to figure out who owns the surf and its local index
+        //       see Surf::add_surfs() and ReadSurf::read_file() for ideas
+        
+      }
+      
+      count++;
+      
+      if (ctype == INT) {
+        if (csize == 0)
+          ivec[index] = input->inumeric(FLERR,strtok(NULL," \t\n\r\f"));
+        else {
+          if (ccol)
+            iarray[index][ccol-1] = input->inumeric(FLERR,strtok(NULL," \t\n\r\f"));
+          else
+            for (int iv = 0; iv < csize; iv++)
+              iarray[index][iv] = input->inumeric(FLERR,strtok(NULL," \t\n\r\f"));
+        }
+      } else if (ctype == DOUBLE) {
+        if (csize == 0)
+          dvec[index] = input->numeric(FLERR,strtok(NULL," \t\n\r\f"));
+        else {
+          if (ccol)
+            darray[index][ccol-1] = input->numeric(FLERR,strtok(NULL," \t\n\r\f"));
+          else
+            for (int iv = 0; iv < csize; iv++)
+              darray[index][iv] = input->numeric(FLERR,strtok(NULL," \t\n\r\f"));
+        }
+      }
+    }
+
+    // increment nread and fcount and continue to next chunck
+    
+    nread += nchunk;
+    fcount++;
+  }
+  
+  // close file
+
+  if (me == 0) {
+    //if (compressed) pclose(fp);
+    //else fclose(fp);
+    fclose(fp);
+  }
+  
+  // free read buffers
+  
+  delete [] line;
+  delete [] buffer;
+
+  // NOTE: print stats if not external ?
+  // NOTE: error checks in callers if count is not as expected, after allreduce(), compare to fcount
+
+  return count;
+}
+

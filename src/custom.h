@@ -31,11 +31,10 @@ class Custom : protected Pointers {
   Custom(class SPARTA *);
   void command(int, char **);
 
-  int read_file(int, int, int, int, char *, int);
+  int read_file(int, int, int, int, int, char *, int);
 
  private:
   int mode,action,groupbit;
-  int ctype,csize,cindex,ccol;
   int vindex,vstyle;
   char *aname,*vname,*fname;
 
@@ -43,9 +42,9 @@ class Custom : protected Pointers {
   class Mixture *mixture;
   class Region *region;
 
-  int set_particle(double, double *);
-  int set_grid(double, double *);
-  int set_surf(double, double *);
+  int set_particle(int, int, int, int, double, double *);
+  int set_grid(int, int, int, int, double, double *);
+  int set_surf(int, int, int, int, double, double *);
 };
 
 }
