@@ -326,6 +326,7 @@ void Collide::group_reduce()
   double swmean, swvar, swstd;
   double d1, d2;
   double lLim, uLim;
+  int np_med,np_small;
 
   for (int icell = 0; icell < nglocal; icell++) {
     np = cinfo[icell].count;
@@ -357,11 +358,10 @@ void Collide::group_reduce()
 
         // find mean / standard deviation of weight
 
-        ip = cinfo[icell].first;
-        n = 0;
+        n = 0.0;
         swmean = swvar = 0.0;
-        while (ip >= 0) {
-          ipart = &particles[ip];
+        for (int i = 0; i < np; i++) {
+          ipart = &particles[plist[i]];
           isw = ipart->weight;
 
           // Incremental variance
@@ -383,24 +383,37 @@ void Collide::group_reduce()
 
         // recreate particle list and omit large weighted particles
 
+        // first place all small weighted particles to front
+        int np_small = 0; // index of center particle
         ip = cinfo[icell].first;
-        int cp = 0; // index of center particle
-        int np_red = 0; // number of particles to reduce
-        while (ip >= 0) {
-          ipart = &particles[ip];
+        for (int i = 0; i < np; i++) {
+          ipart = &particles[plist[i]];
           isw = ipart->weight;
           if(isw > 0 && isw < lLim) {
-            std::swap(plist[ip],plist[cp]);
-            cp++;
-            np_red++;
-          } else if (isw > 0 && isw < uLim) np_red++;
+            std::swap(plist[ip],plist[np_small]);
+            np_small++;
+          }
           ip = next[ip];
         }
 
-        // can reuse binary tree division here
+        // then place all medium weighted particles starting from
+        // .., last index (np_small)
 
-        group_bt(0, cp);
-        group_bt(cp, np_red);
+        np_med = np_small;
+        for (int i = np_small; i < np; i++) {
+          ipart = &particles[plist[i]];
+          isw = ipart->weight;
+          if (isw >= lLim && isw < uLim) {
+            std::swap(plist[np_med],plist[i]);
+            np_med++;
+          }
+        }
+
+        // ignore the very large weighted particles
+        // group and reduce
+
+        group_bt(0, np_small);
+        group_bt(np_small, np_med);
 
       }
 
