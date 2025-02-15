@@ -19,6 +19,7 @@
 #include "domain.h"
 #include "grid.h"
 #include "update.h"
+#include "collide.h"
 #include "input.h"
 #include "modify.h"
 #include "output.h"
@@ -169,6 +170,7 @@ void Run::command(int narg, char **arg)
     if (preflag || update->first_update == 0) {
       sparta->init();
       update->setup();
+      if (collide) collide->setup();
     } else output->setup(0);
 
     timer->init();
@@ -207,6 +209,7 @@ void Run::command(int narg, char **arg)
       if (preflag || iter == 0) {
         sparta->init();
         update->setup();
+        if (collide) collide->setup();
       } else output->setup(0);
 
       timer->init();

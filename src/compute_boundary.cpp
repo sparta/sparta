@@ -172,7 +172,8 @@ void ComputeBoundary::clear()
    jp != NULL means two particles after collision
 ------------------------------------------------------------------------- */
 
-void ComputeBoundary::boundary_tally(int iface, int istyle, int reaction,
+void ComputeBoundary::boundary_tally(double dtremain,
+                                     int iface, int istyle, int reaction,
                                      Particle::OnePart *iorig,
                                      Particle::OnePart *ip,
                                      Particle::OnePart *jp)
