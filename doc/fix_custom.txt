@@ -10,9 +10,7 @@ fix custom command :h3
 
 [Syntax:]
 
-fix ID custom Nfreq thresh bstyle args :pre
-
-custom style attribute style attribute action args ... style attribute action args ... :pre
+fix ID custom Nfreq style attribute action args ... style attribute action args ... :pre
 
 ID is documented in "fix"_fix.html command :ulb,l
 custom = style name of this fix command :l

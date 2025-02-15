@@ -111,7 +111,7 @@ void Custom::command(int narg, char **arg)
 
   int iarg;
   vname = fname = NULL;
-  
+
   if (action == SET) {
 
     if (narg < 6) error->all(FLERR,"Illegal custom command");
@@ -176,7 +176,7 @@ void Custom::command(int narg, char **arg)
 
     // file name
     
-    int n = strlen(arg[3]);
+    int n = strlen(arg[3]) + 1;
     fname = new char[n];
     strcpy(fname,arg[3]);
 
@@ -279,10 +279,14 @@ void Custom::command(int narg, char **arg)
   // for action FILESTYLE, read file and set attributes
   // count = # of changed attributes
 
-  if (action = FILESTYLE) {
+  if (action == FILESTYLE) {
     count = read_file(mode,cindex,ctype,csize,ccol,fname,0);
   }
-    
+
+  // for mode = SURF, set estatus of custom vec/array to 0
+
+  if (mode == SURF) surf->estatus[cindex] = 0;
+  
   // print stats
 
   bigint bcount = count;
@@ -647,16 +651,30 @@ int Custom::read_file(int fmode, int cindex, int ctype, int csize, int ccol,
   int **iarray;
   double **darray;
 
-  if (fmode == GRID) {
-    ivec = grid->eivec[cindex];
-    iarray = grid->eiarray[cindex];
-    dvec = grid->edvec[cindex];
-    darray = grid->edarray[cindex];
-  } else if (fmode == SURF) {
-    ivec = surf->eivec[cindex];
-    iarray = surf->eiarray[cindex];
-    dvec = surf->edvec[cindex];
-    darray = surf->edarray[cindex];
+  if (ctype == INT) {
+    if (csize == 0) {
+      if (fmode == GRID)
+        ivec = grid->eivec[grid->ewhich[cindex]];
+      else if (fmode == SURF)
+        ivec = surf->eivec[surf->ewhich[cindex]];
+    } else {
+      if (fmode == GRID)
+        iarray = grid->eiarray[grid->ewhich[cindex]];
+      else if (fmode == SURF)
+        iarray = surf->eiarray[surf->ewhich[cindex]];
+    }
+  } else if (ctype == DOUBLE) {
+    if (csize == 0) {
+      if (fmode == GRID)
+        dvec = grid->edvec[grid->ewhich[cindex]];
+      else if (fmode == SURF)
+        dvec = surf->edvec[surf->ewhich[cindex]];
+    } else {
+      if (fmode == GRID)
+        darray = grid->edarray[grid->ewhich[cindex]];
+      else if (fmode == SURF)
+        darray = surf->edarray[surf->ewhich[cindex]];
+    }
   }
   
   // nwords_required = # of words per line
@@ -689,8 +707,10 @@ int Custom::read_file(int fmode, int cindex, int ctype, int csize, int ccol,
     if (!external && screen)
       fprintf(screen,"Reading custom file ... %s\n",filename);
     fp = fopen(filename,"r");
+    if (fp == NULL) error->one(FLERR,"Could not open custom attribute file");
   }
 
+  
   // read header portion of file
   // comments or blank lines are allowed
   // nfile = count of attribute lines in file
@@ -724,8 +744,8 @@ int Custom::read_file(int fmode, int cindex, int ctype, int csize, int ccol,
 
   int count = 0;
   bigint nread = 0;
-  int i,m,nchunk,index;
-  char *next,*idptr;
+  int i,m,nchunk,index,iproc;
+  char *next,*buf,*idptr;
   cellint id;
   
   bigint fcount = 0;
@@ -753,18 +773,19 @@ int Custom::read_file(int fmode, int cindex, int ctype, int csize, int ccol,
 
     // process nchunk lines and assign attribute value(s) if I own grid/surf ID
 
+    buf = buffer;
+    
     for (i = 0; i < nchunk; i++) {
-      next = strchr(buffer,'\n');
-
+      next = strchr(buf,'\n');
       *next = '\0';
-      int nwords = input->count_words(buffer);
+      int nwords = input->count_words(buf);
       *next = '\n';
       
       if (nwords != nwords_required)
 	error->all(FLERR,"Incorrect line format in custom attribute file");
 
       if (fmode == GRID) {
-        idptr = strtok(buffer," \t\n\r\f");
+        idptr = strtok(buf," \t\n\r\f");
         id = ATOCELLINT(idptr);
         if (id < 0) error->all(FLERR,"Invalid cell ID in custom attribute grid file");
 
@@ -772,13 +793,15 @@ int Custom::read_file(int fmode, int cindex, int ctype, int csize, int ccol,
         index = (*hash)[id];
 
       } else if (fmode == SURF) {
-        idptr = strtok(buffer," \t\n\r\f");
+        idptr = strtok(buf," \t\n\r\f");
         id = ATOSURFINT(idptr);
         if (id < 0) error->all(FLERR,"Invalid surf ID in custom attribute surf file");
 
-        // NOTE: how to figure out who owns the surf and its local index
-        //       see Surf::add_surfs() and ReadSurf::read_file() for ideas
-        
+        iproc = (id-1) % nprocs;
+        if (iproc != me) continue;
+        index = (id-1) / nprocs;
+
+        // NOTE: error check for invalid surf ID, i.e. ID > nsurfs
       }
       
       count++;
@@ -794,9 +817,12 @@ int Custom::read_file(int fmode, int cindex, int ctype, int csize, int ccol,
               iarray[index][iv] = input->inumeric(FLERR,strtok(NULL," \t\n\r\f"));
         }
       } else if (ctype == DOUBLE) {
-        if (csize == 0)
+        if (csize == 0) {
+          //double foo = input->numeric(FLERR,strtok(NULL," \t\n\r\f"));
+          //printf("FILE VALUE id %d index %d value %g\n",id,index,foo);
+          //dvec[index] = foo;
           dvec[index] = input->numeric(FLERR,strtok(NULL," \t\n\r\f"));
-        else {
+        } else {
           if (ccol)
             darray[index][ccol-1] = input->numeric(FLERR,strtok(NULL," \t\n\r\f"));
           else
@@ -804,9 +830,11 @@ int Custom::read_file(int fmode, int cindex, int ctype, int csize, int ccol,
               darray[index][iv] = input->numeric(FLERR,strtok(NULL," \t\n\r\f"));
         }
       }
+      
+      buf = next + 1;
     }
 
-    // increment nread and fcount and continue to next chunck
+    // increment nread and fcount and continue to next chunk
     
     nread += nchunk;
     fcount++;
