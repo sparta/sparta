@@ -193,6 +193,7 @@ void ComputeEFluxGrid::compute_per_grid()
 
     mass = species[ispecies].mass;
     v = particles[i].v;
+    if(particle->weightflag) mass *= particles[i].weight;
 
     vec = tally[icell];
 
