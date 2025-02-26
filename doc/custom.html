@@ -23,7 +23,7 @@
     cname = name of custom vector or array to create and initialize with zeroes
     datatype = <I>int</I> or <I>float</I> = for integer or floating point values
     Nc = 0 for a vector (single value), Nc >= 1 for an array (one or more values)
-  <I>remove</I> args = cname
+  <I>remove</I> arg2 = cname
     cname = name of custom vector or array to remove
   <I>set</I> args = cname v_name subset-ID region-ID
     cname = specify as name (no brackets) for custom vector with name
@@ -190,8 +190,8 @@ values for 3 surface elements are set.
 </PRE>
 <P>This file could be read with an input script command like this:
 </P>
-<P>custom surf create darray float 2 file file.surf 2 darray[1] darray[2]
-</P>
+<PRE>custom surf create darray float 2 file file.surf 2 darray[1] darray[2] 
+</PRE>
 <HR>
 
 <P><B>Restrictions:</B> none

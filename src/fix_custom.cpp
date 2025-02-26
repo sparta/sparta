@@ -248,24 +248,27 @@ void FixCustom::end_of_step()
     // assign value(s) to custom attribute
     // convert to integer if necessary
     // no assignment if particle/grid/surf not in mixture or group or region
-    
+
+    /*
     if (mode == PARTICLE)
       count = custom->set_particle(cindex,ctype,csize,ccol,scalar,vector);
     else if (mode == GRID)
       count = custom->set_grid(cindex,ctype,csize,ccol,scalar,vector);
     else if (mode == SURF)
       count = custom->set_surf(cindex,ctype,csize,ccol,scalar,vector);
-
+    */
     memory->destroy(vector);
   }
   
   // for action FILESTYLE, read file and set attributes
   // count = # of changed attributes
 
+  /*
   if (action == FILESTYLE) {
     count = custom->read_file(mode,cindex,ctype,csize,ccol,fname,0);
   }
-
+  */
+  
   // for mode = SURF, set estatus of custom vec/array to 0
 
   if (mode == SURF) surf->estatus[cindex] = 0;

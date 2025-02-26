@@ -18,7 +18,7 @@ action = {create} or {remove} or {set} or {file} :l
     cname = name of custom vector or array to create and initialize with zeroes
     datatype = {int} or {float} = for integer or floating point values
     Nc = 0 for a vector (single value), Nc >= 1 for an array (one or more values)
-  {remove} args = cname
+  {remove} arg2 = cname
     cname = name of custom vector or array to remove
   {set} args = cname v_name subset-ID region-ID
     cname = specify as name (no brackets) for custom vector with name
@@ -184,7 +184,7 @@ values for 3 surface elements are set.
 
 This file could be read with an input script command like this:
 
-custom surf create darray float 2 file file.surf 2 darray\[1\] darray\[2\]
+custom surf create darray float 2 file file.surf 2 darray\[1\] darray\[2\] :pre
 
 :line
 
