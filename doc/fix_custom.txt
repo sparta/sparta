@@ -10,64 +10,70 @@ fix custom command :h3
 
 [Syntax:]
 
-fix ID custom Nfreq style attribute action args ... style attribute action args ... :pre
+fix ID custom Nfreq style action args ... action args ... :pre
 
 ID is documented in "fix"_fix.html command :ulb,l
 custom = style name of this fix command :l
 Nfreq = reset custom values every this many steps :l
 style = {particle} or {grid} or {surf} :l
-attribute = name of custom attribute :l
-  name = custom vector or array attribute with name
-  name\[N\] = Nth column of custom array attribute with name :pre
 action = {set} or {file} :l
-  {set} args = v_name subset-ID region-ID
+  {set} args = cname v_name subset-ID region-ID
+    cname = specify as name (no brackets) for custom vector with name
+            or as name\[N\] for Nth column of custom array with name
     v_name = equal-, particle-, grid-, or surf-style variable with name
     subset-ID = mixture ID (particles) or group ID (grid cells or surf elements)
     region-ID = only apply to particle/grid/surf in region, NULL to not test
-  {file} args = fname
-    fname = name of file with custom attributes for grid cells or surface elements, using a "*" wildcard :pre
+  {file} args = fname M cname1 cname2 ... cnameM
+      fname = wildcard name of file with custom attributes for grid cells or surf elements
+    M = # of custom values listed on each line of the file
+    cname1,cname2,...,cnameM = which attribute each line value in the file is assigned to
+      cnameI = name of a custom vector
+      cnameI = name\[N\] for Nth column of a custom array with name :pre
 :ule
 
 [Examples:]
 
-fix 1 custom 1000 particle ivec set v_ivec air NULL
-fix 1 custom 10000 surf temp file surf.temp.* surf vstream file surf.vstream.* &
-                   grid flag file grid.flag.* grid flag2 set v_iflag2 air NULL :pre
+variable dvec particle (x+y)/2.0
+custom particle create dvec double 0
+custom surf create temp double 0 create vstream double 3
+
+fix 1 custom 1000 particle set dvec v_dvec air NULL
+fix 1 custom 10000 surf file surf.temp.* 1 temp file surf.vstream.* 3 vstream\[1\] vstream\[2\] vstream\[3\]
+fix 1 custom 10000 surf file surf.flow.* 4 temp vstream\[1\] vstream\[2\] vstream\[3\]
 
 [Description:]
 
 Reset one or more custom attributes for particles, grid cells, or
 surface elements.  This operation is performed once every {Nfreq}
-timesteps.  For a {set} action, a variable is evaluated.  For a {file}
-action, a file is read which contains values for individual grid cells
-or surface elements.  Particle-style attributes cannot be reset with
-the {file} action.
+timesteps.
+
+The {set} action evaluates a variable to reset the values for an
+attribute.  The {file} action reads a file with lines starting with a
+grid cell ID or surface element ID followed by values for one or more
+per-grid or per-surf attributes.  Particle-style attributes cannot be
+reset with the {file} action.
 
 Custom attributes can be vectors (single value per entity) or arrays
 (mutiple values per entity).  They can also be integer or floating
-point values.  See "Section 6.17"_Section_howto.html#howto_17 for more
-discussion of custom attributes.
+point values.  See "Section 6.17"_Section_howto.html#howto_17 for an
+explanation of custom attributes.
 
 Each {style} setting is {particle} or {grid} or {surf} for custom
 per-particle, per-grid, or per-surf attributes.
 
-Each {attribute} setting specifies the name of the attribute to
-operate on.  The same name can be used for attributes of different
-styles.  E.g. there can be a custom attribute with the name "flag" for
-both particles and surface elements.  If the attribute name is
-specified without brackets, it can refer to a custom vector or array.
-If the attribute name is specified with a bracketed integer, it refers
-to a single column of a custom array.  The integer {N} must be between
-1 and M = # of columns in the array (values per entity)
+The {action} setting is {set} or {file}.
 
-Each {action} setting is {set} or {file}.
+The {set} and {file} actions reset the values of custom attribute(s)
+which must already exist.  See the "custom"_custom.html and
+"read_surf"_read_surf.html and "read_grid"_read_grid.html commands for
+different ways to define and initialize custom attributes.
 
 Note that the resetting of attributes by this fix takes place at the
 end of timesteps determined by {Nfreq}.  If custom attributes are
 output by a "dump"_dump.html command on the same timestep, that takes
 place after this fix has performed the reset.  This means that if this
 fix and a dump command both reset/output every 1000 steps, then a dump
-file snapshot for step 3000 will include custom attributes which were
+file snapshot for step 3000 could include custom attributes which were
 reset at the end of step 3000.  But the new attribute values will not
 influence particles or grid cells or surface elements until the
 following step 3001 and beyond.
@@ -77,45 +83,41 @@ beginning of any run, even if an input script contains multiple
 "run"_run.html commands.  For example, if {Nfreq} = 1000 and the input
 script performs a series of 10000-step runs, then no resetting of
 attributes takes place (due to this command) on timestep 0, before the
-first run.  If needed, this can be done using the "custom"_custom.html
-command before the first run.
-
-Likewise, between runs, this command DOES reset attribute values at
-the end of the last step (10000, 20000, etc) of each run, but DOES NOT
-reset them again before the first step of the next run.  If needed,
-this can be done using the "custom"_custom.html command in between
-runs to reset attribute values as desired.
+first run.  Likewise, between runs, this command DOES reset attribute
+values at the end of the last step (10000, 20000, etc) of each run,
+but DOES NOT reset them again before the first step of the next run.
+If needed, resets of custom values can be performed before the first
+run or between runs using the "custom"_custom.html command.
 
 :line
 
-If {set} is used as an action, a variable is used to reset values of
-the custom attribute.  This action can only be used to operate on a
-custom vector or a single column of a custom array (using a bracketed
-integer).
+The {set} action resets the values of a custom attribute by evaluating
+a variable.  To operate on a custom vector, {cname} is simply the name
+of the vector.  To operate on a single column of a custom array,
+{cname} is specified as name\[N\] for the Nth column of a custom array
+with name.
 
-The specified {v_name} is the name of a variable which is evaluated.
+The specified {v_name} is the name of the variable which is evaluated.
 It must be either an equal-style or particle-style or grid-style or
 surf-style variable.  All of these define a mathematical formula which
 is used to compute the value(s) of the variable.  See the
-"variable"_variable.html for details.
+"variable"_variable.html command for details.
 
 If an equal-style variable is specified, it produces a single value
 which will be assigned as the custom value to all the particles or
 grid cells or surface elements (see subset-ID and region-ID discussion
-below).  Otherwise a particle-style variable must be used for style =
-{particle}, a grid-style variable for style = {grid}, or a surf-style
-variable for style = {surf}.  When it is evaluated it generates one
+below).  Otherwise a particle-style variable must be used for {style
+particle}, a grid-style variable for {style grid}, or a surf-style
+variable for {style surf}.  When it is evaluated it generates one
 value for each particle, grid cell, or surface element, which is
 assigned to the custom vector or to a column of the custom array.
 
 Note that the latter 3 variable styles can include outputs from
 "compute"_compute.html or "fix"_fix.html commands.  They can also
-include the current timestep or the spatial position of a particle,
-grid cell, or surface element in their formula.  So it is easy to
-calculate a value for each entity which varies in time or spatially.
-Note that the variable formula can also include a reference to the
-custom attribute it is overwrting, which means the remainder of the
-formula can increment/decrement or scale the current attribute value.
+include the current timestep (as can equal-style variables) or the
+spatial position of a particle, grid cell, or surface element in their
+formula.  So it is easy to calculate a value for each entity which
+varies in time or spatially.
 
 The next two arguments, {subset-ID} and {region-ID}, can limit which
 particles, grid cells, or surface elements are assigned a custom
@@ -140,10 +142,9 @@ applied.
 
 :line
 
-If {file} is used as an action, a file with name {fname} is read to
-reset values of the custom attribute.  This action can only be used
-with custom attributes of style {grid} or {surf}; it cannot be used
-with custom attributes of style {particle}.
+The {file} action resets the values of one or more custom attributes
+by reading them from the {fname} file.  It can only be used with
+{style grid} or {style surf}, not with {style particle}.
 
 The specified {fname} must contain a "*" character which is replaced
 by the current timestep each time this fix is invoked.  For example,
@@ -152,15 +153,14 @@ then files surf.1000.attribute, surf.2000.attribute,
 surf.3000.attribute, etc will be read on timesteps 1000, 2000, 3000,
 etc.
 
-If the specified custom attribute is a vector or a single column of an
-array (bracketed integer), then the file must contain a single value
-for each grid cell or surface element.  If the custom attribute is an
-array (with no bracketed integer), then the file must contain M values
-for each grid cell or suface element, where M is the number of columns
-in the array.
+The number of {cname1,cname2,...,cnameM} arguments must match the
+number of values listed on each line in the file.  A {cnameI} with no
+brackets is the name of a custom vector.  For a custom array, {cnameI}
+must be of the form name\[N\] for the Nth column of the array.
 
 The format of each file is identical to the file format explained on
-the "custom" command doc page for use with a {file} action.
+the "custom"_custom.html command doc page for use with its {file}
+action.
 
 :line
 

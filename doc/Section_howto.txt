@@ -1656,7 +1656,7 @@ various ways:
 [Per-particle custom attributes:]
 
 "compute reduce"_compute_reduce.html - reduce a per-particle attribute to a scalar value
-"custom"_custom.html - set the values of a per-particle attribute and optionally create it
+"custom"_custom.html - create or set ore remove the values of a per-particle attribute
 "fix custom"_fix_custom.html - reset the values of a per-particle attribute during a simulation
 "dump particle"_dump.html - output per-particle attributes to a dump file
 "fix ambipolar"_fix_ambipolar.html - use a per-particle vector and array for ambipolar quantities
@@ -1665,7 +1665,7 @@ various ways:
 [Per-grid custom attributes:]
 
 "compute reduce"_compute_reduce.html - reduce a per-grid attribute to a scalar value
-"custom"_custom.html - set the values of a per-grid attribute and optionally create it
+"custom"_custom.html - create or set or remove the values of a per-grid attribute
 "fix custom"_fix_custom.html - reset the values of a per-grid attribute during a simulation
 "dump grid"_dump.html - output per-grid attributes to a dump file
 "fix ave/grid"_fix_ave_grid.html - time-average a per-grid attribute
@@ -1677,7 +1677,7 @@ surf_react implicit - use per-grid vectors and an array to store chemical state 
 [Per-surf custom attributes:]
 
 "compute reduce"_compute_reduce.html - reduce a per-surf attribute to a scalar value
-"custom"_custom.html - set the values of a per-surf attribute and optionally create it
+"custom"_custom.html - create or set or remove the values of a per-surf attribute
 "fix custom"_fix_custom.html - reset the values of a per-surf attribute during a simulation
 "dump surf"_dump.html - output per-surf attributes to a dump file
 "fix ave/surf"_fix_ave_surf.html - time-average a per-surf attribute
