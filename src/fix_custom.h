@@ -12,39 +12,40 @@
    See the README file in the top-level SPARTA directory.
 ------------------------------------------------------------------------- */
 
-#ifdef COMMAND_CLASS
+#ifdef FIX_CLASS
 
-CommandStyle(custom,Custom)
+FixStyle(custom,FixCustom)
 
 #else
 
-#ifndef SPARTA_CUSTOM_H
-#define SPARTA_CUSTOM_H
+#ifndef SPARTA_FIX_CUSTOM_H
+#define SPARTA_FIX_CUSTOM_H
 
-#include "pointers.h"
+#include "fix.h"
+#include "surf.h"
 
 namespace SPARTA_NS {
 
-class Custom : protected Pointers {
-
+class FixCustom : public Fix {
  public:
-  Custom(class SPARTA *);
-  void command(int, char **);
-
-  int read_file(int, int, int, int, int, char *, int);
-
-  int set_particle(int, int, int, int, double, double *);
-  int set_grid(int, int, int, int, double, double *);
-  int set_surf(int, int, int, int, double, double *);
+  FixCustom(class SPARTA *, int, char **);
+  virtual ~FixCustom();
+  int setmask();
+  virtual void init();
+  virtual void end_of_step();
 
  private:
-  int mode,action,groupbit;
+  int mode,action;
   int vindex,vstyle;
-  char *aname,*vname,*fname;
+  int groupbit;
+  char *fname,*aname,*vname;
 
   class Variable *variable;
   class Mixture *mixture;
   class Region *region;
+  class Custom *custom;
+
+  int ctype,csize,cindex,ccol;
 };
 
 }
@@ -53,5 +54,11 @@ class Custom : protected Pointers {
 #endif
 
 /* ERROR/WARNING messages:
+
+E: Illegal ... command
+
+Self-explanatory.  Check the input script syntax and compare to the
+documentation for the command.  You can use -echo screen as a
+command-line option when running SPARTA to see the offending line.
 
 */

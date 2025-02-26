@@ -56,11 +56,11 @@ void Custom::command(int narg, char **arg)
   else error->all(FLERR,"Illegal custom command");
 
   if (mode == PARTICLE && !particle->exist)
-    error->all(FLERR,"Cannot use custom particle before particles are defined");
+    error->all(FLERR,"Cannot use custom particle command before particles are defined");
   if (mode == GRID && !grid->exist)
-    error->all(FLERR,"Cannot use custom grid before a grid is defined");
+    error->all(FLERR,"Cannot use custom grid command before a grid is defined");
   if (mode == SURF && !surf->exist)
-    error->all(FLERR,"Cannot use custom surf before surfaces are defined");
+    error->all(FLERR,"Cannot use custom surf command before surfaces are defined");
 
   // attribute name
 
@@ -72,7 +72,7 @@ void Custom::command(int narg, char **arg)
   char *ptr = strchr(aname,'[');
   if (ptr) {
     if (aname[strlen(aname)-1] != ']')
-      error->all(FLERR,"Custom attribute name is invalid");
+      error->all(FLERR,"Custom command attribute name is invalid");
     ccol = atoi(ptr+1);
     *ptr = '\0';
   } else ccol = 0;
@@ -82,7 +82,7 @@ void Custom::command(int narg, char **arg)
   if (strcmp(arg[2],"set") == 0) action = SET;
   else if (strcmp(arg[2],"file") == 0) action = FILESTYLE;
   else if (strcmp(arg[2],"remove") == 0) action = REMOVE;
-  else error->all(FLERR,"Illegal set command");
+  else error->all(FLERR,"Illegal custom command action");
 
   // remove a custom attribute and return
 
@@ -108,7 +108,9 @@ void Custom::command(int narg, char **arg)
   }
 
   // read args to reset a custom attribute via a variable
-
+  // NOTE: should store these args, then invoke a function(s) below
+  // NOTE: so that fix custom can invoke the same functions
+  
   int iarg;
   vname = fname = NULL;
 
@@ -143,7 +145,7 @@ void Custom::command(int narg, char **arg)
       int imix = particle->find_mixture(arg[4]);
       if (imix < 0) error->all(FLERR,"Custom mixture ID does not exist");
       mixture = particle->mixture[imix];
-      mixture->init();
+      mixture->init();   // NOTE: what initialize the mixture here ?
     } else if (mode == GRID) {
       int igroup = grid->find_group(arg[4]);
       if (igroup < 0) error->all(FLERR,"Custom grid group ID does not exist");
@@ -271,9 +273,12 @@ void Custom::command(int narg, char **arg)
     // convert to integer if necessary
     // no assignment if particle/grid/surf not in mixture or group or region
     
-    if (mode == PARTICLE) count = set_particle(cindex,ctype,csize,ccol,scalar,vector);
-    else if (mode == GRID) count = set_grid(cindex,ctype,csize,ccol,scalar,vector);
-    else if (mode == SURF) count = set_surf(cindex,ctype,csize,ccol,scalar,vector);
+    if (mode == PARTICLE)
+      count = set_particle(cindex,ctype,csize,ccol,scalar,vector);
+    else if (mode == GRID)
+      count = set_grid(cindex,ctype,csize,ccol,scalar,vector);
+    else if (mode == SURF)
+      count = set_surf(cindex,ctype,csize,ccol,scalar,vector);
   }
 
   // for action FILESTYLE, read file and set attributes
