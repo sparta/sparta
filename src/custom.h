@@ -29,18 +29,37 @@ class Custom : protected Pointers {
 
  public:
   Custom(class SPARTA *);
+  ~Custom();
   void command(int, char **);
+
+  void parse_actions(int, char **, int);
+  bigint process_actions(int);
+
+ private:
+  int mode;
+  
+  struct Action {
+    int action;
+    char *aname;
+    int cindex,ctype,csize,ccol;
+    int vindex,vstyle;
+    int groupbit;
+    class Mixture *mixture;
+    class Region *region;
+    char *fname;
+    int colcount;
+    int *cindex_file,*ctype_file,*csize_file,*ccol_file;
+  };
+
+  int naction;
+  Action *actions;
 
   bigint set_particle(class Mixture *, class Region *,
                       int, int, int, int, double, double *);
   bigint set_grid(int, class Region *, int, int, int, int, double, double *);
   bigint set_surf(int, class Region *, int, int, int, int, double, double *);
-
   bigint read_file(int, int, int *, int *, int *, int *, char *);
-
   int attribute_bracket(char *);
-
- private:
 };
 
 }

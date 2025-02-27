@@ -31,21 +31,10 @@ class FixCustom : public Fix {
   FixCustom(class SPARTA *, int, char **);
   virtual ~FixCustom();
   int setmask();
-  virtual void init();
   virtual void end_of_step();
 
- private:
-  int mode,action;
-  int vindex,vstyle;
-  int groupbit;
-  char *fname,*aname,*vname;
-
-  class Variable *variable;
-  class Mixture *mixture;
-  class Region *region;
+private:
   class Custom *custom;
-
-  int ctype,csize,cindex,ccol;
 };
 
 }

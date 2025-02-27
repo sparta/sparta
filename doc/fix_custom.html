@@ -70,7 +70,12 @@ explanation of custom attributes.
 <P>Each <I>style</I> setting is <I>particle</I> or <I>grid</I> or <I>surf</I> for custom
 per-particle, per-grid, or per-surf attributes.
 </P>
-<P>The <I>action</I> setting is <I>set</I> or <I>file</I>.
+<P>The <I>action</I> setting is <I>set</I> or <I>file</I>.  The functionality and syntax
+for these settings are identical to the <A HREF = "custom.html">custom</A> command,
+with the exception that the filename for the <I>file</I> action must
+include a wildcard "*" character which is replaced by the current
+timestep each time this fix operates, so that a different file is
+read.  See more discussion below.
 </P>
 <P>The <I>set</I> and <I>file</I> actions reset the values of custom attribute(s)
 which must already exist.  See the <A HREF = "custom.html">custom</A> and
@@ -155,10 +160,10 @@ applied.
 by reading them from the <I>fname</I> file.  It can only be used with
 <I>style grid</I> or <I>style surf</I>, not with <I>style particle</I>.
 </P>
-<P>The specified <I>fname</I> must contain a "*" character which is replaced
-by the current timestep each time this fix is invoked.  For example,
-if <I>Nfreq</I> = 1000 and <I>fname</I> is specified as surf.*.attribute, then
-then files surf.1000.attribute, surf.2000.attribute,
+<P>The specified <I>fname</I> must contain a wildcard "*" character which is
+replaced by the current timestep each time this fix is invoked.  For
+example, if <I>Nfreq</I> = 1000 and <I>fname</I> is specified as
+surf.*.attribute, then files surf.1000.attribute, surf.2000.attribute,
 surf.3000.attribute, etc will be read on timesteps 1000, 2000, 3000,
 etc.
 </P>

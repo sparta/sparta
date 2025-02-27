@@ -61,7 +61,12 @@ explanation of custom attributes.
 Each {style} setting is {particle} or {grid} or {surf} for custom
 per-particle, per-grid, or per-surf attributes.
 
-The {action} setting is {set} or {file}.
+The {action} setting is {set} or {file}.  The functionality and syntax
+for these settings are identical to the "custom"_custom.html command,
+with the exception that the filename for the {file} action must
+include a wildcard "*" character which is replaced by the current
+timestep each time this fix operates, so that a different file is
+read.  See more discussion below.
 
 The {set} and {file} actions reset the values of custom attribute(s)
 which must already exist.  See the "custom"_custom.html and
@@ -146,10 +151,10 @@ The {file} action resets the values of one or more custom attributes
 by reading them from the {fname} file.  It can only be used with
 {style grid} or {style surf}, not with {style particle}.
 
-The specified {fname} must contain a "*" character which is replaced
-by the current timestep each time this fix is invoked.  For example,
-if {Nfreq} = 1000 and {fname} is specified as surf.*.attribute, then
-then files surf.1000.attribute, surf.2000.attribute,
+The specified {fname} must contain a wildcard "*" character which is
+replaced by the current timestep each time this fix is invoked.  For
+example, if {Nfreq} = 1000 and {fname} is specified as
+surf.*.attribute, then files surf.1000.attribute, surf.2000.attribute,
 surf.3000.attribute, etc will be read on timesteps 1000, 2000, 3000,
 etc.
 

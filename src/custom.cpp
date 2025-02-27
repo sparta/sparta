@@ -24,6 +24,7 @@
 #include "region.h"
 #include "input.h"
 #include "variable.h"
+#include "update.h"
 #include "math_const.h"
 #include "memory.h"
 #include "error.h"
@@ -44,13 +45,71 @@ Custom::Custom(SPARTA *sparta) : Pointers(sparta) {}
 
 /* ---------------------------------------------------------------------- */
 
+Custom::~Custom()
+{
+  // delete data in Action list which consumes memory
+  
+  for (int i = 0; i < naction; i++) {
+    int action = actions[i].action;
+    if (action == CREATE) delete [] actions[i].aname;
+    if (action == FILESTYLE) {
+      delete [] actions[i].fname;
+      delete [] actions[i].cindex_file;
+      delete [] actions[i].ctype_file;
+      delete [] actions[i].csize_file;
+      delete [] actions[i].ccol_file;
+    }
+  }
+  
+  memory->sfree(actions);
+}
+
+/* ---------------------------------------------------------------------- */
+
 void Custom::command(int narg, char **arg)
 {
   if (narg < 3) error->all(FLERR,"Illegal custom command");
 
-  // mode
+  // parse mode + list of actions
+  // final arg = 0 for calling from Custom
+  
+  parse_actions(narg,arg,0);
 
-  int mode;
+  // process actions
+  // final arg = 0 for calling from Custom
+
+  bigint count = process_actions(0);
+
+  // print stats
+
+  bigint countall;
+  MPI_Allreduce(&count,&countall,1,MPI_SPARTA_BIGINT,MPI_SUM,world);
+
+  const char *mname;
+  if (mode == PARTICLE) mname = "particle";
+  else if (mode == GRID) mname = "grid";
+  else if (mode == SURF) mname = "surf";
+
+  if (comm->me == 0) {
+    if (screen)
+      fprintf(screen,"Custom %s attributes set = " BIGINT_FORMAT "\n",
+              mname,countall);
+    if (logfile)
+      fprintf(logfile,"Custom %s attributes set = " BIGINT_FORMAT "\n",
+              mname,countall);
+  }
+}
+
+/* ----------------------------------------------------------------------
+   parse mode and list of actions from input script command
+   store each action's info in list of Actions
+   external = 1 if called from FixCustom
+---------------------------------------------------------------------- */
+
+void Custom::parse_actions(int narg, char **arg, int external)
+{
+  // mode
+  
   if (strcmp(arg[0],"particle") == 0) mode = PARTICLE;
   else if (strcmp(arg[0],"grid") == 0) mode = GRID;
   else if (strcmp(arg[0],"surf") == 0) mode = SURF;
@@ -63,22 +122,33 @@ void Custom::command(int narg, char **arg)
   if (mode == SURF && !surf->exist)
     error->all(FLERR,"Cannot use custom surf command before surfaces are defined");
 
-  // process each action
+  // loop over actions
 
+  naction = 0;
+  actions = NULL;
+  
   int iarg = 1;
-  bigint count = 0;
     
   while (iarg < narg) {
-    
+
+    // grow list of Actions
+
+    actions = (Action *) memory->srealloc(actions,(naction+1)*sizeof(Action),
+                                          "custom:actions");
+
     int action;
     if (strcmp(arg[iarg],"create") == 0) action = CREATE;
     else if (strcmp(arg[iarg],"remove") == 0) action = REMOVE;
     else if (strcmp(arg[iarg],"set") == 0) action = SET;
     else if (strcmp(arg[iarg],"file") == 0) action = FILESTYLE;
     else error->all(FLERR,"Illegal custom command action");
+    actions[naction].action = action;
 
+    // create new custom attribute
+    
     if (action == CREATE) {
-      
+
+      if (external) error->all(FLERR,"Fix custom cannot use create action");
       if (iarg+4 > narg) error->all(FLERR,"Illegal custom command");
       
       int n = strlen(arg[iarg+1]) + 1;
@@ -94,26 +164,24 @@ void Custom::command(int narg, char **arg)
 
       int csize = input->inumeric(FLERR,arg[iarg+3]);
       if (csize < 0) error->all(FLERR,"Invalid custom create size");
-      
-      if (mode == PARTICLE) {
-        int cindex = particle->find_custom(aname);
-        if (cindex >= 0) error->all(FLERR,"Custom attribute name already exists");
-        particle->add_custom(aname,ctype,csize);
-      } else if (mode == GRID) {
-        int cindex = grid->find_custom(aname);
-        if (cindex >= 0) error->all(FLERR,"Custom attribute name already exists");
-        grid->add_custom(aname,ctype,csize);
-      } else if (mode == SURF) {
-        int cindex = surf->find_custom(aname);
-        if (cindex >= 0) error->all(FLERR,"Custom attribute name already exists");
-        surf->add_custom(aname,ctype,csize);
-      }
-      
-      delete [] aname;
+
+      int cindex;
+      if (mode == PARTICLE) cindex = particle->find_custom(aname);
+      else if (mode == GRID) cindex = grid->find_custom(aname);
+      else if (mode == SURF) cindex = surf->find_custom(aname);
+      if (cindex >= 0) error->all(FLERR,"Custom attribute name already exists");
+
+      actions[naction].aname = aname;
+      actions[naction].ctype = ctype;
+      actions[naction].csize = csize;
+    
       iarg += 4;
       
+    // remove a custom attribute
+
     } else if (action == REMOVE) {
       
+      if (external) error->all(FLERR,"Fix custom cannot use remove action");
       if (iarg+2 > narg) error->all(FLERR,"Illegal custom command");
 
       int n = strlen(arg[iarg+1]) + 1;
@@ -121,23 +189,19 @@ void Custom::command(int narg, char **arg)
       strcpy(aname,arg[iarg+1]);
       int ccol = attribute_bracket(aname);
       if (ccol) error->all(FLERR,"Illegal custom attribute syntax");
-      
-      if (mode == PARTICLE) {
-        int cindex = particle->find_custom(aname);
-        if (cindex < 0) error->all(FLERR,"Custom attribute name does not exist");
-        particle->remove_custom(cindex);
-      } else if (mode == GRID) {
-        int cindex = grid->find_custom(aname);
-        if (cindex < 0) error->all(FLERR,"Custom attribute name does not exist");
-        grid->remove_custom(cindex);
-      } else if (mode == SURF) {
-        int cindex = surf->find_custom(aname);
-        if (cindex < 0) error->all(FLERR,"Custom attribute name does not exist");
-        surf->remove_custom(cindex);
-      }
-      
+
+      int cindex;
+      if (mode == PARTICLE) cindex = particle->find_custom(aname);
+      else if (mode == GRID) cindex = grid->find_custom(aname);
+      else if (mode == SURF) cindex = surf->find_custom(aname);
+      if (cindex < 0) error->all(FLERR,"Custom attribute name does not exist");
+
+      actions[naction].cindex = cindex;
+
       delete [] aname;
       iarg += 2;
+
+    // set a custom vector or column of custom array via a variable
 
     } else if (action == SET) {
 
@@ -223,43 +287,24 @@ void Custom::command(int narg, char **arg)
         region = domain->regions[iregion];
       }
 
-      double scalar = 0.0;
-      double *vector = NULL;
-  
-      if (vstyle == EQUAL) {
-        scalar = variable->compute_equal(vindex);
-      } else if (vstyle == PARTICLE) {
-        memory->create(vector,particle->nlocal,"custom:vector");
-        variable->compute_particle(vindex,vector,1,0);
-      } else if (vstyle == GRID) {
-        memory->create(vector,grid->nlocal,"custom:vector");
-        variable->compute_grid(vindex,vector,1,0);
-      } else if (vstyle == SURF) {
-        memory->create(vector,surf->nown,"custom:vector");
-        variable->compute_surf(vindex,vector,1,0);
-      }
-
-      // assign value(s) to custom attribute
-      // convert to integer if necessary
-      // no assignment if particle/grid/surf not in mixture or group or region
+      // store info in Action list
       
-      if (mode == PARTICLE)
-        count += set_particle(mixture,region,
-                              cindex,ctype,csize,ccol,scalar,vector);
-      else if (mode == GRID)
-        count += set_grid(groupbit,region,cindex,ctype,csize,ccol,scalar,vector);
-      else if (mode == SURF)
-        count += set_surf(groupbit,region,cindex,ctype,csize,ccol,scalar,vector);
-      
-      // for mode = SURF, set estatus of custom vec/array to 0
-      
-      if (mode == SURF) surf->estatus[cindex] = 0;
+      actions[naction].vstyle = vstyle;
+      actions[naction].vindex = vindex;
+      actions[naction].cindex = cindex;
+      actions[naction].ctype = ctype;
+      actions[naction].csize = csize;
+      actions[naction].ccol = ccol;
+      actions[naction].groupbit = groupbit;
+      actions[naction].mixture = mixture;
+      actions[naction].region = region;
 
       delete [] aname;
       delete [] vname;
-      memory->destroy(vector);
       iarg += 5;
       
+    // set multiple custom attributes from a file
+
     } else if (action == FILESTYLE) {
       
       if (iarg+3 > narg) error->all(FLERR,"Illegal custom command");
@@ -267,14 +312,14 @@ void Custom::command(int narg, char **arg)
       if (mode == PARTICLE)
         error->all(FLERR,"Custom command cannot use action file with style particle");
       // file name
+      // if external fname must have wildcard char
       
       int n = strlen(arg[iarg+1]) + 1;
       char *fname = new char[n];
       strcpy(fname,arg[iarg+1]);
 
-      // search for wildcard, augment the filname
-
-      char *fullname;
+      if (external && strchr(fname,'*') == NULL)
+        error->all(FLERR,"Fix custom filename must have a wildcard char");
 
       // colcount = # of attribute values per file line
       
@@ -313,42 +358,160 @@ void Custom::command(int narg, char **arg)
           error->all(FLERR,"Custom attribute vector cannot use bracketed index");
       }
 
+      // store info in Action list
+      
+      actions[naction].fname = fname;
+      actions[naction].colcount = colcount;
+      actions[naction].cindex_file = cindex;
+      actions[naction].ctype_file = ctype;
+      actions[naction].csize_file = csize;
+      actions[naction].ccol_file = ccol;
+      
+      iarg += 3 + colcount;
+    }
+
+    naction++;
+  }
+}
+
+/* ----------------------------------------------------------------------
+   process list of stored actions
+   external = 1 if called from FixCustom
+   return count of attribute values changed by this proc
+---------------------------------------------------------------------- */
+
+bigint Custom::process_actions(int external)
+{
+  bigint count = 0;
+  
+  // process all stored actions
+
+  for (int i = 0; i < naction; i++) {
+
+    // create new custom attribute
+
+    if (actions[i].action == CREATE) {
+
+      char *aname = actions[i].aname;
+      int ctype = actions[i].ctype;
+      int csize = actions[i].csize;
+
+      if (mode == PARTICLE) {
+        int cindex = particle->find_custom(aname);
+        particle->add_custom(aname,ctype,csize);
+      } else if (mode == GRID) {
+        int cindex = grid->find_custom(aname);
+        grid->add_custom(aname,ctype,csize);
+      } else if (mode == SURF) {
+        int cindex = surf->find_custom(aname);
+        surf->add_custom(aname,ctype,csize);
+      }
+
+    // remove a custom attribute
+
+    } else if (actions[i].action == REMOVE) {
+
+      int cindex = actions[i].cindex;
+      if (mode == PARTICLE) particle->remove_custom(cindex);
+      else if (mode == GRID) grid->remove_custom(cindex);
+      else if (mode == SURF) surf->remove_custom(cindex);
+      
+   // set a custom vector or column of custom array via a variable
+
+    } else if (actions[i].action == SET) {
+      double scalar = 0.0;
+      double *vector = NULL;
+
+      Variable *variable = input->variable;
+      int vstyle = actions[i].vstyle;
+      int vindex = actions[i].vindex;
+      
+      if (vstyle == EQUAL) {
+        scalar = variable->compute_equal(vindex);
+      } else if (vstyle == PARTICLE) {
+        memory->create(vector,particle->nlocal,"custom:vector");
+        variable->compute_particle(vindex,vector,1,0);
+      } else if (vstyle == GRID) {
+        memory->create(vector,grid->nlocal,"custom:vector");
+        variable->compute_grid(vindex,vector,1,0);
+      } else if (vstyle == SURF) {
+        memory->create(vector,surf->nown,"custom:vector");
+        variable->compute_surf(vindex,vector,1,0);
+      }
+
+      // assign value(s) to custom attribute
+      // convert to integer if necessary
+      // no assignment if particle/grid/surf not in mixture or group or region
+
+      int cindex = actions[i].cindex;
+      int ctype = actions[i].ctype;
+      int csize = actions[i].csize;
+      int ccol = actions[i].ccol;
+      int groupbit = actions[i].groupbit;
+      Mixture *mixture = actions[i].mixture;
+      Region *region = actions[i].region;
+      
+      if (mode == PARTICLE)
+        count += set_particle(mixture,region,
+                              cindex,ctype,csize,ccol,scalar,vector);
+      else if (mode == GRID)
+        count += set_grid(groupbit,region,
+                          cindex,ctype,csize,ccol,scalar,vector);
+      else if (mode == SURF)
+        count += set_surf(groupbit,region,
+                          cindex,ctype,csize,ccol,scalar,vector);
+
+      memory->destroy(vector);
+
+      // for mode = SURF, set estatus of custom vec/array to 0
+      
+      if (mode == SURF) surf->estatus[cindex] = 0;
+      
+    // set multiple custom attributes from a file
+
+    } else if (actions[i].action == FILESTYLE) {
+
+      char *fname = actions[i].fname;
+      int colcount = actions[i].colcount;
+      int *cindex_file = actions[i].cindex_file;
+      int *ctype_file = actions[i].ctype_file;
+      int *csize_file = actions[i].csize_file;
+      int *ccol_file = actions[i].ccol_file;
+
       // read the file and set attributes according to column names
+      // if external, replace '*' with current timestep (logic from Dump class)
 
-      if (comm->me == 0 && screen)
-        fprintf(screen,"Reading custom file ... %s\n",fname);
+      if (!external) {
+        if (comm->me == 0 && screen)
+          fprintf(screen,"Reading custom file ... %s\n",fname);
+        
+        count += read_file(mode,colcount,
+                           cindex_file,ctype_file,csize_file,ccol_file,
+                           fname);
+        
+      } else {
+        char *filecurrent = new char[strlen(fname) + 16];
+        char *ptr = strchr(fname,'*');
+        *ptr = '\0';
+        sprintf(filecurrent,"%s" BIGINT_FORMAT "%s",
+                fname,update->ntimestep,ptr+1);
+        
+        count += read_file(mode,colcount,
+                           cindex_file,ctype_file,csize_file,ccol_file,
+                           filecurrent);
 
-      count += read_file(mode,colcount,cindex,ctype,csize,ccol,fname);
-
+        delete [] filecurrent;
+      }
+      
       // for mode = SURF, set estatus of all changed custom vec/array to 0
 
       if (mode == SURF)
         for (int i = 0; i < colcount; i++)
-          surf->estatus[cindex[i]] = 0;
-
-      delete [] fname;
-      iarg += 3 + colcount;
+          surf->estatus[cindex_file[i]] = 0;
     }
   }
 
-  // print stats
-
-  bigint bcountall;
-  MPI_Allreduce(&count,&bcountall,1,MPI_SPARTA_BIGINT,MPI_SUM,world);
-
-  const char *mname;
-  if (mode == PARTICLE) mname = "particle";
-  else if (mode == GRID) mname = "grid";
-  else if (mode == SURF) mname = "surf";
-
-  if (comm->me == 0) {
-    if (screen)
-      fprintf(screen,"Custom %s attributes set = " BIGINT_FORMAT "\n",
-              mname,bcountall);
-    if (logfile)
-      fprintf(logfile,"Custom %s attributes set = " BIGINT_FORMAT "\n",
-              mname,bcountall);
-  }
+  return count;
 }
 
 /* ---------------------------------------------------------------------- */
