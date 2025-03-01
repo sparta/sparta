@@ -29,18 +29,17 @@ class Custom : protected Pointers {
 
  public:
   Custom(class SPARTA *);
-  ~Custom();
+  virtual ~Custom();
   void command(int, char **);
 
-  void parse_actions(int, char **, int);
-  bigint process_actions(int);
+  bigint process_actions(int, char **, int);
+  bigint process_actions();
 
  private:
   int mode;
   
   struct Action {
     int action;
-    char *aname;
     int cindex,ctype,csize,ccol;
     int vindex,vstyle;
     int groupbit;
@@ -54,6 +53,8 @@ class Custom : protected Pointers {
   int naction;
   Action *actions;
 
+  bigint action_set(int, int, int, int, int, int,
+                    int, class Mixture *, class Region *);
   bigint set_particle(class Mixture *, class Region *,
                       int, int, int, int, double, double *);
   bigint set_grid(int, class Region *, int, int, int, int, double, double *);

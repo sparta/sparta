@@ -28,11 +28,11 @@ FixCustom::FixCustom(SPARTA *sparta, int narg, char **arg) :
   nevery = atoi(arg[2]);
 
   // instantiate Custom class for use by this fix
-  // use Custom class to parse mode and list of actions
+  // use Custom class to parse mode and list of SET and FILESTYLE actions
   // final arg = 1 for calling from FixCustom
   
   custom = new Custom(sparta);
-  custom->parse_actions(narg-3,&arg[3],1);
+  custom->process_actions(narg-3,&arg[3],1);
 }
 
 /* ---------------------------------------------------------------------- */
@@ -57,9 +57,14 @@ int FixCustom::setmask()
 
 void FixCustom::end_of_step()
 {
-  // use Custom class to parse mode and list of actions
-  // final arg = 1 for calling from FixCustom
+  // use Custom class to inovke list of SET and FILESTYLE actions
   // NOTE: could make count a scalar output of fix
   
-  bigint count = custom->process_actions(1);
+  bigint count = custom->process_actions();
+  
+  bigint countall;
+  MPI_Allreduce(&count,&countall,1,MPI_SPARTA_BIGINT,MPI_SUM,world);
+
+  // DEBUG
+  printf("Fix custom attributes set = " BIGINT_FORMAT "\n",countall);
 }
