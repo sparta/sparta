@@ -100,6 +100,8 @@ FixEmitSurf::FixEmitSurf(SPARTA *sparta, int narg, char **arg) :
   if (custom_any && subsonic)
     error->all(FLERR,"Cannot use fix emit/surf with subsonic and custom options");
 
+  if (custom_any) flag_custom_surf_changed = 1;
+  
   // task list and subsonic data structs
 
   tasks = NULL;
@@ -303,11 +305,11 @@ void FixEmitSurf::init()
   grid_changed();
 }
 
-
 /* ----------------------------------------------------------------------
    grid changed operation
    invoke create_tasks() to rebuild entire task list
    invoked after per-processor list of grid cells has changed
+   invoked after custom per-surf attributes have changed (fix custom)
 ------------------------------------------------------------------------- */
 
 void FixEmitSurf::grid_changed()
@@ -367,6 +369,17 @@ void FixEmitSurf::grid_changed()
     for (int i = 0; i < ntask; i++)
       tasks[i].ntarget = tasks[i].area / areasum;
   }
+}
+
+/* ----------------------------------------------------------------------
+   custom surf changed operation
+   invoke grid_changed() to rebuild entire task list with new surf properties
+   invoked by fix custom after it resets per-surf custom attributes
+------------------------------------------------------------------------- */
+
+void FixEmitSurf::custom_surf_changed()
+{
+  grid_changed();
 }
 
 /* ----------------------------------------------------------------------
@@ -758,7 +771,7 @@ void FixEmitSurf::perform_task()
 
           if (nfix_update_custom)
             modify->update_custom(particle->nlocal-1,temp_thermal,
-                                 temp_rot,temp_vib,vstream);
+                                  temp_rot,temp_vib,vstream);
         }
 
         nsingle += nactual;

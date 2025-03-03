@@ -26,8 +26,9 @@ CommandStyle(custom,Custom)
 namespace SPARTA_NS {
 
 class Custom : protected Pointers {
-
  public:
+  int mode;            // accessed by fix custom
+  
   Custom(class SPARTA *);
   virtual ~Custom();
   void command(int, char **);
@@ -36,8 +37,6 @@ class Custom : protected Pointers {
   bigint process_actions();
 
  private:
-  int mode;
-  
   struct Action {
     int action;
     int cindex,ctype,csize,ccol;

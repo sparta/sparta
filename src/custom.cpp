@@ -97,8 +97,13 @@ void Custom::command(int narg, char **arg)
 
 /* ----------------------------------------------------------------------
    parse mode and list of actions from input script command
-   store each action's info in list of Actions
-   external = 1 if called from FixCustom
+   external = 0 if called from Custom, 1 if called from FixCustom
+   if external = 0
+     invoke each action as soon as parsed
+     b/c an action may depend on previous actions
+   if external = 1
+     CREATE and REMOVE actions are not allowed
+     store action info in Action list for later invocation by FixCustom
 ---------------------------------------------------------------------- */
 
 bigint Custom::process_actions(int narg, char **arg, int external)
@@ -368,19 +373,24 @@ bigint Custom::process_actions(int narg, char **arg, int external)
 
       // if not external: invoke action now
       // else: store info in Action list for FixCustom
-      // for mode = SURF, set estatus of all changed custom vecs/arrays to 0
+      // for mode = GRID
+      //   set estatus of all changed custom vecs/arrays to 1
+      //   b/c file read stores values for owned+ghost cells
+      // for mode = SURF
+      //   set estatus of all changed custom vecs/arrays to 0
 
       if (!external) {
         if (comm->me == 0 && screen)
           fprintf(screen,"Reading custom file ... %s\n",fname);
         count += read_file(mode,colcount,cindex,ctype,csize,ccol,fname);
 
-        if (mode == SURF)
+        if (mode == GRID)
+          for (int i = 0; i < colcount; i++)
+            grid->estatus[cindex[i]] = 1;
+        else if (mode == SURF)
           for (int i = 0; i < colcount; i++)
             surf->estatus[cindex[i]] = 0;
 
-        // NOTE: do per-grid values also need to be shared with ghost cells ?
-        
         delete [] fname;
         delete [] cindex;
         delete [] ctype;
@@ -406,7 +416,7 @@ bigint Custom::process_actions(int narg, char **arg, int external)
 }
 
 /* ----------------------------------------------------------------------
-   process list of stored SET and FILESTYLE actions
+   invoke Action list of stored SET and FILESTYLE actions
    invoked by FixCustom
    return count of attribute values changed by this proc
 ---------------------------------------------------------------------- */
@@ -461,10 +471,17 @@ bigint Custom::process_actions()
                          cindex,ctype,csize,ccol,filecurrent);
       
       delete [] filecurrent;
+
+      // for mode = GRID
+      //   set estatus of all changed custom vecs/arrays to 1
+      //   b/c file read stores values for owned+ghost cells
+      // for mode = SURF
+      //   set estatus of all changed custom vecs/arrays to 0
       
-      // for mode = SURF, set estatus of all changed custom vecs/arrays to 0
-      
-      if (mode == SURF)
+      if (mode == GRID)
+        for (int i = 0; i < colcount; i++)
+          grid->estatus[cindex[i]] = 1;
+      else if (mode == SURF)
         for (int i = 0; i < colcount; i++)
           surf->estatus[cindex[i]] = 0;
     }
@@ -473,7 +490,11 @@ bigint Custom::process_actions()
   return count;
 }
 
-/* ---------------------------------------------------------------------- */
+/* ----------------------------------------------------------------------
+   perform set action for mode = PARTICLE, GRID, SURF
+   set a custom vector or column of custom array via a variable
+   return count of attribute values changed by this proc
+---------------------------------------------------------------------- */
 
 bigint Custom::action_set(int vstyle, int vindex,
                           int cindex, int ctype, int csize, int ccol,
@@ -481,8 +502,6 @@ bigint Custom::action_set(int vstyle, int vindex,
 {
   bigint count = 0;
   
-  // set a custom vector or column of custom array via a variable
-
   double scalar = 0.0;
   double *vector = NULL;
 
@@ -517,14 +536,23 @@ bigint Custom::action_set(int vstyle, int vindex,
   
   memory->destroy(vector);
 
-  // for mode = SURF, set estatus of custom vec/array to 0
-      
-  if (mode == SURF) surf->estatus[cindex] = 0;
+  // for mode = GRID
+  //   set estatus of custom vec/array to 0
+  //   b/c variable evalulation only sets values for owned cells
+  // for mode = SURF
+  //   set estatus of all changed custom vecs/arrays to 0
+
+  if (mode == GRID) grid->estatus[cindex] = 0;
+  else if (mode == SURF) surf->estatus[cindex] = 0;
 
   return count;
 }    
 
-/* ---------------------------------------------------------------------- */
+/* ----------------------------------------------------------------------
+   set a PARTICLE custom vector or column of custom array via a variable
+   scalar/vector = evaulated variable result
+   return count of attribute values changed by this proc
+---------------------------------------------------------------------- */
 
 bigint Custom::set_particle(Mixture *mixture, Region *region,
                             int cindex, int ctype, int csize, int ccol,
@@ -617,7 +645,11 @@ bigint Custom::set_particle(Mixture *mixture, Region *region,
   return count;
 }
 
-/* ---------------------------------------------------------------------- */
+/* ----------------------------------------------------------------------
+   set a GRID custom vector or column of custom array via a variable
+   scalar/vector = evaulated variable result
+   return count of attribute values changed by this proc
+---------------------------------------------------------------------- */
 
 bigint Custom::set_grid(int groupbit, Region *region,
                         int cindex, int ctype, int csize, int ccol,
@@ -715,7 +747,11 @@ bigint Custom::set_grid(int groupbit, Region *region,
   return count;
 }
 
-/* ---------------------------------------------------------------------- */
+/* ----------------------------------------------------------------------
+   set a SURF custom vector or column of custom array via a variable
+   scalar/vector = evaulated variable result
+   return count of attribute values changed by this proc
+---------------------------------------------------------------------- */
 
 bigint Custom::set_surf(int groupbit, Region *region,
                         int cindex, int ctype, int csize, int ccol,
@@ -843,7 +879,7 @@ bigint Custom::set_surf(int groupbit, Region *region,
 }
 
 /* ----------------------------------------------------------------------
-   read a custom attribute file for fmode = GRID or SURF
+   read a custom attribute file for mode = GRID or SURF
    assign values to custom grid or surf vectors/arrays
    return count of attributes assigned by this proc
 ---------------------------------------------------------------------- */
@@ -1000,6 +1036,8 @@ bigint Custom::read_file(int mode, int colcount,
       if (nwords != colcount + 1)
 	error->all(FLERR,"Incorrect line format in custom attribute file");
 
+      // grid ID will match either an owned or ghost grid cell
+      
       if (mode == GRID) {
         idptr = strtok(buf," \t\n\r\f");
         id = ATOCELLINT(idptr);
@@ -1010,6 +1048,8 @@ bigint Custom::read_file(int mode, int colcount,
           continue;
         }
         index = (*hash)[id];
+
+      // surf ID will only match for the owning proc
 
       } else if (mode == SURF) {
         idptr = strtok(buf," \t\n\r\f");
@@ -1071,7 +1111,12 @@ bigint Custom::read_file(int mode, int colcount,
   return count;
 }
 
-/* ---------------------------------------------------------------------- */
+/* ----------------------------------------------------------------------
+   process an attribute name with optional bracketed index name[N]
+   ccol = 0 if no brackets (vector attribute)
+   ccol = N if bracktes (Nth column of array attribute)
+   return ccol
+---------------------------------------------------------------------- */
 
 int Custom::attribute_bracket(char *aname)
 {

@@ -1692,7 +1692,7 @@ various ways:
 <LI><A HREF = "dump.html">dump surf</A> - output per-surf attributes to a dump file
 <LI><A HREF = "fix_ave_surf.html">fix ave/surf</A> - time-average a per-surf attribute
 <LI><A HREF = "fix_emit_surf.html">fix emit/surf</A> - use per-surf attributes to adjust particle emission from each surf
-<LI><A HREF = "fix_surf_temp.html">fix surf/temp</A> - use a per-surf vector for temperature
+<LI><A HREF = "fix_surf_temp.html">fix surf/temp</A> - set the temperature of each surf based on gas collisions
 <LI><A HREF = "read_surf.html">read_surf</A> - define and initialize per-surf attributes
 <LI><A HREF = "surf_collide.html">surf_collide</A> - use a per-surf attribute as temperature for particle/surf collisions
 <LI><A HREF = "surf_react_adsorb.html">surf_react adsorb</A> - use per-surf vectors and an array to store chemical state
@@ -1723,9 +1723,12 @@ once every N steps from the energy flux which colliding particles
 impart to each surface element, also stored in a custom per-surf
 vector.
 </P>
-<P>In both cases, the custom per-surf vector can be passed to the
-<A HREF = "surf_collide.html">surf_collide diffuse</A> command to each timestep when
-particle/surface element collisions take place.
+<P>In both cases, the custom per-surf temperature can be used by the
+<A HREF = "surf_collide.html">surf_collide diffuse</A> command to use the current
+surface temperature for performing particle/surface element
+collisions.  Likewise the <A HREF = "fix_emit_surf.html">fix emit/surf</A> command
+can use the current custom per-surf temperature to alter the emission
+properties of each surface elemnt.
 </P>
 <P>Another use of dynamic custom attributes is by the <A HREF = "fix_ambipolar.html">fix
 ambipolar</A> and <A HREF = "surf_react.html">surf_react adsorb</A>

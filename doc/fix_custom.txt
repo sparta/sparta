@@ -91,8 +91,19 @@ attributes takes place (due to this command) on timestep 0, before the
 first run.  Likewise, between runs, this command DOES reset attribute
 values at the end of the last step (10000, 20000, etc) of each run,
 but DOES NOT reset them again before the first step of the next run.
-If needed, resets of custom values can be performed before the first
-run or between runs using the "custom"_custom.html command.
+
+IMPORTANT NOTE: If needed, resets of custom values can be performed
+before the first run or between runs using the "custom"_custom.html
+command.
+
+IMPORTANT NOTE: If {Nfreq} triggers the reading of a file on the last
+step of the last run in the input script, then the
+wildcard-substituted filename (explained below) must exist.  This is
+the case, even though the new values will have no effect in the
+current input script, since there are no operations on subsequent
+timesteps which use them.  Note, however that if a restart file is
+wrtten on the last timestep, the updated custom values will be written
+to the restart file.
 
 :line
 

@@ -1682,7 +1682,7 @@ surf_react implicit - use per-grid vectors and an array to store chemical state 
 "dump surf"_dump.html - output per-surf attributes to a dump file
 "fix ave/surf"_fix_ave_surf.html - time-average a per-surf attribute
 "fix emit/surf"_fix_emit_surf.html - use per-surf attributes to adjust particle emission from each surf
-"fix surf/temp"_fix_surf_temp.html - use a per-surf vector for temperature
+"fix surf/temp"_fix_surf_temp.html - set the temperature of each surf based on gas collisions
 "read_surf"_read_surf.html - define and initialize per-surf attributes
 "surf_collide"_surf_collide.html - use a per-surf attribute as temperature for particle/surf collisions
 "surf_react adsorb"_surf_react_adsorb.html - use per-surf vectors and an array to store chemical state
@@ -1713,9 +1713,12 @@ once every N steps from the energy flux which colliding particles
 impart to each surface element, also stored in a custom per-surf
 vector.
 
-In both cases, the custom per-surf vector can be passed to the
-"surf_collide diffuse"_surf_collide.html command to each timestep when
-particle/surface element collisions take place.
+In both cases, the custom per-surf temperature can be used by the
+"surf_collide diffuse"_surf_collide.html command to use the current
+surface temperature for performing particle/surface element
+collisions.  Likewise the "fix emit/surf"_fix_emit_surf.html command
+can use the current custom per-surf temperature to alter the emission
+properties of each surface elemnt.
 
 Another use of dynamic custom attributes is by the "fix
 ambipolar"_fix_ambipolar.html and "surf_react adsorb"_surf_react.html
