@@ -471,8 +471,7 @@ void Grid::acquire_ghosts(int surfflag)
     error->warning(FLERR,"Could not acquire nearby ghost cells b/c "
                    "grid partition is not clumped");
 
-  for (int i = 0; i < ncustom; i++)
-    grid->estatus[i] = 1;
+  for (int i = 0; i < ncustom; i++) grid->estatus[i] = 1;
  
   if (surf->distributed && !surf->implicit) {
     surf->hash->clear();
