@@ -253,7 +253,7 @@ void Modify::grid_changed()
 
 void Modify::custom_surf_changed()
 {
-  for (int i = 0; i < n_pergrid; i++)
+  for (int i = 0; i < n_custom_surf_changed; i++)
     fix[list_custom_surf_changed[i]]->custom_surf_changed();
 }
 

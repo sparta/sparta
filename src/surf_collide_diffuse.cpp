@@ -165,9 +165,6 @@ collide(Particle::OnePart *&ip, double &,
     if (tsurf <= 0.0) error->one(FLERR,"Surf_collide tsurf <= 0.0");
   }
 
-  printf("SC step %ld isurf %d pID %d tsurf %g persurf %d\n",
-         update->ntimestep,isurf,ip->id,tsurf,persurf_temperature);
-
   // diffuse reflection for each particle
   // only if SurfReact did not already reset velocities
   // also both particles need to trigger any fixes
