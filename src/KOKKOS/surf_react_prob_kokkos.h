@@ -118,8 +118,8 @@ class SurfReactProbKokkos : public SurfReactProb {
           d_nsingle()++;
           d_tally_single(j)++;
         } else {
-          Kokkos::atomic_increment(&d_nsingle());
-          Kokkos::atomic_increment(&d_tally_single(j));
+          Kokkos::atomic_inc(&d_nsingle());
+          Kokkos::atomic_inc(&d_tally_single(j));
         }
         switch (d_type(j)) {
         case DISSOCIATION:

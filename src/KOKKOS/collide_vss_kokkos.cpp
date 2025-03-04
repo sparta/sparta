@@ -706,7 +706,7 @@ void CollideVSSKokkos::operator()(TagCollideCollisionsOne< NEARCP, ATOMIC_REDUCT
                                                    recomb_part3,recomb_species,recomb_density,index_kpart);
 
     if (ATOMIC_REDUCTION == 1)
-      Kokkos::atomic_increment(&d_ncollide_one());
+      Kokkos::atomic_inc(&d_ncollide_one());
     else if (ATOMIC_REDUCTION == 0)
       d_ncollide_one()++;
     else
@@ -714,7 +714,7 @@ void CollideVSSKokkos::operator()(TagCollideCollisionsOne< NEARCP, ATOMIC_REDUCT
 
     if (reactflag) {
       if (ATOMIC_REDUCTION == 1)
-        Kokkos::atomic_increment(&d_nreact_one());
+        Kokkos::atomic_inc(&d_nreact_one());
       else if (ATOMIC_REDUCTION == 0)
         d_nreact_one()++;
       else
