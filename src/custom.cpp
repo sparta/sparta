@@ -219,7 +219,7 @@ bigint Custom::process_actions(int narg, char **arg, int external)
       int cindex,ctype,csize;
       if (mode == PARTICLE) {
         cindex = particle->find_custom(aname);
-        if (cindex >= 0) error->all(FLERR,"Custom attribute name does not exist");
+        if (cindex < 0) error->all(FLERR,"Custom attribute name does not exist");
         ctype = particle->etype[cindex];
         csize = particle->esize[cindex];
       } else if (mode == GRID) {
