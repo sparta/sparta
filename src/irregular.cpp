@@ -618,7 +618,7 @@ int Irregular::create_data_variable(int n, int *proclist, int *sizes,
   for (i = 0; i < n; i++) work1_big[proclist[i]] += sizes[i];
 
   for (i = 0; i < nprocs; i++) {
-    if (work1_big[i] > MAXSMALLINT)
+    if (i != me && work1_big[i] > MAXSMALLINT)
       error->one(FLERR,"Irregular comm send buffer exceeds 2 GB, try using"
                        "'global mem/limit' command");
 
@@ -655,13 +655,13 @@ int Irregular::create_data_variable(int n, int *proclist, int *sizes,
   // nrecvdatum = total # of datums I recv
 
   int nbytes;
-   recvsize = 0;
-   for (i = 0; i < nrecv; i++) {
-     MPI_Recv(&nbytes,1,MPI_INT,MPI_ANY_SOURCE,1,world,status);
-     size_recv[proc2recv[status->MPI_SOURCE]] = nbytes;
-     recvsize += nbytes;
-   }
-   recvsize += size_self;
+  recvsize = 0;
+  for (i = 0; i < nrecv; i++) {
+    MPI_Recv(&nbytes,1,MPI_INT,MPI_ANY_SOURCE,1,world,status);
+    size_recv[proc2recv[status->MPI_SOURCE]] = nbytes;
+    recvsize += nbytes;
+  }
+  recvsize += size_self;
 
   // return # of datums I will receive
 
@@ -777,7 +777,6 @@ void Irregular::exchange_uniform(char *sendbuf, int nbytes, char *recvbuf)
   // enable send/recv buf to be larger than 2 GB
 
   bigint offset;
-  char *dest;
 
   // post all receives, starting after self copies
 
@@ -807,23 +806,18 @@ void Irregular::exchange_uniform(char *sendbuf, int nbytes, char *recvbuf)
   n = 0;
   for (int isend = 0; isend < nsend; isend++) {
     count = num_send[isend];
-    dest = buf;
     for (i = 0; i < count; i++) {
       m = index_send[n++];
-      memcpy(dest,&sendbuf[(bigint)m*nbytes],nbytes);
-      dest += nbytes;
+      memcpy(&buf[(bigint)i*nbytes],&sendbuf[(bigint)m*nbytes],nbytes);
     }
-
     MPI_Send(buf,count*nbytes,MPI_CHAR,proc_send[isend],0,world);
   }
 
   // copy datums to self, put at beginning of recvbuf
 
-  dest = recvbuf;
   for (i = 0; i < num_self; i++) {
     m = index_self[i];
-    memcpy(dest,&sendbuf[(bigint)m*nbytes],nbytes);
-    dest += nbytes;
+    memcpy(&recvbuf[(bigint)i*nbytes],&sendbuf[(bigint)m*nbytes],nbytes);
   }
 
   // wait on all incoming messages
@@ -854,7 +848,6 @@ void Irregular::exchange_variable(char *sendbuf, int *nbytes, char *recvbuf)
   // enable send/recv buf to be larger than 2 GB
 
   bigint offset;
-  char *dest;
 
   // post all receives, starting after self copies
 
@@ -880,23 +873,23 @@ void Irregular::exchange_variable(char *sendbuf, int *nbytes, char *recvbuf)
 
   n = 0;
   for (int isend = 0; isend < nsend; isend++) {
+    offset = 0;
     count = num_send[isend];
-    dest = buf;
     for (i = 0; i < count; i++) {
       m = index_send[n++];
-      memcpy(dest,&sendbuf[offset_send[m]],nbytes[m]);
-      dest += nbytes[m];
+      memcpy(&buf[offset],&sendbuf[offset_send[m]],nbytes[m]);
+      offset += (bigint)nbytes[m];
     }
     MPI_Send(buf,size_send[isend],MPI_CHAR,proc_send[isend],0,world);
   }
 
   // copy datums to self, put at beginning of recvbuf
 
-  dest = recvbuf;
+  offset = 0;
   for (i = 0; i < num_self; i++) {
     m = index_self[i];
-    memcpy(dest,&sendbuf[offset_send[m]],nbytes[m]);
-    dest += nbytes[m];
+    memcpy(&recvbuf[offset],&sendbuf[offset_send[m]],nbytes[m]);
+    offset += (bigint)nbytes[m];
   }
 
   // wait on all incoming messages
