@@ -587,9 +587,9 @@ int Comm::irregular_uniform_neighs(int nsend, int *procsend,
   // reallocate rbuf as needed
   // must use smalloc since rbuf can be larger than 2 GB
 
-  if (nrecv*nsize > maxrecvbuf) {
+  if ((bigint)nrecv*nsize > maxrecvbuf) {
     memory->sfree(rbuf);
-    maxrecvbuf = nrecv*nsize;
+    maxrecvbuf = (bigint)nrecv*nsize;
     rbuf = (char *) memory->smalloc(maxrecvbuf,"comm:rbuf");
     memset(rbuf,0,maxrecvbuf);
   }
@@ -628,7 +628,7 @@ int Comm::irregular_uniform(int nsend, int *procsend,
 
   if ((bigint)nrecv*nsize > maxrecvbuf) {
     memory->sfree(rbuf);
-    maxrecvbuf = nrecv*nsize;
+    maxrecvbuf = (bigint)nrecv*nsize;
     rbuf = (char *) memory->smalloc(maxrecvbuf,"comm:rbuf");
     memset(rbuf,0,maxrecvbuf);
   }
