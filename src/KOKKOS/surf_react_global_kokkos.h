@@ -93,8 +93,8 @@ class SurfReactGlobalKokkos : public SurfReactGlobal {
         d_nsingle()++;
         d_tally_single(0)++;
       } else {
-        Kokkos::atomic_increment(&d_nsingle());
-        Kokkos::atomic_increment(&d_tally_single(0));
+        Kokkos::atomic_inc(&d_nsingle());
+        Kokkos::atomic_inc(&d_tally_single(0));
       }
       ip = NULL;
       rand_pool.free_state(rand_gen);
@@ -110,8 +110,8 @@ class SurfReactGlobalKokkos : public SurfReactGlobal {
         d_nsingle()++;
         d_tally_single(1)++;
       } else {
-        Kokkos::atomic_increment(&d_nsingle());
-        Kokkos::atomic_increment(&d_tally_single(1));
+        Kokkos::atomic_inc(&d_nsingle());
+        Kokkos::atomic_inc(&d_tally_single(1));
       }
       double x[3],v[3];
       int id = MAXSMALLINT*rand_gen.drand();

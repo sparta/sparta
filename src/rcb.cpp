@@ -704,7 +704,7 @@ void RCB::invert()
 
   int nrecv = irregular->create_data_uniform(nsend,proclist,comm->commsortflag);
   Invert *rinvert =
-    (Invert *) memory->smalloc(nrecv*sizeof(Invert),"RCB:rinvert");
+    (Invert *) memory->smalloc((bigint)nrecv*sizeof(Invert),"RCB:rinvert");
   irregular->exchange_uniform((char *) sinvert,sizeof(Invert),
                               (char *) rinvert);
 

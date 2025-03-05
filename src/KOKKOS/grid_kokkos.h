@@ -188,9 +188,9 @@ class GridKokkos : public Grid {
   tdual_struct_tdual_float_2d_1d k_edarray_local;
 
  private:
-  void grow_cells(int, int);
-  void grow_sinfo(int);
-  void grow_pcells();
+  void grow_cells(int, int) override;
+  void grow_sinfo(int) override;
+  void grow_pcells() override;
 };
 
 }
