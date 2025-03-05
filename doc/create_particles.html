@@ -30,7 +30,7 @@
 </PRE>
 <LI>zero or more keyword/value pairs may be appended 
 
-<LI>keyword = <I>cut</I> or <I>global</I> or <I>region</I> or <I>species</I> or <I>density</I> or <I>temperature</I> or <I>velocity</I> or <I>twopass</I> 
+<LI>keyword = <I>cut</I> or <I>global</I> or <I>region</I> or <I>species</I> or <I>density</I> or <I>temperature</I> or <I>velocity</I> or <I>custom</I> or <I>twopass</I> 
 
 <PRE>  <I>cut</I> value = <I>yes</I> or <I>no</I>
   <I>global</I> value = <I>yes</I> or <I>no</I>
@@ -47,6 +47,9 @@
   <I>velocity</I> values = vxvar vyvar vzvar xvar yvar zvar
     vxvar,vyvar,vzvar = names of equal-style variables for vx,vy,vz
     xvar,yvar,zvar = names of internal-style variables for x,y,z
+  <I>custom</I> values = attribute g_name
+    attribute = <I>density</I> or <I>temperature</I>
+    g_name = custom per-grid vector with name
   <I>twopass</I> values = none 
 </PRE>
 
@@ -59,6 +62,7 @@ create_particles air n 100000 global yes
 create_particles air single 3 5.0 6.0 5.4 10.0 -1.0 0.0
 create_particles air n 0 species mySpecies xpos NULL zpos
 create_particles air n 0 density myDens xgrid ygrid NULL
+create_particles air n 0 custom density g_dens
 create_particles air n 0 temperature myTemp xgrid ygrid zgrid
 create_particles air n 0 velocity myVx NULL myVz xpos ypos NULL twopass 
 </PRE>
@@ -90,17 +94,21 @@ particles is calculated by SPARTA as a function of the global <I>fnum</I>
 value, the mixture number density, and the flow volume of the
 simulation domain.
 </P>
-<P>The <I>fnum</I> value is set by the <A HREF = "global.html">global fnum</A> command.  The
-mixture <I>nrho</I> is set by the <A HREF = "mixture.html">mixture</A> command.  The flow
-volume of the simulation is the total volume of the simulation domain
-as specified by the <A HREF = "create_box.html">create_box</A> command, minus any
-volume that is interior to surfaces defined by the
-<A HREF = "read_surf.html">read_surf</A> command.  Note that the flow volume
-includes volume contributions from grid cells cut by surfaces.
-However particles are only created in grid cells entirely external to
-surfaces.  This means that particles may be created in external cells
-at a (slightly) higher density to compensate for no particles being
-created in cut cells that still contribute to the overall flow volume.
+<P>The <I>fnum</I> value is set by the <A HREF = "global.html">global fnum</A> command and
+is the ratio of real, physical moleclules to simulation particles.
+The mixture <I>nrho</I> is set by the <A HREF = "mixture.html">mixture</A> command.  The
+flow volume of the simulation is the total volume of the simulation
+domain as specified by the <A HREF = "create_box.html">create_box</A> command, minus
+any volume that is interior to surfaces defined by the
+<A HREF = "read_surf.html">read_surf</A> command.
+</P>
+<P>Note that the flow volume includes volume contributions from grid
+cells cut by surfaces.  Depending on the value of the optional <I>cut</I>
+keyword, particles may be created in the entire volume external to
+surface, or only created in grid cells entirely external to surfaces.
+In the latter case, particles may be created in external cells at a
+(slightly) higher density to compensate for no particles being created
+in cut cells that contribute to the overall flow volume.
 </P>
 <P>If the <I>n</I> style is used with a non-zero <I>Np</I>, then exactly <I>Np</I>
 particles are created, which can be useful for debugging or
@@ -179,6 +187,17 @@ the bounding box that encloses the region.  Particles those grid cells
 attempt to add are included in the count for N, even if some or all of
 the particle insertions are rejected due to not being inside the
 region.
+</P>
+<HR>
+
+<P>The <I>species</I>, <I>density</I>, <I>temperature</I>, and <I>velocity</I> keywords
+enable creation of particles whose properties vary spatially across
+the simulation domain.  They do this by using variable formulas which
+are functions of the position of a created particle or the center
+point of the grid cell the created particles are in.
+</P>
+<P>Note that the <I>custom</I> keyword explained below can also do something
+similar.
 </P>
 <P>The <I>species</I> keyword can be used to create particles with a
 spatially-dependent separation of species.  The specified <I>svar</I> is
@@ -326,6 +345,53 @@ create_particles air n 10000 velocity vx vy NULL x y NULL
 </PRE>
 <CENTER><A HREF = "JPG/velocity_variation.gif"><IMG SRC = "JPG/velocity_variation_small.jpg"></A>
 </CENTER>
+<HR>
+
+<P>The <I>custom</I> keyword enables creation of particles whose properties
+vary spatially across the simulation domain.  This is done by using
+custom per-grid vectors defined by other commands.  E.g. the
+<A HREF = "read_grid.html">read_grid</A> command which can read per-grid attributes
+included in the grid data file.  Or the custom command which allows
+for definition of custom per-grid vectors and their initialization by
+use of <A HREF = "variable.html">grid-style variables</A> or by reading the values
+from a file.  See <A HREF = "Section_howto.html#howto_17">Section Howto 6.17</A> for
+a discussion of custom per-grid attributes.
+</P>
+<P>Note that the <I>species</I>, <I>density</I>, <I>temperature</I>, and <I>velocity</I>
+keywords explained above can also do something similar.
+</P>
+<P>The <I>attribute</I> value of the <I>custom</I> keyword can be any of the
+following:
+</P>
+<P>NOTE: should these be absolute values or scale factors ?
+</P>
+<UL><LI>density = number density (# per length^3 units) = per-grid vector
+<LI>temperature = temperature (temperature units) = per-grid vector 
+</UL>
+<P>The <I>g_name</I> value of the <I>custom</I> keyword is the name of the custom
+per-grid vector or array.  It must store floating-point values and be
+a vector or array, as indicated in the list above.  NOTE: only
+per-grid vectors are currently included as attributes for the <I>custom</I>
+keyword.
+</P>
+<P>The <I>g_name</I> for the <I>attribute density</I> keyword specifies a per-grid
+vector which stores a scale factor on the number of particles to
+create in each grid cell.  Thus a value of 0.5 would create half as
+many particles in that grid cell as would otherwise be the case, due
+to the global <I>fnum</I> and mixture <I>nrho</I> settings that define the
+density, as explained above.  A value of 1.2 would create 20% more
+particles in that grid cell.
+</P>
+<P>The <I>g_name</I> for the <I>attribute temperature</I> keyword specifies a
+per-grid vector which stores a scale factor on the thermal temperature
+of particles to create in each grid cell.  Thus a value of 0.5 would
+create particles with a thermal temperature half of what would
+otherwise be the case, due to the mixture <I>temp</I> setting which defines
+the thermal temperature, as explained above.  A value of 1.2 would
+create particles with a 20% higher thermal temperature.
+</P>
+<HR>
+
 <P>The <I>twopass</I> keyword does not require a value.  If used, the
 creation procedure will loop over the creation grid cells twice, the
 same as the KOKKOS package version of this command does, so that it can

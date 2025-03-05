@@ -53,6 +53,11 @@ class CreateParticles : protected Pointers {
   char *txstr_copy,*tystr_copy,*tzstr_copy;
   char *vstrx_copy,*vstry_copy,*vstrz_copy;
 
+  int density_custom_flag,temp_custom_flag;
+  char *density_custom_id,*temp_custom_id;
+  int density_custom_index,temp_custom_index;
+  double *density_custom,*temp_custom;
+
   virtual void create_single();
   void create_local();
   void create_local_twopass();
