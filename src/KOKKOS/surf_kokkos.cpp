@@ -227,42 +227,66 @@ void SurfKokkos::sync(ExecutionSpace space, unsigned int mask)
     if (mask & TRI_MASK) k_tris.sync_device();
     if (mask & CUSTOM_MASK) {
       if (ncustom) {
-        if (ncustom_ivec)
-          for (int i = 0; i < ncustom_ivec; i++)
+        if (ncustom_ivec) {
+          for (int i = 0; i < ncustom_ivec; i++) {
             k_eivec.h_view[i].k_view.sync_device();
+            k_eivec_local.h_view[i].k_view.sync_device();
+          }
+        }
 
-        if (ncustom_iarray)
-          for (int i = 0; i < ncustom_iarray; i++)
+        if (ncustom_iarray) {
+          for (int i = 0; i < ncustom_iarray; i++) {
             k_eiarray.h_view[i].k_view.sync_device();
+            k_eiarray_local.h_view[i].k_view.sync_device();
+          }
+        }
 
-        if (ncustom_dvec)
-          for (int i = 0; i < ncustom_dvec; i++)
+        if (ncustom_dvec) {
+          for (int i = 0; i < ncustom_dvec; i++) {
             k_edvec.h_view[i].k_view.sync_device();
+            k_edvec_local.h_view[i].k_view.sync_device();
+          }
+        }
 
-        if (ncustom_darray)
-          for (int i = 0; i < ncustom_darray; i++)
+        if (ncustom_darray) {
+          for (int i = 0; i < ncustom_darray; i++) {
             k_edarray.h_view[i].k_view.sync_device();
+            k_edarray_local.h_view[i].k_view.sync_device();
+          }
+        }
       }
     }
   } else {
     if (mask & LINE_MASK) k_lines.sync_host();
     if (mask & TRI_MASK) k_tris.sync_host();
     if (mask & CUSTOM_MASK) {
-      if (ncustom_ivec)
-        for (int i = 0; i < ncustom_ivec; i++)
+      if (ncustom_ivec) {
+        for (int i = 0; i < ncustom_ivec; i++) {
           k_eivec.h_view[i].k_view.sync_host();
+          k_eivec_local.h_view[i].k_view.sync_host();
+        }
+      }
 
-      if (ncustom_iarray)
-        for (int i = 0; i < ncustom_iarray; i++)
+      if (ncustom_iarray) {
+        for (int i = 0; i < ncustom_iarray; i++) {
           k_eiarray.h_view[i].k_view.sync_host();
+          k_eiarray_local.h_view[i].k_view.sync_host();
+        }
+      }
 
-      if (ncustom_dvec)
-        for (int i = 0; i < ncustom_dvec; i++)
+      if (ncustom_dvec) {
+        for (int i = 0; i < ncustom_dvec; i++) {
           k_edvec.h_view[i].k_view.sync_host();
+          k_edvec_local.h_view[i].k_view.sync_host();
+        }
+      }
 
-      if (ncustom_darray)
-        for (int i = 0; i < ncustom_darray; i++)
+      if (ncustom_darray) {
+        for (int i = 0; i < ncustom_darray; i++) {
           k_edarray.h_view[i].k_view.sync_host();
+          k_edarray_local.h_view[i].k_view.sync_host();
+        }
+      }
     }
   }
 }
