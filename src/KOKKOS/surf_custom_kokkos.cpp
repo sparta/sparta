@@ -239,6 +239,8 @@ void SurfKokkos::allocate_custom(int index)
     }
   }
 
+  size_custom_local[index] = 0;
+
   k_eivec.modify_host();
   k_eiarray.modify_host();
   k_edvec.modify_host();
@@ -418,13 +420,13 @@ void SurfKokkos::spread_custom(int index)
         k_eivec_local.modify_host();
       }
 
-      k_eivec.h_view[index].k_view.sync_host();
-      k_eivec_local.h_view[index].k_view.sync_host();
+      k_eivec.h_view[ewhich[index]].k_view.sync_host();
+      k_eivec_local.h_view[ewhich[index]].k_view.sync_host();
 
       spread_own2local(1,INT,eivec[ewhich[index]],
                        eivec_local[ewhich[index]]);
 
-      k_eivec_local.h_view[index].k_view.modify_host();
+      k_eivec_local.h_view[ewhich[index]].k_view.modify_host();
 
     } else if (esize[index]) {
       k_eiarray.sync_host();
@@ -437,15 +439,15 @@ void SurfKokkos::spread_custom(int index)
         auto k_iarray_local = k_eiarray_local.h_view[ewhich[index]].k_view;
         k_iarray_local.modify_host(); // force resize on host
         memoryKK->grow_kokkos(k_iarray_local,iarray_local,size_custom_local[index],
-                              "surf/spread:eiarray_local_array");
+                              esize[index],"surf/spread:eiarray_local_array");
         k_eiarray_local.h_view[ewhich[index]].k_view = k_iarray_local;
         eiarray_local[ewhich[index]] = iarray_local;
 
         k_eiarray_local.modify_host();
       }
 
-      k_eiarray.h_view[index].k_view.sync_host();
-      k_eiarray_local.h_view[index].k_view.sync_host();
+      k_eiarray.h_view[ewhich[index]].k_view.sync_host();
+      k_eiarray_local.h_view[ewhich[index]].k_view.sync_host();
 
       int *in,*out;
       if (nown == 0) in = NULL;
@@ -454,7 +456,7 @@ void SurfKokkos::spread_custom(int index)
       else out = &eiarray_local[ewhich[index]][0][0];
       spread_own2local(esize[index],INT,in,out);
 
-      k_eiarray_local.h_view[index].k_view.modify_host();
+      k_eiarray_local.h_view[ewhich[index]].k_view.modify_host();
     }
 
   } else if (etype[index] == DOUBLE) {
@@ -476,13 +478,13 @@ void SurfKokkos::spread_custom(int index)
         k_edvec_local.modify_host();
       }
 
-      k_edvec.h_view[index].k_view.sync_host();
-      k_edvec_local.h_view[index].k_view.sync_host();
+      k_edvec.h_view[ewhich[index]].k_view.sync_host();
+      k_edvec_local.h_view[ewhich[index]].k_view.sync_host();
 
       spread_own2local(1,DOUBLE,edvec[ewhich[index]],
                        edvec_local[ewhich[index]]);
 
-      k_edvec_local.h_view[index].k_view.modify_host();
+      k_edvec_local.h_view[ewhich[index]].k_view.modify_host();
 
     } else if (esize[index]) {
       k_edarray.sync_host();
@@ -495,15 +497,15 @@ void SurfKokkos::spread_custom(int index)
         auto k_darray_local = k_edarray_local.h_view[ewhich[index]].k_view;
         k_darray_local.modify_host(); // force resize on host
         memoryKK->grow_kokkos(k_darray_local,darray_local,size_custom_local[index],
-                              "surf/spread:edarray_local_array");
+                              esize[index],"surf/spread:edarray_local_array");
         k_edarray_local.h_view[ewhich[index]].k_view = k_darray_local;
         edarray_local[ewhich[index]] = darray_local;
 
         k_edarray_local.modify_host();
       }
 
-      k_edarray.h_view[index].k_view.sync_host();
-      k_edarray_local.h_view[index].k_view.sync_host();
+      k_edarray.h_view[ewhich[index]].k_view.sync_host();
+      k_edarray_local.h_view[ewhich[index]].k_view.sync_host();
 
       double *in,*out;
       if (nown == 0) in = NULL;
@@ -512,7 +514,7 @@ void SurfKokkos::spread_custom(int index)
       else out = &edarray_local[ewhich[index]][0][0];
       spread_own2local(esize[index],DOUBLE,in,out);
 
-      k_edarray_local.h_view[index].k_view.modify_host();
+      k_edarray_local.h_view[ewhich[index]].k_view.modify_host();
     }
   }
 
