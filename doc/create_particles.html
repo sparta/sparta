@@ -279,22 +279,23 @@ spatially-dependent thermal temperature variation.  The specified
 <I>tvar</I> is the name of an <A HREF = "variable.html">equal-style variable</A> whose
 formula should evaluate to a positive value.  The formula for the
 <I>tvar</I> variable can use one or two or three variables which will store
-the x, y, or z coordinates of the geometric center point of a grid
-cell.  If used, these other variables must be <A HREF = "variable.html">internal-style
+the x, y, or z coordinates of the particle that is being created. If
+used, these other variables must be <A HREF = "variable.html">internal-style
 variables</A> defined in the input script; their initial
 numeric values can by anything.  Their names are specified as <I>xvar</I>,
 <I>yvar</I>, and <I>zvar</I>.  If any of them is not used in the <I>tvar</I> formula,
 it can be specified as NULL.
 </P>
-<P>When particles are added to a grid cell, its center point coordinates
-are stored in <I>xvar</I>, <I>yvar</I>, <I>zvar</I> if they are defined.  The <I>tvar</I>
-variable is then evaluated.  The returned value is used as a scale
-factor on the thermal temperature number for particles created in that
-grid cell.  Thus a value of 0.5 would create particles with a thermal
-temperature half of what would otherwise be the case, due to the
-mixture <I>temp</I> setting which defines the thermal temperature, as
+<P>When a particle is added to a grid cell, its coordinates are stored in
+<I>xvar</I>, <I>yvar</I>, <I>zvar</I> if they are defined.  The <I>tvar</I> variable is
+then evaluated.  The returned value is used as a scale factor on the 3
+mixture temperatures for thermal, rotational, and vibrational
+temperature.  Thus a value of 0.5 would create a particle with a
+thermal temperature half of what would otherwise be the case, due to
+the mixture <I>temp</I> setting which defines the thermal temperature, as
 explained above.  A value of 1.2 would create particles with a 20%
-higher thermal temperature.
+higher thermal temperature.  Ditto for the rotational and vibrational
+temperature of the created particle.
 </P>
 <P>As an example, these commands can be used in a 2d simulation, to
 create a thermal temperature gradient in x, where the temperature on

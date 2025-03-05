@@ -269,22 +269,23 @@ spatially-dependent thermal temperature variation.  The specified
 {tvar} is the name of an "equal-style variable"_variable.html whose
 formula should evaluate to a positive value.  The formula for the
 {tvar} variable can use one or two or three variables which will store
-the x, y, or z coordinates of the geometric center point of a grid
-cell.  If used, these other variables must be "internal-style
+the x, y, or z coordinates of the particle that is being created. If
+used, these other variables must be "internal-style
 variables"_variable.html defined in the input script; their initial
 numeric values can by anything.  Their names are specified as {xvar},
 {yvar}, and {zvar}.  If any of them is not used in the {tvar} formula,
 it can be specified as NULL.
 
-When particles are added to a grid cell, its center point coordinates
-are stored in {xvar}, {yvar}, {zvar} if they are defined.  The {tvar}
-variable is then evaluated.  The returned value is used as a scale
-factor on the thermal temperature number for particles created in that
-grid cell.  Thus a value of 0.5 would create particles with a thermal
-temperature half of what would otherwise be the case, due to the
-mixture {temp} setting which defines the thermal temperature, as
+When a particle is added to a grid cell, its coordinates are stored in
+{xvar}, {yvar}, {zvar} if they are defined.  The {tvar} variable is
+then evaluated.  The returned value is used as a scale factor on the 3
+mixture temperatures for thermal, rotational, and vibrational
+temperature.  Thus a value of 0.5 would create a particle with a
+thermal temperature half of what would otherwise be the case, due to
+the mixture {temp} setting which defines the thermal temperature, as
 explained above.  A value of 1.2 would create particles with a 20%
-higher thermal temperature.
+higher thermal temperature.  Ditto for the rotational and vibrational
+temperature of the created particle.
 
 As an example, these commands can be used in a 2d simulation, to
 create a thermal temperature gradient in x, where the temperature on

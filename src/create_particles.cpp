@@ -1091,7 +1091,6 @@ double CreateParticles::density_variable(double *lo, double *hi)
 
 double CreateParticles::temperature_variable(double *x)
 {
-
   if (txstr) input->variable->internal_set(txvar,x[0]);
   if (tystr) input->variable->internal_set(tyvar,x[1]);
   if (tzstr) input->variable->internal_set(tzvar,x[2]);
