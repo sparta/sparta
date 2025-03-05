@@ -1,2 +1,8 @@
 Legend: This is a fork off the SPARTA master branch with modifications that are relevant to ALCF Platforms
 ^^^^^^
+
+Installation: In order to build SPARTA on Aurora use one of the following Makefiles:
+^^^^^^^^^^^^
+ src/MAKE/Makefile.aurora_kokkos_sycl
+ src/MAKE/Makefile.aurora_kokkos_sycl_fft
+ src/MAKE/Makefile.aurora_mpi
