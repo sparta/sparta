@@ -36,6 +36,7 @@ using namespace SPARTA_NS;
 using namespace MathConst;
 
 enum{UNKNOWN,OUTSIDE,INSIDE,OVERLAP};   // same as Grid
+enum{INT,DOUBLE};                       // several files
 
 #define MAXATTEMPT 1024      // max attempts to insert a particle into cut/split cell
 #define EPSZERO 1.0e-14
@@ -96,6 +97,8 @@ void CreateParticles::command(int narg, char **arg)
   dstr = dxstr = dystr = dzstr = NULL;
   tstr = txstr = tystr = tzstr = NULL;
   vxstr = vystr = vzstr = vstrx = vstry = vstrz = NULL;
+  density_custom_flag = temp_custom_flag = 0;
+  density_custom_id = temp_custom_id = NULL;
 
   while (iarg < narg) {
     if (strcmp(arg[iarg],"cut") == 0) {
@@ -117,6 +120,7 @@ void CreateParticles::command(int narg, char **arg)
         error->all(FLERR,"Create_particles region does not exist");
       region = domain->regions[iregion];
       iarg += 2;
+      
     } else if (strcmp(arg[iarg],"species") == 0) {
       if (iarg+5 > narg) error->all(FLERR,"Illegal create_particles command");
       speciesflag = 1;
@@ -166,6 +170,27 @@ void CreateParticles::command(int narg, char **arg)
       if (strcmp(arg[iarg+6],"NULL") == 0) vstrz = NULL;
       else vstrz = arg[iarg+6];
       iarg += 7;
+
+    } else if (strcmp(arg[iarg],"custom") == 0) {
+      if (iarg+3 < narg) error->all(FLERR,"Illegal create_particles command");
+      if (strcmp(arg[iarg+1],"density") == 0) {
+        density_custom_flag = 1;
+        if (strstr(arg[iarg+2],"s_") != arg[iarg+2])
+          error->all(FLERR,"Illegal fix create_particles command");
+        int n = strlen(arg[iarg+2]);
+        delete [] density_custom_id;
+        density_custom_id = new char[n];
+        strcpy(density_custom_id,&arg[iarg+2][2]);
+      } else if (strcmp(arg[iarg+1],"temperature") == 0) {
+        temp_custom_flag = 1;
+        if (strstr(arg[iarg+2],"s_") != arg[iarg+2])
+          error->all(FLERR,"Illegal fix create_particles command");
+        int n = strlen(arg[iarg+2]);
+        delete [] temp_custom_id;
+        temp_custom_id = new char[n];
+        strcpy(temp_custom_id,&arg[iarg+2][2]);
+      } else error->all(FLERR,"Illegal create_particles command");
+      
     } else if (strcmp(arg[iarg],"twopass") == 0) {
       if (iarg+1 > narg) error->all(FLERR,"Illegal create_particles command");
       twopass = 1;
@@ -176,6 +201,13 @@ void CreateParticles::command(int narg, char **arg)
   if (globalflag)
     error->all(FLERR,"Create_particles global option not yet implemented");
 
+  // error checks
+
+  if (densflag && density_custom_flag)
+    error->all(FLERR,"Create_particles cannot use both density and custom density");
+  if (tempflag && temp_custom_flag)
+    error->all(FLERR,"Create_particles cannot use both temperature and custom temperature");
+    
   // error checks and further setup for variables
 
   if (speciesflag) {
@@ -310,6 +342,30 @@ void CreateParticles::command(int narg, char **arg)
     }
   }
 
+  // error checks and further setup for custom settings
+
+  if (density_custom_flag) {
+    density_custom_index = grid->find_custom(density_custom_id);
+    if (density_custom_index < 0)
+      error->all(FLERR,"Could not find create_particles custom density attribute");
+    if (grid->etype[density_custom_index] != DOUBLE)
+      error->all(FLERR,"Create_particles custom density must be floating point");
+    if (grid->esize[density_custom_index] != 0)
+      error->all(FLERR,"Create_particles custom density must be a vector");
+    density_custom = grid->edvec[grid->ewhich[density_custom_index]];
+  }
+  
+  if (temp_custom_flag) {
+    temp_custom_index = grid->find_custom(temp_custom_id);
+    if (temp_custom_index < 0)
+      error->all(FLERR,"Could not find create_particles custom temperature attribute");
+    if (grid->etype[temp_custom_index] != DOUBLE)
+      error->all(FLERR,"Create_particles custom temperature must be floating point");
+    if (grid->esize[temp_custom_index] != 0)
+      error->all(FLERR,"Create_particles custom temperature must be a vector");
+    temp_custom = grid->edvec[grid->ewhich[temp_custom_index]];
+  }
+
   // generate particles
 
   if (comm->me == 0)
@@ -331,6 +387,11 @@ void CreateParticles::command(int narg, char **arg)
 
   MPI_Barrier(world);
   double time2 = MPI_Wtime();
+
+  // clean up
+
+  delete [] density_custom_id;
+  delete [] temp_custom_id;
 
   // issue warning if created particle count is unexpected
   // only if no region and no variable density specified
@@ -569,11 +630,17 @@ void CreateParticles::create_local()
     lo = cells[icell].lo;
     hi = cells[icell].hi;
 
-    if (densflag) {
-      scale = density_variable(lo,hi);
+    if (densflag || density_custom_flag) {
+      if (densflag) scale = density_variable(lo,hi);
+      else scale = density_custom[icell];
       ntarget *= scale;
       ncreate = static_cast<int> (ntarget);
       if (random->uniform() < ntarget-ncreate) ncreate++;
+    }
+    
+    if (temp_custom_flag) {
+      tempscale = temp_custom[icell];
+      sqrttempscale = sqrt(tempscale);
     }
 
     // if surfs in cell, use xcell for all created particle attempts
@@ -823,8 +890,9 @@ void CreateParticles::create_local_twopass()
     lo = cells[icell].lo;
     hi = cells[icell].hi;
 
-    if (densflag) {
-      scale = density_variable(lo,hi);
+    if (densflag || density_custom_flag) {
+      if (densflag) scale = density_variable(lo,hi);
+      else scale = density_custom[icell];
       ntarget *= scale;
       ncreate = static_cast<int> (ntarget);
       if (random->uniform() < ntarget-ncreate) ncreate++;
@@ -849,10 +917,15 @@ void CreateParticles::create_local_twopass()
       continue;
     if (!cutflag && cells[icell].nsurf) continue;
 
+    ncreate = ncreate_values[icell];
+
     lo = cells[icell].lo;
     hi = cells[icell].hi;
 
-    ncreate = ncreate_values[icell];
+    if (temp_custom_flag) {
+      tempscale = temp_custom[icell];
+      sqrttempscale = sqrt(tempscale);
+    }
 
     // if surfs in cell, use xcell for all created particle attempts
 
