@@ -107,7 +107,7 @@ Particle::Particle(SPARTA *sparta) : Pointers(sparta)
 
 Particle::~Particle()
 {
-  if (!uncopy && (copy || copymode)) return;
+  if (copy || copymode) return;
 
   memory->sfree(species);
   for (int i = 0; i < nmixture; i++) delete mixture[i];

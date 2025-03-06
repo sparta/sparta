@@ -162,7 +162,7 @@ Grid::Grid(SPARTA *sparta) : Pointers(sparta)
 
 Grid::~Grid()
 {
-  if (!uncopy && (copy || copymode)) return;
+  if (copy || copymode) return;
 
   for (int i = 0; i < ngroup; i++) delete [] gnames[i];
   memory->sfree(gnames);

@@ -33,10 +33,9 @@ class KKCopy {
   KKCopy(SPARTA *sparta):
   obj(sparta) {
     ptr_temp = NULL;
+    save();
     obj.copy = 1;
     obj.copymode = 0;
-    obj.uncopy = 0;
-    save();
   }
 
   ~KKCopy() {}
@@ -52,7 +51,6 @@ class KKCopy {
       free(ptr_temp);
       ptr_temp = NULL;
     }
-    obj.uncopy = 1;
   }
 
  private:

@@ -67,6 +67,23 @@ SurfKokkos::~SurfKokkos()
   eicol = NULL;
   edcol = NULL;
 
+  for (int i = 0; i < ncustom_ivec; i++) {
+    memoryKK->destroy_kokkos(k_eiarray.h_view[i].k_view,eivec[i]);
+    memoryKK->destroy_kokkos(k_eivec_local.h_view[i].k_view,eivec_local[i]);
+  }
+  for (int i = 0; i < ncustom_iarray; i++) {
+    memoryKK->destroy_kokkos(k_eiarray.h_view[i].k_view,eiarray[i]);
+    memoryKK->destroy_kokkos(k_eiarray_local.h_view[i].k_view,eiarray_local[i]);
+  }
+  for (int i = 0; i < ncustom_dvec; i++) {
+    memoryKK->destroy_kokkos(k_edvec.h_view[i].k_view,edvec[i]);
+    memoryKK->destroy_kokkos(k_edvec_local.h_view[i].k_view,edvec_local[i]);
+  }
+  for (int i = 0; i < ncustom_darray; i++) {
+    memoryKK->destroy_kokkos(k_edarray.h_view[i].k_view,edarray[i]);
+    memoryKK->destroy_kokkos(k_edarray_local.h_view[i].k_view,edarray_local[i]);
+  }
+
   ncustom_ivec = ncustom_iarray = 0;
   ncustom_dvec = ncustom_darray = 0;
 }

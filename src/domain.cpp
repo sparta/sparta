@@ -65,7 +65,7 @@ Domain::Domain(SPARTA *sparta) : Pointers(sparta)
 
 Domain::~Domain()
 {
-  if (!uncopy && (copy || copymode)) return;
+  if (copy || copymode) return;
 
   for (int i = 0; i < nregion; i++) delete regions[i];
   memory->sfree(regions);

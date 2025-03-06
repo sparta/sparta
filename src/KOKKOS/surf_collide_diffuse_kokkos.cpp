@@ -100,7 +100,7 @@ SurfCollideDiffuseKokkos::SurfCollideDiffuseKokkos(SPARTA *sparta) :
 
 SurfCollideDiffuseKokkos::~SurfCollideDiffuseKokkos()
 {
-  if (!uncopy) return;
+  if (copy) return;
 
   fix_ambi_kk_copy.uncopy();
   fix_vibmode_kk_copy.uncopy();

@@ -73,7 +73,7 @@ GridKokkos::GridKokkos(SPARTA *sparta) : Grid(sparta)
 
 GridKokkos::~GridKokkos()
 {
-  if (!uncopy && (copy || copymode)) return;
+  if (copy || copymode) return;
 
   cells = NULL;
   cinfo = NULL;
@@ -84,6 +84,15 @@ GridKokkos::~GridKokkos()
   ewhich = NULL;
   eicol = NULL;
   edcol = NULL;
+
+  for (int i = 0; i < ncustom_ivec; i++)
+    memoryKK->destroy_kokkos(k_eiarray.h_view[i].k_view,eivec[i]);
+  for (int i = 0; i < ncustom_iarray; i++)
+    memoryKK->destroy_kokkos(k_eiarray.h_view[i].k_view,eiarray[i]);
+  for (int i = 0; i < ncustom_dvec; i++)
+    memoryKK->destroy_kokkos(k_edvec.h_view[i].k_view,edvec[i]);
+  for (int i = 0; i < ncustom_darray; i++)
+    memoryKK->destroy_kokkos(k_edarray.h_view[i].k_view,edarray[i]);
 
   ncustom_ivec = ncustom_iarray = 0;
   ncustom_dvec = ncustom_darray = 0;

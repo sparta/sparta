@@ -227,6 +227,8 @@ void Surf::reallocate_custom()
 
 void Surf::remove_custom(int index)
 {
+  if (!ename || !ename[index]) return;
+
   delete [] ename[index];
   ename[index] = NULL;
 
