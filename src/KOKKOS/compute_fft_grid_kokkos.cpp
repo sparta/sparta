@@ -601,8 +601,8 @@ void ComputeFFTGridKokkos::irregular_create()
   if (nrecv != nfft)
     error->one(FLERR,"Compute fft/grid FFT mapping is inconsistent");
 
-  MemKK::realloc_kokkos(d_sbuf1,"fft/grid:sbuf1",nglocal*sizeof(cellint));
-  MemKK::realloc_kokkos(d_rbuf1,"fft/grid:rbuf1",nfft*sizeof(cellint));
+  MemKK::realloc_kokkos(d_sbuf1,"fft/grid:sbuf1",(bigint)nglocal*sizeof(cellint));
+  MemKK::realloc_kokkos(d_rbuf1,"fft/grid:rbuf1",(bigint)nfft*sizeof(cellint));
 
   DAT::t_cellint_1d d_idsend = DAT::t_cellint_1d((cellint *)d_sbuf1.data(),nglocal);
 
@@ -655,8 +655,8 @@ void ComputeFFTGridKokkos::irregular_create()
   if (nrecv != nglocal)
     error->one(FLERR,"Compute fft/grid FFT mapping is inconsistent");
 
-  MemKK::realloc_kokkos(d_sbuf2,"fft/grid:sbuf2",nfft*sizeof(cellint));
-  MemKK::realloc_kokkos(d_rbuf2,"fft/grid:rbuf2",nglocal*sizeof(cellint));
+  MemKK::realloc_kokkos(d_sbuf2,"fft/grid:sbuf2",(bigint)nfft*sizeof(cellint));
+  MemKK::realloc_kokkos(d_rbuf2,"fft/grid:rbuf2",(bigint)nglocal*sizeof(cellint));
 
   d_idsend = DAT::t_cellint_1d((cellint *)d_sbuf2.data(),nfft);
 

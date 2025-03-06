@@ -292,7 +292,7 @@ int attempt_kk(Particle::OnePart *ip, Particle::OnePart *jp,
     //      nothing that is I-specific or J-specific
 
     if (react_prob > random_prob) {
-      Kokkos::atomic_increment(&d_tally_reactions[d_list[i]]);
+      Kokkos::atomic_inc(&d_tally_reactions[d_list[i]]);
       if (!computeChemRates) {
         ip->ispecies = r->d_products[0];
 
