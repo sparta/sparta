@@ -81,11 +81,6 @@ GridKokkos::~GridKokkos()
   pcells = NULL;
   plevels = NULL;
 
-  eivec = NULL;
-  eiarray = NULL;
-  edvec = NULL;
-  edarray = NULL;
-
   ewhich = NULL;
   eicol = NULL;
   edcol = NULL;

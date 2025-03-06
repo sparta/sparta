@@ -70,11 +70,6 @@ ParticleKokkos::~ParticleKokkos()
   particles = NULL;
   species = NULL;
 
-  eivec = NULL;
-  eiarray = NULL;
-  edvec = NULL;
-  edarray = NULL;
-
   ewhich = NULL;
   eicol = NULL;
   edcol = NULL;

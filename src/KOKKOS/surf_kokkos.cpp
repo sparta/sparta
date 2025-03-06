@@ -63,16 +63,6 @@ SurfKokkos::~SurfKokkos()
   mylines = NULL;
   mytris = NULL;
 
-  eivec = NULL;
-  eiarray = NULL;
-  edvec = NULL;
-  edarray = NULL;
-
-  eivec_local = NULL;
-  eiarray_local = NULL;
-  edvec_local = NULL;
-  edarray_local = NULL;
-
   ewhich = NULL;
   eicol = NULL;
   edcol = NULL;
@@ -85,22 +75,26 @@ SurfKokkos::~SurfKokkos()
 
 void SurfKokkos::clear_explicit()
 {
-  nsurf = 0;
-  nlocal = nghost = nmax = 0;
-  nown = maxown = 0;
+  if (sparta->kokkos->prewrap) {
+    Surf::clear_explicit();
+  } else {
+    nsurf = 0;
+    nlocal = nghost = nmax = 0;
+    nown = maxown = 0;
 
-  k_lines = {};
-  k_tris = {};
-  k_mylines = {};
-  k_mytris = {};
+    k_lines = {};
+    k_tris = {};
+    k_mylines = {};
+    k_mytris = {};
 
-  lines = NULL;
-  tris = NULL;
-  mylines = NULL;
-  mytris = NULL;
+    lines = NULL;
+    tris = NULL;
+    mylines = NULL;
+    mytris = NULL;
 
-  hash->clear();
-  hashfilled = 0;
+    hash->clear();
+    hashfilled = 0;
+  }
 }
 
 /* ---------------------------------------------------------------------- */
