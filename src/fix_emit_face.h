@@ -73,6 +73,9 @@ class FixEmitFace : public FixEmit {
   int dimension,nspecies;
   double fnum,dt;
   double *fraction,*cummulative;
+  // Virgile - Modif Start - 26/04/2023
+  double *cummulative_weighted;
+  // Virgile - Modif End - 26/04/2023
 
                          // ntask = # of tasks is stored by parent class
   Task *tasks;           // list of particle insertion tasks
