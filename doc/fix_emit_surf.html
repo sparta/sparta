@@ -255,13 +255,21 @@ command are trying to achieve.
 
 <P>The <I>custom</I> keyword can be used to tailor the emission of particles
 from individual surface elements.  This is done by using custom
-per-surf vectors or arrays defined by other commands.  E.g. the
-<A HREF = "read_surf.html">read_surf</A> command which can read per-surf attributes
-included in the surface data file.  Or the custom command which allows
+per-surf vectors or arrays defined by other commands.
+</P>
+<P>For example, the <A HREF = "read_surf.html">read_surf</A> command can read per-surf
+attributes included in the surface data file.  The
+<A HREF = "custom.html">custom</A> and <A HREF = "fix_custom.html">fix custom</A> commands allow
 for definition of custom per-surf vectors or arrays and their
-initialization by use of <A HREF = "variable.html">surf-style variables</A>.  See
-<A HREF = "Section_howto.html#howto_17">Section Howto 6.17</A> for a discussion of
-custom per-surf attributes.
+initialization by use of <A HREF = "variable.html">surf-style variables</A> or by
+reading the values from a file.  Note that the use of "fix custom"
+allows for the resetting of custom attributes once every N timesteps,
+which allows for time-dependence in per-surface emission properties.
+The <A HREF = "fix_surf_temp.html">fix surf/temp</A> command resets per-surf
+temperatures based on gas collisions with each surface element.
+</P>
+<P>See <A HREF = "Section_howto.html#howto_17">Section Howto 6.17</A> for a discussion
+of custom per-surf attributes.
 </P>
 <P>IMPORTANT NOTE: The <I>custom</I> keyword cannot be used together with
 either the <I>n</I> or <I>subsonic</I> keywords.

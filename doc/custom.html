@@ -13,28 +13,30 @@
 </H3>
 <P><B>Syntax:</B>
 </P>
-<PRE>custom style attribute action args ... keyword value ... 
+<PRE>custom style action args ... action args ... 
 </PRE>
 <UL><LI>style = <I>particle</I> or <I>grid</I> or <I>surf</I> 
 
-<LI>attribute = name of custom attribute 
+<LI>action = <I>create</I> or <I>remove</I> or <I>set</I> or <I>file</I> 
 
-<PRE>  name = custom vector attribute with name
-  name[N] = Nth column of custom array attribute with name 
-</PRE>
-<LI>action = <I>set</I> or <I>remove</I> 
-
-<PRE>  <I>set</I> args = v_name subset-ID region-ID
+<PRE>  <I>create</I> args = cname datatype Nc
+    cname = name of custom vector or array to create and initialize with zeroes
+    datatype = <I>int</I> or <I>float</I> = for integer or floating point values
+    Nc = 0 for a vector (single value), Nc >= 1 for an array (one or more values)
+  <I>remove</I> arg2 = cname
+    cname = name of custom vector or array to remove
+  <I>set</I> args = cname v_name subset-ID region-ID
+    cname = specify as name (no brackets) for custom vector with name
+            or as name[N] for Nth column of custom array with name
     v_name = equal-, particle-, grid-, or surf-style variable with name
     subset-ID = mixture ID (particles) or group ID (grid cells or surf elements)
     region-ID = only apply to particle/grid/surf in region, NULL to not test
-  <I>remove</I> args = none 
-</PRE>
-<LI>zero of more keyword/arg pairs may be appended (only for action = set) 
-
-<PRE>keyword = <I>type</I> or <I>size</I>
-  <I>type</I> arg = <I>int</I> or <I>float</I>
-  <I>size</I> arg = M for number of columns in a new custom array 
+  <I>file</I> args = fname M cname1 cname2 ... cnameM
+    fname = name of file with custom attributes for grid cells or surf elements
+    M = # of custom values listed on each line of the file
+    cname1,cname2,...,cnameM = which attribute each line value in the file is assigned to
+      cnameI = name of a custom vector
+      cnameI = name[N] for Nth column of a custom array with name 
 </PRE>
 
 </UL>
@@ -45,82 +47,85 @@ variable sdvec surf c_1*10+3.5
 variable sdarray1 surf s_dvec+1
 variable sdarray2 surf v_sdarray1+1 
 </PRE>
-<PRE>custom particle ivec set v_ivec air NULL type int
-custom surf dvec set v_sdvec all NULL
-custom surf darray[1] set v_sdarray1 all NULL size 2
-custom surf darray[2] set v_sdarray2 all NULL
-custom particle ivec remove
-custom surf darray remove 
+<PRE>custom particle create ivec int 0 set ivec v_ivec air NULL
+custom surf create sdvec float 0 set sdvec v_sdvec all NULL
+custom surf create darray float 2 set darray[1] v_sdarray1 all NULL
+custom surf set darray[2] v_sdarray2 all NULL
+custom grid create gvec int 0 create garray float 2 file grid.attributes gvec garray<B>1</B> garray<B>2</B>
+custom particle remove ivec
+custom surf remove darray 
 </PRE>
 <P><B>Description:</B>
 </P>
-<P>Create or reset or remove a custom attribute for individual particles,
-grid cells, or surface elements.  To create or reset an attribute a
-variable is specified and evaluated.  Custom attributes can be can be
-vectors (single value per entity) or arrays (mutiple values per
-entity).  They can also be integer or floating point values.  See
-<A HREF = "Section_howto.html#howto_17">Section 6.17</A> for more discussion of
-custom attributes.
+<P>Create or remove or initialize/reset custom attributes for particles,
+grid cells, or surface elements.
 </P>
-<P>The specified <I>style</I> setting is <I>particle</I> or <I>grid</I> or <I>surf</I>
-for per-particle, per-grid, or per-surf attributes.
+<P>To create a new attribute, the <I>create</I> action is specified.  To
+remove an attribute, the <I>remove</I> action is specified.  The <I>set</I>
+action evaluates a variable to reset the values for an attribute.  The
+<I>file</I> action reads a file with lines starting with a grid cell ID or
+surface element ID followed by values for one or more per-grid or
+per-surf attributes.  Particle-style attributes cannot be reset with
+the <I>file</I> action.
 </P>
-<P>The <I>attribute</I> specifies the name of the attribute to operate on.
-The same name can be used for attributes of different styles.
-E.g. there can be a custom attribute with the name "flag" for both
-particles and surface elements.  If the attribute name is specified
-without brackets, it refers to a custom vector (single value per
-entity).  If the attribute name is specified with a bracketed integer,
-it refers to the column of a custom array (one or more values per
-entity).  The integer <I>N</I> must be between 1 and M = # of columns in
-the array (values per entity).  See the <I>size</I> keyword discussion
-below for how to specify M if it is a new custom array.
+<P>Custom attributes can be vectors (single value per entity) or arrays
+(mutiple values per entity).  They can also be integer or floating
+point values.  See <A HREF = "Section_howto.html#howto_17">Section 6.17</A> for an
+explanation of custom attributes.
 </P>
-<P>The <I>action</I> is specified as <I>set</I> or <I>remove</I>.
+<P>The <I>style</I> setting is <I>particle</I> or <I>grid</I> or <I>surf</I> for custom
+per-particle, per-grid, or per-surf attributes.
 </P>
-<P>If <I>remove</I> is used, then the <I>attribute</I> should be simply the name of
-the attribute, whether it is a vector or array.  No trailing brackets
-are specified.  The attribute will be removed from the system.  No
-further arguments can be specified.
+<P>The <I>action</I> setting is <I>create</I> or <I>remove</I> or <I>set</I> or <I>file</I>.
 </P>
-<P>If <I>set</I> is used, then the attribute is created if it does not already
-exist and its values are initialized.  If it already exists, its
-values are reset.  Custom attributes can be vectors (single value per
-entity) or arrays (mutiple values per entity).  To set the values for
-a custom vector, use an <I>attribute</I> name without brackets,
-e.g. temperature.  To set the values for a single column of a custom
-array, use an <I>attribute</I> name suffixed by a bracketed integer,
-e.g. dipole[3].  The integer must be a value from 1 to M, where M is
-the number of columns (values per entity) in the array.
+<P>The <I>create</I> action creates a new custom attribute called <I>cname</I> and
+initializes all its values to zero.  The <I>datatype</I> is specified as
+<I>int</I> or <I>float</I> and determines what kind of values the attribute
+stores.  <I>Nc</I> is specified as 0 for custom vector which stores a
+single value per entity.  Specify <I>Nc</I> >= 1 for a custom array which
+stores Nc values per entity.
 </P>
-<P>The specified <I>v_name</I> is the name of a previously defined variable
-which this command will evaluate.  It must be either an equal-style or
-particle-style or grid-style or surf-style variable.  All of these
-styles define a mathematical formula which is used to compute the
-value(s) of the variable.  See the <A HREF = "variable.html">variable</A> for
-details.
+<P>The <I>remove</I> action deletes the custom attribute called <I>cname</I>,
+whether it is a vector or array.
+</P>
+<P>The <I>set</I> and <I>file</I> actions reset the values of custom attribute(s)
+which must already exist.
+</P>
+<HR>
+
+<P>The <I>set</I> action resets the values of a custom attribute by evaluating
+a variable.  To operate on a custom vector, <I>cname</I> is simply the name
+of the vector.  To operate on a single column of a custom array,
+<I>cname</I> is specified as name[N] for the Nth column of a custom array
+with name.
+</P>
+<P>The specified <I>v_name</I> is the name of the variable which is evaluated.
+It must be either an equal-style or particle-style or grid-style or
+surf-style variable.  All of these define a mathematical formula which
+is used to compute the value(s) of the variable.  See the
+<A HREF = "variable.html">variable</A> command for details.
 </P>
 <P>If an equal-style variable is specified, it produces a single value
-which will be assigned as the custom value to all particles or grid
-cells or surface elements.  Otherwise a particle-style variable must
-be used for style = <I>particle</I>, a grid-style variable for style =
-<I>grid</I>, or a surf-style variable for style = <I>surf</I>.  When it is
-evaluated it generates one value for each particle, grid cell, or
-surface element, which is assigned to the custom vector or to a column
-of the custom array.
+which will be assigned as the custom value to all the particles or
+grid cells or surface elements (see subset-ID and region-ID discussion
+below).  Otherwise a particle-style variable must be used for <I>style
+particle</I>, a grid-style variable for <I>style grid</I>, or a surf-style
+variable for <I>style surf</I>.  When it is evaluated it generates one
+value for each particle, grid cell, or surface element, which is
+assigned to the custom vector or to a column of the custom array.
 </P>
 <P>Note that the latter 3 variable styles can include outputs from
 <A HREF = "compute.html">compute</A> or <A HREF = "fix.html">fix</A> commands.  They can also
-include the current timestep or the spatial position of a particle,
-grid cell, or surface element in their formula. So it is easy to
-calculate values for each entity which vary spatially or which depend
-on the current timestep.
+include the current timestep (as can equal-style variables) or the
+spatial position of a particle, grid cell, or surface element in their
+formula.  So it is easy to calculate a value for each entity which
+varies in time or spatially.
 </P>
 <P>The next two arguments, <I>subset-ID</I> and <I>region-ID</I>, can limit which
 particles, grid cells, or surface elements are assigned a custom
 value.  An individual particle, grid cell, or surface element must
 meet both criteria to have its custom value set, otherwise its value
-is set to zero.
+is unchanged.
 </P>
 <P>The <I>subset-ID</I> is the ID of a mixture for particles or the ID of a
 group of grid cells or surface elements.  Only particles in the
@@ -128,7 +133,7 @@ mixture or grid cells/surface elements in the group will be assigned a
 value.  See the <A HREF = "mixture.html">mixture</A> and <A HREF = "group.html">group</A> commands
 for more details.  Note that "all" is a pre-defined mixture ID which
 contains all particles.  Likewise "all" is the name of a pre-defined
-group with all grid cells or surface elements.
+group with all grid cells or all surface elements.
 </P>
 <P>The <I>region-ID</I> is the ID of a geometric region defined by the
 <A HREF = "region.html">region</A> command.  Only particles or grid cells or surface
@@ -137,33 +142,65 @@ of a grid cell or surface element is used for the region check.  If
 <I>region-ID</I> is specified as NULL, then the region criterion is not
 applied.
 </P>
-<P>Two optional keywords affect the creation of a new custom vector or
-array.  They are ignored if the custom vector or array already exists.
+<HR>
+
+<P>The <I>file</I> action resets the values of one or more custom attributes
+by reading them from the <I>fname</I> file.  It can only be used with
+<I>style grid</I> or <I>style surf</I>, not with <I>style particle</I>.
 </P>
-<P>The <I>type</I> keyword can be used with <I>int</I> or <I>float</I> as its arg.  The
-created custom attribute will then store either integer or
-floating-point values.  Floating point values are the default.
+<P>The number of <I>cname1,cname2,...,cnameM</I> arguments must match the
+number of values listed on each line in the file.  A <I>cnameI</I> with no
+brackets is the name of a custom vector.  For a custom array, <I>cnameI</I>
+must be of the form name[N] for the Nth column of the array.
 </P>
-<P>The <I>size</I> keyword can be used with arg = 0 to create a custom vector
-(which is the default).  It can also be used with an arg M >= 1 to
-create an array with M columns (values per entity).  This means that
-if a new <I>attribute</I> name is specified with no brackets, the <I>size</I>
-keyword is not necessary, because it's default value refers to a
-custom vector.  But if a new <I>attribute</I> name with a bracket is used,
-the <I>size</I> keyword must be used so that the column dimension of the
-array is known.
+<P>The format of the file is as follows.  Note that the number of
+attributes specified in the file does not have to equal the number of
+grid cells or surface elements.  If the ID of a grid cell or surface
+element does not appear in the file, then its custom attribute
+value(s) will be unchanged.
 </P>
+<P>The file can start with any number of commented or blank lines.
+A commented line starts with the "#" character.
+</P>
+<P>The first non-comment, non-blank line must be an integer count N of
+the number of remaining attribute value lines in the file.  These N
+lines must immediately follow the count line and contain no blank lines.
+Any remaining lines are ignored.
+</P>
+<P>The format of each attribute value line is as follows:
+</P>
+<P>ID value1 value2 ... valueM
+</P>
+<P>ID is the integer ID of the grid cell or surface element.  Note that
+for hierarchial grids, it must be the integer form of the ID, not the
+string form.  M values follow, corresponding to the <I>M</I> argument in the
+input script, following the <I>fname</I> argument.
+</P>
+<P>The following is an example of a correctly formatted file to set the
+values for a per-surface custom array with 2 columns.  Only the
+values for 3 surface elements are set.
+</P>
+<PRE># custom values for a few surface elements
+# calculated for test problem XYZ 
+</PRE>
+<PRE>3
+1 10.0 5.0
+20 12.0 6.5
+21 8.0 4.55 
+</PRE>
+<P>This file could be read with an input script command like this:
+</P>
+<PRE>custom surf create darray float 2 file file.surf 2 darray[1] darray[2] 
+</PRE>
 <HR>
 
 <P><B>Restrictions:</B> none
 </P>
 <P><B>Related commands:</B>
 </P>
-<P><A HREF = "mixture.html">mixture</A>, <A HREF = "group.html">group</A>, <A HREF = "region.html">region</A>
+<P><A HREF = "fix_custom.html">fix custom</A>, <A HREF = "mixture.html">mixture</A>,
+<A HREF = "group.html">group</A>, <A HREF = "region.html">region</A>
 </P>
-<P><B>Default:</B>
-</P>
-<P>The default settings for creation of a new custom attibute are type =
-float and size = 0.
+<P><B>Default:</B> none
 </P>
 </HTML>

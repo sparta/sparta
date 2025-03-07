@@ -65,6 +65,7 @@ int Grid::add_custom(char *name, int type, int size)
                                        "grid:ename");
     memory->grow(etype,ncustom,"grid:etype");
     memory->grow(esize,ncustom,"grid:etype");
+    memory->grow(estatus,ncustom,"grid:estatus");
     memory->grow(ewhich,ncustom,"grid:etype");
   }
 
@@ -73,6 +74,7 @@ int Grid::add_custom(char *name, int type, int size)
   strcpy(ename[index],name);
   etype[index] = type;
   esize[index] = size;
+  estatus[index] = 0;
 
   if (type == INT) {
     if (size == 0) {

@@ -39,13 +39,13 @@ variable            gdarray1 grid g_dvec+1
 variable            gdarray2 grid v_gdarray1+1
 variable            gdarray3 grid v_gdarray2+1
 
-custom              grid ivec set v_givec all NULL type int
-custom              grid iarray[1] set v_giarray1 all NULL type int size 2
-custom              grid iarray[2] set v_giarray2 all NULL type int size 2
-custom              grid dvec set v_gdvec all NULL
-custom              grid darray[1] set v_gdarray1 all NULL size 3
-custom              grid darray[2] set v_gdarray2 all NULL size 3
-custom              grid darray[3] set v_gdarray3 all NULL size 3
+custom              grid create ivec int 0 set ivec v_givec all NULL
+custom              grid create iarray int 2 set iarray[1] v_giarray1 all NULL
+custom              grid set iarray[2] v_giarray2 all NULL
+custom              grid create dvec float 0 set dvec v_gdvec all NULL
+custom              grid create darray float 3 set darray[1] v_gdarray1 all NULL
+custom              grid set darray[2] v_gdarray2 all NULL
+custom              grid set darray[3] v_gdarray3 all NULL
 
 species		    air.species N O
 mixture		    air N O vstream 100.0 0 0 
