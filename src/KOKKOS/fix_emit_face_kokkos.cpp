@@ -145,6 +145,7 @@ void FixEmitFaceKokkos::create_task(int icell)
 
 void FixEmitFaceKokkos::perform_task()
 {
+  copymode = 1;
   dt = update->dt;
   auto l_dimension = this->dimension;
   auto l_subsonic_style = this->subsonic_style;
@@ -168,9 +169,7 @@ void FixEmitFaceKokkos::perform_task()
   if (d_ninsert.extent(0) < ntask * ninsert_dim1)
     d_ninsert = DAT::t_int_1d("ninsert", ntask * ninsert_dim1);
 
-  copymode = 1;
   Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagFixEmitFace_ninsert>(0,ntask),*this);
-  copymode = 0;
 
   int ncands;
   d_task2cand = offset_scan(d_ninsert, ncands);
@@ -245,9 +244,7 @@ void FixEmitFaceKokkos::perform_task()
     error->one(FLERR,"Cannot yet use fix emit/face/kk with regions");
 
   int nsingle_reduce = 0;
-  copymode = 1;
   Kokkos::parallel_reduce(Kokkos::RangePolicy<DeviceType, TagFixEmitFace_perform_task>(0,ntask),*this,nsingle_reduce);
-  copymode = 0;
   nsingle += nsingle_reduce;
 
   int nnew;
@@ -340,6 +337,7 @@ void FixEmitFaceKokkos::perform_task()
           temp_rot,temp_vib,vstream);
     }
   }
+  copymode = 0;
 }
 
 KOKKOS_INLINE_FUNCTION

@@ -15,9 +15,6 @@
 #ifndef SPARTA_KK_COPY_H
 #define SPARTA_KK_COPY_H
 
-#include "grid_kokkos.h"
-#include "domain_kokkos.h"
-
 // Need a copy of classes instantiated on the stack at the class level scope.
 // However, this isn't directly possible due to issues with pointers.h
 //  and Kokkos allocation tracking.
@@ -35,7 +32,7 @@ class KKCopy {
     ptr_temp = NULL;
     save();
     obj.copy = 1;
-    obj.copymode = 0;
+    obj.uncopy = 0;
   }
 
   ~KKCopy() {}
@@ -43,6 +40,7 @@ class KKCopy {
   void copy(void* orig) {
     memcpy((void*)&obj, orig, sizeof(ClassStyle));
     obj.copy = 1;
+    obj.uncopy = 0;
   }
 
   void uncopy() {
@@ -51,6 +49,7 @@ class KKCopy {
       free(ptr_temp);
       ptr_temp = NULL;
     }
+    obj.uncopy = 1;
   }
 
  private:

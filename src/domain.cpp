@@ -58,7 +58,8 @@ Domain::Domain(SPARTA *sparta) : Pointers(sparta)
 
   nregion = maxregion = 0;
   regions = NULL;
-  copy = uncopy = copymode = 0;
+  copy = copymode = 0;
+  uncopy = 1;
 }
 
 /* ---------------------------------------------------------------------- */

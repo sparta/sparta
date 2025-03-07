@@ -155,7 +155,8 @@ Grid::Grid(SPARTA *sparta) : Pointers(sparta)
   hash = new MyHash();
   hashfilled = 0;
 
-  copy = uncopy = copymode = 0;
+  copy = copymode = 0;
+  uncopy = 1;
 }
 
 /* ---------------------------------------------------------------------- */
