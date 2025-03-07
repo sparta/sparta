@@ -33,7 +33,6 @@ keyword = {n} or {nevery} or {perspecies} or {region} or {modulate} or {subsonic
 
 [Examples:]
 
-
 fix in emit/face air all
 fix in emit/face mymix xlo yhi n 1000 nevery 10 region circle
 fix in emit/face air xlo subsonic 0.1 300
