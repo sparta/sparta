@@ -340,41 +340,58 @@ void SurfKokkos::remove_custom(int index)
 
   if (etype[index] == INT) {
     if (esize[index] == 0) {
+      memoryKK->destroy_kokkos(k_eivec.h_view[ewhich[index]].k_view,eivec[ewhich[index]]);
+      memoryKK->destroy_kokkos(k_eivec_local.h_view[ewhich[index]].k_view,eivec_local[ewhich[index]]);
       ncustom_ivec--;
       for (int i = ewhich[index]; i < ncustom_ivec; i++) {
         icustom_ivec[i] = icustom_ivec[i+1];
         ewhich[icustom_ivec[i]] = i;
         eivec[i] = eivec[i+1];
+        eivec_local[i] = eivec_local[i+1];
         k_eivec.h_view[i] = k_eivec.h_view[i+1];
+        k_eivec_local.h_view[i] = k_eivec_local.h_view[i+1];
       }
+      k_eivec.modify_host();
     } else {
+      memoryKK->destroy_kokkos(k_eiarray.h_view[ewhich[index]].k_view,eiarray[ewhich[index]]);
+      memoryKK->destroy_kokkos(k_eiarray_local.h_view[ewhich[index]].k_view,eiarray_local[ewhich[index]]);
       ncustom_iarray--;
       for (int i = ewhich[index]; i < ncustom_iarray; i++) {
         icustom_iarray[i] = icustom_iarray[i+1];
         ewhich[icustom_iarray[i]] = i;
-        eiarray[i] = eiarray[i+1];
         eicol[i] = eicol[i+1];
+        eiarray[i] = eiarray[i+1];
+        eiarray_local[i] = eiarray_local[i+1];
         k_eiarray.h_view[i] = k_eiarray.h_view[i+1];
+        k_eiarray_local.h_view[i] = k_eiarray_local.h_view[i+1];
       }
+      k_eiarray.modify_host();
     }
   } else if (etype[index] == DOUBLE) {
     if (esize[index] == 0) {
+      memoryKK->destroy_kokkos(k_edvec.h_view[ewhich[index]].k_view,edvec[ewhich[index]]);
       ncustom_dvec--;
       for (int i = ewhich[index]; i < ncustom_dvec; i++) {
         icustom_dvec[i] = icustom_dvec[i+1];
         ewhich[icustom_dvec[i]] = i;
         edvec[i] = edvec[i+1];
+        edvec_local[i] = edvec_local[i+1];
         k_edvec.h_view[i] = k_edvec.h_view[i+1];
+        k_edvec_local.h_view[i] = k_edvec_local.h_view[i+1];
       }
       k_edvec.modify_host();
     } else {
+      memoryKK->destroy_kokkos(k_edarray.h_view[ewhich[index]].k_view,edarray[ewhich[index]]);
+      memoryKK->destroy_kokkos(k_edarray_local.h_view[ewhich[index]].k_view,edarray_local[ewhich[index]]);
       ncustom_darray--;
       for (int i = ewhich[index]; i < ncustom_darray; i++) {
         icustom_darray[i] = icustom_darray[i+1];
         ewhich[icustom_darray[i]] = i;
-        edarray[i] = edarray[i+1];
         edcol[i] = edcol[i+1];
+        edarray[i] = edarray[i+1];
+        edarray_local[i] = edarray_local[i+1];
         k_edarray.h_view[i] = k_edarray.h_view[i+1];
+        k_edarray_local.h_view[i] = k_edarray_local.h_view[i+1];
       }
       k_edarray.modify_host();
     }

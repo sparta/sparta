@@ -75,7 +75,7 @@ ParticleKokkos::~ParticleKokkos()
   edcol = NULL;
 
   for (int i = 0; i < ncustom_ivec; i++)
-    memoryKK->destroy_kokkos(k_eiarray.h_view[i].k_view,eivec[i]);
+    memoryKK->destroy_kokkos(k_eivec.h_view[i].k_view,eivec[i]);
   for (int i = 0; i < ncustom_iarray; i++)
     memoryKK->destroy_kokkos(k_eiarray.h_view[i].k_view,eiarray[i]);
   for (int i = 0; i < ncustom_dvec; i++)

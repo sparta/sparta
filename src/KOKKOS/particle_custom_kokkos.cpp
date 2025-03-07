@@ -223,6 +223,7 @@ void ParticleKokkos::remove_custom(int index)
 
   if (etype[index] == INT) {
     if (esize[index] == 0) {
+      memoryKK->destroy_kokkos(k_eivec.h_view[ewhich[index]].k_view,eivec[ewhich[index]]);
       ncustom_ivec--;
       for (int i = ewhich[index]; i < ncustom_ivec; i++) {
         icustom_ivec[i] = icustom_ivec[i+1];
@@ -231,6 +232,7 @@ void ParticleKokkos::remove_custom(int index)
         k_eivec.h_view[i] = k_eivec.h_view[i+1];
       }
     } else {
+      memoryKK->destroy_kokkos(k_eiarray.h_view[ewhich[index]].k_view,eiarray[ewhich[index]]);
       ncustom_iarray--;
       for (int i = ewhich[index]; i < ncustom_iarray; i++) {
         icustom_iarray[i] = icustom_iarray[i+1];
@@ -242,6 +244,7 @@ void ParticleKokkos::remove_custom(int index)
     }
   } else if (etype[index] == DOUBLE) {
     if (esize[index] == 0) {
+      memoryKK->destroy_kokkos(k_edvec.h_view[ewhich[index]].k_view,edvec[ewhich[index]]);
       ncustom_dvec--;
       for (int i = ewhich[index]; i < ncustom_dvec; i++) {
         icustom_dvec[i] = icustom_dvec[i+1];
@@ -251,6 +254,7 @@ void ParticleKokkos::remove_custom(int index)
       }
       k_edvec.modify_host();
     } else {
+      memoryKK->destroy_kokkos(k_edarray.h_view[ewhich[index]].k_view,edarray[ewhich[index]]);
       ncustom_darray--;
       for (int i = ewhich[index]; i < ncustom_darray; i++) {
         icustom_darray[i] = icustom_darray[i+1];
