@@ -31,10 +31,10 @@ namespace SPARTA_NS {
 class ReactTCEKokkos : public ReactBirdKokkos {
  public:
   ReactTCEKokkos(class SPARTA *, int, char **);
-  ReactTCEKokkos(class SPARTA* sparta) : ReactBirdKokkos(sparta) {};
+  ReactTCEKokkos(class SPARTA* sparta) : ReactBirdKokkos(sparta) {copy = 1;}
   void init();
   int attempt(Particle::OnePart *, Particle::OnePart *,
-              double, double, double, double &, int &) { return 0; }
+              double, double, double, double &, int &) {return 0;}
 
 /* ---------------------------------------------------------------------- */
 

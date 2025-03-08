@@ -65,19 +65,23 @@ ParticleKokkos::ParticleKokkos(SPARTA *sparta) : Particle(sparta)
 
 ParticleKokkos::~ParticleKokkos()
 {
-  if (!uncopy && (copy || copymode)) return;
+  if (copy || copymode) return;
 
   particles = NULL;
   species = NULL;
 
-  eivec = NULL;
-  eiarray = NULL;
-  edvec = NULL;
-  edarray = NULL;
-
   ewhich = NULL;
   eicol = NULL;
   edcol = NULL;
+
+  for (int i = 0; i < ncustom_ivec; i++)
+    memoryKK->destroy_kokkos(k_eivec.h_view[i].k_view,eivec[i]);
+  for (int i = 0; i < ncustom_iarray; i++)
+    memoryKK->destroy_kokkos(k_eiarray.h_view[i].k_view,eiarray[i]);
+  for (int i = 0; i < ncustom_dvec; i++)
+    memoryKK->destroy_kokkos(k_edvec.h_view[i].k_view,edvec[i]);
+  for (int i = 0; i < ncustom_darray; i++)
+    memoryKK->destroy_kokkos(k_edarray.h_view[i].k_view,edarray[i]);
 
   ncustom_ivec = ncustom_iarray = 0;
   ncustom_dvec = ncustom_darray = 0;
