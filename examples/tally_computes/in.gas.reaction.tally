@@ -1,0 +1,52 @@
+################################################################################
+# thermal gas in a 3d box with collisions and chemistry
+# particles reflect off global box boundaries
+#
+# Note:
+#  - The "comm/sort” option to the “global” command is used to match MPI runs.
+#  - The “twopass” option is used to match Kokkos runs.
+# The "comm/sort" and "twopass" options should not be used for production runs.
+################################################################################
+
+seed	    	    12345
+dimension   	    3
+global              gridcut 1.0e-5 comm/sort yes
+
+boundary	    rr rr rr
+
+create_box  	    0 0.0001 0 0.0001 0 0.0001
+create_grid 	    10 10 10
+
+balance_grid        rcb part
+
+species		    air.species N2 N
+mixture		    air N2 N vstream 0.0 0.0 0.0 temp 20000.0
+mixture             air N2 frac 1.0
+mixture             air N frac 0.0
+
+global              nrho 7.07043E22
+global              fnum 7.07043E5
+
+collide		    vss air air.vss
+react               tce air.tce
+
+create_particles    air n 10000 twopass
+
+stats		    100
+compute             temp temp
+stats_style	    step cpu np nattempt ncoll nreact c_temp
+
+#dump                2 image all 100 image.*.ppm type type pdiam 3.0e-6 &
+#		    size 512 512 gline yes 0.005
+#dump_modify	    2 pad 4
+
+compute             1 gas/reaction/tally all all &
+                    reaction id/cell id1/pre id2/pre id1/post id2/post id3/post &
+                    type1/pre type2/pre type1/post type2/post type3/post &
+                    vx1/post vy1/post vz1/post vx2/post vy2/post vz2/post &
+                    vx3/post vy3/post vz3/post 
+
+dump                1 tally all 100 dump.gas.reaction.tally c_1[*]
+
+timestep 	    7.00E-9
+run 		    1000
