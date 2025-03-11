@@ -37,6 +37,11 @@ target_link_libraries(${TARGET_SPARTA_LIB} LINK_PUBLIC
                       ${TARGET_SPARTA_BUILD_TPLS})
 target_link_libraries(${TARGET_SPARTA_LIB} LINK_PUBLIC ${TARGET_SPARTA_PKGS})
 
+# link LAMMPS library -- ADD OPTION FLAG
+find_library(LAMMPS_LIBRARY lammps ../../lammps/build)
+target_include_directories(${TARGET_SPARTA_LIB} PUBLIC ../../lammps/src)
+target_link_libraries(${TARGET_SPARTA_LIB} LINK_PUBLIC ${LAMMPS_LIBRARY})
+
 include(${SPARTA_CMAKE_COMMON_DIR}/set/style_file_glob.cmake)
 
 add_custom_target(
