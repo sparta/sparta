@@ -22,25 +22,25 @@ style = {n} or {single} :l
     x,y,z = position of particle (distance units)
     vx,vy,vz = velocity of particle (velocity units) :pre
 zero or more keyword/value pairs may be appended :l
-keyword = {cut} or {global} or {region} or {species} or {density} or {temperature} or {velocity} or {custom} or {twopass} :l
+keyword = {cut} or {global} or {region} or {species} or {density} or {temperature} or {vstream} or {custom} or {twopass} :l
   {cut} value = {yes} or {no}
   {global} value = {yes} or {no}
   {region} value = region-ID
   {species} values = svar xvar yvar zvar
-    svar = name of equal-style variable for species
+    svar = name of equal-style variable for species type
     xvar,yvar,zvar = names of internal-style variables for x,y,z
   {density} values = dvar xvar yvar zvar
     svar = name of equal-style variable for density
     xvar,yvar,zvar = names of internal-style variables for x,y,z
   {temperature} values = tvar xvar yvar zvar
-    svar = name of equal-style variable for temperature
+    tvar = name of equal-style variable for temperature
     xvar,yvar,zvar = names of internal-style variables for x,y,z
-  {velocity} values = vxvar vyvar vzvar xvar yvar zvar
+  {vstream} values = vxvar vyvar vzvar xvar yvar zvar
     vxvar,vyvar,vzvar = names of equal-style variables for vx,vy,vz
     xvar,yvar,zvar = names of internal-style variables for x,y,z
   {custom} values = attribute g_name
-    attribute = {density} or {temperature}
-    g_name = custom per-grid vector with name
+    attribute = {nrho} or {temp} or {temp} or {vstream} or {fractions}
+    g_name = custom per-grid vector or array with name :pre
   {twopass} values = none :pre
 :ule
 
@@ -52,7 +52,6 @@ create_particles air n 100000 global yes
 create_particles air single 3 5.0 6.0 5.4 10.0 -1.0 0.0
 create_particles air n 0 species mySpecies xpos NULL zpos
 create_particles air n 0 density myDens xgrid ygrid NULL
-create_particles air n 0 custom density g_dens
 create_particles air n 0 temperature myTemp xgrid ygrid zgrid
 create_particles air n 0 velocity myVx NULL myVz xpos ypos NULL twopass :pre
 
@@ -84,21 +83,17 @@ particles is calculated by SPARTA as a function of the global {fnum}
 value, the mixture number density, and the flow volume of the
 simulation domain.
 
-The {fnum} value is set by the "global fnum"_global.html command and
-is the ratio of real, physical moleclules to simulation particles.
-The mixture {nrho} is set by the "mixture"_mixture.html command.  The
-flow volume of the simulation is the total volume of the simulation
-domain as specified by the "create_box"_create_box.html command, minus
-any volume that is interior to surfaces defined by the
-"read_surf"_read_surf.html command.
-
-Note that the flow volume includes volume contributions from grid
-cells cut by surfaces.  Depending on the value of the optional {cut}
-keyword, particles may be created in the entire volume external to
-surface, or only created in grid cells entirely external to surfaces.
-In the latter case, particles may be created in external cells at a
-(slightly) higher density to compensate for no particles being created
-in cut cells that contribute to the overall flow volume.
+The {fnum} value is set by the "global fnum"_global.html command.  The
+mixture {nrho} is set by the "mixture"_mixture.html command.  The flow
+volume of the simulation is the total volume of the simulation domain
+as specified by the "create_box"_create_box.html command, minus any
+volume that is interior to surfaces defined by the
+"read_surf"_read_surf.html command.  Note that the flow volume
+includes volume contributions from grid cells cut by surfaces.
+However particles are only created in grid cells entirely external to
+surfaces.  This means that particles may be created in external cells
+at a (slightly) higher density to compensate for no particles being
+created in cut cells that still contribute to the overall flow volume.
 
 If the {n} style is used with a non-zero {Np}, then exactly {Np}
 particles are created, which can be useful for debugging or
@@ -125,7 +120,9 @@ velocity sampled from the thermal temperature of the mixture.  Both
 the streaming velocity and thermal temperature are also set by the
 "mixture"_mixture.html command.  The internal rotational and
 vibrational energies of the particle are also set based on the {trot}
-and {tvib} settings for the mixture, as explained above.
+and {tvib} settings for the mixture, as explained above.  These
+default values based on the mixture properties can be overridden by
+keywords explained below.
 
 The {single} style creates a single particle.  This can be useful for
 debugging purposes, e.g. to advect a single particle towards a
@@ -133,9 +130,10 @@ surface.  A single particle of the specified species is inserted at
 the specified position and with the specified velocity.  In this case
 the {mix-ID} is ignored.
 
-:line
+The meaning of the optional keywords are described in the subsequent
+sub-sections.
 
-This is the meaning of the other allowed keywords.
+:line
 
 The {cut} keyword controls how grid cells cut by surfaces are treated.
 If {yes} is specified (the default) then particles are added to the
@@ -180,19 +178,34 @@ region.
 
 :line
 
-The {species}, {density}, {temperature}, and {velocity} keywords
-enable creation of particles whose properties vary spatially across
-the simulation domain.  They do this by using variable formulas which
-are functions of the position of a created particle or the center
-point of the grid cell the created particles are in.
+The {species}, {density}, {temp}, and {vstream} keywords can be used
+to create particles with properties which are spatially dependent.
+This is done by defined "equal-style variables"_variable.html with
+formulas that include the coordinates of the created particle or the
+coordinates of the grid cell containing the particle.
 
-Note that the {custom} keyword explained below can also do something
-similar.
+The formulas for these 4 keywords should be in the following form,
+where (x,y,z) are the coordinates of the created particle, and
+(cx,cy,cz) are the coordinates of the center point of the grid cell
+the particle is in.
+
+species formula = f(x,y,z) produces an integer from 1 to Nspecies
+density = f(cx,cy,cz) produces a unitless scale factor
+temp = f(x,y,z) = produces a unitless scale factor
+vstream = 3 formulas for vx,vy,vz = vx(x,y,z) (and vy,vz) produces a value in velocity units :ul
+
+Note that the {species}, {temp}, {vstream} keywords define particle
+attributes based on the position of an individual particle.  This is
+in contrast to the {custom nrho}, {custom temp}, {custom vstream}, and
+{custom fractions} keywords described below, which define particle
+attributes at the resolution of individual grid cells.  The {density}
+keyword is similar to the {custom nrho} keyword, in that it operates
+on individual grid cells.
 
 The {species} keyword can be used to create particles with a
 spatially-dependent separation of species.  The specified {svar} is
 the name of an "equal-style variable"_variable.html whose formula
-should evaluate to a species number, i.e. an integer from 1 to Nsp,
+should evaluate to a species type, i.e. an integer from 1 to Nsp,
 where Nsp is the number of species in the mixture with mix-ID.  Since
 equal-style variables evaluate to floating-point values, this value is
 truncated to an integer value.  The formula for the species variable
@@ -269,23 +282,22 @@ spatially-dependent thermal temperature variation.  The specified
 {tvar} is the name of an "equal-style variable"_variable.html whose
 formula should evaluate to a positive value.  The formula for the
 {tvar} variable can use one or two or three variables which will store
-the x, y, or z coordinates of the particle that is being created. If
-used, these other variables must be "internal-style
+the x, y, or z coordinates of the geometric center point of a grid
+cell.  If used, these other variables must be "internal-style
 variables"_variable.html defined in the input script; their initial
 numeric values can by anything.  Their names are specified as {xvar},
 {yvar}, and {zvar}.  If any of them is not used in the {tvar} formula,
 it can be specified as NULL.
 
-When a particle is added to a grid cell, its coordinates are stored in
-{xvar}, {yvar}, {zvar} if they are defined.  The {tvar} variable is
-then evaluated.  The returned value is used as a scale factor on the 3
-mixture temperatures for thermal, rotational, and vibrational
-temperature.  Thus a value of 0.5 would create a particle with a
-thermal temperature half of what would otherwise be the case, due to
-the mixture {temp} setting which defines the thermal temperature, as
+When particles are added to a grid cell, its center point coordinates
+are stored in {xvar}, {yvar}, {zvar} if they are defined.  The {tvar}
+variable is then evaluated.  The returned value is used as a scale
+factor on the thermal temperature number for particles created in that
+grid cell.  Thus a value of 0.5 would create particles with a thermal
+temperature half of what would otherwise be the case, due to the
+mixture {temp} setting which defines the thermal temperature, as
 explained above.  A value of 1.2 would create particles with a 20%
-higher thermal temperature.  Ditto for the rotational and vibrational
-temperature of the created particle.
+higher thermal temperature.
 
 As an example, these commands can be used in a 2d simulation, to
 create a thermal temperature gradient in x, where the temperature on
@@ -296,14 +308,14 @@ variable x internal 0
 variable t equal "1.0 + 2.0*(v_x-xlo)/(xhi-xlo)"
 create_particles air n 10000 temperature t x NULL NULL :pre
 
-The {velocity} keyword can be used to create particles with a
+The {vstream} keyword can be used to create particles with a
 spatially-dependent streaming velocity.  The specified {vxvar},
 {vyvar}, {vzvar} are the names of "equal-style
 variables"_variable.html whose formulas should evaluate to the
 corresponding component of the streaming velocity.  If any of them are
 specified as NULL, then that streaming velocity component is set by
-the corresponding global or mixture streaming velocity component, the
-same as if the {velocity} keyword were not used.
+the corresponding mixture streaming velocity component, the same as if
+the {vstream} keyword were not used.
 
 The formulas for the {vxvar}, {vyvar}, {vzvar} variables can use one
 or two or three variables which will store the x, y, or z coordinates
@@ -318,8 +330,8 @@ When a particle is added, its coordinates are stored in {xvar},
 {yvar}, {zvar} if they are defined.  The {vxvar}, {vyvar}, {vzvar}
 variables are then evaluated.  The returned values are used to set the
 streaming velocity of that particle.  A thermal velocity is also added
-to the particle, using the the global or mixture temperature, as
-described above.
+to the particle, using the temperature set by the mixture or {temp}
+keyword, as described above.
 
 As an example, these commands can be used in a 2d simulation, to give
 particles an initial velocity pointing towards the upper right corner
@@ -338,48 +350,71 @@ create_particles air n 10000 velocity vx vy NULL x y NULL :pre
 
 :line
 
-The {custom} keyword enables creation of particles whose properties
-vary spatially across the simulation domain.  This is done by using
-custom per-grid vectors defined by other commands.  E.g. the
-"read_grid"_read_grid.html command which can read per-grid attributes
-included in the grid data file.  Or the custom command which allows
-for definition of custom per-grid vectors and their initialization by
-use of "grid-style variables"_variable.html or by reading the values
-from a file.  See "Section Howto 6.17"_Section_howto.html#howto_17 for
-a discussion of custom per-grid attributes.
+The {custom} keyword can be used one or more times to tailor the
+attributes of created particles within individual grid cells.  This is
+done by using custom per-grid vectors or arrays defined by other
+commands.
 
-Note that the {species}, {density}, {temperature}, and {velocity}
-keywords explained above can also do something similar.
+For example, the "read_grid"_read_grid.html command can read per-grid
+attributes included in a grid data file.  The "custom"_custom.html
+command allows for definition of custom per-grid vectors or arrays and
+their initialization by use of "grid-style variables"_variable.html or
+by reading the values from a file.
 
-The {attribute} value of the {custom} keyword can be any of the
+See "Section Howto 6.17"_Section_howto.html#howto_17 for a discussion
+of custom per-grid attributes.
+
+The {attribute} values of the {custom} keyword can be any of the
 following:
 
-NOTE: should these be absolute values or scale factors ?
-
-density = number density (# per length^3 units) = per-grid vector
-temperature = temperature (temperature units) = per-grid vector :ul
+nrho = number density (# per volume or area units) = per-grid vector
+temp = temperature (temperature units) = per-grid vector
+vstream = 3-component streaming velocity (velocity units) = per-grid array with 3 columns
+fractions = species fractions (unitless) = per-grid array :ul
 
 The {g_name} value of the {custom} keyword is the name of the custom
 per-grid vector or array.  It must store floating-point values and be
-a vector or array, as indicated in the list above.  NOTE: only
-per-grid vectors are currently included as attributes for the {custom}
-keyword.
+a vector or array, as indicated in the list above.
 
-The {g_name} for the {attribute density} keyword specifies a per-grid
-vector which stores a scale factor on the number of particles to
-create in each grid cell.  Thus a value of 0.5 would create half as
-many particles in that grid cell as would otherwise be the case, due
-to the global {fnum} and mixture {nrho} settings that define the
-density, as explained above.  A value of 1.2 would create 20% more
-particles in that grid cell.
+Note that the {custom} keyword defines particle attributes at the
+resolution of individual grid cells.  This is in contrast to the
+{species}, {temp}, {vstream} keywords described above, which can
+define particle attributes based on the position of an individual
+particle.  The {custom density} keyword is similar to the {nrho}
+keyword, in that it operates on individual grid cells.
 
-The {g_name} for the {attribute temperature} keyword specifies a
-per-grid vector which stores a scale factor on the thermal temperature
-of particles to create in each grid cell.  Thus a value of 0.5 would
-create particles with a thermal temperature half of what would
-otherwise be the case, due to the mixture {temp} setting which defines
-the thermal temperature, as explained above.  A value of 1.2 would
-create particles with a 20% higher thermal temperature.
+The {custom} attribute {nrho} sets a number density for each grid cell
+from a per-grid custom vector.  The values are used to calculate the
+count of particles created within each grid cell.  The nrho values
+should be in per-volume units = per-length^3 for 3d models or
+axisymmetric models.  The values should be in per-area units =
+per-length^2 for 2d models.
+
+The {custom} attribute {temp} sets a temperature for each grid cell
+from a per-grid vector.  This temperature is used as the thermal
+temeperature for each created particle which means it affects its
+thermal velocity components as well as its rotational and vibrational
+energies.
+
+The {custom} attribute {vstream} sets a streaming velocity for each
+grid cell from a 3-column per-grid cusstom array.
+
+The {custom} attribute {fractions} sets the relative species fractions
+for grid cell from an N-column per-grid custom array, where N is the
+number of species in the mixture specified with this command.  For
+each grid cell, the N values will be used to set the relative
+fractions of created particles in that cell.
+
+For each grid cell, the N per-species fractional values must sum to
+1.0.  However, one or more of the numeric values can be < zero, say M
+of them.  In this case, each of the M values will be reset to (1 -
+sum)/M, where sum is the sum of the N-M values which are >= zero.
+
+Note that the ordering of species within the N columns of the custom
+per-grid array, is the same as the order of species within the mix-ID
+mixture.  This is determined by the "mixture"_mixture.html command.
+It is the order the gas species names were listed when the mixture
+command was specified (one or more times).
 
 :line
 
@@ -421,7 +456,13 @@ effectively.
 
 :line
 
-[Restrictions:] none
+[Restrictions:]
+
+The keywords {density} and {custom nrho} cannot both be used.  This is
+because they are both methods for setting the number of particles
+created.  Ditto for {temperature} amd {custom temp}.  Ditto for
+{vstream} and {custom vstream}.  Ditto for {species} and {custom
+fractions}.
 
 [Related commands:]
 

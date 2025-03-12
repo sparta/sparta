@@ -39,7 +39,7 @@ class CreateParticles : protected Pointers {
   double xp,yp,zp,vx,vy,vz;
   class Region *region;
 
-  int speciesflag,densflag,velflag,tempflag,normflag;
+  int speciesflag,densflag,vstreamflag,tempflag,normflag;
   char *sstr,*sxstr,*systr,*szstr;
   char *dstr,*dxstr,*dystr,*dzstr;
   char *tstr,*txstr,*tystr,*tzstr;
@@ -53,18 +53,13 @@ class CreateParticles : protected Pointers {
   char *txstr_copy,*tystr_copy,*tzstr_copy;
   char *vstrx_copy,*vstry_copy,*vstrz_copy;
 
-  int density_custom_flag,temp_custom_flag;
-  char *density_custom_id,*temp_custom_id;
-  int density_custom_index,temp_custom_index;
-  double *density_custom,*temp_custom;
-
   virtual void create_single();
   void create_local();
   void create_local_twopass();
   int species_variable(double *);
   double density_variable(double *, double *);
   double temperature_variable(double *);
-  void velocity_variable(double *, double *, double *);
+  void vstream_variable(double *, double *, double *);
   int outside_region(int, double *, double *);
 };
 
