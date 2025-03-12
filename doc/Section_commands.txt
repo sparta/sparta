@@ -395,6 +395,7 @@ This is indicated by additional letters in parenthesis: k = KOKKOS.
 "field/grid"_fix_field_grid.html,
 "field/particle"_fix_field_particle.html,
 "grid/check (k)"_fix_grid_check.html,
+"lammps"_fix_lammps.html,
 "move/surf (k)"_fix_move_surf.html,
 "print"_fix_print.html,
 "surf/temp"_fix_surf_temp.html,

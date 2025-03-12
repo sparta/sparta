@@ -1,0 +1,123 @@
+<HTML>
+<CENTER><A HREF = "https://sparta.github.io">SPARTA WWW Site</A> - <A HREF = "Manual.html">SPARTA Documentation</A> - <A HREF = "Section_commands.html#comm">SPARTA Commands</A> 
+</CENTER>
+
+
+
+
+
+
+<HR>
+
+<H3>fix lammps command 
+</H3>
+<P><B>Syntax:</B>
+</P>
+<PRE>fix ID lammps group-ID Nevery source
+</PRE>
+<UL><LI>ID is documented in <A HREF = "fix.html">fix</A> command 
+
+<LI>lammps = style name of this fix command 
+
+<LI>group-ID = group ID for which grid cells to consider 
+
+<LI>Nevery = couple to LAMMPS once every Nevery steps
+
+<LI>source = computeID
+
+<PRE>  computeID = c_ID for a compute that calculates per grid number density values
+</PRE>
+
+</UL>
+<P><B>Examples:</B>
+</P>
+<PRE>group face grid region front all
+compute 1 grid all all nrho
+fix md lammps face_grid 100 c_1
+</PRE>
+<P><B>Description:</B>
+</P>
+<P>Concurrently couple a molecular dynamics (MD) simulation to SPARTA. 
+This command will invoke an instance of the MD software package 
+<A HREF = "https://lammps.org">LAMMPS</A> every Nevery steps. It 
+automatically translates DSMC properties to a classical molecular 
+dynamics domain, requiring the per-grid number density as an additional 
+input. A user-defined group of cells can be selected for coupling.
+</P>
+<P>This fix creates an MD simulation based on the current state of the
+SPARTA simulation as described in <A HREF = "#Linke25">(Linke25)</A>. 
+It accesses the position and velocity of particles and decomposes them 
+into atoms with no restriction to fnum. Based on the provided group-ID, 
+one or more cells are coupled to MD and atomistic information is calculated. 
+The insights are automatically passed back to SPARTA and the simulation continues.
+</P>
+<P>Note that this fix requires knowledge of molecular dynamics. To adjust
+the MD simulation, you must edit the LAMMPS input script constructed 
+in the Lifting operator in src/fix_lammps.cpp. To adjust the 
+information passed from the MD to the DSMC domain, you must edit the 
+Restricting operator in src/fix_lammps.cpp.
+</P>
+<P>In its provided form, fix lammps calculates the temperature of a nickel 
+surface in an air flow. The temperature is passed back to SPARTA for a 
+more accurate surface-flow interaction. See the examples/couple 
+directory for input scripts that use this fix.
+</P>
+<P>Note that this fix can be run in parallel. For parallel runs, the MD instance
+will inherit all procs for the MD simulation. GPUs can also be employed through the 
+KOKKOS package and extending input arguments to the LAMMPS instance (see src/fix_lammps.cpp).
+</P>
+<P>The specified <I>group-ID</I> must be the name of a grid cell group,
+as defined by the <A HREF = "group.html">group grid</A> command, which contains a
+set of grid cells.
+</P>
+<P>The specfied <I>Nevery</I> determines how often the DSMC-MD coupling
+takes place.
+</P>
+<P>The <I>source</I> is a per-grid quantity calculated by a compute, such 
+as the <A HREF = "compute_grid.html">compute grid</A> command. It must
+calculate the number density of all cells.
+</P>
+<HR>
+
+<P><B>Restart, output info:</B>
+</P>
+<P>No information about this fix is written to <A HREF = "restart.html">binary restart
+files</A>.
+</P>
+<P>However, in its provided formulation, this fix defines a custom surface 
+attribute that is written to the restart file.  Namely the 
+floating-point vector of temperature values for each surface with the 
+name <I>temperature</I>.  As explained on the <A HREF = "read_restart.html">read_restart</A>
+doc page these values will be re-assigned to surface when a restart file
+is read.  If a new fix lammps command is specified in the restart
+script as well as a surface collision model which uses the custom
+attribute updated by this fix, then the per-surf temperatures and
+updating process will continue to be used in the continued run.
+</P>
+<P>No global or per-surf quantities are stored by this fix for access by
+various output commands.
+</P>
+<P>However, the per-surf attribute defined by this fix can be
+accessed by the <A HREF = "dump.html">dump surf</A> command, as s_temperature.  That means
+those per-surf values can be written to surface dump files. See the 
+examples/couple directory for an input script where this is shown.
+</P>
+<P><B>Restrictions:</B>
+</P>
+<P>In its provided formulation, this fix can only be used to calculate the
+temperature of a nickel surface in an air flow. However, this fix provides
+the framework that allows for easy adaptation to the specific needs of a 
+coupled DSMC-MD simulation. Templates for various adjustments can be found in
+src/fix_lammps.cpp.
+</P>
+<P><B>Related commands:</B> none
+</P>
+<P><B>Default:</B> none
+</P>
+<HR>
+
+<A NAME = "Linke25"></A>
+
+<P><B>(Linke25)</B> T. Linke et al., TBD. (2025).
+</P>
+</HTML>

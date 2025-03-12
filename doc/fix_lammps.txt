@@ -1,0 +1,111 @@
+"SPARTA WWW Site"_sws - "SPARTA Documentation"_sd - "SPARTA Commands"_sc :c
+
+:link(sws,https://sparta.github.io)
+:link(sd,Manual.html)
+:link(sc,Section_commands.html#comm)
+
+:line
+
+fix lammps command :h3
+
+[Syntax:]
+
+fix ID lammps group-ID Nevery source :pre
+
+ID is documented in "fix"_fix.html command :ulb,l
+lammps = style name of this fix command :l
+group-ID = group ID for which grid cells to consider  :l
+Nevery = couple to LAMMPS once every Nevery steps :l
+source = computeID :l
+  computeID = c_ID for a compute that calculates per grid number density values :pre,ule
+
+[Examples:]
+
+group face grid region front all
+compute 1 grid all all nrho
+fix md lammps face_grid 100 c_1 :pre
+
+[Description:]
+
+Concurrently couple a molecular dynamics (MD) simulation to SPARTA. 
+This command will invoke an instance of the MD software package 
+"LAMMPS"_https://lammps.org every Nevery steps. It automatically 
+translates DSMC properties to a classical molecular dynamics domain, 
+requiring the per-grid number density as an additional input. A 
+user-defined group of cells can be selected for coupling.
+
+This fix creates an MD simulation based on the current state of the
+SPARTA simulation as described in "(Linke25)"_#Linke25. It accesses 
+the position and velocity of particles and decomposes them into atoms 
+with no restriction to fnum. Based on the provided group-ID, one or 
+more cells are coupled to MD and atomistic information is calculated. 
+The insights are automatically passed back to SPARTA and the simulation 
+continues.
+
+Note that this fix requires knowledge of molecular dynamics. To adjust
+the MD simulation, you must edit the LAMMPS input script constructed 
+in the Lifting operator in src/fix_lammps.cpp. To adjust the 
+information passed from the MD to the DSMC domain, you must edit the 
+Restricting operator in src/fix_lammps.cpp. 
+
+In its provided form, fix lammps calculates the temperature of a nickel 
+surface in an air flow. The temperature is passed back to SPARTA for a 
+more accurate surface-flow interaction. See the examples/couple 
+directory for input scripts that use this fix.
+
+Note that this fix can be run in parallel. For parallel runs, the MD instance
+will inherit all procs for the MD simulation. GPUs can also be employed through the 
+KOKKOS package and extending input arguments to the LAMMPS instance (see src/fix_lammps.cpp).
+
+The specified {group-ID} must be the name of a grid cell group,
+as defined by the "group grid"_group.html command, which contains a
+set of grid cells.
+
+The specfied {Nevery} determines how often the DSMC-MD coupling
+takes place.
+
+The {source} is a per-grid quantity calculated by a
+compute, such as the "compute grid"_compute_grid.html command. It must
+calculate the number density of all cells.
+
+:line
+
+[Restart, output info:]
+
+No information about this fix is written to "binary restart
+files"_restart.html.
+
+However, in its provided formulation, this fix defines a custom surface 
+attribute that is written to the restart file.  Namely the 
+floating-point vector of temperature values for each surface with the 
+name {temperature}.  As explained on the "read_restart"_read_restart.html 
+doc page these values will be re-assigned to surface when a restart file
+is read.  If a new fix lammps command is specified in the restart
+script as well as a surface collision model which uses the custom
+attribute updated by this fix, then the per-surf temperatures and
+updating process will continue to be used in the continued run.
+
+No global or per-surf quantities are stored by this fix for access by
+various output commands.
+
+However, the per-surf attribute defined by this fix can be
+accessed by the "dump surf"_dump.html command, as s_temperature.  That means
+those per-surf values can be written to surface dump files. See the 
+examples/couple directory for an input script where this is shown.
+
+[Restrictions:]
+
+In its provided formulation, this fix can only be used to calculate the
+temperature of a nickel surface in an air flow. However, this fix provides
+the framework that allows for easy adaptation to the specific needs of a 
+coupled DSMC-MD simulation. Templates for various adjustments can be found in
+src/fix_lammps.cpp.
+
+[Related commands:] none
+
+[Default:] none
+
+:line
+
+:link(Linke25)
+[(Linke25)] T. Linke et al., TBD. (2025).
