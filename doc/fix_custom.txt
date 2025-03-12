@@ -25,8 +25,8 @@ action = {set} or {file} :l
     region-ID = only apply to particle/grid/surf in region, NULL to not test
   {file} args = fname M cname1 cname2 ... cnameM
       fname = wildcard name of file with custom attributes for grid cells or surf elements
-    M = # of custom values listed on each line of the file
-    cname1,cname2,...,cnameM = which attribute each line value in the file is assigned to
+    M = # of custom values listed on each line of each file
+    cname1,cname2,...,cnameM = which attribute each line's values are assigned to
       cnameI = name of a custom vector
       cnameI = name\[N\] for Nth column of a custom array with name :pre
 :ule
@@ -177,6 +177,35 @@ must be of the form name\[N\] for the Nth column of the array.
 The format of each file is identical to the file format explained on
 the "custom"_custom.html command doc page for use with its {file}
 action.
+
+:line
+
+The {file/coarse} action resets the values of one or more custom
+attributes by reading them from the {fname} file.  It can only be used
+with {style grid}, not with {style surf} or {style particle}.
+
+IMPORTANT NOTE: The {file/coarse} action has NOT yet been implemented
+for this command.
+
+The specified {fname} must contain a wildcard "*" character which is
+replaced by the current timestep each time this fix is invoked.  For
+example, if {Nfreq} = 1000 and {fname} is specified as
+surf.*.attribute, then files surf.1000.attribute, surf.2000.attribute,
+surf.3000.attribute, etc will be read on timesteps 1000, 2000, 3000,
+etc.
+
+The number of {cname1,cname2,...,cnameM} arguments must match the
+number of values listed on each line in the file.  A {cnameI} with no
+brackets is the name of a custom vector.  For a custom array, {cnameI}
+must be of the form name\[N\] for the Nth column of the array.
+
+The format of each file is identical to the file format explained on
+the "custom"_custom.html command doc page for use with its
+{file/coarse} action.
+
+Note that if there are multiple coarse files for each timestep, then
+the specified {fname} must contain both wildcard "*" and "%"
+characters.
 
 :line
 

@@ -33,8 +33,8 @@
     region-ID = only apply to particle/grid/surf in region, NULL to not test
   <I>file</I> args = fname M cname1 cname2 ... cnameM
       fname = wildcard name of file with custom attributes for grid cells or surf elements
-    M = # of custom values listed on each line of the file
-    cname1,cname2,...,cnameM = which attribute each line value in the file is assigned to
+    M = # of custom values listed on each line of each file
+    cname1,cname2,...,cnameM = which attribute each line's values are assigned to
       cnameI = name of a custom vector
       cnameI = name[N] for Nth column of a custom array with name 
 </PRE>
@@ -186,6 +186,35 @@ must be of the form name[N] for the Nth column of the array.
 <P>The format of each file is identical to the file format explained on
 the <A HREF = "custom.html">custom</A> command doc page for use with its <I>file</I>
 action.
+</P>
+<HR>
+
+<P>The <I>file/coarse</I> action resets the values of one or more custom
+attributes by reading them from the <I>fname</I> file.  It can only be used
+with <I>style grid</I>, not with <I>style surf</I> or <I>style particle</I>.
+</P>
+<P>IMPORTANT NOTE: The <I>file/coarse</I> action has NOT yet been implemented
+for this command.
+</P>
+<P>The specified <I>fname</I> must contain a wildcard "*" character which is
+replaced by the current timestep each time this fix is invoked.  For
+example, if <I>Nfreq</I> = 1000 and <I>fname</I> is specified as
+surf.*.attribute, then files surf.1000.attribute, surf.2000.attribute,
+surf.3000.attribute, etc will be read on timesteps 1000, 2000, 3000,
+etc.
+</P>
+<P>The number of <I>cname1,cname2,...,cnameM</I> arguments must match the
+number of values listed on each line in the file.  A <I>cnameI</I> with no
+brackets is the name of a custom vector.  For a custom array, <I>cnameI</I>
+must be of the form name[N] for the Nth column of the array.
+</P>
+<P>The format of each file is identical to the file format explained on
+the <A HREF = "custom.html">custom</A> command doc page for use with its
+<I>file/coarse</I> action.
+</P>
+<P>Note that if there are multiple coarse files for each timestep, then
+the specified <I>fname</I> must contain both wildcard "*" and "%"
+characters.
 </P>
 <HR>
 
