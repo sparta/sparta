@@ -585,19 +585,15 @@ void FixEmitSurf::create_task(int icell)
     // initialize other task values with mixture or per-surf custom properties
     // may be overwritten by subsonic methods
 
-    double utemp;
-
     tasks[ntask].nrho = nrho;
     if (temp_custom_flag) {
       tasks[ntask].temp_thermal = temp_thermal_custom;
       tasks[ntask].temp_rot = temp_thermal_custom;
       tasks[ntask].temp_vib = temp_thermal_custom;
-      utemp = temp_thermal_custom;
     } else {
       tasks[ntask].temp_thermal = temp_thermal;
       tasks[ntask].temp_rot = particle->mixture[imix]->temp_rot;
       tasks[ntask].temp_vib = particle->mixture[imix]->temp_vib;
-      utemp = temp_thermal;
     }
     tasks[ntask].magvstream = magvstream;
     tasks[ntask].vstream[0] = vstream[0];
