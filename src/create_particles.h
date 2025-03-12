@@ -53,6 +53,12 @@ class CreateParticles : protected Pointers {
   char *txstr_copy,*tystr_copy,*tzstr_copy;
   char *vstrx_copy,*vstry_copy,*vstrz_copy;
 
+  int nrho_custom_flag,vstream_custom_flag,temp_custom_flag,fractions_custom_flag;
+  char *nrho_custom_id,*vstream_custom_id,*temp_custom_id,*fractions_custom_id;
+  int nrho_custom_index,vstream_custom_index,temp_custom_index,fractions_custom_index;
+  double *nrho_custom,*temp_custom;
+  double **vstream_custom,**fractions_custom;
+  
   virtual void create_single();
   void create_local();
   void create_local_twopass();
@@ -61,6 +67,7 @@ class CreateParticles : protected Pointers {
   double temperature_variable(double *);
   void vstream_variable(double *, double *, double *);
   int outside_region(int, double *, double *);
+  void fractions_to_cummulative(int, double *, double *);
 };
 
 }
