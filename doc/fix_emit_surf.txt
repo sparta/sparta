@@ -248,15 +248,15 @@ from individual surface elements.  This is done by using custom
 per-surf vectors or arrays defined by other commands.
 
 For example, the "read_surf"_read_surf.html command can read per-surf
-attributes included in the surface data file.  The
-"custom"_custom.html and "fix custom"_fix_custom.html commands allow
-for definition of custom per-surf vectors or arrays and their
-initialization by use of "surf-style variables"_variable.html or by
-reading the values from a file.  Note that the use of "fix custom"
-allows for the resetting of custom attributes once every N timesteps,
-which allows for time-dependence in per-surface emission properties.
-The "fix surf/temp"_fix_surf_temp.html command resets per-surf
-temperatures based on gas collisions with each surface element.
+attributes included in a surface data file.  The "custom"_custom.html
+and "fix custom"_fix_custom.html commands allow for definition of
+custom per-surf vectors or arrays and their initialization by use of
+"surf-style variables"_variable.html or by reading the values from a
+file.  Note that the use of "fix custom" allows for the resetting of
+custom attributes once every N timesteps, which allows for
+time-dependence in per-surface emission properties.  The "fix
+surf/temp"_fix_surf_temp.html command resets per-surf temperatures
+based on gas collisions with each surface element.
 
 See "Section Howto 6.17"_Section_howto.html#howto_17 for a discussion
 of custom per-surf attributes.
@@ -267,7 +267,7 @@ either the {n} or {subsonic} keywords.
 The {attribute} value of the {custom} keyword can be any of the
 following:
 
-nrho = number density (# per length^3 units) = per-surf vector
+nrho = number density (# per volume or area units) = per-surf vector
 vstream = 3-component streaming velocity (velocity units) = per-surf array with 3 columns
 speed = length of streaming velocity vector in normal direction (velocity units) = per-surf vector
 temp = temperature (temperature units) = per-surf vector
@@ -283,8 +283,14 @@ it uses the mixture properties of the specified {mix-ID} for number
 density, streaming velocity, temperature, and relative species
 fractions.  The same values are used for all surface elements.  If the
 {custom} keyword is used for one or more of these properties, the
-values of the associated custom per-surf vector(s) or array(s)
-override the default mixture properties.
+values of the associated custom per-surf vector or array override the
+default mixture properties.
+
+The {custom} attribute {nrho} sets a number density used to calculate
+the count of particles emitted from each surface element.  The nrho
+values should be in per-volume units = per-length^3 for 3d models
+or axisymmetric models.  The values should be in per-area units =
+per-length^2 for 2d models.
 
 The {custom} attribute {vstream} can only be used if the {normal}
 keyword is set to {no}, which is the default.  In this case it must
@@ -312,8 +318,8 @@ to 1.0.  However, one or more of the numeric values can be < zero, say
 M of them.  In this case, each of the M values will be reset to (1 -
 sum)/M, where sum is the sum of the N-M values which are >= zero.
 
-Note that the order of species within the N columns of the custom
-per-surf array, if the same as the order of species within the mix-ID
+Note that the ordering of species within the N columns of the custom
+per-surf array, is the same as the order of species within the mix-ID
 mixture.  This is determined by the "mixture"_mixture.html command.
 It is the order the gas species names were listed when the mixture
 command was specified (one or more times).
