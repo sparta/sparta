@@ -36,6 +36,7 @@ using namespace SPARTA_NS;
 using namespace MathConst;
 
 enum{UNKNOWN,OUTSIDE,INSIDE,OVERLAP};   // same as Grid
+enum{INT,DOUBLE};                       // several files
 
 #define MAXATTEMPT 1024      // max attempts to insert a particle into cut/split cell
 #define EPSZERO 1.0e-14
@@ -96,6 +97,10 @@ void CreateParticles::command(int narg, char **arg)
   dstr = dxstr = dystr = dzstr = NULL;
   tstr = txstr = tystr = tzstr = NULL;
   vxstr = vystr = vzstr = vstrx = vstry = vstrz = NULL;
+  nrho_custom_flag = vstream_custom_flag = temp_custom_flag =
+    fractions_custom_flag = 0;
+  nrho_custom_id = vstream_custom_id = temp_custom_id =
+    fractions_custom_id = NULL;
 
   while (iarg < narg) {
     if (strcmp(arg[iarg],"cut") == 0) {
@@ -170,7 +175,35 @@ void CreateParticles::command(int narg, char **arg)
 
     } else if (strcmp(arg[iarg],"custom") == 0) {
 
-      // NOTE: prevent both per-particle and per-grid keywords to both be defined
+      if (iarg+3 > narg) error->all(FLERR,"Illegal create_particles command");
+
+      if (strcmp(arg[iarg+1],"nrho") == 0) {
+        nrho_custom_flag = 1;
+        if (strstr(arg[iarg+2],"s_") != arg[iarg+2])
+          error->all(FLERR,"Illegal create_particles command");
+        nrho_custom_id = &arg[iarg+2][2];
+        
+      } else if (strcmp(arg[iarg+1],"vstream") == 0) {
+        vstream_custom_flag = 1;
+        if (strstr(arg[iarg+2],"s_") != arg[iarg+2])
+          error->all(FLERR,"Illegal create_particles command");
+        vstream_custom_id = &arg[iarg+2][2];
+
+      } else if (strcmp(arg[iarg+1],"temp") == 0) {
+        temp_custom_flag = 1;
+        if (strstr(arg[iarg+2],"s_") != arg[iarg+2])
+          error->all(FLERR,"Illegal create_particles command");
+        temp_custom_id = &arg[iarg+2][2];
+
+      } else if (strcmp(arg[iarg+1],"fractions") == 0) {
+        fractions_custom_flag = 1;
+        if (strstr(arg[iarg+2],"s_") != arg[iarg+2])
+          error->all(FLERR,"Illegal create_particles command");
+        fractions_custom_id = &arg[iarg+2][2];
+
+      } else error->all(FLERR,"Illegal create_particles command");
+
+      iarg += 3;
 
     } else if (strcmp(arg[iarg],"twopass") == 0) {
       if (iarg+1 > narg) error->all(FLERR,"Illegal create_particles command");
@@ -182,6 +215,15 @@ void CreateParticles::command(int narg, char **arg)
   if (globalflag)
     error->all(FLERR,"Create_particles global option not yet implemented");
 
+  if (speciesflag && fractions_custom_flag)
+    error->all(FLERR,"Create_particles cannot use species and custom fractions together");
+  if (densflag && nrho_custom_flag)
+    error->all(FLERR,"Create_particles cannot use density and custom nrho together");
+  if (tempflag && temp_custom_flag)
+    error->all(FLERR,"Create_particles cannot use temperature and custom temp together");
+  if (vstreamflag && vstream_custom_flag)
+    error->all(FLERR,"Create_particles cannot use vstream and custom vstream together");
+  
   // error checks and further setup for variables
 
   if (speciesflag) {
@@ -314,6 +356,52 @@ void CreateParticles::command(int narg, char **arg)
       if (!input->variable->internal_style(vvarz))
         error->all(FLERR,"Variable for create_particles is invalid style");
     }
+  }
+
+  // error checks and further setup for custom attributes
+
+  int custom_any = 0;
+  if (nrho_custom_flag || vstream_custom_flag || temp_custom_flag ||
+      fractions_custom_flag) custom_any = 1;
+
+  if (nrho_custom_flag) {
+    nrho_custom_index = grid->find_custom(nrho_custom_id);
+    if (nrho_custom_index < 0)
+      error->all(FLERR,"Could not find create_particles nrho custom attribute");
+    if (grid->etype[nrho_custom_index] != DOUBLE)
+      error->all(FLERR,"Create_particles nrho custom attribute must be floating point");
+    if (grid->esize[nrho_custom_index] != 0)
+      error->all(FLERR,"Create_particles nrho custom attribute must be a vector");
+  }
+
+  if (vstream_custom_flag) {
+    vstream_custom_index = grid->find_custom(vstream_custom_id);
+    if (vstream_custom_index < 0)
+      error->all(FLERR,"Could not find create_particles vstream custom attribute");
+    if (grid->etype[vstream_custom_index] != DOUBLE)
+      error->all(FLERR,"Create_particles vstream custom attribute must be floating point");
+    if (grid->esize[vstream_custom_index] != 3)
+      error->all(FLERR,"Create_particles vstream custom attribute must be an array with 3 columns");
+  }
+
+  if (temp_custom_flag) {
+    temp_custom_index = grid->find_custom(temp_custom_id);
+    if (temp_custom_index < 0) error->all(FLERR,"Could not find create_particles temp custom attribute");
+    if (grid->etype[temp_custom_index] != DOUBLE)
+      error->all(FLERR,"Create_particles temp custom attribute must be floating point");
+    if (grid->esize[temp_custom_index] != 0)
+      error->all(FLERR,"Create_particles temp custom attribute must be a vector");
+  }
+
+  if (fractions_custom_flag) {
+    fractions_custom_index = grid->find_custom(fractions_custom_id);
+    if (fractions_custom_index < 0)
+      error->all(FLERR,"Could not find create_particles fractions custom attribute");
+    if (grid->etype[fractions_custom_index] != DOUBLE)
+      error->all(FLERR,"Create_particles fractions custom attribute must be floating point");
+    if (grid->esize[fractions_custom_index] != particle->mixture[imix]->nspecies)
+      error->all(FLERR,"Create_particles fractions custom attribute must be an array "
+                 "with columns = # of species in mixture");
   }
 
   // generate particles
@@ -535,6 +623,7 @@ void CreateParticles::create_local()
   // particle species = random value based on mixture fractions
   // particle velocity = stream velocity + thermal velocity
 
+  double nrho = particle->mixture[imix]->nrho;
   int *species = particle->mixture[imix]->species;
   double *cummulative = particle->mixture[imix]->cummulative;
   double *vstream = particle->mixture[imix]->vstream;
@@ -548,6 +637,8 @@ void CreateParticles::create_local()
   double x[3],v[3],xcell[3],vstream_var[3];
   double ntarget,scale,rn,vn,vr,theta1,theta2,erot,evib;
   double *lo,*hi;
+  
+  double *cummulative_custom = new double[nspecies];
 
   double tempscale = 1.0;
   double sqrttempscale = 1.0;
@@ -575,13 +666,17 @@ void CreateParticles::create_local()
     lo = cells[icell].lo;
     hi = cells[icell].hi;
 
-    if (densflag) {
-      scale = density_variable(lo,hi);
+    if (densflag || nrho_custom_flag) {
+      if (densflag) scale = density_variable(lo,hi);
+      else scale = nrho_custom[icell] / nrho;
       ntarget *= scale;
       ncreate = static_cast<int> (ntarget);
       if (random->uniform() < ntarget-ncreate) ncreate++;
     }
 
+    if (fractions_custom_flag)
+      fractions_to_cummulative(nspecies,fractions_custom[icell],cummulative_custom);
+    
     // if surfs in cell, use xcell for all created particle attempts
 
     if (cells[icell].nsurf)
@@ -633,18 +728,25 @@ void CreateParticles::create_local()
 
       rn = random->uniform();
 
-      isp = 0;
-      while (cummulative[isp] < rn) isp++;
-      ispecies = species[isp];
-
-      if (speciesflag) {
-        isp = species_variable(x) - 1;
-        if (isp < 0 || isp >= nspecies) continue;
+      if (speciesflag || fractions_custom_flag) {
+        if (speciesflag) {
+          isp = species_variable(x) - 1;
+          if (isp < 0 || isp >= nspecies) continue;
+          ispecies = species[isp];
+        } else {
+          isp = 0;
+          while (cummulative_custom[isp] < rn) isp++;
+          ispecies = species[isp];
+        }
+      } else {
+        isp = 0;
+        while (cummulative[isp] < rn) isp++;
         ispecies = species[isp];
       }
 
-      if (tempflag) {
-        tempscale = temperature_variable(x);
+      if (tempflag || temp_custom_flag) {
+        if (tempflag) tempscale = temperature_variable(x);
+        else tempscale = temp_custom[icell] / temp_thermal;
         sqrttempscale = sqrt(tempscale);
       }
 
@@ -653,11 +755,17 @@ void CreateParticles::create_local()
       theta1 = MY_2PI * random->uniform();
       theta2 = MY_2PI * random->uniform();
 
-      if (vstreamflag) {
-        vstream_variable(x,vstream,vstream_var);
-        v[0] = vstream_var[0] + vn*cos(theta1);
-        v[1] = vstream_var[1] + vr*cos(theta2);
-        v[2] = vstream_var[2] + vr*sin(theta2);
+      if (vstreamflag || vstream_custom_flag) {
+        if (vstreamflag) {
+          vstream_variable(x,vstream,vstream_var);
+          v[0] = vstream_var[0] + vn*cos(theta1);
+          v[1] = vstream_var[1] + vr*cos(theta2);
+          v[2] = vstream_var[2] + vr*sin(theta2);
+        } else {
+          v[0] = vstream_custom[icell][0] + vn*cos(theta1);
+          v[1] = vstream_custom[icell][1] + vr*cos(theta2);
+          v[2] = vstream_custom[icell][2] + vr*sin(theta2);
+        }
       } else {
         v[0] = vstream[0] + vn*cos(theta1);
         v[1] = vstream[1] + vr*cos(theta2);
@@ -682,6 +790,9 @@ void CreateParticles::create_local()
     nprev += npercell;
   }
 
+  // clean up
+  
+  delete [] cummulative_custom;
   delete random;
 }
 
@@ -783,6 +894,7 @@ void CreateParticles::create_local_twopass()
   // particle species = random value based on mixture fractions
   // particle velocity = stream velocity + thermal velocity
 
+  double nrho = particle->mixture[imix]->nrho;
   int *species = particle->mixture[imix]->species;
   double *cummulative = particle->mixture[imix]->cummulative;
   double *vstream = particle->mixture[imix]->vstream;
@@ -796,6 +908,8 @@ void CreateParticles::create_local_twopass()
   double x[3],v[3],xcell[3],vstream_var[3];
   double ntarget,scale,rn,vn,vr,theta1,theta2,erot,evib;
   double *lo,*hi;
+
+  double *cummulative_custom = new double[nspecies];
 
   double tempscale = 1.0;
   double sqrttempscale = 1.0;
@@ -829,8 +943,9 @@ void CreateParticles::create_local_twopass()
     lo = cells[icell].lo;
     hi = cells[icell].hi;
 
-    if (densflag) {
-      scale = density_variable(lo,hi);
+    if (densflag || nrho_custom_flag) {
+      if (densflag) scale = density_variable(lo,hi);
+      else scale = nrho_custom[icell] / nrho;
       ntarget *= scale;
       ncreate = static_cast<int> (ntarget);
       if (random->uniform() < ntarget-ncreate) ncreate++;
@@ -859,6 +974,9 @@ void CreateParticles::create_local_twopass()
     hi = cells[icell].hi;
 
     ncreate = ncreate_values[icell];
+
+    if (fractions_custom_flag)
+      fractions_to_cummulative(nspecies,fractions_custom[icell],cummulative_custom);
 
     // if surfs in cell, use xcell for all created particle attempts
 
@@ -911,18 +1029,25 @@ void CreateParticles::create_local_twopass()
 
       rn = random->uniform();
 
-      isp = 0;
-      while (cummulative[isp] < rn) isp++;
-      ispecies = species[isp];
-
-      if (speciesflag) {
-        isp = species_variable(x) - 1;
-        if (isp < 0 || isp >= nspecies) continue;
+      if (speciesflag || fractions_custom_flag) {
+        if (speciesflag) {
+          isp = species_variable(x) - 1;
+          if (isp < 0 || isp >= nspecies) continue;
+          ispecies = species[isp];
+        } else {
+          isp = 0;
+          while (cummulative_custom[isp] < rn) isp++;
+          ispecies = species[isp];
+        }
+      } else {
+        isp = 0;
+        while (cummulative[isp] < rn) isp++;
         ispecies = species[isp];
       }
-
-      if (tempflag) {
-        tempscale = temperature_variable(x);
+      
+      if (tempflag || temp_custom_flag) {
+        if (tempflag) tempscale = temperature_variable(x);
+        else tempscale = temp_custom[icell] / temp_thermal;
         sqrttempscale = sqrt(tempscale);
       }
 
@@ -931,11 +1056,17 @@ void CreateParticles::create_local_twopass()
       theta1 = MY_2PI * random->uniform();
       theta2 = MY_2PI * random->uniform();
 
-      if (vstreamflag) {
-        vstream_variable(x,vstream,vstream_var);
-        v[0] = vstream_var[0] + vn*cos(theta1);
-        v[1] = vstream_var[1] + vr*cos(theta2);
-        v[2] = vstream_var[2] + vr*sin(theta2);
+      if (vstreamflag || vstream_custom_flag) {
+        if (vstreamflag) {
+          vstream_variable(x,vstream,vstream_var);
+          v[0] = vstream_var[0] + vn*cos(theta1);
+          v[1] = vstream_var[1] + vr*cos(theta2);
+          v[2] = vstream_var[2] + vr*sin(theta2);
+        } else {
+          v[0] = vstream_custom[icell][0] + vn*cos(theta1);
+          v[1] = vstream_custom[icell][1] + vr*cos(theta2);
+          v[2] = vstream_custom[icell][2] + vr*sin(theta2);
+        }
       } else {
         v[0] = vstream[0] + vn*cos(theta1);
         v[1] = vstream[1] + vr*cos(theta2);
@@ -959,6 +1090,7 @@ void CreateParticles::create_local_twopass()
 
   memory->destroy(ncreate_values);
 
+  delete [] cummulative_custom;
   delete random;
 }
 
@@ -1032,6 +1164,7 @@ double CreateParticles::temperature_variable(double *x)
   double scale = input->variable->compute_equal(tvar);
   return scale;
 }
+
 /* ----------------------------------------------------------------------
    use particle position in vxvar,vyvar,vzvar variables to generate
      stream velocity
@@ -1051,6 +1184,41 @@ void CreateParticles::vstream_variable(double *x, double *vstream,
   else vstream_variable[1] = vstream[1];
   if (vzstr) vstream_variable[2] = input->variable->compute_equal(vzvar);
   else vstream_variable[2] = vstream[2];
+}
+
+/* ----------------------------------------------------------------------
+   convert a vector of relative fractions into cummulative fractions
+   explicit values are >= 0.0, implicit values are < 0.0
+   set each implicit value = 1/nimplicit of unset remainder
+   adapted from Mixture::init_fraction()
+------------------------------------------------------------------------- */
+
+void CreateParticles::fractions_to_cummulative(int nspecies,
+                                               double *fractions, double *cummulative)
+{
+  // sum = total frac for species with explicity set fractions
+  // nimplicit = number of unset species
+
+  double sum = 0.0;
+  int nimplicit = 0;
+  for (int i = 0; i < nspecies; i++) {
+    if (fractions[i] >= 0.0) sum += fractions[i];
+    else nimplicit++;
+  }
+
+  // fraction for each unset species = equal portion of unset remainder
+  // cummulative = cummulative fraction across species
+
+  double value;
+  
+  for (int i = 0; i < nspecies; i++) {
+    if (fractions[i] >= 0.0) value = fractions[i];
+    else value = (1.0-sum) / nimplicit;
+    if (i) cummulative[i] = cummulative[i-1] + value;
+    else cummulative[i] = value;
+  }
+
+  cummulative[nspecies-1] = 1.0;
 }
 
 /* ----------------------------------------------------------------------

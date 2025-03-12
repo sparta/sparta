@@ -69,14 +69,15 @@ particles.
 IMPORTANT NOTE: When a particle is created at a specified temperature
 (as set by the "mixture"_mixture.html command), it's rotational and
 vibrational energy will also be initialized, consistent with the
-mixture temperatures.  The {rotate} and {vibrate} options of the
-"collide_modify"_collide_modify.html command determine how internal
-energy modes are initialized.  If the "collide"_collide.html command
-has not yet been specified, then no rotational or vibrational energy
-will be assigned to created particles.  Thus if you wish to create
-particles with non-zero internal energy, the "collide"_collide.html
-and (optionally) "collide_modify"_collide_modify.html commands must be
-used before this command.
+corresponding mixture temperatures.  The {rotate} and {vibrate}
+options of the "collide_modify"_collide_modify.html command determine
+how internal energy modes are initialized.  If the
+"collide"_collide.html command has not yet been specified, then no
+rotational or vibrational energy will be assigned to created
+particles.  Thus if you wish to create particles with non-zero
+internal energy, the "collide"_collide.html and (optionally)
+"collide_modify"_collide_modify.html commands must be used before this
+command.
 
 If the {n} style is used with {Np} = 0, then the number of created
 particles is calculated by SPARTA as a function of the global {fnum}
@@ -258,9 +259,10 @@ are stored in {xvar}, {yvar}, {zvar} if they are defined.  The {dvar}
 variable is then evaluated.  The returned value is used as a scale
 factor on the number of particles to create in that grid cell.  Thus a
 value of 0.5 would create half as many particles in that grid cell as
-would otherwise be the case, due to the global {fnum} and mixture
-{nrho} settings that define the density, as explained above.  A value
-of 1.2 would create 20% more particles in that grid cell.
+would otherwise be the case, due either to the global {fnum} and
+mixture {nrho} settings that define the density or due to the
+specified {Np > 0} value, as explained above.  A value of 1.2 would
+create 20% more particles in that grid cell.
 
 As an example, these commands can be used in a 2d simulation, to
 create more particles towards the upper right corner of the domain and
@@ -321,7 +323,7 @@ The formulas for the {vxvar}, {vyvar}, {vzvar} variables can use one
 or two or three variables which will store the x, y, or z coordinates
 of the particle that is being created.  If used, these other variables
 must be "internal-style variables"_variable.html defined in the input
-script; their initial numerica values can by anything.  Their names
+script; their initial numerical values can by anything.  Their names
 are specified as {xvar}, {yvar}, and {zvar}.  If any of them is not
 used in the {vxvar}, {vyvar}, {vzvar} formulas, it can be specified as
 NULL.
