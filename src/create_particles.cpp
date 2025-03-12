@@ -780,8 +780,8 @@ void CreateParticles::create_local()
       particle->add_particle(id,ispecies,icell,x,v,erot,evib);
 
       if (nfix_update_custom)
-        modify->update_custom(particle->nlocal-1,temp_thermal,
-                             temp_rot,temp_vib,vstream);
+        modify->update_custom(particle->nlocal-1,tempscale*temp_thermal,
+                             tempscale*temp_rot,tempscale*temp_vib,vstream);
     }
 
     // increment count without effect of density variation
@@ -1081,8 +1081,8 @@ void CreateParticles::create_local_twopass()
       particle->add_particle(id,ispecies,icell,x,v,erot,evib);
 
       if (nfix_update_custom)
-        modify->update_custom(particle->nlocal-1,temp_thermal,
-                             temp_rot,temp_vib,vstream);
+        modify->update_custom(particle->nlocal-1,tempscale*temp_thermal,
+                              tempscale*temp_rot,tempscale*temp_vib,vstream);
     }
   }
 

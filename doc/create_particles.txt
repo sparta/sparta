@@ -291,15 +291,14 @@ numeric values can by anything.  Their names are specified as {xvar},
 {yvar}, and {zvar}.  If any of them is not used in the {tvar} formula,
 it can be specified as NULL.
 
-When particles are added to a grid cell, its center point coordinates
-are stored in {xvar}, {yvar}, {zvar} if they are defined.  The {tvar}
-variable is then evaluated.  The returned value is used as a scale
-factor on the thermal temperature number for particles created in that
-grid cell.  Thus a value of 0.5 would create particles with a thermal
-temperature half of what would otherwise be the case, due to the
-mixture {temp} setting which defines the thermal temperature, as
-explained above.  A value of 1.2 would create particles with a 20%
-higher thermal temperature.
+When a particle is created, its coordinates are stored in {xvar},
+{yvar}, {zvar} if they are defined.  The {tvar} variable is then
+evaluated.  The returned value is used as a scale factor on all 3
+mixture temperatures (thermal, rotational, vibrational) used to
+initialize the particle's velocity and internal energies, as explained
+above.  Thus a value of 0.5 would create particles using temperatures
+half of what the mixture specifies.  A value of 1.2 would create
+particles using 20% higher temperatures.
 
 As an example, these commands can be used in a 2d simulation, to
 create a thermal temperature gradient in x, where the temperature on
@@ -323,9 +322,9 @@ The formulas for the {vxvar}, {vyvar}, {vzvar} variables can use one
 or two or three variables which will store the x, y, or z coordinates
 of the particle that is being created.  If used, these other variables
 must be "internal-style variables"_variable.html defined in the input
-script; their initial numerical values can by anything.  Their names
-are specified as {xvar}, {yvar}, and {zvar}.  If any of them is not
-used in the {vxvar}, {vyvar}, {vzvar} formulas, it can be specified as
+script; their initial numeric values can by anything.  Their names are
+specified as {xvar}, {yvar}, and {zvar}.  If any of them is not used
+in the {vxvar}, {vyvar}, {vzvar} formulas, it can be specified as
 NULL.
 
 When a particle is added, its coordinates are stored in {xvar},
@@ -392,18 +391,32 @@ should be in per-volume units = per-length^3 for 3d models or
 axisymmetric models.  The values should be in per-area units =
 per-length^2 for 2d models.
 
-The {custom} attribute {temp} sets a temperature for each grid cell
-from a per-grid vector.  This temperature is used as the thermal
-temeperature for each created particle which means it affects its
-thermal velocity components as well as its rotational and vibrational
-energies.
+Note that if {Np} = 0, then the custom {nrho} value effectively
+increases or decreases the number of particles created in a cell by
+the scale factor custom_rho/mixture_nrho.  As compared to the number
+created if the {custom nrho} keyword were not used.  If {Np} > 0, the
+number of particles created in a cell is increased or decreased by the
+same scale factor custom_nrho/mixture_nrho, only now the scale factor
+is applied to the count of particles for the grid cell calculated as
+explained above when {Np} > 0.
 
-The {custom} attribute {vstream} sets a streaming velocity for each
-grid cell from a 3-column per-grid cusstom array.
+The {custom} attribute {temp} sets a temperature for each grid cell
+from a per-grid vector.  This temperature is divided by the mixture
+thermal temperature to calculate a scale factor.  The scale factor is
+applied to all 3 mixture temperatures (thermal, rotational,
+vibrational) used to initialize the velocity and internal energies, as
+explained above, for each particle created in the grid cell.  Thus a
+scale factor of 0.5 would create particles using temperatures half of
+what the mixture specifies.  A value of 1.2 would create particles
+using 20% higher temperatures.
+
+The {custom} attribute {vstream} sets a streaming velocity for
+particles created in each grid cell from a 3-column per-grid custom
+array.
 
 The {custom} attribute {fractions} sets the relative species fractions
-for grid cell from an N-column per-grid custom array, where N is the
-number of species in the mixture specified with this command.  For
+for each grid cell from an N-column per-grid custom array, where N is
+the number of species in the mixture specified with this command.  For
 each grid cell, the N values will be used to set the relative
 fractions of created particles in that cell.
 
