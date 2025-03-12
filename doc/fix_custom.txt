@@ -28,6 +28,14 @@ action = {set} or {file} :l
     M = # of custom values listed on each line of each file
     cname1,cname2,...,cnameM = which attribute each line's values are assigned to
       cnameI = name of a custom vector
+      cnameI = name\[N\] for Nth column of a custom array with name
+  {file/coarse} args = Nfile filestyle fname M cname1 cname2 ... cnameM
+    Nfile = number of coarse files
+    filestyle = {text} or {binary}
+    fname = name of file with custom attributes for coarse grid cells
+    M = # of custom values listed for each coarse cell entry in the file
+    cname1,cname2,...,cnameM = which attribute each coarse cell's values are assigned to
+      cnameI = name of a custom vector
       cnameI = name\[N\] for Nth column of a custom array with name :pre
 :ule
 
@@ -61,17 +69,19 @@ explanation of custom attributes.
 Each {style} setting is {particle} or {grid} or {surf} for custom
 per-particle, per-grid, or per-surf attributes.
 
-The {action} setting is {set} or {file}.  The functionality and syntax
-for these settings are identical to the "custom"_custom.html command,
-with the exception that the filename for the {file} action must
-include a wildcard "*" character which is replaced by the current
-timestep each time this fix operates, so that a different file is
-read.  See more discussion below.
+The {action} setting is {set} or {file} or {file/coarse}.  The
+functionality and syntax for these settings are identical to the
+"custom"_custom.html command, with the exception that the filename for
+the {file} and {file/coarse} actions must include a wildcard "*"
+character which is replaced by the current timestep each time this fix
+operates, so that different files are read.  See more discussion
+below.
 
-The {set} and {file} actions reset the values of custom attribute(s)
-which must already exist.  See the "custom"_custom.html and
-"read_surf"_read_surf.html and "read_grid"_read_grid.html commands for
-different ways to define and initialize custom attributes.
+The {set} and {file} and {file/coarse} actions reset the values of
+custom attribute(s) which must already exist.  See the
+"custom"_custom.html and "read_surf"_read_surf.html and
+"read_grid"_read_grid.html commands for different ways to define and
+initialize custom attributes.
 
 Note that the resetting of attributes by this fix takes place at the
 end of timesteps determined by {Nfreq}.  If custom attributes are
