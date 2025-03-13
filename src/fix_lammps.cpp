@@ -94,28 +94,24 @@ FixLAMMPS::FixLAMMPS(SPARTA *sparta, int narg, char **arg) : Fix(sparta, narg, a
   // create per-surf temperature vector
   char *id_custom = new char[12];
   strcpy(id_custom,"temperature");
-  tindex = surf->add_custom(id_custom,DOUBLE,0);
+  tindex = surf->find_custom(id_custom);
+  if (tindex < 0) tindex = surf->add_custom(id_custom,DOUBLE,0);
   delete [] id_custom;
   // trigger setup of list of owned surf elements belonging to surf group
   firstflag = 1;
-  // initialize data structure
-  tvector_me = NULL;
   // number of grid cells
   ncells = grid->nlocal;
   dimension = domain->dimension;
   nvalid = nextvalid();
-  tvector_me = NULL;
 }
 
 /* ---------------------------------------------------------------------- */
 
 FixLAMMPS::~FixLAMMPS()
 {
-  memory->destroy(tvector_me);
   surf->remove_custom(tindex);
   delete random;       
   delete[] id_nrho;
-
 }
 
 /* ---------------------------------------------------------------------- */
@@ -140,13 +136,11 @@ void FixLAMMPS::init()
   if (!firstflag) return;
   firstflag = 0;
   int nlocal = surf->nlocal;
-  tvector = surf->edvec[surf->ewhich[tindex]];
-  for (int i = 0; i < nlocal; i++) {
+  int nsown = surf->nown;
+  double *tvector = surf->edvec[surf->ewhich[tindex]];
+  for (int i = 0; i < nsown; i++) {
     tvector[i] = 273.0;
   }
-  
-  // allocate per-surf vector for explicit all surfs
-  memory->create(tvector_me,nlocal,"lammps:tvector_me");
 }
 
 void FixLAMMPS::end_of_step()
@@ -177,11 +171,12 @@ void FixLAMMPS::end_of_step()
   }
   
   int nlocal = surf->nlocal;
-  memset(tvector_me,0,nlocal*sizeof(double));
+  double *tvector = surf->edvec[surf->ewhich[tindex]];
+  int nsown = surf->nown;
 
   // Set LAMMPS parameters
   double surftemp = 0.0;
-  for (int i = 0; i < nlocal; i++) {
+  for (int i = 0; i < nsown; i++) {
     surftemp += tvector[i];
   }
   surftemp /= nlocal;
@@ -199,186 +194,189 @@ void FixLAMMPS::end_of_step()
     double xLength, yLength, yBox, xBox;
     local_fnum = 19; //design choice: MD atoms representing one DSMC particle
 
-    if ((i < ncells) && (cinfo[i].mask & groupbit)) // apply coupling to selected cell group
+    if (i < ncells)  // apply coupling to selected cell group
     {
-      coupleCell = 1;
-      coupledProc = rank;
-      fprintf(screen,"DSMC-MD coupling invoked for cell %d. Running LAMMPS ...\n", cells[i].id);
-
-      // Check for DSMC particles in cell
-      int particle_iterator = cinfo[i].first;
-      if (particle_iterator == -1) {
-        fprintf(screen, "No particles in cell %d, skipping.\n",cells[i].id);
-        coupleCell = 2;
-      }
-
-      /****************************
-      1. Lifting Operator: From SPARTA to LAMMPS, initialize microscopic properties derived from SPARTA
-      2. Run LAMMPS simulation
-      3. Restricting Operator: From LAMMPS to SPARTA, calculate relevant quantities to pass to SPARTA
-      *****************************/
-
-      // LIFTING OPERATOR -------------------------------------------------
-
-      //Obtain SPARTA data
-      double gridnrho = gridrho[cells[i].ilocal] * 1.0e28; // local number density
-      numPar = (int) cinfo[i].count; // number of simulated particles in cell
-      if (numPar > 27)
+      if (cinfo[i].mask & groupbit)
       {
-        //LAMMPS is restricted to <32 groups
-        fprintf(screen,"WARNING: Number of DSMC particles per cell is exceeding LAMMPS capabilities (more than 27 DSMC particles per cell).\n");
-        coupleCell = 2;
+        coupleCell = 1;
+        coupledProc = rank;
+        fprintf(screen,"DSMC-MD coupling invoked for cell %d. Running LAMMPS ...\n", cells[i].id);
+
+        // Check for DSMC particles in cell
+        int particle_iterator = cinfo[i].first;
+        if (particle_iterator == -1) {
+          fprintf(screen, "No particles in cell %d, skipping.\n",cells[i].id);
+          coupleCell = 2;
+        }
+
+        /****************************
+        1. Lifting Operator: From SPARTA to LAMMPS, initialize microscopic properties derived from SPARTA
+        2. Run LAMMPS simulation
+        3. Restricting Operator: From LAMMPS to SPARTA, calculate relevant quantities to pass to SPARTA
+        *****************************/
+
+        // LIFTING OPERATOR -------------------------------------------------
+
+        //Obtain SPARTA data
+        double gridnrho = gridrho[cells[i].ilocal] * 1.0e28; // local number density
+        numPar = (int) cinfo[i].count; // number of simulated particles in cell
+        if (numPar > 27)
+        {
+          //LAMMPS is restricted to <32 groups
+          fprintf(screen,"WARNING: Number of DSMC particles per cell is exceeding LAMMPS capabilities (more than 27 DSMC particles per cell).\n");
+          coupleCell = 2;
+        }
+        int numAtoms = local_fnum * numPar;
+        if (numAtoms > 1e5) fprintf(screen,"WARNING: High density detected in fix lammps. Number of MD atoms is %d. Reduce local_fnum\n",numAtoms);
+        if (numAtoms < 10) fprintf(screen,"WARNING: Low density detected in fix lammps. Number of MD atoms is %d. Increase local_fnum\n",numAtoms);
+        xLength = (cells + i)->hi[0] - (cells + i)->lo[0];
+        yLength = (cells + i)->hi[1] - (cells + i)->lo[1];
+        double AR = xLength/yLength; //aspect ratio of DSMC cell
+        double gridnrhoA = gridnrho * 1e-30; //convert number density to 1/Angstrom^3
+
+        // LAMMPS Simulation Parameters
+        double zBox = 1.0; //in Angstrom
+        yBox = sqrt(numAtoms / (AR * gridnrho * 1e-30 * zBox)); //in Angstrom
+        double lattice_constant = 7.0; //in Angstrom
+        double lattice_constant_surf = 2.55; // lattice constant of wall //3.52
+        int lattice_length = (int) (yBox / lattice_constant_surf); //ensure MD length is an even multiple of lattice length
+        yBox = lattice_length * lattice_constant_surf;
+        xBox = AR * yBox; //in Angstrom
+        
+        // Obtain radius for sphere that will cover hexagonal lattice in atom initialization
+        double radius = 0.0;
+        radius = lattice_constant * sqrt( sqrt(3)*local_fnum / (2.0*M_PI) );
+
+        int timesteps_equi = 10000;
+        int timesteps = 10000;
+        
+        // create individual LAMMPS input file for every cell
+        sprintf(filenameS, "%s%d", filename, cells[i].id);
+        
+        // fill input file with SPARTA data
+        FILE *fp = fopen(filenameS,"w");
+        if (fp == NULL) error->all(FLERR,"Could not open LAMMPS input script in fix lammps");
+        if (screen == NULL) error->all(FLERR, "Screen output invalid in fix lammps");
+
+        // Create LAMMPS input file
+        fprintf(fp, "# LAMMPS input script created by SPARTA\n\n");
+        fprintf(fp, "# Number of DSMC particles: %d\n",numPar);
+        fprintf(fp, "# Number density nrho = %e\n", gridnrho);
+
+        fprintf(fp,"units metal\n");
+        fprintf(fp,"atom_style atomic\n\n");
+        fprintf(fp,"dimension %d\n",dimension);
+        fprintf(fp,"boundary f p p\n");
+        fprintf(fp,"neighbor 3.0 bin\n\n");
+
+        fprintf(fp, "region box block 0.0 %g 0.0 %g %g %g\n", xBox, yBox, -zBox*0.5, zBox*0.5);
+        fprintf(fp, "create_box 2 box\n\n");
+        fprintf(fp, "lattice hex %e\n\n", lattice_constant);
+
+        // LIFTING OPERATOR: for every DSMC particle, create a batch of MD particles in space
+        // MD particles are initialized in a hexagonal lattice around the DSMC particle's position
+        double xMD, yMD, vxMD, vyMD;
+        std::string regions;
+        particle_iterator = cinfo[i].first;
+
+        for (int p = 0; p < numPar; p++)
+        {
+          xMD = (particle->particles[particle_iterator].x[0] - (cells + i)->lo[0]) * (0.9*xBox / xLength); //moved to origin and scaled
+          yMD = (particle->particles[particle_iterator].x[1] - (cells + i)->lo[1]) * (0.9*yBox / yLength);
+
+          fprintf(fp, "region %d sphere %g %g %g %g units box\n", p+1, xMD, yMD, 0.0, radius);
+
+          particle_iterator = particle->next[particle_iterator];
+          regions += std::to_string(p+1);
+          regions += " ";
+        }
+
+        fprintf(fp, "region flow union %d %s\n", numPar, regions.c_str());
+        fprintf(fp, "create_atoms 2 region flow\n\n");
+
+        fprintf(fp, "lattice hex %e\n", lattice_constant_surf);
+        fprintf(fp, "region wall block %g %g %g %g %g %g units box\n", 0.9*xBox, xBox, 0.0, yBox, -zBox*0.5, zBox*0.5);
+        fprintf(fp, "region sink block %g %g %g %g %g %g units box\n", 0.95*xBox, xBox, 0.0, yBox, -zBox*0.5, zBox*0.5);
+        fprintf(fp, "region side block %g %g %g %g %g %g units box\n", 0.9*xBox, 0.95*xBox, 0.0, yBox, -zBox*0.5, zBox*0.5);
+        fprintf(fp, "create_atoms 1 region wall\n\n");
+
+        fprintf(fp, "# Material properties\n");
+        fprintf(fp, "mass 1 58.710\n");
+        fprintf(fp, "mass 2 28.96\n\n");
+
+        fprintf(fp, "# Define potentials: EAM for wire, LJ for air\n");
+        fprintf(fp, "pair_style hybrid eam/alloy lj/cut 2.5  # Hybrid potential for different interactions\n");
+        fprintf(fp, "pair_coeff * * eam/alloy MDfiles/Ni_v6_2.0.eam Ni NULL\n");
+        fprintf(fp, "pair_coeff 2 2 lj/cut 0.0091 3.55 # DOI: 10.1007/s11085-009-9180-z\n");
+        fprintf(fp, "pair_coeff 1 2 lj/cut 0.3308 2.92 2.5 # Lorentz-Berthelot\n\n");
+
+        fprintf(fp, "# Define groups\n");
+        fprintf(fp, "group wire region wall\n");
+        fprintf(fp, "group heatsink region sink\n");
+        fprintf(fp, "group surfside region side\n");
+        fprintf(fp, "group air region flow\n\n");
+        for (int p = 0; p < numPar; p++) {
+          fprintf(fp, "group %d region %d\n", p+1, p+1); // keep track of atoms per DSMC particle
+        }
+
+        fprintf(fp, "# Set wire velocity\n");
+        fprintf(fp, "velocity wire create %g 12345 mom yes dist gaussian\n\n", surftemp);
+
+        fprintf(fp, "timestep 5e-4\n");
+
+
+        fprintf(fp, "# Equilibration of wire\n");
+        fprintf(fp, "fix wall_boundary all wall/reflect xlo EDGE\n");
+        fprintf(fp, "fix wall_lj wire wall/lj126 xhi EDGE 0.2314 2.49 6.5\n");
+        fprintf(fp, "fix init wire nvt temp %g %g $(10.0*dt)\n\n", surftemp, surftemp);
+
+        fprintf(fp, "# Compute wire temperature\n");
+        fprintf(fp, "compute temp_wire wire temp\n\n");
+
+        fprintf(fp, "# Output to file\n");
+        fprintf(fp, "#fix wire_temp_output wire ave/time 1000 1 1000 c_temp_wire file MDfiles/MDwireTemp.txt\n\n");
+        fprintf(fp, "fix wire_temp_ave wire ave/time %d %d %d c_temp_wire #file MDfiles/finalTemp.txt\n", 100, 200, timesteps_equi+timesteps); //sound averaging
+
+        fprintf(fp, "thermo 0\n");
+        fprintf(fp, "thermo_modify flush yes lost ignore\n");
+        fprintf(fp, "run %d\n\n", timesteps_equi);
+
+        fprintf(fp, "# Set DSMC velocities\n");
+        particle_iterator = cinfo[i].first; //reset particle index
+        for (int p = 0; p < numPar; p++)
+        {
+          vxMD = particle->particles[particle_iterator].v[0]*0.01; //converted from m/s to Angstrom/ps
+          vyMD = particle->particles[particle_iterator].v[1]*0.01;
+          fprintf(fp,"velocity %d set %g %g %g units box\n", p+1, vxMD, vyMD, 0.0);
+          particle_iterator = particle->next[particle_iterator];
+        }
+        fprintf(fp, "\n");
+
+        fprintf(fp, "timestep 1e-3\n");
+
+        fprintf(fp, "# Fixes\n");
+        fprintf(fp, "unfix init\n");
+        fprintf(fp, "fix source heatsink nvt temp %g %g $(10.0*dt)\n", surftemp, surftemp);
+        fprintf(fp, "fix cooling surfside nve\n");
+        fprintf(fp, "fix intgl air nve\n");
+        fprintf(fp,"fix 2d all enforce2d\n\n");
+
+        fprintf(fp, "compute restricting air property/atom id x y vx vy\n");
+
+        //fprintf(fp, "dump 2 all image 1000 MDfiles/lmp.image.*.ppm type type adiam 1.5 zoom 1.8\n");
+        //fprintf(fp, "dump_modify  2 pad 7\n\n");
+
+        fprintf(fp, "#Output settings\n");
+        fprintf(fp, "thermo_style custom step time temp c_temp_wire\n");
+        fprintf(fp, "thermo 4000  # Output every 100 steps\n");
+        fprintf(fp, "thermo_modify flush yes lost ignore\n");
+        fprintf(fp, "# Run simulation\n");
+
+        fprintf(fp, "run %d\n", timesteps);
+
+
+        fclose(fp);
       }
-      int numAtoms = local_fnum * numPar;
-      if (numAtoms > 1e5) fprintf(screen,"WARNING: High density detected in fix lammps. Number of MD atoms is %d. Reduce local_fnum\n",numAtoms);
-      if (numAtoms < 10) fprintf(screen,"WARNING: Low density detected in fix lammps. Number of MD atoms is %d. Increase local_fnum\n",numAtoms);
-      xLength = (cells + i)->hi[0] - (cells + i)->lo[0];
-      yLength = (cells + i)->hi[1] - (cells + i)->lo[1];
-      double AR = xLength/yLength; //aspect ratio of DSMC cell
-      double gridnrhoA = gridnrho * 1e-30; //convert number density to 1/Angstrom^3
-
-      // LAMMPS Simulation Parameters
-      double zBox = 1.0; //in Angstrom
-      yBox = sqrt(numAtoms / (AR * gridnrho * 1e-30 * zBox)); //in Angstrom
-      double lattice_constant = 7.0; //in Angstrom
-      double lattice_constant_surf = 2.55; // lattice constant of wall //3.52
-      int lattice_length = (int) (yBox / lattice_constant_surf); //ensure MD length is an even multiple of lattice length
-      yBox = lattice_length * lattice_constant_surf;
-      xBox = AR * yBox; //in Angstrom
-      
-      // Obtain radius for sphere that will cover hexagonal lattice in atom initialization
-      double radius = 0.0;
-      radius = lattice_constant * sqrt( sqrt(3)*local_fnum / (2.0*M_PI) );
-
-      int timesteps_equi = 10000;
-      int timesteps = 10000;
-      
-      // create individual LAMMPS input file for every cell
-      sprintf(filenameS, "%s%d", filename, cells[i].id);
-      
-      // fill input file with SPARTA data
-      FILE *fp = fopen(filenameS,"w");
-      if (fp == NULL) error->all(FLERR,"Could not open LAMMPS input script in fix lammps");
-      if (screen == NULL) error->all(FLERR, "Screen output invalid in fix lammps");
-
-      // Create LAMMPS input file
-      fprintf(fp, "# LAMMPS input script created by SPARTA\n\n");
-      fprintf(fp, "# Number of DSMC particles: %d\n",numPar);
-      fprintf(fp, "# Number density nrho = %e\n", gridnrho);
-
-      fprintf(fp,"units metal\n");
-      fprintf(fp,"atom_style atomic\n\n");
-      fprintf(fp,"dimension %d\n",dimension);
-      fprintf(fp,"boundary f p p\n");
-      fprintf(fp,"neighbor 3.0 bin\n\n");
-
-      fprintf(fp, "region box block 0.0 %g 0.0 %g %g %g\n", xBox, yBox, -zBox*0.5, zBox*0.5);
-      fprintf(fp, "create_box 2 box\n\n");
-      fprintf(fp, "lattice hex %e\n\n", lattice_constant);
-
-      // LIFTING OPERATOR: for every DSMC particle, create a batch of MD particles in space
-      // MD particles are initialized in a hexagonal lattice around the DSMC particle's position
-      double xMD, yMD, vxMD, vyMD;
-      std::string regions;
-      particle_iterator = cinfo[i].first;
-
-      for (int p = 0; p < numPar; p++)
-      {
-        xMD = (particle->particles[particle_iterator].x[0] - (cells + i)->lo[0]) * (0.9*xBox / xLength); //moved to origin and scaled
-        yMD = (particle->particles[particle_iterator].x[1] - (cells + i)->lo[1]) * (0.9*yBox / yLength);
-
-        fprintf(fp, "region %d sphere %g %g %g %g units box\n", p+1, xMD, yMD, 0.0, radius);
-
-        particle_iterator = particle->next[particle_iterator];
-        regions += std::to_string(p+1);
-        regions += " ";
-      }
-
-      fprintf(fp, "region flow union %d %s\n", numPar, regions.c_str());
-      fprintf(fp, "create_atoms 2 region flow\n\n");
-
-      fprintf(fp, "lattice hex %e\n", lattice_constant_surf);
-      fprintf(fp, "region wall block %g %g %g %g %g %g units box\n", 0.9*xBox, xBox, 0.0, yBox, -zBox*0.5, zBox*0.5);
-      fprintf(fp, "region sink block %g %g %g %g %g %g units box\n", 0.95*xBox, xBox, 0.0, yBox, -zBox*0.5, zBox*0.5);
-      fprintf(fp, "region side block %g %g %g %g %g %g units box\n", 0.9*xBox, 0.95*xBox, 0.0, yBox, -zBox*0.5, zBox*0.5);
-      fprintf(fp, "create_atoms 1 region wall\n\n");
-
-      fprintf(fp, "# Material properties\n");
-      fprintf(fp, "mass 1 58.710\n");
-      fprintf(fp, "mass 2 28.96\n\n");
-
-      fprintf(fp, "# Define potentials: EAM for wire, LJ for air\n");
-      fprintf(fp, "pair_style hybrid eam/alloy lj/cut 2.5  # Hybrid potential for different interactions\n");
-      fprintf(fp, "pair_coeff * * eam/alloy MDfiles/Ni_v6_2.0.eam Ni NULL\n");
-      fprintf(fp, "pair_coeff 2 2 lj/cut 0.0091 3.55 # DOI: 10.1007/s11085-009-9180-z\n");
-      fprintf(fp, "pair_coeff 1 2 lj/cut 0.3308 2.92 2.5 # Lorentz-Berthelot\n\n");
-
-      fprintf(fp, "# Define groups\n");
-      fprintf(fp, "group wire region wall\n");
-      fprintf(fp, "group heatsink region sink\n");
-      fprintf(fp, "group surfside region side\n");
-      fprintf(fp, "group air region flow\n\n");
-      for (int p = 0; p < numPar; p++) {
-        fprintf(fp, "group %d region %d\n", p+1, p+1); // keep track of atoms per DSMC particle
-      }
-
-      fprintf(fp, "# Set wire velocity\n");
-      fprintf(fp, "velocity wire create %g 12345 mom yes dist gaussian\n\n", surftemp);
-
-      fprintf(fp, "timestep 5e-4\n");
-
-
-      fprintf(fp, "# Equilibration of wire\n");
-      fprintf(fp, "fix wall_boundary all wall/reflect xlo EDGE\n");
-      fprintf(fp, "fix wall_lj wire wall/lj126 xhi EDGE 0.2314 2.49 6.5\n");
-      fprintf(fp, "fix init wire nvt temp %g %g $(10.0*dt)\n\n", surftemp, surftemp);
-
-      fprintf(fp, "# Compute wire temperature\n");
-      fprintf(fp, "compute temp_wire wire temp\n\n");
-
-      fprintf(fp, "# Output to file\n");
-      fprintf(fp, "#fix wire_temp_output wire ave/time 1000 1 1000 c_temp_wire file MDfiles/MDwireTemp.txt\n\n");
-      fprintf(fp, "fix wire_temp_ave wire ave/time %d %d %d c_temp_wire #file MDfiles/finalTemp.txt\n", 100, 200, timesteps_equi+timesteps); //sound averaging
-
-      fprintf(fp, "thermo 0\n");
-      fprintf(fp, "thermo_modify flush yes lost ignore\n");
-      fprintf(fp, "run %d\n\n", timesteps_equi);
-
-      fprintf(fp, "# Set DSMC velocities\n");
-      particle_iterator = cinfo[i].first; //reset particle index
-      for (int p = 0; p < numPar; p++)
-      {
-        vxMD = particle->particles[particle_iterator].v[0]*0.01; //converted from m/s to Angstrom/ps
-        vyMD = particle->particles[particle_iterator].v[1]*0.01;
-        fprintf(fp,"velocity %d set %g %g %g units box\n", p+1, vxMD, vyMD, 0.0);
-        particle_iterator = particle->next[particle_iterator];
-      }
-      fprintf(fp, "\n");
-
-      fprintf(fp, "timestep 1e-3\n");
-
-      fprintf(fp, "# Fixes\n");
-      fprintf(fp, "unfix init\n");
-      fprintf(fp, "fix source heatsink nvt temp %g %g $(10.0*dt)\n", surftemp, surftemp);
-      fprintf(fp, "fix cooling surfside nve\n");
-      fprintf(fp, "fix intgl air nve\n");
-      fprintf(fp,"fix 2d all enforce2d\n\n");
-
-      fprintf(fp, "compute restricting air property/atom id x y vx vy\n");
-
-      //fprintf(fp, "dump 2 all image 1000 MDfiles/lmp.image.*.ppm type type adiam 1.5 zoom 1.8\n");
-      //fprintf(fp, "dump_modify  2 pad 7\n\n");
-
-      fprintf(fp, "#Output settings\n");
-      fprintf(fp, "thermo_style custom step time temp c_temp_wire\n");
-      fprintf(fp, "thermo 4000  # Output every 100 steps\n");
-      fprintf(fp, "thermo_modify flush yes lost ignore\n");
-      fprintf(fp, "# Run simulation\n");
-
-      fprintf(fp, "run %d\n", timesteps);
-
-
-      fclose(fp);
     }
 
     //agree on coupled proc
@@ -493,7 +491,7 @@ void FixLAMMPS::end_of_step()
         error->all(FLERR,"Fix wire_temp_ave cannot be found!");
       }
 
-      double temp_lmp = (double) lmp_fix->compute_scalar();
+      temp_lmp = (double) lmp_fix->compute_scalar();
       if (temp_lmp < 1e-5 || !temp_lmp)
       {
         fprintf(screen, "Error extracting data from fix lammps. Defaulting to calculated temperature.\n");
@@ -503,6 +501,7 @@ void FixLAMMPS::end_of_step()
       if(rank == coupledProc)
       {
         int particle_iterator = cinfo[i].first; //DSMC particle index
+        numPar = (int) cinfo[i].count;
       
         // --------------------------------------------------------------------------------
         // Sort atoms according to their spatial distribution
@@ -616,10 +615,6 @@ void FixLAMMPS::end_of_step()
           x = y = vx = vy = 0; // reset averages
           particle_iterator = particle->next[particle_iterator];
         }
-        // Assign surface temperature to DSMC surface
-        for (int f = 0; f < nlocal; f++) {
-          tvector_me[f] = temp_lmp;;
-        }
       }
       MPI_Barrier(comm_lammps);
       if (IDs) {delete[] IDs; IDs = nullptr;}
@@ -631,20 +626,18 @@ void FixLAMMPS::end_of_step()
     }
     else if (coupleCell == 2)
     {
-      MPI_Comm_rank(comm_lammps, &rank); //ensure ranks are owned
-      if(rank == coupledProc)
-      {
-        for (int f = 0; f < nlocal; f++) {
-          tvector_me[f] = surftemp;
-        }
+      for (int f = 0; f < nsown; f++) {
+        tvector[f] = surftemp;
       }
     }
     MPI_Barrier(comm_lammps);
+    MPI_Bcast(&temp_lmp, 1, MPI_DOUBLE, coupledProc, comm_lammps); //communicate new temp
+    // Assign surface temperature to DSMC surface
+    for (int f = 0; f < nsown; f++) {
+      tvector[f] = temp_lmp;;
+    }
   }
   nvalid += nevery;
-  int size;
-  MPI_Comm_size(comm_lammps, &size);
-  MPI_Allreduce(tvector_me,tvector,nlocal,MPI_DOUBLE,MPI_SUM,comm_lammps);
   MPI_Comm_free(&comm_lammps);
   MPI_Barrier(MPI_COMM_WORLD);
 }

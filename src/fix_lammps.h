@@ -47,8 +47,7 @@ class FixLAMMPS : public Fix {
 
   // Surface Temperature Specific
   int firstflag, tindex, icompute;
-  double *tvector_me, *tvector;
-  double twall;
+  double temp_lmp;
   char *id_nrho;
   class Compute *c_nrho;
 
