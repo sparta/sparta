@@ -11,14 +11,11 @@
 
    See the README file in the top-level SPARTA directory.
 ------------------------------------------------------------------------- */
-
-#ifdef FIX_CLASS
-
-FixStyle(lammps,FixLAMMPS)
-
+#if defined(FIX_CLASS) && defined(SPARTA_ENABLE_LAMMPS)
+   FixStyle(lammps,FixLAMMPS)
 #else
 
-#ifndef SPARTA_FIX_LAMMPS_H
+#if !defined(SPARTA_FIX_LAMMPS_H) && defined(SPARTA_ENABLE_LAMMPS)
 #define SPARTA_FIX_LAMMPS_H
 
 #include "fix.h"
@@ -41,11 +38,11 @@ class FixLAMMPS : public Fix {
   int groupbit;
   int numPar, fnum;
   double KE_ave, Tave, p_spa;
-  double *v, mass, ***v_lmp;
+  double mass;
   bigint nvalid;
-  FILE *fp;                  // file to write dump to
-  char filename[256];           // LAMMPS input file
-  char filenameS[256];          // file specific to proc and cell
+  FILE *fp;
+  char filename[256];
+  char filenameS[256];
   bigint nextvalid();
 
   // Surface Temperature Specific
@@ -55,7 +52,7 @@ class FixLAMMPS : public Fix {
   char *id_nrho;
   class Compute *c_nrho;
 
-  class RanKnuth *random;     // RNG for particle reflection
+  class RanKnuth *random;
   
 };
 

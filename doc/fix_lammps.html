@@ -79,6 +79,23 @@ calculate the number density of all cells.
 </P>
 <HR>
 
+<P>This fix requires a shared library instance of LAMMPS. The following steps achieve a working version
+of the coupled DSMC-MD framework. After copying the LAMMPS code into a directory at the same level as SPARTA, 
+run
+<ol><li>cd lammps</li>
+    <li>mkdir build; cd build</li>
+    <li>cmake -D PKG_MANYBODY=on -D BUILD_SHARED_LIBS=yes ../cmake</li>
+    <li>make -j</li>
+    <li>cd ../../sparta/build</li>
+    <li>cmake -D CMAKE_CXX_STANDARD=17 ../cmake</li>
+    <li>make -j</li></ol>
+    
+The examples/couple directory can test the setup. Should errors occur for either LAMMPS or SPARTA, then they will be shown in
+their respective log files.
+</P>
+
+<HR>
+
 <P><B>Restart, output info:</B>
 </P>
 <P>No information about this fix is written to <A HREF = "restart.html">binary restart

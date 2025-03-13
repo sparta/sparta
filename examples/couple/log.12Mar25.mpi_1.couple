@@ -1,0 +1,155 @@
+SPARTA (20 Jan 2025)
+Running on 1 MPI task(s)
+################################################################################
+# hypersonic flow around a wall
+#
+# surface temperature evolution modeled using molecular dynamics
+################################################################################
+
+seed	    	    12345
+dimension   	    2
+global		        nrho 1.0 fnum 0.2 gridcut 0.0 comm/style all comm/sort yes
+timestep            0.0001
+
+boundary	        o ro p
+create_box          -11 11 -11 11 -0.5 0.5
+Created orthogonal box = (-11 -11 -0.5) to (11 11 0.5)
+create_grid 	    11 11 1 block * * *
+Created 121 child grid cells
+  CPU time = 0.00122605 secs
+  create/ghost percent = 86.4151 13.5849
+
+species             air.species air
+mixture             all vstream 50.0 0 0 temp 10.0
+
+collide             vss all air.vss
+
+read_surf	        wall.surf group wallsurf
+  4 lines
+  8.9 11 xlo xhi
+  -1 1 ylo yhi
+  0 0 zlo zhi
+  2 min line length
+  6 0 = cells overlapping surfs, overlap cells with unmarked corner pts
+  115 0 6 = cells outside/inside/overlapping surfs
+  6 = surf cells with 1,2,etc splits
+  479.8 479.8 = cell-wise and global flow volume
+  CPU time = 0.00127697 secs
+  read/check/sort/surf2grid/ghost/inout/particle percent = 21.3718 11.5748 1.23418 55.2791 10.5402 3.40119 0.0258425
+  surf2grid time = 0.000705895 secs
+  map/comm1/comm2/comm3/comm4/split percent = 30.6524 3.37019 5.67606 2.13545 3.67477 5.30702
+group               frontface surf id 1 2 3 4
+0 = initial surface count in group frontface
+4 = final surface count in group frontface
+region              front_face block 6.8 9.2 -1.2 1.2 -0.5 0.5
+group               face_grid grid region front_face all
+0 initial grid cell count in group face_grid
+1 final grid cell count in group face_grid
+
+compute             1 grid all all nrho
+
+
+# A concurrent molecular dynamics simulation is created.
+# In this scenario, the MD is designed to accurately capture and provide
+# the surface temperature of the wall to the DSMC domain. It can be extended
+# or altered for other parameters in the file fix_lammps.cpp .
+
+fix                 md lammps face_grid 10 c_1
+
+
+
+surf_collide        1 diffuse s_temperature 1.0
+surf_modify         wallsurf collide 1
+
+fix                 in emit/face all xlo twopass
+create_particles    all n 0 twopass
+Created 2399 particles
+  CPU time = 0.00218731 secs
+
+dump                2 surf frontface 1 dump.surftemp.couple id s_temperature
+dump                10 grid face_grid 1 nrho.txt c_1[*] #THIS COMMAND IS NEEDED TO GET VALUES FOR NRHO IN FIX LAMMPS
+
+#dump                3 image all 1 image.*.ppm type type pdiam 0.1 gline no 0.005 zoom 2 surf one 0.01
+#dump_modify         3 pad 6
+
+stats_style         step cpu np nattempt ncoll nscoll ngrid maxlevel
+stats_modify        flush yes
+stats               1
+
+run                 10
+Memory usage per proc in Mbytes:
+  particles (ave,min,max) = 1.6875 1.6875 1.6875
+  grid      (ave,min,max) = 1.51379 1.51379 1.51379
+  surf      (ave,min,max) = 0.000411987 0.000411987 0.000411987
+  total     (ave,min,max) = 3.20263 3.20263 3.20263
+Step CPU Np Natt Ncoll Nscoll Ngrid Maxlevel 
+       0            0     2399        0        0        0      121        1 
+       1  0.000211631     2399        0        0        0      121        1 
+       2  0.000423245     2398        0        0        0      121        1 
+       3  0.000626864     2399        0        0        0      121        1 
+       4  0.000831367     2400        0        0        0      121        1 
+       5  0.001035404     2400        0        0        0      121        1 
+       6  0.001239623     2401        0        0        0      121        1 
+       7  0.001444665     2401        0        0        0      121        1 
+       8  0.001647853     2401        0        0        0      121        1 
+       9  0.001857653     2402        0        0        1      121        1 
+      10    10.081141     2400        0        0        0      121        1 
+Loop time of 10.0812 on 1 procs for 10 steps with 2400 particles
+
+MPI task timing breakdown:
+Section |  min time  |  avg time  |  max time  |%varavg| %total
+---------------------------------------------------------------
+Move    | 0.00091381 | 0.00091381 | 0.00091381 |   0.0 |  0.01
+Coll    | 0.00017625 | 0.00017625 | 0.00017625 |   0.0 |  0.00
+Sort    | 0.00020156 | 0.00020156 | 0.00020156 |   0.0 |  0.00
+Comm    | 1.7592e-05 | 1.7592e-05 | 1.7592e-05 |   0.0 |  0.00
+Modify  | 10.079     | 10.079     | 10.079     |   0.0 | 99.98
+Output  | 0.00084195 | 0.00084195 | 0.00084195 |   0.0 |  0.01
+Other   |            | 8.496e-06  |            |       |  0.00
+
+Particle moves    = 24007 (24K)
+Cells touched     = 24134 (24.1K)
+Particle comms    = 0 (0K)
+Boundary collides = 6 (0.006K)
+Boundary exits    = 6 (0.006K)
+SurfColl checks   = 2215 (2.21K)
+SurfColl occurs   = 1 (0.001K)
+Surf reactions    = 0 (0K)
+Collide attempts  = 0 (0K)
+Collide occurs    = 0 (0K)
+Reactions         = 0 (0K)
+Particles stuck   = 0
+Axisymm bad moves = 0
+
+Particle-moves/CPUsec/proc: 2381.37
+Particle-moves/step: 2400.7
+Cell-touches/particle/step: 1.00529
+Particle comm iterations/step: 1
+Particle fraction communicated: 0
+Particle fraction colliding with boundary: 0.000249927
+Particle fraction exiting boundary: 0.000249927
+Surface-checks/particle/step: 0.0922648
+Surface-collisions/particle/step: 4.16545e-05
+Surf-reactions/particle/step: 0
+Collision-attempts/particle/step: 0
+Collisions/particle/step: 0
+Reactions/particle/step: 0
+
+Particles: 2400 ave 2400 max 2400 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+Cells:      121 ave 121 max 121 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+GhostCell: 0 ave 0 max 0 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+EmptyCell: 0 ave 0 max 0 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+Surfs:    4 ave 4 max 4 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+GhostSurf: 0 ave 0 max 0 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+
+
+
+
+
+

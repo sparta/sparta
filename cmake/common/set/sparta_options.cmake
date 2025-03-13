@@ -110,6 +110,9 @@ sparta_option(
 sparta_option(SPARTA_ENABLE_PARAVIEW_TESTING "Enable ParaView testing. Default: OFF" OFF
               SPARTA_EXTRA_OPTIONS_LIST)
 
+sparta_option(SPARTA_ENABLE_LAMMPS "Enable LAMMPS coupling. Default: OFF" OFF
+              SPARTA_EXTRA_OPTIONS_LIST)
+
 if(SPARTA_CTEST_CONFIGS)
   foreach(config ${SPARTA_CTEST_CONFIGS})
     list(APPEND SPARTA_EXTRA_OPTIONS_LIST SPARTA_SPA_ARGS_${config})

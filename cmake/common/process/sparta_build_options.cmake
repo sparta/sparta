@@ -244,3 +244,12 @@ endif()
 if(SPARTA_CTEST_CONFIGS)
   string(REPLACE " " ";" SPARTA_CTEST_CONFIGS "${SPARTA_CTEST_CONFIGS}")
 endif()
+
+if(SPARTA_ENABLE_LAMMPS)
+
+  # LAMMPS requires C++17
+  if(CMAKE_CXX_STANDARD LESS 17)
+    message(FATAL_ERROR "The LAMMPS package requires the C++ standard to
+  be set to at least C++17")
+  endif()
+endif()

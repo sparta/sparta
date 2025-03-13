@@ -113,7 +113,9 @@ FixLAMMPS::~FixLAMMPS()
 {
   memory->destroy(tvector_me);
   surf->remove_custom(tindex);
-  delete random;
+  delete random;       
+  delete[] id_nrho;
+
 }
 
 /* ---------------------------------------------------------------------- */

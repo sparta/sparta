@@ -7,6 +7,9 @@ file(
   LIST_DIRECTORIES false
   CONFIGURE_DEPENDS *.cpp *.hpp *.h)
 list(REMOVE_ITEM SPA_SRC_FILES "main.cpp")
+if(NOT SPARTA_ENABLE_LAMMPS)
+  list(FILTER SPA_SRC_FILES EXCLUDE REGEX "fix_lammps\\.(cpp|h)$") #(cpp|h)
+endif()
 
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/include)
 
@@ -37,10 +40,13 @@ target_link_libraries(${TARGET_SPARTA_LIB} LINK_PUBLIC
                       ${TARGET_SPARTA_BUILD_TPLS})
 target_link_libraries(${TARGET_SPARTA_LIB} LINK_PUBLIC ${TARGET_SPARTA_PKGS})
 
-# link LAMMPS library -- ADD OPTION FLAG
-find_library(LAMMPS_LIBRARY lammps ../../lammps/build)
-target_include_directories(${TARGET_SPARTA_LIB} PUBLIC ../../lammps/src)
-target_link_libraries(${TARGET_SPARTA_LIB} LINK_PUBLIC ${LAMMPS_LIBRARY})
+# Enable LAMMPS
+if(SPARTA_ENABLE_LAMMPS)
+  find_library(LAMMPS_LIBRARY lammps ../../lammps/build)
+  target_include_directories(${TARGET_SPARTA_LIB} PRIVATE ../../lammps/src)
+  target_link_libraries(${TARGET_SPARTA_LIB} LINK_PRIVATE ${LAMMPS_LIBRARY})
+  target_compile_definitions(${TARGET_SPARTA_LIB} PRIVATE SPARTA_ENABLE_LAMMPS)
+endif()
 
 include(${SPARTA_CMAKE_COMMON_DIR}/set/style_file_glob.cmake)
 
