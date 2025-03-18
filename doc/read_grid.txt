@@ -65,15 +65,15 @@ attributes and specification of their values.  See the "Section
 custom per-grid attributes.  Custom vectors or arrays associate a
 single value or multiple values with each grid cell.  They can be
 output by the "dump grid"_dump.html command and uses as inputs by
-other commands.  For example, many of the models for the
-"surf_collide"_surf_collide.html command take temperature as an input;
-use of a per-surf vector allows the temperature of individual surface
-elements to be specified.
+other commands.  For example, the
+"create_particles"_create_particles.html command can use per-grid
+values to influence the creation of particles in each grid cell and
+their properties.
 
 The {name} argument is the name assigned to the new custom vector or
 array.  The {datatytpe} argument is {int} or {float} which determines
 whether the vector/array stores integer or floating point values.  The
-{Nc} argument is 0 for a per-surgrid vector and an integer >= 1 for an
+{Nc} argument is 0 for a per-grid vector and an integer >= 1 for an
 array with {Nc} columns.  A per-grid vector stores a single value per
 grid cell; a per-grid array stores Nc values per grid cell.
 

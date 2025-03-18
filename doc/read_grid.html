@@ -72,15 +72,15 @@ attributes and specification of their values.  See the <A HREF = "Section_howto.
 custom per-grid attributes.  Custom vectors or arrays associate a
 single value or multiple values with each grid cell.  They can be
 output by the <A HREF = "dump.html">dump grid</A> command and uses as inputs by
-other commands.  For example, many of the models for the
-<A HREF = "surf_collide.html">surf_collide</A> command take temperature as an input;
-use of a per-surf vector allows the temperature of individual surface
-elements to be specified.
+other commands.  For example, the
+<A HREF = "create_particles.html">create_particles</A> command can use per-grid
+values to influence the creation of particles in each grid cell and
+their properties.
 </P>
 <P>The <I>name</I> argument is the name assigned to the new custom vector or
 array.  The <I>datatytpe</I> argument is <I>int</I> or <I>float</I> which determines
 whether the vector/array stores integer or floating point values.  The
-<I>Nc</I> argument is 0 for a per-surgrid vector and an integer >= 1 for an
+<I>Nc</I> argument is 0 for a per-grid vector and an integer >= 1 for an
 array with <I>Nc</I> columns.  A per-grid vector stores a single value per
 grid cell; a per-grid array stores Nc values per grid cell.
 </P>
