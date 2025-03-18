@@ -360,7 +360,7 @@ For example, the "read_grid"_read_grid.html command can read per-grid
 attributes included in a grid data file.  The "custom"_custom.html
 command allows for definition of custom per-grid vectors or arrays and
 their initialization by use of "grid-style variables"_variable.html or
-by reading the values from a file.
+by reading the values from a SPARTA grid file or a coarse-grid file.
 
 See "Section Howto 6.17"_Section_howto.html#howto_17 for a discussion
 of custom per-grid attributes.
