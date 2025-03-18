@@ -26,24 +26,40 @@ CommandStyle(custom,Custom)
 namespace SPARTA_NS {
 
 class Custom : protected Pointers {
-
  public:
+  int mode;            // accessed by fix custom
+  
   Custom(class SPARTA *);
+  virtual ~Custom();
   void command(int, char **);
 
+  bigint process_actions(int, char **, int);
+  bigint process_actions();
+
  private:
-  int mode,action,groupbit;
-  int ctype,csize,cindex,ccol;
-  int vindex,vstyle;
-  char *aname,*vname;
+  struct Action {
+    int action;
+    int cindex,ctype,csize,ccol;
+    int vindex,vstyle;
+    int groupbit;
+    class Mixture *mixture;
+    class Region *region;
+    char *fname;
+    int colcount;
+    int *cindex_file,*ctype_file,*csize_file,*ccol_file;
+  };
 
-  class Variable *variable;
-  class Mixture *mixture;
-  class Region *region;
+  int naction;
+  Action *actions;
 
-  int set_particle(double, double *);
-  int set_grid(double, double *);
-  int set_surf(double, double *);
+  bigint action_set(int, int, int, int, int, int,
+                    int, class Mixture *, class Region *);
+  bigint set_particle(class Mixture *, class Region *,
+                      int, int, int, int, double, double *);
+  bigint set_grid(int, class Region *, int, int, int, int, double, double *);
+  bigint set_surf(int, class Region *, int, int, int, int, double, double *);
+  bigint read_file(int, int, int *, int *, int *, int *, char *);
+  int attribute_bracket(char *);
 };
 
 }

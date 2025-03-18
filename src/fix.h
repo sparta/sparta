@@ -27,10 +27,11 @@ class Fix : protected Pointers {
   int nevery;                    // how often to call an end_of_step fix
   int time_depend;               // 1 if requires continuous timestepping
   int gridmigrate;               // 0/1 if per grid cell info must migrate
-  int flag_update_custom;         // 0/1 if has update_custom() method
+  int flag_update_custom;        // 0/1 if has update_custom() method
   int flag_gas_react;            // 0/1 if has gas_react() method
   int flag_surf_react;           // 0/1 if has surf_react() method
-
+  int flag_custom_surf_changed;  // 0/1 if depends on custom per-surf attributes
+  
   int scalar_flag;               // 0/1 if compute_scalar() function exists
   int vector_flag;               // 0/1 if compute_vector() function exists
   int array_flag;                // 0/1 if compute_array() function exists
@@ -93,6 +94,7 @@ class Fix : protected Pointers {
   virtual void add_grid_one() {}
   virtual void reset_grid_count(int) {}
   virtual void grid_changed() {}
+  virtual void custom_surf_changed() {}
 
   virtual double compute_scalar() {return 0.0;}
   virtual double compute_vector(int) {return 0.0;}
