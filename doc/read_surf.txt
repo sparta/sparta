@@ -23,7 +23,6 @@ keyword = {type} or {custom} or {origin} or {trans} or {atrans} or
     name = name of custom per-surf vector or array
     datatype = {int} or {float} = for integer or floating point values
     Nc = 0 for a vector (single value), Nc >= 1 for an array (one or more values)
-    NOTE: if the type or custom keywords are used, they must come first
   {origin} args = Ox Oy Oz
     Ox,Oy,Oz = set origin of surface to this point (distance units)
   {trans} args = Dx Dy Dz
@@ -370,9 +369,12 @@ array named flags which stores 3 values per triangle.
 :line
 :line
 
-The following optional keywords affect the format of the surface
-file(s) that are read.  If used, these two keywords must come before
-any other keywords.
+The following two optional keywords affect the format of the surface
+file(s) that are read.
+
+IMPORTANT NOTE: if the {type} or {custom} keywords are used, they must
+come first, before any other keywords.  The two keywords themselves
+can be in any order.
 
 The {type} keyword means that each surface element in the Lines or
 Triangles section will include a surface element type, which is a
@@ -582,14 +584,13 @@ of a shrinking or ablating object.
 
 :line
 
-IMPORTANT NOTE: The final optional keyword is {file}, which must be
-must be the last keyword specified.  This is because all the remaining
-arguments in the read_surf command are passed to the
-"write_surf"_write_surf.html command.
-
 If the {file} keyword is used, the surfaces will be written out to the
 specified {filename} immediately after they are read in (and
 transformed by any of the optional keywords).
+
+IMPORTANT NOTE: If the {file} keyword is used, it must be must be the
+last keyword specified.  This is because all the remaining arguments
+after {file} are passed to the "write_surf"_write_surf.html command.
 
 The arguments for this keyword are identical to those used for the
 "write_surf"_write_surf.html command.  This includes a file name with
