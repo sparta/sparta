@@ -15,9 +15,10 @@ compute ID lambda/grid nrho temp value1 value2 ... :pre
 
 ID is documented in "compute"_compute.html command :ulb,l
 lambda/grid = style name of this compute command :l
-nrho = compute or fix for number density, prefaced by "c_" or "f_" :l
-temp = NULL or compute or fix column for temperature, prefaced by "c_" or "f_" :l
-value = {lambda} or {tau} or {knall} or {knx} or {kny} or {knz} :l
+nrho = compute or fix referebce for number density, prefaced by "c_" or "f_" :l
+temp = NULL or compute or fix reference for temperature, prefaced by "c_" or "f_" :l
+one or more values can be listed :l
+value = {lambda}, {tau}, {knall}, {knx}, {kny}, {knz} :l
   {lambda} = calculate mean free path
   {tau} = calculate mean collision time
   {knall} = calculate Knudsen number based on cell size in all dimensions
@@ -34,81 +35,82 @@ compute 1 lambda/grid f_ave\[*\] f_ave\[3\] lambda knall :pre
 These commands will dump time averages for the mean free path and mean
 collision time for each grid cell to a dump file every 1000 steps:
 
-compute 1 grid species nrho temp
-fix 1 ave/grid 10 100 1000 c_1\[*\]
+compute 1 grid all species nrho temp
+fix 1 ave/grid all 10 100 1000 c_1\[*\]
 compute 2 lambda/grid f_1\[1\] f_1\[2\] lambda tau
 dump 1 grid all 1000 tmp.grid id c_2 :pre
 
 [Description:]
 
-If the {lambda} keyword is specified, the mean free path will be
-computed. If the {tau} keyword is specified, the mean collision time
-between molecular collisions for each grid cell based on the particles
-in that cell will be computed. If one or more of the {knall} or {knx}
-or {kny} or {knz} keywords are specified, the dimensionless Knudsen
-number will be calculated, which is the ratio of the mean free path to
-the cell size. For {knall}, the cell size is taken to be the average
-of the three grid cell side lengths (or two cell lengths for a 2d
-simulation).  For {knx}, {kny}, or {knz}, the cell size is the single
-cell side length in the corresponding x,y,z dimension. The Knudsen
-number can be useful for estimating the optimal grid cell size when
-adapting the grid, e.g.  via the "adapt_grid"_adapt_grid.html or "fix
-adapt/grid"_fix_adapt_grid.html commands, as well as the optimal time
-step size.
+This command calculates properties for each grid cell based on the
+number density {nrho} and thermal tempearture {temp} of particles in
+the cell.
+
+If the {lambda} value is specified, the mean free path (MFP) of
+particles between collisions will be computed. If the {tau} value is
+specified, the mean collision time (MCT) between molecular collisions
+will be computed.
+
+If one or more of the {knall} or {knx} or {kny} or {knz} values are
+specified, the dimensionless Knudsen number will be calculated, which
+is the ratio of the MFP to the cell size.  For {knall}, the cell size
+is taken to be the average of the three grid cell side lengths (or two
+cell lengths for a 2d simulation).  For {knx}, {kny}, or {knz}, the
+cell size is the single cell side length in the corresponding x,y,z
+dimension. The Knudsen number can be useful for estimating the optimal
+grid cell size when adapting the grid, e.g. via the
+"adapt_grid"_adapt_grid.html or "fix adapt/grid"_fix_adapt_grid.html
+commands, as well as the optimal time step size.
 
 Unlike other computes that calculate per grid cell values, this
 compute does not take a "group-ID" for a grid cell group as an
 argument, nor a particle "mixture"_mixture.html ID as an argument.
-This is because it uses the number density and temperature calculated
-by other computes or fixes as input, and those computes or fixes use
-grid group IDs or mixture IDs as part of their computations.
+This is because it uses the number density and thermal temperature
+calculated by other computes or fixes as input, and those computes or
+fixes use grid group IDs or mixture IDs as part of their computations.
 
 The results of this compute can be used by different commands in
-different ways.  For example, the values can be output by the
-"dump grid"_dump.html command.
+different ways.  For example, the values can be output by the "dump
+grid"_dump.html command.
 
 :line
 
 The formula used to calculate the mean free path (lambda) is given in
 "(Bird94)"_#Bird94 as equation 4.77:
 
-:c,image(Eqs/lambda.jpg)
+:c,image(Eqs/lambda.png)
 
-NOTE: In October 2024, the formula to compute the mean free path was updated
-to the equation above, from "(Bird94)"_#Bird94, equation 4.65:
+IMPORTANT NOTE: Prior to October 2024, a simpler formula was used for
+the mean free path, also from "(Bird94)"_#Bird94, equation 4.65:
 
 :c,image(Eqs/lambda_old.jpg)
 
-The new formula is more accurate as it uses the number densities, 
-translational temperatures and VSS parameters of each gases in the
-mixture, as opposed to using the flow total number density and the
-VSS parameters of only one species.
-This will make a significant difference for gas mixtures, in particular
-for reacting flow problems where the composition of the mixture changes
-significantly in time.
+The new formula is more accurate as it uses the number densities,
+thermal temperatures, and VSS parameters of each gas in the mixture,
+as opposed to using the total number density and the VSS parameters of
+only one species.  This can make a significant difference for gas
+mixtures, in particular for reacting flow problems where the
+composition of the mixture changes significantly in time.
 
 The formula used to calculate the mean collision time (tau) is given in
 "(Bird94)"_#Bird94 as equation 1.38 combined with 4.75:
 
-:c,image(Eqs/tau.jpg)
+:c,image(Eqs/tau.png)
 
-These are the exact mean free path and mean collision time for a
-multi-species mixture, suitable for estimating optimal grid cell sizes
-and timestep as explained above.
+These are the exact mean free path (MFP) and mean collision time (MCT)
+for a multi-species mixture, suitable for estimating optimal grid cell
+sizes and timestep as explained above.
 
+The {dref} and {Tref} and {omega} values in the two formulas are
+collision properties for a pair of species in the flow, subscripted as
+*pq*.  Specifically, {dref} is the diameter of molecules of the
+species pair, {Tref} is the reference temperature, and {omega} is the
+viscosity temperature-dependence for the species pair.
 
-
-{dref} and {Tref} and {omega} are collision properties for a pair of
-species species in the flow. Specifically, {dref} is the diameter of
-molecules of the species pair, {Tref} is the reference temperature,
-and {omega} is the viscosity temperature-dependence for the species
-pair.
-
-In the formula above, {n} is the number density and {T} is the thermal
-temperature of particles in a grid cell.  This compute does not
-calculate these quantities itself; instead it uses another compute or
-fix to perform the calculation.  This is done by specifying the {nrho}
-and {temp} arguments like this:
+In the two formulas, {n} is the number density and {T} is the thermal
+temperature of particles in a grid cell.  These two per-grid values
+are specified via the {nrho} and {temp} arguments in one of these
+forms:
 
 c_ID = compute with ID that calculates temp as a vector output
 c_ID\[m\] = compute with ID that calculates temp as its Mth column of array output

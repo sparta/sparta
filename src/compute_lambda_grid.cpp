@@ -99,8 +99,9 @@ ComputeLambdaGrid::ComputeLambdaGrid(SPARTA *sparta, int narg, char **arg) :
         error->all(FLERR,"Compute lambda/grid fix array is "
                    "accessed out-of-range");
     }
-  } else if (strcmp(arg[3],"NULL") == 0) tempwhich = NONE;
-  else error->all(FLERR,"Illegal compute lambda/grid command");
+  } else if (strcmp(arg[3],"NULL") == 0) {
+    tempwhich = NONE;
+  } else error->all(FLERR,"Illegal compute lambda/grid command");
 
   lambdaflag = 0;
   tauflag = 0;
