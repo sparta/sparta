@@ -191,8 +191,11 @@ action.
 :line
 
 The {file/coarse} action resets the values of one or more custom
-attributes by reading them from the {fname} file.  It can only be used
-with {style grid}, not with {style surf} or {style particle}.
+attributes by reading coarse grid values from the {fname} file as
+explained on the "custom"_custom.html command doc page.
+
+It can only be used with {style grid}, not with {style surf} or {style
+particle}.
 
 IMPORTANT NOTE: The {file/coarse} action has NOT yet been implemented
 for this command.
@@ -215,7 +218,7 @@ the "custom"_custom.html command doc page for use with its
 
 Note that if there are multiple coarse files for each timestep, then
 the specified {fname} must contain both wildcard "*" and "%"
-characters.
+characters, as explained on the "custom"_custom.html command doc page.
 
 :line
 

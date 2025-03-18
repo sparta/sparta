@@ -151,11 +151,11 @@ The {file} action resets the values of one or more custom attributes
 by reading them from the {fname} file.  It can only be used with
 {style grid} or {style surf}, not with {style particle}.
 
-The specified (M) number of {cname1,cname2,...,cnameM} arguments must
-match the number of values listed on each line in the file.  A
-{cnameI} with no brackets is the name of a custom vector.  For a
-custom array, {cnameI} must be of the form name\[N\] for the Nth
-column of the array.
+The specified {M} is the number of {cname1,cname2,...,cnameM} values
+that follow and must match the number of values listed on each line in
+the file, as explained below.  A {cnameI} with no brackets is the name
+of a custom vector.  For a custom array, {cnameI} must be of the form
+name\[N\] for the Nth column of the array.
 
 The format of the file is as follows.  Note that the number of grid
 cells or surf elements specified in the file does not have to equal
@@ -166,10 +166,14 @@ custom attribute value(s) will be unchanged.
 The file can start with any number of comment or blank lines.
 A comment line starts with the "#" character.
 
-The first non-comment, non-blank line must be an integer count N of
-the number of attribute value lines which follow in the file.  These N
-lines must immediately follow the count line and contain no blank
-lines.  Any remaining lines in the file are ignored.
+The first non-comment, non-blank line has this format:
+
+N Nvalue :pre
+
+N is the count of attribute value lines which follow.  These N lines
+must immediately follow the count line and contain no blank lines.
+Any remaining lines in the file are ignored.  Nvalue is the
+number of attribute values per line and must equal the specified {M}.
 
 The format of each attribute value line is as follows:
 
@@ -187,7 +191,7 @@ for 3 surface elements are set.
 # custom values for a few surface elements
 # calculated for test problem XYZ :pre
 
-3
+3 2
 1 10.0 5.0
 20 12.0 6.5
 21 8.0 4.55 :pre
@@ -199,25 +203,64 @@ custom surf create darray float 2 file file.surf 2 darray\[1\] darray\[2\] :pre
 :line
 
 The {file/coarse} action resets the values of one or more custom
-attributes by reading them from one or more files.  It can only be
-used with {style grid}, not with {style surf} or {style particle}.
+attributes by reading coarse grid values from one or more files.  It
+can only be used with {style grid}, not with {style surf} or {style
+particle}.
 
 IMPORTANT NOTE: The file/coarse action has NOT yet been implemented
 for this command.
 
-This action is designed to allow input of custom values for a handful
-of "coarse" cells.  The values for each coarse cell are assigned to
-multiple smaller SPARTA grid cells.  The coarse cells could be from
-another code, such as a continuum Navier-Stokes (NS) code.  This
-operation allows the solution from the NS code to be be mapped to the
-SPARTA grid.
+This action is designed to allow input of custom values for some
+number of "coarse" grid cells.  The coarse cells and their values
+could be output from another code, such as a continuum Navier-Stokes
+(NS) code or even from an experiment.  The coarse cell values are
+"mapped" to individual SPARTA grid cells, so that per-grid custom
+attributes for each SPARTA grid cell are set by the values for one of
+the coarse cells.  This is done in the following manner.
 
-Creation of the file(s) used by this action is a pre-processing step,
-which in the NS context could calculates which SPARTA grid cells to
-assign to each coarse grid cell, based on the geometry of the two
-grids.  The "create_particles"_create_particles.html command could be
-used with its custom options to create particles with properties that
-match the NS solution.  Using this action with the "fix
+Each coarse grid cell is associated with a (cx,cy,cz) point.  This
+could be the center point of grid cell in a NS code which uses
+finite-volume grid cells.  Or it could be a grid point in a NS code
+which uses finite elements, e.g. the corner point of a triangle (2d)
+or tetrahedron (3d).  Conceptually, the idea is that the small area
+(2d) or volume (3d) surrounding the point has properties represented
+by the coarse grid cell values in the file.
+
+All SPARTA grid cells have a center point (sx,sy,sz), which is the
+center of a rectangle (2d) or parallelpiped (3d).
+
+Both the coarse-grid code and SPARTA should operate on the same
+simulation domain, which is the simulation box in the case of SPARTA.
+The set of all (cx,cy,cz) points should "cover" this domain, as do the
+set of all (sx,sy,sz) points.  For each (sx,sz,sz) point, the
+{nearest} (cx,cy,cz) point is found.  The coarse grid values for that
+point are assigned to the custom per-grid values of that SPARTA grid
+cell.  Here are a few additional details.
+
+If two or more coarse grid points are equi-distant from a SPARTA point,
+then their coarse grid values are averged before assigning them to the SPARTA
+grid cell. :ulb,l
+
+SPARTA points will never be on the boundary of the simulation domain.
+But coarse grid points can be.  If a pair of boundaries (e.g. xlo,xhi)
+are periodic, then the set of coarse grid points is also considered to
+be periodic for purposes of finding a closest coarse grid point. :l
+
+If surfaces are present in the two codes's simulations, then both
+codes should define an identical set of surface elements.  This is
+necessary to make flow parameters near surfaces consistent between the
+two codes. :l
+
+SPARTA can define grid cells wholly inside of surface objects. The
+coarse grid code may not, e.g. if finite elements conform to the
+surface of an object.  The mapping operation described above is not
+performed for SPARTA grid cells wholly inside surface objects; their
+custom attribute values are set to zero. :l,ule
+
+Creation of the file(s) read by this action is a pre-processing step.
+The "create_particles"_create_particles.html command can be used with
+its custom options to create particles with properties that match the
+coarse-grid NS values.  Using this action with the "fix
 custom"_fix_custom.html command could assign per-grid custom values
 based on different time snapshots from the NS code.
 
@@ -228,62 +271,51 @@ filename.  For example, if {Nfile} = 3 and {fname} is specified as
 surf.%.attribute, then files surf.1.attribute, surf.2.attribute,
 surf.3.attribute, etc will be read.  Note that if the "fix
 custom"_fix_custom.html command uses this action, and there are also
-multiple coarse files for each of the different timesteps , then the
-specified {fname} must contain both wildcard "%" and "*" characters.
+multiple coarse files for different timesteps, then the specified
+{fname} must contain both wildcard "%" and "*" characters.
+
+The {filestyle} argument is {text} or {binary}.  The format for both
+kinds of files is explained below.
 
 The specified (M) number of {cname1,cname2,...,cnameM} arguments must
-match the number of values listed for each coarse cell entry in each
-file.  A {cnameI} with no brackets is the name of a custom vector.
-For a custom array, {cnameI} must be of the form name\[N\] for the Nth
+match the number of values listed on each line in each file.  A
+{cnameI} with no brackets is the name of a custom vector.  For a
+custom array, {cnameI} must be of the form name\[N\] for the Nth
 column of the array.
 
-The reason to use multiple files is a single file would be extremely
-large and/or to enable more parallelism by having different processors
-read different files simultaneously.  Conceptually, the information being
-read is the union of the information from all the individual files.
+The reason to use multiple files is that a single file could be
+extremely large and/or to enable more parallelism by having different
+processors read different files simultaneously.  Conceptually, the
+information being read is the union of the information from all the
+individual files.
 
-As explained below, for each coarse cell entry, one of more SPARTA
-grid cell IDs is specified.  The custom values for the coarse cell are
-assigned to each of the SPARTA grid cells.  The union of all the
-SPARTA grid cell IDs (from all the files) should have no duplicates.
-But the union does not have to equal the total number of SPARTA grid
-cells.  If the ID of a SPARTA grid cell does not appear in any of the
-files, then its custom attribute value(s) will be unchanged.
+For {filestyle} = {text}, the format of each file is as follows.  It
+can start with any number of comment or blank lines.  A comment line
+starts with the "#" character.
 
-The format of each {text} file is as follows.  One of more of these
-files should be written by the pre-processing code in text (ASCII)
-format.
+The first non-comment, non-blank line has this format:
 
-It can start with any number of comment or blank lines.  A comment
-line starts with the "#" character.
+N Nvalue :pre
 
-The first non-comment, non-blank line must be an integer count Nentry
-of the number of coarse cell entries which follow in this file.  The
-entries must immediately follow the count line and contain no blank
-lines.  Any remaining lines in the file are ignored.
+N is the count of coarse cell value lines which follow.  These N lines
+must immediately follow the count line and contain no blank lines.
+Any remaining lines in the file are ignored.  Nvalue is the number of
+attribute values per line and must equal the specified {M}.
 
-The format of each coarse cell entry is as follows:
+The format of each coarse cell value line is as follows:
 
-coarse-ID Ncells value1 value2 ... valueM
-cell1-ID cell2-ID ... (10 per line until complete, last line may have fewer)
+coarse-ID x y z value1 value2 ... valueM
 
-On the first line, the coarse-ID is simply an index for the coarse
-cell entry.  It may be convenient for indexing the coarse grid cells
-from another code.  Or for indexing the entries across multiple coarse
-files.  SPARTA ignores this index value.
+Coarse-ID is an integer ID of the coarse grid cell.  SPARTA ignores
+this ID, but it may be convenient for indexing the coarse grid cells
+from another code.  Or for indexing the coarse cells across multiple
+coarse grid files.
 
-Ncells is the count of SPARTA grid cells which are mapped to this
-coarse cell entry.  Conceptually, it could be the list of SPARTA grid
-cells whose center points fall inside the coarse grid cell from
-another code.
+The x, y, z values are the coordinates of the point associated with
+the values which follow.
 
 M values follow, corresponding to the {M} argument in the input
 script, following the {fname} argument.
-
-The next line(s) list the {Ncell} SPARTA grid cell IDs.  If {Ncell} >
-10, list 10 per line.  The last line contains from 1 to 10 grid cell
-IDs.  Note that for hierarchial grids, each grid cell ID must be the
-integer form of the ID, not the string form (possibly with dashes).
 
 The following is an example of a correctly formatted file to set the
 values for a per-grid custom array with 2 columns.  Only the
@@ -292,53 +324,59 @@ values for 30 SPARTA grid cells are set (6+6+18).
 # custom values for a few Navier-Stokes elements
 # calculated for test problem XYZ :pre
 
-3
-1 6 10.0 5.0
-  2 4 6 8 10 12
-2 6 12.0 6.5
-  1 3 5 7 9 11
-3 18 8.0 4.55
-  13 14 15 16 17 18 19 20 21 22
-  23 24 25 26 27 28 29 30 :pre
+4 2
+1 5.0 5.0 0.0 10.0 5.0
+1 15.0 5.0 0.0 12.0 6.5
+1 5.0 15.0 0.0 8.0 4.55
+1 15.0 15.0 9.0 5.5 :pre
 
 This file could be read with an input script command like either of these:
 
-custom surf create darray float 2 file/coarse 1 text file.surf 2 darray\[1\] darray\[2\]
-custom surf create darray float 2 file/coarse 3 text file.surf.% 2 darray\[1\] darray\[2\] :pre
+custom grid create nrho float 0 create temp float 0 file/coarse 1 text cfile.grid 2 nrho temp
+custom grid create nrho float 0 create temp float 0 file/coarse 3 text cfile.grid.% 2 nrho temp :pre
 
 The latter command assumes there are 2 other files like this one, with
-names file.surf.1, file.surf.2, and file.surf.3.
+names cfile.grid.1, cfile.grid.2, and cfile.grid.3.
 
-The format of each {binary} file is as follows.  One of more of these
-files should be written by the pre-processing code in binary format.
+For {filestyle} = {binary}, the format of each file is as follows.
 
-precision of grid-cell IDs (4-byte integer)
-Nentry (4-byte integer)
-entry-ID for entry # 1 (4-byte integer)
-Ncell (4-byte integer)
-M custom values (8-byte doubles)
-Ncell grid-IDs (4- or 8-byte integers)
+Ncoarse (4-byte integer)
+Nvalue (4-byte integer)
+x y z (three 8-byte doubles for 1st coarse cell)
+Nvalue custom values 1 (Nvalue 8-byte doubles for 1st coarse cell)
+x y z (three 8-byte doubles for 2nd cell)
+Nvalue custom values (Nvalue 8-byte doubles for 2nd cell)
 ...
-entry-ID for entry # Nentry (4-byte integer)
-Ncell (4-byte integer)
-M custom values (8-byte doubles)
-Ncell grid-IDs (4- or 8-byte integers) :pre
+x y z (three 8-byte doubles for Ncoarse cell)
+Nvaluecustom values (Nvalue 8-byte doubles for Ncoarse cell) :pre
 
-The precision is the number 32 or 64 and depends on the precision the
-SPARTA executable is using to store its grid cell IDs.  If SPARTA was
-compiled with the SPARTA_BIG setting (default), then precision = 32
-for 32-bit grid cell IDs.  If SPARTA was compiled with the
-SPARTA_BIGBIG setting, then precision = 64 for 64-bit grid cell IDs.
+Ncoarse is the number of coarse grid entries in this file.  Nvalue is
+the number of values per coarse grid; it must match the specified {M}.
 
-Nentry refers to the number of coarse cell entries in this file.
+X,y,z are the coordinates of the point associated with the values
+which follow.
 
-The double for custom values refers to an 8-byte floating point value.
+Each of the Nvalue values are 8-byte floating point values (doubles).
 If the corresponding custom attribute in SPARTA is of type {int}, then
 the floating point value read from the file will be truncated to an
 integer.  E.g. 12.0 --> 12, 12.3 --> 12.
 
-The 4 lines listed above as entry-ID, Ncell, M custom values, Ncell
-grid-IDs are repeated Nentry times in the binary file.
+The coarse grid binary file that corresponds to the coarse grid text file
+above would store these numbers (without the newlines):
+
+4 2
+5.0 5.0 0.0 10.0 5.0
+15.0 5.0 0.0 12.0 6.5
+5.0 15.0 0.0 8.0 4.55
+15.0 15.0 9.0 5.5 :pre
+
+This file could be read with an input script command like either of these:
+
+custom grid create nrho float 0 create temp float 0 file/coarse 1 binary cfile.grid 2 nrho temp
+custom grid create nrho float 0 create temp float 0 file/coarse 3 binary cfile.grid.% 2 nrho temp :pre
+
+The latter command assumes there are 2 other binary files like this
+one, with names cfile.grid.1, cfile.grid.2, and cfile.grid.3.
 
 :line
 
@@ -347,6 +385,7 @@ grid-IDs are repeated Nentry times in the binary file.
 [Related commands:]
 
 "fix custom"_fix_custom.html, "mixture"_mixture.html,
-"group"_group.html, "region"_region.html
+"group"_group.html, "region"_region.html,
+"create_particles"_create_particles.html
 
 [Default:] none
