@@ -35,11 +35,15 @@ class ComputeLambdaGrid : public Compute {
   bigint memory_usage();
 
  protected:
-  int nglocal,nvalues,nparams,tmax,noutputs;
   int tempwhich;
+  int noutputs;
   int lambdaflag,tauflag;
   int knallflag,knxflag,knyflag,knzflag,knanyflag;
 
+  int nglocal;               // current count of owned grid cells
+  int tmax;                  // max tally count for nrho compute/fix
+  
+  int nrho_values;           // # of species with nrho values
   char **ids_nrho;           // ID/name of compute,fix,variable to access
   int *nrhowhich;            // COMPUTE or FIX or VARIABLE
   int *nrhoindex;            // which column from compute or fix to access
