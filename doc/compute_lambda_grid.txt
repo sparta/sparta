@@ -15,10 +15,10 @@ compute ID lambda/grid nrho temp value1 value2 ... :pre
 
 ID is documented in "compute"_compute.html command :ulb,l
 lambda/grid = style name of this compute command :l
-nrho = compute or fix referebce for number density, prefaced by "c_" or "f_" :l
-temp = NULL or compute or fix reference for temperature, prefaced by "c_" or "f_" :l
+nrho = compute or fix reference for per-grid number density, prefaced by "c_" or "f_" :l
+temp = NULL or compute or fix reference for pre-grid temperature, prefaced by "c_" or "f_" :l
 one or more values can be listed :l
-value = {lambda}, {tau}, {knall}, {knx}, {kny}, {knz} :l
+value = {lambda}, {tau}, {knall}, {knx}, {kny}, or {knz} :l
   {lambda} = calculate mean free path
   {tau} = calculate mean collision time
   {knall} = calculate Knudsen number based on cell size in all dimensions
@@ -37,14 +37,14 @@ collision time for each grid cell to a dump file every 1000 steps:
 
 compute 1 grid all species nrho temp
 fix 1 ave/grid all 10 100 1000 c_1\[*\]
-compute 2 lambda/grid f_1\[1\] f_1\[2\] lambda tau
-dump 1 grid all 1000 tmp.grid id c_2 :pre
+compute 2 lambda/grid f_1\[*\] f_1\[2\] lambda tau
+dump 1 grid all 1000 tmp.grid id c_2\[*\] :pre
 
 [Description:]
 
-This command calculates properties for each grid cell based on the
-number density {nrho} and thermal tempearture {temp} of particles in
-the cell.
+This command calculates properties related to the gas collision mean
+free path for each grid cell based on the number density {nrho} and
+thermal tempearture {temp} of particles in the cell.
 
 If the {lambda} value is specified, the mean free path (MFP) of
 particles between collisions will be computed. If the {tau} value is
@@ -54,24 +54,29 @@ will be computed.
 If one or more of the {knall} or {knx} or {kny} or {knz} values are
 specified, the dimensionless Knudsen number will be calculated, which
 is the ratio of the MFP to the cell size.  For {knall}, the cell size
-is taken to be the average of the three grid cell side lengths (or two
-cell lengths for a 2d simulation).  For {knx}, {kny}, or {knz}, the
-cell size is the single cell side length in the corresponding x,y,z
-dimension. The Knudsen number can be useful for estimating the optimal
-grid cell size when adapting the grid, e.g. via the
-"adapt_grid"_adapt_grid.html or "fix adapt/grid"_fix_adapt_grid.html
-commands, as well as the optimal time step size.
+is the average of the three grid cell side lengths (or two cell
+lengths for a 2d simulation).  For {knx}, {kny}, or {knz}, the cell
+size is the single cell side length in the corresponding x,y,z
+dimension.
 
-Unlike other computes that calculate per grid cell values, this
-compute does not take a "group-ID" for a grid cell group as an
-argument, nor a particle "mixture"_mixture.html ID as an argument.
-This is because it uses the number density and thermal temperature
-calculated by other computes or fixes as input, and those computes or
-fixes use grid group IDs or mixture IDs as part of their computations.
+The Knudsen number can be useful for estimating the optimal grid cell
+size when adapting the grid, e.g. via the "adapt_grid"_adapt_grid.html
+or "fix adapt/grid"_fix_adapt_grid.html commands, as well as for
+estimating the optimal timestep size.
+
+Note that unlike other computes which calculate per-grid values, this
+compute does not take a "group-ID" for a grid cell group or a particle
+"mixture"_mixture.html ID as an argument.  This is because it uses the
+number density and thermal temperature calculated by other computes or
+fixes as input, and those computes or fixes use grid group IDs or
+mixture IDs as part of their computations.
 
 The results of this compute can be used by different commands in
 different ways.  For example, the values can be output by the "dump
-grid"_dump.html command.
+grid"_dump.html command.  Or as indicated above the compute can be
+used as an argument for the "adapt_grid"_adapt_grid.html or "fix
+adapt"_fix_adapt.html commands, e.g. to trigger grid cell refinement
+or coarsening based on a mean free path metric.
 
 :line
 
@@ -85,21 +90,21 @@ the mean free path, also from "(Bird94)"_#Bird94, equation 4.65:
 
 :c,image(Eqs/lambda_old.jpg)
 
-The new formula is more accurate as it uses the number densities,
-thermal temperatures, and VSS parameters of each gas in the mixture,
-as opposed to using the total number density and the VSS parameters of
+The new formula is more accurate as it uses the number densities and
+VSS parameters of all gas species (sum over {s}) in the system, as
+opposed to using the total number density and the VSS parameters of
 only one species.  This can make a significant difference for gas
 mixtures, in particular for reacting flow problems where the
-composition of the mixture changes significantly in time.
+composition of the mixture changes significantly over time.
 
 The formula used to calculate the mean collision time (tau) is given in
 "(Bird94)"_#Bird94 as equation 1.38 combined with 4.75:
 
 :c,image(Eqs/tau.png)
 
-These are the exact mean free path (MFP) and mean collision time (MCT)
-for a multi-species mixture, suitable for estimating optimal grid cell
-sizes and timestep as explained above.
+These two formulas are the exact mean free path (MFP) and mean
+collision time (MCT) for a multi-species mixture, suitable for
+estimating optimal grid cell sizes and timestep as explained above.
 
 The {dref} and {Tref} and {omega} values in the two formulas are
 collision properties for a pair of species in the flow, subscripted as
@@ -107,74 +112,83 @@ collision properties for a pair of species in the flow, subscripted as
 species pair, {Tref} is the reference temperature, and {omega} is the
 viscosity temperature-dependence for the species pair.
 
-In the two formulas, {n} is the number density and {T} is the thermal
-temperature of particles in a grid cell.  These two per-grid values
-are specified via the {nrho} and {temp} arguments in one of these
+In the two formulas, {n_q} is the number density of species {q} within
+a grid cell.  {T} is the thermal temperature of all particles (all
+species) in a grid cell.  These per-grid values are specified for use
+by this command as the {nrho} and {temp} arguments in one of these
 forms:
 
-c_ID = compute with ID that calculates temp as a vector output
-c_ID\[m\] = compute with ID that calculates temp as its Mth column of array output
-c_ID\[*\] = compute with ID that calculates nrho as an array output
-f_ID\[m\] = fix with ID that calculates a time-averaged temp as a vector output
-f_ID\[m\] = fix with ID that calculates a time-averaged temp as its Mth column of array output
-f_ID\[*\] = fix with ID that calculates a time-averaged nrho as an array output :pre
+c_ID\[*\] = compute with ID that calculates nrho for each species as an array output
+f_ID\[*\] = fix with ID that calculates a time-averaged nrho for each species as an array output :pre
+
+c_ID = compute with ID that calculates temp for all particles a vector output
+c_ID\[m\] = compute with ID that calculates temp for all particles as its Mth column of array output
+f_ID = fix with ID that calculates a time-averaged temp for all particles as a vector output
+f_ID\[m\] = fix with ID that calculates a time-averaged temp for all particles as its Mth column of array output :pre
 
 The {temp} argument can also be specified as NULL, which drops the
-(Tref/T) ratio term from the formula above.  That is also effectively
-the case if the reference species defines omega = 1/2.  In that case,
-the {temp} argument is ignored, whether it is NULL or not.
+(Tref/T) and (T/Tref) ratios from the two formulas above.
 
-IMPORTANT NOTE: A per species number density array calculated by
-either a compute or a fix has to be specified.  The code will
-automatically detect the number of species in the mixture to perform
-the mean free path and mean collision time calculation.  The
-"compute_grid.html"_compute_grid command with mixture "species" has to
-be invoked to ensure that the number density of all the species in the
-mixture is computed.
+NOTE for next paragraph: Is it correct that currently, this command
+requires that you use a compute grid nrho command which calculates
+nrho for every species in the system, not simply every species in a
+mixture that the user defines (used as an arg with the compute grid
+command) ?  And this is intentional (for accuracy), not a limitation
+of the current implementation?
 
-Note that if the value of {n} is 0.0 for a grid cell, its
-mean-free-path and mean-collision-time will be set to 1.0e20 (infinite
-length and time).
+Note that because the MFP and MFT formulas require a number density
+nrho for all species in the system, you should use a "compute
+grid"_compute_grid.html command in this form:
 
-The "compute_grid.html"_compute_grid command can calculate a number
-density, using its {nrho} value.  It can also calculate a temperature
-using its {temp} value.  Note that this temperature is inferred from
-the translational kinetic energy of the particles, which is only
-appopriate for a mean free path calculation for systems with zero or
-small streaming velocities.  For systems with streaming flow, an
-appropriate temperature can be calculated by the "compute_thermal_grid.html"_compute
-thermal/grid command.  The formulas on its
-doc page show that the the center-of-mass velocity from the particles
-in each grid cell is subtracted from each particle's velocity to yield
-a translational thermal velocity, from which a thermal temperature is
-calculated.
+compute 1 grid all species nrho :pre
 
-The "fix_ave_grid.html"_fix ave/grid command can calculate the same
-values in a time-averaged sense, assuming it uses these same computes
-as input.  Using this fix as input to this compute will thus yield
-less noisy values, due to the time averaging.
+to reference by this command as c_ID\[*\].  Or similarly for a "fix
+ave/grid"_fix_ave_grid.html command that takes c_ID\[*\] as an
+argument, which is then referenced by this command as f_ID\[*\].
 
-Note that the compute or fix (via the compute(s) it uses as input) has to
-perform its number density calculation for a subset of
-the particles based on the "mixture" it uses.  See the
-"mixture.html"_mixture command for how a set of species can be
-partitioned into groups.
+NOTE: check that this next paragraph is correct about the meaning of T
+in the 2 formulas.
 
-IMPORTANT NOTE: If the ID of a "fix_ave_grid.html"_fix ave/grid
-command is used as the {nrho} or {temp} argument, it only produces
-output on timesteps that are multiples of its {Nfreq} argument.  Thus
-this compute can only be invoked on those timesteps.  For example, if
-a "dump.html"_dump grid command invokes this compute to write values
-to a dump file, it must do so on timesteps that are multiples of
-{Nfreq}.
+For the compute or fix referenced by the {temp} argument, this is
+meant in the two formulas to be the aggregate thermal temperature of
+all the particles in a grid cell.
+
+For systems with a zero of small streaming velocity, this can be calculated
+using this command:
+
+compute 2 grid all all temp :pre
+
+which uses the velocity of each particle to calculate a temperature.
+
+For systems with a streaming flow, an appropriate therml temperature
+can be calculated by the "compute
+thermal/grid"_compute_thermal_grid.html thermal/grid command.  Its doc
+page explain that the the center-of-mass velocity for the particles in
+each grid cell is subtracted from each particle's individual velocity
+to yield its thermal velocity, from which a thermal temperature is
+calculated.  The corresponding command to use with this compute would
+be:
+
+compute 2 thermal/grid all all temp :pre
+
+Note that using fixes, rather than computes, for the {nrho} and {temp}
+arguments will typically result in less noisy MFP and MCT values, due
+to the time averaging which the "fix ave/grid"_fix_ave_grid.html
+command can perform.
+
+IMPORTANT NOTE: If the IDs of one or more "fix
+ave/grid"_fix_ave_grid.html commands is used for the {nrho} or {temp}
+arguments, they only produce output on timesteps that are multiples of
+their {Nfreq} argument.  Thus this compute can only be invoked on
+those timesteps.
 
 :line
 
 [Output info:]
 
 If only one output value is specified, this compute outputs a per-grid
-vector. Otherwise outputs a per-grid array with two or more columns,
-in the order the output values were specified in the input.
+vector. Otherwise it outputs a per-grid array with two or more
+columns, in the order the output values were specified.
 
 This compute performs calculations for all flavors of child grid cells
 in the simulation, which includes unsplit, cut, split, and sub cells.
@@ -192,11 +206,15 @@ values from a compute as input.  See "Section
 4.4"_Section_howto.html#howto_4 for an overview of SPARTA output
 options.
 
-The per-grid values for the column of output corresponding to {lambda}
-will will be in distance "units.html"_units. The column corresponding
-to {tau} will be time distance divided by time "units.html"_units.
-Columns of corresponding to {knall} or {knx} or {kny} or {knz} will be
-dimensionless.
+The per-grid values for a column of output for {lambda} will be in
+"distance units"_units.html.  A column of output for {tau} will be
+"time units"_units.html.  Columns of output for {knall} or {knx} or
+{kny} or {knz} will be dimensionless.
+
+If the value of {nrho} for a grid cell is 0.0 (no particles), its MFP
+and MCT will be set to 1.0e20 (infinite length and time).  This
+"infinite" MFP value will also be used for the calculation of Knudsen
+numbers.
 
 :line
 
@@ -252,4 +270,3 @@ ave/grid"_fix_ave_grid.html, "dump grid"_dump.html
 :link(Bird94)
 [(Bird94)] G. A. Bird, Molecular Gas Dynamics and the Direct
 Simulation of Gas Flows, Clarendon Press, Oxford (1994).
-

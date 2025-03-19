@@ -50,7 +50,7 @@ class ComputeLambdaGrid : public Compute {
   int *value2index;          // index of compute,fix,variable
   int *post_process;         // 1 if need compute->post_process() on value
 
-  int ntotal;                // total # of columns in tally array
+  int ntotal;                // total # of columns in tally array = # of species
 
                              // used when normalizing tallies
   int *nmap;                 // # of tally quantities for each value
@@ -69,11 +69,11 @@ class ComputeLambdaGrid : public Compute {
   int tempindex;
   class Compute *cnrho,*ctemp;
   class Fix *fnrho,*ftemp;
-  double **nrho,*temp,**lambdainv,**tauinv;
+  
+  double **nrho,*temp;
+  double *lambda_grid;
+  double **lambdainv,**tauinv;
   double **array_grid1;
-
-  char *species;
-  double dref,tref,omega,mj,mk,mr;
 };
 
 }
