@@ -77,6 +77,8 @@ before running cmake.
   * Print the SPARTA packages and exit.
 * SPARTA_LIST_TPLS
   * Print the SPARTA TPLs and exit.
+* SPARTA_ENABLE_LAMMPS
+  * Link molecular dynamics library
 * SPARTA_ENABLE_TESTING
   * Add tests in examples to be run via ctest.
 * SPARTA_ENABLE_PARAVIEW_TESTING
