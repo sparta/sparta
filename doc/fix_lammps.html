@@ -63,8 +63,7 @@ more accurate surface-flow interaction. See the examples/couple
 directory for input scripts that use this fix.
 </P>
 <P>Note that this fix can be run in parallel. For parallel runs, the MD instance
-will inherit all procs for the MD simulation. GPUs can also be employed through the 
-KOKKOS package and extending input arguments to the LAMMPS instance (see src/fix_lammps.cpp).
+will inherit all procs for the MD simulation.
 </P>
 <P>The specified <I>group-ID</I> must be the name of a grid cell group,
 as defined by the <A HREF = "group.html">group grid</A> command, which contains a
@@ -87,7 +86,7 @@ run
     <li>cmake -D PKG_MANYBODY=on -D BUILD_SHARED_LIBS=yes ../cmake</li>
     <li>make -j</li>
     <li>cd ../../sparta/build</li>
-    <li>cmake -D CMAKE_CXX_STANDARD=17 ../cmake</li>
+    <li>cmake -D SPARTA_ENABLE_LAMMPS=ON ../cmake</li>
     <li>make -j</li></ol>
     
 The examples/couple directory can test the setup. Should errors occur for either LAMMPS or SPARTA, then they will be shown in

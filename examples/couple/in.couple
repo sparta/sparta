@@ -42,7 +42,7 @@ fix                 in emit/face all xlo twopass
 create_particles    all n 0 twopass
 
 dump                2 surf frontface 1 dump.surftemp.couple id s_temperature
-dump                10 grid face_grid 1 nrho.txt c_1[*] #THIS COMMAND IS NEEDED TO GET VALUES FOR NRHO IN FIX LAMMPS
+dump                10 grid face_grid 1 nrho.txt c_1[*] #THIS COMMAND IS NEEDED FOR NRHO IN FIX LAMMPS
 
 #dump                3 image all 1 image.*.ppm type type pdiam 0.1 gline no 0.005 zoom 2 surf one 0.01
 #dump_modify         3 pad 6

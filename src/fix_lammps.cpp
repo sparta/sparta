@@ -143,6 +143,18 @@ void FixLAMMPS::init()
   }
 }
 
+/* ----------------------------------------------------------------------
+   couples the current SPARTA simulation to molecular dynamics by 
+   translating properties and creating an instance of LAMMPS. Resulting
+   quantities of interest are automatically passed back to SPARTA. The 
+   workflow is
+    1. Lifting Operator: From SPARTA to LAMMPS, initialize microscopic 
+       properties derived from SPARTA
+    2. Run LAMMPS simulation
+    3. Restricting Operator: From LAMMPS to SPARTA, calculate relevant 
+       quantities to pass to SPARTA
+------------------------------------------------------------------------- */
+
 void FixLAMMPS::end_of_step()
 {
   // skip LAMMPS check if not on timestep that's multiple of Nevery
@@ -150,7 +162,7 @@ void FixLAMMPS::end_of_step()
   if (ntimestep != nvalid) return;
 
   // Duplicate communicator
-  MPI_Comm comm_lammps;  // New communicator
+  MPI_Comm comm_lammps;
   MPI_Comm_dup(MPI_COMM_WORLD, &comm_lammps);
   int rank,nprocs;
   MPI_Comm_rank(comm_lammps,&rank);
@@ -184,7 +196,8 @@ void FixLAMMPS::end_of_step()
   int coupleCell;
   int coupledProc;
   int local_fnum;
-  int maxCells; // (all procs need to loop over the maximum number of cells of one proc to be able to assist in a coupling)
+  int maxCells; 
+  // (all procs need to loop over the maximum number of cells of one proc to be able to assist in a coupling)
   MPI_Allreduce(&ncells, &maxCells, 1, MPI_INT, MPI_MAX, comm_lammps);
 
   for (int i = 0; i < maxCells; i++)
@@ -194,9 +207,9 @@ void FixLAMMPS::end_of_step()
     double xLength, yLength, yBox, xBox;
     local_fnum = 19; //design choice: MD atoms representing one DSMC particle
 
-    if (i < ncells)  // apply coupling to selected cell group
+    if (i < ncells)
     {
-      if (cinfo[i].mask & groupbit)
+      if (cinfo[i].mask & groupbit) // apply coupling to selected cell group
       {
         coupleCell = 1;
         coupledProc = rank;
@@ -209,13 +222,12 @@ void FixLAMMPS::end_of_step()
           coupleCell = 2;
         }
 
-        /****************************
-        1. Lifting Operator: From SPARTA to LAMMPS, initialize microscopic properties derived from SPARTA
-        2. Run LAMMPS simulation
-        3. Restricting Operator: From LAMMPS to SPARTA, calculate relevant quantities to pass to SPARTA
-        *****************************/
-
-        // LIFTING OPERATOR -------------------------------------------------
+        /*
+        LIFTING OPERATOR
+        1. Translate SPARTA domain to LAMMPS domain
+        2. Initialize MD positions and velocities
+        3. Define LAMMPS functionality
+        */
 
         //Obtain SPARTA data
         double gridnrho = gridrho[cells[i].ilocal] * 1.0e28; // local number density
@@ -259,6 +271,7 @@ void FixLAMMPS::end_of_step()
         if (screen == NULL) error->all(FLERR, "Screen output invalid in fix lammps");
 
         // Create LAMMPS input file
+        // ANY CHANGES TO MD FUNCTIONALITY CAN BE ADDED HERE
         fprintf(fp, "# LAMMPS input script created by SPARTA\n\n");
         fprintf(fp, "# Number of DSMC particles: %d\n",numPar);
         fprintf(fp, "# Number density nrho = %e\n", gridnrho);
@@ -273,7 +286,7 @@ void FixLAMMPS::end_of_step()
         fprintf(fp, "create_box 2 box\n\n");
         fprintf(fp, "lattice hex %e\n\n", lattice_constant);
 
-        // LIFTING OPERATOR: for every DSMC particle, create a batch of MD particles in space
+        // for every DSMC particle, create a batch of MD particles in space
         // MD particles are initialized in a hexagonal lattice around the DSMC particle's position
         double xMD, yMD, vxMD, vyMD;
         std::string regions;
@@ -363,8 +376,11 @@ void FixLAMMPS::end_of_step()
 
         fprintf(fp, "compute restricting air property/atom id x y vx vy\n");
 
-        //fprintf(fp, "dump 2 all image 1000 MDfiles/lmp.image.*.ppm type type adiam 1.5 zoom 1.8\n");
-        //fprintf(fp, "dump_modify  2 pad 7\n\n");
+        // Uncomment to visualize MD simulation 
+        /*
+        fprintf(fp, "dump 2 all image 1000 MDfiles/lmp.image.*.ppm type type adiam 1.5 zoom 1.8\n");
+        fprintf(fp, "dump_modify  2 pad 7\n\n");
+        */
 
         fprintf(fp, "#Output settings\n");
         fprintf(fp, "thermo_style custom step time temp c_temp_wire\n");
@@ -379,13 +395,21 @@ void FixLAMMPS::end_of_step()
       }
     }
 
+    /*
+      PARALLELIZATION STRATEGY
+      The DSMC simulation cannot continue before MD provides its new results. Therefore, all procs
+      of the DSMC simulation are blocked and used for MD run. This makes for a highly scalable 
+      setup when few cells are coupled, but gets increasingly complex for larger numbers of coupled
+      cells.
+    */
+    
     //agree on coupled proc
     MPI_Barrier(comm_lammps);
     int maxProc;
     MPI_Allreduce(&coupledProc, &maxProc, 1, MPI_INT, MPI_MAX, comm_lammps);
     coupledProc = maxProc;
     MPI_Barrier(comm_lammps);
-    MPI_Bcast(&coupleCell, 1, MPI_INT, coupledProc, comm_lammps); //communicate coupled cell
+    MPI_Bcast(&coupleCell, 1, MPI_INT, coupledProc, comm_lammps);
     MPI_Barrier(comm_lammps);
     
     if (coupleCell == 1)
@@ -396,7 +420,9 @@ void FixLAMMPS::end_of_step()
       MPI_Bcast(&filenameS, n, MPI_CHAR, coupledProc, comm_lammps);
       MPI_Comm_rank(comm_lammps, &rank); //ensure ranks are owned
 
-      // RUN LAMMPS ----------------------------------------------------------------
+      /*
+      RUN LAMMPS
+      */
 
       // instantiate LAMMPS
       LAMMPS_NS::LAMMPS *lmp;
@@ -406,11 +432,15 @@ void FixLAMMPS::end_of_step()
       lmp = new LAMMPS_NS::LAMMPS(lmpargc, (char **)lmpargv, comm_lammps);
       lmp->input->file(filenameS);
 
-      // RESTRICTING OPERATOR ------------------------------------------------------
-      // Sort atoms according to nearest neighbor criterion
-      // sum up local atoms into a DSMC particle
+      /*
+      RESTRICTING OPERATOR
+      1. Sort atoms according to nearest neighbor criterion
+      2. Sum up local atoms into a DSMC particle
+      3. Obtain quantities of interest and pass to SPARTA
+      */
 
-      int natoms = static_cast<int> (lmp->atom->natoms); //total number of LAMMPS particles
+      //total number of LAMMPS particles
+      int natoms = static_cast<int> (lmp->atom->natoms);
       int nlocalLMP = lmp->atom->nlocal;
       auto lmp_compute = lmp->modify->get_compute_by_id("restricting");
       if (!lmp_compute)
@@ -500,7 +530,7 @@ void FixLAMMPS::end_of_step()
 
       if(rank == coupledProc)
       {
-        int particle_iterator = cinfo[i].first; //DSMC particle index
+        int particle_iterator = cinfo[i].first;
         numPar = (int) cinfo[i].count;
       
         // --------------------------------------------------------------------------------
@@ -575,7 +605,7 @@ void FixLAMMPS::end_of_step()
             delete[] groups[g];
         }
 
-        // Copy the new_xLMP back to xLMP
+        // Copy the sorted list back to xLMP
         for (int f = 0; f < nExpt; f++) {
             IDs[f] = new_IDs[f];
             xLMP[f] = new_xLMP[f];
@@ -593,6 +623,7 @@ void FixLAMMPS::end_of_step()
         delete[] new_vxLMP;
         delete[] new_vyLMP;
         //--------------------------------------------------------------------------------
+
         double x = 0, y = 0, vx = 0, vy = 0;
         int count = local_fnum;
 
