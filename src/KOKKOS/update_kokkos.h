@@ -71,6 +71,10 @@ typedef struct s_UPDATE_REDUCE UPDATE_REDUCE;
 
 template<int DIM, int SURF, int REACT, int OPT, int ATOMIC_REDUCTION>
 struct TagUpdateMove{};
+template<int DIM, int SURF, int REACT, int OPT, int ATOMIC_REDUCTION>
+struct TagUpdateMoveIndirect{};
+template<int DIM>
+struct TagUpdateMoveFirstPass{};
 
 class UpdateKokkos : public Update {
  public:
@@ -96,8 +100,23 @@ class UpdateKokkos : public Update {
   KOKKOS_INLINE_FUNCTION
   void operator()(TagUpdateMove<DIM,SURF,REACT,OPT,ATOMIC_REDUCTION>, const int&, UPDATE_REDUCE&) const;
 
- private:
+  template<int DIM, int SURF, int REACT, int OPT, int ATOMIC_REDUCTION>
+  KOKKOS_INLINE_FUNCTION
+  void operator()(TagUpdateMoveIndirect<DIM,SURF,REACT,OPT,ATOMIC_REDUCTION>, 
+        const typename Kokkos::TeamPolicy<DeviceType, TagUpdateMove<DIM,SURF,REACT,OPT,ATOMIC_REDUCTION>>::member_type &team, UPDATE_REDUCE&) const;
 
+  template<int DIM, int SURF, int REACT, int OPT, int ATOMIC_REDUCTION>
+  KOKKOS_INLINE_FUNCTION
+  void moveOne(const int&, UPDATE_REDUCE&) const;
+
+  template<int DIM>
+  KOKKOS_INLINE_FUNCTION
+  void operator()(TagUpdateMoveFirstPass<DIM>, const int) const;
+
+ private:
+  Kokkos::View<int> not_updated_cnt;
+  Kokkos::View<int, Kokkos::OpenMP> h_not_updated_cnt;
+  Kokkos::View<int*> not_updated;
   double dt;
   int field_active[3];
 
