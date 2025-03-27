@@ -12,6 +12,12 @@
    See the README file in the top-level SPARTA directory.
 ------------------------------------------------------------------------- */
 
+/* ----------------------------------------------------------------------
+   Optimizations contributed by Matt Bettencourt (NVIDIA) are:
+    Copyright (c) 2025 NVIDIA CORPORATION & AFFILIATES. All rights
+    reserved.
+------------------------------------------------------------------------- */
+
 #include "math.h"
 #include "string.h"
 #include "stdlib.h"
