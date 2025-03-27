@@ -583,7 +583,7 @@ template < int DIM, int SURF, int REACT, int OPT > void UpdateKokkos::move()
       if ( fstyle == NOFIELD && not_updated.extent(0) < pstop ) {
         not_updated = Kokkos::View<int*>("not_updated",pstop*1.05);
         not_updated_cnt=Kokkos::View<int>("not_updated_cnt");
-        h_not_updated_cnt=Kokkos::View<int,Kokkos::OpenMP>("h_not_updated_cnt");
+        h_not_updated_cnt=Kokkos::View<int,SPAHostType>("h_not_updated_cnt");
       }
 #endif
     }

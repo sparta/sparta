@@ -115,7 +115,7 @@ class UpdateKokkos : public Update {
 
  private:
   Kokkos::View<int> not_updated_cnt;
-  Kokkos::View<int, Kokkos::OpenMP> h_not_updated_cnt;
+  Kokkos::View<int, SPAHostType> h_not_updated_cnt;
   Kokkos::View<int*> not_updated;
   double dt;
   int field_active[3];
