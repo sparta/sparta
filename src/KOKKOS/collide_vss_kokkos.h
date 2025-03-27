@@ -60,6 +60,8 @@ struct TagCollideCollisionsOne{};
 template < int ATOMIC_REDUCTION >
 struct TagCollideCollisionsOneAmbipolar{};
 
+struct TagCountAttempts{};
+
 class CollideVSSKokkos : public CollideVSS {
  public:
   typedef COLLIDE_REDUCE value_type;
@@ -117,6 +119,9 @@ class CollideVSSKokkos : public CollideVSS {
   KOKKOS_INLINE_FUNCTION
   void operator()(TagCollideCollisionsOneAmbipolar< ATOMIC_REDUCTION >, const int&, COLLIDE_REDUCE&) const;
 
+  KOKKOS_INLINE_FUNCTION
+  void operator()(TagCountAttempts, const int) const;
+
  private:
   KOKKOS_INLINE_FUNCTION
   void ambi_reset_kokkos(int, int, int, int,
@@ -133,6 +138,9 @@ class CollideVSSKokkos : public CollideVSS {
   KKCopy<GridKokkos> grid_kk_copy;
   KKCopy<ReactTCEKokkos> react_kk_copy;
 
+  Kokkos::View<short*> d_nattempt;
+  Kokkos::View<int*> d_active_cells;
+  Kokkos::View<int> num_active_cells;
   t_particle_1d d_particles;
   t_species_1d_const d_species;
   DAT::t_int_2d d_plist;
