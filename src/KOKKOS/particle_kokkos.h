@@ -158,7 +158,7 @@ class ParticleKokkos : public Particle {
   int collide_rot,vibstyle;
   double boltz;
 
-  DAT::t_int_2d d_plist;
+  DAT::t_int_2d_lr d_plist;
   DAT::t_int_1d d_cellcount;
 
   DAT::t_int_2d_lr d_lists;

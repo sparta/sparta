@@ -143,7 +143,7 @@ class CollideVSSKokkos : public CollideVSS {
   Kokkos::View<int> num_active_cells;
   t_particle_1d d_particles;
   t_species_1d_const d_species;
-  DAT::t_int_2d d_plist;
+  DAT::t_int_2d_lr d_plist;
 
   DAT::t_int_1d d_ewhich;
   tdual_struct_tdual_int_1d_1d k_eivec;
@@ -204,7 +204,7 @@ class CollideVSSKokkos : public CollideVSS {
 
   DAT::t_float_2d d_recomb_ijflag;
 
-  DAT::t_int_2d d_nn_last_partner;
+  DAT::t_int_2d_lr d_nn_last_partner;
 
   template < int NEARCP > void collisions_one(COLLIDE_REDUCE&);
   void collisions_one_ambipolar(COLLIDE_REDUCE&);
@@ -259,10 +259,10 @@ class CollideVSSKokkos : public CollideVSS {
   void restore();
 
   t_particle_1d d_particles_backup;
-  DAT::t_int_2d d_plist_backup;
+  DAT::t_int_2d_lr d_plist_backup;
   DAT::t_float_3d d_vremax_backup;
   DAT::t_float_3d d_remain_backup;
-  DAT::t_int_2d d_nn_last_partner_backup;
+  DAT::t_int_2d_lr d_nn_last_partner_backup;
   DAT::t_int_1d d_ionambi_backup;
   DAT::t_float_2d_lr d_velambi_backup;
   RanKnuth* random_backup;
