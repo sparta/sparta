@@ -35,18 +35,22 @@ class ComputeLambdaGrid : public Compute {
   bigint memory_usage();
 
  protected:
-  int nglocal,nvalues,nparams,tmax,noutputs;
   int tempwhich;
+  int noutputs;
   int lambdaflag,tauflag;
   int knallflag,knxflag,knyflag,knzflag,knanyflag;
 
+  int nglocal;               // current count of owned grid cells
+  int tmax;                  // max tally count for nrho compute/fix
+  
+  int nrho_values;           // # of species with nrho values
   char **ids_nrho;           // ID/name of compute,fix,variable to access
   int *nrhowhich;            // COMPUTE or FIX or VARIABLE
   int *nrhoindex;            // which column from compute or fix to access
   int *value2index;          // index of compute,fix,variable
   int *post_process;         // 1 if need compute->post_process() on value
 
-  int ntotal;                // total # of columns in tally array
+  int ntotal;                // total # of columns in tally array = # of species
 
                              // used when normalizing tallies
   int *nmap;                 // # of tally quantities for each value
@@ -65,11 +69,11 @@ class ComputeLambdaGrid : public Compute {
   int tempindex;
   class Compute *cnrho,*ctemp;
   class Fix *fnrho,*ftemp;
-  double **nrho,*temp,**lambdainv,**tauinv;
+  
+  double **nrho,*temp;
+  double *lambda_grid;
+  double **lambdainv,**tauinv;
   double **array_grid1;
-
-  char *species;
-  double dref,tref,omega,mj,mk,mr;
 };
 
 }
