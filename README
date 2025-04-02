@@ -17,7 +17,7 @@ funding from the DOE.  It is an open-source code, distributed freely
 under the terms of the GNU Public License (GPL).
 
 The primary authors of the code are Steve Plimpton and Michael Gallis,
-who can be emailed at sjplimp@gmail.com and magalli@sandia.gov.  The
+who can be emailed at sjplimp@sandia.gov and magalli@sandia.gov.  The
 SPARTA web site at http://sparta.sandia.gov has more information about
 the code and its uses.
 
@@ -40,3 +40,106 @@ doc/Manual.html	           the SPARTA manual
 doc/Section_intro.html	   hi-level introduction to SPARTA
 doc/Section_start.html	   how to build and use SPARTA
 doc/Developer.pdf          SPARTA developer guide
+
+----------------------------------------------------------------------
+SPECIES WEIGHTING SCHEME: Virgile Charton and Takato Morimoto
+-----------------------------------
+The species weighting scheme was implemented as described in: "Conservative 
+Species Weighting Scheme for the Direct Simulation Monte Carlo Method", 
+Iain D. Boyd, Journal of Thermophysics and Heat Transfer, 1996. The
+particles' momentum, kinetic energy and internal energies are conserved 
+throughout the collisions using a splitting-merging approach.
+Chemical reactions occurring when two differentially weighted particles
+collide are implemented. As reactant are deleted, it is not possible
+to use the splitting-merging approach. Instead, each reactant and product 
+is associated with a probability to remain or be created according to their weights. 
+-----------------------------------
+To use the Species Weighting Scheme, use one of the following keywords 
+when calling the 'species' command in SPARTA input files: SWS, SWSmax.
+The keyword is read along with the species list to be used in the 
+simulation. When using one of these keyword, the weight (0<wi<1) are
+read for every species in the gas.specie file (9th column). Usinga a low weight
+results in an increase in the number of numerical particles of the related specie.
+-----------------------------------
+The modifications are the following:
+0) Warning message about the current SPARTA version in sparta.cpp
+1) Particles emition/creation:
+- fix_emit_face: fnum weighted with species wi
+   - fnum weighted with species wi in 'perspecies yes' mode
+   - accumulated weighted fraction in 'perspecies no' mode
+- create_particles : particles are created according to the accumulative
+weighted fraction instead of the classical accumulative fraction to 
+account for species weight
+- fix_emit_surf: 
+   - fnum weighted with species wi in 'perspecies yes' mode
+   - accumulated weighted fraction in 'perspecies no' mode
+   - compute local quantity accounting for the species wi
+2) Particles collision:
+- grid: creation of a new cinfo variable named count_wi to store the sum 
+of the wi per cell
+- particle: 
+   - compute the count_wi variable for every particle in cells
+   - add the SWS method keywords: SWS and SWSmax
+- collide: 
+   - add the count_wi and count_wi_group variables to the nattempt function, as
+   well as the wi maximum if option SWSmax is selected
+   - initialize the lost energy due to different weighted particle collision
+   to zero for each cells before performing the collisions
+   - add the count of every particle that are created after chemical reaction occur
+   to the perform_collide function
+- collide_vss: 
+   - modify the random process to select particle pairs accounting for species weights
+   using two possible options: 1-no modification (SWS) ; 2-using wi maximum (SWSmax)
+   - use the count_wi and count_wi_group variables instead of np to compute nattempt, as
+   well as the weight maximum if option SWSmax is selected
+   - modified two body scattering function to consider wi in the post collision 
+   velocities (splitting - merging approach)
+   - modified two body scattering function to track lost energy when
+   different weighted particles collide and add to the next nontrace species collision
+   - modified the energy exchange functions to consider wi in the final 
+   internal energies (splitting - merging approach). If energies are descrete
+   levels, prevent any exchange from the highest weighted particle when colliding
+   with a trace specie.
+   - modified the perform_collision function to create the post chemical reaction
+   particles according to a probability based on their weight. As a consequence: 
+      - the major reactant might remain or be consumed after the reaction
+      - several particles of the minor product will be produced to reach mass conservation
+      - major product might be created or not after the reaction
+   Thus, each reaction does not explicitly conserve the mass. However, with a large number
+   of collision across the flow, the global mass is conserved. The particles weights
+   are always the same (depending on the species) and are never modified. Furthermore,
+   while using this approach the splitting-merging approach is not performed
+   as the probabilistic approach ensure the momentum and energy conservation.
+3) Flow quantities computation:
+- compute_grid: computation of the cell quantities accounting for the 
+species wi. Add a keyword to output the wi sum in each cells: NUMWI (nwi in input file)
+- compute_thermal_grid: computation of the cells P and T accounting for the 
+species wi
+- compute_surf: computation of the surface quantities accounting for
+the species wi.
+-----------------------------------
+4) Vibrational relaxation model:
+In the original SPARTA, the Millikan-White model is already implemented in the code. 
+This modification include the ability to use Millikan-White model modified by Park1993 
+for high temperature air, using the coefficients of the two chemical species of the collision pair.
+
+To use this feature, collide in SPARTA input will be changed.
+e.g.)
+ collide vss air Input/air.vss relax variable tv_mw yes Input/VT.vvr
+
+"tv_mw" is the keyword to trigger this feature with the keyword "yes".
+After the keyword "yes" the file to set coefficients is specified.
+
+The file format contains four colums.
+1. First specie, 2. Second specie, 
+3. Coefficient a, 4. Coefficient b
+a, b is defined by eq. 2 in Park1993.
+
+e.g.)
+N2  N   180.0 0.0262 
+N2  N2  221   0.0290 
+N2  NO  225   0.0293 
+
+- collide_vss: read the new keyword and option, create TV_MWflag to switch to the new model,
+modification of the function vibrel to add the new model.
+-----------------------------------
