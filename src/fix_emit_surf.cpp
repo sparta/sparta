@@ -556,7 +556,7 @@ void FixEmitSurf::create_task(int icell)
     tasks[ntask].ntarget = 0.0;
     for (isp = 0; isp < nspecies; isp++) {
       ntargetsp = mol_inflow(indot,vscale[isp],fraction[isp]);
-      ntargetsp *= nrho*area*dt / fnum;
+      ntargetsp *= nrho*area*dt / (fnum*particle->species[isp].specwt);  // SWS
       ntargetsp /= cinfo[icell].weight;
       tasks[ntask].ntarget += ntargetsp;
       if (perspecies) tasks[ntask].ntargetsp[isp] = ntargetsp;
@@ -934,7 +934,7 @@ void FixEmitSurf::subsonic_inflow()
       mass = species[mspecies[isp]].mass;
       vscale = sqrt(2.0 * boltz * temp_thermal / mass);
       ntargetsp = mol_inflow(indot,vscale,fraction[isp]);
-      ntargetsp *= nrho*area*dt / fnum;
+      ntargetsp *= nrho*area*dt / (fnum*particle->species[isp].specwt);  // SWS
       ntargetsp /= cinfo[icell].weight;
       tasks[i].ntarget += ntargetsp;
       if (perspecies) tasks[i].ntargetsp[isp] = ntargetsp;
@@ -1015,7 +1015,7 @@ void FixEmitSurf::subsonic_grid()
   double mass_cell,gamma_cell,soundspeed_cell,vsmag;
   double mv[4];
   double *v,*vstream,*vscale,*normal;
-
+  double masstot_wi;  // SWS
   Surf::Line *lines = surf->lines;
   Surf::Tri *tris = surf->tris;
 
@@ -1031,13 +1031,14 @@ void FixEmitSurf::subsonic_grid()
   for (int i = 0; i < ntask; i++) {
     icell = tasks[i].pcell;
     np = cinfo[icell].count;
-
+    
     // accumulate needed per-particle quantities
     // mv = mass*velocity terms, masstot = total mass
     // gamma = rotational/tranlational DOFs
 
     mv[0] = mv[1] = mv[2] = mv[3] = 0.0;
     masstot = gamma = 0.0;
+    masstot_wi = 0.0;  // SWS
 
     ip = cinfo[icell].first;
 
@@ -1048,8 +1049,9 @@ void FixEmitSurf::subsonic_grid()
       mv[0] += mass*v[0];
       mv[1] += mass*v[1];
       mv[2] += mass*v[2];
-      mv[3] += mass * (v[0]*v[0]+v[1]*v[1]+v[2]*v[2]);
+      mv[3] += mass*(v[0]*v[0]+v[1]*v[1]+v[2]*v[2]);
       masstot += mass;
+      masstot_wi += mass*species[ispecies].specwt;  // SWS
       gamma += 1.0 + 2.0 / (3.0 + species[ispecies].rotdof);
       ip = next[ip];
     }
@@ -1069,14 +1071,26 @@ void FixEmitSurf::subsonic_grid()
     if (subsonic_style == PTBOTH) {
       tasks[i].nrho = nsubsonic;
       temp_thermal_cell = tsubsonic;
-
     } else {
-      nrho_cell = np * fnum / cinfo[icell].volume;
-      massrho_cell = masstot * fnum / cinfo[icell].volume;
+      // ========================================================================
+      // Using the species weighting scheme, the total number of 
+      // physical particles is given by:
+      // Sum (wi*fnum) = cinfo[icell].count_wi * fnum
+      // and the total mass by:
+      // Sum (mi*wi*fnum) = masstot_wi * fnum
+      // ========================================================================
+      // Baseline code:
+      //~ nrho_cell = np * fnum / cinfo[icell].volume;
+      //~ massrho_cell = masstot * fnum / cinfo[icell].volume;
+      // SWS - Modified code:
+      nrho_cell = cinfo[icell].count_wi * fnum / cinfo[icell].volume;
+      massrho_cell = masstot_wi * fnum / cinfo[icell].volume;
+
       if (np > 1) {
         ke = mv[3]/np - (mv[0]*mv[0] + mv[1]*mv[1] + mv[2]*mv[2])/np/masstot;
         temp_thermal_cell = tprefactor * ke;
       } else temp_thermal_cell = particle->mixture[imix]->temp_thermal;
+
       press_cell = nrho_cell * boltz * temp_thermal_cell;
       if (np) {
         mass_cell = masstot / np;

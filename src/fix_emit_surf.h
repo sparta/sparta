@@ -51,6 +51,7 @@ class FixEmitSurf : public FixEmit {
   double fnum,dt;
   double nrho,temp_thermal,temp_rot,temp_vib;
   double *fraction,*cummulative;
+  double *cummulative_weighted;  // SWS
 
   class Cut2d *cut2d;
   class Cut3d *cut3d;
