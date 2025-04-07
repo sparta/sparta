@@ -51,9 +51,7 @@ class FixEmitSurf : public FixEmit {
   double fnum,dt;
   double nrho,temp_thermal,temp_rot,temp_vib;
   double *fraction,*cummulative;
-  // Virgile - Modif Start - 26/04/2023
-  double *cummulative_weighted;
-  // Virgile - Modif End - 26/04/2023
+  double *cummulative_weighted;  // SWS
 
   class Cut2d *cut2d;
   class Cut3d *cut3d;

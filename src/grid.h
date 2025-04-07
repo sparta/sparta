@@ -146,12 +146,7 @@ class Grid : protected Pointers {
 
   struct ChildInfo {
     int count;                // # of particles in this cell, 0 if split cell
-    // Virgile - Modif Start - 18/10/23
-    // ========================================================================
-    // Add the wi sum variable in the ChildInfo structure
-    // ========================================================================
-    double count_wi;          // sum of the particles species weight
-    // Virgile - Modif End - 18/10/23
+    double count_wi;          // SWS - sum of the particles species weight
     int first;                // index of 1st particle in this cell, -1 if none
 
     int mask;                 // grid group mask

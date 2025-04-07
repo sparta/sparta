@@ -193,6 +193,8 @@ that particle, based on the list of species defined for the mixture.
 If the returned value is <= 0 or greater than Nsp = the number of
 species in the mixture, then no particle is created.
 
+Note: SWS computations does not work with the {species} keyword.
+
 As an example, these commands can be used in a 2d simulation, to
 create a particle distribution with species 1 on top of species 2 with
 a sinudoidal interface between the two species, as illustrated in the

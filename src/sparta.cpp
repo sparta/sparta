@@ -252,24 +252,6 @@ SPARTA::SPARTA(int narg, char **arg, MPI_Comm communicator)
     }
 
     if (universe->me == 0) {
-      // Virgile - Modif Start - 25/09/23
-      if (screen) fprintf(screen,"-----------------------------------------------------------------------------------\n");
-      if (screen) fprintf(screen,"|      ____            _    ____  __    ____  _____  __                           |\n");
-      if (screen) fprintf(screen,"|     //// \\ -------* / \\  |   / /  \\  |   /    |   /  \\ ¤¤________________/\\     |\n");
-      if (screen) fprintf(screen,"|    || || ||        |___  |__/ /____\\ |__/     |  /____\\                  \\/     |\n");
-      if (screen) fprintf(screen,"|     \\_/_//            /  |    |    | | \\      |  |    |                         |\n");
-      if (screen) fprintf(screen,"|                    __/   |    |    | |  \\     |  |    |                         |\n");
-      if (screen) fprintf(screen,"|                    *             ¤¤                                ___          |\n");
-      if (screen) fprintf(screen,"|               _   /               \\______________________________ / | \\         |\n");
-      if (screen) fprintf(screen,"|              / \\ /                 \\   _                          \\_|_/         |\n");
-      if (screen) fprintf(screen,"|             |||||                   \\ / \\                                       |\n");
-      if (screen) fprintf(screen,"|              \\_/                     |   |                                      |\n");
-      if (screen) fprintf(screen,"|                                       \\_/                                       |\n");
-      if (screen) fprintf(screen,"-----------------------------------------------------------------------------------\n");
-      if (screen) fprintf(screen,"| WARNING : THIS IS A MODIFIED VERSION FOR SPECIES WEIGHTING CAPACITY ENHANCEMENT |\n");
-      if (screen) fprintf(screen,"| WARNING : MODIFIED BY VIRGILE CHARTON AND TAKATO MORIMOTO                       |\n");
-      if (screen) fprintf(screen,"-----------------------------------------------------------------------------------\n");
-      // Virgile - Modif End - 25/09/23
       if (screen) fprintf(screen,"SPARTA (%s)\n",universe->version);
       if (logfile) fprintf(logfile,"SPARTA (%s)\n",universe->version);
     }

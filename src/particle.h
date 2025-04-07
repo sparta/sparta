@@ -24,10 +24,7 @@ class Particle : protected Pointers {
  public:
   int exist;                // 1 if particles exist
   int sorted;               // 1 if particles are sorted by grid cell
-
-  // Virgile - Modif Start - 17/12/24
-  int sws;                  // 0:none, 1:SWS, 2:SWSmax ; read from input file species command keyword
-  // Virgile - Modif End - 17/12/24
+  int sws;                  // SWS - 0:none, 1:SWS, 2:SWSmax ; read from input file species command keyword
 
   enum{MAXVIBMODE=4};       // increase value if species need more vib modes
 

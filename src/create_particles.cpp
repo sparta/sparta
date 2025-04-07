@@ -481,42 +481,11 @@ void CreateParticles::create_local()
   if (np == 0) {
     double flowvol;
     MPI_Allreduce(&flowvolme,&flowvol,1,MPI_DOUBLE,MPI_SUM,world);
-    // Virgile - Modif Start - 05/12/2023
+
     // ========================================================================
-    // Scale the number of created particles based on the 
+    // SWS - scale the total number of created particles based on the 
     // species weight. More particles are created when using
     // small weight. 
-    // -------
-    // Comment: on the contrary of Emit_particles used with the 
-    // default mode (perspecies yes) which directly
-    // uses the density flux of each species to define the number of
-    // numerical particles to emit per species, 
-    // Create_particles have to use a cummulative function (perspecies no)
-    // over the species molar fraction to create each species particles. 
-    // The difference is that the total number of created numerical
-    // particles is computed before defining the composition of the
-    // created particles.
-    // The cummulative function used in the Create_particle file
-    // is described in the create_local routine.
-    // -------
-    // Example of perspecies no usage with two species A and B:
-    // molar fraction: X_A=0.1 and X_B=0.9
-    // species weight: w_A=0.1 and w_B=1.0
-    // -------
-    // Without species weighting scheme: assuming np calculation gives 
-    // 1000 particles, 100 are A species and 900 B species according 
-    // to the cummulative molar fractions function.
-    // -------
-    // With the species weighting scheme: np calculation has to 
-    // account for the weight which will increase the total
-    // number of created particles. Thus the new np is not
-    // calculated from the global flow quantities such as 
-    // density and fnum, but equal to the sum of the np_species
-    // computed for each species:
-    // np = nrho*v*A*dt/fnum = sum_i nrho*v*A*dt*X_i/fnum
-    // A modified cummulative function, accounting for the species
-    // weights is then used to produce 900 particles of B as previously
-    // and 1000 particles of A, consequence of the used weights.
     // ========================================================================
     // Baseline code:
     // np = particle->mixture[imix]->nrho * flowvol / update->fnum;
@@ -529,7 +498,6 @@ void CreateParticles::create_local()
     for (int isp = 0; isp < nspecies; isp++) {
       np += particle->mixture[imix]->nrho * flowvol * fraction[isp] / (update->fnum * species_weight[species[isp]].specwt);
     }
-    // Virgile - Modif End - 05/12/2023
   }
 
   // gather cummulative insertion volumes across all procs
@@ -578,9 +546,6 @@ void CreateParticles::create_local()
   // particle velocity = stream velocity + thermal velocity
 
   int *species = particle->mixture[imix]->species;
-  // Virgile - Modif Start - 26/04/2023
-  double *cummulative_weighted = particle->mixture[imix]->cummulative_weighted;
-  // Virgile - Modif End - 26/04/2023
   double *cummulative = particle->mixture[imix]->cummulative;
   double *vstream = particle->mixture[imix]->vstream;
   double *vscale = particle->mixture[imix]->vscale;
@@ -679,17 +644,8 @@ void CreateParticles::create_local()
       rn = random->uniform();
 
       isp = 0;
-      // Virgile - Modif Start - 30/11/2023
-      // ========================================================================
-      // The new cummulative array is used, accounting for species weight.
-      // ========================================================================
-      // Baseline code:
-      // while (cummulative[isp] < rn) isp++;
-      // Modified code:
-      while (cummulative_weighted[isp] < rn) {
-        isp++;
-      }
-      // Virgile - Modif End - 30/11/2023
+
+      while (cummulative[isp] < rn) isp++;
       ispecies = species[isp];
 
       if (speciesflag) {
@@ -791,7 +747,7 @@ void CreateParticles::create_local_twopass()
   if (np == 0) {
     double flowvol;
     MPI_Allreduce(&flowvolme,&flowvol,1,MPI_DOUBLE,MPI_SUM,world);
-    // Virgile - Modif Start - 05/12/2023
+    // SWS
     // Baseline code:
     // np = particle->mixture[imix]->nrho * flowvol / update->fnum;
     // Modified code:
@@ -803,7 +759,6 @@ void CreateParticles::create_local_twopass()
     for (int isp = 0; isp < nspecies; isp++) {
       np += particle->mixture[imix]->nrho * flowvol * fraction[isp] / (update->fnum * species_weight[species[isp]].specwt);
     }
-    // Virgile - Modif End - 05/12/2023
   }
 
   // gather cummulative insertion volumes across all procs
@@ -851,9 +806,6 @@ void CreateParticles::create_local_twopass()
   // particle velocity = stream velocity + thermal velocity
 
   int *species = particle->mixture[imix]->species;
-  // Virgile - Modif Start - 26/04/2023
-  double *cummulative_weighted = particle->mixture[imix]->cummulative_weighted;
-  // Virgile - Modif End - 26/04/2023
   double *cummulative = particle->mixture[imix]->cummulative;
   double *vstream = particle->mixture[imix]->vstream;
   double *vscale = particle->mixture[imix]->vscale;
@@ -982,12 +934,7 @@ void CreateParticles::create_local_twopass()
       rn = random->uniform();
 
       isp = 0;
-      // Virgile - Modif Start - 30/11/2023
-      // Baseline code:
-      // while (cummulative[isp] < rn) isp++;
-      // Modified code:
-      while (cummulative_weighted[isp] < rn) isp++;
-      // Virgile - Modif End - 30/11/2023
+      while (cummulative[isp] < rn) isp++;
       ispecies = species[isp];
 
       if (speciesflag) {

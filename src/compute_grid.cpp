@@ -27,25 +27,15 @@ using namespace SPARTA_NS;
 
 // user keywords
 
-// Takato Morimoto - Modif Start - 27/05/24
-// add NUMWI
+// SWS - adding the new output variable: NUMWI
 enum{NUM,NUMWI,NRHO,NFRAC,MASS,MASSRHO,MASSFRAC,
      U,V,W,USQ,VSQ,WSQ,KE,TEMPERATURE,EROT,TROT,EVIB,TVIB,
      PXRHO,PYRHO,PZRHO,KERHO};
-// Takato Morimoto - Modif Start - 27/05/24
 
 // internal accumulators
-  // Virgile - Modif Start - 02/10/23
-  // ========================================================================
-  // Add the keyword for the new accumulators: COUNT_WI and CELLCOUNTWI.
-  // ========================================================================
-  // Baseline code:
-//enum{COUNT,MASSSUM,MVX,MVY,MVZ,MVXSQ,MVYSQ,MVZSQ,MVSQ,
-//     ENGROT,ENGVIB,DOFROT,DOFVIB,CELLCOUNT,CELLMASS,LASTSIZE};
-  // Modified code:
+// SWS - add the keyword for the new accumulators: COUNT_WI and CELLCOUNTWI.
 enum{COUNT,COUNT_WI,MASSSUM,MVX,MVY,MVZ,MVXSQ,MVYSQ,MVZSQ,MVSQ,
      ENGROT,ENGVIB,DOFROT,DOFVIB,CELLCOUNT,CELLMASS,CELLCOUNTWI,LASTSIZE};
-     // Virgile - Modif End - 02/10/23
 
 // max # of quantities to accumulate for any user value
 
@@ -68,13 +58,7 @@ ComputeGrid::ComputeGrid(SPARTA *sparta, int narg, char **arg) :
 
   nvalue = narg - 4;
   value = new int[nvalue];
-  // Virgile - Modif Start - 02/10/23
-  // ========================================================================
-  // Initialize accumulator to 0 (not tallied), 
-  // 1 if total wi count is tallied.
-  // ========================================================================
-  cellcountwi = 0;
-  // Virgile - Modif End - 02/10/23
+  cellcountwi = 0;  // SWS
   tvib_flag = 0;
 
   npergroup = cellmass = cellcount = 0;
@@ -89,58 +73,24 @@ ComputeGrid::ComputeGrid(SPARTA *sparta, int narg, char **arg) :
     if (strcmp(arg[iarg],"n") == 0) {
       value[ivalue] = NUM;
       set_map(ivalue,COUNT);
-      //Takato Morimoto - Modif Start - 30/05/2024
-    } else if (strcmp(arg[iarg],"nwi") == 0) {
+    } else if (strcmp(arg[iarg],"sumwi") == 0) {  // SWS - wi summation output
       value[ivalue] = NUMWI;
       set_map(ivalue,COUNT_WI);
-      //Takato Morimoto - Modif End - 30/05/2024
     } else if (strcmp(arg[iarg],"nrho") == 0) {
       value[ivalue] = NRHO;
-      // Virgile - Modif Start - 02/10/23
-      // ========================================================================
-      // Set the value to accumulate depending on the user keyword.
-      // The accumulation of particles weight is requiered to
-      // obtain the correct number of physical particles using the
-      // weighting species scheme.
-      // ========================================================================
-      // Baseline code:
-      // set_map(ivalue,COUNT);
-      // Modified code:
-      set_map(ivalue,COUNT_WI);
+      set_map(ivalue,COUNT_WI);  // SWS
       cellcountwi = 1;
-      // Virgile - Modif End - 02/10/23
     } else if (strcmp(arg[iarg],"nfrac") == 0) {
       value[ivalue] = NFRAC;
-      // Virgile - Modif Start - 04/10/23
-      // ========================================================================
-      // Set the value to accumulate depending on the user keyword.
-      // ========================================================================
-      // Baseline code:
-      //~ set_map(ivalue,COUNT);
-      //~ set_map(ivalue,CELLCOUNT);
-      //~ cellcount = 1;
-      // Modified code:
-      set_map(ivalue,COUNT_WI);
-      set_map(ivalue,CELLCOUNTWI);
-      cellcountwi = 1;
-      // Virgile - Modif End - 04/10/23
+      set_map(ivalue,COUNT_WI);  // SWS
+      set_map(ivalue,CELLCOUNTWI);  // SWS
+      cellcountwi = 1;  // SWS
       cellcount = 1;
     } else if (strcmp(arg[iarg],"mass") == 0) {
       value[ivalue] = MASS;
       set_map(ivalue,MASSSUM);
-      // Virgile - Modif Start - 02/10/23
-      // ========================================================================
-      // Set the value to accumulate depending on the user keyword.
-      // The accumulation of particles weight is requiered to
-      // obtain the correct number of physical particles using the
-      // weighting species scheme.
-      // ========================================================================
-      // Baseline code:
-      //~ set_map(ivalue,COUNT);
-      // Modified code:
-      set_map(ivalue,COUNT_WI);
-      cellcountwi = 1;
-      // Virgile - Modif End - 02/10/23
+      set_map(ivalue,COUNT_WI); // SWS
+      cellcountwi = 1;  // SWS
     } else if (strcmp(arg[iarg],"massrho") == 0) {
       value[ivalue] = MASSRHO;
       set_map(ivalue,MASSSUM);
@@ -176,51 +126,18 @@ ComputeGrid::ComputeGrid(SPARTA *sparta, int narg, char **arg) :
     } else if (strcmp(arg[iarg],"ke") == 0) {
       value[ivalue] = KE;
       set_map(ivalue,MVSQ);
-      // Virgile - Modif Start - 04/10/23
-      // ========================================================================
-      // Set the value to accumulate depending on the user keyword.
-      // The accumulation of particles weight is requiered to
-      // obtain the correct number of physical particles using the
-      // weighting species scheme.
-      // ========================================================================
-      // Baseline code:
-      // set_map(ivalue,COUNT);
-      // Modified code:
-      set_map(ivalue,COUNT_WI);
-      cellcountwi = 1;
-      // Virgile - Modif End - 04/10/23
+      set_map(ivalue,COUNT_WI);  // SWS
+      cellcountwi = 1;  // SWS
     } else if (strcmp(arg[iarg],"temp") == 0) {
       value[ivalue] = TEMPERATURE;
       set_map(ivalue,MVSQ);
-      // Virgile - Modif Start - 04/10/23
-      // ========================================================================
-      // Set the value to accumulate depending on the user keyword.
-      // The accumulation of particles weight is requiered to
-      // obtain the correct number of physical particles using the
-      // weighting species scheme.
-      // ========================================================================
-      // Baseline code:
-      // set_map(ivalue,COUNT);
-      // Modified code:
-      set_map(ivalue,COUNT_WI);
-      cellcountwi = 1;
-      // Virgile - Modif End - 04/10/23
+      set_map(ivalue,COUNT_WI);  // SWS
+      cellcountwi = 1;  // SWS
     } else if (strcmp(arg[iarg],"erot") == 0) {
       value[ivalue] = EROT;
       set_map(ivalue,ENGROT);
-      // Virgile - Modif Start - 04/10/23
-      // ========================================================================
-      // Set the value to accumulate depending on the user keyword.
-      // The accumulation of particles weight is requiered to
-      // obtain the correct number of physical particles using the
-      // weighting species scheme.
-      // ========================================================================
-      // Baseline code:
-      //~ set_map(ivalue,COUNT);
-      // Modified code:
-      set_map(ivalue,COUNT_WI);
-      cellcountwi = 1;
-      // Virgile - Modif End - 04/10/23
+      set_map(ivalue,COUNT_WI);  // SWS
+      cellcountwi = 1;  // SWS
     } else if (strcmp(arg[iarg],"trot") == 0) {
       value[ivalue] = TROT;
       set_map(ivalue,ENGROT);
@@ -228,19 +145,8 @@ ComputeGrid::ComputeGrid(SPARTA *sparta, int narg, char **arg) :
     } else if (strcmp(arg[iarg],"evib") == 0) {
       value[ivalue] = EVIB;
       set_map(ivalue,ENGVIB);
-      // Virgile - Modif Start - 04/10/23
-      // ========================================================================
-      // Set the value to accumulate depending on the user keyword.
-      // The accumulation of particles weight is requiered to
-      // obtain the correct number of physical particles using the
-      // weighting species scheme.
-      // ========================================================================
-      // Baseline code:
-      //~ set_map(ivalue,COUNT);
-      // Modified code:
-      set_map(ivalue,COUNT_WI);
-      cellcountwi = 1;
-      // Virgile - Modif End - 04/10/23
+      set_map(ivalue,COUNT_WI);  // SWS
+      cellcountwi = 1;  // SWS
     } else if (strcmp(arg[iarg],"tvib") == 0) {
       value[ivalue] = TVIB;
       set_map(ivalue,ENGVIB);
@@ -330,9 +236,7 @@ void ComputeGrid::compute_per_grid()
   int i,j,k,m,ispecies,igroup,icell;
   double mass;
   double *v,*vec;
-  // Virgile - Modif Start - 02/10/23
-  double specwt;
-  // Virgile - Modif End - 02/10/23
+  double specwt;  // SWS
 
   // zero all accumulators - could do this with memset()
 
@@ -356,9 +260,8 @@ void ComputeGrid::compute_per_grid()
     v = particles[i].v;
 
     vec = tally[icell];
-    // Virgile - Modif Start - 04/10/23
     // ========================================================================
-    // Accumulate the number of physical particles: sum of the weight, and 
+    // SWS - Accumulate the number of physical particles: sum of the weight, and 
     // the corresponding mass: sum of the product mass * weight.
     // ========================================================================
     // Baseline code:
@@ -370,8 +273,6 @@ void ComputeGrid::compute_per_grid()
     if (cellmass) vec[cellmass] += mass*specwt;
     if (cellcount) vec[cellcount] += 1.0;
 
-    // Virgile - Modif End - 04/10/23
-
     // loop has all possible values particle needs to accumulate
     // subset defined by user values are indexed by accumulate vector
 
@@ -379,86 +280,49 @@ void ComputeGrid::compute_per_grid()
 
     for (m = 0; m < npergroup; m++) {
       switch (unique[m]) {
-      // Virgile - Modif Start - 04/10/23
-      // ========================================================================
-      // Accumulate the weighted values for each group (mixture).
-      // ========================================================================
       case COUNT:
         vec[k++] += 1.0;
         break;
-      // Added code:
-      case COUNT_WI:
-        vec[k++] += specwt;
-        break;
-      // End added code
+      case COUNT_WI:         // SWS
+        vec[k++] += specwt;  // SWS
+        break;               // SWS
       case MASSSUM:
-      // Baseline code:
-        //~ vec[k++] += mass;
-      // Modified code:
-        vec[k++] += mass*specwt;
+        vec[k++] += mass*specwt;  // SWS
         break;
       case MVX:
-      // Baseline code:
-        //~ vec[k++] += mass*v[0];
-      // Modified code:
-        vec[k++] += mass*specwt*v[0];
+        vec[k++] += mass*specwt*v[0];  // SWS
         break;
       case MVY:
-      // Baseline code:
-        //~ vec[k++] += mass*v[1];
-      // Modified code:
-        vec[k++] += mass*specwt*v[1];
+        vec[k++] += mass*specwt*v[1];  // SWS
         break;
       case MVZ:
-      // Baseline code:
-        //~ vec[k++] += mass*v[2];
-      // Modified code:
-        vec[k++] += mass*specwt*v[2];
+        vec[k++] += mass*specwt*v[2];  // SWS
         break;
       case MVXSQ:
-      // Baseline code:
-        //~ vec[k++] += mass*v[0]*v[0];
-      // Modified code:
-        vec[k++] += mass*specwt*v[0]*v[0];
+        vec[k++] += mass*specwt*v[0]*v[0];  // SWS
         break;
       case MVYSQ:
-      // Baseline code:
-        //~ vec[k++] += mass*v[1]*v[1];
-      // Modified code:
-        vec[k++] += mass*specwt*v[1]*v[1];
+        vec[k++] += mass*specwt*v[1]*v[1];  // SWS
         break;
       case MVZSQ:
-      // Baseline code:
-        //~ vec[k++] += mass*v[2]*v[2];
-      // Modified code:
-        vec[k++] += mass*specwt*v[2]*v[2];
+        vec[k++] += mass*specwt*v[2]*v[2];  // SWS
         break;
       case MVSQ:
-      // Baseline code:
-        //~ vec[k++] += mass * (v[0]*v[0]+v[1]*v[1]+v[2]*v[2]);
-      // Modified code:
-        vec[k++] += mass*specwt * (v[0]*v[0]+v[1]*v[1]+v[2]*v[2]);
+        vec[k++] += mass*specwt * (v[0]*v[0]+v[1]*v[1]+v[2]*v[2]);  // SWS
         break;
       case ENGROT:
-      // Baseline code:
-      // vec[k++] += particles[i].erot;
-      // Modified code:
-        vec[k++] += specwt * particles[i].erot;
+        vec[k++] += specwt * particles[i].erot;  // SWS
         break;
       case ENGVIB:
-      // Baseline code:
-      // vec[k++] += particles[i].evib;
-      // Modified code:
-        vec[k++] += specwt * particles[i].evib;
+        vec[k++] += specwt * particles[i].evib;  // SWS
         break;
       case DOFROT:
-        vec[k++] += species[ispecies].rotdof;
+        vec[k++] += specwt * species[ispecies].rotdof;  // SWS
         break;
       case DOFVIB:
-        vec[k++] += species[ispecies].vibdof;
+        vec[k++] += specwt * species[ispecies].vibdof;  // SWS
         break;
       }
-      // Virgile - Modif End - 02/10/23
     }
   }
 }
@@ -527,42 +391,28 @@ void ComputeGrid::post_process_grid(int index, int nsample,
       }
       break;
     }
-  //Takato Morimoto - Modif Start - 30/05/2024
-  // Added code:
-  case NUMWI:
+  case NUMWI:  // SWS
     {
       int count_wi = emap[0];
       for (int icell = lo; icell < hi; icell++) {
-        vec[k] = etally[icell][count_wi]/ nsample;
+        vec[k] = etally[icell][count_wi] / nsample;
         k += nstride;
       }
       break;
     }
-  // End added code - Modif End  - 30/05/2024
-
   case MASS:
     {
       double norm;
       int mass = emap[0];
-      // Virgile - Modif Start - 04/10/23
-      // ========================================================================
-      // Use count_wi, representing the number of physical particles. The mass
-      // is already accounting for the particles weight.
-      // ========================================================================
-      // Baseline code:
-      //~ int count = emap[1];
-      // Modified code:
-      int count_wi = emap[1];
-      // Virgile - Modif End - 04/10/23
+      int count_wi = emap[1];  // SWS
       for (int icell = lo; icell < hi; icell++) {
         // Baseline code:
         //~ norm = etally[icell][count];
-        // Modifified code:
+        // SWS - modifified code:
         norm = etally[icell][count_wi];
         if (norm == 0.0) vec[k] = 0.0;
         else vec[k] = etally[icell][mass] / norm;
         k += nstride;
-       // Virgile - Modif End - 04/10/23
       }
       break;
     }
@@ -574,38 +424,20 @@ void ComputeGrid::post_process_grid(int index, int nsample,
       Grid::ChildInfo *cinfo = grid->cinfo;
 
       double norm;
-      // Virgile - Modif Start - 04/10/23
-      // ========================================================================
-      // Use count_wi, representing the number of physical particles. 
-      // Not using species weighting scheme: 
-      // n = W*N/V = fnum * sum(part)/V
-      // Using species weighting scheme: 
-      // n = sum(Wi)/V = sum(coef_wi*fnum)/V = fnum * sum(coef_wi)/V
-      // ========================================================================
-      // Baseline code:
-      // int count = emap[0];
-      // Modified code:
-      int count_wi = emap[0];
-      // Virgile - Modif End - 04/10/23
+      int count_wi = emap[0]; // SWS
       for (int icell = lo; icell < hi; icell++) {
         norm = cinfo[icell].volume;
         if (norm == 0.0) vec[k] = 0.0;
         else {
-          // Virgile - Modif Start - 25/09/23
-          // Baseline code:
-          // wt = fnum * cinfo[icell].weight / norm;
-          // vec[k] = wt * etally[icell][count] / nsample;
-          // Modified code:
           wt = fnum * cinfo[icell].weight / norm;     
-          vec[k] = wt * etally[icell][count_wi] / nsample;
-          // Virgile - Modif End - 25/09/23
+          vec[k] = wt * etally[icell][count_wi] / nsample;  // SWS
         }
         k += nstride;
       }
       break;
     }
 
-  case MASSRHO: // Virgile: no need to modify as mass is already weighted
+  case MASSRHO:
     {
       double wt;
       double fnum = update->fnum;
@@ -626,7 +458,7 @@ void ComputeGrid::post_process_grid(int index, int nsample,
     }
 
   case NFRAC:
-  case MASSFRAC: // Virgile: no need to modify as mass is already weighted
+  case MASSFRAC:
     {
       double norm;
       int count_or_mass = emap[0];
@@ -645,7 +477,7 @@ void ComputeGrid::post_process_grid(int index, int nsample,
   case W:
   case USQ:
   case VSQ:
-  case WSQ: // Virgile: no need to modify as mass is already weighted
+  case WSQ:
     {
       double norm;
       int velocity = emap[0];
@@ -663,20 +495,9 @@ void ComputeGrid::post_process_grid(int index, int nsample,
     {
       double norm;
       int mvsq = emap[0];
-      // Virgile - Modif Start - 04/10/23
-      // ========================================================================
-      // Use count_wi, representing the number of physical particles. 
-      // ========================================================================
-      // Baseline code:
-      // int count = emap[1];
-      // Modified code:
-      int count_wi = emap[1];
+      int count_wi = emap[1];  // SWS
       for (int icell = lo; icell < hi; icell++) {
-        // Baseline code:
-        // norm = etally[icell][count];
-        // Modified code:
-        norm = etally[icell][count_wi];
-      // Virgile - Modif End - 04/10/23
+        norm = etally[icell][count_wi];  // SWS
         if (norm == 0.0) vec[k] = 0.0;
         else vec[k] = eprefactor * etally[icell][mvsq] / norm;
         k += nstride;
@@ -688,20 +509,9 @@ void ComputeGrid::post_process_grid(int index, int nsample,
     {
       double norm;
       int mvsq = emap[0];
-      // Virgile - Modif Start - 04/10/23
-      // ========================================================================
-      // Use count_wi, representing the number of physical particles. 
-      // ========================================================================
-      // Baseline code:
-      // int count = emap[1];
-      // Modified code:
-      int count_wi = emap[1];
+      int count_wi = emap[1];  // SWS
       for (int icell = lo; icell < hi; icell++) {
-        // Baseline code:
-        // norm = etally[icell][count];
-        // Modified code:
-        norm = etally[icell][count_wi];
-      // Virgile - Modif End - 04/10/23
+        norm = etally[icell][count_wi];  // SWS
         if (norm == 0.0) vec[k] = 0.0;
         else vec[k] = tprefactor * etally[icell][mvsq] / norm;
         k += nstride;
@@ -714,20 +524,9 @@ void ComputeGrid::post_process_grid(int index, int nsample,
     {
       double norm;
       int eng = emap[0];
-      // Virgile - Modif Start - 04/10/23
-      // ========================================================================
-      // Use count_wi, representing the number of physical particles. 
-      // ========================================================================
-      // Baseline code:
-      //~ int count = emap[1];
-      // Modified code:
-      int count_wi = emap[1];
+      int count_wi = emap[1];  // SWS
       for (int icell = lo; icell < hi; icell++) {
-        // Baseline code:
-        //~ norm = etally[icell][count];
-        // Modified code:
-        norm = etally[icell][count_wi];
-      // Virgile - Modif End - 04/10/23
+        norm = etally[icell][count_wi];  // SWS
         if (norm == 0.0) vec[k] = 0.0;
         else vec[k] = etally[icell][eng] / norm;
         k += nstride;
@@ -752,7 +551,7 @@ void ComputeGrid::post_process_grid(int index, int nsample,
 
   case PXRHO:
   case PYRHO:
-  case PZRHO: // Virgile: no need to modify as mass is already weighted
+  case PZRHO: 
     {
       double wt;
       double fnum = update->fnum;
@@ -772,7 +571,7 @@ void ComputeGrid::post_process_grid(int index, int nsample,
       break;
     }
 
-  case KERHO: // Virgile: no need to modify as mass is already weighted
+  case KERHO: 
     {
       double wt;
       double fnum = update->fnum;
@@ -815,12 +614,8 @@ void ComputeGrid::set_map(int ivalue, int name)
   // if name = CELLCOUNT/CELLMASS, just set index to name for now
   // if name is not already in unique, add it and increment npergroup
 
-  // Virgile - Modif Start - 02/10/23
-  // Baseline code:
-  //~ if (name == CELLCOUNT || name == CELLMASS) index = name;
-  // Modified code:
-  if (name == CELLCOUNT || name == CELLMASS || name == CELLCOUNTWI) index = name;
-  // Virgile - Modif End - 02/10/23
+  if (name == CELLCOUNT || name == CELLMASS || name == CELLCOUNTWI) index = name; // SWS
+
   else if (index == npergroup) {
     index = npergroup;
     unique[npergroup++] = name;
@@ -843,9 +638,7 @@ void ComputeGrid::reset_map()
 {
   if (cellcount) cellcount = ntotal++;
   if (cellmass) cellmass = ntotal++;
-  // Virgile - Starts End - 02/10/23
-  if (cellcountwi) cellcountwi = ntotal++;
-  // Virgile - Modif End - 02/10/23
+  if (cellcountwi) cellcountwi = ntotal++;  // SWS
 
   for (int i = 0; i < ngroup*nvalue; i++) {
     int igroup = i / nvalue;
@@ -853,9 +646,7 @@ void ComputeGrid::reset_map()
     for (int k = 0; k < nmap[ivalue]; k++) {
       if (map[i][k] == CELLCOUNT) map[i][k] = cellcount;
       else if (map[i][k] == CELLMASS) map[i][k] = cellmass;
-      // Virgile - Starts End - 02/10/23
-      else if (map[i][k] == CELLCOUNTWI) map[i][k] = cellcountwi;
-      // Virgile - Modif End - 02/10/23
+      else if (map[i][k] == CELLCOUNTWI) map[i][k] = cellcountwi;  // SWS
       else map[i][k] += igroup*npergroup;
     }
   }

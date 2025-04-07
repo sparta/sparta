@@ -30,12 +30,7 @@ class Collide : protected Pointers {
   int vibstyle;       // none/discrete/smooth vibrational modes
   int nearcp;         // 1 for near neighbor collisions
   int nearlimit;      // limit on neighbor serach for near neigh collisions
-  // Virgile - Modif Start - 29/11/2023
-  // ========================================================================
-  // Energy lost per collisions using species weighting scheme.
-  // ========================================================================
-  double Ewilost;
-  // Virgile - Modif End - 29/11/2023
+  double Ewilost;     // SWS - Energy lost when differently weighted particles collide
 
   int ncollide_one,nattempt_one,nreact_one;
   bigint ncollide_running,nattempt_running,nreact_running;
@@ -48,28 +43,27 @@ class Collide : protected Pointers {
   virtual void collisions();
 
   virtual double vremax_init(int, int) = 0;
-  // Virgile - Modif Start - 20/10/2023
-  // ========================================================================
-  // Add count_wi in the variable definition.
-  // ========================================================================
-  // Baseline code :
-  // virtual double attempt_collision(int, int, double) = 0;
-  // virtual double attempt_collision(int, int, int, double) = 0;
-  // virtual int test_collision(int, int, int,
-	// 		     Particle::OnePart *, Particle::OnePart *) = 0;
-  // Modified code :
-  virtual double attempt_collision(int, int, double, double, double) = 0;
+
+  virtual double attempt_collision(int, int, double) = 0;
   virtual double attempt_collision(int, int, int, double) = 0;
+
   virtual int test_collision(int, int, int,
+	 		     Particle::OnePart *, Particle::OnePart *) = 0;
+
+  virtual double attempt_collision_SWS(int, int, double, double, double) = 0;  // SWS
+  virtual double attempt_collision_SWS(int, int, int, double) = 0;             // SWS
+
+  virtual int test_collision_SWS(int, int, int,                                // SWS
 			     Particle::OnePart *, Particle::OnePart *, double) = 0;
-  // Virgile - Modif End - 20/10/2023
+
   virtual void setup_collision(Particle::OnePart *, Particle::OnePart *) = 0;
-  //Takato Morimoto - Modif Start - 20/10/23
-  // virtual int perform_collision(Particle::OnePart *&, Particle::OnePart *&,
-  //                              Particle::OnePart *&) = 0;
+  virtual void setup_collision_SWS(Particle::OnePart *, Particle::OnePart *) = 0;   // SWS
+
   virtual int perform_collision(Particle::OnePart *&, Particle::OnePart *&,
+                                Particle::OnePart *&) = 0;
+  virtual int perform_collision_SWS(Particle::OnePart *&, Particle::OnePart *&,     // SWS
                                 Particle::OnePart *&,int &,int &,int &,int &) = 0;    
-  // Takato Morimoto - Modif End - 20/10/23  
+
 
   virtual double extract(int, int, const char *) {return 0.0;}
 
@@ -117,10 +111,8 @@ class Collide : protected Pointers {
   bigint vre_next;    // next timestep to reset vre params on
   int remainflag;     // 1 if remain defined, else use random fraction
   
- // Virgile - Start Modif - 21/11/2023
-  double *count_wi_group;
-  double *maxwigr;
- // Virgile - End Modif - 21/11/2023
+  double *count_wi_group;            // SWS
+  double *maxwigr;                   // SWS
 
   double ***vremax;   // max relative velocity, per cell, per group pair
   double ***remain;   // collision number remainder, per cell, per group pair
@@ -186,6 +178,10 @@ class Collide : protected Pointers {
   template < int > void collisions_group();
   void collisions_one_ambipolar();
   void collisions_group_ambipolar();
+  template < int > void collisions_one_SWS();        // SWS
+  template < int > void collisions_group_SWS();      // SWS
+  void collisions_one_ambipolar_SWS();               // SWS
+  void collisions_group_ambipolar_SWS();             // SWS
   void ambi_reset(int, int, int, Particle::OnePart *, Particle::OnePart *,
                   Particle::OnePart *, int *);
   void ambi_check();
