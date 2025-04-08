@@ -1,0 +1,96 @@
+################################################################################
+# 2D Fourier flow with diffuse walls of unequal temperature
+# Verify that Kn_q has a small effect on the conductivity
+################################################################################
+
+seed               12137
+dimension          3
+
+#############
+# Constants #
+#############
+variable kb        equal 1.380658E-23
+variable pi        equal 3.14159
+
+##################
+# Gas parameters #
+##################
+variable gamma     equal 1.4
+
+#####################
+# Chosen Parameters #
+#####################
+variable T         equal 298.15
+variable p         equal 1013.250
+variable Ma        equal 0.2
+variable ppc       equal 16.0
+
+################
+# Precalculate #
+################
+variable mass_ref  equal 5.0e-26
+variable R_ref     equal ${kb}/${mass_ref}
+variable RT        equal ${R_ref}*${T}
+variable rho       equal ${p}/${RT}
+variable nden      equal ${rho}/${mass_ref}
+
+###########
+# Species #
+###########
+species            air.species Ar
+
+mixture            air Ar vstream 0.0 0.0 0.0 temp ${T}
+mixture            air Ar frac 1.0
+
+#####################
+# Boundary/Geometry #
+#####################
+variable Lx        equal 0.0001
+variable Ly        equal 0.0001
+variable Lz        equal 0.0001
+
+variable nx        equal 1
+variable ny        equal 1
+variable nz        equal 1 
+
+boundary           p p p
+
+create_box         0.0 ${Lx} 0.0 ${Ly} 0.0 ${Lz}
+create_grid        ${nx} ${ny} ${nz} block * * * 
+balance_grid       rcb part
+
+
+###########
+# Collide #
+###########
+collide            vss air air.vss
+collide_modify     remain no
+
+# swpm
+collide_modify     swpm yes -1.0 1.0
+collide_modify     reduce energy 32.0 binary 4.0
+#collide_modify     reduce heat 32.0 weight 4.0
+#collide_modify     reduce stress 96.0 binary 12.0
+
+variable N         equal ${nx}*${ny}*${nz}*${ppc}
+variable Fnum      equal ${nden}/(${N}/(${Lx}*${Ly}*${Lz}))
+
+global nrho ${nden}
+global fnum ${Fnum}
+
+create_particles   air n 0
+
+#######
+# Run #
+#######
+compute 1     thermal/grid all all temp
+compute 2     grid all all n
+
+compute 1r reduce ave c_1[*]
+compute 2r reduce ave c_2[*]
+
+stats              50
+stats_style        step np nattempt ncoll nbound c_1r c_2r
+
+timestep           4.0e-9
+run                1000
