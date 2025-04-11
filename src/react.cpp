@@ -42,7 +42,8 @@ React::React(SPARTA *sparta, int, char **arg) : Pointers(sparta)
   double seed = update->ranmaster->uniform();
   random->reset(seed,comm->me,100);
 
-  copy = uncopy = copymode = 0;
+  copy = copymode = 0;
+  uncopy = 1;
 }
 
 /* ---------------------------------------------------------------------- */
