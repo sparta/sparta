@@ -622,14 +622,16 @@ template < int DIM, int SURF, int REACT, int OPT > void UpdateKokkos::move()
                         -1 = use parallel_reduce
     */
 #if defined SPARTA_KOKKOS_GPU
-    if ( fstyle == NOFIELD && niterate == 1 && !continue_loop_flag ) {
-      // on the first time split the move on GPU
+    if (fstyle == NOFIELD && niterate == 1 && !continue_loop_flag) {
+
+      // on the first pass, split the move on GPU
+
       Kokkos::deep_copy(not_updated_cnt,0);
       Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagUpdateMoveFirstPass<DIM> >(pstart,pstop),*this);
       Kokkos::deep_copy(h_not_updated_cnt,not_updated_cnt);
-      int team_size=128;
+      int team_size = 128;
       int num_teams = (std::min<int>(DeviceType::concurrency(),h_not_updated_cnt())-1)/team_size+1;
-      auto policy=Kokkos::TeamPolicy<DeviceType, TagUpdateMoveIndirect<DIM,SURF,REACT,OPT,-1> >(num_teams,team_size);
+      auto policy = Kokkos::TeamPolicy<DeviceType, TagUpdateMoveIndirect<DIM,SURF,REACT,OPT,-1> >(num_teams,team_size);
       Kokkos::parallel_reduce(policy,*this,reduce);
     } else
       Kokkos::parallel_reduce(Kokkos::RangePolicy<DeviceType, TagUpdateMove<DIM,SURF,REACT,OPT,-1> >(pstart,pstop),*this,reduce);
