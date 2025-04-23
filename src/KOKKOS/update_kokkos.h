@@ -108,7 +108,7 @@ class UpdateKokkos : public Update {
 
   template<int DIM, int SURF, int REACT, int OPT, int ATOMIC_REDUCTION>
   KOKKOS_INLINE_FUNCTION
-  void operator()(TagUpdateMoveIndirect<DIM,SURF,REACT,OPT,ATOMIC_REDUCTION>, 
+  void operator()(TagUpdateMoveIndirect<DIM,SURF,REACT,OPT,ATOMIC_REDUCTION>,
         const typename Kokkos::TeamPolicy<DeviceType, TagUpdateMove<DIM,SURF,REACT,OPT,ATOMIC_REDUCTION>>::member_type &team, UPDATE_REDUCE&) const;
 
   template<int DIM, int SURF, int REACT, int OPT, int ATOMIC_REDUCTION>

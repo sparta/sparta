@@ -581,11 +581,11 @@ template < int DIM, int SURF, int REACT, int OPT > void UpdateKokkos::move()
       nmigrate = 0;
       entryexit = 0;
     }
-    
+
     if (niterate == 1 && !continue_loop_flag) {
       pstart = 0;
       pstop = particle->nlocal;
-#if defined SPARTA_KOKKOS_GPU    
+#if defined SPARTA_KOKKOS_GPU
       if ( fstyle == NOFIELD && not_updated.extent(0) < pstop ) {
         not_updated = Kokkos::View<int*>("not_updated",pstop*1.05);
         not_updated_cnt=Kokkos::View<int>("not_updated_cnt");
@@ -621,7 +621,7 @@ template < int DIM, int SURF, int REACT, int OPT > void UpdateKokkos::move()
                          0 = don't need atomics
                         -1 = use parallel_reduce
     */
-#if defined SPARTA_KOKKOS_GPU    
+#if defined SPARTA_KOKKOS_GPU
     if ( fstyle == NOFIELD && niterate == 1 && !continue_loop_flag ) {
       // on the first time split the move on GPU
       Kokkos::deep_copy(not_updated_cnt,0);
@@ -847,8 +847,8 @@ void UpdateKokkos::operator()(TagUpdateMoveFirstPass<DIM>, const int i) const {
     }
   }
 
-  const double * const v=particle_i.v;
-  double * x=particle_i.x;
+  const double* const v = particle_i.v;
+  double* x = particle_i.x;
   double xnew[DIM];
   xnew[0] = x[0] + dt*v[0];
   if (DIM > 1) xnew[1] = x[1] + dt*v[1];
@@ -866,8 +866,8 @@ void UpdateKokkos::operator()(TagUpdateMoveFirstPass<DIM>, const int i) const {
   const double* const hi = d_cells[icell].hi;
   bool leave=false;
   if (xnew[0] < lo[0] || xnew[0] >= hi[0]) leave=true;
-  if (DIM>1 && (xnew[1] < lo[1] || xnew[1] >= hi[1]) ) leave=true;
-  if (DIM>2 && (xnew[2] < lo[2] || xnew[2] >= hi[2]) ) leave=true;
+  if (DIM > 1 && (xnew[1] < lo[1] || xnew[1] >= hi[1])) leave = true;
+  if (DIM > 2 && (xnew[2] < lo[2] || xnew[2] >= hi[2])) leave = true;
 
   if (leave) {
     const int indx = Kokkos::atomic_fetch_add(&not_updated_cnt(),1);
@@ -893,15 +893,13 @@ void UpdateKokkos::operator()(TagUpdateMove<DIM,SURF,REACT,OPT,ATOMIC_REDUCTION>
 
 template<int DIM, int SURF, int REACT, int OPT, int ATOMIC_REDUCTION>
 KOKKOS_INLINE_FUNCTION
-void UpdateKokkos::operator()(TagUpdateMoveIndirect<DIM,SURF,REACT,OPT,ATOMIC_REDUCTION>, 
+void UpdateKokkos::operator()(TagUpdateMoveIndirect<DIM,SURF,REACT,OPT,ATOMIC_REDUCTION>,
      const typename Kokkos::TeamPolicy<DeviceType, TagUpdateMove<DIM,SURF,REACT,OPT,ATOMIC_REDUCTION>>::member_type &team,
      UPDATE_REDUCE &reduce) const {
   int i = team.team_rank() + team.team_size()*team.league_rank();
-  for (; i<not_updated_cnt(); i+= team.league_size()*team.team_size())
+  for (; i < not_updated_cnt(); i += team.league_size()*team.team_size())
     moveOne<DIM,SURF,REACT,OPT,ATOMIC_REDUCTION>(not_updated(i),reduce);
 }
-
-
 
 template<int DIM, int SURF, int REACT, int OPT, int ATOMIC_REDUCTION>
 KOKKOS_INLINE_FUNCTION
