@@ -1,6 +1,6 @@
 /* ----------------------------------------------------------------------
    SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
-   http://sparta.sandia.gov
+   http://sparta.github.io
    Steve Plimpton, sjplimp@gmail.com, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
@@ -23,7 +23,8 @@ class MarchingSquares : protected Pointers {
  public:
   MarchingSquares(class SPARTA *, int, double);
   ~MarchingSquares() {}
-  void invoke(double **, int *);
+  void invoke(double **, double ***, int *);
+  double mindist;
 
  private:
   int ggroup;

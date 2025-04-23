@@ -1,5 +1,5 @@
 <HTML>
-<CENTER><A HREF = "Section_packages.html">Previous Section</A> - <A HREF = "http://sparta.sandia.gov">SPARTA WWW Site</A> -
+<CENTER><A HREF = "Section_packages.html">Previous Section</A> - <A HREF = "https://sparta.github.io">SPARTA WWW Site</A> -
 <A HREF = "Manual.html">SPARTA Documentation</A> - <A HREF = "Section_commands.html#comm">SPARTA Commands</A> - <A HREF = "Section_howto.html">Next
 Section</A> 
 </CENTER>
@@ -28,7 +28,7 @@ multi-core CPUs, GPUs, and Intel Xeon Phi coprocessors.
 
 <LI>5.3 <A HREF = "#acc_3">KOKKOS package</A> 
 </UL>
-<P>The <A HREF = "http://sparta.sandia.gov/bench.html">Benchmark page</A> of the SPARTA
+<P>The <A HREF = "https://sparta.github.io/bench.html">Benchmark page</A> of the SPARTA
 web site gives performance results for the various accelerator
 packages discussed in Section 5.2, for several of the standard SPARTA
 benchmark problems, as a function of problem size and number of
@@ -50,7 +50,7 @@ typically no need to run for 1000s of timesteps to get accurate
 timings; you can simply extrapolate from short runs.
 </P>
 <P>For the set of runs, look at the timing data printed to the screen and
-log file at the end of each SPARTA run.  <A HREF = "Section_start.html#start_7">This
+log file at the end of each SPARTA run.  <A HREF = "Section_start.html#start_8">This
 section</A> of the manual has an overview.
 </P>
 <P>Running on one (or a few processors) should give a good estimate of
@@ -141,9 +141,9 @@ it provides, follow these general steps:
 </P>
 <DIV ALIGN=center><TABLE  BORDER=1 >
 <TR><TD >prepare and test a regular SPARTA simulation </TD><TD >  lmp_kokkos_cuda -in in.script; mpirun -np 32 lmp_kokkos_cuda -in in.script </TD></TR>
-<TR><TD >enable specific accelerator support via '-k on' <A HREF = "Section_start.html#start_6">command-line switch</A>, </TD><TD >  -k on g 1 </TD></TR>
-<TR><TD >set any needed options for the package via "-pk" <A HREF = "Section_start.html#start_6">command-line switch</A> or <A HREF = "package.html">package</A> command, </TD><TD >  only if defaults need to be changed, -pk kokkos react/retry yes </TD></TR>
-<TR><TD >use accelerated styles in your input via "-sf" <A HREF = "Section_start.html#start_6">command-line switch</A> or <A HREF = "suffix.html">suffix</A> command </TD><TD > lmp_kokkos_cuda -in in.script -sf kk
+<TR><TD >enable specific accelerator support via '-k on' <A HREF = "Section_start.html#start_7">command-line switch</A>, </TD><TD >  -k on g 1 </TD></TR>
+<TR><TD >set any needed options for the package via "-pk" <A HREF = "Section_start.html#start_7">command-line switch</A> or <A HREF = "package.html">package</A> command, </TD><TD >  only if defaults need to be changed, -pk kokkos react/retry yes </TD></TR>
+<TR><TD >use accelerated styles in your input via "-sf" <A HREF = "Section_start.html#start_7">command-line switch</A> or <A HREF = "suffix.html">suffix</A> command </TD><TD > lmp_kokkos_cuda -in in.script -sf kk
 </TD></TR></TABLE></DIV>
 
 <P>Note that the first 3 steps can be done as a single command with
@@ -159,7 +159,7 @@ individual accelerator sections.  Or you can add
 <A HREF = "package.html">package</A> and <A HREF = "suffix.html">suffix</A> commands to your input
 script.
 </P>
-<P>The <A HREF = "http://sparta.sandia.gov/bench.html">Benchmark page</A> of the SPARTA
+<P>The <A HREF = "https://sparta.github.io/bench.html">Benchmark page</A> of the SPARTA
 web site gives performance results for the various accelerator
 packages for several of the standard SPARTA benchmark problems, as a
 function of problem size and number of compute nodes, on different
@@ -539,7 +539,7 @@ size.
 performance difference of a KOKKOS style and (un-accelerated) styles
 (MPI-only mode) is typically small (less than 20%).
 </P>
-<P>See the <A HREF = "http://sparta.sandia.gov/bench.html">Benchmark page</A> of the
+<P>See the <A HREF = "https://sparta.github.io/bench.html">Benchmark page</A> of the
 SPARTA web site for performance of the KOKKOS package on different
 hardware.
 </P>
@@ -565,56 +565,63 @@ KOKKOS_DEVICES=CUDA means an NVIDIA GPU running CUDA will be used.
 <DIV ALIGN=center><TABLE  BORDER=1 >
 <TR><TD ><B>Arch-ID</B>	</TD><TD > <B>HOST or GPU</B> </TD><TD >	<B>Description</B> </TD></TR>
 <TR><TD >NATIVE </TD><TD > HOST </TD><TD > Local machine </TD></TR>
-<TR><TD >AMDAVX </TD><TD > HOST </TD><TD > AMD 64-bit x86 CPU (AVX 1) </TD></TR>
-<TR><TD >ZEN </TD><TD > HOST </TD><TD > AMD Zen class CPU (AVX 2) </TD></TR>
-<TR><TD >ZEN2 </TD><TD > HOST </TD><TD > AMD Zen2 class CPU (AVX 2) </TD></TR>
-<TR><TD >ZEN3 </TD><TD > HOST </TD><TD > AMD Zen3 class CPU (AVX 2) </TD></TR>
+<TR><TD >AMDAVX </TD><TD > HOST </TD><TD > AMD chip </TD></TR>
 <TR><TD >ARMV80 </TD><TD > HOST </TD><TD > ARMv8.0 Compatible CPU </TD></TR>
 <TR><TD >ARMV81 </TD><TD > HOST </TD><TD > ARMv8.1 Compatible CPU </TD></TR>
 <TR><TD >ARMV8_THUNDERX </TD><TD > HOST </TD><TD > ARMv8 Cavium ThunderX CPU </TD></TR>
 <TR><TD >ARMV8_THUNDERX2 </TD><TD > HOST </TD><TD > ARMv8 Cavium ThunderX2 CPU </TD></TR>
 <TR><TD >A64FX </TD><TD > HOST </TD><TD > ARMv8.2 with SVE Support </TD></TR>
-<TR><TD >SNB </TD><TD > HOST </TD><TD > Intel Sandy/Ivy Bridge CPU (AVX 1) </TD></TR>
-<TR><TD >HSW </TD><TD > HOST </TD><TD > Intel Haswell CPU (AVX 2) </TD></TR>
-<TR><TD >BDW </TD><TD > HOST </TD><TD > Intel Broadwell Xeon E-class CPU (AVX 2 + transactionalmem) </TD></TR>
-<TR><TD >SKL </TD><TD > HOST </TD><TD > Intel Skylake Client CPU </TD></TR>
-<TR><TD >SKX </TD><TD > HOST </TD><TD > Intel Skylake Xeon Server CPU (AVX512) </TD></TR>
-<TR><TD >ICL </TD><TD > HOST </TD><TD > Intel Ice Lake Client CPU (AVX512) </TD></TR>
-<TR><TD >ICX </TD><TD > HOST </TD><TD > Intel Ice Lake Xeon Server CPU (AVX512) </TD></TR>
-<TR><TD >SPR </TD><TD > HOST </TD><TD > Intel Sapphire Rapids Xeon Server CPU (AVX512) </TD></TR>
+<TR><TD >ARMV9_GRACE </TD><TD > HOST </TD><TD > ARMv9 NVIDIA Grace CPU </TD></TR>
+<TR><TD >SNB </TD><TD > HOST </TD><TD > Intel Sandy/Ivy Bridge CPUs </TD></TR>
+<TR><TD >HSW </TD><TD > HOST </TD><TD > Intel Haswell CPUs </TD></TR>
+<TR><TD >BDW </TD><TD > HOST </TD><TD > Intel Broadwell Xeon E-class CPUs </TD></TR>
+<TR><TD >ICL </TD><TD > HOST </TD><TD > Intel Ice Lake Client CPUs (AVX512) </TD></TR>
+<TR><TD >ICX </TD><TD > HOST </TD><TD > Intel Ice Lake Xeon Server CPUs (AVX512) </TD></TR>
+<TR><TD >SKL </TD><TD > HOST </TD><TD > Intel Skylake Client CPUs </TD></TR>
+<TR><TD >SKX </TD><TD > HOST </TD><TD > Intel Skylake Xeon Server CPUs (AVX512) </TD></TR>
 <TR><TD >KNC </TD><TD > HOST </TD><TD > Intel Knights Corner Xeon Phi </TD></TR>
 <TR><TD >KNL </TD><TD > HOST </TD><TD > Intel Knights Landing Xeon Phi </TD></TR>
-<TR><TD >POWER8 </TD><TD > HOST </TD><TD > IBM POWER8 CPU </TD></TR>
-<TR><TD >POWER9 </TD><TD > HOST </TD><TD > IBM POWER9 CPU </TD></TR>
-<TR><TD >RISCV_SG2042 </TD><TD > HOST </TD><TD > SG2042 (RISC-V) CPU </TD></TR>
-<TR><TD >KEPLER30 </TD><TD > GPU </TD><TD > NVIDIA Kepler generation CC 3.0 GPU </TD></TR>
-<TR><TD >KEPLER32 </TD><TD > GPU </TD><TD > NVIDIA Kepler generation CC 3.2 GPU </TD></TR>
-<TR><TD >KEPLER35 </TD><TD > GPU </TD><TD > NVIDIA Kepler generation CC 3.5 GPU </TD></TR>
-<TR><TD >KEPLER37 </TD><TD > GPU </TD><TD > NVIDIA Kepler generation CC 3.7 GPU </TD></TR>
-<TR><TD >MAXWELL50 </TD><TD > GPU </TD><TD > NVIDIA Maxwell generation CC 5.0 GPU </TD></TR>
-<TR><TD >MAXWELL52 </TD><TD > GPU </TD><TD > NVIDIA Maxwell generation CC 5.2 GPU </TD></TR>
-<TR><TD >MAXWELL53 </TD><TD > GPU </TD><TD > NVIDIA Maxwell generation CC 5.3 GPU </TD></TR>
-<TR><TD >PASCAL60 </TD><TD > GPU </TD><TD > NVIDIA Pascal generation CC 6.0 GPU </TD></TR>
-<TR><TD >PASCAL61 </TD><TD > GPU </TD><TD > NVIDIA Pascal generation CC 6.1 GPU </TD></TR>
-<TR><TD >VOLTA70 </TD><TD > GPU </TD><TD > NVIDIA Volta generation CC 7.0 GPU </TD></TR>
-<TR><TD >VOLTA72 </TD><TD > GPU </TD><TD > NVIDIA Volta generation CC 7.2 GPU </TD></TR>
-<TR><TD >TURING75 </TD><TD > GPU </TD><TD > NVIDIA Turing generation CC 7.5 GPU </TD></TR>
-<TR><TD >AMPERE80 </TD><TD > GPU </TD><TD > NVIDIA Ampere generation CC 8.0 GPU </TD></TR>
-<TR><TD >AMPERE86 </TD><TD > GPU </TD><TD > NVIDIA Ampere generation CC 8.6 GPU </TD></TR>
-<TR><TD >ADA89 </TD><TD > GPU </TD><TD > NVIDIA Ada Lovelace generation CC 8.9 GPU </TD></TR>
-<TR><TD >HOPPER90 </TD><TD > GPU </TD><TD > NVIDIA Hopper generation CC 9.0 GPU </TD></TR>
+<TR><TD >SPR </TD><TD > HOST </TD><TD > Intel Sapphire Rapids Xeon Server CPUs (AVX512) </TD></TR>
+<TR><TD >POWER8 </TD><TD > HOST </TD><TD > IBM POWER8 CPUs </TD></TR>
+<TR><TD >POWER9 </TD><TD > HOST </TD><TD > IBM POWER9 CPUs </TD></TR>
+<TR><TD >ZEN </TD><TD > HOST </TD><TD > AMD Zen architecture </TD></TR>
+<TR><TD >ZEN2 </TD><TD > HOST </TD><TD > AMD Zen2 architecture </TD></TR>
+<TR><TD >ZEN3 </TD><TD > HOST </TD><TD > AMD Zen3 architecture </TD></TR>
+<TR><TD >RISCV_SG2042 </TD><TD > HOST </TD><TD > SG2042 (RISC-V) CPUs </TD></TR>
+<TR><TD >RISCV_RVA22V </TD><TD > HOST </TD><TD > RVA22V (RISC-V) CPUs </TD></TR>
+<TR><TD >KEPLER30 </TD><TD > GPU </TD><TD > NVIDIA Kepler generation CC 3.0 </TD></TR>
+<TR><TD >KEPLER32 </TD><TD > GPU </TD><TD > NVIDIA Kepler generation CC 3.2 </TD></TR>
+<TR><TD >KEPLER35 </TD><TD > GPU </TD><TD > NVIDIA Kepler generation CC 3.5 </TD></TR>
+<TR><TD >KEPLER37 </TD><TD > GPU </TD><TD > NVIDIA Kepler generation CC 3.7 </TD></TR>
+<TR><TD >MAXWELL50 </TD><TD > GPU </TD><TD > NVIDIA Maxwell generation CC 5.0 </TD></TR>
+<TR><TD >MAXWELL52 </TD><TD > GPU </TD><TD > NVIDIA Maxwell generation CC 5.2 </TD></TR>
+<TR><TD >MAXWELL53 </TD><TD > GPU </TD><TD > NVIDIA Maxwell generation CC 5.3 </TD></TR>
+<TR><TD >PASCAL60 </TD><TD > GPU </TD><TD > NVIDIA Pascal generation CC 6.0 </TD></TR>
+<TR><TD >PASCAL61 </TD><TD > GPU </TD><TD > NVIDIA Pascal generation CC 6.1 </TD></TR>
+<TR><TD >VOLTA70 </TD><TD > GPU </TD><TD > NVIDIA Volta generation CC 7.0 </TD></TR>
+<TR><TD >VOLTA72 </TD><TD > GPU </TD><TD > NVIDIA Volta generation CC 7.2 </TD></TR>
+<TR><TD >TURING75 </TD><TD > GPU </TD><TD > NVIDIA Turing generation CC 7.5 </TD></TR>
+<TR><TD >AMPERE80 </TD><TD > GPU </TD><TD > NVIDIA Ampere generation CC 8.0 </TD></TR>
+<TR><TD >AMPERE86 </TD><TD > GPU </TD><TD > NVIDIA Ampere generation CC 8.6 </TD></TR>
+<TR><TD >ADA89 </TD><TD > GPU </TD><TD > NVIDIA Ada generation CC 8.9 </TD></TR>
+<TR><TD >HOPPER90 </TD><TD > GPU </TD><TD > NVIDIA Hopper generation CC 9.0 </TD></TR>
+<TR><TD >AMD_GFX906 </TD><TD > GPU </TD><TD > AMD GPU MI50/60 </TD></TR>
 <TR><TD >AMD_GFX908 </TD><TD > GPU </TD><TD > AMD GPU MI100 </TD></TR>
 <TR><TD >AMD_GFX90A </TD><TD > GPU </TD><TD > AMD GPU MI200 </TD></TR>
+<TR><TD >AMD_GFX940 </TD><TD > GPU </TD><TD > AMD GPU MI300 </TD></TR>
 <TR><TD >AMD_GFX942 </TD><TD > GPU </TD><TD > AMD GPU MI300 </TD></TR>
+<TR><TD >AMD_GFX942_APU </TD><TD > GPU </TD><TD > AMD APU MI300A </TD></TR>
 <TR><TD >AMD_GFX1030 </TD><TD > GPU </TD><TD > AMD GPU V620/W6800 </TD></TR>
 <TR><TD >AMD_GFX1100 </TD><TD > GPU </TD><TD > AMD GPU RX7900XTX </TD></TR>
-<TR><TD >INTEL_GEN GPU SPIR64-based devices, e.g. Intel GPUs, using JIT </TD><TD >INTEL_DG1 </TD><TD > GPU </TD></TR>
-<TR><TD > Intel Iris XeMAX GPU </TD><TD >INTEL_GEN9 </TD><TD > GPU </TD></TR>
-<TR><TD > Intel GPU Gen9 </TD><TD >INTEL_GEN11 </TD><TD > GPU </TD></TR>
-<TR><TD > Intel GPU Gen11 </TD><TD >INTEL_GEN12LP </TD><TD > GPU </TD></TR>
-<TR><TD > Intel GPU Gen12LP </TD><TD >INTEL_XEHP </TD><TD > GPU </TD></TR>
-<TR><TD > Intel GPU Xe-HP </TD><TD >INTEL_PVC </TD><TD > GPU </TD></TR>
-<TR><TD > Intel GPU Ponte Vecchio </TD><TD >
+<TR><TD >AMD_GFX1103 </TD><TD > GPU </TD><TD > AMD GPU PHOENIX </TD></TR>
+<TR><TD >INTEL_GEN </TD><TD > GPU </TD><TD > SPIR64-based devices, e.g. Intel GPUs, using JIT </TD></TR>
+<TR><TD >INTEL_DG1 </TD><TD > GPU </TD><TD > Intel Iris XeMAX GPU </TD></TR>
+<TR><TD >INTEL_GEN9 </TD><TD > GPU </TD><TD > Intel GPU Gen9 </TD></TR>
+<TR><TD >INTEL_GEN11 </TD><TD > GPU </TD><TD > Intel GPU Gen11 </TD></TR>
+<TR><TD >INTEL_GEN12LP </TD><TD > GPU </TD><TD > Intel GPU Gen12LP </TD></TR>
+<TR><TD >INTEL_XEHP </TD><TD > GPU </TD><TD > Intel GPU Xe-HP </TD></TR>
+<TR><TD >INTEL_PVC </TD><TD > GPU </TD><TD > Intel GPU Ponte Vecchio </TD></TR>
+<TR><TD >
 </TD></TR></TABLE></DIV>
 
 <P>The CMake option Kokkos_ENABLE_CUDA_<I>OPTION</I> or the makefile setting KOKKOS_CUDA_OPTIONS=<I>OPTION</I> are 

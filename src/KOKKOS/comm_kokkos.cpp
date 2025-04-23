@@ -1,6 +1,6 @@
 /* ----------------------------------------------------------------------
    SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
-   http://sparta.sandia.gov
+   http://sparta.github.io
    Steve Plimpton, sjplimp@gmail.com, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
@@ -50,11 +50,11 @@ CommKokkos::~CommKokkos()
 {
   if (copymode) return;
 
+  particle_kk_copy.uncopy();
+
   if (!sparta->kokkos->comm_serial) {
     pproc = NULL;
   }
-
-  particle_kk_copy.uncopy();
 }
 
 /* ----------------------------------------------------------------------
@@ -116,8 +116,9 @@ int CommKokkos::migrate_particles(int nmigrate, int *plist, DAT::t_int_1d &d_pli
     pproc = h_pproc.data();
   }
   //if (maxsendbuf == 0 || nmigrate*nbytes_total > maxsendbuf) { // this doesn't work, not sure why
-    int maxsendbuf = nmigrate*nbytes_total;
-    if (maxsendbuf > int(d_sbuf.extent(0)) || !gpu_aware_flag)
+
+    bigint maxsendbuf = (bigint)nmigrate*nbytes_total;
+    if (maxsendbuf > bigint(d_sbuf.extent(0)) || !gpu_aware_flag)
       d_sbuf = DAT::t_char_1d(Kokkos::view_alloc("comm:sbuf",Kokkos::WithoutInitializing),maxsendbuf);
   //}
 
@@ -205,7 +206,7 @@ int CommKokkos::migrate_particles(int nmigrate, int *plist, DAT::t_int_1d &d_pli
 
     // allocate exact buffer size to reduce GPU <--> CPU memory transfer
 
-    int maxrecvbuf = nrecv*nbytes_total;
+    bigint maxrecvbuf = (bigint)nrecv*nbytes_total;
     d_rbuf = DAT::t_char_1d(Kokkos::view_alloc("comm:rbuf",Kokkos::WithoutInitializing),maxrecvbuf);
 
     nlocal = particle->nlocal;
@@ -229,7 +230,7 @@ int CommKokkos::migrate_particles(int nmigrate, int *plist, DAT::t_int_1d &d_pli
 
   particle_kk->modify(Device,PARTICLE_MASK);
   d_particles = t_particle_1d(); // destroy reference to reduce memory use
-  d_plist = decltype(d_plist)();
+  d_plist = {};
 
   particle->nlocal += nrecv;
   ncomm += nsend;
@@ -250,7 +251,7 @@ void CommKokkos::operator()(TagCommMigrateParticles<NEED_ATOMICS, HAVE_CUSTOM>, 
   }
   d_pproc[nsend] = d_cells[d_particles[j].icell].proc;
   d_particles[j].icell = d_cells[d_particles[j].icell].ilocal;
-  const int offset = nsend*nbytes_total;
+  const bigint offset = (bigint)nsend*nbytes_total;
   memcpy(&d_sbuf[offset],&d_particles[j],nbytes_particle);
   if (HAVE_CUSTOM)
     particle_kk_copy.obj.pack_custom_kokkos(j,(char*)(d_sbuf.data()+offset+nbytes_particle));
@@ -260,7 +261,7 @@ template<int HAVE_CUSTOM>
 KOKKOS_INLINE_FUNCTION
 void CommKokkos::operator()(TagCommMigrateUnpackParticles<HAVE_CUSTOM>, const int &irecv) const {
   const int i = nlocal + irecv;
-  const int offset = irecv*nbytes_total;
+  const bigint offset = (bigint)irecv*nbytes_total;
   memcpy(&d_particles[i],&d_rbuf[offset],nbytes_particle);
   if (HAVE_CUSTOM)
     particle_kk_copy.obj.unpack_custom_kokkos((char*)(d_rbuf.data()+offset+nbytes_particle),i);

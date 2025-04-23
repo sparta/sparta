@@ -1,6 +1,6 @@
 /* ----------------------------------------------------------------------
    SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
-   http://sparta.sandia.gov
+   http://sparta.github.io
    Steve Plimpton, sjplimp@gmail.com, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
@@ -1048,7 +1048,7 @@ void UpdateKokkos::moveOne(const int &i, UPDATE_REDUCE &reduce) const{
           particle_i.flag = PDONE;
 
           if (ATOMIC_REDUCTION == 1)
-            Kokkos::atomic_increment(&d_ncomm_one());
+            Kokkos::atomic_inc(&d_ncomm_one());
           else if (ATOMIC_REDUCTION == 0)
             d_ncomm_one()++;
           else
@@ -1068,7 +1068,7 @@ void UpdateKokkos::moveOne(const int &i, UPDATE_REDUCE &reduce) const{
   int nmask = d_cells[icell].nmask;
   stuck_iterate = 0;
   if (ATOMIC_REDUCTION == 1)
-    Kokkos::atomic_increment(&d_ntouch_one());
+    Kokkos::atomic_inc(&d_ntouch_one());
   else if (ATOMIC_REDUCTION == 0)
     d_ntouch_one()++;
   else
@@ -1512,7 +1512,7 @@ void UpdateKokkos::moveOne(const int &i, UPDATE_REDUCE &reduce) const{
 
           exclude = minsurf;
           if (ATOMIC_REDUCTION == 1)
-            Kokkos::atomic_increment(&d_nscollide_one());
+            Kokkos::atomic_inc(&d_nscollide_one());
           else if (ATOMIC_REDUCTION == 0)
             d_nscollide_one()++;
           else
@@ -1559,7 +1559,7 @@ void UpdateKokkos::moveOne(const int &i, UPDATE_REDUCE &reduce) const{
           else {
             particle_i.flag = PDISCARD;
             if (ATOMIC_REDUCTION == 1)
-              Kokkos::atomic_increment(&d_nstuck());
+              Kokkos::atomic_inc(&d_nstuck());
             else if (ATOMIC_REDUCTION == 0)
               d_nstuck()++;
             else
@@ -1604,7 +1604,7 @@ void UpdateKokkos::moveOne(const int &i, UPDATE_REDUCE &reduce) const{
         if (x[1] < lo[1] || x[1] > hi[1]) {
           particle_i.flag = PDISCARD;
           if (ATOMIC_REDUCTION == 1)
-            Kokkos::atomic_increment(&d_naxibad());
+            Kokkos::atomic_inc(&d_naxibad());
           else if (ATOMIC_REDUCTION == 0)
             d_naxibad()++;
           else
@@ -1762,7 +1762,7 @@ void UpdateKokkos::moveOne(const int &i, UPDATE_REDUCE &reduce) const{
       if (bflag == OUTFLOW) {
         particle_i.flag = PDISCARD;
         if (ATOMIC_REDUCTION == 1)
-          Kokkos::atomic_increment(&d_nexit_one());
+          Kokkos::atomic_inc(&d_nexit_one());
         else if (ATOMIC_REDUCTION == 0)
           d_nexit_one()++;
         else
@@ -1809,7 +1809,7 @@ void UpdateKokkos::moveOne(const int &i, UPDATE_REDUCE &reduce) const{
         }
 
         if (ATOMIC_REDUCTION == 1) {
-          Kokkos::atomic_increment(&d_nboundary_one());
+          Kokkos::atomic_inc(&d_nboundary_one());
           Kokkos::atomic_decrement(&d_ntouch_one());    // decrement here since will increment below
         } else if (ATOMIC_REDUCTION == 0) {
           d_nboundary_one()++;
@@ -1821,7 +1821,7 @@ void UpdateKokkos::moveOne(const int &i, UPDATE_REDUCE &reduce) const{
 
       } else {
         if (ATOMIC_REDUCTION == 1) {
-          Kokkos::atomic_increment(&d_nboundary_one());
+          Kokkos::atomic_inc(&d_nboundary_one());
           Kokkos::atomic_decrement(&d_ntouch_one());    // decrement here since will increment below
         } else if (ATOMIC_REDUCTION == 0) {
           d_nboundary_one()++;
@@ -1862,7 +1862,7 @@ void UpdateKokkos::moveOne(const int &i, UPDATE_REDUCE &reduce) const{
     neigh = d_cells[icell].neigh;
     nmask = d_cells[icell].nmask;
     if (ATOMIC_REDUCTION == 1)
-      Kokkos::atomic_increment(&d_ntouch_one());
+      Kokkos::atomic_inc(&d_ntouch_one());
     else if (ATOMIC_REDUCTION == 0)
       d_ntouch_one()++;
     else
@@ -1902,7 +1902,7 @@ void UpdateKokkos::moveOne(const int &i, UPDATE_REDUCE &reduce) const{
         return;
       }
       if (ATOMIC_REDUCTION == 1)
-        Kokkos::atomic_increment(&d_ncomm_one());
+        Kokkos::atomic_inc(&d_ncomm_one());
       else if (ATOMIC_REDUCTION == 0)
         d_ncomm_one()++;
       else
@@ -2110,5 +2110,5 @@ void UpdateKokkos::restore()
 
   // deallocate references to reduce memory use
 
-  d_particles_backup = decltype(d_particles_backup)();
+  d_particles_backup = {};
 }

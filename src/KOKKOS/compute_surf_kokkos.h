@@ -1,6 +1,6 @@
 /* ----------------------------------------------------------------------
    SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
-   http://sparta.sandia.gov
+   http://sparta.github.io
    Steve Plimpton, sjplimp@gmail.com, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
@@ -45,8 +45,8 @@ class ComputeSurfKokkos : public ComputeSurf {
   void pre_surf_tally();
   void post_surf_tally();
 
-enum{NUM,NUMWT,NFLUX,NFLUXIN,MFLUX,MFLUXIN,FX,FY,FZ,PRESS,XPRESS,YPRESS,ZPRESS,
-     XSHEAR,YSHEAR,ZSHEAR,KE,EROT,EVIB,ECHEM,ETOT};
+enum{NUM,NUMWT,NFLUX,NFLUXIN,MFLUX,MFLUXIN,FX,FY,FZ,TX,TY,TZ,
+  PRESS,XPRESS,YPRESS,ZPRESS,XSHEAR,YSHEAR,ZSHEAR,KE,EROT,EVIB,ECHEM,ETOT};
 
 /* ----------------------------------------------------------------------
    tally values for a single particle in icell
@@ -64,9 +64,11 @@ void surf_tally_kk(int isurf, int icell, int reaction,
                    Particle::OnePart *iorig,
                    Particle::OnePart *ip, Particle::OnePart *jp) const
 {
-  // skip if no particle, called by SurfReactAdsorb for on-surf reaction
+  // skip if no original particle and a reaction is taking place
+  //   called by SurfReactAdsorb for on-surf reaction
+  // FixEmitSurf also calls with no original particle but no reaction
 
-  if (!iorig) return;
+  if (!iorig && reaction) return;
 
   // skip if isurf not in surface group
 
@@ -76,11 +78,18 @@ void surf_tally_kk(int isurf, int icell, int reaction,
     if (!(d_tris(isurf).mask & groupbit)) return;
   }
 
-  // skip if species not in mixture group
+  // skip if colliding/emitting species not in mixture group
 
-  int origspecies = iorig->ispecies;
-  int igroup = d_s2g(imix,origspecies);
-  if (igroup < 0) return;
+  int origspecies = -1;
+  int igroup;
+  if (iorig) {
+    origspecies = iorig->ispecies;
+    igroup = d_s2g(imix,origspecies);
+    if (igroup < 0) return;
+  } else {
+    igroup = d_s2g(imix,ip->ispecies);
+    if (igroup < 0) return;
+  }
 
   // itally = tally index of isurf
   // grow tally list if needed
@@ -107,6 +116,8 @@ void surf_tally_kk(int isurf, int icell, int reaction,
   double fluxscale = d_normflux(isurf);
 
   // tally all values associated with group into array
+  // set fflag after force computation is done once
+  // set tqflag after torque computation is done once
   // set nflag and tflag after normal and tangent computation is done once
   // particle weight used for all keywords except NUM
   // forcescale factor applied for keywords FX,FY,FZ
@@ -115,24 +126,37 @@ void surf_tally_kk(int isurf, int icell, int reaction,
 
   double vsqpre,ivsqpost,jvsqpost;
   double ierot,jerot,ievib,jevib,iother,jother,otherpre,etot;
-  double pdelta[3],pnorm[3],ptang[3],pdelta_force[3];
+  double pdelta[3],pnorm[3],ptang[3],pdelta_force[3],rdelta[3],torque[3];
+  double *xcollide;
 
   double *norm;
   if (dim == 2) norm = d_lines(isurf).norm;
   else norm = d_tris(isurf).norm;
 
-  double origmass,imass,jmass;
-
   double weight = 1.0;
-  if (weightflag) weight = iorig->weight;
-  origmass = d_species(origspecies).mass * weight;
+  double origmass = 0.0;
+  double imass,jmass;
+  if (weightflag && iorig) weight = iorig->weight;
+  else if (weightflag) weight = ip->weight;
+  if (origspecies >= 0) origmass = d_species[origspecies].mass * weight;
   if (ip) imass = d_species(ip->ispecies).mass * weight;
   if (jp) jmass = d_species(jp->ispecies).mass * weight;
 
-  double *vorig = iorig->v;
+  double *vorig = NULL;
+  double oerot,oevib;
+  if (iorig) {
+    vorig = iorig->v;
+    oerot = iorig->erot;
+    oevib = iorig->evib;
+  } else {
+    oerot = 0.0;
+    oevib = 0.0;
+  }
 
   int k = igroup*nvalue;
+
   int fflag = 0;
+  int tqflag = 0;
   int nflag = 0;
   int tflag = 0;
 
@@ -140,7 +164,11 @@ void surf_tally_kk(int isurf, int icell, int reaction,
   auto a_array_surf_tally = v_array_surf_tally.template access<typename AtomicDup<ATOMIC_REDUCTION,DeviceType>::value>();
 
   for (int m = 0; m < nvalue; m++) {
+
     switch (d_which(m)) {
+
+    // counts and fluxes
+
     case NUM:
       a_array_surf_tally(itally,k++) += 1.0;
       break;
@@ -148,7 +176,7 @@ void surf_tally_kk(int isurf, int icell, int reaction,
       a_array_surf_tally(itally,k++) += weight;
       break;
     case NFLUX:
-      a_array_surf_tally(itally,k) += weight * fluxscale;
+      if (iorig) a_array_surf_tally(itally,k) += weight * fluxscale;
       if (!transparent) {
         if (ip) a_array_surf_tally(itally,k) -= weight * fluxscale;
         if (jp) a_array_surf_tally(itally,k) -= weight * fluxscale;
@@ -160,7 +188,7 @@ void surf_tally_kk(int isurf, int icell, int reaction,
       k++;
       break;
     case MFLUX:
-      a_array_surf_tally(itally,k) += origmass * fluxscale;
+      if (iorig) a_array_surf_tally(itally,k) += origmass * fluxscale;
       if (!transparent) {
         if (ip) a_array_surf_tally(itally,k) -= imass * fluxscale;
         if (jp) a_array_surf_tally(itally,k) -= jmass * fluxscale;
@@ -171,10 +199,14 @@ void surf_tally_kk(int isurf, int icell, int reaction,
       a_array_surf_tally(itally,k) += origmass * fluxscale;
       k++;
       break;
+
+    // forces and torques
+
     case FX:
       if (!fflag) {
         fflag = 1;
-        MathExtraKokkos::scale3(-origmass,vorig,pdelta_force);
+        pdelta_force[0] = pdelta_force[1] = pdelta_force[2] = 0.0;
+        if (iorig) MathExtraKokkos::axpy3(-origmass,vorig,pdelta_force);
         if (ip) MathExtraKokkos::axpy3(imass,ip->v,pdelta_force);
         if (jp) MathExtraKokkos::axpy3(jmass,jp->v,pdelta_force);
       }
@@ -183,7 +215,8 @@ void surf_tally_kk(int isurf, int icell, int reaction,
     case FY:
       if (!fflag) {
         fflag = 1;
-        MathExtraKokkos::scale3(-origmass,vorig,pdelta_force);
+        pdelta_force[0] = pdelta_force[1] = pdelta_force[2] = 0.0;
+        if (iorig) MathExtraKokkos::axpy3(-origmass,vorig,pdelta_force);
         if (ip) MathExtraKokkos::axpy3(imass,ip->v,pdelta_force);
         if (jp) MathExtraKokkos::axpy3(jmass,jp->v,pdelta_force);
       }
@@ -192,22 +225,82 @@ void surf_tally_kk(int isurf, int icell, int reaction,
     case FZ:
       if (!fflag) {
         fflag = 1;
-        MathExtraKokkos::scale3(-origmass,vorig,pdelta_force);
+        pdelta_force[0] = pdelta_force[1] = pdelta_force[2] = 0.0;
+        if (iorig) MathExtraKokkos::axpy3(-origmass,vorig,pdelta_force);
         if (ip) MathExtraKokkos::axpy3(imass,ip->v,pdelta_force);
         if (jp) MathExtraKokkos::axpy3(jmass,jp->v,pdelta_force);
       }
       a_array_surf_tally(itally,k++) -= pdelta_force[2] * nfactor_inverse;
       break;
+
+    // for torque, xcollide should be same for any non-NULL particle
+
+    case TX:
+      if (!fflag) {
+        fflag = 1;
+        MathExtraKokkos::scale3(-origmass,vorig,pdelta_force);
+        if (ip) MathExtraKokkos::axpy3(imass,ip->v,pdelta_force);
+        if (jp) MathExtraKokkos::axpy3(jmass,jp->v,pdelta_force);
+      }
+      if (!tqflag) {
+        tqflag = 1;
+        if (ip) xcollide = ip->x;
+        else xcollide = iorig->x;
+        MathExtraKokkos::sub3(xcollide,com,rdelta);
+        MathExtraKokkos::cross3(rdelta,pdelta_force,torque);
+      }
+      a_array_surf_tally(itally,k++) -= torque[0] * nfactor_inverse;
+      break;
+    case TY:
+      if (!fflag) {
+        fflag = 1;
+        MathExtraKokkos::scale3(-origmass,vorig,pdelta_force);
+        if (ip) MathExtraKokkos::axpy3(imass,ip->v,pdelta_force);
+        if (jp) MathExtraKokkos::axpy3(jmass,jp->v,pdelta_force);
+      }
+      if (!tqflag) {
+        tqflag = 1;
+        if (ip) xcollide = ip->x;
+        else xcollide = iorig->x;
+        MathExtraKokkos::sub3(xcollide,com,rdelta);
+        MathExtraKokkos::cross3(rdelta,pdelta_force,torque);
+      }
+      a_array_surf_tally(itally,k++) -= torque[1] * nfactor_inverse;
+      break;
+    case TZ:
+      if (!fflag) {
+        fflag = 1;
+        MathExtraKokkos::scale3(-origmass,vorig,pdelta_force);
+        if (ip) MathExtraKokkos::axpy3(imass,ip->v,pdelta_force);
+        if (jp) MathExtraKokkos::axpy3(jmass,jp->v,pdelta_force);
+      }
+      if (!tqflag) {
+        tqflag = 1;
+        if (ip) xcollide = ip->x;
+        else xcollide = iorig->x;
+        MathExtraKokkos::sub3(xcollide,com,rdelta);
+        MathExtraKokkos::cross3(rdelta,pdelta_force,torque);
+      }
+      a_array_surf_tally(itally,k++) -= torque[2] * nfactor_inverse;
+      break;
+
+    // pressures
+
     case PRESS:
-      MathExtraKokkos::scale3(-origmass,vorig,pdelta);
-      if (ip) MathExtraKokkos::axpy3(imass,ip->v,pdelta);
-      if (jp) MathExtraKokkos::axpy3(jmass,jp->v,pdelta);
+      if (!nflag && !tflag) {
+        pdelta[0] = pdelta[1] = pdelta[2] = 0.0;
+        if (iorig) MathExtraKokkos::axpy3(-origmass,vorig,pdelta);
+        if (ip) MathExtraKokkos::axpy3(imass,ip->v,pdelta);
+        if (jp) MathExtraKokkos::axpy3(jmass,jp->v,pdelta);
+      }
       a_array_surf_tally(itally,k++) += MathExtraKokkos::dot3(pdelta,norm) * fluxscale;
       break;
+
     case XPRESS:
       if (!nflag) {
         nflag = 1;
-        MathExtraKokkos::scale3(-origmass,vorig,pdelta);
+        pdelta[0] = pdelta[1] = pdelta[2] = 0.0;
+        if (iorig) MathExtraKokkos::axpy3(-origmass,vorig,pdelta);
         if (ip) MathExtraKokkos::axpy3(imass,ip->v,pdelta);
         if (jp) MathExtraKokkos::axpy3(jmass,jp->v,pdelta);
         MathExtraKokkos::scale3(MathExtraKokkos::dot3(pdelta,norm),norm,pnorm);
@@ -217,7 +310,8 @@ void surf_tally_kk(int isurf, int icell, int reaction,
     case YPRESS:
       if (!nflag) {
         nflag = 1;
-        MathExtraKokkos::scale3(-origmass,vorig,pdelta);
+        pdelta[0] = pdelta[1] = pdelta[2] = 0.0;
+        if (iorig) MathExtraKokkos::axpy3(-origmass,vorig,pdelta);
         if (ip) MathExtraKokkos::axpy3(imass,ip->v,pdelta);
         if (jp) MathExtraKokkos::axpy3(jmass,jp->v,pdelta);
         MathExtraKokkos::scale3(MathExtraKokkos::dot3(pdelta,norm),norm,pnorm);
@@ -227,17 +321,20 @@ void surf_tally_kk(int isurf, int icell, int reaction,
     case ZPRESS:
       if (!nflag) {
         nflag = 1;
-        MathExtraKokkos::scale3(-origmass,vorig,pdelta);
+        pdelta[0] = pdelta[1] = pdelta[2] = 0.0;
+        if (iorig) MathExtraKokkos::axpy3(-origmass,vorig,pdelta);
         if (ip) MathExtraKokkos::axpy3(imass,ip->v,pdelta);
         if (jp) MathExtraKokkos::axpy3(jmass,jp->v,pdelta);
         MathExtraKokkos::scale3(MathExtraKokkos::dot3(pdelta,norm),norm,pnorm);
       }
       a_array_surf_tally(itally,k++) -= pnorm[2] * fluxscale;
       break;
+
     case XSHEAR:
       if (!tflag) {
         tflag = 1;
-        MathExtraKokkos::scale3(-origmass,vorig,pdelta);
+        pdelta[0] = pdelta[1] = pdelta[2] = 0.0;
+        if (iorig) MathExtraKokkos::axpy3(-origmass,vorig,pdelta);
         if (ip) MathExtraKokkos::axpy3(imass,ip->v,pdelta);
         if (jp) MathExtraKokkos::axpy3(jmass,jp->v,pdelta);
         MathExtraKokkos::scale3(MathExtraKokkos::dot3(pdelta,norm),norm,pnorm);
@@ -248,7 +345,8 @@ void surf_tally_kk(int isurf, int icell, int reaction,
     case YSHEAR:
       if (!tflag) {
         tflag = 1;
-        MathExtraKokkos::scale3(-origmass,vorig,pdelta);
+        pdelta[0] = pdelta[1] = pdelta[2] = 0.0;
+        if (iorig) MathExtraKokkos::axpy3(-origmass,vorig,pdelta);
         if (ip) MathExtraKokkos::axpy3(imass,ip->v,pdelta);
         if (jp) MathExtraKokkos::axpy3(jmass,jp->v,pdelta);
         MathExtraKokkos::scale3(MathExtraKokkos::dot3(pdelta,norm),norm,pnorm);
@@ -259,7 +357,8 @@ void surf_tally_kk(int isurf, int icell, int reaction,
     case ZSHEAR:
       if (!tflag) {
         tflag = 1;
-        MathExtraKokkos::scale3(-origmass,vorig,pdelta);
+        pdelta[0] = pdelta[1] = pdelta[2] = 0.0;
+        if (iorig) MathExtraKokkos::axpy3(-origmass,vorig,pdelta);
         if (ip) MathExtraKokkos::axpy3(imass,ip->v,pdelta);
         if (jp) MathExtraKokkos::axpy3(jmass,jp->v,pdelta);
         MathExtraKokkos::scale3(MathExtraKokkos::dot3(pdelta,norm),norm,pnorm);
@@ -267,8 +366,12 @@ void surf_tally_kk(int isurf, int icell, int reaction,
       }
       a_array_surf_tally(itally,k++) -= ptang[2] * fluxscale;
       break;
+
+    // energies
+
     case KE:
-      vsqpre = origmass * MathExtraKokkos::lensq3(vorig);
+      if (iorig) vsqpre = origmass * MathExtraKokkos::lensq3(vorig);
+      else vsqpre = 0.0;
       if (ip) ivsqpost = imass * MathExtraKokkos::lensq3(ip->v);
       else ivsqpost = 0.0;
       if (jp) jvsqpost = jmass * MathExtraKokkos::lensq3(jp->v);
@@ -284,9 +387,9 @@ void surf_tally_kk(int isurf, int icell, int reaction,
       if (jp) jerot = jp->erot;
       else jerot = 0.0;
       if (transparent)
-        a_array_surf_tally(itally,k++) += weight * iorig->erot * fluxscale;
+        a_array_surf_tally(itally,k++) += weight * oerot * fluxscale;
       else
-        a_array_surf_tally(itally,k++) -= weight * (ierot + jerot - iorig->erot) * fluxscale;
+        a_array_surf_tally(itally,k++) -= weight * (ierot + jerot - oerot) * fluxscale;
       break;
     case EVIB:
       if (ip) ievib = ip->evib;
@@ -294,9 +397,9 @@ void surf_tally_kk(int isurf, int icell, int reaction,
       if (jp) jevib = jp->evib;
       else jevib = 0.0;
       if (transparent)
-        a_array_surf_tally(itally,k++) += weight * iorig->evib * fluxscale;
+        a_array_surf_tally(itally,k++) += weight * oevib * fluxscale;
       else
-        a_array_surf_tally(itally,k++) -= weight * (ievib + jevib - iorig->evib) * fluxscale;
+        a_array_surf_tally(itally,k++) -= weight * (ievib + jevib - oevib) * fluxscale;
       break;
     case ECHEM:
       if (reaction && !transparent) {
@@ -309,8 +412,9 @@ void surf_tally_kk(int isurf, int icell, int reaction,
       }
       break;
     case ETOT:
-      vsqpre = origmass * MathExtraKokkos::lensq3(vorig);
-      otherpre = iorig->erot + iorig->evib;
+      if (iorig) vsqpre = origmass * MathExtraKokkos::lensq3(vorig);
+      else vsqpre = 0.0;
+      otherpre = oerot + oevib;
       if (ip) {
         ivsqpost = imass * MathExtraKokkos::lensq3(ip->v);
         iother = ip->erot + ip->evib;

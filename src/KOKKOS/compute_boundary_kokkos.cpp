@@ -1,6 +1,6 @@
 /* ----------------------------------------------------------------------
    SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
-   http://sparta.sandia.gov
+   http://sparta.github.io
    Steve Plimpton, sjplimp@gmail.com, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
@@ -47,12 +47,7 @@ ComputeBoundaryKokkos::ComputeBoundaryKokkos(SPARTA *sparta, int narg, char **ar
 ComputeBoundaryKokkos::ComputeBoundaryKokkos(SPARTA *sparta) :
   ComputeBoundary(sparta)
 {
-  array = NULL;
-  myarray = NULL;
-  which = NULL;
-  id = NULL;
-  style = NULL;
-  tlist = NULL;
+  copy = 1;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -138,6 +133,6 @@ void ComputeBoundaryKokkos::post_boundary_tally()
 {
   if (need_dup) {
     Kokkos::Experimental::contribute(d_myarray, dup_myarray);
-    dup_myarray = decltype(dup_myarray)(); // free duplicated memory
+    dup_myarray = {}; // free duplicated memory
   }
 }

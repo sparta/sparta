@@ -1,6 +1,6 @@
 /* ----------------------------------------------------------------------
    SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
-   http://sparta.sandia.gov
+   http://sparta.github.io
    Steve Plimpton, sjplimp@gmail.com, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
@@ -21,6 +21,7 @@
 #define EPSSQ 1.0e-16
 #define EPSSQNEG -1.0e-16
 #define EPSSELF 1.0e-6
+#define EPSTIME 1.0e-16
 
 enum{OUTSIDE,INSIDE,ONSURF2OUT,ONSURF2IN};    // same as Update
 
@@ -670,6 +671,9 @@ bool line_line_intersect(double *start, double *stop,
   //     depending on direction of 2 lines
   //   thus this can lead to no collision with either line
   //   typical observed dot values were 1.0e-18, so use EPSSQ = 1.0e-16
+  // NOTE: EPSSQ and EPSSQNEG are not normalized to size of line
+  //   this means the test is not robust for lines of widely varying size
+  //   better test would be something like EPS * line-length
 
   MathExtra::sub3(v1,v0,edge);
   MathExtra::sub3(point,v0,pvec);
@@ -787,6 +791,15 @@ bool axi_line_intersect(double tdelta, double *x, double *v,
   // loop over 1 or 2 possible collision times
 
   while (1) {
+
+    // check for roundoff issue which can occur when
+    //  axisym surf is nearly exactly on grid cell edge
+    // round-off in solution to quadratic equation
+    //   can cause t1 to be EPSTIME greater than tdelta and miss collision
+    // force a collision in this special case by setting t1 = tdelta
+
+    if (t1 > tdelta && (t1-tdelta) < EPSTIME && tdelta > 0.0)
+      t1 = tdelta;
 
     // test for collision time >= 0.0 and <= tdelta
 
@@ -932,6 +945,17 @@ bool axi_horizontal_line(double tdelta, double *x, double *v,
     nc = 1;
   }
 
+  // check for roundoff issue which can occur when
+  //  axisym surf is nearly exactly on grid cell edge
+  // round-off in solution to quadratic equation
+  //   can cause t1 or t2 to be EPSTIME greater than tdelta and miss collision
+  // force a collision in this special case by setting t1/t2 = tdelta
+
+  if (t1 > tdelta && (t1-tdelta) < EPSTIME && tdelta > 0.0)
+    t1 = tdelta;
+  else if (t2 > tdelta && (t2-tdelta) < EPSTIME && tdelta > 0.0)
+    t2 = tdelta;
+
   // require first collision time >= 0.0 and <= tdelta
 
   if (t1 < 0.0 || t1 > tdelta) {
@@ -1010,6 +1034,10 @@ bool line_tri_intersect(double *start, double *stop,
   //     depending on direction of 2 tri norms
   //   thus this can lead to no collision with either tri
   //   typical observed dot values were -1.0e-18, so use EPSSQNEG = -1.0e-16
+  // NOTE: EPSSQ and EPSSQNEG are not normalized to size of triangle
+  //   this means the test is not robust for tris of widely varying size
+  //   better test would be something like EPS * max-edge-length
+  //     but that would be expensive to calculate
 
   MathExtra::sub3(v1,v0,edge);
   MathExtra::sub3(point,v0,pvec);
@@ -1025,6 +1053,94 @@ bool line_tri_intersect(double *start, double *stop,
   MathExtra::sub3(point,v2,pvec);
   MathExtra::cross3(edge,pvec,xproduct);
   if (MathExtra::dot3(xproduct,norm) < EPSSQNEG) return false;
+
+  // there is a valid intersection with triangle
+  // set side to ONSUFR, OUTSIDE, or INSIDE
+  // if start point is inside or outside then side = same
+  // if particle started on triangle, side = ONSURF OUT/IN based on dotstop
+
+  if (dotstart < 0.0) side = INSIDE;
+  else if (dotstart > 0.0) side = OUTSIDE;
+  else if (dotstop > 0.0) side = ONSURF2OUT;
+  else side = ONSURF2IN;
+
+  return true;
+}
+
+/* ----------------------------------------------------------------------
+   detect intersection between a directed line segment and a triangle
+   intersection is defined as any line segment pt (including end pts)
+     in common with any triangle pt (interior, edge, vertex)
+   one exception is if both line end pts are in plane of triangle,
+     then is NOT an intersection
+   start,stop = end points of directed line segment, can have zero length
+   v0,v1,v2 = 3 vertices of triangle
+   norm = unit vector normal to triangle plane
+     pointing OUTSIDE via right-hand rule
+   return TRUE if there is an intersection, else FALSE
+   if TRUE also return:
+     point = pt of intersection
+     param = intersection pt is this fraction along line (0-1 inclusive)
+     side = side of B that was hit = OUTSIDE,INSIDE,ONSURF2OUT,ONSURF2IN
+   use 0.0 instead of EPSSQNEG as above when checking if particles
+     are inside surfaces
+------------------------------------------------------------------------- */
+
+bool line_tri_intersect_noeps(double *start, double *stop,
+                              double *v0, double *v1, double *v2, double *norm,
+                              double *point, double &param, int &side)
+{
+  double vec[3],start2stop[3],edge[3],pvec[3],xproduct[3];
+
+  // if start,stop are on same side of triangle, no intersection
+  // if start,stop are both in plane of triangle, no intersection
+
+  MathExtra::sub3(start,v0,vec);
+  double dotstart = MathExtra::dot3(norm,vec);
+  MathExtra::sub3(stop,v0,vec);
+  double dotstop = MathExtra::dot3(norm,vec);
+
+  if (dotstart < 0.0 && dotstop < 0.0) return false;
+  if (dotstart > 0.0 && dotstop > 0.0) return false;
+  if (dotstart == 0.0 && dotstop == 0.0) return false;
+
+  // param = parametric distance from start to stop
+  //   at which tri plane is intersected
+  // force param to be 0.0 to 1.0 inclusive
+
+  MathExtra::sub3(v0,start,vec);
+  MathExtra::sub3(stop,start,start2stop);
+  param = MathExtra::dot3(norm,vec) / MathExtra::dot3(norm,start2stop);
+  param = MAX(param,0.0);
+  param = MIN(param,1.0);
+
+  // point = intersection pt with plane of triangle
+
+  point[0] = start[0] + param * start2stop[0];
+  point[1] = start[1] + param * start2stop[1];
+  point[2] = start[2] + param * start2stop[2];
+
+  // test if intersection pt is inside triangle
+  // edge = edge vector of triangle
+  // pvec = vector from triangle vertex to intersection point
+  // xproduct = cross product of edge with pvec
+  // if dot product of xproduct with norm < 0.0 for any of 3 edges,
+  //   intersection point is outside tri
+
+  MathExtra::sub3(v1,v0,edge);
+  MathExtra::sub3(point,v0,pvec);
+  MathExtra::cross3(edge,pvec,xproduct);
+  if (MathExtra::dot3(xproduct,norm) < 0.0) return false;
+
+  MathExtra::sub3(v2,v1,edge);
+  MathExtra::sub3(point,v1,pvec);
+  MathExtra::cross3(edge,pvec,xproduct);
+  if (MathExtra::dot3(xproduct,norm) < 0.0) return false;
+
+  MathExtra::sub3(v0,v2,edge);
+  MathExtra::sub3(point,v2,pvec);
+  MathExtra::cross3(edge,pvec,xproduct);
+  if (MathExtra::dot3(xproduct,norm) < 0.0) return false;
 
   // there is a valid intersection with triangle
   // set side to ONSUFR, OUTSIDE, or INSIDE
@@ -1403,6 +1519,54 @@ double tri_fraction(double *x, double *v0, double *v1, double *v2)
   fracsq = MIN(fracsq,MathExtra::lensq3(segment)/lensq);
 
   return fracsq;
+}
+
+/* ----------------------------------------------------------------------
+   compute area of an arbitrary convex polygon (does not work for concave)
+   npoint = number of points
+   cpath = series of x,y,z triplets that define the polygon
+            e.g. returned from cut2/3d clip_external() function
+   center = computed centroid of polygon
+------------------------------------------------------------------------- */
+
+double poly_area(int npoint, double *cpath, double* center)
+{
+  double area = 0.0;
+  double v1[3],v2[3],xproduct[3];
+  double pt0[3],pti[3],ptip1[3],tri_center[3];
+
+  center[0] = 0.0;
+  center[1] = 0.0;
+  center[2] = 0.0;
+
+  pt0[0] = cpath[0];
+  pt0[1] = cpath[1];
+  pt0[2] = cpath[2];
+
+  for (int i = 1; i < npoint-1; i++) {
+    pti[0] = cpath[3*i];
+    pti[1] = cpath[3*i+1];
+    pti[2] = cpath[3*i+2];
+
+    ptip1[0] = cpath[3*(i+1)];
+    ptip1[1] = cpath[3*(i+1)+1];
+    ptip1[2] = cpath[3*(i+1)+2];
+
+    MathExtra::sub3(pti,pt0,v1);
+    MathExtra::sub3(ptip1,pt0,v2);
+    MathExtra::cross3(v1,v2,xproduct);
+    double tri_area = 0.5*sqrt(MathExtra::dot3(xproduct,xproduct));
+
+    MathExtra::add3(pt0,pti,tri_center);
+    MathExtra::add3(tri_center,ptip1,tri_center);
+    MathExtra::scale3(tri_area/3.0,tri_center);
+    MathExtra::add3(center,tri_center,center);
+    area += tri_area;
+  }
+
+  MathExtra::scale3(1.0/area,center);
+
+  return area;
 }
 
 /* ---------------------------------------------------------------------- */

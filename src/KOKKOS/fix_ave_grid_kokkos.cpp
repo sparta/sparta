@@ -1,6 +1,6 @@
 /* ----------------------------------------------------------------------
    SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
-   http://sparta.sandia.gov
+   http://sparta.github.io
    Steve Plimpton, sjplimp@gmail.com, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
@@ -236,9 +236,10 @@ void FixAveGridKokkos::end_of_step()
     // evaluate grid-style variable, sum values to Kth column of tally array
 
     } else if (which[m] == VARIABLE) {
-      error->all(FLERR,"Cannot (yet) use variables with fix ave/grid/kk");
-      //k = umap[m][0];
-      //input->variable->compute_grid(n,&tally[0][k],ntotal,1); // need Kokkos version
+      k = umap[m][0];
+      input->variable->compute_grid(n,&tally[0][k],ntotal,1);
+      k_tally.modify_host();
+      k_tally.sync_device();
 
     // access custom attribute
 

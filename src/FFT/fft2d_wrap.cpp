@@ -1,6 +1,6 @@
 /* ----------------------------------------------------------------------
    SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
-   http://sparta.sandia.gov
+   http://sparta.github.io
    Steve Plimpton, sjplimp@gmail.com, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
@@ -20,7 +20,7 @@ using namespace SPARTA_NS;
 
 /* ---------------------------------------------------------------------- */
 
-FFT2D::FFT2D(SPARTA *spa, MPI_Comm comm, int nfast, int nslow,
+FFT2d::FFT2d(SPARTA *spa, MPI_Comm comm, int nfast, int nslow,
              int in_ilo, int in_ihi, int in_jlo, int in_jhi,
              int out_ilo, int out_ihi, int out_jlo, int out_jhi,
              int scaled, int permute, int *nbuf, int usecollective) :
@@ -35,21 +35,21 @@ FFT2D::FFT2D(SPARTA *spa, MPI_Comm comm, int nfast, int nslow,
 
 /* ---------------------------------------------------------------------- */
 
-FFT2D::~FFT2D()
+FFT2d::~FFT2d()
 {
   fft_2d_destroy_plan(plan);
 }
 
 /* ---------------------------------------------------------------------- */
 
-void FFT2D::compute(FFT_SCALAR *in, FFT_SCALAR *out, int flag)
+void FFT2d::compute(FFT_SCALAR *in, FFT_SCALAR *out, int flag)
 {
   fft_2d((FFT_DATA *) in,(FFT_DATA *) out,flag,plan);
 }
 
 /* ---------------------------------------------------------------------- */
 
-void FFT2D::timing1d(FFT_SCALAR *in, int nsize, int flag)
+void FFT2d::timing1d(FFT_SCALAR *in, int nsize, int flag)
 {
   fft_2d_1d_only((FFT_DATA *) in,nsize,flag,plan);
 }

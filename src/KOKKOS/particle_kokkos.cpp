@@ -1,6 +1,6 @@
 /* ----------------------------------------------------------------------
    SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
-   http://sparta.sandia.gov
+   http://sparta.github.io
    Steve Plimpton, sjplimp@gmail.com, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
@@ -30,7 +30,7 @@
 #include "kokkos.h"
 #include "sparta_masks.h"
 
-#include <Kokkos_Vector.hpp>
+//#include <Kokkos_Vector.hpp>
 
 using namespace SPARTA_NS;
 
@@ -65,34 +65,23 @@ ParticleKokkos::ParticleKokkos(SPARTA *sparta) : Particle(sparta)
 
 ParticleKokkos::~ParticleKokkos()
 {
-  if (!uncopy && (copy || copymode)) return;
+  if (copy || copymode) return;
 
   particles = NULL;
   species = NULL;
 
-
-  // deallocate views of views in serial to prevent race condition in profiling tools
-
-  for (int i = 0; i < k_eivec.extent(0); i++)
-    k_eivec.h_view(i).k_view = decltype(k_eivec.h_view(i).k_view)();
-
-  for (int i = 0; i < k_eiarray.extent(0); i++)
-    k_eiarray.h_view(i).k_view = decltype(k_eiarray.h_view(i).k_view)();
-
-  for (int i = 0; i < k_edvec.extent(0); i++)
-    k_edvec.h_view(i).k_view = decltype(k_edvec.h_view(i).k_view)();
-
-  for (int i = 0; i < k_edarray.extent(0); i++)
-    k_edarray.h_view(i).k_view = decltype(k_edarray.h_view(i).k_view)();
-
-  eivec = NULL;
-  eiarray = NULL;
-  edvec = NULL;
-  edarray = NULL;
-
   ewhich = NULL;
   eicol = NULL;
   edcol = NULL;
+
+  for (int i = 0; i < ncustom_ivec; i++)
+    memoryKK->destroy_kokkos(k_eivec.h_view[i].k_view,eivec[i]);
+  for (int i = 0; i < ncustom_iarray; i++)
+    memoryKK->destroy_kokkos(k_eiarray.h_view[i].k_view,eiarray[i]);
+  for (int i = 0; i < ncustom_dvec; i++)
+    memoryKK->destroy_kokkos(k_edvec.h_view[i].k_view,edvec[i]);
+  for (int i = 0; i < ncustom_darray; i++)
+    memoryKK->destroy_kokkos(k_edarray.h_view[i].k_view,edarray[i]);
 
   ncustom_ivec = ncustom_iarray = 0;
   ncustom_dvec = ncustom_darray = 0;
@@ -210,7 +199,7 @@ void ParticleKokkos::sort_kokkos()
   d_plist = grid_kk->d_plist;
 
   if (ngrid > int(d_cellcount.extent(0))) {
-    d_cellcount = decltype(d_cellcount)();
+    d_cellcount = {};
     MemKK::realloc_kokkos(grid_kk->d_cellcount,"particle:cellcount",ngrid);
     d_cellcount = grid_kk->d_cellcount;
   }
@@ -218,7 +207,7 @@ void ParticleKokkos::sort_kokkos()
   Kokkos::deep_copy(d_cellcount,0);
 
   if (ngrid > int(d_plist.extent(0)) || maxcellcount > int(d_plist.extent(1))) {
-    d_plist = decltype(d_plist)();
+    d_plist = {};
     MemKK::realloc_kokkos(grid_kk->d_plist,"particle:plist",ngrid,maxcellcount);
     d_plist = grid_kk->d_plist;
   }
@@ -263,7 +252,7 @@ void ParticleKokkos::sort_kokkos()
     if (resize) {
       Kokkos::deep_copy(d_cellcount,0);
       maxcellcount = MAX(maxcellcount+MAX(DELTACELLCOUNT,maxcellcount*0.1),resize);
-      d_plist = decltype(d_plist)();
+      d_plist = {};
       MemKK::realloc_kokkos(grid_kk->d_plist,"particle:plist",ngrid,maxcellcount);
       d_plist = grid_kk->d_plist;
 
@@ -340,7 +329,7 @@ void ParticleKokkos::sort_kokkos()
   }
 
   d_particles = t_particle_1d(); // destroy reference to reduce memory use
-  d_plist = decltype(d_plist)();
+  d_plist = {};
 }
 
 KOKKOS_INLINE_FUNCTION
@@ -507,7 +496,7 @@ void ParticleKokkos::post_weight()
     Particle::post_weight();
     sparta->kokkos->auto_sync = prev_auto_sync;
     this->modify(Host,PARTICLE_MASK);
-  } else if (METHOD == 2) { // Kokkos-parallel, gives same (correct) answer
+  } /*else if (METHOD == 2) { // Kokkos-parallel, gives same (correct) answer
     Kokkos::View<double*> d_ratios("post_weight:ratios", nlocal);
     auto h_ratios = Kokkos::create_mirror_view(d_ratios);
     auto grid_kk = dynamic_cast<GridKokkos*>(grid);
@@ -567,7 +556,7 @@ void ParticleKokkos::post_weight()
     Kokkos::deep_copy(k_particles.d_view,d_newparticles);
     this->modify(Device,PARTICLE_MASK);
     d_particles = t_particle_1d();
-  }
+  }*/
 }
 
 /* ---------------------------------------------------------------------- */

@@ -1,6 +1,6 @@
 "Previous Section"_Section_start.html - "SPARTA WWW Site"_sws - "SPARTA Documentation"_sd - "SPARTA Commands"_sc - "Next Section"_Section_howto.html :c
 
-:link(sws,http://sparta.sandia.gov)
+:link(sws,https://sparta.github.io)
 :link(sd,Manual.html)
 :link(sc,Section_commands.html#comm)
 
@@ -310,6 +310,7 @@ section"_#cmd_4 lists many of the same commands, grouped by category.
 "compute"_compute.html,
 "create_box"_create_box.html,
 "create_grid"_create_grid.html,
+"create_isurf"_create_isurf.html,
 "create_particles"_create_particles.html,
 "custom"_custom.html,
 "dimension"_dimension.html,
@@ -394,6 +395,7 @@ This is indicated by additional letters in parenthesis: k = KOKKOS.
 "field/grid"_fix_field_grid.html,
 "field/particle"_fix_field_particle.html,
 "grid/check (k)"_fix_grid_check.html,
+"halt"_fix_halt.html,
 "move/surf (k)"_fix_move_surf.html,
 "print"_fix_print.html,
 "surf/temp"_fix_surf_temp.html,
@@ -474,6 +476,6 @@ used if SPARTA is built with the "appropriate accelerated
 package"_Section_accelerate.html.  This is indicated by additional
 letters in parenthesis: k = KOKKOS.
 
-"adsorb"_surf_adsorb.html,
+"adsorb"_surf_react_adsorb.html,
 "global (k)"_surf_react.html,
 "prob (k)"_surf_react.html :tb(c=2,ea=c)

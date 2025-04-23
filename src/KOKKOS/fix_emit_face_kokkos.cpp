@@ -1,6 +1,6 @@
 /* ----------------------------------------------------------------------
    SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
-   http://sparta.sandia.gov
+   http://sparta.github.io
    Steve Plimpton, sjplimp@gmail.com, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
@@ -33,6 +33,7 @@
 #include "kokkos_type.h"
 #include "particle_kokkos.h"
 #include "sparta_masks.h"
+#include "variable.h"
 #include "Kokkos_Random.hpp"
 
 using namespace SPARTA_NS;
@@ -155,6 +156,14 @@ void FixEmitFaceKokkos::perform_task()
   if (subsonic)
     error->one(FLERR,"Cannot yet use fix emit/face/kk with subsonic emission");
   //if (subsonic) subsonic_inflow(); ////////////////////////
+
+  // if modulate variable set, evaluate it as prefactor for this timestep
+
+  prefactor = 1.0;
+  if (modvar) {
+    prefactor = input->variable->compute_equal(imodvar);
+    if (prefactor < 0.0) error->all(FLERR,"Fix emit/face modulation < 0.0");
+  }
 
   // insert particles for each task = cell/face pair
   // ntarget/ninsert is either perspecies or for all species
@@ -351,13 +360,13 @@ void FixEmitFaceKokkos::operator()(TagFixEmitFace_ninsert, const int &i) const
 
   if (perspecies) {
     for (int isp = 0; isp < nspecies; isp++) {
-      auto ntarget = d_ntargetsp(i,isp)+rand_gen.drand();
+      auto ntarget = prefactor*d_ntargetsp(i,isp) + rand_gen.drand();
       ninsert = static_cast<int> (ntarget);
       d_ninsert(i * nspecies + isp) = ninsert;
     }
   } else {
     if (np == 0) {
-      auto ntarget = d_tasks(i).ntarget+rand_gen.drand();
+      auto ntarget = prefactor*d_tasks(i).ntarget + rand_gen.drand();
       ninsert = static_cast<int> (ntarget);
     } else {
       ninsert = npertask;

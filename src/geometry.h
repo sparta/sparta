@@ -1,6 +1,6 @@
 /* ----------------------------------------------------------------------
    SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
-   http://sparta.sandia.gov
+   http://sparta.github.io
    Steve Plimpton, sjplimp@gmail.com, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
@@ -43,6 +43,9 @@ namespace Geometry {
   bool line_tri_intersect(double *, double *,
                           double *, double *, double *, double *,
                           double *, double &param, int &);
+  bool line_tri_intersect_noeps(double *, double *,
+                                double *, double *, double *, double *,
+                                double *, double &param, int &);
   int whichside(double *, double *, double, double, double);
   int point_on_hex(double *, double *, double *);
   int point_in_hex(double *, double *, double *);
@@ -57,6 +60,7 @@ namespace Geometry {
 
   double line_fraction(double *, double *, double *);
   double tri_fraction(double *, double *, double *, double *);
+  double poly_area(int, double *, double *);
 }
 
 #endif

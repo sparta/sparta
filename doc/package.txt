@@ -1,6 +1,6 @@
 "SPARTA WWW Site"_lws - "SPARTA Documentation"_ld - "SPARTA Commands"_lc :c
 
-:link(lws,http://sparta.sandia.gov)
+:link(lws,https://sparta.github.io)
 :link(ld,Manual.html)
 :link(lc,Section_commands.html#comm)
 
@@ -48,7 +48,7 @@ its initialization, before a simulation is defined.
 
 This command can also be specified from the command-line when
 launching SPARTA, using the "-pk" "command-line
-switch"_Section_start.html#start_6.  The syntax is exactly the same as
+switch"_Section_start.html#start_7.  The syntax is exactly the same as
 when used in an input script.
 
 Note that the KOKKOS accelerator package requires the package command
@@ -57,12 +57,12 @@ can be built with the accelerator package without using it in a
 particular simulation).  However, a default version of the command is
 typically invoked by other accelerator settings. For example, the
 KOKKOS package requires a "-k on" "command-line
-switch"_Section_start.html#start_6 respectively, which invokes a
+switch"_Section_start.html#start_7 respectively, which invokes a
 "package kokkos" command with default settings.
 
 NOTE: A package command for a particular style can be invoked multiple
 times when a simulation is setup, e.g. by the "-k on", "-sf", and
-"-pk" "command-line switches"_Section_start.html#start_6, and by using
+"-pk" "command-line switches"_Section_start.html#start_7, and by using
 this command in an input script.  Each time it is used all of the
 style options are set, either to default values or to specified
 settings.  I.e. settings from previous invocations do not persist
@@ -131,14 +131,14 @@ SPARTA"_Section_start.html#start_3 section for more info.
 [Related commands:]
 
 "suffix"_suffix.html, "-pk" "command-line
-setting"_Section_start.html#start_6
+setting"_Section_start.html#start_7
 
 [Default:]
 
 For the KOKKOS package, the option defaults are react/extra = 1.1,
 react/retry = no, and gpu/aware yes. For CPUs: comm = serial, and for
 GPUs: comm = threaded.  These settings are made automatically by the
-required "-k on" "command-line switch"_Section_start.html#start_6. You
+required "-k on" "command-line switch"_Section_start.html#start_7. You
 can change them by using the package kokkos command in your input script
 or via the "-pk kokkos" "command-line
-switch"_Section_start.html#start_6. 
+switch"_Section_start.html#start_7. 

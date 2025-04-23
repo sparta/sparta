@@ -1,6 +1,6 @@
 /* ----------------------------------------------------------------------
    SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
-   http://sparta.sandia.gov
+   http://sparta.github.io
    Steve Plimpton, sjplimp@gmail.com
    Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
@@ -44,15 +44,23 @@ class CreateISurf : protected Pointers {
   int ggroup;               // group id for grid cells
   int groupbit;
   int ncorner;              // number of corners
-  int nadj;                 // number of adjacent neighbors
+  int nmulti;               // number of adjacent neighbors
+  int nedge;                // number of cell edges
   double thresh;            // lower threshold for corner values
   double corner[3];         // corners of grid group
   double xyzsize[3];        // size of lowest level cell (must be uniform grid)
   int nxyz[3], Nxyz;        // dimensions of grid
   double **cvalues;         // array of corner point values
+  double ***mulvalues;      // array of multi values
+  double **tmp_cvalues;     // temporary array of corner point values
+  double ***tmp_mulvalues;  // temporary array of multi values
   double **mvalues;         // minimum intersection value
   int **svalues;            // marks corners as in or out
   double ***ivalues;        // point of intersection between corner points
+
+  // buffer between corner point and intersection
+
+  double surfbuffer;
 
   double **icvalues;        // corner values for Fix Ablate
   int *tvalues;             // vector of per grid cell surf types
@@ -61,9 +69,10 @@ class CreateISurf : protected Pointers {
   Surf::Tri *ltris;         // local copy of Surf tris
   double **cuvalues;        // local copy of custom per-surf data
 
-  int aveFlag;              // flag for how corners in unknown cells are set
+  int ctype;                // flag for how corners in unknown cells are set
   double mind;              // minimum cell length
   double cin, cout;         // in and out corner values
+  double cbufmin, cbufmax;  // corner value buffer
   class FixAblate *ablate;  // ablate fix
 
   // for communicating
@@ -71,8 +80,11 @@ class CreateISurf : protected Pointers {
   int **ixyz;             // ix,iy,iz indices (1 to Nxyz) of my cells
                           // in 2d/3d ablate grid (iz = 1 for 2d)
 
+  // various arrays to pass to other processors
+
   int **sghost;
   double **cghost;
+  double ***inghost;
   double ***ighost;       // ditto for my ghost cells communicated to me
   int maxgrid;            // max size of per-cell vectors/arrays
   int maxghost;           // max size of cdelta_ghost
@@ -96,13 +108,17 @@ class CreateISurf : protected Pointers {
     ubuf(uint32_t arg) : u(arg) {}
   };
 
-  // functions to set corner values
+  void process_args(int, char **);
+
+  // functions to set corner/multi values
 
   void set_corners();
+  void set_multi();
 
   // send/recv values between neighborind cells (similar to fix_ablate)
 
   void sync(int);
+  void sync_voxels();
   void comm_neigh_corners(int);
   void grow_send();
   int walk_to_neigh(int, int, int, int);
@@ -121,6 +137,10 @@ class CreateISurf : protected Pointers {
   int find_side_2d();
   int find_side_3d();
   void set_cvalues();
+  void set_cvalues_inout();
+  void set_cvalues_voxel();
+  void set_cvalues_ave();
+  void set_cvalues_multi();
 
   // detects intersection between surfaces and cell edges
 
@@ -133,7 +153,8 @@ class CreateISurf : protected Pointers {
 
   // misc functions
 
-  double param2in(double, double);
+  double param2cval(double, double);
+  double interpolate(double, double);
 };
 
 }

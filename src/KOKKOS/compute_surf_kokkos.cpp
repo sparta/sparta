@@ -1,6 +1,6 @@
 /* ----------------------------------------------------------------------
    SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
-   http://sparta.sandia.gov
+   http://sparta.github.io
    Steve Plimpton, sjplimp@gmail.com, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
@@ -47,16 +47,7 @@ ComputeSurfKokkos::ComputeSurfKokkos(SPARTA *sparta) :
   sr_kk_global_copy{VAL_2(KKCopy<SurfReactGlobalKokkos>(sparta))},
   sr_kk_prob_copy{VAL_2(KKCopy<SurfReactProbKokkos>(sparta))}
 {
-  hash = NULL;
-  which = NULL;
-  array_surf_tally = NULL;
-  tally2surf = NULL;
-  array_surf = NULL;
-  vector_surf = NULL;
-  normflux = NULL;
-  id = NULL;
-  style = NULL;
-  tlist = NULL;
+  copy = 1;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -64,21 +55,16 @@ ComputeSurfKokkos::ComputeSurfKokkos(SPARTA *sparta) :
 ComputeSurfKokkos::~ComputeSurfKokkos()
 {
   if (uncopy) {
-    for (int i=0; i<KOKKOS_MAX_SURF_REACT_PER_TYPE; i++) {
+    for (int i = 0; i < KOKKOS_MAX_SURF_REACT_PER_TYPE; i++) {
       sr_kk_global_copy[i].uncopy();
       sr_kk_prob_copy[i].uncopy();
     }
   }
 
-  if (copy || copymode) return;
+  if (copy) return;
 
   memoryKK->destroy_kokkos(k_tally2surf,tally2surf);
   memoryKK->destroy_kokkos(k_array_surf_tally,array_surf_tally);
-
-  for (int i = 0; i < KOKKOS_MAX_SURF_REACT_PER_TYPE; i++) {
-    sr_kk_global_copy[i].uncopy();
-    sr_kk_prob_copy[i].uncopy();
-  }
 }
 
 /* ---------------------------------------------------------------------- */
@@ -195,7 +181,7 @@ void ComputeSurfKokkos::post_surf_tally()
 {
   if (need_dup) {
     Kokkos::Experimental::contribute(d_array_surf_tally, dup_array_surf_tally);
-    dup_array_surf_tally = decltype(dup_array_surf_tally)(); // free duplicated memory
+    dup_array_surf_tally = {}; // free duplicated memory
   }
 
   k_tally2surf.modify_device();

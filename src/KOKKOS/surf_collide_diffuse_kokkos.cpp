@@ -1,6 +1,6 @@
 /* ----------------------------------------------------------------------
    SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
-   http://sparta.sandia.gov
+   http://sparta.github.io
    Steve Plimpton, sjplimp@gmail.com, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
@@ -87,28 +87,24 @@ SurfCollideDiffuseKokkos::SurfCollideDiffuseKokkos(SPARTA *sparta) :
 #endif
            )
 {
-  random = NULL;
-  random_backup = NULL;
-  id = NULL;
-  style = NULL;
-
-  t_owned = NULL;
-  t_localghost = NULL;
+  copy = 1;
 }
 
 /* ---------------------------------------------------------------------- */
 
 SurfCollideDiffuseKokkos::~SurfCollideDiffuseKokkos()
 {
-  if (!uncopy) return;
+  if (uncopy) {
+    fix_ambi_kk_copy.uncopy();
+    fix_vibmode_kk_copy.uncopy();
 
-  fix_ambi_kk_copy.uncopy();
-  fix_vibmode_kk_copy.uncopy();
-
-  for (int i = 0; i < KOKKOS_MAX_SURF_REACT_PER_TYPE; i++) {
-    sr_kk_global_copy[i].uncopy();
-    sr_kk_prob_copy[i].uncopy();
+    for (int i = 0; i < KOKKOS_MAX_SURF_REACT_PER_TYPE; i++) {
+      sr_kk_global_copy[i].uncopy();
+      sr_kk_prob_copy[i].uncopy();
+    }
   }
+
+  if (copy) return;
 
 #ifdef SPARTA_KOKKOS_EXACT
   rand_pool.destroy();
@@ -304,7 +300,7 @@ void SurfCollideDiffuseKokkos::post_collide()
   sc->nsingle += h_nsingle();
   surf->nreact_one += h_nreact_one();
 
-  d_particles = decltype(d_particles)();
+  d_particles = {};
 }
 
 /* ---------------------------------------------------------------------- */

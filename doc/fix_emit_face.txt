@@ -1,6 +1,6 @@
 "SPARTA WWW Site"_sws - "SPARTA Documentation"_sd - "SPARTA Commands"_sc :c
 
-:link(sws,http://sparta.sandia.gov)
+:link(sws,https://sparta.github.io)
 :link(sd,Manual.html)
 :link(sc,Section_commands.html#comm)
 
@@ -18,11 +18,13 @@ emit/face = style name of this fix command :l
 mix-ID = ID of mixture to use when creating particles :l
 face1,face2,... = one or more of {all} or {xlo} or {xhi} or {ylo} or {yhi} or {zlo} or {zhi} :l
 zero or more keyword/value(s) pairs may be appended :l
-keyword = {n} or {nevery} or {perspecies} or {region} or {subsonic} or {twopass} :l
+keyword = {n} or {nevery} or {perspecies} or {region} or {modulate} or {subsonic} or {twopass} :l
   {n} value = Np = number of particles to create
   {nevery} value = Nstep = add particles every this many timesteps
   {perspecies} value = {yes} or {no}
-  {region} value = region-ID 
+  {region} value = region-ID
+  {modulate} value = v_name
+    name = name of equal-style variable which modulates inflow of particles
   {subsonic} values = Psub Tsub
     Psub = pressure setting at inflow boundary (pressure units)
     Tsub = temperature setting at inflow boundary, can be NULL (temperature units)
@@ -35,6 +37,9 @@ fix in emit/face air all
 fix in emit/face mymix xlo yhi n 1000 nevery 10 region circle
 fix in emit/face air xlo subsonic 0.1 300
 fix in emit/face air xhi subsonic 0.05 NULL twopass :pre
+
+variable mod equal "1.0 + sin(step/10000*2*PI)"
+fix in emit/face air all modulate v_mod :pre
 
 [Description:]
 
@@ -158,6 +163,16 @@ Particles those grid cells attempt to add are included in the count
 for N, even if some or all of the particle insertions are rejected due
 to not being inside the region.
 
+The {modulate} keyword can be used to multiple the count of particles
+inserted at each timestep by a prefactor.  The prefactor is calcalated
+at each insertion timestep by invoking the equal-style variable whose
+name is speficied as {v_name}.  A value of 1.0 will not modulate the
+count of inserted particles (on that timestep).  A value of 0.5 (or
+2.0) will insert half (or twice) the unmodulated count of particles.
+Note that the formula used for an equal-style variable can include the
+current timestep, so this is a simple way to insert a time-varying
+flow of particles.
+
 The {subsonic} keyword uses the method of Fang and Liou
 "(Fang02)"_#Fang02 to determine the number of particles to insert in
 each grid cell on the emitting face(s).  They used the method of
@@ -233,7 +248,7 @@ SPARTA"_Section_start.html#start_3 section for more info.
 
 You can specify the accelerated styles explicitly in your input script
 by including their suffix, or you can use the "-suffix command-line
-switch"_Section_start.html#start_6 when you invoke SPARTA, or you can
+switch"_Section_start.html#start_7 when you invoke SPARTA, or you can
 use the "suffix"_suffix.html command in your input script.
 
 See the "Accelerating SPARTA"_Section_accelerate.html section of the
@@ -248,8 +263,9 @@ Particles cannot be emitted from periodic faces of the simulation box.
 Particles cannot be emitted from {z} faces of the simluation box for a
 2d simulation.
 
-A {n} setting of {Np} > 0 can only be used with a {perspecies} setting
-of {no}.
+A {perspecies} setting of {yes} can only be used with an {n} setting
+of {Np} = 0.  Likewise, the {modulate} keyword can only be used with
+an {n} setting of {Np} = 0.
 
 A warning will be issued if a specified face has an inward normal in a
 direction opposing the streaming velocity.  Particles will still be
@@ -268,7 +284,7 @@ emit/face/file"_fix_emit_face_file.html
 [Default:]
 
 The keyword defaults are n = 0, nevery = 1, perspecies = yes, region =
-none, no subsonic settings, no twopass setting.
+none, no modulate setting, no subsonic settings, no twopass setting.
 
 :line
 

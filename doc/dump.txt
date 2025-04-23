@@ -1,6 +1,6 @@
 "SPARTA WWW Site"_sws - "SPARTA Documentation"_sd - "SPARTA Commands"_sc :c
 
-:link(sws,http://sparta.sandia.gov)
+:link(sws,https://sparta.github.io)
 :link(sd,Manual.html)
 :link(sc,Section_commands.html#comm)
 
@@ -23,13 +23,14 @@ N = dump every this many timesteps :l
 file = name of file to write dump info to :l
 args = list of arguments for a particular style :l
   {particle} args = list of particle attributes
-    possible attributes = id, type, proc, x, y, z, xs, ys, zs, vx, vy, vz,
+    possible attributes = id, type, proc, cellID, x, y, z, xs, ys, zs, vx, vy, vz,
                           ke, erot, evib, 
                           c_ID, c_ID\[N\], f_ID, f_ID\[N\], v_name, p_name, p_name\[N\] :pre
 
       id = particle ID
       type = particle species as an integer index
       proc = ID of owning processor
+      cellID = ID of grid cell particle is in
       x,y,z = unscaled particle coordinates
       xs,ys,zs = scaled particle coordinates
       vx,vy,vz = particle velocities
@@ -132,7 +133,7 @@ its options.
 The {particle} and {grid} and {surf} styles create files in a simple
 text format that is self-explanatory when viewing a dump file.  Many
 of the SPARTA "post-processing tools"_Section_tools.html, including
-"Pizza.py"_http://pizza.sandia.gov, work with this format.
+"Pizza.py"_https://lammps.github.io/pizza, work with this format.
 
 For post-processing purposes the text files are self-describing in the
 following sense.

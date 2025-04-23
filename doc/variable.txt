@@ -1,6 +1,6 @@
 "SPARTA WWW Site"_sws - "SPARTA Documentation"_sd - "SPARTA Commands"_sc :c
 
-:link(sws,http://sparta.sandia.gov)
+:link(sws,https://sparta.github.io)
 :link(sd,Manual.html)
 :link(sc,Section_commands.html#comm)
 
@@ -51,7 +51,7 @@ style = {delete} or {index} or {loop} or {world} or {universe} or {uloop} or {st
                      sin(x), cos(x), tan(x), asin(x), acos(x), atan(x), atan2(y,x), erf(x),
                      random(x,y), normal(x,y), ceil(x), floor(x), round(x)
                      ramp(x,y), stagger(x,y), logfreq(x,y,z), stride(x,y,z), vdisplace(x,y), swiggle(x,y,z), cwiggle(x,y,z)
-    special functions = sum(x), min(x), max(x), ave(x), trap(x), slope(x), next(x)
+    special functions = sum(x), min(x), max(x), ave(x), trap(x), slope(x), next(x), grid2part(x), is_file(x)
     particle vectors = id, type, mass, q, mu, x, y, z, vx, vy, vz
     grid vectors = cxlo, cxhi, cylo, cyhi, czlo, czhi
     compute references = c_ID, c_ID\[I\], c_ID\[I\]\[J\]
@@ -137,7 +137,7 @@ is ignored.  This means variables can NOT be re-defined in an input
 script (with 2 exceptions, read further).  This is to allow an input
 script to be processed multiple times without resetting the variables;
 see the "jump"_jump.html or "include"_include.html commands.  It also
-means that using the "command-line switch"_Section_start.html#start_6
+means that using the "command-line switch"_Section_start.html#start_7
 -var will override a corresponding index variable setting in the input
 script.
 
@@ -205,7 +205,7 @@ variable.
 
 {Index} style variables with a single string value can also be set by
 using the command-line switch -var; see "Section
-2.6"_Section_start.html#start_6 of the manual for details.
+2.6"_Section_start.html#start_7 of the manual for details.
 
 The {loop} style is identical to the {index} style except that the
 strings are the integers from 1 to N inclusive, if only one argument N
@@ -221,7 +221,7 @@ N1 <= N2 and N2 >= 0 is required.
 
 For the {world} style, one or more strings are specified.  There must
 be one string for each processor partition or "world".  See "Section
-2.6"_Section_start.html#start_6 of the manual for information on
+2.6"_Section_start.html#start_7 of the manual for information on
 running SPARTA with multiple partitions via the "-partition"
 command-line switch.  This variable command assigns one string to each
 world.  All processors in the world are assigned the same string.  The
@@ -231,7 +231,7 @@ you wish to run different simulations on different partitions.
 
 For the {universe} style, one or more strings are specified.  There
 must be at least as many strings as there are processor partitions or
-"worlds".  See "this page"_Section_start.html#start_6 for information
+"worlds".  See "this page"_Section_start.html#start_7 for information
 on running SPARTA with multiple partitions via the "-partition"
 command-line switch.  This variable command initially assigns one
 string to each world.  When a "next"_next.html command is encountered
@@ -357,7 +357,7 @@ Math functions: sqrt(x), exp(x), ln(x), log(x), abs(x), sin(x), cos(x), tan(x), 
      asin(x), acos(x), atan(x), atan2(y,x), erf(x), random(x,y,z), normal(x,y,z), \
      ceil(x), floor(x), round(x), ramp(x,y), stagger(x,y), logfreq(x,y,z), \
      stride(x,y,z), vdisplace(x,y), swiggle(x,y,z), cwiggle(x,y,z)
-Special functions: sum(x), min(x), max(x), ave(x), trap(x), slope(x), next(x)
+Special functions: sum(x), min(x), max(x), ave(x), trap(x), slope(x), next(x), grid2part(x), is_file(x)
 Particle vectors: id, type, mass, q, mu, x, y, z, vx, vy, vz
 Grid vectors = cxlo, cxhi, cylo, cyhi, czlo, czhi
 Compute references: c_ID, c_ID\[I\], c_ID\[I\]\[J\]
@@ -614,6 +614,39 @@ when they are defined in the input script, this is the value that will
 be returned the first time the next() function is invoked.  If next()
 is invoked more times than there are lines in the file, the variable
 is deleted, similar to how the "next"_next.html command operates.
+
+The grid2part(x) function can only be used in a particle-style
+variable formula.  Its purpose is to enable each particle to access a
+per-grid quantity for the grid cell it is currently in.  The per-grid
+quantity must be produced by a compute or fix.  When the
+particle-style variable formula is evaluated for each particle, the
+per-grid vector or array from the compute or fix is accessed, using
+the grid cell index for each particle.
+
+An example of its usage is as follows:
+
+variable     csq particle "vx*vx + vy*vy + vz*vz"
+compute      therm thermal/grid all all temp press
+variable     csq_norm particle v_csq/grid2part(c_therm[1]) :pre
+
+The per-particle variable csq_norm will calculate the kinetic energy
+for each particle, normalized by the thermal temperature of the full
+set of particles for the grid cell it is in.  The latter is computed
+by the "compute thermal/grid"_compute_thermal_grid.html command.
+
+The grid2part(x) function takes 1 argument which is of the form "c_ID"
+or "c_ID\[N\]" or "f_ID" or "f_ID\[N\]".  The first two are computes
+and the second two are fixes; the ID in the reference should be
+replaced by the ID of a compute or fix defined elsewhere in the input
+script.  The compute or fix must produce either a per-grid vector or
+array.  If it produces a per-grid vector, then the notation without
+"\[N\]" should be used.  If it produces a per-grid array, then the
+notation with "\[N\]" should be used, when N is an integer, to specify
+which column of the per-grid array is being referenced.
+
+The is_file(x) function is a test whether "x" is a (readable) file and
+returns 1 in this case, otherwise it returns 0. For this test, "x" is taken
+as a literal string and must not have any blanks in it.
 
 :line
 

@@ -1,6 +1,6 @@
 /* ----------------------------------------------------------------------
    SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
-   http://sparta.sandia.gov
+   http://sparta.github.io
    Steve Plimpton, sjplimp@gmail.com, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
@@ -74,6 +74,9 @@ namespace MathExtra {
                               double ans[3][3]);
   inline void vecmat(const double *v, const double m[3][3], double *ans);
   inline void scalar_times3(const double f, double m[3][3]);
+
+  int mldivide3(const double mat[3][3], const double *vec, double *ans);
+  int mldivide4(const double mat[4][4], const double *vec, double *ans);
 
   // quaternion operations
 

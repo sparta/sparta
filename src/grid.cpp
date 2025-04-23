@@ -1,6 +1,6 @@
 /* ----------------------------------------------------------------------
    SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
-   http://sparta.sandia.gov
+   http://sparta.github.io
    Steve Plimpton, sjplimp@gmail.com, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
@@ -155,14 +155,15 @@ Grid::Grid(SPARTA *sparta) : Pointers(sparta)
   hash = new MyHash();
   hashfilled = 0;
 
-  copy = uncopy = copymode = 0;
+  copy = copymode = 0;
+  uncopy = 1;
 }
 
 /* ---------------------------------------------------------------------- */
 
 Grid::~Grid()
 {
-  if (!uncopy && (copy || copymode)) return;
+  if (copy || copymode) return;
 
   for (int i = 0; i < ngroup; i++) delete [] gnames[i];
   memory->sfree(gnames);
@@ -720,12 +721,15 @@ void Grid::acquire_ghosts_near(int surfflag)
   // perform irregular communication of list of ghost cells
 
   Irregular *irregular = new Irregular(sparta);
-  int recvsize;
+  bigint recvsize;
   int nrecv = irregular->create_data_variable(nsend,proclist,sizelist,
                                               recvsize,comm->commsortflag);
 
+  // reallocate rbuf
+  // must use smalloc since rbuf can be larger than 2 GB
+
   char *rbuf;
-  memory->create(rbuf,recvsize,"grid:rbuf");
+  rbuf = (char *) memory->smalloc(recvsize,"grid:rbuf");
   memset(rbuf,0,recvsize);
 
   irregular->exchange_variable(sbuf,sizelist,rbuf);
@@ -947,12 +951,15 @@ void Grid::acquire_ghosts_near_less_memory(int surfflag)
     // perform irregular communication of list of ghost cells
 
     Irregular *irregular = new Irregular(sparta);
-    int recvsize;
+    bigint recvsize;
     int nrecv = irregular->create_data_variable(nsend,proclist,sizelist,
                                                 recvsize,comm->commsortflag);
 
+    // reallocate rbuf
+    // must use smalloc since rbuf can be larger than 2 GB
+
     char *rbuf;
-    memory->create(rbuf,recvsize,"grid:rbuf");
+    rbuf = (char *) memory->smalloc(recvsize,"grid:rbuf");
     memset(rbuf,0,recvsize);
 
     irregular->exchange_variable(sbuf,sizelist,rbuf);
@@ -1291,9 +1298,9 @@ void Grid::unset_neighbors()
 {
   // set unset_flag = 0/1 depending on whether unset is performed
   // so that reset_neighbors() can check it
-  
+
   unset_flag = 0;
-  
+
   if (!exist_ghost) return;
 
   // no change in neigh[] needed if nflag = NUNKNOWN, NPBUNKNOWN, or NBOUND
@@ -1333,14 +1340,14 @@ void Grid::reset_neighbors()
   // if unset operation was not performed, cannot reset
   // instead must perform full find_neighbors() operation
   // this can happen if "global gridcut" is used after grid is created
-  
+
   if (!unset_flag) {
     find_neighbors();
     return;
   }
-  
+
   unset_flag = 0;
-  
+
   // insure all cell IDs (owned + ghost) are hashed
 
   rehash();
@@ -1708,7 +1715,7 @@ void Grid::set_inout()
     if (nrecv > maxrecv) {
       memory->sfree(rbuf);
       maxrecv = nrecv;
-      rbuf = (Connect *) memory->smalloc(maxrecv*sizeof(Connect),"grid:rbuf");
+      rbuf = (Connect *) memory->smalloc((bigint)maxrecv*sizeof(Connect),"grid:rbuf");
     }
 
     irregular->exchange_uniform((char *) sbuf,sizeof(Connect),(char *) rbuf);

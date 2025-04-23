@@ -1,6 +1,6 @@
 /* ----------------------------------------------------------------------
    SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
-   http://sparta.sandia.gov
+   http://sparta.github.io
    Steve Plimpton, sjplimp@gmail.com, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
@@ -83,7 +83,8 @@ int GridKokkos::add_custom(char *name, int type, int size)
       eivec = (int **)
         memory->srealloc(eivec,ncustom_ivec*sizeof(int *),"grid:eivec");
       eivec[ncustom_ivec-1] = NULL;
-      k_eivec.resize(ncustom_ivec);
+      auto h_eivec = k_eivec.h_view;
+      k_eivec.resize(Kokkos::view_alloc(Kokkos::SequentialHostInit),ncustom_ivec);
       memory->grow(icustom_ivec,ncustom_ivec,"grid:icustom_ivec");
       icustom_ivec[ncustom_ivec-1] = index;
     } else {
@@ -92,7 +93,8 @@ int GridKokkos::add_custom(char *name, int type, int size)
         memory->srealloc(eiarray,ncustom_iarray*sizeof(int **),
                          "grid:eiarray");
       eiarray[ncustom_iarray-1] = NULL;
-      k_eiarray.resize(ncustom_iarray);
+      auto h_eiarray = k_eiarray.h_view;
+      k_eiarray.resize(Kokkos::view_alloc(Kokkos::SequentialHostInit),ncustom_iarray);
       memory->grow(icustom_iarray,ncustom_iarray,"grid:icustom_iarray");
       icustom_iarray[ncustom_iarray-1] = index;
       memoryKK->grow_kokkos(k_eicol,eicol,ncustom_iarray,"grid:eicol");
@@ -104,7 +106,8 @@ int GridKokkos::add_custom(char *name, int type, int size)
       edvec = (double **)
         memory->srealloc(edvec,ncustom_dvec*sizeof(double *),"grid:edvec");
       edvec[ncustom_dvec-1] = NULL;
-      k_edvec.resize(ncustom_dvec);
+      auto h_edvec = k_edvec.h_view;
+      k_edvec.resize(Kokkos::view_alloc(Kokkos::SequentialHostInit),ncustom_dvec);
       memory->grow(icustom_dvec,ncustom_dvec,"grid:icustom_dvec");
       icustom_dvec[ncustom_dvec-1] = index;
     } else {
@@ -113,7 +116,8 @@ int GridKokkos::add_custom(char *name, int type, int size)
         memory->srealloc(edarray,ncustom_darray*sizeof(double **),
                          "grid:edarray");
       edarray[ncustom_darray-1] = NULL;
-      k_edarray.resize(ncustom_darray);
+      auto h_edarray = k_edarray.h_view;
+      k_edarray.resize(Kokkos::view_alloc(Kokkos::SequentialHostInit),ncustom_darray);
       memory->grow(icustom_darray,ncustom_darray,"grid:icustom_darray");
       icustom_darray[ncustom_darray-1] = index;
       memoryKK->grow_kokkos(k_edcol,edcol,ncustom_darray,"grid:edcol");
@@ -273,11 +277,14 @@ void GridKokkos::remove_custom(int index)
 {
   // modifies the outer host view, deletes the inner dual view
 
+  if (!ename || !ename[index]) return;
+
   delete [] ename[index];
   ename[index] = NULL;
 
   if (etype[index] == INT) {
     if (esize[index] == 0) {
+      memoryKK->destroy_kokkos(k_eivec.h_view[ewhich[index]].k_view,eivec[ewhich[index]]);
       ncustom_ivec--;
       for (int i = ewhich[index]; i < ncustom_ivec; i++) {
         icustom_ivec[i] = icustom_ivec[i+1];
@@ -286,6 +293,7 @@ void GridKokkos::remove_custom(int index)
         k_eivec.h_view[i] = k_eivec.h_view[i+1];
       }
     } else {
+      memoryKK->destroy_kokkos(k_eiarray.h_view[ewhich[index]].k_view,eiarray[ewhich[index]]);
       ncustom_iarray--;
       for (int i = ewhich[index]; i < ncustom_iarray; i++) {
         icustom_iarray[i] = icustom_iarray[i+1];
@@ -297,6 +305,7 @@ void GridKokkos::remove_custom(int index)
     }
   } else if (etype[index] == DOUBLE) {
     if (esize[index] == 0) {
+      memoryKK->destroy_kokkos(k_edvec.h_view[ewhich[index]].k_view,edvec[ewhich[index]]);
       ncustom_dvec--;
       for (int i = ewhich[index]; i < ncustom_dvec; i++) {
         icustom_dvec[i] = icustom_dvec[i+1];
@@ -306,6 +315,7 @@ void GridKokkos::remove_custom(int index)
       }
       k_edvec.modify_host();
     } else {
+      memoryKK->destroy_kokkos(k_edarray.h_view[ewhich[index]].k_view,edarray[ewhich[index]]);
       ncustom_darray--;
       for (int i = ewhich[index]; i < ncustom_darray; i++) {
         icustom_darray[i] = icustom_darray[i+1];

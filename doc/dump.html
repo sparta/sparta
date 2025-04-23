@@ -1,5 +1,5 @@
 <HTML>
-<CENTER><A HREF = "http://sparta.sandia.gov">SPARTA WWW Site</A> - <A HREF = "Manual.html">SPARTA Documentation</A> - <A HREF = "Section_commands.html#comm">SPARTA Commands</A> 
+<CENTER><A HREF = "https://sparta.github.io">SPARTA WWW Site</A> - <A HREF = "Manual.html">SPARTA Documentation</A> - <A HREF = "Section_commands.html#comm">SPARTA Commands</A> 
 </CENTER>
 
 
@@ -34,13 +34,14 @@
 <LI>args = list of arguments for a particular style 
 
 <PRE>  <I>particle</I> args = list of particle attributes
-    possible attributes = id, type, proc, x, y, z, xs, ys, zs, vx, vy, vz,
+    possible attributes = id, type, proc, cellID, x, y, z, xs, ys, zs, vx, vy, vz,
                           ke, erot, evib, 
                           c_ID, c_ID[N], f_ID, f_ID[N], v_name, p_name, p_name[N] 
 </PRE>
 <PRE>      id = particle ID
       type = particle species as an integer index
       proc = ID of owning processor
+      cellID = ID of grid cell particle is in
       x,y,z = unscaled particle coordinates
       xs,ys,zs = scaled particle coordinates
       vx,vy,vz = particle velocities
@@ -144,7 +145,7 @@ its options.
 <P>The <I>particle</I> and <I>grid</I> and <I>surf</I> styles create files in a simple
 text format that is self-explanatory when viewing a dump file.  Many
 of the SPARTA <A HREF = "Section_tools.html">post-processing tools</A>, including
-<A HREF = "http://pizza.sandia.gov">Pizza.py</A>, work with this format.
+<A HREF = "https://lammps.github.io/pizza">Pizza.py</A>, work with this format.
 </P>
 <P>For post-processing purposes the text files are self-describing in the
 following sense.

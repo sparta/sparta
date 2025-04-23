@@ -1,6 +1,6 @@
 /* ----------------------------------------------------------------------
    SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
-   http://sparta.sandia.gov
+   http://sparta.github.io
    Steve Plimpton, sjplimp@gmail.com, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
@@ -61,7 +61,8 @@ SurfCollide::SurfCollide(SPARTA *sparta, int, char **arg) :
   n_owned = n_localghost = 0;
   t_owned = t_localghost = NULL;
 
-  kokkosable = copy = uncopy = copymode = 0;
+  kokkosable = copy = copymode = 0;
+  uncopy = 1;
 }
 
 /* ---------------------------------------------------------------------- */

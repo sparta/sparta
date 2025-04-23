@@ -1,0 +1,144 @@
+"SPARTA WWW Site"_sws - "SPARTA Documentation"_sd - "SPARTA Commands"_sc :c
+ 
+:link(sws,https://sparta.github.io)
+:link(sd,Manual.html)
+:link(sc,Section_commands.html#comm)
+
+:line
+
+fix halt command :h3
+
+[Syntax:]
+
+fix ID halt N attribute operator avalue keyword value ... :pre
+
+ID is documented in "fix"_fix.html command :ulb,l
+halt = style name of this fix command :l
+N = check halt condition every N timesteps :l
+attribute = {tlimit} or v_name :l
+  tlimit = elapsed CPU time (in seconds)
+  v_name = name of "equal-style variable"_variable.html :pre
+operator = "<" or "<=" or ">" or ">=" or "==" or "!=" or "|^" :l
+avalue = numeric value to compare attribute to :l
+zero or more keyword/value pairs may be appended :l
+keyword = {error} or {message} :l
+  error value = {hard} or {soft} or {continue}
+  message value = {yes} or {no} :pre
+:ule
+
+[Examples:]
+
+fix 1 halt 10 tlimit > 3600.0
+fix 1 halt 10 v_myCheck != 0 error soft :pre
+
+[Description:]
+
+Check a condition every N steps during a simulation run. N must be
+>=1. If the condition is met, exit the run.
+
+The specified {attribute} can be one of the options listed above,
+namely {tlimit}, or an "equal-style variable"_variable.html referenced
+as {v_name}, where "name" is the name of a variable that has been
+defined previously in the input script.
+
+The {tlimit} attribute queries the elapsed CPU time (in seconds) since
+the current run began, and sets {attribute} to that value. The clock
+starts at the beginning of the current run (not when the fix command
+is specified), so that any setup time for the run is not included in
+the elapsed time. The timer invocation and syncing across all
+processors (via MPI_Allreduce) is performed (typically) only a small
+number of times and the elapsed times are used to predict when the
+end-of-the-run will be.  This can be useful when performing benchmark
+calculations for a desired length of time with minimal overhead.
+
+Equal-style variables evaluate to a numeric value. See the
+"variable"_variable.html command for a description. They calculate
+formulas which can involve mathematical operations, particle
+properties, grid properties, surface properties, global values
+calculated by a "compute"_compute.html or "fix"_fix.html, or
+references to other "variables"_varible.html. Thus they are a very
+general means of computing some attribute of the current system.  For
+example, the following two versions of a fix halt command will both
+stop the run after an hour of walltime:
+
+fix 1 halt 10 tlimit > 3600.0 :pre
+
+variable cpu equal cpu
+fix 1 halt 10 v_cpu > 3600.0 :pre
+
+The commands above apply only to the time spent in the current run
+command. If multiple run commands are used in the same input script,
+one can also stop the run after a predetermined amount of {total}
+walltime:
+
+variable wall equal wall
+fix 1 halt 10 v_wall > 3600.0 :pre
+
+Similarly one can stop the run after a predetermined amount of
+simulation time, which is useful when using a "variable
+timestep"_fix_dt_reset.html:
+
+variable time equal time
+fix 1 halt 10 v_time > 1.0e-3 :pre
+
+One can also stop the run if a file exists. The example below
+checks for a file named "EXIT" in the current directory:
+
+variable file equal is_file(EXIT)
+fix 1 halt 10 v_file > 0 :pre
+
+The choice of operators listed above are the usual comparison
+operators. The XOR operation (exclusive or) is also included as "|^".
+In this context, XOR means that if either the attribute or avalue is
+0.0 and the other is non-zero, then the result is "true". Otherwise it
+is "false".
+
+The specified {avalue} must be a numeric value.
+
+The optional {error} keyword determines how the current run is halted.
+If its value is {hard}, then SPARTA will stop with an error message.
+
+If its value is {soft}, SPARTA will exit the current run, but continue
+to execute subsequent commands in the input script. However,
+additional "run"_run.html commands will be skipped. For example, this
+allows a script to output the current state of the system, e.g. via a
+"write_grid"_write_grid.html or "write_restart"_write_restart.html
+command.
+
+If its value is {continue}, the behavior is the same as for soft,
+except subsequent run commands are executed. This allows your script
+to remedy the condition that triggered the halt, if necessary.  Note
+that you may wish use the "unfix"_unfix.html command on the fix halt
+ID, so that the same condition is not immediately triggered in a
+subsequent run.
+
+:line
+
+The optional {message} keyword determines whether a message is printed
+to the screen and logfile when the halt condition is triggered. If
+{message} is set to {yes}, a one line message with the values that
+triggered the halt is printed. If {message} is set to {no}, no message
+is printed; the run simply exits. The latter may be desirable for
+post-processing tools that extract statistical information from log
+files.
+
+:line
+
+[Restart, output info:]
+
+No information about this fix is written to "binary restart
+files"_restart.html.
+
+This fix produces no output.
+
+:line
+
+[Restrictions:] none
+
+[Related commands:]
+
+"run"_run.html
+
+[Default:]
+
+The option defaults are error = soft and message = yes.

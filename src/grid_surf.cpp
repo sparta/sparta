@@ -1,6 +1,6 @@
  /* ----------------------------------------------------------------------
    SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
-   http://sparta.sandia.gov
+   http://sparta.github.io
    Steve Plimpton, sjplimp@gmail.com, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
@@ -516,7 +516,7 @@ void Grid::surf2grid_surf_algorithm(int outflag)
 
     irregular = new Irregular(sparta);
     int nrecv1 = irregular->create_data_uniform(nsend,proclist1,1);
-    char *rbuf1 = (char *) memory->smalloc(nrecv1*nbytes_surf,"surf2grid:rbuf");
+    char *rbuf1 = (char *) memory->smalloc((bigint)nrecv1*nbytes_surf,"surf2grid:rbuf");
     irregular->exchange_uniform(sbuf1,nbytes_surf,rbuf1);
     delete irregular;
 
@@ -571,7 +571,7 @@ void Grid::surf2grid_surf_algorithm(int outflag)
 
     irregular = new Irregular(sparta);
     int nrecv2 = irregular->create_data_uniform(nsend,proclist2,1);
-    Send2 *rbuf2 = (Send2 *) memory->smalloc(nrecv2*sizeof(Send2),"surf2grid:rbuf2");
+    Send2 *rbuf2 = (Send2 *) memory->smalloc((bigint)nrecv2*sizeof(Send2),"surf2grid:rbuf2");
     irregular->exchange_uniform((char *) sbuf2,sizeof(Send2),(char *) rbuf2);
     delete irregular;
 
@@ -716,7 +716,7 @@ void Grid::surf2grid_surf_algorithm(int outflag)
 
     irregular = new Irregular(sparta);
     int nrecv3 = irregular->create_data_uniform(nsend,proclist3,1);
-    Send3 *rbuf3 = (Send3 *) memory->smalloc(nrecv3*sizeof(Send3),
+    Send3 *rbuf3 = (Send3 *) memory->smalloc((bigint)nrecv3*sizeof(Send3),
                                              "surf2grid:rbuf3");
     irregular->exchange_uniform((char *) sbuf3,sizeof(Send3),(char *) rbuf3);
     delete irregular;
@@ -1642,7 +1642,7 @@ void Grid::clear_surf_implicit()
 
   // store cellIDs = list of cellID each particle is in
   // sub-cells and parent split cell have the same cellID
-  
+
   Particle::OnePart *particles = particle->particles;
   int nplocal = particle->nlocal;
 
@@ -1879,6 +1879,7 @@ int Grid::point_outside_surfs_implicit(int icell, double *x)
     edgelen = MathExtra::len3(edge);
     minedge = MIN(minedge,edgelen);
     MathExtra::sub3(tris[isurf].p3,tris[isurf].p1,edge);
+    edgelen = MathExtra::len3(edge);
     minedge = MIN(minedge,edgelen);
 
     displace = EPSSURF * minedge;
@@ -1919,6 +1920,10 @@ int Grid::point_outside_surfs_explicit(int icell, double *x)
   double minsize = MIN(hi[0]-lo[0],hi[1]-lo[1]);
   double displace = EPSSURF * minsize;
 
+  double maxlength = 0.0;
+  double maxarea = 0.0;
+  int setflag = 0;
+
   if (dim == 2) {
     int npoint;
     double cpath[4];
@@ -1943,10 +1948,24 @@ int Grid::point_outside_surfs_explicit(int icell, double *x)
         if (edge == 4 and norm[1] > 0.0) continue;
       }
 
+      // for surfaces with a tiny intersection, the point to push off
+      //  from can be very close to another line
+      // if the angle between the two lines is less than 90 degrees,
+      //  the pushed-off point can end up "inside" the surface instead
+      //  of "outside"
+      // using the line with the largest clipped length makes this
+      //  issue very unlikely to occur
+
+      double x1 = cpath[2] - cpath[0];
+      double y1 = cpath[3] - cpath[1];
+      double length = sqrt(x1*x1 + y1*y1);
+      if (length < maxlength) continue;
+      maxlength = length;
+
       x[0] = 0.5*(cpath[0]+cpath[2]) + displace*norm[0];
       x[1] = 0.5*(cpath[1]+cpath[3]) + displace*norm[1];
       x[2] = 0.0;
-      return 1;
+      setflag = 1;
     }
 
   } else {
@@ -1975,20 +1994,34 @@ int Grid::point_outside_surfs_explicit(int icell, double *x)
         if (face == 6 and norm[2] > 0.0) continue;
       }
 
-      double onethird = 1.0/3.0;
-      x[0] = onethird*(cpath[0]+cpath[3]+cpath[6]) + displace*norm[0];
-      x[1] = onethird*(cpath[1]+cpath[4]+cpath[7]) + displace*norm[1];
-      x[2] = onethird*(cpath[2]+cpath[5]+cpath[8]) + displace*norm[2];
-      return 1;
+      // for surfaces with a tiny intersection, the point to push off
+      //  from can be very close to a shared edge with another triangle
+      // if the angle between the two tris is less than 90 degrees,
+      //  the pushed-off point can end up "inside" the surface instead
+      //  of "outside"
+      // using the triangle with the largest clipped area
+      //  and pushing off its centroid makes this issue very unlikely
+      //  to occur
+
+      double center[3];
+      double area = Geometry::poly_area(npoint,cpath,center);
+      if (area < maxarea) continue;
+      maxarea = area;
+
+      x[0] = center[0] + displace*norm[0];
+      x[1] = center[1] + displace*norm[1];
+      x[2] = center[2] + displace*norm[2];
+      setflag = 1;
     }
   }
 
-  // unable to find a point in flow volume, all surfs invoked "continue"
-  // means entire cell is actually outside or inside, just touched by surfs
-  // if outside, caller does not need to call outside_surfs()
-  // if inside, caller can detect that its flow volume = zero
+  // if setflag equal to 0
+  //  unable to find a point in flow volume, all surfs invoked "continue"
+  //  means entire cell is actually outside or inside, just touched by surfs
+  //  if outside, caller does not need to call outside_surfs()
+  //  if inside, caller can detect that its flow volume = zero
 
-  return 0;
+  return setflag;
 }
 
 /* ----------------------------------------------------------------------
@@ -2005,42 +2038,39 @@ int Grid::outside_surfs(int icell, double *x, double *xcell)
   Surf::Tri *tris = surf->tris;
   surfint *csurfs = cells[icell].csurfs;
 
-  int m,isurf,minflag,hitflag,side,minside;
-  double param,minparam;
+  int m,isurf,hitflag,side;
+  double param;
   double xc[3];
   Surf::Line *line;
   Surf::Tri *tri;
 
-  // loop over surfs, ray-trace from x to xcell, see which surf is hit first
+  // loop over surfs, ray-trace from x to xcell, see how many surfaces were hit
 
   int nsurf = cells[icell].nsurf;
 
-  minflag = 0;
-  minparam = 2.0;
+  int cnt = 0;
   for (m = 0; m < nsurf; m++) {
     isurf = csurfs[m];
     if (dim == 3) {
       tri = &tris[isurf];
       hitflag = Geometry::
-        line_tri_intersect(x,xcell,tri->p1,tri->p2,tri->p3,
-                           tri->norm,xc,param,side);
+        line_tri_intersect_noeps(x,xcell,tri->p1,tri->p2,tri->p3,
+                                 tri->norm,xc,param,side);
     } else {
       line = &lines[isurf];
       hitflag = Geometry::
         line_line_intersect(x,xcell,line->p1,line->p2,line->norm,xc,param,side);
     }
-    if (hitflag && param < minparam) {
-      minflag = 1;
-      minparam = param;
-      minside = side;
-    }
+    if (hitflag) cnt++;
   }
 
   // if no surf was hit, particle is outside surfs
-  // else check which side of surf was hit
+  // else check how many surfaces were hit
+  //   odd number = inside, even number = outside
 
-  if (!minflag) return 1;
-  if (minside == SOUTSIDE || minside == ONSURF2OUT) return 1;
+  if (cnt == 0) return 1;
+  if (cnt % 2 == 0) return 1;
+
   return 0;
 }
 

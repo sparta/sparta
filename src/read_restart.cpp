@@ -1,6 +1,6 @@
 /* ----------------------------------------------------------------------
    SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
-   http://sparta.sandia.gov
+   http://sparta.github.io
    Steve Plimpton, sjplimp@gmail.com, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
@@ -67,8 +67,8 @@ void ReadRestart::command(int narg, char **arg)
   if (domain->box_exist)
     error->all(FLERR,"Cannot read_restart after simulation box is defined");
 
-  mem_limit_flag = update->global_mem_limit > 0 ||
-       (update->mem_limit_grid_flag && !grid->nlocal);
+  mem_limit_flag = update->have_mem_limit();
+  mem_limit_file = 0;
 
   MPI_Comm_rank(world,&me);
   MPI_Comm_size(world,&nprocs);
@@ -583,12 +583,16 @@ void ReadRestart::header(int incompatible)
       update->reorder_period = read_int();
     } else if (flag == MEMLIMIT_GRID) {
       // ignore value if already set
-      if (mem_limit_flag) read_int();
-      else update->mem_limit_grid_flag = read_int();
+      int value = read_int();
+      if (!mem_limit_flag) update->mem_limit_grid_flag = value;
+      if (!mem_limit_file) mem_limit_file = value;
+      mem_limit_flag = update->have_mem_limit();
     } else if (flag == MEMLIMIT) {
       // ignore value if already set
-      if (mem_limit_flag) read_int();
-      else update->global_mem_limit = read_int();
+      int value = read_int();
+      if (!mem_limit_flag) update->global_mem_limit = value;
+      if (!mem_limit_file) mem_limit_file = value;
+      mem_limit_flag = update->have_mem_limit();
     } else if (flag == NPARTICLE) {
       nparticle_file = read_bigint();
     } else if (flag == NUNSPLIT) {
@@ -1106,7 +1110,13 @@ void ReadRestart::read_gp_multi_file_less_procs_memlimit(char *file)
       if (flag != PERPROC_GRID)
         error->one(FLERR,"Invalid flag in peratom section of restart file");
 
-      tmp = fread(&n_big,sizeof(bigint),1,fp);
+      if (mem_limit_file) {
+        tmp = fread(&n_big,sizeof(bigint),1,fp);
+      } else {
+        int n;
+        tmp = fread(&n,sizeof(int),1,fp);
+	n_big = n;
+      }
 
       int grid_nlocal;
       tmp = fread(&grid_nlocal,sizeof(int),1,fp);
@@ -1260,7 +1270,13 @@ void ReadRestart::read_gp_multi_file_more_procs_memlimit(char *file)
       if (flag != PERPROC_GRID)
         error->one(FLERR,"Invalid flag in peratom section of restart file");
 
-      tmp = fread(&n_big,sizeof(bigint),1,fp);
+      if (mem_limit_file) {
+        tmp = fread(&n_big,sizeof(bigint),1,fp);
+      } else {
+        int n;
+        tmp = fread(&n,sizeof(int),1,fp);
+        n_big = n;
+      }
 
       int grid_nlocal;
       tmp = fread(&grid_nlocal,sizeof(int),1,fp);
@@ -1598,6 +1614,7 @@ void ReadRestart::read_surfs_single_file()
 void ReadRestart::read_surfs_multi_file_less_procs(char *file)
 {
   int tmp,n,flag;
+  bigint n_big;
   long filepos;
 
   int maxbuf = 0;
@@ -1628,9 +1645,14 @@ void ReadRestart::read_surfs_multi_file_less_procs(char *file)
 
     for (int i = 0; i < procsperfile; i++) {
       tmp = fread(&flag,sizeof(int),1,fp);
-      tmp = fread(&n,sizeof(int),1,fp);
+      if (mem_limit_file) {
+        tmp = fread(&n_big,sizeof(bigint),1,fp);
+      } else {
+        tmp = fread(&n,sizeof(int),1,fp);
+        n_big = n;
+      }
       filepos = ftell(fp);
-      fseek(fp,filepos + n,SEEK_SET);
+      fseek(fp,filepos + n_big,SEEK_SET);
     }
 
     // now can read PERPROC_SURF section of file
@@ -1669,6 +1691,7 @@ void ReadRestart::read_surfs_multi_file_less_procs(char *file)
 void ReadRestart::read_surfs_multi_file_more_procs(char *file)
 {
   int tmp,n,flag,procsperfile;
+  bigint n_big;
   long filepos;
 
   int maxbuf = 0;
@@ -1720,9 +1743,14 @@ void ReadRestart::read_surfs_multi_file_more_procs(char *file)
   for (int i = 0; i < procsperfile; i++) {
     if (filereader) {
       tmp = fread(&flag,sizeof(int),1,fp);
-      tmp = fread(&n,sizeof(int),1,fp);
+      if (mem_limit_file) {
+        tmp = fread(&n_big,sizeof(bigint),1,fp);
+      } else {
+        tmp = fread(&n,sizeof(int),1,fp);
+        n_big = n;
+      }
       filepos = ftell(fp);
-      fseek(fp,filepos + n,SEEK_SET);
+      fseek(fp,filepos + n_big,SEEK_SET);
     }
   }
 

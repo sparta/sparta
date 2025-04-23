@@ -1,5 +1,5 @@
 <HTML>
-<CENTER><A HREF = "http://sparta.sandia.gov">SPARTA WWW Site</A> - <A HREF = "Manual.html">SPARTA Documentation</A> - <A HREF = "Section_commands.html#comm">SPARTA Commands</A> 
+<CENTER><A HREF = "https://sparta.github.io">SPARTA WWW Site</A> - <A HREF = "Manual.html">SPARTA Documentation</A> - <A HREF = "Section_commands.html#comm">SPARTA Commands</A> 
 </CENTER>
 
 
@@ -86,6 +86,8 @@
     color = name of color or color1/color2/...
   <I>glinecolor</I> arg = color
     color = name of color for grid cell outlines
+  <I>gridgroup</I> arg = group-ID
+    group-ID = name of a user-defined grid group, see the <A HREF = "group.html">group</A> command
   <I>pcolor</I> args = type color
     type = particle type or range of types or proc ID or range of IDs (see below)
     color = name of color or color1/color2/...
@@ -98,6 +100,8 @@
   <I>slinecolor</I> arg = color
     color = name of color for surface element outlines 
 </PRE>
+  <I>surfgroup</I> arg = group-ID
+    group-ID = name of a user-defined surf group, see the <A HREF = "group.html">group</A> command
 
 </UL>
 <P><B>Examples:</B>
@@ -513,6 +517,14 @@ a color name defined by the dump_modify color option.
 </P>
 <HR>
 
+<P>The <I>gridgroup</I> keyword can be used with the <A HREF = "dump_image.html">dump
+image</A> command to only draw a subset of the grid cells
+in the simulation.  By default all the grid cells are rendered.  The
+group-ID argument can be any valid grid group name, as defined by the
+<A HREF = "group.html">group grid</A> command.
+</P>
+<HR>
+
 <P>The <I>pcolor</I> keyword can be used one or more times with the <A HREF = "dump_image.html">dump
 image</A> command, only when its particle color setting is
 <I>type</I> or <I>procs</I>, to set the color that particles will be drawn in
@@ -602,6 +614,14 @@ option.
 </P>
 <HR>
 
+<P>The <I>surfgroup</I> keyword can be used with the <A HREF = "dump_image.html">dump
+image</A> command to only draw a subset of the surface
+elements in the simulation.  By default all the surface elements are
+rendered.  The group-ID argument can be any valid surf group name, as
+defined by the <A HREF = "group.html">group surf</A> command.
+</P>
+<HR>
+
 <P><B>Restrictions:</B> none
 </P>
 <P><B>Related commands:</B>
@@ -625,6 +645,7 @@ option.
 <LI>format = %d and %g for each integer or floating point value
 <LI>gcolor = * red/green/blue/yellow/aqua/cyan
 <LI>glinecolor = white
+<LI>gridgroup = all
 <LI>nfile = 1
 <LI>pad = 0
 <LI>pcolor = * red/green/blue/yellow/aqua/cyan
@@ -632,6 +653,7 @@ option.
 <LI>region = none
 <LI>scolor = * gray
 <LI>slinecolor = white
+<LI>surfgroup = all
 <LI>thresh = none 
 </UL>
 <HR>

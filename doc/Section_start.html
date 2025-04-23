@@ -1,5 +1,5 @@
 <HTML>
-<CENTER><A HREF = "Section_intro.html">Previous Section</A> - <A HREF = "http://sparta.sandia.gov">SPARTA WWW Site</A> - <A HREF = "Manual.html">SPARTA Documentation</A> - <A HREF = "Section_commands.html#comm">SPARTA Commands</A> - <A HREF = "Section_commands.html">Next Section</A> 
+<CENTER><A HREF = "Section_intro.html">Previous Section</A> - <A HREF = "https://sparta.github.io">SPARTA WWW Site</A> - <A HREF = "Manual.html">SPARTA Documentation</A> - <A HREF = "Section_commands.html#comm">SPARTA Commands</A> - <A HREF = "Section_commands.html">Next Section</A> 
 </CENTER>
 
 
@@ -75,15 +75,19 @@ used (MPI, JPEG).
 cmake, makefiles, or building codes on a Linux platform, or running an MPI
 job on your machine, please find a local expert to help you.
 </P>
+<P>SPARTA requires that the compiler supports C++11. SPARTA will throw an error
+if this is not the case. If you are building SPARTA with Kokkos, the compiler
+must support C++17.
+</P>
 <P>If you have a build problem that you are convinced is a SPARTA issue
 (e.g. the compiler complains about a line of SPARTA source code), then
 please send an email to the
-<A HREF = "http://sparta.sandia.gov/authors.html">developers</A>.
+<A HREF = "https://sparta.github.io/authors.html">developers</A>.
 </P>
 <P>If you succeed in building SPARTA on a new kind of machine, for which
 there isn't a similar Makefile in the src/MAKE directory or .cmake file
 in cmake/presets, send it to the 
-<A HREF = "http://sparta.sandia.gov/authors.html">developers</A> and we'll include it in future SPARTA releases.
+<A HREF = "https://sparta.github.io/authors.html">developers</A> and we'll include it in future SPARTA releases.
 </P>
 <HR>
 
@@ -223,9 +227,9 @@ MPI version does not recognize "long long" data types.  In this case a
 "long" data type is likely already 64-bits, in which case this setting
 will use that data type.
 </P>
-<P>Using one of the -DPACK_ARRAY, -DPACK_POINTER, and -DPACK_MEMCPY
+<P>Using one of the -DFFT_PACK_ARRAY, -DFFT_PACK_POINTER, and -DFFT_PACK_MEMCPY
 options can make for faster parallel FFTs on some platforms.  The
--DPACK_ARRAY setting is the default.  See the <A HREF = "compute_fft_grid.html">compute
+-DFFT_PACK_ARRAY setting is the default.  See the <A HREF = "compute_fft_grid.html">compute
 fft/grid</A> command for info about FFTs.  See Step
 6 below for info about building SPARTA with an FFT library.
 </P>
@@ -303,14 +307,22 @@ By default, SPARTA will use a Kokkos version of the open-source <A HREF = "http:
 FFT library</A>, which is included in the SPARTA
 distribution. Note that using the KISS FFT library on GPUs may give
 suboptimal performance. Other options can be specified using the form
--DFFT_KOKKOS_XXX. Available values for XXX when using Kokkos are: CUFFT,
-HIPFFT, MKL or FFTW3. When using the Kokkos CUDA backend, either CUFFT
-or KISS must be used. When using the Kokkos HIP backend, either HIPFFT
-or KISS must be used. When using the Kokkos OpenMP or Serial backend,
-either MKL, FFTW3, or KISS must be used. The CUFFT option specifies the
-<A HREF = "https://developer.nvidia.com/cufft">cuFFT library</A> from NVIDIA. The
-HIPFFT option specifies the <A HREF = "https://rocm.docs.amd.com/projects/rocFFT/en/latest/">rocFFT
-library</A> from AMD.
+-DFFT_KOKKOS_XXX. Available values for XXX when using Kokkos are:
+CUFFT, HIPFFT, MKL_GPU, MKL or FFTW3. When using the Kokkos CUDA
+backend, either CUFFT or KISS must be used. When using the Kokkos HIP
+backend, either HIPFFT or KISS must be used. When using the Kokkos
+SYCL backend, either MKL_GPU or KISS must be used. When using the
+Kokkos OpenMP or Serial backend, either MKL, FFTW3, or KISS must be
+used.
+</P>
+<P>The CUFFT option specifies the <A HREF = "https://developer.nvidia.com/cufft">cuFFT
+library</A> from NVIDIA. The HIPFFT
+option specifies the <A HREF = "https://rocm.docs.amd.com/projects/rocFFT/en/latest/">rocFFT
+library</A> from
+AMD. The HIPFFT option specifies the <A HREF = "https://rocm.docs.amd.com/projects/rocFFT/en/latest/">rocFFT
+library</A> from
+AMD. The MKL_GPU option supports GPU offload of FFTs on Intel GPUs
+with oneMKL using the Kokkos SYCL backend.
 </P>
 <P>You may also need to set the FFT_INC, FFT_PATH, and FFT_LIB variables,
 so the compiler and linker can find the needed FFT header and library
@@ -328,8 +340,8 @@ Building FFTW for your box should be as simple as ./configure; make.
 </P>
 <P>The FFT_INC variable also allows for a -DFFT_SINGLE setting that will
 use single-precision FFTs, which can speed-up the calculation,
-particularly in parallel or on GPUs.  Fourier transform and related
-PPPM operations are somewhat insensitive to floating point truncation
+particularly in parallel or on GPUs.  Fourier transform operations
+are somewhat insensitive to floating point truncation
 errors and thus do not always need to be performed in double
 precision.  Using the -DFFT_SINGLE setting trades off a little
 accuracy for reduced memory use and parallel communication costs for
@@ -802,7 +814,7 @@ standard Linux make or CMake, just as you would on any Linux box.
 <P>You can also import the *.cpp and *.h files into Microsoft Visual
 Studio.  If someone does this and wants to provide project files or
 other Windows build tips, please send them to the
-<A HREF = "http://sparta.sandia.gov/authors.html">developers</A> and we will include
+<A HREF = "https://sparta.github.io/authors.html">developers</A> and we will include
 them in the distribution.
 </P>
 <HR>
@@ -1231,7 +1243,7 @@ cp src/spa_g++ /path/to/bench
 cd /path/to/bench
 mpirun -np 4 spa_g++ < in.free 
 </PRE>
-<P>See <A HREF = "http://sparta.sandia.gov/bench.html">this page</A> for timings for this and the other benchmarks on
+<P>See <A HREF = "https://sparta.github.io/bench.html">this page</A> for timings for this and the other benchmarks on
 various platforms.
 </P>
 

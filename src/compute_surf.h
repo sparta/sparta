@@ -1,6 +1,6 @@
 /* ----------------------------------------------------------------------
    SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
-   http://sparta.sandia.gov
+   http://sparta.github.io
    Steve Plimpton, sjplimp@gmail.com, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
@@ -49,6 +49,8 @@ class ComputeSurf : public Compute {
   int normarea;            // 1 for value/area/time, 0 for value/time
   double nfactor_inverse;
   int *which;
+  int comflag;             // body center-of-mass setting for torques
+  double com[3];
 
   int ntally;              // # of surfs I have tallied for
   int maxtally;            // # of tallies currently allocated

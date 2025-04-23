@@ -1,6 +1,6 @@
 "SPARTA WWW Site"_sws - "SPARTA Documentation"_sd - "SPARTA Commands"_sc :c
 
-:link(sws,http://sparta.sandia.gov)
+:link(sws,https://sparta.github.io)
 :link(sd,Manual.html)
 :link(sc,Section_commands.html#comm)
 
@@ -104,7 +104,7 @@ of each processor's sub-block of cells.
 The product of Px, Py, Pz must equal P, the total # of processors
 SPARTA is running on.  For a 2d simulation, Pz must equal 1. If
 multiple partitions are being used then P is the number of processors
-in this partition; see "Section 2.6"_Section_start.html#start_6 for an
+in this partition; see "Section 2.6"_Section_start.html#start_7 for an
 explanation of the -partition command-line switch.
 
 Note that if you run on a large, prime number of processors P, then a

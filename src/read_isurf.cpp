@@ -1,6 +1,6 @@
 /* ----------------------------------------------------------------------
    SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
-   http://sparta.sandia.gov
+   http://sparta.github.io
    Steve Plimpton, sjplimp@gmail.com, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
@@ -175,7 +175,7 @@ void ReadISurf::command(int narg, char **arg)
   if (sgrouparg) sgroupID = arg[sgrouparg];
 
   ablate->store_corners(nx,ny,nz,corner,xyzsize,
-                        cvalues,tvalues,thresh,sgroupID,pushflag);
+                        cvalues,NULL,tvalues,thresh,sgroupID,pushflag);
 
   if (ablate->nevery == 0) modify->delete_fix(ablateID);
 

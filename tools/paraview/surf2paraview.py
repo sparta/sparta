@@ -97,25 +97,25 @@ def read_elements(sif, num_points, num_elements, ug, three_d_file):
 
   if ug.GetNumberOfCells():
     print("Error reading SPARTA surf input file")
-    print("Trangles or Lines section of file occurs more than once")
+    print("Triangles or Lines section of file occurs more than once")
     sys.exit(1)
 
   for line in sif:
     s = clean_line(line)
-    if s and len(s.split()) == num_items_per_line:
+    if s and len(s.split()) >= num_items_per_line:
       if three_d_file:
         tri = vtk.vtkTriangle()
-        i = int(s.split()[1])
-        j = int(s.split()[2])
-        k = int(s.split()[3])
+        i = int(s.split()[-3])
+        j = int(s.split()[-2])
+        k = int(s.split()[-1])
         tri.GetPointIds().SetId(0,i-1)
         tri.GetPointIds().SetId(1,j-1)
         tri.GetPointIds().SetId(2,k-1)
         ug.InsertNextCell(tri.GetCellType(), tri.GetPointIds());
       else:
         li = vtk.vtkLine()
-        i = int(s.split()[1])
-        j = int(s.split()[2])
+        i = int(s.split()[-2])
+        j = int(s.split()[-1])
         li.GetPointIds().SetId(0,i-1)
         li.GetPointIds().SetId(1,j-1)
         ug.InsertNextCell(li.GetCellType(), li.GetPointIds());
