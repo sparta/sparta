@@ -120,9 +120,9 @@ class UpdateKokkos : public Update {
   void operator()(TagUpdateMoveFirstPass<DIM>, const int) const;
 
  private:
-  Kokkos::View<int> not_updated_cnt;
-  Kokkos::View<int, SPAHostType> h_not_updated_cnt;
-  Kokkos::View<int*> not_updated;
+  DAT::t_int_scalar d_not_updated_cnt;
+  HAT::t_int_scalar h_not_updated_cnt;
+  DAT::t_int_1d d_not_updated;
   double dt;
   int field_active[3];
 

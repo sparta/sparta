@@ -586,10 +586,10 @@ template < int DIM, int SURF, int REACT, int OPT > void UpdateKokkos::move()
       pstart = 0;
       pstop = particle->nlocal;
 #if defined SPARTA_KOKKOS_GPU
-      if ( fstyle == NOFIELD && not_updated.extent(0) < pstop ) {
-        not_updated = Kokkos::View<int*>("not_updated",pstop*1.05);
-        not_updated_cnt=Kokkos::View<int>("not_updated_cnt");
-        h_not_updated_cnt=Kokkos::View<int,SPAHostType>("h_not_updated_cnt");
+      if ( fstyle == NOFIELD && d_not_updated.extent(0) < pstop ) {
+        d_not_updated = DAT::t_int_1d("not_updated",pstop*1.05);
+        d_not_updated_cnt = DAT::t_int_scalar("not_updated_cnt");
+        h_not_updated_cnt = HAT::t_int_scalar("h_not_updated_cnt");
       }
 #endif
     }
@@ -626,9 +626,9 @@ template < int DIM, int SURF, int REACT, int OPT > void UpdateKokkos::move()
 
       // on the first pass, split the move on GPU
 
-      Kokkos::deep_copy(not_updated_cnt,0);
+      Kokkos::deep_copy(d_not_updated_cnt,0);
       Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagUpdateMoveFirstPass<DIM> >(pstart,pstop),*this);
-      Kokkos::deep_copy(h_not_updated_cnt,not_updated_cnt);
+      Kokkos::deep_copy(h_not_updated_cnt,d_not_updated_cnt);
       int team_size = 128;
       int num_teams = (std::min<int>(DeviceType::concurrency(),h_not_updated_cnt())-1)/team_size+1;
       auto policy = Kokkos::TeamPolicy<DeviceType, TagUpdateMoveIndirect<DIM,SURF,REACT,OPT,-1> >(num_teams,team_size);
@@ -843,8 +843,8 @@ void UpdateKokkos::operator()(TagUpdateMoveFirstPass<DIM>, const int i) const {
     if (pflag == PDONE)
       pflag = PKEEP;
     else{
-      const int indx = Kokkos::atomic_fetch_add(&not_updated_cnt(),1);
-      not_updated(indx) = i;
+      const int indx = Kokkos::atomic_fetch_add(&d_not_updated_cnt(),1);
+      d_not_updated(indx) = i;
       return;
     }
   }
@@ -859,8 +859,8 @@ void UpdateKokkos::operator()(TagUpdateMoveFirstPass<DIM>, const int i) const {
   int icell = particle_i.icell;
   int nsurf = d_cells[icell].nsurf;
   if (nsurf) {
-    const int indx = Kokkos::atomic_fetch_add(&not_updated_cnt(),1);
-    not_updated(indx) = i;
+    const int indx = Kokkos::atomic_fetch_add(&d_not_updated_cnt(),1);
+    d_not_updated(indx) = i;
     return;
   }
 
@@ -872,8 +872,8 @@ void UpdateKokkos::operator()(TagUpdateMoveFirstPass<DIM>, const int i) const {
   if (DIM > 2 && (xnew[2] < lo[2] || xnew[2] >= hi[2])) leave = true;
 
   if (leave) {
-    const int indx = Kokkos::atomic_fetch_add(&not_updated_cnt(),1);
-    not_updated(indx) = i;
+    const int indx = Kokkos::atomic_fetch_add(&d_not_updated_cnt(),1);
+    d_not_updated(indx) = i;
     return;
   }
 
@@ -899,8 +899,8 @@ void UpdateKokkos::operator()(TagUpdateMoveIndirect<DIM,SURF,REACT,OPT,ATOMIC_RE
      const typename Kokkos::TeamPolicy<DeviceType, TagUpdateMove<DIM,SURF,REACT,OPT,ATOMIC_REDUCTION>>::member_type &team,
      UPDATE_REDUCE &reduce) const {
   int i = team.team_rank() + team.team_size()*team.league_rank();
-  for (; i < not_updated_cnt(); i += team.league_size()*team.team_size())
-    moveOne<DIM,SURF,REACT,OPT,ATOMIC_REDUCTION>(not_updated(i),reduce);
+  for (; i < d_not_updated_cnt(); i += team.league_size()*team.team_size())
+    moveOne<DIM,SURF,REACT,OPT,ATOMIC_REDUCTION>(d_not_updated(i),reduce);
 }
 
 template<int DIM, int SURF, int REACT, int OPT, int ATOMIC_REDUCTION>

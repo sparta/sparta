@@ -58,7 +58,6 @@ struct s_COLLIDE_REDUCE {
 typedef struct s_COLLIDE_REDUCE COLLIDE_REDUCE;
 
 struct TagCollideResetVremax{};
-struct TagCollideZeroNN{};
 
 template < int NEARCP, int ATOMIC_REDUCTION >
 struct TagCollideCollisionsOne{};
@@ -106,9 +105,6 @@ class CollideVSSKokkos : public CollideVSS {
   KOKKOS_INLINE_FUNCTION
   void operator()(TagCollideResetVremax, const int&) const;
 
-  KOKKOS_INLINE_FUNCTION
-  void operator()(TagCollideZeroNN, const int&) const;
-
   template < int NEARCP, int ATOMIC_REDUCTION >
   KOKKOS_INLINE_FUNCTION
   void operator()(TagCollideCollisionsOne< NEARCP, ATOMIC_REDUCTION >, const int&) const;
@@ -150,9 +146,9 @@ class CollideVSSKokkos : public CollideVSS {
   KKCopy<GridKokkos> grid_kk_copy;
   KKCopy<ReactTCEKokkos> react_kk_copy;
 
-  Kokkos::View<short*> d_nattempt;
-  Kokkos::View<int*> d_active_cells;
-  Kokkos::View<int> num_active_cells;
+  DAT::t_int_1d d_nattempt;
+  DAT::t_int_1d d_active_cells;
+  DAT::t_int_scalar d_num_active_cells;
   t_particle_1d d_particles;
   t_species_1d_const d_species;
   DAT::t_int_2d_lr d_plist;
