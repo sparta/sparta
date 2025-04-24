@@ -493,20 +493,18 @@ template < int NEARCP > void CollideVSSKokkos::collisions_one(COLLIDE_REDUCE &re
   if (NEARCP) {
     if (int(d_nn_last_partner.extent(0)) < nglocal || int(d_nn_last_partner.extent(1)) < d_plist.extent(1))
       MemKK::realloc_kokkos(d_nn_last_partner,"collide:nn_last_partner",nglocal,d_plist.extent(1));
+  }
 
 #ifndef SPARTA_KOKKOS_EXACT
-    if (d_nattempt.extent(0) < nglocal) {
-      d_nattempt = DAT::t_int_1d("d_nattempt",nglocal);
-      d_active_cells = DAT::t_int_1d("d_active_cells",nglocal);
-      d_num_active_cells = DAT::t_int_scalar("d_num_active_cells");
-    }
-    if (nearcp)
-      Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagCountAttempts<1>>(0,nglocal),*this);
-    else
-      Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagCountAttempts<0>>(0,nglocal),*this);
-    Kokkos::parallel_scan(nglocal, ReduceLoc(d_nattempt,d_active_cells,d_num_active_cells,nglocal));
-#endif
+  if (d_nattempt.extent(0) < nglocal) {
+    d_nattempt = DAT::t_int_1d("d_nattempt",nglocal);
+    d_active_cells = DAT::t_int_1d("d_active_cells",nglocal);
+    d_num_active_cells = DAT::t_int_scalar("d_num_active_cells");
   }
+
+  Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagCountAttempts<NEARCP>>(0,nglocal),*this);
+  Kokkos::parallel_scan(nglocal, ReduceLoc(d_nattempt,d_active_cells,d_num_active_cells,nglocal));
+#endif
 
   /* ATOMIC_REDUCTION: 1 = use atomics
                        0 = don't need atomics
