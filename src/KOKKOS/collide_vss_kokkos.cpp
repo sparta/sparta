@@ -459,7 +459,7 @@ namespace {
           d_active_cells(sum) = i;
         if (i == last)
           d_sum() = sum + 1;
-      } // final
+      } // if final
       if (d_nattempt(i))
         sum += 1;
     }
@@ -500,7 +500,10 @@ template < int NEARCP > void CollideVSSKokkos::collisions_one(COLLIDE_REDUCE &re
       d_active_cells = DAT::t_int_1d("d_active_cells",nglocal);
       d_num_active_cells = DAT::t_int_scalar("d_num_active_cells");
     }
-    Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagCountAttempts>(0,nglocal),*this);
+    if (nearcp)
+      Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagCountAttempts<1>>(0,nglocal),*this);
+    else
+      Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagCountAttempts<0>>(0,nglocal),*this);
     Kokkos::parallel_scan(nglocal, ReduceLoc(d_nattempt,d_active_cells,d_num_active_cells,nglocal));
 #endif
   }
@@ -637,8 +640,9 @@ template < int NEARCP > void CollideVSSKokkos::collisions_one(COLLIDE_REDUCE &re
   //d_plist = {};
 }
 
+template <int NEARCP>
 KOKKOS_INLINE_FUNCTION
-void CollideVSSKokkos::operator()(TagCountAttempts, const int icell) const {
+void CollideVSSKokkos::operator()(TagCountAttempts<NEARCP>, const int icell) const {
   const int np = grid_kk_copy.obj.d_cellcount[icell];
   d_nattempt(icell) = 0;
   if (!np) return;
@@ -649,9 +653,10 @@ void CollideVSSKokkos::operator()(TagCountAttempts, const int icell) const {
   d_nattempt(icell) = static_cast<int> (attempt);
   rand_pool.free_state(rand_gen);
 
-  if (!(attempt < 1.0))
-    for (int i = 0; i < np; i++)
-      d_nn_last_partner(icell,i) = 0;
+  if (NEARCP)
+    if (!(attempt < 1.0))
+      for (int i = 0; i < np; i++)
+        d_nn_last_partner(icell,i) = 0;
 }
 
 template < int NEARCP, int ATOMIC_REDUCTION >
@@ -680,11 +685,7 @@ void CollideVSSKokkos::operator()(TagCollideCollisionsOne< NEARCP, ATOMIC_REDUCT
     for (int i = 0; i < np; i++)
       d_nn_last_partner(icell,i) = 0;
   }
-#else
-  int nattempt = d_nattempt(icell);
 #endif
-
-  rand_type rand_gen = rand_pool.get_state();
 
   const double volume = grid_kk_copy.obj.k_cinfo.d_view[icell].volume / grid_kk_copy.obj.k_cinfo.d_view[icell].weight;
   if (volume == 0.0) d_error_flag() = 1;
@@ -692,16 +693,21 @@ void CollideVSSKokkos::operator()(TagCollideCollisionsOne< NEARCP, ATOMIC_REDUCT
   struct State precoln;       // state before collision
   struct State postcoln;      // state after collision
 
+  rand_type rand_gen = rand_pool.get_state();
+
 #ifdef SPARTA_KOKKOS_EXACT
+
   // attempt = exact collision attempt count for a pair of groups
   // nattempt = rounded attempt with RN
 
   const double attempt = attempt_collision_kokkos(icell,np,volume,rand_gen);
   const int nattempt = static_cast<int> (attempt);
-  if (!nattempt){
+  if (!nattempt) {
     rand_pool.free_state(rand_gen);
     return;
   }
+#else
+  const int nattempt = d_nattempt(icell);
 #endif
 
   if (ATOMIC_REDUCTION == 1)

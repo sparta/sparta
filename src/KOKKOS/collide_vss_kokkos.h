@@ -65,6 +65,7 @@ struct TagCollideCollisionsOne{};
 template < int ATOMIC_REDUCTION >
 struct TagCollideCollisionsOneAmbipolar{};
 
+template < int NEARCP >
 struct TagCountAttempts{};
 
 class CollideVSSKokkos : public CollideVSS {
@@ -121,8 +122,9 @@ class CollideVSSKokkos : public CollideVSS {
   KOKKOS_INLINE_FUNCTION
   void operator()(TagCollideCollisionsOneAmbipolar< ATOMIC_REDUCTION >, const int&, COLLIDE_REDUCE&) const;
 
+  template < int NEARCP >
   KOKKOS_INLINE_FUNCTION
-  void operator()(TagCountAttempts, const int) const;
+  void operator()(TagCountAttempts< NEARCP >, const int) const;
 
   typedef Kokkos::
     DualView<Params**, Kokkos::LayoutRight, DeviceType> tdual_params_2d;

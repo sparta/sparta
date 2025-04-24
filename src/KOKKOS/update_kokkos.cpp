@@ -586,7 +586,7 @@ template < int DIM, int SURF, int REACT, int OPT > void UpdateKokkos::move()
       pstart = 0;
       pstop = particle->nlocal;
 #if defined SPARTA_KOKKOS_GPU
-      if ( fstyle == NOFIELD && d_not_updated.extent(0) < pstop ) {
+      if (fstyle == NOFIELD && d_not_updated.extent(0) < pstop) {
         d_not_updated = DAT::t_int_1d("not_updated",pstop*1.05);
         d_not_updated_cnt = DAT::t_int_scalar("not_updated_cnt");
         h_not_updated_cnt = HAT::t_int_scalar("h_not_updated_cnt");
@@ -842,7 +842,7 @@ void UpdateKokkos::operator()(TagUpdateMoveFirstPass<DIM>, const int i) const {
   if (pflag != PKEEP ) {
     if (pflag == PDONE)
       pflag = PKEEP;
-    else{
+    else {
       const int indx = Kokkos::atomic_fetch_add(&d_not_updated_cnt(),1);
       d_not_updated(indx) = i;
       return;
@@ -866,7 +866,7 @@ void UpdateKokkos::operator()(TagUpdateMoveFirstPass<DIM>, const int i) const {
 
   const double* const lo = d_cells[icell].lo;
   const double* const hi = d_cells[icell].hi;
-  bool leave=false;
+  bool leave = false;
   if (xnew[0] < lo[0] || xnew[0] >= hi[0]) leave=true;
   if (DIM > 1 && (xnew[1] < lo[1] || xnew[1] >= hi[1])) leave = true;
   if (DIM > 2 && (xnew[2] < lo[2] || xnew[2] >= hi[2])) leave = true;
@@ -905,7 +905,7 @@ void UpdateKokkos::operator()(TagUpdateMoveIndirect<DIM,SURF,REACT,OPT,ATOMIC_RE
 
 template<int DIM, int SURF, int REACT, int OPT, int ATOMIC_REDUCTION>
 KOKKOS_INLINE_FUNCTION
-void UpdateKokkos::moveOne(const int &i, UPDATE_REDUCE &reduce) const{
+void UpdateKokkos::moveOne(const int &i, UPDATE_REDUCE &reduce) const {
   if (d_error_flag() || d_retry()) return;
 
   // int m;
