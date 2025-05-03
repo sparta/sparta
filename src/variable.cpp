@@ -32,6 +32,7 @@
 #include "surf_react.h"
 #include "input.h"
 #include "output.h"
+#include "spapython.h"
 #include "stats.h"
 #include "random_mars.h"
 #include "random_knuth.h"
@@ -903,6 +904,18 @@ int Variable::find(char *name)
   for (int i = 0; i < nvar; i++)
     if (strcmp(name,names[i]) == 0) return i;
   return -1;
+}
+
+/* ----------------------------------------------------------------------
+   called by python command in input script
+   simply pass input script line args to Python class
+------------------------------------------------------------------------- */
+
+void Variable::python_command(int narg, char **arg)
+{
+  if (!python->is_enabled())
+    error->all(FLERR,"SPARTA is not built with Python embedded");
+  python->command(narg,arg);
 }
 
 /* ----------------------------------------------------------------------

@@ -57,30 +57,6 @@ PythonImpl::PythonImpl(SPARTA *spa) : Pointers(spa)
 #endif
 #endif
 
-#ifdef MLIAP_PYTHON
-  // cannot register mliappy module a second time
-  if (!Py_IsInitialized()) {
-    // Inform python intialization scheme of the mliappy module.
-    // This -must- happen before python is initialized.
-    int err = PyImport_AppendInittab("mliap_model_python_couple", PyInit_mliap_model_python_couple);
-    if (err) error->all(FLERR, "Could not register MLIAPPY embedded python module.");
-
-    err = PyImport_AppendInittab("mliap_unified_couple", PyInit_mliap_unified_couple);
-    if (err) error->all(FLERR, "Could not register MLIAPPY unified embedded python module.");
-
-#ifdef SPA_KOKKOS
-    // Inform python intialization scheme of the mliappy module.
-    // This -must- happen before python is initialized.
-    err = PyImport_AppendInittab("mliap_model_python_couple_kokkos",
-                                 PyInit_mliap_model_python_couple_kokkos);
-    if (err) error->all(FLERR, "Could not register MLIAPPY embedded python KOKKOS module.");
-
-    err = PyImport_AppendInittab("mliap_unified_couple_kokkos", PyInit_mliap_unified_couple_kokkos);
-    if (err) error->all(FLERR, "Could not register MLIAPPY unified embedded python KOKKOS module.");
-#endif
-  }
-#endif
-
 #if PY_VERSION_HEX >= 0x030800f0 && !defined(Py_LIMITED_API)
   Py_InitializeFromConfig(&config);
   PyConfig_Clear(&config);

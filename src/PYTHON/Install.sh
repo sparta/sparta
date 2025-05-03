@@ -1,4 +1,4 @@
-# Install/unInstall package files in SPPARKS
+# Install/unInstall package files in SPPARTA
 # mode = 0/1/2 for uninstall/install/update
 
 mode=$1
@@ -43,7 +43,7 @@ if (test $1 = 1) then
   if (test -e ../Makefile.package) then
     sed -i -e 's/[^ \t]*python[^ \t]* //' ../Makefile.package
     sed -i -e 's/[^ \t]*PYTHON[^ \t]* //g' ../Makefile.package
-    sed -i -e 's|^PKG_INC =[ \t]*|&-DSPA_PYTHON |' ../Makefile.package
+    sed -i -e 's|^PKG_INC =[ \t]*|&-DSPARTA_PYTHON |' ../Makefile.package
     sed -i -e 's|^PKG_SYSINC =[ \t]*|&$(python_SYSINC) |' ../Makefile.package
     sed -i -e 's|^PKG_SYSLIB =[ \t]*|&$(python_SYSLIB) |' ../Makefile.package
     sed -i -e 's|^PKG_SYSPATH =[ \t]*|&$(python_SYSPATH) |' ../Makefile.package

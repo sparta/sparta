@@ -34,7 +34,7 @@ class PythonInterface {
 
 class Python : protected Pointers {
  public:
-  Python(class LAMMPS *);
+  Python(class SPARTA *);
   ~Python() override;
 
   void command(int, char **);

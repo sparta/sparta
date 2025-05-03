@@ -29,6 +29,8 @@ class Variable : protected Pointers {
   int next(int, char **);
   int find(char *);
 
+  void python_command(int, char **);
+
   int equal_style(int);
   int particle_style(int);
   int grid_style(int);

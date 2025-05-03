@@ -714,6 +714,7 @@ int Input::execute_command()
   else if (!strcmp(command,"next")) next_command();
   else if (!strcmp(command,"partition")) partition();
   else if (!strcmp(command,"print")) print();
+  else if (!strcmp(command,"python")) python();
   else if (!strcmp(command,"quit")) quit();
   else if (!strcmp(command,"shell")) shell();
   else if (!strcmp(command,"variable")) variable_command();
@@ -1139,6 +1140,13 @@ void Input::print()
       fclose(fp);
     }
   }
+}
+
+/* ---------------------------------------------------------------------- */
+
+void Input::python()
+{
+  variable->python_command(narg,arg);
 }
 
 /* ---------------------------------------------------------------------- */

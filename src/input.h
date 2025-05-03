@@ -72,6 +72,7 @@ class Input : protected Pointers {
   void next_command();
   void partition();
   void print();
+  void python();
   void quit();
   void shell();
   void variable_command();
