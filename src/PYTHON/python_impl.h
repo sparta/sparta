@@ -23,7 +23,7 @@ namespace SPARTA_NS {
 class PythonImpl : protected Pointers, public PythonInterface {
 
  public:
-  PythonImpl(class LAMMPS *);
+  PythonImpl(class SPARTA *);
   ~PythonImpl() override;
   void command(int, char **) override;
   void invoke_function(int, char *) override;
