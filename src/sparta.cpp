@@ -29,6 +29,7 @@
 #include "collide.h"
 #include "react.h"
 #include "output.h"
+#include "spapython.h"
 #include "accelerator_kokkos.h"
 #include "timer.h"
 #include "memory.h"
@@ -448,6 +449,7 @@ SPARTA::~SPARTA()
 
   if (world != universe->uworld) MPI_Comm_free(&world);
 
+  delete python;
   delete kokkos;
   delete [] suffix;
 
@@ -486,6 +488,8 @@ void SPARTA::create()
   collide = NULL;
   react = NULL;
 
+  python = new Python(this);
+    
   if (kokkos) modify = new ModifyKokkos(this);
   else modify = new Modify(this);
 
@@ -571,6 +575,7 @@ void SPARTA::destroy()
   delete react;
   delete output;
   delete timer;
+  delete python;
 }
 
 /* ----------------------------------------------------------------------

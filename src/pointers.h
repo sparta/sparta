@@ -62,6 +62,7 @@ class Pointers {
     react(ptr->react),
     output(ptr->output),
     timer(ptr->timer),
+    python(ptr->python),
     memoryKK(ptr->memoryKK),
     world(ptr->world),
     infile(ptr->infile),
@@ -89,7 +90,8 @@ class Pointers {
   Output *&output;
   Timer *&timer;
 
-  MemoryKokkos *&memoryKK;
+  class Python *&python;
+  class MemoryKokkos *&memoryKK;
 
   MPI_Comm &world;
   FILE *&infile;
