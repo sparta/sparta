@@ -47,7 +47,6 @@ using namespace MathConst;
 #define MAXLEVEL 4
 #define MAXLINE 256
 #define CHUNK 1024
-#define VALUELENGTH 64
 
 #define MYROUND(a) (( a-floor(a) ) >= .5) ? ceil(a) : floor(a)
 
@@ -956,6 +955,22 @@ int Variable::surf_style(int ivar)
 {
   if (style[ivar] == SURF) return 1;
   return 0;
+}
+
+/* ----------------------------------------------------------------------
+   check if variable with name is PYTHON and matches funcname
+   called by Python class before it invokes a Python function
+   return data storage so Python function can return a value for this variable
+   return nullptr if not a match
+------------------------------------------------------------------------- */
+
+char *Variable::python_style(char *name, char *funcname)
+{
+  int ivar = find(name);
+  if (ivar < 0) return nullptr;
+  if (style[ivar] != PYTHON) return nullptr;
+  if (strcmp(data[ivar][0],funcname) != 0) return nullptr;
+  return data[ivar][1];
 }
 
 /* ----------------------------------------------------------------------

@@ -22,6 +22,8 @@ namespace SPARTA_NS {
 
 class Variable : protected Pointers {
  public:
+  static constexpr int VALUELENGTH = 64;
+
   Variable(class SPARTA *);
   ~Variable();
   void set(int, char **);
@@ -35,6 +37,7 @@ class Variable : protected Pointers {
   int particle_style(int);
   int grid_style(int);
   int surf_style(int);
+  char *python_style(char *, char *);
   int internal_style(int);
 
   char *retrieve(char *);
