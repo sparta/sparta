@@ -102,7 +102,7 @@ PythonImpl::~PythonImpl()
 
 void PythonImpl::command(int narg, char **arg)
 {
-  if (narg < 2) utils::missing_cmd_args(FLERR, "python", error);
+  if (narg < 2) error->all(FLERR,"Illegal python command");
 
   // if invoke is only keyword, invoke the previously defined function
 
@@ -183,16 +183,16 @@ void PythonImpl::command(int narg, char **arg)
       iarg += 2;
       delete[] istr;
       istr = new char *[ninput];
-      if (iarg + ninput > narg) utils::missing_cmd_args(FLERR, "python input", error);
+      if (iarg+ninput > narg) error->all(FLERR, "Invalid python input command");
       for (int i = 0; i < ninput; i++) istr[i] = arg[iarg + i];
       iarg += ninput;
     } else if (strcmp(arg[iarg], "return") == 0) {
-      if (iarg + 2 > narg) utils::missing_cmd_args(FLERR, "python return", error);
+      if (iarg+2 > narg) error->all(FLERR, "Invalid python return command");
       noutput = 1;
       ostr = arg[iarg + 1];
       iarg += 2;
     } else if (strcmp(arg[iarg], "format") == 0) {
-      if (iarg + 2 > narg) utils::missing_cmd_args(FLERR, "python format", error);
+      if (iarg+2 > narg) error->all(FLERR, "Invalid python format command");
       format = utils::strdup(arg[iarg + 1]);
       iarg += 2;
     } else if (strcmp(arg[iarg], "length") == 0) {
@@ -201,12 +201,12 @@ void PythonImpl::command(int narg, char **arg)
       if (length_longstr <= 0) error->all(FLERR, "Invalid python return value length");
       iarg += 2;
     } else if (strcmp(arg[iarg], "file") == 0) {
-      if (iarg + 2 > narg) utils::missing_cmd_args(FLERR, "python file", error);
+      if (iarg+2 > narg) error->all(FLERR, "Invalid python file command");
       delete[] pyfile;
       pyfile = utils::strdup(arg[iarg + 1]);
       iarg += 2;
     } else if (strcmp(arg[iarg], "here") == 0) {
-      if (iarg + 2 > narg) utils::missing_cmd_args(FLERR, "python here", error);
+      if (iarg+2 > narg) error->all(FLERR, "Invalid python here command");
       herestr = arg[iarg + 1];
       iarg += 2;
     } else if (strcmp(arg[iarg], "exists") == 0) {
@@ -359,9 +359,9 @@ void PythonImpl::invoke_function(int ifunc, char *result)
     } else if (itype == PTR) {
       pValue = PyCapsule_New((void *)sparta, nullptr, nullptr);
     } else {
-          char msg[128];
-          sprintf(msg, "Unsupported variable type: %i", itype);
-          error->all(FLERR, msg);
+      char msg[128];
+      sprintf(msg, "Unsupported variable type: %i", itype);
+      error->all(FLERR, msg);
     }
     PyTuple_SetItem(pArgs, i, pValue);
   }
@@ -383,6 +383,8 @@ void PythonImpl::invoke_function(int ifunc, char *result)
   // assign it to result string stored by python-style variable
   // or if user specified a length, assign it to longstr
 
+  char python2str[64];
+  
   if (pfuncs[ifunc].noutput) {
     int otype = pfuncs[ifunc].otype;
     if (otype == INT) {
@@ -434,7 +436,8 @@ char *PythonImpl::long_string(int ifunc)
 
 /* ------------------------------------------------------------------ */
 
-int PythonImpl::create_entry(char *name, int ninput, int noutput, int length_longstr, char **istr,
+int PythonImpl::create_entry(char *name, int ninput, int noutput,
+                             int length_longstr, char **istr,
                              char *ostr, char *format)
 {
   // ifunc = index to entry by name in pfuncs vector, can be old or new
