@@ -47,11 +47,12 @@ using namespace MathConst;
 #define MAXLEVEL 4
 #define MAXLINE 256
 #define CHUNK 1024
+#define MAXFUNCARG 6
 
 #define MYROUND(a) (( a-floor(a) ) >= .5) ? ceil(a) : floor(a)
 
 enum{INDEX,LOOP,WORLD,UNIVERSE,ULOOP,STRING,GETENV,
-     SCALARFILE,FORMAT,EQUAL,PARTICLE,GRID,SURF,INTERNAL};
+  SCALARFILE,FORMAT,EQUAL,PARTICLE,GRID,SURF,INTERNAL,PYTHON};
 enum{ARG,OP};
 
 enum{INT,DOUBLE};                       // several files
@@ -465,6 +466,34 @@ void Variable::set(int narg, char **arg)
       copy(1,&arg[2],data[nvar]);
     }
 
+  // PYTHON
+  // replace pre-existing var if also style PYTHON (allows it to be reset)
+  // num = 2, which = 1st value
+  // data = 2 values, 1st is Python func to invoke, 2nd is filled by invoke
+
+  } else if (strcmp(arg[1], "python") == 0) {
+    if (narg != 3) error->all(FLERR,"Illegal variable command");
+    if (!python->is_enabled())
+      error->all(FLERR,"SPARTA is not built with Python embedded");
+    int ivar = find(arg[0]);
+    if (ivar >= 0) {
+      if (style[ivar] != PYTHON)
+        error->all(FLERR,"Cannot redefine variable as a different style");
+      delete[] data[ivar][0];
+      copy(1,&arg[2],data[ivar]);
+      replaceflag = 1;
+    } else {
+      if (nvar == maxvar) grow();
+      style[nvar] = PYTHON;
+      num[nvar] = 2;
+      which[nvar] = 1;
+      pad[nvar] = 0;
+      data[nvar] = new char *[num[nvar]];
+      copy(1,&arg[2],data[nvar]);
+      data[nvar][1] = new char[VALUELENGTH];
+      strcpy(data[nvar][1],"(undefined)");
+    }
+
   // INTERNAL
   // replace pre-existing var if also style INTERNAL (allows it to be reset)
   // num = 1, for string representation of dvalue, set by retrieve()
@@ -547,12 +576,13 @@ int Variable::next(int narg, char **arg)
   }
 
   // invalid styles: STRING, EQUAL, WORLD, PARTICLE, GRID, SURF,
-  //                 GETENV, FORMAT, INTERNAL
+  //                 GETENV, FORMAT, PYTHON, INTERNAL
 
   int istyle = style[find(arg[0])];
   if (istyle == STRING || istyle == EQUAL || istyle == WORLD ||
       istyle == GETENV || istyle == PARTICLE || istyle == GRID ||
-      istyle == SURF || istyle == FORMAT || istyle == INTERNAL)
+      istyle == SURF || istyle == FORMAT || istyle == PYTHON ||
+      istyle == INTERNAL)
     error->all(FLERR,"Invalid variable style with next command");
 
   // if istyle = UNIVERSE or ULOOP, insure all such variables are incremented
@@ -665,9 +695,10 @@ int Variable::next(int narg, char **arg)
    if GETENV var, query environment and put result in str
    if PARTICLE or GRID or SURF var, return NULL
    if INTERNAL, convert dvalue and put result in str
-   return NULL if no variable with name or which value is bad,
-     caller must respond
-------------------------------------------------------------------------- */
+     return NULL if no variable with name or which value is bad,
+     caller must respond-
+   if PYTHON, evaluate Python function, it will put result in str
+------------------------------------------------------------------------ */
 
 char *Variable::retrieve(char *name)
 {
@@ -680,6 +711,7 @@ char *Variable::retrieve(char *name)
       style[ivar] == UNIVERSE || style[ivar] == STRING ||
       style[ivar] == SCALARFILE) {
     str = data[ivar][which[ivar]];
+    
   } else if (style[ivar] == LOOP || style[ivar] == ULOOP) {
     char result[16];
     if (pad[ivar] == 0) sprintf(result,"%d",which[ivar]+1);
@@ -693,10 +725,12 @@ char *Variable::retrieve(char *name)
     data[ivar][0] = new char[n];
     strcpy(data[ivar][0],result);
     str = data[ivar][0];
+    
   } else if (style[ivar] == EQUAL) {
     double answer = evaluate(data[ivar][0],NULL);
     sprintf(data[ivar][1],"%.15g",answer);
     str = data[ivar][1];
+    
   } else if (style[ivar] == FORMAT) {
     int jvar = find(data[ivar][0]);
     if (jvar == -1) return NULL;
@@ -704,6 +738,7 @@ char *Variable::retrieve(char *name)
     double answer = compute_equal(jvar);
     sprintf(data[ivar][2],data[ivar][1],answer);
     str = data[ivar][2];
+    
   } else if (style[ivar] == GETENV) {
     const char *result = getenv(data[ivar][0]);
     if (result == NULL) result = (const char *)"";
@@ -717,6 +752,32 @@ char *Variable::retrieve(char *name)
   } else if (style[ivar] == INTERNAL) {
     sprintf(data[ivar][0],"%.15g",dvalue[ivar]);
     str = data[ivar][0];
+    
+  } else if (style[ivar] == PYTHON) {
+    int ifunc = python->variable_match(data[ivar][0],name,0);
+    if (ifunc < 0) {
+      if (ifunc == -1) {
+        error->all(FLERR,"Could not find Python function linked to variable");
+      } else if (ifunc == -2) {
+        error->all(FLERR,"Python function for variable does not have a "
+                   "return value");
+      } else if (ifunc == -3) {
+        error->all(FLERR,"Python variable does not match variable name "
+                   "registered with Python function");
+      } else {
+        error->all(FLERR,"Unknown error verifying function linked to "
+                   "python-style variable");
+      }
+    }
+    python->invoke_function(ifunc,data[ivar][1]);
+    str = data[ivar][1];
+
+    // if Python func returns a string longer than VALUELENGTH
+    // then the Python class stores the result, query it via long_string()
+
+    char *strlong = python->long_string(ifunc);
+    if (strlong) str = strlong;
+
   } else if (style[ivar] == PARTICLE || style[ivar] == GRID ||
 	     style[ivar] == SURF) return NULL;
 
@@ -725,7 +786,9 @@ char *Variable::retrieve(char *name)
 
 /* ----------------------------------------------------------------------
    return result of equal-style variable evaluation
-   can be EQUAL or INTERNAL style
+   can be EQUAL or INTERNAL or PYTHON numeric style
+   for PYTHON, don't need to check python->variable_match() error return,
+     since caller will have already checked via equalstyle()
 ------------------------------------------------------------------------- */
 
 double Variable::compute_equal(int ivar)
@@ -738,6 +801,19 @@ double Variable::compute_equal(int ivar)
   double value;
   if (style[ivar] == EQUAL) value = evaluate(data[ivar][0],NULL);
   else if (style[ivar] == INTERNAL) value = dvalue[ivar];
+  else if (style[ivar] == PYTHON) {
+    int ifunc = python->find(data[ivar][0]);
+    if (ifunc < 0) error->all(FLERR,"Cannot find python function");
+    python->invoke_function(ifunc,data[ivar][1]);
+    try {
+      value = std::stod(data[ivar][1]);
+    } catch (std::exception &e) {
+      error->all(FLERR,"Equal-style variable has invalid python value");
+    }
+  }
+
+  // round to zero on underflow
+  //if (fabs(value) < std::numeric_limits<double>::min()) value = 0.0;
 
   eval_in_progress[ivar] = 0;
   return value;
@@ -918,12 +994,20 @@ void Variable::python_command(int narg, char **arg)
 }
 
 /* ----------------------------------------------------------------------
-   return 1 if variable is EQUAL or INTERNAL style, 0 if not
+   return 1 if variable is EQUAL style, 0 if not
+   INTERNAL, PYTHON qualify as EQUAL style
+   this is checked before call to compute_equal() to return a double
 ------------------------------------------------------------------------- */
 
 int Variable::equal_style(int ivar)
 {
   if (style[ivar] == EQUAL || style[ivar] == INTERNAL) return 1;
+  if (style[ivar] == PYTHON) {
+    int ifunc = python->variable_match(data[ivar][0],names[ivar],1);
+    if (ifunc < 0) return 0;
+    else return 1;
+  }
+  
   return 0;
 }
 
