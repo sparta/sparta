@@ -32,9 +32,11 @@
 #include "surf_react.h"
 #include "input.h"
 #include "output.h"
+#include "spapython.h"
 #include "stats.h"
 #include "random_mars.h"
 #include "random_knuth.h"
+#include "utils.h"
 #include "math_const.h"
 #include "memory.h"
 #include "error.h"
@@ -47,12 +49,12 @@ using namespace MathConst;
 #define MAXLEVEL 4
 #define MAXLINE 256
 #define CHUNK 1024
-#define VALUELENGTH 64
+#define MAXFUNCARG 6
 
 #define MYROUND(a) (( a-floor(a) ) >= .5) ? ceil(a) : floor(a)
 
 enum{INDEX,LOOP,WORLD,UNIVERSE,ULOOP,STRING,GETENV,
-     SCALARFILE,FORMAT,EQUAL,PARTICLE,GRID,SURF,INTERNAL};
+  SCALARFILE,FORMAT,EQUAL,PARTICLE,GRID,SURF,INTERNAL,PYTHON};
 enum{ARG,OP};
 
 enum{INT,DOUBLE};                       // several files
@@ -68,6 +70,7 @@ enum{DONE,ADD,SUBTRACT,MULTIPLY,DIVIDE,CARAT,MODULO,UNARY,
      SQRT,EXP,LN,LOG,ABS,SIN,COS,TAN,ASIN,ACOS,ATAN,ATAN2,ERF,
      RANDOM,NORMAL,CEIL,FLOOR,ROUND,RAMP,STAGGER,LOGFREQ,STRIDE,
      VDISPLACE,SWIGGLE,CWIGGLE,
+     PYWRAPPER,
      VALUE,ARRAY,ARRAYINT,PARTARRAYDOUBLE,PARTARRAYINT,SPECARRAY,PARTGRIDARRAY};
 
 // customize by adding a special function
@@ -192,7 +195,6 @@ double VariableKokkos::evaluate(char *str, Tree **tree)
         Tree *newtree = new Tree();
         newtree->type = VALUE;
         newtree->value = atof(number);
-        newtree->left = newtree->middle = newtree->right = NULL;
         treestack[ntreestack++] = newtree;
       } else argstack[nargstack++] = atof(number);
 
@@ -276,7 +278,6 @@ double VariableKokkos::evaluate(char *str, Tree **tree)
             Tree *newtree = new Tree();
             newtree->type = VALUE;
             newtree->value = value1;
-            newtree->left = newtree->middle = newtree->right = NULL;
             treestack[ntreestack++] = newtree;
           } else argstack[nargstack++] = value1;
 
@@ -300,7 +301,6 @@ double VariableKokkos::evaluate(char *str, Tree **tree)
             Tree *newtree = new Tree();
             newtree->type = VALUE;
             newtree->value = value1;
-            newtree->left = newtree->middle = newtree->right = NULL;
             treestack[ntreestack++] = newtree;
           } else argstack[nargstack++] = value1;
 
@@ -327,7 +327,6 @@ double VariableKokkos::evaluate(char *str, Tree **tree)
             Tree *newtree = new Tree();
             newtree->type = VALUE;
             newtree->value = value1;
-            newtree->left = newtree->middle = newtree->right = NULL;
             treestack[ntreestack++] = newtree;
           } else argstack[nargstack++] = value1;
 
@@ -351,8 +350,6 @@ double VariableKokkos::evaluate(char *str, Tree **tree)
           newtree->type = ARRAY;
           newtree->array = compute->vector_particle;
           newtree->nstride = 1;
-          newtree->selfalloc = 0;
-          newtree->left = newtree->middle = newtree->right = NULL;
           treestack[ntreestack++] = newtree;
 
         // c_ID[i] = vector from per-particle array
@@ -378,8 +375,6 @@ double VariableKokkos::evaluate(char *str, Tree **tree)
           newtree->type = ARRAY;
           newtree->array = &compute->array_particle[0][index1-1];
           newtree->nstride = compute->size_per_particle_cols;
-          newtree->selfalloc = 0;
-          newtree->left = newtree->middle = newtree->right = NULL;
           treestack[ntreestack++] = newtree;
 
         // c_ID = vector from per-grid vector
@@ -407,8 +402,6 @@ double VariableKokkos::evaluate(char *str, Tree **tree)
           newtree->type = ARRAY;
           newtree->array = compute->vector_grid;
           newtree->nstride = 1;
-          newtree->selfalloc = 0;
-          newtree->left = newtree->middle = newtree->right = NULL;
           treestack[ntreestack++] = newtree;
 
         // c_ID[i] = vector from per-grid array
@@ -449,8 +442,6 @@ double VariableKokkos::evaluate(char *str, Tree **tree)
             newtree->array = &compute->array_grid[0][index1-1];
             newtree->nstride = compute->size_per_grid_cols;
           }
-          newtree->selfalloc = 0;
-          newtree->left = newtree->middle = newtree->right = NULL;
           treestack[ntreestack++] = newtree;
 
 	// c_ID = vector from per-surf vector
@@ -475,8 +466,6 @@ double VariableKokkos::evaluate(char *str, Tree **tree)
           newtree->type = ARRAY;
           newtree->array = compute->vector_surf;
           newtree->nstride = 1;
-          newtree->selfalloc = 0;
-          newtree->left = newtree->middle = newtree->right = NULL;
           treestack[ntreestack++] = newtree;
 	
 	// c_ID[i] = vector from per-surf array
@@ -504,8 +493,6 @@ double VariableKokkos::evaluate(char *str, Tree **tree)
           newtree->type = ARRAY;
 	  newtree->array = &compute->array_surf[0][index1-1];
 	  newtree->nstride = compute->size_per_surf_cols;
-          newtree->selfalloc = 0;
-          newtree->left = newtree->middle = newtree->right = NULL;
           treestack[ntreestack++] = newtree;
 
 	// unrecognized compute
@@ -560,7 +547,6 @@ double VariableKokkos::evaluate(char *str, Tree **tree)
             Tree *newtree = new Tree();
             newtree->type = VALUE;
             newtree->value = value1;
-            newtree->left = newtree->middle = newtree->right = NULL;
             treestack[ntreestack++] = newtree;
           } else argstack[nargstack++] = value1;
 
@@ -579,7 +565,6 @@ double VariableKokkos::evaluate(char *str, Tree **tree)
             Tree *newtree = new Tree();
             newtree->type = VALUE;
             newtree->value = value1;
-            newtree->left = newtree->middle = newtree->right = NULL;
             treestack[ntreestack++] = newtree;
           } else argstack[nargstack++] = value1;
 
@@ -601,7 +586,6 @@ double VariableKokkos::evaluate(char *str, Tree **tree)
             Tree *newtree = new Tree();
             newtree->type = VALUE;
             newtree->value = value1;
-            newtree->left = newtree->middle = newtree->right = NULL;
             treestack[ntreestack++] = newtree;
           } else argstack[nargstack++] = value1;
 
@@ -621,8 +605,6 @@ double VariableKokkos::evaluate(char *str, Tree **tree)
           newtree->type = ARRAY;
           newtree->array = fix->vector_particle;
           newtree->nstride = 1;
-          newtree->selfalloc = 0;
-          newtree->left = newtree->middle = newtree->right = NULL;
           treestack[ntreestack++] = newtree;
 
         // f_ID[i] = vector from per-particle array
@@ -644,8 +626,6 @@ double VariableKokkos::evaluate(char *str, Tree **tree)
           newtree->type = ARRAY;
           newtree->array = &fix->array_particle[0][index1-1];
           newtree->nstride = fix->size_per_particle_cols;
-          newtree->selfalloc = 0;
-          newtree->left = newtree->middle = newtree->right = NULL;
           treestack[ntreestack++] = newtree;
 
         // f_ID = vector from per-grid vector
@@ -664,8 +644,6 @@ double VariableKokkos::evaluate(char *str, Tree **tree)
           newtree->type = ARRAY;
           newtree->array = fix->vector_grid;
           newtree->nstride = 1;
-          newtree->selfalloc = 0;
-          newtree->left = newtree->middle = newtree->right = NULL;
           treestack[ntreestack++] = newtree;
 
         // f_ID[i] = vector from per-grid array
@@ -687,8 +665,6 @@ double VariableKokkos::evaluate(char *str, Tree **tree)
           newtree->type = ARRAY;
           newtree->array = &fix->array_grid[0][index1-1];
           newtree->nstride = fix->size_per_grid_cols;
-          newtree->selfalloc = 0;
-          newtree->left = newtree->middle = newtree->right = NULL;
           treestack[ntreestack++] = newtree;
 
         // f_ID = vector from per-surf vector
@@ -707,8 +683,6 @@ double VariableKokkos::evaluate(char *str, Tree **tree)
           newtree->type = ARRAY;
           newtree->array = fix->vector_surf;
           newtree->nstride = 1;
-          newtree->selfalloc = 0;
-          newtree->left = newtree->middle = newtree->right = NULL;
           treestack[ntreestack++] = newtree;
 
         // f_ID[i] = vector from per-surf array
@@ -730,8 +704,6 @@ double VariableKokkos::evaluate(char *str, Tree **tree)
           newtree->type = ARRAY;
           newtree->array = &fix->array_surf[0][index1-1];
           newtree->nstride = fix->size_per_surf_cols;
-          newtree->selfalloc = 0;
-          newtree->left = newtree->middle = newtree->right = NULL;
           treestack[ntreestack++] = newtree;
 
 	// unrecognized fix
@@ -838,8 +810,6 @@ double VariableKokkos::evaluate(char *str, Tree **tree)
 	      newtree->array = surf->edvec[surf->ewhich[icustom]];
 	  }
 	  newtree->nstride = 1;
-	  newtree->selfalloc = 0;
-	  newtree->left = newtree->middle = newtree->right = NULL;
 	  treestack[ntreestack++] = newtree;
 	
 	} else if (nbracket == 1 && size > 0) {
@@ -863,8 +833,6 @@ double VariableKokkos::evaluate(char *str, Tree **tree)
 	      newtree->array = surf->edvec[surf->ewhich[icustom]];
 	  }
 	  newtree->nstride = size;
-	  newtree->selfalloc = 0;
-	  newtree->left = newtree->middle = newtree->right = NULL;
 	  treestack[ntreestack++] = newtree;
 
 	// unrecognized custom attribute
@@ -921,7 +889,6 @@ double VariableKokkos::evaluate(char *str, Tree **tree)
             Tree *newtree = new Tree();
             newtree->type = VALUE;
             newtree->value = value1;
-            newtree->left = newtree->middle = newtree->right = NULL;
             treestack[ntreestack++] = newtree;
           } else argstack[nargstack++] = value1;
 
@@ -978,7 +945,6 @@ double VariableKokkos::evaluate(char *str, Tree **tree)
             Tree *newtree = new Tree();
             newtree->type = VALUE;
             newtree->value = value1;
-            newtree->left = newtree->middle = newtree->right = NULL;
             treestack[ntreestack++] = newtree;
           } else argstack[nargstack++] = value1;
 
@@ -1022,7 +988,6 @@ double VariableKokkos::evaluate(char *str, Tree **tree)
             Tree *newtree = new Tree();
             newtree->type = VALUE;
             newtree->value = value1;
-            newtree->left = newtree->middle = newtree->right = NULL;
             treestack[ntreestack++] = newtree;
           } else argstack[nargstack++] = value1;
 
@@ -1039,7 +1004,6 @@ double VariableKokkos::evaluate(char *str, Tree **tree)
             Tree *newtree = new Tree();
             newtree->type = VALUE;
             newtree->value = atof(var);
-            newtree->left = newtree->middle = newtree->right = NULL;
             treestack[ntreestack++] = newtree;
           } else argstack[nargstack++] = atof(var);
 
@@ -1094,6 +1058,7 @@ double VariableKokkos::evaluate(char *str, Tree **tree)
 
         // ----------------
         // math or special function
+        // math_function() includes Python function wrapper
         // ----------------
 
         if (str[i] == '(') {
@@ -1139,7 +1104,6 @@ double VariableKokkos::evaluate(char *str, Tree **tree)
             Tree *newtree = new Tree();
             newtree->type = VALUE;
             newtree->value = value1;
-            newtree->left = newtree->middle = newtree->right = NULL;
             treestack[ntreestack++] = newtree;
           } else argstack[nargstack++] = value1;
 
@@ -1159,7 +1123,6 @@ double VariableKokkos::evaluate(char *str, Tree **tree)
             Tree *newtree = new Tree();
             newtree->type = VALUE;
             newtree->value = value1;
-            newtree->left = newtree->middle = newtree->right = NULL;
             treestack[ntreestack++] = newtree;
           } else argstack[nargstack++] = value1;
         }
@@ -1236,12 +1199,10 @@ double VariableKokkos::evaluate(char *str, Tree **tree)
           Tree *newtree = new Tree();
           newtree->type = opprevious;
           if (opprevious == UNARY) {
-            newtree->left = treestack[--ntreestack];
-            newtree->middle = newtree->right = NULL;
+            newtree->first = treestack[--ntreestack];
           } else {
-            newtree->right = treestack[--ntreestack];
-            newtree->middle = NULL;
-            newtree->left = treestack[--ntreestack];
+            newtree->second = treestack[--ntreestack];
+            newtree->first = treestack[--ntreestack];
           }
           treestack[ntreestack++] = newtree;
 

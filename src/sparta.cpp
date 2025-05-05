@@ -489,7 +489,7 @@ void SPARTA::create()
   react = NULL;
 
   python = new Python(this);
-    
+
   if (kokkos) modify = new ModifyKokkos(this);
   else modify = new Modify(this);
 

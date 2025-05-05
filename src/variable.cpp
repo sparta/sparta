@@ -713,7 +713,7 @@ char *Variable::retrieve(char *name)
       style[ivar] == UNIVERSE || style[ivar] == STRING ||
       style[ivar] == SCALARFILE) {
     str = data[ivar][which[ivar]];
-    
+
   } else if (style[ivar] == LOOP || style[ivar] == ULOOP) {
     char result[16];
     if (pad[ivar] == 0) sprintf(result,"%d",which[ivar]+1);
@@ -727,12 +727,12 @@ char *Variable::retrieve(char *name)
     data[ivar][0] = new char[n];
     strcpy(data[ivar][0],result);
     str = data[ivar][0];
-    
+
   } else if (style[ivar] == EQUAL) {
     double answer = evaluate(data[ivar][0],NULL);
     sprintf(data[ivar][1],"%.15g",answer);
     str = data[ivar][1];
-    
+
   } else if (style[ivar] == FORMAT) {
     int jvar = find(data[ivar][0]);
     if (jvar == -1) return NULL;
@@ -740,7 +740,7 @@ char *Variable::retrieve(char *name)
     double answer = compute_equal(jvar);
     sprintf(data[ivar][2],data[ivar][1],answer);
     str = data[ivar][2];
-    
+
   } else if (style[ivar] == GETENV) {
     const char *result = getenv(data[ivar][0]);
     if (result == NULL) result = (const char *)"";
@@ -754,7 +754,7 @@ char *Variable::retrieve(char *name)
   } else if (style[ivar] == INTERNAL) {
     sprintf(data[ivar][0],"%.15g",dvalue[ivar]);
     str = data[ivar][0];
-    
+
   } else if (style[ivar] == PYTHON) {
     int ifunc = python->variable_match(data[ivar][0],name,0);
     if (ifunc < 0) {
@@ -808,7 +808,7 @@ double Variable::compute_equal(int ivar)
     if (ifunc < 0) error->all(FLERR,"Cannot find python function");
     python->invoke_function(ifunc,data[ivar][1]);
     try {
-      value = std::stod(data[ivar][1]);
+      value = strtod(data[ivar][1],NULL);
     } catch (std::exception &e) {
       error->all(FLERR,"Equal-style variable has invalid python value");
     }
@@ -1009,7 +1009,7 @@ int Variable::equal_style(int ivar)
     if (ifunc < 0) return 0;
     else return 1;
   }
-  
+
   return 0;
 }
 
@@ -2764,7 +2764,7 @@ double Variable::collapse_tree(Tree *tree)
     tree->value = arg1 + arg2*(1.0-cos(omega*delta*update->dt));
     return tree->value;
   }
-  
+
   if (tree->type == PYWRAPPER) {
     int narg = tree->argcount;
     int *argvars = tree->argvars;
@@ -3553,7 +3553,7 @@ int Variable::math_function(char *word, char *contents, Tree **tree,
 
     delete [] jvars;
   }
-  
+
   // delete stored args
 
   for (int i = 0; i < narg; i++) delete [] args[i];
