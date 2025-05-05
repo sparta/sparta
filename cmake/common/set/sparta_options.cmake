@@ -24,6 +24,10 @@ sparta_option(PKG_FFT "Enable or disable sparta fft package. Default: OFF." OFF
 sparta_option(
   PKG_KOKKOS "Enable or disable sparta kokkos package. Default: OFF." OFF
   SPARTA_PKG_LIST)
+
+sparta_option(
+  PKG_PYTHON "Enable or disable sparta python package. Default: OFF." OFF
+  SPARTA_PKG_LIST)
 # ######### END   SPARTA OPTIONAL DEPENDENCIES ##########
 
 # ######### BEGIN SPARTA TPL DEPENDENCIES ##########
