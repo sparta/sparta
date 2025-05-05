@@ -69,7 +69,7 @@ class Pointers {
     screen(ptr->screen),
     logfile(ptr->logfile) {}
 
-  virtual ~Pointers() {}
+  virtual ~Pointers() noexcept(false) {}
 
  protected:
   SPARTA *sparta;
