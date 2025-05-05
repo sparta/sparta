@@ -2764,6 +2764,20 @@ double Variable::collapse_tree(Tree *tree)
     tree->value = arg1 + arg2*(1.0-cos(omega*delta*update->dt));
     return tree->value;
   }
+  
+  if (tree->type == PYWRAPPER) {
+    int narg = tree->argcount;
+    int *argvars = tree->argvars;
+    double arg;
+    for (int iarg = 0; iarg < narg; iarg++) {
+      if (iarg == 0) arg = collapse_tree(tree->first);
+      else if (iarg == 1) arg = collapse_tree(tree->second);
+      else arg = collapse_tree(tree->extra[iarg-2]);
+      internal_set(argvars[iarg],arg);
+    }
+    tree->value = compute_equal(tree->pyvar);
+    return tree->value;
+  }
 
   return 0.0;
 }
@@ -3022,6 +3036,18 @@ double Variable::eval_tree(Tree *tree, int i)
     double delta = update->ntimestep - update->beginstep;
     double omega = 2.0*MY_PI/arg3;
     arg = arg1 + arg2*(1.0-cos(omega*delta*update->dt));
+    return arg;
+  }
+
+  if (tree->type == PYWRAPPER) {
+    int narg = tree->argcount;
+    for (int iarg = 0; iarg < narg; iarg++) {
+      if (iarg == 0) arg = eval_tree(tree->first,i);
+      else if (iarg == 1) arg = eval_tree(tree->second,i);
+      else arg = eval_tree(tree->extra[iarg-2],i);
+      internal_set(tree->argvars[iarg],arg);
+    }
+    arg = compute_equal(tree->pyvar);
     return arg;
   }
 
@@ -3495,16 +3521,15 @@ int Variable::math_function(char *word, char *contents, Tree **tree,
     // store their indices in jvars
 
     int *jvars = new int[narg];
-    char *internal_varname;
+    char internal_varname[16];
 
     for (int iarg = 0; iarg < narg; iarg++) {
-      internal_varname = strdup(fmt::format("pyarg{}", iarg+1));
+      sprintf(internal_varname,"pyarg%d",iarg+1);
       jvars[iarg] = find(internal_varname);
       if (jvars[iarg] < 0)
         error->all(FLERR,"Invalid python function arg in variable formula");
       if (!internal_style(jvars[iarg]))
         error->all(FLERR,"Invalid python function arg in variable formula");
-      delete[] internal_varname;
     }
 
     // if tree: store python variable and arg info in tree for later eval
@@ -3531,7 +3556,7 @@ int Variable::math_function(char *word, char *contents, Tree **tree,
   
   // delete stored args
 
-  for (int i = 0; i < narg; i++) delete[] args[i];
+  for (int i = 0; i < narg; i++) delete [] args[i];
 
   return 1;
 }
@@ -3932,11 +3957,11 @@ int Variable::special_function(char *word, char *contents, Tree **tree,
     } else argstack[nargstack++] = value;
   }
 
-  // delete args
+  // delete stored args
 
-  if (arg1) delete [] arg1;
-  if (arg2) delete [] arg2;
-  if (arg3) delete [] arg3;
+  delete [] arg1;
+  delete [] arg2;
+  delete [] arg3;
 
   return 1;
 }
@@ -4111,7 +4136,9 @@ int Variable::parse_args(char *str, char **args)
   while (ptr && narg < MAXFUNCARG) {
     ptrnext = find_next_comma(ptr);
     if (ptrnext) *ptrnext = '\0';
-    args[narg] = utils::strdup(utils::trim(ptr));
+    int n = strlen(ptr) + 1;
+    args[narg] = new char[n];
+    strcpy(args[narg],ptr);
     narg++;
     ptr = ptrnext;
     if (ptr) ptr++;
