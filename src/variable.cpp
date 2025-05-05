@@ -808,7 +808,7 @@ double Variable::compute_equal(int ivar)
     if (ifunc < 0) error->all(FLERR,"Cannot find python function");
     python->invoke_function(ifunc,data[ivar][1]);
     try {
-      value = std::stod(data[ivar][1]);
+      value = strtod(data[ivar][1],NULL);
     } catch (std::exception &e) {
       error->all(FLERR,"Equal-style variable has invalid python value");
     }
