@@ -87,9 +87,18 @@ class Variable : protected Pointers {
     char *carray;          // ptr into data struct with nstride = sizeof(struct)
     int type;              // operation, see enum{} in variable.cpp
     int nstride;           // stride between atoms if array is a 2d array
-    int selfalloc;         // 1 if array is allocated here, else 0
-    int ivalue1,ivalue2;   // extra values for needed for gmask,rmask,grmask
-    Tree *left,*middle,*right;    // ptrs further down tree
+
+    int nextra;              // # of additional args beyond first 2
+    Tree *first, *second;    // ptrs further down tree for first 2 args
+    Tree **extra;            // ptrs further down tree for nextra args
+
+    int pyvar;               // index of Python variable invoked as py_name()
+    int argcount;            // # of args to associated Python function
+    int *argvars;            // indices of internal variables for each arg
+
+    Tree() :
+      array(nullptr), iarray(nullptr), carray(nullptr), nextra(0),
+      first(nullptr), second(nullptr), extra(nullptr), argvars(nullptr) {}
   };
 
   void remove(int);
@@ -110,6 +119,7 @@ class Variable : protected Pointers {
   virtual void grid_vector(char *, Tree **, Tree **, int &);
   int is_constant(char *);
   double constant(char *);
+  int parse_args(char *, char **);
   char *find_next_comma(char *);
   void print_tree(Tree *, int);
   double *add_storage(double *);
