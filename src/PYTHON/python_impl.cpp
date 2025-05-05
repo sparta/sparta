@@ -139,7 +139,13 @@ void PythonImpl::command(int narg, char **arg)
     if ((narg > 2) && (strcmp(arg[1], "here") == 0)) {
       err = execute_string(arg[2]);
     } else {
-      if (platform::file_is_readable(arg[1]))
+      int file_is_readable = 0;
+      FILE *fp = fopen(arg[1], "r");
+      if (fp) {
+        fclose(fp);
+        file_is_readable = 1;
+      }
+      if (file_is_readable)
         err = execute_file(arg[1]);
       else {
         char msg[128];
