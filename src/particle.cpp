@@ -55,6 +55,8 @@ Particle::Particle(SPARTA *sparta) : Pointers(sparta)
   nglobal = 0;
   nlocal = maxlocal = 0;
   particles = NULL;
+  
+  sws = 0;  // SWS
 
   nspecies = maxspecies = 0;
   species = NULL;
@@ -432,17 +434,25 @@ void Particle::sort()
   for (int icell = 0; icell < nglocal; icell++) {
     cinfo[icell].first = -1;
     cinfo[icell].count = 0;
+    cinfo[icell].count_wi = 0;  // SWS
   }
 
   // reverse loop over partlcles to store linked lists in forward order
   // icell = global cell the particle is in
 
   int icell;
+  int ispecies;
+  double wi;  // SWS
+  Particle::Species *species = particle->species;  // SWS
+
   for (int i = nlocal-1; i >= 0; i--) {
     icell = particles[i].icell;
+    ispecies = particles[i].ispecies;  // SWS
+    wi = species[ispecies].specwt;  // SWS
     next[i] = cinfo[icell].first;
     cinfo[icell].first = i;
     cinfo[icell].count++;
+    cinfo[icell].count_wi+=wi;  // SWS
   }
 }
 
@@ -743,6 +753,10 @@ void Particle::add_species(int narg, char **arg)
       break;
     } else if (strcmp(arg[iarg],"vibfile") == 0) {
       break;
+    } else if (strcmp(arg[iarg],"SWS") == 0) {  // SWS
+      break;
+    } else if (strcmp(arg[iarg],"SWSmax") == 0) {  // SWS
+      break;
     } else {
       newspecies++;
     }
@@ -760,6 +774,10 @@ void Particle::add_species(int narg, char **arg)
     } else if (strcmp(arg[iarg],"rotfile") == 0) {
       break;
     } else if (strcmp(arg[iarg],"vibfile") == 0) {
+      break;
+    } else if (strcmp(arg[iarg],"SWS") == 0) {  // SWS
+      break;
+    } else if (strcmp(arg[iarg],"SWSmax") == 0) {  // SWS
       break;
     } else {
       names[newspecies++] = arg[iarg];
@@ -815,6 +833,15 @@ void Particle::add_species(int narg, char **arg)
   int rotindex = 0;
   int vibindex = 0;
 
+  // ========================================================================
+  // New input keyword for SWS pair selection routine.
+  // keywords are: SWS (standard Species Weighting Scheme), SWSmax (using
+  // the max(wi) to compute nattempt and select the collision pairs).
+  // If SWS or SWSmax are not used, species wi are reset to 1.
+  // ========================================================================
+
+  int pairselect = 0;
+
   while (iarg < narg) {
     if (strcmp(arg[iarg],"rotfile") == 0) {
       // not yet supported
@@ -830,7 +857,26 @@ void Particle::add_species(int narg, char **arg)
         error->all(FLERR,"Species command can only use a single vibfile");
       vibindex = iarg+1;
       iarg += 2;
-    } else error->all(FLERR,"Illegal species command");
+    } 
+    else if (strcmp(arg[iarg],"SWS") == 0) {  // SWS
+      sws=1;
+      if (pairselect)
+        error->all(FLERR,"Species Weighting Scheme models are SWS or SWSmax");
+      pairselect= iarg+1;
+      iarg += 1;
+    } 
+    else if (strcmp(arg[iarg],"SWSmax") == 0) {  // SWS
+      sws=2;
+      if (pairselect)
+        error->all(FLERR,"Species Weighting Scheme models are SWS or SWSmax");
+      pairselect= iarg+1;
+      iarg += 1;
+    } 
+    else error->all(FLERR,"Illegal species command");
+  }
+
+  if (sws==0) {  
+    for (i = 0; i < newspecies; i++) species[i].specwt=1.0;  // SWS
   }
 
   // read rotational species file and setup per-species params

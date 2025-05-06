@@ -162,6 +162,7 @@ void ComputePFluxGrid::compute_per_grid()
   int i,j,k,m,ispecies,igroup,icell;
   double mass;
   double *v,*vec;
+  double specwt;  // SWS
 
   // zero all accumulators - could do this with memset()
 
@@ -182,6 +183,7 @@ void ComputePFluxGrid::compute_per_grid()
 
     mass = species[ispecies].mass;
     v = particles[i].v;
+    specwt = species[ispecies].specwt; // SWS
 
     vec = tally[icell];
 
@@ -194,34 +196,34 @@ void ComputePFluxGrid::compute_per_grid()
     for (m = 0; m < npergroup; m++) {
       switch (unique[m]) {
       case MASSSUM:
-        vec[k++] += mass;
+        vec[k++] += mass*specwt;
         break;
       case MVX:
-        vec[k++] += mass*v[0];
+        vec[k++] += mass*v[0]*specwt;
         break;
       case MVY:
-        vec[k++] += mass*v[1];
+        vec[k++] += mass*v[1]*specwt;
         break;
       case MVZ:
-        vec[k++] += mass*v[2];
+        vec[k++] += mass*v[2]*specwt;
         break;
       case MVXSQ:
-        vec[k++] += mass*v[0]*v[0];
+        vec[k++] += mass*v[0]*v[0]*specwt;
         break;
       case MVYSQ:
-        vec[k++] += mass*v[1]*v[1];
+        vec[k++] += mass*v[1]*v[1]*specwt;
         break;
       case MVZSQ:
-        vec[k++] += mass*v[2]*v[2];
+        vec[k++] += mass*v[2]*v[2]*specwt;
         break;
       case MVXVY:
-        vec[k++] += mass*v[0]*v[1];
+        vec[k++] += mass*v[0]*v[1]*specwt;
         break;
       case MVYVZ:
-        vec[k++] += mass*v[1]*v[2];
+        vec[k++] += mass*v[1]*v[2]*specwt;
         break;
       case MVXVZ:
-        vec[k++] += mass*v[0]*v[2];
+        vec[k++] += mass*v[0]*v[2]*specwt;
         break;
       }
     }

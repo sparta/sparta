@@ -18,8 +18,9 @@ grid = style name of this compute command :l
 group-ID = group ID for which grid cells to perform calculation on :l
 mix-ID = mixture ID to perform calculation on :l
 one or more values can be appended :l
-value = {n} or {nrho} or {nfrac} or {mass} or {massrho} or {massfrac} or {u} or {v} or {w} or {usq} or {vsq} or {wsq} of {ke} or {temp} or {erot} or {trot} or {evib} or {tvib} or {pxrho} or {pyrho} or {pzrho} or {kerho} :l
+value = {n} or {sumwi} or {nrho} or {nfrac} or {mass} or {massrho} or {massfrac} or {u} or {v} or {w} or {usq} or {vsq} or {wsq} of {ke} or {temp} or {erot} or {trot} or {evib} or {tvib} or {pxrho} or {pyrho} or {pzrho} or {kerho} :l
   {n} = particle count
+  {sumwi} = sum of the particle species weight
   {nrho} = number density
   {nfrac} = number fraction
   {mass} = mass
@@ -88,6 +89,10 @@ then dividing by the number of sampling steps.
 The {n} value counts the number of particles in each group.  When
 accumulated over multiple sampling steps, this value is normalized by
 the number of sampling steps.
+
+The {sumwi} value counts the summation of the particles species weights
+in the grid cell. The species weights are defined in the species file
+and used during SWS computations (see "species"_species.html command).
 
 The {nrho} value computes the number density for the grid cell volume
 due to particles in each group:
