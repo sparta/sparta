@@ -575,7 +575,6 @@ void SPARTA::destroy()
   delete react;
   delete output;
   delete timer;
-  delete python;
 }
 
 /* ----------------------------------------------------------------------
