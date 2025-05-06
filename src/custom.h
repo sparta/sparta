@@ -44,6 +44,7 @@ class Custom : protected Pointers {
     int groupbit;
     class Mixture *mixture;
     class Region *region;
+    int numfile,filestyle;
     char *fname;
     int colcount;
     int *cindex_file,*ctype_file,*csize_file,*ccol_file;
@@ -59,6 +60,7 @@ class Custom : protected Pointers {
   bigint set_grid(int, class Region *, int, int, int, int, double, double *);
   bigint set_surf(int, class Region *, int, int, int, int, double, double *);
   bigint read_file(int, int, int *, int *, int *, int *, char *);
+  bigint read_file_coarse(int, int, int *, int *, int *, int *, char *);
   int attribute_bracket(char *);
 };
 

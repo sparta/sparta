@@ -32,9 +32,10 @@
 using namespace SPARTA_NS;
 using namespace MathConst;
 
-enum{CREATE,REMOVE,SET,FILESTYLE};
+enum{CREATE,REMOVE,SET,FILESTYLE,FILECOARSE};
 enum{EQUAL,PARTICLE,GRID,SURF};
 enum{INT,DOUBLE};                       // several files
+enum{TEXT,BINARY};
 
 #define MAXLINE 256
 #define CHUNK 4     // NOTE: make this larger after debugging
@@ -143,6 +144,7 @@ bigint Custom::process_actions(int narg, char **arg, int external)
     else if (strcmp(arg[iarg],"remove") == 0) action = REMOVE;
     else if (strcmp(arg[iarg],"set") == 0) action = SET;
     else if (strcmp(arg[iarg],"file") == 0) action = FILESTYLE;
+    else if (strcmp(arg[iarg],"file/coarse") == 0) action = FILECOARSE;
     else error->all(FLERR,"Illegal custom command action");
 
     // create new custom attribute
@@ -331,7 +333,7 @@ bigint Custom::process_actions(int narg, char **arg, int external)
       strcpy(fname,arg[iarg+1]);
 
       if (external && strchr(fname,'*') == NULL)
-        error->all(FLERR,"Fix custom filename must have a wildcard char");
+        error->all(FLERR,"Fix custom filename must have * wildcard char");
 
       // colcount = # of attribute values per file line
       
@@ -409,6 +411,119 @@ bigint Custom::process_actions(int narg, char **arg, int external)
       }
       
       iarg += 3 + colcount;
+
+    // set multiple custom attributes from a coarse file
+
+    } else if (action == FILECOARSE) {
+      
+      if (iarg+5 > narg) error->all(FLERR,"Illegal custom command");
+
+      if (mode == PARTICLE || mode == SURF)
+        error->all(FLERR,"Custom command cannot use action file/coarse "
+                   "with style particle or surf");
+
+      // # of coarse files and filestyle
+
+      int numfile = input->inumeric(FLERR,arg[iarg+1]);
+      int filestyle;
+      if (strcmp(arg[iarg+2],"text") == 0) filestyle = TEXT;
+      else if (strcmp(arg[iarg+2],"binary") == 0) filestyle = BINARY;
+      
+      // file name
+      // if numfile > 1, fname must have "%" wildcard char
+      // if external, fname must have "*" wildcard char
+      
+      int n = strlen(arg[iarg+3]) + 1;
+      char *fname = new char[n];
+      strcpy(fname,arg[iarg+3]);
+
+      if (numfile > 1 && strchr(fname,'%') == NULL)
+        error->all(FLERR,"Fix custom filename must have % wildcard char");
+      if (external && strchr(fname,'*') == NULL)
+        error->all(FLERR,"Fix custom filename must have * wildcard char");
+
+      // colcount = # of attribute values per file line
+      
+      int colcount = input->inumeric(FLERR,arg[iarg+4]);
+      if (colcount < 1)
+        error->all(FLERR,"Custom command file/coarse column count is invalid");
+      if (iarg+5+colcount > narg) error->all(FLERR,"Illegal custom command");
+
+      // create vectors of attribute name settings
+
+      int *cindex = new int[colcount];
+      int *ctype = new int[colcount];
+      int *csize = new int[colcount];
+      int *ccol = new int[colcount];
+
+      for (int i = 0; i < colcount; i++) {
+        int n = strlen(arg[iarg+5+i]) + 1;  
+        char *aname = new char[n];
+        strcpy(aname,arg[iarg+5+i]);
+        ccol[i] = attribute_bracket(aname);
+        if (mode == GRID) {
+          cindex[i] = grid->find_custom(aname);
+          if (cindex[i] < 0)
+            error->all(FLERR,"Custom attribute name does not exist");
+          ctype[i] = grid->etype[cindex[i]];
+          csize[i] = grid->esize[cindex[i]];
+        } else if (mode == SURF) {
+          cindex[i] = surf->find_custom(aname);
+          if (cindex[i] < 0)
+            error->all(FLERR,"Custom attribute name does not exist");
+          ctype[i] = surf->etype[cindex[i]];
+          csize[i] = surf->esize[cindex[i]];
+        }
+        if (csize[i] && ccol[i] == 0)
+          error->all(FLERR,"Custom attribute array requires bracketed index");
+        if (csize[i] == 0 && ccol[i])
+          error->all(FLERR,"Custom attribute vector cannot use bracketed index");
+        delete [] aname;
+      }
+
+      // if not external: invoke action now
+      // else: store info in Action list for FixCustom
+      // for mode = GRID
+      //   set estatus of all changed custom vecs/arrays to 1
+      //   b/c file read stores values for owned+ghost cells
+      // for mode = SURF
+      //   set estatus of all changed custom vecs/arrays to 0
+
+      if (!external) {
+        if (comm->me == 0 && screen)
+          fprintf(screen,"Reading custom file/coarse ... %s\n",fname);
+        count += read_file_coarse(mode,colcount,cindex,ctype,csize,ccol,fname);
+        
+        // need logic for multiple file reads, text or binary
+        // need method for mapping SPARTA grid cells to coarse cells
+        
+        if (mode == GRID)
+          for (int i = 0; i < colcount; i++)
+            grid->estatus[cindex[i]] = 1;
+        else if (mode == SURF)
+          for (int i = 0; i < colcount; i++)
+            surf->estatus[cindex[i]] = 0;
+
+        delete [] fname;
+        delete [] cindex;
+        delete [] ctype;
+        delete [] csize;
+        delete [] ccol;
+
+      } else {
+        actions[naction].action = action;
+        actions[naction].numfile = numfile;
+        actions[naction].filestyle = filestyle;
+        actions[naction].fname = fname;
+        actions[naction].colcount = colcount;
+        actions[naction].cindex_file = cindex;
+        actions[naction].ctype_file = ctype;
+        actions[naction].csize_file = csize;
+        actions[naction].ccol_file = ccol;
+        naction++;
+      }
+      
+      iarg += 5 + colcount;
     }
   }
 
@@ -469,6 +584,43 @@ bigint Custom::process_actions()
 
       count += read_file(mode,colcount,
                          cindex,ctype,csize,ccol,filecurrent);
+      
+      delete [] filecurrent;
+
+      // for mode = GRID
+      //   set estatus of all changed custom vecs/arrays to 1
+      //   b/c file read stores values for owned+ghost cells
+      // for mode = SURF
+      //   set estatus of all changed custom vecs/arrays to 0
+      
+      if (mode == GRID)
+        for (int i = 0; i < colcount; i++)
+          grid->estatus[cindex[i]] = 1;
+      else if (mode == SURF)
+        for (int i = 0; i < colcount; i++)
+          surf->estatus[cindex[i]] = 0;
+
+    } else if (actions[i].action == FILECOARSE) {
+
+      char *fname = actions[i].fname;
+      int colcount = actions[i].colcount;
+      int *cindex = actions[i].cindex_file;
+      int *ctype = actions[i].ctype_file;
+      int *csize = actions[i].csize_file;
+      int *ccol = actions[i].ccol_file;
+
+      // replace '*' in fname with current timestep (logic from Dump class)
+      // read the file and set attributes via input script column names
+
+      char *filecurrent = new char[strlen(fname) + 16];
+      char *ptr = strchr(fname,'*');
+      *ptr = '\0';
+      sprintf(filecurrent,"%s" BIGINT_FORMAT "%s",
+              fname,update->ntimestep,ptr+1);
+      *ptr = '*';
+
+      count += read_file_coarse(mode,colcount,
+                                cindex,ctype,csize,ccol,filecurrent);
       
       delete [] filecurrent;
 
@@ -1066,6 +1218,203 @@ bigint Custom::read_file(int mode, int colcount,
       }
 
       // assign all attribute values for this grid cell or surf
+
+      for (int j = 0; j < colcount; j++) {
+        if (ctype[j] == INT) {
+          if (csize[j] == 0)
+            ivec[j][index] = input->inumeric(FLERR,strtok(NULL," \t\n\r\f"));
+          else
+            iarray[j][index][ccol[j]-1] = input->inumeric(FLERR,strtok(NULL," \t\n\r\f"));
+        } else if (ctype[j] == DOUBLE) {
+          if (csize[j] == 0)
+            dvec[j][index] = input->numeric(FLERR,strtok(NULL," \t\n\r\f"));
+          else
+            darray[j][index][ccol[j]-1] = input->numeric(FLERR,strtok(NULL," \t\n\r\f"));
+        }
+      }
+
+      count += colcount;
+      buf = next + 1;
+    }
+
+    // increment nread and fcount and continue to next chunk
+    
+    nread += nchunk;
+    fcount++;
+  }
+  
+  // close file
+
+  if (me == 0) {
+    //if (compressed) pclose(fp);
+    //else fclose(fp);
+    fclose(fp);
+  }
+  
+  // free read buffers and vec/array ptrs
+  
+  delete [] line;
+  delete [] buffer;
+  delete [] ivec;
+  delete [] dvec;
+  delete [] iarray;
+  delete [] darray;
+
+  return count;
+}
+
+/* ----------------------------------------------------------------------
+   read a coarse file for mode = GRID only
+   assign values to custom grid vectors/arrays
+   return count of attributes assigned by this proc
+---------------------------------------------------------------------- */
+
+bigint Custom::read_file_coarse(int mode, int colcount,
+                                int *cindex, int *ctype, int *csize, int *ccol,
+                                char *filename)
+{
+  // setup read buffers
+  // NOTE: should these be created by Memory class ?
+  
+  char *line = new char[MAXLINE];
+  char *buffer = new char[CHUNK*MAXLINE];
+
+  // set ivec,dvec,iarray,darray pointers
+  // only one will be active for each value in input line
+  
+  int **ivec = new int*[colcount];
+  double **dvec = new double*[colcount];
+  int ***iarray = new int**[colcount];
+  double ***darray = new double**[colcount];
+
+  for (int j = 0; j < colcount; j++) {
+    if (ctype[j] == INT) {
+      if (csize[j] == 0) {
+        ivec[j] = grid->eivec[grid->ewhich[cindex[j]]];
+      } else {
+        iarray[j] = grid->eiarray[grid->ewhich[cindex[j]]];
+      }
+    } else if (ctype[j] == DOUBLE) {
+      if (csize[j] == 0) {
+        dvec[j] = grid->edvec[grid->ewhich[cindex[j]]];
+      } else {
+        darray[j] = grid->edarray[grid->ewhich[cindex[j]]];
+      }
+    }
+  }
+  
+  // ensure grid cell IDs are hashed
+  
+  Grid::MyHash *hash;
+
+  if (!grid->hashfilled) grid->rehash();
+  hash = grid->hash;
+
+  // read file
+
+  MPI_Barrier(world);
+  double time1 = MPI_Wtime();
+
+  // NOTE: support compressed files like read_grid ?
+
+  int me = comm->me;
+  int nprocs = comm->nprocs;
+  FILE *fp;
+
+  if (me == 0) {
+    fp = fopen(filename,"r");
+    if (fp == NULL) error->one(FLERR,"Could not open custom attribute file");
+  }
+  
+  // read header portion of file
+  // comments or blank lines are allowed
+  // nfile = count of attribute lines in file
+  // NOTE: allow for nfile to be a bigint ?
+  
+  int nfile;
+  
+  if (me == 0) {
+    char *eof,*ptr;
+    
+    while (1) {
+      eof = fgets(line,MAXLINE,fp);
+      if (eof == NULL) error->one(FLERR,"Unexpected end of custom attribute file");
+
+      // trim anything from '#' onward
+      // if line is blank, continue
+      // else break and read nfile
+
+      if ((ptr = strchr(line,'#'))) *ptr = '\0';
+      if (strspn(line," \t\n\r") == strlen(line)) continue;
+      break;
+    }
+
+    sscanf(line,"%d",&nfile);
+    //sscanf(line,BIGINT_FORMAT,&nfile);
+  }
+
+  MPI_Bcast(&nfile,1,MPI_INT,0,world);
+  
+  // read and broadcast one CHUNK of lines at a time
+
+  bigint count = 0;
+  bigint nread = 0;
+  bigint fcount = 0;
+
+  int i,m,nchunk,index,iproc;
+  char *next,*buf,*idptr;
+  cellint id;
+  
+  while (nread < nfile) {
+    if (nfile-nread > CHUNK) nchunk = CHUNK;
+    else nchunk = nfile-nread;
+    if (me == 0) {
+      char *eof;
+      m = 0;
+      for (i = 0; i < nchunk; i++) {
+        eof = fgets(&buffer[m],MAXLINE,fp);
+        if (eof == NULL) error->one(FLERR,"Unexpected end of custom attribute file");
+        m += strlen(&buffer[m]);
+      }
+      if (buffer[m-1] != '\n') strcpy(&buffer[m++],"\n");
+      m++;
+    }
+    MPI_Bcast(&m,1,MPI_INT,0,world);
+    MPI_Bcast(buffer,m,MPI_CHAR,0,world);
+
+    // add occasional barrier to prevent issues from having too many
+    //  outstanding MPI recv requests (from the broadcast above)
+
+    if (fcount % 1024 == 0) MPI_Barrier(world);
+
+    // process nchunk lines and assign attribute values if I store grid/surf ID
+    // store means as owned or ghost grid cell
+    
+    buf = buffer;
+
+    for (i = 0; i < nchunk; i++) {
+      next = strchr(buf,'\n');
+      if (next == NULL) printf("NULL proc %d i %d\n",me,i);
+      *next = '\0';
+      int nwords = input->count_words(buf);
+      *next = '\n';
+
+      if (nwords != colcount + 1)
+	error->all(FLERR,"Incorrect line format in custom attribute file");
+
+      // grid ID will match either an owned or ghost grid cell
+      
+      idptr = strtok(buf," \t\n\r\f");
+      id = ATOCELLINT(idptr);
+      if (id <= 0) error->all(FLERR,"Invalid cell ID in custom attribute grid file");
+
+      if (hash->find(id) == hash->end()) {
+        buf = next + 1;
+        continue;
+      }
+      index = (*hash)[id];
+
+      // assign all attribute values for this grid cell
 
       for (int j = 0; j < colcount; j++) {
         if (ctype[j] == INT) {
