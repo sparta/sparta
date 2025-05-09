@@ -207,15 +207,12 @@ attributes by reading coarse grid values from one or more files.  It
 can only be used with {style grid}, not with {style surf} or {style
 particle}.
 
-IMPORTANT NOTE: The file/coarse action has NOT yet been implemented
-for this command.
-
 This action is designed to allow input of custom values for some
 number of "coarse" grid cells.  The coarse cells and their values
 could be output from another code, such as a continuum Navier-Stokes
 (NS) code or even from an experiment.  The coarse cell values are
 "mapped" to individual SPARTA grid cells, so that per-grid custom
-attributes for each SPARTA grid cell are set by the values for one of
+attributes for each SPARTA grid cell are set by the values from one of
 the coarse cells.  This is done in the following manner.
 
 Each coarse grid cell is associated with a (cx,cy,cz) point.  This
@@ -227,7 +224,7 @@ or tetrahedron (3d).  Conceptually, the idea is that the small area
 by the coarse grid cell values in the file.
 
 All SPARTA grid cells have a center point (sx,sy,sz), which is the
-center of a rectangle (2d) or parallelpiped (3d).
+center of a rectangle (2d) or parallelepiped (3d).
 
 Both the coarse-grid code and SPARTA should operate on the same
 simulation domain, which is the simulation box in the case of SPARTA.
@@ -235,16 +232,15 @@ The set of all (cx,cy,cz) points should "cover" this domain, as do the
 set of all (sx,sy,sz) points.  For each (sx,sz,sz) point, the
 {nearest} (cx,cy,cz) point is found.  The coarse grid values for that
 point are assigned to the custom per-grid values of that SPARTA grid
-cell.  Here are a few additional details.
+cell cell.  Here are a few additional details.
 
-If two or more coarse grid points are equi-distant from a SPARTA point,
-then their coarse grid values are averged before assigning them to the SPARTA
-grid cell. :ulb,l
+If two or more coarse grid points are equi-distant from a SPARTA
+center point, then their coarse grid values are averaged before
+assigning them to the SPARTA grid cell. :ulb,l
 
-SPARTA points will never be on the boundary of the simulation domain.
-But coarse grid points can be.  If a pair of boundaries (e.g. xlo,xhi)
-are periodic, then the set of coarse grid points is also considered to
-be periodic for purposes of finding a closest coarse grid point. :l
+SPARTA center points will never be on the boundary of the simulation
+domain.  But coarse grid points can be.  All coarse grid points must
+be inside the SPARTA simulation box or on its surface.
 
 If surfaces are present in the two codes's simulations, then both
 codes should define an identical set of surface elements.  This is
@@ -255,7 +251,18 @@ SPARTA can define grid cells wholly inside of surface objects. The
 coarse grid code may not, e.g. if finite elements conform to the
 surface of an object.  The mapping operation described above is not
 performed for SPARTA grid cells wholly inside surface objects; their
-custom attribute values are set to zero. :l,ule
+custom attribute values are set to zero.  If a SPARTA grid cell is cut
+by surface elements, its center point may be inside a suface object.
+In this case it should be fine to assign the grid cell values from the
+nearest coarse grid point in the flow. :l,ule
+
+IMPORTANT NOTE: The current implementation of this "mapping" operation
+stores the entire coarse grid on every processor.  Each processor then
+loops over the SPARTA grid cells it own and searches the entire set of
+of coarse grid point for the nearest, using a k-d tree.  If either the
+coarse grid storage or tree search becomes a bottleneck for very
+large-scale problems, we could consider implementing a more parallel
+algorithm.
 
 Creation of the file(s) read by this action is a pre-processing step.
 The "create_particles"_create_particles.html command can be used with
@@ -272,35 +279,39 @@ surf.%.attribute, then files surf.1.attribute, surf.2.attribute,
 surf.3.attribute, etc will be read.  Note that if the "fix
 custom"_fix_custom.html command uses this action, and there are also
 multiple coarse files for different timesteps, then the specified
-{fname} must contain both wildcard "%" and "*" characters.
-
-The {filestyle} argument is {text} or {binary}.  The format for both
-kinds of files is explained below.
-
-The specified (M) number of {cname1,cname2,...,cnameM} arguments must
-match the number of values listed on each line in each file.  A
-{cnameI} with no brackets is the name of a custom vector.  For a
-custom array, {cnameI} must be of the form name\[N\] for the Nth
-column of the array.
+{fname} must contain both a wildcard "%" and "*" character.
 
 The reason to use multiple files is that a single file could be
 extremely large and/or to enable more parallelism by having different
 processors read different files simultaneously.  Conceptually, the
 information being read is the union of the information from all the
-individual files.
+individual files.  There must be no duplicate coarse grid points
+(based on point coordinates) in a single or multiple files.
+
+The {filestyle} argument is {text} or {binary}.  The format for both
+kinds of files is explained below.  NOTE: The binary format is not yet
+supported by this command.
+
+The specified (M) number of {cname1,cname2,...,cnameM} arguments must
+match the number of values listed on each line in each file.  A
+{cnameI} with no brackets is the name of a custom vector.  For a
+custom array, {cnameI} must be of the form cnameI\[N\] for the Nth
+column of the array.
 
 For {filestyle} = {text}, the format of each file is as follows.  It
 can start with any number of comment or blank lines.  A comment line
-starts with the "#" character.
+starts with the "#" character.  It is a good idea to document in a
+comment what coarse grid values are listed on each line.
 
 The first non-comment, non-blank line has this format:
 
 N Nvalue :pre
 
-N is the count of coarse cell value lines which follow.  These N lines
-must immediately follow the count line and contain no blank lines.
-Any remaining lines in the file are ignored.  Nvalue is the number of
-attribute values per line and must equal the specified {M}.
+N is the count of coarse cell value lines which follow (in this file).
+These N lines must immediately follow the count line and contain no
+blank lines.  Any remaining lines in the file are ignored.  Nvalue is
+the number of attribute values per line and must equal the specified
+{M}.
 
 The format of each coarse cell value line is as follows:
 
@@ -311,24 +322,25 @@ this ID, but it may be convenient for indexing the coarse grid cells
 from another code.  Or for indexing the coarse cells across multiple
 coarse grid files.
 
-The x, y, z values are the coordinates of the point associated with
-the values which follow.
+The x, y, z values are the coordinates of the coarse grid point
+associated with the values which follow.  Z must be zero for a 2d or
+axisymmetric simulation.
 
 M values follow, corresponding to the {M} argument in the input
 script, following the {fname} argument.
 
 The following is an example of a correctly formatted file to set the
-values for a per-grid custom array with 2 columns.  Only the
-values for 30 SPARTA grid cells are set (6+6+18).
+values for a per-grid custom array with 2 columns.
 
-# custom values for a few Navier-Stokes elements
-# calculated for test problem XYZ :pre
+# custom values for a few 2d Navier-Stokes elements
+# calculated for test problem XYZ
+# attribute columns = density temperature :pre
 
 4 2
 1 5.0 5.0 0.0 10.0 5.0
 1 15.0 5.0 0.0 12.0 6.5
 1 5.0 15.0 0.0 8.0 4.55
-1 15.0 15.0 9.0 5.5 :pre
+1 15.0 15.0 0.0 9.0 5.5 :pre
 
 This file could be read with an input script command like either of these:
 
@@ -339,6 +351,7 @@ The latter command assumes there are 2 other files like this one, with
 names cfile.grid.1, cfile.grid.2, and cfile.grid.3.
 
 For {filestyle} = {binary}, the format of each file is as follows.
+NOTE: The binary format is not yet supported by this command.
 
 Ncoarse (4-byte integer)
 Nvalue (4-byte integer)

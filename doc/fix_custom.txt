@@ -12,32 +12,11 @@ fix custom command :h3
 
 fix ID custom Nfreq style action args ... action args ... :pre
 
-ID is documented in "fix"_fix.html command :ulb,l
-custom = style name of this fix command :l
-Nfreq = reset custom values every this many steps :l
-style = {particle} or {grid} or {surf} :l
-action = {set} or {file} :l
-  {set} args = cname v_name subset-ID region-ID
-    cname = specify as name (no brackets) for custom vector with name
-            or as name\[N\] for Nth column of custom array with name
-    v_name = equal-, particle-, grid-, or surf-style variable with name
-    subset-ID = mixture ID (particles) or group ID (grid cells or surf elements)
-    region-ID = only apply to particle/grid/surf in region, NULL to not test
-  {file} args = fname M cname1 cname2 ... cnameM
-      fname = wildcard name of file with custom attributes for grid cells or surf elements
-    M = # of custom values listed on each line of each file
-    cname1,cname2,...,cnameM = which attribute each line's values are assigned to
-      cnameI = name of a custom vector
-      cnameI = name\[N\] for Nth column of a custom array with name
-  {file/coarse} args = Nfile filestyle fname M cname1 cname2 ... cnameM
-    Nfile = number of coarse files
-    filestyle = {text} or {binary}
-    fname = name of file with custom attributes for coarse grid cells
-    M = # of custom values listed for each coarse cell entry in the file
-    cname1,cname2,...,cnameM = which attribute each coarse cell's values are assigned to
-      cnameI = name of a custom vector
-      cnameI = name\[N\] for Nth column of a custom array with name :pre
-:ule
+ID is documented in "fix"_fix.html command
+custom = style name of this fix command
+Nfreq = reset custom values every this many steps
+style = {particle} or {grid} or {surf}
+action args = all remaining args are identical to those defined for the "custom"_custom.html command :ul
 
 [Examples:]
 
@@ -55,29 +34,20 @@ Reset one or more custom attributes for particles, grid cells, or
 surface elements.  This operation is performed once every {Nfreq}
 timesteps.
 
-The {set} action evaluates a variable to reset the values for an
-attribute.  The {file} action reads a file with lines starting with a
-grid cell ID or surface element ID followed by values for one or more
-per-grid or per-surf attributes.  Particle-style attributes cannot be
-reset with the {file} action.
+The syntax for {actions} and their arguments are the same as for the
+"custom"_custom.html command with two differences.
 
-Custom attributes can be vectors (single value per entity) or arrays
-(mutiple values per entity).  They can also be integer or floating
-point values.  See "Section 6.17"_Section_howto.html#howto_17 for an
-explanation of custom attributes.
+First, only the {set}, {file}, and {file/coarse} actions are supported
+for this fix.  The {create} and {remove} actions are not, since they
+do not make sense to perform multiple times during a run.
 
-Each {style} setting is {particle} or {grid} or {surf} for custom
-per-particle, per-grid, or per-surf attributes.
+Second, the {file} and {file/coarse} actions take a filename as an
+argument.  The filename must contain a wildcard "*" character which
+will be replaced by the timestep.  This is to allow a sequence of
+files to be read during the simulation.  The filename wildcard "*"
+cannot be used with the "custom"_custom.html command.
 
-The {action} setting is {set} or {file} or {file/coarse}.  The
-functionality and syntax for these settings are identical to the
-"custom"_custom.html command, with the exception that the filename for
-the {file} and {file/coarse} actions must include a wildcard "*"
-character which is replaced by the current timestep each time this fix
-operates, so that different files are read.  See more discussion
-below.
-
-The {set} and {file} and {file/coarse} actions reset the values of
+All of the actions supported by this command reset the values of
 custom attribute(s) which must already exist.  See the
 "custom"_custom.html and "read_surf"_read_surf.html and
 "read_grid"_read_grid.html commands for different ways to define and
@@ -102,7 +72,7 @@ first run.  Likewise, between runs, this command DOES reset attribute
 values at the end of the last step (10000, 20000, etc) of each run,
 but DOES NOT reset them again before the first step of the next run.
 
-IMPORTANT NOTE: If needed, resets of custom values can be performed
+IMPORTANT NOTE: If needed, resetting of custom values can be performed
 before the first run or between runs using the "custom"_custom.html
 command.
 
@@ -110,115 +80,10 @@ IMPORTANT NOTE: If {Nfreq} triggers the reading of a file on the last
 step of the last run in the input script, then the
 wildcard-substituted filename (explained below) must exist.  This is
 the case, even though the new values will have no effect in the
-current input script, since there are no operations on subsequent
-timesteps which use them.  Note, however that if a restart file is
-wrtten on the last timestep, the updated custom values will be written
-to the restart file.
-
-:line
-
-The {set} action resets the values of a custom attribute by evaluating
-a variable.  To operate on a custom vector, {cname} is simply the name
-of the vector.  To operate on a single column of a custom array,
-{cname} is specified as name\[N\] for the Nth column of a custom array
-with name.
-
-The specified {v_name} is the name of the variable which is evaluated.
-It must be either an equal-style or particle-style or grid-style or
-surf-style variable.  All of these define a mathematical formula which
-is used to compute the value(s) of the variable.  See the
-"variable"_variable.html command for details.
-
-If an equal-style variable is specified, it produces a single value
-which will be assigned as the custom value to all the particles or
-grid cells or surface elements (see subset-ID and region-ID discussion
-below).  Otherwise a particle-style variable must be used for {style
-particle}, a grid-style variable for {style grid}, or a surf-style
-variable for {style surf}.  When it is evaluated it generates one
-value for each particle, grid cell, or surface element, which is
-assigned to the custom vector or to a column of the custom array.
-
-Note that the latter 3 variable styles can include outputs from
-"compute"_compute.html or "fix"_fix.html commands.  They can also
-include the current timestep (as can equal-style variables) or the
-spatial position of a particle, grid cell, or surface element in their
-formula.  So it is easy to calculate a value for each entity which
-varies in time or spatially.
-
-The next two arguments, {subset-ID} and {region-ID}, can limit which
-particles, grid cells, or surface elements are assigned a custom
-value.  An individual particle, grid cell, or surface element must
-meet both criteria to have its custom value set, otherwise its value
-is unchanged.
-
-The {subset-ID} is the ID of a mixture for particles or the ID of a
-group of grid cells or surface elements.  Only particles in the
-mixture or grid cells/surface elements in the group will be assigned a
-value.  See the "mixture"_mixture.html and "group"_group.html commands
-for more details.  Note that "all" is a pre-defined mixture ID which
-contains all particles.  Likewise "all" is the name of a pre-defined
-group with all grid cells or all surface elements.
-
-The {region-ID} is the ID of a geometric region defined by the
-"region"_region.html command.  Only particles or grid cells or surface
-elements in the region will have their values set.  The center point
-of a grid cell or surface element is used for the region check.  If
-{region-ID} is specified as NULL, then the region criterion is not
-applied.
-
-:line
-
-The {file} action resets the values of one or more custom attributes
-by reading them from the {fname} file.  It can only be used with
-{style grid} or {style surf}, not with {style particle}.
-
-The specified {fname} must contain a wildcard "*" character which is
-replaced by the current timestep each time this fix is invoked.  For
-example, if {Nfreq} = 1000 and {fname} is specified as
-surf.*.attribute, then files surf.1000.attribute, surf.2000.attribute,
-surf.3000.attribute, etc will be read on timesteps 1000, 2000, 3000,
-etc.
-
-The number of {cname1,cname2,...,cnameM} arguments must match the
-number of values listed on each line in the file.  A {cnameI} with no
-brackets is the name of a custom vector.  For a custom array, {cnameI}
-must be of the form name\[N\] for the Nth column of the array.
-
-The format of each file is identical to the file format explained on
-the "custom"_custom.html command doc page for use with its {file}
-action.
-
-:line
-
-The {file/coarse} action resets the values of one or more custom
-attributes by reading coarse grid values from the {fname} file as
-explained on the "custom"_custom.html command doc page.
-
-It can only be used with {style grid}, not with {style surf} or {style
-particle}.
-
-IMPORTANT NOTE: The {file/coarse} action has NOT yet been implemented
-for this command.
-
-The specified {fname} must contain a wildcard "*" character which is
-replaced by the current timestep each time this fix is invoked.  For
-example, if {Nfreq} = 1000 and {fname} is specified as
-surf.*.attribute, then files surf.1000.attribute, surf.2000.attribute,
-surf.3000.attribute, etc will be read on timesteps 1000, 2000, 3000,
-etc.
-
-The number of {cname1,cname2,...,cnameM} arguments must match the
-number of values listed on each line in the file.  A {cnameI} with no
-brackets is the name of a custom vector.  For a custom array, {cnameI}
-must be of the form name\[N\] for the Nth column of the array.
-
-The format of each file is identical to the file format explained on
-the "custom"_custom.html command doc page for use with its
-{file/coarse} action.
-
-Note that if there are multiple coarse files for each timestep, then
-the specified {fname} must contain both wildcard "*" and "%"
-characters, as explained on the "custom"_custom.html command doc page.
+current input script, since there are no subsequent timestep
+operations which will use them.  Note, however that if a restart file
+is written on the last timestep, or following the last run, the
+updated custom values will be written to the restart file.
 
 :line
 
