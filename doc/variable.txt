@@ -359,10 +359,10 @@ Math functions: sqrt(x), exp(x), ln(x), log(x), abs(x), sin(x), cos(x), tan(x), 
      stride(x,y,z), vdisplace(x,y), swiggle(x,y,z), cwiggle(x,y,z)
 Special functions: sum(x), min(x), max(x), ave(x), trap(x), slope(x), next(x), grid2part(x), is_file(x)
 Particle vectors: id, type, mass, q, mu, x, y, z, vx, vy, vz
-Grid vectors = cxlo, cxhi, cylo, cyhi, czlo, czhi
+Grid vectors: cxlo, cxhi, cylo, cyhi, czlo, czhi
 Compute references: c_ID, c_ID\[I\], c_ID\[I\]\[J\]
 Fix references: f_ID, f_ID\[I\], f_ID\[I\]\[J\]
-Custom attribute references = name_ID, name_ID\[I\], name_ID, name_ID\[I\], name_ID, name_ID\[I\]
+Custom attribute references: name_ID, name_ID\[I\], name_ID, name_ID\[I\], name_ID, name_ID\[I\]
 Surface collision model references: sc_ID\[I\]
 Surface reaction model references: sr_ID\[I\]
 Other variables: v_name :tb(s=:)

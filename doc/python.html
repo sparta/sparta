@@ -1,0 +1,582 @@
+<HTML>
+<CENTER><A HREF = "https://sparta.github.io">SPARTA WWW Site</A> - <A HREF = "Manual.html">SPARTA Documentation</A> - <A HREF = "Section_commands.html#comm">SPARTA Commands</A> 
+</CENTER>
+
+
+
+
+
+
+<HR>
+
+<H3>mixture command 
+</H3>
+<P><B>Syntax:</B>
+</P>
+<PRE>python mode keyword args ... 
+</PRE>
+<UL><LI>mode = <I>source</I> or <I>name</I> of a Python file 
+
+<LI>for mode = <I>source</I>: 
+
+<P>  keyword = <I>here</I> or name of a <I>Python file</I>
+  <I>here</I> arg = one or more lines of Python code which define a Python function
+     must be a single argument, typically enclosed between triple quotes
+     the in-lined Python code will be executed immediately
+  <I>Python file</I> = name of a file with Python code
+     the Python code in the file will be executed immediately
+</P>
+<LI>for mode = <I>name</I> of a Python function: 
+
+<PRE>  one or more keywords with arguments must be appended
+  keyword = <I>invoke</I> or <I>input</I> or <I>return</I> or <I>format</I> or <I>length</I> or <I>file</I> or <I>here</I> or <I>exists</I>
+  <I>invoke</I> arg = none = invoke the Python function which was previously defined
+  <I>input</I> args = N i1 i2 ... iN
+    N = # of inputs to function
+    i1,...,iN = value, SELF, or SPARTA variable name
+    value = integer number, floating point number, or string
+    SELF = reference to SPARTA itself which can be accessed by Python function
+    variable = v_name, where name = name of SPARTA variable, e.g. v_abc
+  <I>return</I> arg = varReturn
+    varReturn = v_name  = return value of the Python function will be assigned to the SPARTA variable name
+  <I>format</I> arg = fstring with M characters
+    M = N if no return value, where N = # of inputs
+    M = N+1 if there is a return value
+    fstring = each character (i,f,s,p) corresponds (in order) to an input or return value
+      'i' = integer, 'f' = floating point, 's' = string, 'p' = SELF
+   <I>length</I> arg = Nlen
+     Nlen = max length of string returned from Python function
+   <I>file</I> arg = filename
+     filename = file of Python code, which defines the Python function
+   <I>here</I> arg = one or more lines of Python code which defines the Python function
+     must be a single argument, typically enclosed between triple quotes
+   <I>exists</I> arg = none = Python code has been loaded by previous python command 
+</PRE>
+<P><B>Examples:</B>
+</P>
+<PRE>python source funcdef.py
+python pForce input 2 v_x 20.0 return v_f format fff file force.py
+python pForce invoke 
+</PRE>
+<PRE>python factorial input 1 myN return v_fac format ii here """
+def factorial(n):
+  if n == 1: return n
+  return n * factorial(n-1)
+""" 
+</PRE>
+<P>NOTE: need new SPRATA example here
+</P>
+<PRE>python loop input 1 SELF return v_value format pf here """
+def loop(spaptr,N,cut0):
+  from sparta import sparta
+  spa = sparta(ptr=spaptr)
+  # loop N times, increasing cutoff each time
+  for i in range(N):
+    cut = cut0 + i*0.1
+    lmp.set_variable("cut",cut)               # set a variable in SPARTA
+    spa.command("pair_style lj/cut $<I>cut</I>")   # SPARTA commands
+    spa.command("pair_coeff * * 1.0 1.0")
+    spa.command("run 10000")
+""" 
+</PRE>
+<P><B>Description:</B>
+</P>
+<P>The <I>python</I> command interfaces SPARTA with an embedded Python
+interpreter and enables executing arbitrary python code in that
+interpreter.  This can be done immediately, by using <I>mode</I> =
+<I>source</I>.  Or execution can be deferred, by registering a Python
+function for later execution, by using <I>mode</I> = <I>name</I> of a Python
+function.
+</P>
+<P>Later execution after registration can be triggered in one of two
+ways.  One is to use the python command again with its <I>invoke</I>
+keyword.  The other is to trigger the evaluation of python-style,
+equal-style, or grid-style variable.  A python-style variable invokes
+its associated Python function; its return value becomes the value of
+the python-style variable.  Equal- and grid-style variable can use a
+Python function wrapper in their formulas which encodes the Python
+function name, as well as arguments passed to the function.  Note that
+variables can be evaluated in many different ways within SPARTA.  They
+can be evaulated directly in an input script, effectively replacing
+the variable with its value.  Or they can be passed to various
+commands as arguments, so that the variable is evaluated multiple
+times during a simulation run.  See the <A HREF = "variable.html">variable</A>
+command for more details on variables with styles which enable Python
+function evaluation.
+</P>
+<P>The Python code for the function can be included directly in the input
+script or in a separate Python file.  The function can be standard
+Python code or it can make "callbacks" to SPARTA through its library
+interface to query or set internal values within SPARTA.  This is a
+powerful mechanism for performing complex operations in a SPARTA input
+script that are not possible with the simple input script and variable
+syntax which SPARTA defines.  Thus your input script can operate more
+like a true programming language.
+</P>
+<P>Use of this command requires building SPARTA with the PYTHON package
+which links to the Python library so that the Python interpreter is
+embedded in SPARTA.  More details about this process are given below.
+</P>
+<P>A broader overview of how Python can be used with SPARTA is given in the
+Use Python with SPARTA <Python_head> section of the
+documentation.  There also is an ``examples/python`` directory which
+illustrates use of the python command.
+</P>
+<P>----------
+</P>
+<P>The first argument is the <I>mode</I> setting, which is either <I>source</I> or
+the <I>name</I> of a Python function.
+</P>
+<P>If <I>source</I> is used, it is followed by either the <I>here</I> keyword or a
+file name containing Python code.  The <I>here</I> keyword is followed by a
+string containing python commands, either on a single line enclosed in
+quotes, or as multiple lines enclosed in triple quotes.  In either
+case, the in-line code or file contents are passed to the python
+interpreter and executed immediately.  The code will be loaded into
+and run in the "main" module of the Python interpreter.  This allows
+running arbitrary Python code at any time while processing the SPARTA
+input file.  This can be used to pre-load Python modules, initialize
+global variables, define functions or classes, or perform operations
+using the python programming language.  The Python code will be
+executed in parallel on all the MPI processes being used to run
+SPARTA.  Note that no arguments can be passed to the executed Python
+code.
+</P>
+<P>If the <I>mode</I> setting is the <I>name</I> of a Python function, then it will
+be registered with SPARTA for future execution.  One or more keywords
+must follow the <I>mode</I> function name. One of these keywords must be
+included: <I>invoke</I>, <I>file</I>, <I>here</I>, or <I>exists</I>.
+</P>
+<P>If the <I>invoke</I> keyword is used, no other keywords can be used, and a
+previous <I>python</I> command must have registered the Python function
+referenced by this command.  This invokes the Python function with the
+previously defined arguments and the return value is processed as
+explained below.  You can invoke a registered function as many times
+as you wish in your input script.
+</P>
+<P>The <I>input</I> keyword defines how many arguments <I>N</I> the Python function
+expects.  If it takes no arguments, then the <I>input</I> keyword should
+not be used.  Each argument can be specified directly as a value,
+e.g. '6' or '3.14159' or 'abc' (a string of characters).  The type of
+each argument is specified by the <I>format</I> keyword, as explained
+below, so that Python will know how to interpret the value.  If the
+word SELF is used for an argument it has a special meaning.  A pointer
+is passed to the Python function which it can convert into a reference
+to SPARTA itself using the SPARTA Python module <Python_module>. This
+enables the function to call back to SPARTA through its library
+interface as explained below.  This allows the Python function to
+query or set values internal to SPARTA which can affect the subsequent
+execution of the input script.  A SPARTA variable can also be used as
+an argument, specified as v_name, where "name" is the name of the
+variable.  Any style of SPARTA variable returning a scalar or a string
+can be used, as defined by the variable <variable> command.
+Each time the Python function is invoked, the SPARTA variable
+is evaluated and its value is passed to the Python function.
+</P>
+<P>NOTE: say something about using internal vars for args associated
+with Python function wrappers in variable formulas
+</P>
+<P>The <I>return</I> keyword is only needed if the Python function returns a
+value.  The specified <I>varReturn</I> must be of the form v_name, where
+"name" is the name of a python-style SPARTA variable, defined by the
+<A HREF = "variable.html">variable</A> command.  The Python function can return a
+numeric or string value, as specified by the <I>format</I> keyword.
+</P>
+<P>As explained on the <A HREF = "variable.html">variable</A>, the definition of a
+python-style variable associates a Python function name with the
+variable.  Its specification must match the <I>mode</I> argument of the
+python command for the Python function name.  For example these two
+commands would be consistent, which associate the variable "foo" with
+the Python function "myMultiply":
+</P>
+<P>.. code-block:: SPARTA
+</P>
+<P>   variable foo python myMultiply
+   python myMultiply return v_foo format f file funcs.py
+</P>
+<P>The two commands can appear in either order in the input script so
+long as both are specified before the Python function is invoked for
+the first time.
+</P>
+<P>The <I>format</I> keyword MUST be used if the <I>input</I> or <I>return</I> keywords
+are used.  It defines an <I>fstring</I> with M characters, where M = sum of
+number of inputs and outputs.  The order of characters corresponds to
+the N inputs, followed by the return value (if it exists).  Each
+character must be one of the following: "i" for integer, "f" for
+floating point, "s" for string, or "p" for SELF.  Each character
+defines the type of the corresponding input or output value of the
+Python function and affects the type conversion that is performed
+internally as data is passed back and forth between SPARTA and Python.
+Note that it is permissible to use a <A HREF = "variable.html">python-style
+variable</A> in a SPARTA command that allows for an
+equal-style variable as an argument, but only if the output of the
+Python function is flagged as a numeric value ("i" or "f") via the
+<I>format</I> keyword.
+</P>
+<P>If the <I>return</I> keyword is used and the <I>format</I> keyword specifies the
+output as a string, then the default maximum length of that string is
+63 characters (64-1 for the string terminator).  If you want to return
+a longer string, the <I>length</I> keyword can be specified with its <I>Nlen</I>
+value set to a larger number.  SPARTA will then allocate Nlen+1 space
+to include the string terminator.  If the Python function generates a
+string longer than the default 63 or the specified <I>Nlen</I>, it will be
+truncated.
+</P>
+<HR>
+
+<P>Either the <I>file</I>, <I>here</I>, or <I>exists</I> keyword must be used, but only
+one of them.  These keywords specify what Python code to load into the
+Python interpreter.  The <I>file</I> keyword gives the name of a file
+containing Python code, which should end with a ".py" suffix.  The code
+will be immediately loaded into and run in the "main" module of the
+Python interpreter.  The Python code will be executed in parallel on all
+MPI processes.  Note that Python code which contains a function
+definition does not "execute" the function when it is run; it simply
+defines the function so that it can be invoked later.
+</P>
+<P>The <I>here</I> keyword does the same thing, except that the Python code
+follows as a single argument to the <I>here</I> keyword.  This can be done
+using triple quotes as delimiters, as in the examples above.  This
+allows Python code to be listed verbatim in your input script, with
+proper indentation, blank lines, and comments, as desired.  See the
+Commands parse <Commands_parse> doc page, for an explanation of
+how triple quotes can be used as part of input script syntax.
+</P>
+<P>The <I>exists</I> keyword takes no argument.  It means that Python code
+containing the required Python function with the given name has
+already been executed, for example by a <I>python source</I> command or in
+the same file that was used previously with the <I>file</I> keyword.  This
+allows use of a single file of Python code which contains multiple
+functions, any of which can be used in the same (or different) input
+scripts (see below).
+</P>
+<P>Note that the Python code which is loaded and run by the <I>file</I> or
+<I>here</I> keyword must contain a function with the specified function
+name.  To operate properly when later invoked, the code for the
+runftion must match the <I>input</I> and <I>return</I> and <I>format</I> keywords
+specified by the python command.  Otherwise Python will generate an
+error.
+</P>
+<HR>
+
+<P>This section describes how Python code can be written to work with
+SPARTA.
+</P>
+<P>Whether you load Python code from a file or directly from your input
+script, via the <I>file</I> and <I>here</I> keywords, the code can be identical.
+It must be indented properly as Python requires.  It can contain
+comments or blank lines.  If the code is in your input script, it cannot
+however contain triple-quoted Python strings, since that will conflict
+with the triple-quote parsing that the SPARTA input script performs.
+</P>
+<P>All the Python code you specify via one or more python commands is
+loaded into the Python "main" module, i.e. ``__name__ == '__main__'``.
+The code can define global variables, define global functions, define
+classes or execute statements that are outside of function
+definitions.  It can contain multiple functions, only one of which
+matches the name of the Python function specified in the python
+command.  This means you can use the <I>file</I> keyword once to load
+several functions, and the <I>exists</I> keyword thereafter in subsequent
+python commands to register the other functions that were previously
+loaded with SPARTA.
+</P>
+<P>A Python function you define (or more generally, the code you load)
+can import other Python modules or classes, it can make calls to other
+system functions or functions you define, and it can access or modify
+global variables (in the "main" module) which will persist between
+successive function calls.  The latter can be useful, for example, to
+prevent a function from being invoked multiple times per timestep by
+different commands in a SPARTA input script that accesses the returned
+python-style variable associated with the function.  For example,
+consider this function loaded with two global variables defined
+outside the function:
+</P>
+<P>.. code-block:: python
+</P>
+<P>   nsteplast = -1
+   nvaluelast = 0
+</P>
+<P>   def expensive(nstep):
+     global nsteplast,nvaluelast
+     if nstep == nsteplast: return nvaluelast
+     nsteplast = nstep
+     # perform complicated calculation
+     nvalue = ...
+     nvaluelast = nvalue
+     return nvalue
+</P>
+<P>The variable 'nsteplast' stores the previous timestep the function was
+invoked (passed as an argument to the function).  The variable
+'nvaluelast' stores the return value computed on the last function
+invocation.  If the function is invoked again on the same timestep, the
+previous value is simply returned, without re-computing it.  The
+"global" statement inside the Python function allows it to overwrite the
+global variables from within the local context of the function.
+</P>
+<P>Also note that if you load Python code multiple times (via multiple
+python commands), you can overwrite previously loaded variables and
+functions if you are not careful.  E.g. if the code above were loaded
+twice, the global variables would be re-initialized, which might not
+be what you want.  Likewise, if a function with the same name exists
+in two chunks of Python code you load, the function loaded second will
+override the function loaded first.
+</P>
+<P>It's important to realize that if you are running SPARTA in parallel,
+each MPI task will load the Python interpreter and execute a local
+copy of the Python function(s) you define.  There is no connection
+between the Python interpreters running on different processors.
+This implies three important things.
+</P>
+<P>First, if you put a print or other statement creating output to the
+screen in your Python function, you will see P copies of the output,
+when running on P processors.  If the prints occur at (nearly) the same
+time, the P copies of the output may be mixed together.
+</P>
+<P>It is possible to avoid this issue, by passing the pointer to the
+current SPARTA class instance to the Python function via the <I>input</I>
+SELF argument described above.  The Python function can then use the
+Python interface to the SPARTA library interface, and determine the
+MPI rank of the current process.  The Python code can then ensure
+output will only appear on MPI rank 0.  The following SPARTA input
+demonstrates how this could be done. The text 'Hello, SPARTA!' should
+be printed only once, even when running SPARTA in parallel.
+</P>
+<PRE>python python_hello input 1 SELF format p here """
+def python_hello(handle):
+  from SPARTA import SPARTA
+  sparta = SPARTA(ptr=handle)
+  me = sparta.extract_setting('world_rank')
+  if me == 0: print('Hello, SPARTA!')
+"""
+python python_hello invoke 
+</PRE>
+<P>Second, if your Python code loads Python modules that are not
+pre-loaded by the Python library, then it will load the module from
+disk.  This may be a bottleneck if 1000s of processors try to load a
+module at the same time.  On some large supercomputers, loading of
+modules from disk by Python may be disabled.  In this case you would
+need to pre-build a Python library that has the required modules
+pre-loaded and link SPARTA with that library.
+</P>
+<P>Third, if your Python code calls back to SPARTA (discussed in the next
+section) and causes SPARTA to perform an MPI operation requiring
+global communication (e.g. via MPI_Allreduce), such as computing the
+global temperature of the system, then you must ensure all your Python
+functions (running independently on different processors) call back to
+SPARTA.  Otherwise the code may hang.
+</P>
+<HR>
+
+<P>As mentioned above, Your Python function can "call back" to SPARTA
+through its library interface, if you use the SELF input to pass
+Python a pointer to SPARTA.  The mechanism for doing this in your
+Python function is as follows:
+</P>
+<PRE>def foo(handle,...):
+   from SPARTA import SPARTA
+   sparta = SPARTA(ptr=handle)
+   sparta.command('print "Hello from inside Python"')
+   ... 
+</PRE>
+<P>The function definition must include a variable ('handle' in this
+case) which corresponds to SELF in the <I>python</I> command.  The first
+line of the function imports the SPARTA Python module <Python_module>.
+The second line creates a Python object "sparta" which wraps the
+instance of SPARTA that called the function.  The 'ptr=handle'
+argument is what makes that happen.  The third line invokes the
+command() function in the SPARTA library interface.  It takes a single
+string argument which is a SPARTA input script command for SPARTA to
+execute, the same as if it appeared in your input script.  In this
+case, SPARTA should output
+</P>
+<P>.. parsed-literal::
+</P>
+<P>   Hello from inside Python
+</P>
+<P>to the screen and log file.  Note that since the SPARTA print command
+itself takes a string in quotes as its argument, the Python string
+must be delimited with a different style of quotes.
+</P>
+<P>The <A HREF = "Section_python.html">Section python</A> doc page describes the syntax
+for how Python wraps the various functions included in the SPARTA
+library interface.
+</P>
+<P>A more interesting example is in the ``examples/python/in.python`` script
+which loads and runs the following function from ``examples/python/funcs.py``:
+</P>
+<P>NOTE: need to modify this example and provied an examples/python dir
+      put circle script with grid-style var inside it
+</P>
+<P>.. code-block:: python
+</P>
+<P>   def loop(N,cut0,thresh,handle):
+     print("LOOP ARGS", N, cut0, thresh, lmpptr)
+     from SPARTA import SPARTA
+     sparta = SPARTA(ptr=handle)
+     natoms = sparta.get_natoms()
+</P>
+<P>     for i in range(N):
+       cut = cut0 + i<I>0.1
+</P>
+<P>       sparta.set_variable("cut",cut)                 # set a variable in SPARTA
+       sparta.command("pair_style lj/cut $<I>cut</I>")     # SPARTA command
+       #sparta.command("pair_style lj/cut %d" % cut)  # SPARTA command option
+</P>
+<P>       sparta.command("pair_coeff </I> <I> 1.0 1.0")       # ditto
+       sparta.command("run 10")                       # ditto
+       pe = sparta.extract_compute("thermo_pe",0,0)   # extract total PE from SPARTA
+       print("PE", pe/natoms, thresh)
+       if pe/natoms < thresh: return
+</P>
+<P>with these input script commands:
+</P>
+<PRE>python          loop input 4 10 1.0 -4.0 SELF format iffp file funcs.py
+python          loop invoke 
+</PRE>
+<P>This has the effect of looping over a series of 10 short runs (10
+timesteps each) where the pair style cutoff is increased from a value
+of 1.0 in distance units, in increments of 0.1.  The looping stops
+when the per-atom potential energy falls below a threshold of -4.0 in
+energy units.  More generally, Python can be used to implement a loop
+with complex logic, much more so than can be created using the SPARTA
+<A HREF = "jump.html">jump</A> and <A HREF = "if.html">if</A> commands.
+</P>
+<P>Several SPARTA library functions are called from the loop function.
+Get_natoms() returns the number of atoms in the simulation, so that it
+can be used to normalize the potential energy that is returned by
+extract_compute() for the "thermo_pe" compute that is defined by
+default for SPARTA thermodynamic output.  Set_variable() sets the
+value of a string variable defined in SPARTA.  This library function
+is a useful way for a Python function to return multiple values to
+SPARTA, more than the single value that can be passed back via a
+return statement.  This cutoff value in the "cut" variable is then
+substituted (by SPARTA) in the pair_style command that is executed
+next.  Alternatively, the "SPARTA command option" line could be used
+in place of the 2 preceding lines, to have Python insert the value
+into the SPARTA command string.
+</P>
+<P>.. note::
+</P>
+<P>   When using the callback mechanism just described, recognize that
+   there are some operations you should not attempt because SPARTA cannot
+   execute them correctly.  If the Python function is invoked between
+   runs in the SPARTA input script, then it should be OK to invoke any
+   SPARTA input script command via the library interface command() or
+   file() functions, so long as the command would work if it were
+   executed in the SPARTA input script directly at the same point.
+</P>
+<P>However, a Python function can also be invoked during a run, whenever
+an associated SPARTA variable it is assigned to is evaluated.  If the
+variable is an input argument to another SPARTA command (e.g. <A HREF = "fix_custom.html">fix
+custom</A>), then the Python function will be invoked
+inside the class for that command, in one of its methods that is
+invoked in the middle of a timestep.  You cannot execute arbitrary
+input script commands from the Python function (again, via the
+command() or file() functions) at that point in the run and expect it
+to work.  Other library functions such as those that invoke computes
+or other variables may have hidden side effects as well.  In these
+cases, SPARTA has no simple way to check that something illogical is
+being attempted.
+</P>
+<HR>
+
+<P>NOTE: OK from here on down
+</P>
+<P>If you run Python code directly on your workstation, either
+interactively or by using Python to launch a Python script stored in a
+file, and your code has an error, you will typically see informative
+error messages.  That is not the case when you run Python code from
+SPARTA using an embedded Python interpreter.  The code will typically
+fail silently.  SPARTA will catch some errors but cannot tell you
+where in the Python code the problem occurred.  For example, if the
+Python code cannot be loaded and run because it has syntax or other
+logic errors, you may get an error from Python pointing to the
+offending line, or you may get one of these generic errors from
+SPARTA:
+</P>
+<UL><LI>Could not process Python file 
+<LI>Could not process Python string 
+</UL>
+<P>When the Python function is invoked, if it does not return properly,
+you will typically get this generic error from SPARTA:
+</P>
+<UL><LI>Python function evaluation failed 
+</UL>
+<P>Here are three suggestions for debugging your Python code while
+running it under SPARTA.
+</P>
+<P>First, don't run it under SPARTA, at least to start with!  Debug it
+using plain Python.  Load and invoke your function, pass it arguments,
+check return values, etc.
+</P>
+<P>Second, add Python print statements to the function to check how far
+it gets and intermediate values it calculates.  See the discussion
+above about printing from Python when running in parallel.
+</P>
+<P>Third, use Python exception handling.  For example, say this statement
+in your Python function is failing, because you have not initialized the
+variable foo:
+</P>
+<PRE>foo += 1 
+</PRE>
+<P>If you put one (or more) statements inside a "try" statement,
+like this:
+</P>
+<PRE>import exceptions
+print("Inside simple function")
+try:
+  foo += 1      # one or more statements here
+except Exception as e:
+  print("FOO error:", e) 
+</PRE>
+<P>then you will get this message printed to the screen:
+</P>
+<PRE>FOO error: local variable 'foo' referenced before assignment 
+</PRE>
+<P>If there is no error in the try statements, then nothing is printed.
+Either way the function continues on (unless you put a return or
+sys.exit() in the except clause).
+</P>
+<HR>
+
+<P><B>Restrictions:</B>
+</P>
+<P>This command is part of the PYTHON package.  It is only enabled if
+SPARTA was built with that package.  See the <A HREF = "Section_start.html#start_3">Section start
+2.3</A> doc page for more info.
+</P>
+<P>Building SPARTA with the PYTHON package will link SPARTA with the Python
+library on your system.  Settings to enable this are in the
+lib/python/Makefile.SPARTA file.  See the lib/python/README file for
+information on those settings.
+</P>
+<P>If you use Python code which calls back to SPARTA, via the SELF input
+argument explained above, there is an extra step required when
+building SPARTA.  SPARTA must also be built as a shared library; see the
+<A HREF = "Section_start.html#start_4">Section start 2.4</A> doc page.
+</P>
+<P>And your Python function must be able to load the Python module that
+wraps the SPARTA library interface.  These are the same steps required
+to use Python by itself to wrap SPARTA.  Details on these steps are
+explained on the <A HREF = "Section_python.html">Section python</A> doc page.  Note
+that it is important that the stand-alone SPARTA executable and the
+SPARTA shared library be consistent (built from the same source code
+files) in order for this to work.  If the two have been built at
+different times using different source files, problems may occur.
+</P>
+<P>Another limitation of calling back to Python from the SPARTA module
+using the python command in a SPARTA input is that both the Python
+interpreter and SPARTA, must be linked to the same Python runtime as a
+shared library.  If the Python interpreter is linked to Python
+statically (which seems to happen with Conda) then loading the shared
+SPARTA library will create a second python "main" module that hides
+the one from the Python interpreter and all previous defined function
+and global variables will become invisible.
+</P>
+<P><B>Related commands:</B>
+</P>
+<P><A HREF = "shell.html">shell</A>, <A HREF = "variable,html">variable</A>
+</P>
+<P><B>Default:</B> none
+</P>
+</HTML>
