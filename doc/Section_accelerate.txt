@@ -587,6 +587,7 @@ POWER9 | HOST | IBM POWER9 CPUs |
 ZEN | HOST | AMD Zen architecture |
 ZEN2 | HOST | AMD Zen2 architecture |
 ZEN3 | HOST | AMD Zen3 architecture |
+ZEN4 | HOST | AMD Zen4 architecture |
 RISCV_SG2042 | HOST | SG2042 (RISC-V) CPUs |
 RISCV_RVA22V | HOST | RVA22V (RISC-V) CPUs |
 KEPLER30 | GPU | NVIDIA Kepler generation CC 3.0 |
