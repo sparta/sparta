@@ -47,6 +47,7 @@ class Variable : protected Pointers {
   void compute_grid(int, double *, int, int);
   void compute_surf(int, double *, int, int);
   void internal_set(int, double);
+  void internal_create(char *, double);
 
   int int_between_brackets(char *&, int, const char * = "variable");
   double evaluate_boolean(char *);
@@ -60,6 +61,7 @@ class Variable : protected Pointers {
   int *num;                // # of values for each variable
   int *which;              // next available value for each variable
   int *pad;                // 1 = pad loop/uloop variables with 0s, 0 = no pad
+  int *pyindex;                // indices to Python funcs for python-style vars
   class VarReader **reader;   // variable that reads from file
   char ***data;            // str value of each variable's values
   double *dvalue;          // single numeric value for internal variables

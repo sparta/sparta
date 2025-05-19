@@ -68,10 +68,10 @@ void Python::command(int narg, char **arg)
 
 /* ------------------------------------------------------------------ */
 
-void Python::invoke_function(int ifunc, char *result)
+void Python::invoke_function(int ifunc, char *result, double *dvalue)
 {
   init();
-  impl->invoke_function(ifunc, result);
+  impl->invoke_function(ifunc, result, dvalue);
 }
 
 /* ------------------------------------------------------------------ */
@@ -84,10 +84,19 @@ int Python::find(const char *name)
 
 /* ------------------------------------------------------------------ */
 
-int Python::variable_match(const char *name, const char *varname, int numeric)
+int Python::function_match(const char *name, const char *varname, int numeric)
 {
   init();
-  return impl->variable_match(name, varname, numeric);
+  return impl->function_match(name, varname, numeric);
+}
+
+/* ------------------------------------------------------------------ */
+
+int Python::wrapper_match(const char *name, const char *varname,
+                          int narg, int *argvars)
+{
+  init();
+  return impl->wrapper_match(name, varname, narg, argvars);
 }
 
 /* ------------------------------------------------------------------ */

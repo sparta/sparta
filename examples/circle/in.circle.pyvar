@@ -38,9 +38,7 @@ timestep 	    0.0001
 #dump_modify	    2 pad 4
 
 variable        foo python truncate
-python          truncate return v_foo input 1 v_pyarg1 format fi file truncate.py
-
-variable        pyarg1 internal 0.0
+python          truncate return v_foo input 1 iv_arg format fi file truncate.py
 
 variable        scalar equal py_foo(4.5)
 

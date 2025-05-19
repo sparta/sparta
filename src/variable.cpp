@@ -97,6 +97,7 @@ Variable::Variable(SPARTA *sparta) : Pointers(sparta)
   num = NULL;
   which = NULL;
   pad = NULL;
+  pyindex = NULL;
   reader = NULL;
   data = NULL;
   dvalue = NULL;
@@ -140,6 +141,7 @@ Variable::~Variable()
   memory->destroy(num);
   memory->destroy(which);
   memory->destroy(pad);
+  memory->destroy(pyindex);
   memory->sfree(reader);
   memory->sfree(data);
   memory->sfree(dvalue);
@@ -756,7 +758,7 @@ char *Variable::retrieve(char *name)
     str = data[ivar][0];
 
   } else if (style[ivar] == PYTHON) {
-    int ifunc = python->variable_match(data[ivar][0],name,0);
+    int ifunc = python->function_match(data[ivar][0],name,0);
     if (ifunc < 0) {
       if (ifunc == -1) {
         error->all(FLERR,"Could not find Python function linked to variable");
@@ -771,7 +773,7 @@ char *Variable::retrieve(char *name)
                    "python-style variable");
       }
     }
-    python->invoke_function(ifunc,data[ivar][1]);
+    python->invoke_function(ifunc,data[ivar][1],NULL);
     str = data[ivar][1];
 
     // if Python func returns a string longer than VALUELENGTH
@@ -803,16 +805,7 @@ double Variable::compute_equal(int ivar)
   double value;
   if (style[ivar] == EQUAL) value = evaluate(data[ivar][0],NULL);
   else if (style[ivar] == INTERNAL) value = dvalue[ivar];
-  else if (style[ivar] == PYTHON) {
-    int ifunc = python->find(data[ivar][0]);
-    if (ifunc < 0) error->all(FLERR,"Cannot find python function");
-    python->invoke_function(ifunc,data[ivar][1]);
-    try {
-      value = strtod(data[ivar][1],NULL);
-    } catch (std::exception &e) {
-      error->all(FLERR,"Equal-style variable has invalid python value");
-    }
-  }
+  else if (style[ivar] == PYTHON) python->invoke_function(pyindex[ivar],nullptr,&value);
 
   // round to zero on underflow
   //if (fabs(value) < std::numeric_limits<double>::min()) value = 0.0;
@@ -972,6 +965,37 @@ void Variable::internal_set(int ivar, double value)
 }
 
 /* ----------------------------------------------------------------------
+   create an INTERNAL style variable with name, set to value
+------------------------------------------------------------------------- */
+
+void Variable::internal_create(char *name, double value)
+{
+  if (find(name) >= 0) {
+    char str[128];
+    sprintf(str,"Creation of internal-style variable %s which already exists", name);
+    error->all(FLERR,str);
+  }
+  
+  if (nvar == maxvar) grow();
+  style[nvar] = INTERNAL;
+  num[nvar] = 1;
+  which[nvar] = 0;
+  pad[nvar] = 0;
+  data[nvar] = new char *[num[nvar]];
+  data[nvar][0] = new char[VALUELENGTH];
+  dvalue[nvar] = value;
+
+  if (!utils::is_id(name)) {
+    char str[128];
+    sprintf(str,"Variable name %s must have only letters, numbers, or underscores", name);
+    error->all(FLERR,str);
+  }    
+
+  names[nvar] = utils::strdup(name);
+  nvar++;
+}
+
+/* ----------------------------------------------------------------------
    search for name in list of variables names
    return index or -1 if not found
 ------------------------------------------------------------------------- */
@@ -1005,11 +1029,23 @@ int Variable::equal_style(int ivar)
 {
   if (style[ivar] == EQUAL || style[ivar] == INTERNAL) return 1;
   if (style[ivar] == PYTHON) {
-    int ifunc = python->variable_match(data[ivar][0],names[ivar],1);
-    if (ifunc < 0) return 0;
-    else return 1;
+    pyindex[ivar] = python->function_match(data[ivar][0],names[ivar],1);
+    if (pyindex[ivar] < 0) {
+      int ierror = pyindex[ivar];
+      if (ierror == -1) {
+        error->all(FLERR, "Python function specified by variable not found");
+      } else if (ierror == -2) {
+        error->all(FLERR, "Python function for variable does not return a value");
+      } else if (ierror == -3) {
+        error->all(FLERR, "Python function and variable do not not link to each other");
+      } else if (ierror == -4) {
+        error->all(FLERR, "Python function for variable returns a string");
+      } else {
+        error->all(FLERR, "Unknown error linking Python function to variable ");
+      }
+      return 0;
+    } else return 1;
   }
-
   return 0;
 }
 
@@ -1108,6 +1144,7 @@ void Variable::grow()
   memory->grow(num,maxvar,"var:num");
   memory->grow(which,maxvar,"var:which");
   memory->grow(pad,maxvar,"var:pad");
+  memory->grow(pyindex,maxvar,"var:pyindex");
 
   reader = (VarReader **)
     memory->srealloc(reader,maxvar*sizeof(VarReader *),"var:reader");
@@ -3506,30 +3543,41 @@ int Variable::math_function(char *word, char *contents, Tree **tree,
       argstack[nargstack++] = value;
     }
 
-  // Python function tied to varname
-  // narg arguments tied to internal variables pyarg1, pyarg2, ... pyargN
+  // Python wrapper function tied to python-style variable
+  // text following py_ = python-style variable name tied to Python function
+  // narg arguments are tied to internal variables defined by python command
+
 
   } else if (strstr(word,"py_") == word) {
 
-    // text following py_ = python-style variable name
+    // pyvar = index of python-style variable which invokes Python function
 
     int pyvar = find(&word[3]);
     if (style[pyvar] != PYTHON)
       error->all(FLERR,"Invalid python function variable name");
 
-    // check for existence of narg internal variables with names pyarg1 to pyargN
-    // store their indices in jvars
+    // check that wrapper matches Python function
+    // jvars = returned indices of narg internal variables used by Python function
 
     int *jvars = new int[narg];
-    char internal_varname[16];
-
-    for (int iarg = 0; iarg < narg; iarg++) {
-      sprintf(internal_varname,"pyarg%d",iarg+1);
-      jvars[iarg] = find(internal_varname);
-      if (jvars[iarg] < 0)
-        error->all(FLERR,"Invalid python function arg in variable formula");
-      if (!internal_style(jvars[iarg]))
-        error->all(FLERR,"Invalid python function arg in variable formula");
+    pyindex[pyvar] = python->wrapper_match(data[pyvar][0],names[pyvar],narg,jvars);
+    if (pyindex[pyvar] < 0) {
+      int ierror = pyindex[pyvar];
+      if (ierror == -1) {
+        error->all(FLERR, "Python function specified by variable not found");
+      } else if (ierror == -2) {
+        error->all(FLERR, "Python function for variable does not return a value");
+      } else if (ierror == -3) {
+        error->all(FLERR, "Python function and variable do not not link to each other");
+      } else if (ierror == -4) {
+        error->all(FLERR, "Python function for variable returns a string");
+      } else if (ierror == -5) {
+        error->all(FLERR, "Python function does not use internal variable args");
+      } else if (ierror == -6) {
+        error->all(FLERR,"Python function cannot find an internal variable");
+      } else {
+        error->all(FLERR, "Unknown error linking Python function to variable");
+      }
     }
 
     // if tree: store python variable and arg info in tree for later eval
