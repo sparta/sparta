@@ -12,27 +12,27 @@ mixture command :h3
 
 python mode keyword args ... :pre
 
-mode = {source} or {name} of a Python file :ulb,l
+mode = {source} or {name} of a Python function :ulb,l
 for mode = {source}: :l
   keyword = {here} or name of a {Python file}
-  {here} arg = one or more lines of Python code which define a Python function
-     must be a single argument, typically enclosed between triple quotes
-     the in-lined Python code will be executed immediately
+  {here} arg = one or more lines of Python code
+               must be a single argument, typically enclosed between triple quotes
+               the in-lined Python code will be executed immediately
   {Python file} = name of a file with Python code
      the Python code in the file will be executed immediately
 
 for mode = {name} of a Python function: :l
   one or more keywords with arguments must be appended
   keyword = {invoke} or {input} or {return} or {format} or {length} or {file} or {here} or {exists}
-  {invoke} arg = none = invoke the Python function which was previously defined
+  {invoke} arg = none = invoke the previously-defined Python function
   {input} args = N i1 i2 ... iN
     N = # of inputs to function
     i1,...,iN = value, SELF, or SPARTA variable name
     value = integer number, floating point number, or string
-    SELF = reference to SPARTA itself which can be accessed by Python function
+    SELF = reference to SPARTA itself which can then be accessed by Python function
     variable = v_name, where name = name of SPARTA variable, e.g. v_abc
   {return} arg = varReturn
-    varReturn = v_name  = return value of the Python function will be assigned to the SPARTA variable name
+    varReturn = v_name  = SPARTA variable name which the return value of the Python function will be assigned to
   {format} arg = fstring with M characters
     M = N if no return value, where N = # of inputs
     M = N+1 if there is a return value
@@ -43,7 +43,7 @@ for mode = {name} of a Python function: :l
    {file} arg = filename
      filename = file of Python code, which defines the Python function
    {here} arg = one or more lines of Python code which defines the Python function
-     must be a single argument, typically enclosed between triple quotes
+                must be a single argument, typically enclosed between triple quotes
    {exists} arg = none = Python code has been loaded by previous python command :pre
 
 [Examples:]
@@ -58,6 +58,7 @@ def factorial(n):
   return n * factorial(n-1)
 """ :pre
 
+NOTE: need to sync with new LAMMPS python.rst
 NOTE: need new SPRATA example here
 
 python loop input 1 SELF return v_value format pf here """
@@ -82,21 +83,22 @@ interpreter.  This can be done immediately, by using {mode} =
 function for later execution, by using {mode} = {name} of a Python
 function.
 
-Later execution after registration can be triggered in one of two
-ways.  One is to use the python command again with its {invoke}
-keyword.  The other is to trigger the evaluation of python-style,
-equal-style, or grid-style variable.  A python-style variable invokes
-its associated Python function; its return value becomes the value of
-the python-style variable.  Equal- and grid-style variable can use a
-Python function wrapper in their formulas which encodes the Python
-function name, as well as arguments passed to the function.  Note that
-variables can be evaluated in many different ways within SPARTA.  They
-can be evaulated directly in an input script, effectively replacing
-the variable with its value.  Or they can be passed to various
-commands as arguments, so that the variable is evaluated multiple
-times during a simulation run.  See the "variable"_variable.html
-command for more details on variables with styles which enable Python
-function evaluation.
+Later execution can be triggered in one of two ways.  One is to use
+the python command again with its {invoke} keyword.  The other is to
+trigger the evaluation of a python-style, equal-style, or grid-style
+variable.  A python-style variable invokes its associated Python
+function; its return value becomes the value of the python-style
+variable.  Equal- and grid-style variables can use a Python function
+wrapper in their formulas which encodes the Python function name, and
+specifies arguments to pass to the function.
+
+Note that python-style, equal-style, and grid-style variables can be
+used in many different ways within SPARTA.  They can be evaulated
+directly in an input script, effectively replacing the variable with
+its value.  Or they can be passed to various commands as arguments, so
+that the variable is evaluated multiple times during a simulation run.
+See the "variable"_variable.html command for more details on variable
+styles which enable Python function evaluation.
 
 The Python code for the function can be included directly in the input
 script or in a separate Python file.  The function can be standard
@@ -137,9 +139,10 @@ SPARTA.  Note that no arguments can be passed to the executed Python
 code.
 
 If the {mode} setting is the {name} of a Python function, then it will
-be registered with SPARTA for future execution.  One or more keywords
-must follow the {mode} function name. One of these keywords must be
-included: {invoke}, {file}, {here}, or {exists}.
+be registered with SPARTA for future execution (or already be defined,
+see the *exists* keyword).  One or more keywords must follow the
+{mode} function name.  One of the keywords must be {invoke}, {file},
+{here}, or {exists}.
 
 If the {invoke} keyword is used, no other keywords can be used, and a
 previous {python} command must have registered the Python function
@@ -147,6 +150,11 @@ referenced by this command.  This invokes the Python function with the
 previously defined arguments and the return value is processed as
 explained below.  You can invoke a registered function as many times
 as you wish in your input script.
+
+NOTE: As indicated with a NOTE in python_impl.cpp, I don't think there
+is any access to a value returned by invoking a Py function in this way.
+If that is correct, I think this should be clarified in the doc page,
+with a better explanation of the utility of using the *invoke* keyword.
 
 The {input} keyword defines how many arguments {N} the Python function
 expects.  If it takes no arguments, then the {input} keyword should
@@ -163,23 +171,27 @@ query or set values internal to SPARTA which can affect the subsequent
 execution of the input script.  A SPARTA variable can also be used as
 an argument, specified as v_name, where "name" is the name of the
 variable.  Any style of SPARTA variable returning a scalar or a string
-can be used, as defined by the variable <variable> command.
-Each time the Python function is invoked, the SPARTA variable
-is evaluated and its value is passed to the Python function.
+can be used, as defined by the variable <variable> command.  This must
+be consistent with the {format} keyword specification for the type of
+data that is passed to Python.  Each time the Python function is
+invoked, the SPARTA variable is evaluated and its value is passed to
+the Python function.
 
 NOTE: say something about using internal vars for args associated
 with Python function wrappers in variable formulas
 
 The {return} keyword is only needed if the Python function returns a
-value.  The specified {varReturn} must be of the form v_name, where
-"name" is the name of a python-style SPARTA variable, defined by the
+value.  The specified {varReturn} is of the form v_name, where "name"
+is the name of a python-style SPARTA variable, defined by the
 "variable"_variable.html command.  The Python function can return a
 numeric or string value, as specified by the {format} keyword.
+
+:line
 
 As explained on the "variable"_variable.html, the definition of a
 python-style variable associates a Python function name with the
 variable.  Its specification must match the {mode} argument of the
-python command for the Python function name.  For example these two
+{python} command for the Python function name.  For example these two
 commands would be consistent, which associate the variable "foo" with
 the Python function "myMultiply":
 
@@ -192,7 +204,7 @@ The two commands can appear in either order in the input script so
 long as both are specified before the Python function is invoked for
 the first time.
 
-The {format} keyword MUST be used if the {input} or {return} keywords
+The {format} keyword must be used if the {input} or {return} keywords
 are used.  It defines an {fstring} with M characters, where M = sum of
 number of inputs and outputs.  The order of characters corresponds to
 the N inputs, followed by the return value (if it exists).  Each
@@ -218,15 +230,16 @@ truncated.
 
 :line
 
-Either the {file}, {here}, or {exists} keyword must be used, but only
-one of them.  These keywords specify what Python code to load into the
-Python interpreter.  The {file} keyword gives the name of a file
-containing Python code, which should end with a ".py" suffix.  The code
-will be immediately loaded into and run in the "main" module of the
-Python interpreter.  The Python code will be executed in parallel on all
-MPI processes.  Note that Python code which contains a function
-definition does not "execute" the function when it is run; it simply
-defines the function so that it can be invoked later.
+As noted above, either the {invoke}, {file}, {here}, or {exists}
+keyword must be used, but only one of them.  These keywords specify
+what Python code to load into the Python interpreter.  The {file}
+keyword gives the name of a file containing Python code, which should
+end with a ".py" suffix.  The code will be immediately loaded into and
+run in the "main" module of the Python interpreter.  The Python code
+will be executed in parallel on all MPI processes.  Note that Python
+code which contains a function definition does not "execute" the
+function when it is run; it simply defines the function so that it can
+be invoked later.
 
 The {here} keyword does the same thing, except that the Python code
 follows as a single argument to the {here} keyword.  This can be done
@@ -246,10 +259,9 @@ scripts (see below).
 
 Note that the Python code which is loaded and run by the {file} or
 {here} keyword must contain a function with the specified function
-name.  To operate properly when later invoked, the code for the
-runftion must match the {input} and {return} and {format} keywords
-specified by the python command.  Otherwise Python will generate an
-error.
+name.  To operate properly when later invoked, the function code must
+match the {input} and {return} and {format} keywords specified by the
+python command.  Otherwise Python will generate an error.
 
 :line
 
@@ -361,7 +373,7 @@ SPARTA.  Otherwise the code may hang.
 
 :line
 
-As mentioned above, Your Python function can "call back" to SPARTA
+As mentioned above, your Python function can "call back" to SPARTA
 through its library interface, if you use the SELF input to pass
 Python a pointer to SPARTA.  The mechanism for doing this in your
 Python function is as follows:
@@ -460,17 +472,17 @@ into the SPARTA command string.
    executed in the SPARTA input script directly at the same point.
 
 However, a Python function can also be invoked during a run, whenever
-an associated SPARTA variable it is assigned to is evaluated.  If the
-variable is an input argument to another SPARTA command (e.g. "fix
-custom"_fix_custom.html), then the Python function will be invoked
-inside the class for that command, in one of its methods that is
-invoked in the middle of a timestep.  You cannot execute arbitrary
-input script commands from the Python function (again, via the
-command() or file() functions) at that point in the run and expect it
-to work.  Other library functions such as those that invoke computes
-or other variables may have hidden side effects as well.  In these
-cases, SPARTA has no simple way to check that something illogical is
-being attempted.
+an associated python-style variable it is assigned to is evaluated.
+If the variable is an input argument to another SPARTA command
+(e.g. "fix custom"_fix_custom.html), then the Python function will be
+invoked inside the class for that command, possibly in one of its
+methods that is invoked in the middle of a timestep.  You cannot
+execute arbitrary input script commands from the Python function
+(again, via the command() or file() functions) at that point in the
+run and expect it to work.  Other library functions such as those that
+invoke computes or other variables may have hidden side effects as
+well.  In these cases, SPARTA has no simple way to check that
+something illogical is being attempted.
 
 :line
 
@@ -548,15 +560,16 @@ If you use Python code which calls back to SPARTA, via the SELF input
 argument explained above, there is an extra step required when
 building SPARTA.  SPARTA must also be built as a shared library; see the
 "Section start 2.4"_Section_start.html#start_4 doc page.
-
 And your Python function must be able to load the Python module that
-wraps the SPARTA library interface.  These are the same steps required
-to use Python by itself to wrap SPARTA.  Details on these steps are
-explained on the "Section python"_Section_python.html doc page.  Note
-that it is important that the stand-alone SPARTA executable and the
-SPARTA shared library be consistent (built from the same source code
-files) in order for this to work.  If the two have been built at
-different times using different source files, problems may occur.
+wraps the SPARTA library interface.
+
+These are the same steps required to use Python by itself to wrap
+SPARTA.  Details on these steps are explained on the "Section
+python"_Section_python.html doc page.  Note that it is important that
+the stand-alone SPARTA executable and the SPARTA shared library be
+consistent (built from the same source code files) in order for this
+to work.  If the two have been built at different times using
+different source files, problems may occur.
 
 Another limitation of calling back to Python from the SPARTA module
 using the python command in a SPARTA input is that both the Python
