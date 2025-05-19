@@ -383,7 +383,7 @@ bigint Custom::process_actions(int narg, char **arg, int external)
 
       if (!external) {
         if (comm->me == 0 && screen)
-          fprintf(screen,"Reading custom file ... %s\n",fname);
+          fprintf(screen,"Reading custom file %s ...\n",fname);
         count += read_file(mode,colcount,cindex,ctype,csize,ccol,fname);
 
         if (mode == GRID)
@@ -461,19 +461,11 @@ bigint Custom::process_actions(int narg, char **arg, int external)
         char *aname = new char[n];
         strcpy(aname,arg[iarg+5+i]);
         ccol[i] = attribute_bracket(aname);
-        if (mode == GRID) {
-          cindex[i] = grid->find_custom(aname);
-          if (cindex[i] < 0)
-            error->all(FLERR,"Custom attribute name does not exist");
-          ctype[i] = grid->etype[cindex[i]];
-          csize[i] = grid->esize[cindex[i]];
-        } else if (mode == SURF) {
-          cindex[i] = surf->find_custom(aname);
-          if (cindex[i] < 0)
-            error->all(FLERR,"Custom attribute name does not exist");
-          ctype[i] = surf->etype[cindex[i]];
-          csize[i] = surf->esize[cindex[i]];
-        }
+        cindex[i] = grid->find_custom(aname);
+        if (cindex[i] < 0)
+          error->all(FLERR,"Custom attribute name does not exist");
+        ctype[i] = grid->etype[cindex[i]];
+        csize[i] = grid->esize[cindex[i]];
         if (csize[i] && ccol[i] == 0)
           error->all(FLERR,"Custom attribute array requires bracketed index");
         if (csize[i] == 0 && ccol[i])
@@ -486,23 +478,66 @@ bigint Custom::process_actions(int narg, char **arg, int external)
       // for mode = GRID
       //   set estatus of all changed custom vecs/arrays to 1
       //   b/c file read stores values for owned+ghost cells
-      // for mode = SURF
-      //   set estatus of all changed custom vecs/arrays to 0
-
+      //   NOTE: should I still do this for ghost cells ?
+      //         either here or in FILESTYLE
+      //         because owned+ghost can be ALL grid cells
+      
       if (!external) {
         if (comm->me == 0 && screen)
-          fprintf(screen,"Reading custom file/coarse ... %s\n",fname);
-        count += read_file_coarse(mode,colcount,cindex,ctype,csize,ccol,fname);
+          fprintf(screen,"Reading custom file/coarse %s ...\n",fname);
+
+        // make a function to expand both wildcards with an integer value
+        // use it everywhere
         
-        // need logic for multiple file reads, text or binary
-        // need method for mapping SPARTA grid cells to coarse cells
+        // NOTE: make remainder of this a function callable from process_actions()
+
+        // replace '%' in fname with current timestep (logic from Dump class)
+        // read the file and set attributes via input script column names
+
+        char *filecurrent = new char[strlen(fname) + 16];
+        char *ptr = strchr(fname,'%');
+        *ptr = '\0';
+        sprintf(filecurrent,"%s" BIGINT_FORMAT "%s",
+                fname,iproc+1,ptr+1);
+        *ptr = '*';
+
+        int ncoarse_me = 0;
+        for (int iproc = comm->me; iproc < numfile; iproc += comm->nprocs) {
+          ncoarse_me += read_file_coarse(iproc+1,mode,colcount,fname);
+          // NOTE: how to store read-in coarse points
+          // error-out for mode = binary
+          // check match of column count, 2d z = 0.0
+          // check that each point is inside or on simulation box
+        }
+
+        int ncoarse;
+        MPI_Allreduce(&ncoarse_me,&ncoarse,1,MPI_INT,MPI_SUM,world);
+
+        if (comm->me == 0 && screen)
+          fprintf(screen,"  %d coarse points with %d values each\n",
+                  ncoarse,colcount);
+
+        // NOTE: concatenate all coarse points
+        // each proc has copy of entire data strucs
+        // warn if > 1M points ?
+
+        // form k-d tree for 2d or 3d points
+        // loop over my owned grid cells:
+        //   skip if cell entirely inside
+        //   search k-d tree for nearest point, use its values
+        //   allow for distance ties
+        //   check that tie is not for duplicate point --> ERROR
+        //   if tie, use average of tied values
+
+        // NOTE: do other uses of grid-style vars set inside = 0.0 ?
+        //       maybe should just use a far-away coarse point?
+        //       or have user flag to choose zero or far-away
+
+
+
         
-        if (mode == GRID)
-          for (int i = 0; i < colcount; i++)
-            grid->estatus[cindex[i]] = 1;
-        else if (mode == SURF)
-          for (int i = 0; i < colcount; i++)
-            surf->estatus[cindex[i]] = 0;
+        for (int i = 0; i < colcount; i++)
+          grid->estatus[cindex[i]] = 1;
 
         delete [] fname;
         delete [] cindex;
@@ -619,23 +654,25 @@ bigint Custom::process_actions()
               fname,update->ntimestep,ptr+1);
       *ptr = '*';
 
+
+
+
+      
       count += read_file_coarse(mode,colcount,
                                 cindex,ctype,csize,ccol,filecurrent);
+
+
+
       
       delete [] filecurrent;
 
       // for mode = GRID
       //   set estatus of all changed custom vecs/arrays to 1
       //   b/c file read stores values for owned+ghost cells
-      // for mode = SURF
-      //   set estatus of all changed custom vecs/arrays to 0
       
       if (mode == GRID)
         for (int i = 0; i < colcount; i++)
           grid->estatus[cindex[i]] = 1;
-      else if (mode == SURF)
-        for (int i = 0; i < colcount; i++)
-          surf->estatus[cindex[i]] = 0;
     }
   }
 
