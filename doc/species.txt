@@ -16,8 +16,10 @@ file = filename with species info :ulb,l
 ID1, ID2, ... = one or more species names listed in file :l
 multi-species abbreviations can also be used (see below) :l
 zero or more keyword/value pairs may be appended :l
-keyword = {vibfile} :l
+keyword = {vibfile} or {SWS} or {SMSmax} :l
   {vibfile} value = vfile = filename for extra vibrational info :pre
+  {SWS} to use the species weighting scheme :pre
+  {SMSmax} to use the species weighting scheme with improved pair selection method :pre
 :ule
 
 [Examples:]
@@ -25,7 +27,8 @@ keyword = {vibfile} :l
 species air.species air
 species ar.species Ar
 species air.species air CO2 CO vibfile co2.species.vib
-species myfile H+ Cl- HCl :pre
+species myfile H+ Cl- HCl 
+species air.species N2 O2 N O NO NO+ e SWSmax :pre
 
 [Description:]
 
@@ -152,8 +155,69 @@ the same species in the {vibfile}.
 
 :line
 
+The keywords {SWS} or {SWSmax} trigger the use of the species weighting
+scheme. prop8 from the species file is used to modify the ratio of 
+physical particles to simulation particles for the corresponding 
+species-ID. 
+
+The species weights are defined as: wi=prop8 (0<prop8<=1). The ratio 
+is calculated then for every species i: wi*fnum.
+
+Using a weight equal to 1 for every species is equivalent to a 
+conventional simulation, where every species is simulated with the 
+same ratio of physical particles to simulation particles. However,
+the number of numerical particles of a species can be increased 
+when using a weight smaller than 1. Using the species weighting scheme 
+typically allows the simulation of trace species, such as ions and 
+electrons, with very small mole fractions in a neutral particle 
+mixture.
+
+The conservation of momentum and energy upon the impact of differently
+weighted particles is ensured by Boyd's splitting-merging method
+described in "(Boyd96)"_#Boyd96. 
+
+Note: chemical reactions occurring when two differentially weighted 
+particles collide are implemented only for a single group mixture. The
+ambipolar assumption is also enabled. Multiple mixture groups feature and
+surface reactions are not yet implemented when using SWS. 
+Furthermore, as reactants are deleted by the reaction, it is not 
+possible to use the splitting-merging approach. Instead, each reactant 
+and product is associated with a probability to remain or be created 
+according to their weights. 
+
+When using the species weighting scheme, the particle species collision
+rates can deviate from the expectation as the particle species
+distribution does not follow the mixture mole fraction anymore. It 
+is recommended to always maintain a ratio of 10 major species to 1
+trace species simulation particles to avoid any significant deviation 
+on the physical accuracy of the simulation. 
+
+Using the {SWSmax} keyword prevents this limitation by modifying 
+the total number of attempted collisions and the acceptance-rejection
+probability of a selected pair to collide using the maximum value 
+of the pair particle weights to obtain accurate physical particle
+collision rates. The computational effort increases
+slightly due to the increase in attempted collisions, but this
+method gives accurate results even for a ratio of 1 major species to
+1 trace species simulation particle. Details can be found in 
+"(Rjasanow2005)"_#Rjasanow2005.
+
+:line
+
 [Restrictions:] none
 
 [Related commands:] none
 
 [Default:] none
+
+:line
+
+:link(Boyd96)
+[(Boyd96)] I. D. Boyd, Conservative species weighting scheme for the
+direct simulation Monte Carlo method, Journal of Thermophysics and
+Heat Transfer, 1996.
+
+:link(Rjasanow2005)
+[(Rjasanow2005)] S. Rjasanow and W. Wagner, Stochastic Numerics for the
+Boltzmann Equation, Springer Series in Computational Mathematics, 2005.
+

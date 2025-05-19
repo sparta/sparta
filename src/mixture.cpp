@@ -218,7 +218,6 @@ void Mixture::init()
   // account for both explicitly and implicitly set fractions
 
   int err = init_fraction(fraction_flag,fraction_user,fraction,cummulative);
-
   if (err) {
     char str[128];
     sprintf(str,"Mixture %s fractions exceed 1.0",id);
@@ -275,7 +274,7 @@ void Mixture::init()
    called by init() and also by FixInflowFile::interpolate()
 ------------------------------------------------------------------------- */
 
-int Mixture::init_fraction(int *fflag, double *fuser, double *f, double *c)
+int Mixture::init_fraction(int *fflag, double *fuser, double *f, double *c) 
 {
   // sum = total frac for species with explicity set fractions
   // nimplicit = number of unset species
@@ -289,16 +288,36 @@ int Mixture::init_fraction(int *fflag, double *fuser, double *f, double *c)
 
   if (sum > 1.0) return 1;
 
-  // fraction for each unset species = equal portion of unset remainder
-  // cummulative = cummulative fraction across species
+  // // fraction for each unset species = equal portion of unset remainder
+  // // cummulative = cummulative fraction across species
+  //
+  // for (int i = 0; i < nspecies; i++) {
+  //   if (fflag[i]) f[i] = fuser[i];
+  //   else f[i] = (1.0-sum) / nimplicit;
+  //   if (i) c[i] = c[i-1] + f[i];
+  //   else c[i] = f[i];
+  // }
+  // if (nspecies) c[nspecies-1] = 1.0;
 
-  for (int i = 0; i < nspecies; i++) {
+  // ========================================================================
+  // SWS - Definition of the cummulative weighted array, accounting for the 
+  // species weight. 
+  // ========================================================================
+  double sum_norm = 0.0;
+  for (int i = 0; i < nspecies; i++){
     if (fflag[i]) f[i] = fuser[i];
     else f[i] = (1.0-sum) / nimplicit;
-    if (i) c[i] = c[i-1] + f[i];
-    else c[i] = f[i];
+    sum_norm += f[i]/particle->species[species[i]].specwt;
   }
-  if (nspecies) c[nspecies-1] = 1.0;
+  for (int i = 0; i < nspecies; i++){
+    if (i) {
+      c[i]=c[i-1]+f[i]/(particle->species[species[i]].specwt*sum_norm);
+    } else {
+      c[i]=f[i]/(particle->species[species[i]].specwt*sum_norm);
+    }
+    if (nspecies) c[nspecies-1] = 1.0;
+  }
+
   return 0;
 }
 
