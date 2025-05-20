@@ -53,6 +53,10 @@ class Custom : protected Pointers {
   int naction;
   Action *actions;
 
+  int ncoarse;
+  double **xyz_coarse;
+  double **values_coarse;
+
   bigint action_set(int, int, int, int, int, int,
                     int, class Mixture *, class Region *);
   bigint set_particle(class Mixture *, class Region *,
@@ -60,7 +64,7 @@ class Custom : protected Pointers {
   bigint set_grid(int, class Region *, int, int, int, int, double, double *);
   bigint set_surf(int, class Region *, int, int, int, int, double, double *);
   bigint read_file(int, int, int *, int *, int *, int *, char *);
-  bigint read_file_coarse(int, int, int *, int *, int *, int *, char *);
+  void read_coarse_files(char *, int, int, int);
   int attribute_bracket(char *);
 };
 

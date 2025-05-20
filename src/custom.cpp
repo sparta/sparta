@@ -482,40 +482,22 @@ bigint Custom::process_actions(int narg, char **arg, int external)
       //         either here or in FILESTYLE
       //         because owned+ghost can be ALL grid cells
       
+      // make a function to expand both wildcards with an integer value
+      // use it everywhere
+
+      // NOTE: make remainder of this a function callable from process_actions()
+
       if (!external) {
         if (comm->me == 0 && screen)
           fprintf(screen,"Reading custom file/coarse %s ...\n",fname);
 
-        // make a function to expand both wildcards with an integer value
-        // use it everywhere
-        
-        // NOTE: make remainder of this a function callable from process_actions()
+        // read all coarse files, share results with all procs
+        // sets ncoarse, xyz_coarse, values_coarse
 
-        // replace '%' in fname with current timestep (logic from Dump class)
-        // read the file and set attributes via input script column names
-
-        char *filecurrent = new char[strlen(fname) + 16];
-        char *ptr = strchr(fname,'%');
-        *ptr = '\0';
-        sprintf(filecurrent,"%s" BIGINT_FORMAT "%s",
-                fname,iproc+1,ptr+1);
-        *ptr = '*';
-
-        int ncoarse_me = 0;
-        for (int iproc = comm->me; iproc < numfile; iproc += comm->nprocs) {
-          ncoarse_me += read_file_coarse(iproc+1,mode,colcount,fname);
-          // NOTE: how to store read-in coarse points
-          // error-out for mode = binary
-          // check match of column count, 2d z = 0.0
-          // check that each point is inside or on simulation box
-        }
-
-        int ncoarse;
-        MPI_Allreduce(&ncoarse_me,&ncoarse,1,MPI_INT,MPI_SUM,world);
+        read_coarse_files(fname,external,numfile,colcount);
 
         if (comm->me == 0 && screen)
-          fprintf(screen,"  %d coarse points with %d values each\n",
-                  ncoarse,colcount);
+          fprintf(screen,"  %d coarse grid points with %d values each\n",ncoarse,colcount);
 
         // NOTE: concatenate all coarse points
         // each proc has copy of entire data strucs
@@ -545,6 +527,9 @@ bigint Custom::process_actions(int narg, char **arg, int external)
         delete [] csize;
         delete [] ccol;
 
+        memory->destroy(xyz_coarse);
+        memory->destroy(values_coarse);
+
       } else {
         actions[naction].action = action;
         actions[naction].numfile = numfile;
@@ -563,6 +548,197 @@ bigint Custom::process_actions(int narg, char **arg, int external)
   }
 
   return count;
+}
+
+
+/* ----------------------------------------------------------------------
+   read one or more coarse files
+   external = 0/1 for custom versus fix custom
+   numfile = # of coarse grid files to read
+   colcount = # of values per coarse grid point file must have
+   commumicate grid info to all procs
+   each proc stores copy of all coarse-grid info:
+     ncoarse = # of coarse grid points
+     xyz_coarse = coords of each coarse grid point
+     values_coarse = values for each coarse grid point
+---------------------------------------------------------------------- */
+
+void Custom::read_coarse_files(char *fname, int external, int numfile, int colcount)
+{
+  // binary files not yet supported
+
+  if (mode == BINARY) error->all(FLERR,"Custom file/coarse binary files not yet supported");
+
+  // setup
+
+  char *line = new char[MAXLINE];
+
+  // if external:
+  // filecurrent = replace '*' in fname with current timestep
+  
+  char *filecurrent;
+        
+  if (external) {
+    filecurrent = new char[strlen(fname) + 16];
+    char *ptr = strchr(fname,'*');
+    *ptr = '\0';
+    sprintf(filecurrent,"%s" BIGINT_FORMAT "%s",
+            fname,update->ntimestep,ptr+1);
+    *ptr = '*';
+  } else filecurrent = fname;
+
+  // storage for coarse grid points I read in
+  
+  int ncoarse_me = 0;
+  double **xyz_coarse_me = NULL;
+  double **values_coarse_me = NULL;
+  
+  for (int iproc = comm->me; iproc < numfile; iproc += comm->nprocs) {
+
+    // if multiple files:
+    // filewhich = replace '*' in filecurrent with current timestep 
+
+    char *filewhich;
+    
+    if (numfile > 1) {
+      filewhich = new char[strlen(filecurrent) + 16];
+      char *ptr = strchr(fname,'%');
+      *ptr = '\0';
+      sprintf(filewhich,"%s%d%s",filecurrent,iproc+1,ptr+1);
+      *ptr = '%';
+    } else filewhich = filecurrent;
+    
+    // read a single coarse file = filewhich
+  
+    // NOTE: print name of bad file ?
+    FILE *fp = fopen(filewhich,"r");
+    if (fp == NULL) error->one(FLERR,"Could not open custom coarse file");
+  
+    // read past header portion of file
+    // comments or blank lines are allowed
+  
+    char *eof,*ptr;
+    
+    while (1) {
+      eof = fgets(line,MAXLINE,fp);
+      if (eof == NULL) error->one(FLERR,"Unexpected end of custom coarse file");
+
+      // trim anything from '#' onward
+      // if line is blank, continue
+      // else break and read nfile
+
+      if ((ptr = strchr(line,'#'))) *ptr = '\0';
+      if (strspn(line," \t\n\r") == strlen(line)) continue;
+      break;
+    }
+
+    // line: Npoints Nvalues
+
+    int npoints,nvalues;
+    sscanf(line,"%d %d",&npoints,&nvalues);
+
+    if (nvalues != colcount)
+      error->one(FLERR,"Incorrect line format in custom coarse file");
+
+    // reallocate local storage to store more grid point info
+
+    memory->grow(xyz_coarse_me,ncoarse_me+npoints,domain->dimension,"custom:xyz_coarse_me");
+    memory->grow(values_coarse_me,ncoarse_me+npoints,colcount,"custom:values_coarse_me");
+
+    for (int i = ncoarse_me; i < ncoarse_me+npoints; i++) {
+      eof = fgets(line,MAXLINE,fp);
+      if (eof == NULL) error->one(FLERR,"Unexpected end of custom coarse file");
+
+      if (i == 0) {
+        int nwords = input->count_words(line);
+        if (nwords != colcount + 1 + domain->dimension)
+          error->one(FLERR,"Incorrect line format in custom coarse file");
+      }
+
+      ptr = strtok(line," \t\n\r\f");   // skip coarse cell ID
+      xyz_coarse_me[i][0] = input->numeric(FLERR,strtok(NULL," \t\n\r\f"));
+      xyz_coarse_me[i][1] = input->numeric(FLERR,strtok(NULL," \t\n\r\f"));
+      if (domain->dimension == 3)
+        xyz_coarse_me[i][2] = input->numeric(FLERR,strtok(NULL," \t\n\r\f"));
+
+      for (int j = 0; j < colcount; j++)
+        values_coarse_me[i][j] = input->numeric(FLERR,strtok(NULL," \t\n\r\f"));
+    }
+
+    fclose(fp);
+    if (numfile > 1) delete [] filewhich;
+    ncoarse_me += npoints;
+  }
+
+  if (external) delete [] filecurrent;
+
+  // check that each coarse point is inside or on simulation box
+
+  double *boxlo = domain->boxlo;
+  double *boxhi = domain->boxhi;
+  int count = 0;
+  int flag;
+  
+  for (int i = 0; i < ncoarse_me; i++) {
+    flag = 0;
+    if (xyz_coarse[i][0] < boxlo[0] || xyz_coarse[i][0] > boxhi[0]) flag = 1;
+    if (xyz_coarse[i][1] < boxlo[1] || xyz_coarse[i][1] > boxhi[1]) flag = 1;
+    if (domain->dimension == 3)
+      if (xyz_coarse[i][2] < boxlo[2] || xyz_coarse[i][2] > boxhi[2]) flag = 1;
+    if (flag) count++;
+  }
+
+  int count_all;
+  MPI_Allreduce(&count,&count_all,1,MPI_INT,MPI_SUM,world);
+
+  if (count_all) {
+    error->all(FLERR,"How many coarse grid points are outside simulation box");
+  }
+
+  // perform Allgatherv() so each proc has copy of all coarse points read by all procs
+  // done once for xyz_coarse, another for values_coarse
+
+  MPI_Allreduce(&ncoarse_me,&ncoarse,1,MPI_INT,MPI_SUM,world);
+  memory->create(xyz_coarse,ncoarse,domain->dimension,"custom:xyz_coarse");
+  memory->create(values_coarse,ncoarse,colcount,"custom:values_coarse");
+  
+  int nprocs = comm->nprocs;
+  int *recvcounts,*displs;
+  memory->create(recvcounts,nprocs,"custom:recvcounts");
+  memory->create(displs,nprocs,"custom:displs");
+
+  int nper = domain->dimension * ncoarse_me;
+
+  MPI_Allgather(&nper,1,MPI_INT,recvcounts,1,MPI_INT,world);
+  displs[0] = 0;
+  for (int i = 1; i < nprocs; i++) displs[i] = displs[i-1] + recvcounts[i-1];
+
+  if (ncoarse_me)
+    MPI_Allgatherv(xyz_coarse_me[0],nper,MPI_DOUBLE,
+                   xyz_coarse[0],recvcounts,displs,MPI_DOUBLE,world);
+  else
+    MPI_Allgatherv(NULL,nper,MPI_DOUBLE,
+                   xyz_coarse[0],recvcounts,displs,MPI_DOUBLE,world);
+
+  nper = colcount * ncoarse_me;
+
+  MPI_Allgather(&nper,1,MPI_INT,recvcounts,1,MPI_INT,world);
+  displs[0] = 0;
+  for (int i = 1; i < nprocs; i++) displs[i] = displs[i-1] + recvcounts[i-1];
+
+  if (ncoarse_me)
+    MPI_Allgatherv(values_coarse_me[0],nper,MPI_DOUBLE,
+                   values_coarse[0],recvcounts,displs,MPI_DOUBLE,world);
+  else
+    MPI_Allgatherv(NULL,nper,MPI_DOUBLE,
+                   values_coarse[0],recvcounts,displs,MPI_DOUBLE,world);
+    
+  // clean up
+
+  memory->destroy(recvcounts);
+  memory->destroy(displs);
+  memory->destroy(xyz_coarse_me);
+  memory->sfree(values_coarse_me);
 }
 
 /* ----------------------------------------------------------------------
@@ -644,28 +820,11 @@ bigint Custom::process_actions()
       int *csize = actions[i].csize_file;
       int *ccol = actions[i].ccol_file;
 
-      // replace '*' in fname with current timestep (logic from Dump class)
-      // read the file and set attributes via input script column names
-
-      char *filecurrent = new char[strlen(fname) + 16];
-      char *ptr = strchr(fname,'*');
-      *ptr = '\0';
-      sprintf(filecurrent,"%s" BIGINT_FORMAT "%s",
-              fname,update->ntimestep,ptr+1);
-      *ptr = '*';
 
 
 
 
       
-      count += read_file_coarse(mode,colcount,
-                                cindex,ctype,csize,ccol,filecurrent);
-
-
-
-      
-      delete [] filecurrent;
-
       // for mode = GRID
       //   set estatus of all changed custom vecs/arrays to 1
       //   b/c file read stores values for owned+ghost cells
@@ -1154,7 +1313,7 @@ bigint Custom::read_file(int mode, int colcount,
   // nfile = count of attribute lines in file
   // NOTE: allow for nfile to be a bigint ?
   
-  int nfile;
+  int nfile,nvalues;
   
   if (me == 0) {
     char *eof,*ptr;
@@ -1172,12 +1331,18 @@ bigint Custom::read_file(int mode, int colcount,
       break;
     }
 
-    sscanf(line,"%d",&nfile);
+    // line: Nfile Nvalues
+
+    sscanf(line,"%d %d",&nfile,&nvalues);
     //sscanf(line,BIGINT_FORMAT,&nfile);
   }
 
   MPI_Bcast(&nfile,1,MPI_INT,0,world);
-  
+  MPI_Bcast(&nvalues,1,MPI_INT,0,world);
+
+  if (nvalues != colcount)
+    error->all(FLERR,"Incorrect line format in custom attribute file");
+
   // read and broadcast one CHUNK of lines at a time
 
   bigint count = 0;
@@ -1255,203 +1420,6 @@ bigint Custom::read_file(int mode, int colcount,
       }
 
       // assign all attribute values for this grid cell or surf
-
-      for (int j = 0; j < colcount; j++) {
-        if (ctype[j] == INT) {
-          if (csize[j] == 0)
-            ivec[j][index] = input->inumeric(FLERR,strtok(NULL," \t\n\r\f"));
-          else
-            iarray[j][index][ccol[j]-1] = input->inumeric(FLERR,strtok(NULL," \t\n\r\f"));
-        } else if (ctype[j] == DOUBLE) {
-          if (csize[j] == 0)
-            dvec[j][index] = input->numeric(FLERR,strtok(NULL," \t\n\r\f"));
-          else
-            darray[j][index][ccol[j]-1] = input->numeric(FLERR,strtok(NULL," \t\n\r\f"));
-        }
-      }
-
-      count += colcount;
-      buf = next + 1;
-    }
-
-    // increment nread and fcount and continue to next chunk
-    
-    nread += nchunk;
-    fcount++;
-  }
-  
-  // close file
-
-  if (me == 0) {
-    //if (compressed) pclose(fp);
-    //else fclose(fp);
-    fclose(fp);
-  }
-  
-  // free read buffers and vec/array ptrs
-  
-  delete [] line;
-  delete [] buffer;
-  delete [] ivec;
-  delete [] dvec;
-  delete [] iarray;
-  delete [] darray;
-
-  return count;
-}
-
-/* ----------------------------------------------------------------------
-   read a coarse file for mode = GRID only
-   assign values to custom grid vectors/arrays
-   return count of attributes assigned by this proc
----------------------------------------------------------------------- */
-
-bigint Custom::read_file_coarse(int mode, int colcount,
-                                int *cindex, int *ctype, int *csize, int *ccol,
-                                char *filename)
-{
-  // setup read buffers
-  // NOTE: should these be created by Memory class ?
-  
-  char *line = new char[MAXLINE];
-  char *buffer = new char[CHUNK*MAXLINE];
-
-  // set ivec,dvec,iarray,darray pointers
-  // only one will be active for each value in input line
-  
-  int **ivec = new int*[colcount];
-  double **dvec = new double*[colcount];
-  int ***iarray = new int**[colcount];
-  double ***darray = new double**[colcount];
-
-  for (int j = 0; j < colcount; j++) {
-    if (ctype[j] == INT) {
-      if (csize[j] == 0) {
-        ivec[j] = grid->eivec[grid->ewhich[cindex[j]]];
-      } else {
-        iarray[j] = grid->eiarray[grid->ewhich[cindex[j]]];
-      }
-    } else if (ctype[j] == DOUBLE) {
-      if (csize[j] == 0) {
-        dvec[j] = grid->edvec[grid->ewhich[cindex[j]]];
-      } else {
-        darray[j] = grid->edarray[grid->ewhich[cindex[j]]];
-      }
-    }
-  }
-  
-  // ensure grid cell IDs are hashed
-  
-  Grid::MyHash *hash;
-
-  if (!grid->hashfilled) grid->rehash();
-  hash = grid->hash;
-
-  // read file
-
-  MPI_Barrier(world);
-  double time1 = MPI_Wtime();
-
-  // NOTE: support compressed files like read_grid ?
-
-  int me = comm->me;
-  int nprocs = comm->nprocs;
-  FILE *fp;
-
-  if (me == 0) {
-    fp = fopen(filename,"r");
-    if (fp == NULL) error->one(FLERR,"Could not open custom attribute file");
-  }
-  
-  // read header portion of file
-  // comments or blank lines are allowed
-  // nfile = count of attribute lines in file
-  // NOTE: allow for nfile to be a bigint ?
-  
-  int nfile;
-  
-  if (me == 0) {
-    char *eof,*ptr;
-    
-    while (1) {
-      eof = fgets(line,MAXLINE,fp);
-      if (eof == NULL) error->one(FLERR,"Unexpected end of custom attribute file");
-
-      // trim anything from '#' onward
-      // if line is blank, continue
-      // else break and read nfile
-
-      if ((ptr = strchr(line,'#'))) *ptr = '\0';
-      if (strspn(line," \t\n\r") == strlen(line)) continue;
-      break;
-    }
-
-    sscanf(line,"%d",&nfile);
-    //sscanf(line,BIGINT_FORMAT,&nfile);
-  }
-
-  MPI_Bcast(&nfile,1,MPI_INT,0,world);
-  
-  // read and broadcast one CHUNK of lines at a time
-
-  bigint count = 0;
-  bigint nread = 0;
-  bigint fcount = 0;
-
-  int i,m,nchunk,index,iproc;
-  char *next,*buf,*idptr;
-  cellint id;
-  
-  while (nread < nfile) {
-    if (nfile-nread > CHUNK) nchunk = CHUNK;
-    else nchunk = nfile-nread;
-    if (me == 0) {
-      char *eof;
-      m = 0;
-      for (i = 0; i < nchunk; i++) {
-        eof = fgets(&buffer[m],MAXLINE,fp);
-        if (eof == NULL) error->one(FLERR,"Unexpected end of custom attribute file");
-        m += strlen(&buffer[m]);
-      }
-      if (buffer[m-1] != '\n') strcpy(&buffer[m++],"\n");
-      m++;
-    }
-    MPI_Bcast(&m,1,MPI_INT,0,world);
-    MPI_Bcast(buffer,m,MPI_CHAR,0,world);
-
-    // add occasional barrier to prevent issues from having too many
-    //  outstanding MPI recv requests (from the broadcast above)
-
-    if (fcount % 1024 == 0) MPI_Barrier(world);
-
-    // process nchunk lines and assign attribute values if I store grid/surf ID
-    // store means as owned or ghost grid cell
-    
-    buf = buffer;
-
-    for (i = 0; i < nchunk; i++) {
-      next = strchr(buf,'\n');
-      if (next == NULL) printf("NULL proc %d i %d\n",me,i);
-      *next = '\0';
-      int nwords = input->count_words(buf);
-      *next = '\n';
-
-      if (nwords != colcount + 1)
-	error->all(FLERR,"Incorrect line format in custom attribute file");
-
-      // grid ID will match either an owned or ghost grid cell
-      
-      idptr = strtok(buf," \t\n\r\f");
-      id = ATOCELLINT(idptr);
-      if (id <= 0) error->all(FLERR,"Invalid cell ID in custom attribute grid file");
-
-      if (hash->find(id) == hash->end()) {
-        buf = next + 1;
-        continue;
-      }
-      index = (*hash)[id];
-
-      // assign all attribute values for this grid cell
 
       for (int j = 0; j < colcount; j++) {
         if (ctype[j] == INT) {
