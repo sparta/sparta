@@ -397,8 +397,9 @@ void PythonImpl::invoke_function(int ifunc, char *result, double *dvalue)
   }
 
   // function returned a value
-  // assign it to result string stored by python-style variable
-  // or if user specified a length, assign it to longstr
+  // if result is non-NULL, assign to result string stored by python-style variable
+  //   or if value is string and user specified a length, assign it to longstr
+  // if dvalue is non-NULL, assign numeric value directly to dvalue
 
   char python2str[64];
   

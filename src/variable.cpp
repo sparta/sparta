@@ -2812,6 +2812,16 @@ double Variable::collapse_tree(Tree *tree)
       else arg = collapse_tree(tree->extra[iarg-2]);
       internal_set(argvars[iarg],arg);
     }
+    for (int iarg = 0; iarg < narg; iarg++) {
+      if (iarg == 0) {
+        if (tree->first->type != VALUE) return 0.0;
+      } else if (iarg == 1) {
+        if (tree->second->type != VALUE) return 0.0;
+      } else {
+        if (tree->extra[iarg-2]->type != VALUE) return 0.0;
+      }
+    }
+    tree->type = VALUE;
     tree->value = compute_equal(tree->pyvar);
     return tree->value;
   }
@@ -4252,7 +4262,11 @@ double *Variable::add_storage(double *cvec)
 
 void Variable::print_tree(Tree *tree, int level)
 {
-  printf("TREE %d: %d %g\n",level,tree->type,tree->value);
+  if (tree->type == VALUE) {
+    printf("TREE %d: %d %g\n",level,tree->type,tree->value);
+    return;
+  }
+  printf("TREE %d: %d\n",level,tree->type);
   if (tree->first) print_tree(tree->first,level+1);
   if (tree->second) print_tree(tree->second,level+1);
   if (tree->nextra)
