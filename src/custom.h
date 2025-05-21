@@ -75,7 +75,8 @@ class KDTree : protected Pointers {
   KDTree(class SPARTA *, int, int, double **);
   virtual ~KDTree();
   int create_tree(int, int, int *);
-  int find_nearest(double *, int, double);
+  int find_nearest(double *, int, double &);
+  void find_within_cutoff(double *, int, double, int &, int *, double *);
   void stats_tree();
   void stats_search();
   
@@ -98,6 +99,7 @@ class KDTree : protected Pointers {
   int maxtree;
 
   int depthwalk(int, int, int);
+  int walk_to_leaf(int, double *);
 };
 
 

@@ -510,39 +510,51 @@ bigint Custom::process_actions(int narg, char **arg, int external)
 
         if (comm->me == 0) kdtree->stats_tree();
         
-        // loop over my owned grid cells:
-        //   allow for distance ties, use average of tied values
-        //   check that tie is not for duplicate point --> ERROR
-
+        // loop over my owned grid cells
+        // find closest coarse point
+        // find all coarse points within cutoff = closest distance + EPSILON
+        // error if any of closest coarse points are duplicates
+        // set grid cell attributes to average of closest coarse point values
+        
+        // NOTE: gather search stats internal to KDTree class, so can print them
+        // NOTE: what to do about inside and split cells
         // NOTE: do other uses of grid-style vars set inside = 0.0 ?
         //       maybe should just use a far-away coarse point?
         //       or have user flag to choose zero or far-away
 
-
-        // for each owned grid cell:
-        //   search tree for nearest of npoints to grid cell center point
-        //   use its file values to set custom attributes of grid cell
-        // NOTE: what to do about inside and split cells
-        // NOTE: maybe should just store index of nearest, then set values later
-        
         Grid::ChildCell *cells = grid->cells;
         int nglocal = grid->nlocal;
         double ctr[3];
+        double distsq;
+
+        for (int i = 0; i < nglocal; i++) {
+          ctr[0] = 0.5 * (cells[i].lo[0] + cells[i].hi[0]);
+          ctr[1] = 0.5 * (cells[i].lo[1] + cells[i].hi[1]);
+          ctr[2] = 0.5 * (cells[i].lo[2] + cells[i].hi[2]);
+          int icoarse = kdtree->find_nearest(ctr,0,distsq);
+        }
+
+        int ncount;
+        double cutsq;
+        int plist[16];
+        double dlist[16];
         
         for (int i = 0; i < nglocal; i++) {
           ctr[0] = 0.5 * (cells[i].lo[0] + cells[i].hi[0]);
           ctr[1] = 0.5 * (cells[i].lo[1] + cells[i].hi[1]);
           ctr[2] = 0.5 * (cells[i].lo[2] + cells[i].hi[2]);
-          int icoarse = kdtree->find_nearest(ctr,0,BIG);
+          // compute cutsq for each nearest point
+          ncount = 0;
+          kdtree->find_within_cutoff(ctr,0,cutsq,ncount,plist,dlist);
         }
-
+        
         // print stats on tree searches
 
         if (comm->me == 0) kdtree->stats_search();
-
         
         // use search results to set custom attributes of each owned grid cell
 
+        
 
         
         // for mode = GRID
@@ -1674,28 +1686,122 @@ int KDTree::create_tree(int iparent, int n, int *plist)
 
 /* ----------------------------------------------------------------------
    recursive search of KD tree for point nearest to X
-   inode = which node to examine next
-   bestsq = current closest distance squared from any point to X
-
-# find nearest point to XYZ, starting at node Inode of KD tree
-# returns index of nearest leaf node and its squared distance to XYZ
-# also pass in bestsq = current best distance so recursion efficiently prunes
-# algorithm:
-# initial walk to leaf from node to find distance to leaf node's point
-#   this can miss closer points in other branches
-#   to find all of them walk back up to starting node
-#     each time examine opposite branch
-#     if it could possibly have a closer point, then walk down it
-#     do this recursively, so walk down untaken branches of every node visited
-#   efficiency comes form criteria for "could possibly have"
-#     if distance of point to split plane > current best
-#     then no need to walk that branch
-
+   find nearest coarse point to point X, starting at Node inode of KD tree
+   returns index of nearest leaf Node and its squared distance (distsq) to point X
+   algorithm:
+   initial walk to leaf from inode to find distance to leaf node's point
+     this can miss closer points in other branches
+     to find all of them, walk back up to starting node
+       each time examine opposite branch
+       if it could possibly have a closer point, then walk down it
+       do this recursively, so walk down untaken branches of every node visited
+     efficiency comes form criteria for "could possibly have"
+       if distance of point to split plane > current closest point
+       then no need to walk that branch
 ---------------------------------------------------------------------- */
 
-int KDTree::find_nearest(double *x, int inode, double bestsq)
+int KDTree::find_nearest(double *x, int inode, double &distsq)
 {
-  return 0;
+  int startnode = inode;
+  inode = walk_to_leaf(inode,x);
+  int ipoint = tree[inode].ipoint;
+
+  double dx,dy,dz;
+  dx = x[0] - points[ipoint][0];
+  dy = x[1] - points[ipoint][1];
+  if (dim == 3) dz = x[2] - points[ipoint][2];
+  else dz = 0.0;
+  distsq = dx*dx + dy*dy + dz*dz;
+
+  int ipoint_new;
+  double distsq_new;
+  
+  while (inode != startnode) {
+    int ichild = inode;
+    inode = tree[inode].iparent;
+    int splitdim = tree[inode].splitdim;
+    double split = tree[inode].split;
+    double delta = x[splitdim] - split;
+    if (delta*delta <= distsq) {
+      if (tree[inode].left == ichild)
+        ipoint_new = find_nearest(x,tree[inode].right,distsq_new);
+      else
+        ipoint_new = find_nearest(x,tree[inode].left,distsq_new);
+      if (distsq_new < distsq) {
+        ipoint = ipoint_new;
+        distsq = distsq_new;
+      }
+    }
+  }
+
+  return ipoint;
+}
+
+/* ----------------------------------------------------------------------
+   recursive search of KD tree for all points within cutoff distance of X
+   start search starting at Node inode of KD tree
+   returns count of neighbors and plist,dlist
+     plist = list of coarse point indices
+     dlist = list of distances to coarse points
+   algorithm:
+   initial walk to leaf from inode to find distance to leaf node's point
+     add it to list if wihin cutoff
+     this can miss neighbor points in other branches
+     to find all of them, walk back up to starting node
+       each time examine opposite branch
+       if it could possibly have a neighbor point, then walk down it
+       do this recursively, so walk down untaken branches of every node visited
+     efficiency comes form criteria for "could possibly have"
+       if distance of point to split plane > cutoff
+       then no need to walk that branch
+---------------------------------------------------------------------- */
+
+void KDTree::find_within_cutoff(double *x, int inode, double cutsq,
+                                int &ncount, int *plist, double *dlist)
+{
+  int startnode = inode;
+  inode = walk_to_leaf(inode,x);
+  int ipoint = tree[inode].ipoint;
+
+  double dx,dy,dz;
+  dx = x[0] - points[ipoint][0];
+  dy = x[1] - points[ipoint][1];
+  if (dim == 3) dz = x[2] - points[ipoint][2];
+  else dz = 0.0;
+  double distsq = dx*dx + dy*dy + dz*dz;
+
+  if (distsq < cutsq) {
+    plist[ncount] = ipoint;
+    dlist[ncount] = sqrt(distsq);
+    ncount++;
+  }
+
+  while (inode != startnode) {
+    int ichild = inode;
+    inode = tree[inode].iparent;
+    int splitdim = tree[inode].splitdim;
+    double split = tree[inode].split;
+    double delta = x[splitdim] - split;
+    if (delta*delta <= cutsq) {
+      if (tree[inode].left == ichild)
+        find_within_cutoff(x,tree[inode].right,cutsq,ncount,plist,dlist);
+      else
+        find_within_cutoff(x,tree[inode].left,cutsq,ncount,plist,dlist);
+    }
+  }
+}
+
+/* ---------------------------------------------------------------------- */
+
+int KDTree::walk_to_leaf(int inode, double *x)
+{
+  if (tree[inode].which == LEAF) return inode;
+  
+  int splitdim = tree[inode].splitdim;
+  double split = tree[inode].split;
+  if (x[splitdim] <= split) inode = walk_to_leaf(tree[inode].left,x);
+  else inode = walk_to_leaf(tree[inode].right,x);
+  return inode;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -1736,4 +1842,3 @@ int KDTree::depthwalk(int inode, int depth, int caller_maxdepth)
 void KDTree::stats_search()
 {
 }
-
