@@ -82,7 +82,6 @@ styles available in SPARTA:
 "field/particle"_fix_field_particle.html - apply an external field on a per particle basis
 "grid/check"_fix_grid_check.html - check if particles are in the correct grid cell
 "halt"_fix_halt.html - stop the simulation early if a condition is met
-"lammps"_fix_lammps.html - concurrently couple molecular dynamics
 "move/surf"_fix_move_surf.html - move surfaces dynamically during a simulation
 "print"_fix_print.html - print text and variables during a simulation
 "surf/temp"_fix_surf_temp.html - compute per-surf temperatures dynamically
