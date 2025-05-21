@@ -39,6 +39,7 @@ enum{TEXT,BINARY};
 
 #define MAXLINE 256
 #define CHUNK 4     // NOTE: make this larger after debugging
+#define BIG 1.0e20
 
 /* ---------------------------------------------------------------------- */
 
@@ -475,12 +476,6 @@ bigint Custom::process_actions(int narg, char **arg, int external)
 
       // if not external: invoke action now
       // else: store info in Action list for FixCustom
-      // for mode = GRID
-      //   set estatus of all changed custom vecs/arrays to 1
-      //   b/c file read stores values for owned+ghost cells
-      //   NOTE: should I still do this for ghost cells ?
-      //         either here or in FILESTYLE
-      //         because owned+ghost can be ALL grid cells
       
       // make a function to expand both wildcards with an integer value
       // use it everywhere
@@ -499,37 +494,79 @@ bigint Custom::process_actions(int narg, char **arg, int external)
         if (comm->me == 0 && screen)
           fprintf(screen,"  %d coarse grid points with %d values each\n",ncoarse,colcount);
 
-        // NOTE: concatenate all coarse points
-        // each proc has copy of entire data strucs
         // warn if > 1M points ?
 
         // form k-d tree for 2d or 3d points
+
+        KDTree *kdtree = new KDTree(sparta,domain->dimension,ncoarse,xyz_coarse);
+
+        int *list;
+        memory->create(list,ncoarse,"custom:list");
+        for (int i = 0; i < ncoarse; i++) list[i] = i;
+        
+        int ntree = kdtree->create_tree(-1,ncoarse,list);
+
+        // print stats on created KD tree
+
+        if (comm->me == 0) kdtree->stats_tree();
+        
         // loop over my owned grid cells:
-        //   skip if cell entirely inside
-        //   search k-d tree for nearest point, use its values
-        //   allow for distance ties
+        //   allow for distance ties, use average of tied values
         //   check that tie is not for duplicate point --> ERROR
-        //   if tie, use average of tied values
 
         // NOTE: do other uses of grid-style vars set inside = 0.0 ?
         //       maybe should just use a far-away coarse point?
         //       or have user flag to choose zero or far-away
 
 
+        // for each owned grid cell:
+        //   search tree for nearest of npoints to grid cell center point
+        //   use its file values to set custom attributes of grid cell
+        // NOTE: what to do about inside and split cells
+        // NOTE: maybe should just store index of nearest, then set values later
+        
+        Grid::ChildCell *cells = grid->cells;
+        int nglocal = grid->nlocal;
+        double ctr[3];
+        
+        for (int i = 0; i < nglocal; i++) {
+          ctr[0] = 0.5 * (cells[i].lo[0] + cells[i].hi[0]);
+          ctr[1] = 0.5 * (cells[i].lo[1] + cells[i].hi[1]);
+          ctr[2] = 0.5 * (cells[i].lo[2] + cells[i].hi[2]);
+          int icoarse = kdtree->find_nearest(ctr,0,BIG);
+        }
 
+        // print stats on tree searches
+
+        if (comm->me == 0) kdtree->stats_search();
+
+        
+        // use search results to set custom attributes of each owned grid cell
+
+
+        
+        // for mode = GRID
+        //   set estatus of all changed custom vecs/arrays to 1
+        //   b/c file read stores values for owned+ghost cells
+        //   NOTE: should I still do this for ghost cells ?
+        //         either here or in FILESTYLE
+        //         because owned+ghost can be ALL grid cells
         
         for (int i = 0; i < colcount; i++)
           grid->estatus[cindex[i]] = 1;
 
+        // clean up
+        
         delete [] fname;
         delete [] cindex;
         delete [] ctype;
         delete [] csize;
         delete [] ccol;
 
+        delete kdtree;
         memory->destroy(xyz_coarse);
         memory->destroy(values_coarse);
-
+        
       } else {
         actions[naction].action = action;
         actions[naction].numfile = numfile;
@@ -1465,8 +1502,8 @@ bigint Custom::read_file(int mode, int colcount,
   return count;
 }
 
-/* ----------------------------------------------------------------------
-   process an attribute name with optional bracketed index name[N]
+/* ---------------------------------------------------------------------- 
+  process an attribute name with optional bracketed index name[N]
    ccol = 0 if no brackets (vector attribute)
    ccol = N if bracktes (Nth column of array attribute)
    return ccol
@@ -1485,3 +1522,218 @@ int Custom::attribute_bracket(char *aname)
 
   return ccol;
 } 
+
+// ----------------------------------------------------------------------
+// ----------------------------------------------------------------------
+// KDTree class
+// ----------------------------------------------------------------------
+// ----------------------------------------------------------------------
+
+enum{STUB,BRANCH,LEAF};
+#define DELTANODE 4       // NOTE: make this larger after debugging
+
+/* ---------------------------------------------------------------------- */
+
+KDTree::KDTree(SPARTA *sparta, int dimension, int n, double **coords) : Pointers(sparta)
+{
+  dim = dimension;
+  points = coords;
+  npoints = n;
+  
+  tree = NULL;
+  ntree = maxtree = 0;
+}
+
+/* ---------------------------------------------------------------------- */
+
+KDTree::~KDTree()
+{
+  memory->sfree(tree);
+
+  // NOTE: check if all memory is cleaned up
+}
+
+/* ----------------------------------------------------------------------
+   recursive build of KD tree
+   n = # of points
+   plist = list of N indices into coords array
+---------------------------------------------------------------------- */
+
+int KDTree::create_tree(int iparent, int n, int *plist)
+{
+  // zero points, create STUB node
+
+  if (n == 0) {
+    if (ntree == maxtree) {
+      maxtree += DELTANODE;
+      tree = (Node *) memory->srealloc(tree,maxtree*sizeof(Node),"KDTree:tree");
+    }
+    tree[ntree].which = STUB;
+    tree[ntree].iparent = iparent;
+    ntree++;
+    return ntree-1;
+  }
+
+  // single point, create LEAF node
+  
+  if (n == 1) {
+    if (ntree == maxtree) {
+      maxtree += DELTANODE;
+      tree = (Node *) memory->srealloc(tree,maxtree*sizeof(Node),"KDTree:tree");
+    }
+    tree[ntree].which = LEAF;
+    tree[ntree].iparent = iparent;
+    tree[ntree].ipoint = plist[0];
+    ntree++;
+    return ntree-1;
+  }
+
+  // 2 or more points, create BRANCH node, continue recursing
+
+  if (ntree == maxtree) {
+    maxtree += DELTANODE;
+    tree = (Node *) memory->srealloc(tree,maxtree*sizeof(Node),"KDTree:tree");
+  }
+  tree[ntree].which = BRANCH;
+  tree[ntree].iparent = iparent;
+
+  // calculate bbox around list of points
+  
+  double bboxlo[3] = {BIG,BIG,BIG};
+  double bboxhi[3] = {-BIG,-BIG,-BIG};
+
+  for (int i = 0; i < n; i++) {
+    bboxlo[0] = MIN(bboxlo[0],points[plist[i]][0]);
+    bboxhi[0] = MAX(bboxhi[0],points[plist[i]][0]);
+    bboxlo[1] = MIN(bboxlo[1],points[plist[i]][1]);
+    bboxhi[1] = MAX(bboxhi[1],points[plist[i]][1]);
+    if (dim == 3) {
+      bboxlo[2] = MIN(bboxlo[2],points[plist[i]][2]);
+      bboxhi[2] = MAX(bboxhi[2],points[plist[i]][2]);
+    }
+  }
+
+  /* NOTE: no need to store bbox in Tree ?
+  tree[ntree].bboxlo[0] = bboxlo[0];
+  tree[ntree].bboxlo[1] = bboxlo[1];
+  tree[ntree].bboxlo[2] = bboxlo[2];
+  tree[ntree].bboxhi[0] = bboxhi[0];
+  tree[ntree].bboxhi[1] = bboxhi[1];
+  tree[ntree].bboxhi[2] = bboxhi[2];
+  */
+  
+  // splitdim = which dim to split points in (minimum bbox edge)
+  // split = splitting value in that dim
+  
+  double xdelta = bboxhi[0] - bboxlo[0];
+  double ydelta = bboxhi[1] - bboxlo[1];
+  double zdelta = bboxhi[2] - bboxlo[2];
+
+  int splitdim;
+  if (xdelta <= ydelta) splitdim = 0;
+  else splitdim = 1;
+  if (dim == 3) {
+    if (splitdim == 0 && zdelta < xdelta) splitdim = 2;
+    if (splitdim == 1 && ydelta < xdelta) splitdim = 2;
+  }
+      
+  double split = 0.5 * (bboxlo[splitdim] + bboxhi[splitdim]);
+  
+  tree[ntree].splitdim = splitdim;
+  tree[ntree].split = split;
+
+  // split plist into left and right lists
+
+  int *leftlist,*rightlist;
+  memory->create(leftlist,n,"KDTree:leftlist");
+  memory->create(rightlist,n,"KDTree:rightlist");
+
+  int nleft = 0;
+  int nright = 0;
+  int maxleft = 0;
+  int maxright = 0;
+  
+  for (int i = 0; i < n; i++) {
+    if (points[plist[i]][splitdim] <= split) leftlist[nleft++] = plist[i];
+    else rightlist[nright++] = plist[i];
+  }
+
+  // recurse on left and right lists
+
+  ntree++;
+  int itree = ntree-1;
+  
+  tree[itree].left = create_tree(itree,nleft,leftlist);
+  memory->destroy(leftlist);
+
+  tree[itree].right = create_tree(itree,nright,rightlist);
+  memory->destroy(rightlist);
+
+  return itree;
+}
+
+/* ----------------------------------------------------------------------
+   recursive search of KD tree for point nearest to X
+   inode = which node to examine next
+   bestsq = current closest distance squared from any point to X
+
+# find nearest point to XYZ, starting at node Inode of KD tree
+# returns index of nearest leaf node and its squared distance to XYZ
+# also pass in bestsq = current best distance so recursion efficiently prunes
+# algorithm:
+# initial walk to leaf from node to find distance to leaf node's point
+#   this can miss closer points in other branches
+#   to find all of them walk back up to starting node
+#     each time examine opposite branch
+#     if it could possibly have a closer point, then walk down it
+#     do this recursively, so walk down untaken branches of every node visited
+#   efficiency comes form criteria for "could possibly have"
+#     if distance of point to split plane > current best
+#     then no need to walk that branch
+
+---------------------------------------------------------------------- */
+
+int KDTree::find_nearest(double *x, int inode, double bestsq)
+{
+  return 0;
+}
+
+/* ---------------------------------------------------------------------- */
+
+void KDTree::stats_tree()
+{
+  int nbranch = 0;
+  int nleaf = 0;
+  for (int i = 0; i < ntree; i++) {
+    if (tree[i].which == BRANCH) nbranch++;
+    if (tree[i].which == LEAF) nleaf++;
+  }
+  
+  int maxdepth = depthwalk(0,0,0);
+
+  printf("KD tree stats:\n");
+  printf("  %d = points stored\n",npoints);
+  printf("  %d = # of nodes\n",ntree);
+  printf("  %d = # of branches\n",nbranch);
+  printf("  %d = # of leaves\n",nleaf);
+  printf("  %d = maxdepth\n",maxdepth);
+}
+
+/* ---------------------------------------------------------------------- */
+
+int KDTree::depthwalk(int inode, int depth, int caller_maxdepth)
+{
+  if (tree[inode].which == LEAF) return depth;
+
+  int maxdepth = caller_maxdepth;
+  maxdepth = MAX(maxdepth,depthwalk(tree[inode].left,depth+1,maxdepth));
+  maxdepth = MAX(maxdepth,depthwalk(tree[inode].right,depth+1,maxdepth));
+  return maxdepth;
+}
+
+/* ---------------------------------------------------------------------- */
+
+void KDTree::stats_search()
+{
+}
+

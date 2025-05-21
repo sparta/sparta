@@ -68,6 +68,39 @@ class Custom : protected Pointers {
   int attribute_bracket(char *);
 };
 
+// K-D tree class
+  
+class KDTree : protected Pointers {
+ public:
+  KDTree(class SPARTA *, int, int, double **);
+  virtual ~KDTree();
+  int create_tree(int, int, int *);
+  int find_nearest(double *, int, double);
+  void stats_tree();
+  void stats_search();
+  
+ private:
+  int dim;
+  double **points;
+  int npoints;
+  
+  struct Node {
+    int which;       // STUB, BRANCH, LEAF
+    int iparent;     // index of parent node
+    int ipoint;      // index of LEAF point
+    int left,right;  // indices of 2 child nodes of this branch node
+    int splitdim;    // dimension (0,1,2) of branch node splitting
+    double split;    // coordinate of branch node splitting
+  };
+
+  Node *tree;
+  int ntree;
+  int maxtree;
+
+  int depthwalk(int, int, int);
+};
+
+
 }
 
 #endif
