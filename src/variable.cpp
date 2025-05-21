@@ -3442,7 +3442,8 @@ int Variable::math_function(char *word, char *contents, Tree **tree,
      currently, all special functions just take one arg
    return 0 if not a match, 1 if successfully processed
    customize by adding a special function:
-     sum(x),min(x),max(x),ave(x),trap(x),slope(x),next(x),grid2part(x)
+     sum(x),min(x),max(x),ave(x),trap(x),slope(x),next(x),grid2part(x),
+     is_file(x)
 ------------------------------------------------------------------------- */
 
 int Variable::special_function(char *word, char *contents, Tree **tree,
@@ -3455,7 +3456,8 @@ int Variable::special_function(char *word, char *contents, Tree **tree,
 
   if (strcmp(word,"sum") && strcmp(word,"min") && strcmp(word,"max") &&
       strcmp(word,"ave") && strcmp(word,"trap") && strcmp(word,"slope") &&
-      strcmp(word,"next") && strcmp(word,"grid2part"))
+      strcmp(word,"next") && strcmp(word,"grid2part") &&
+      strcmp(word,"is_file"))
     return 0;
 
   // parse contents for arg1,arg2,arg3 separated by commas
@@ -3820,6 +3822,23 @@ int Variable::special_function(char *word, char *contents, Tree **tree,
       } else error->all(FLERR,"Mismatched compute in variable formula");
 
     } else error->all(FLERR,"Invalid variable style in special function grid2part()");
+  } else if (strcmp(word,"is_file") == 0) {
+    if (narg != 1)
+      error->all(FLERR,"Invalid is_file() special function in variable formula");
+
+    FILE *fp = fopen(arg1,"r");
+    value = (fp == nullptr) ? 0.0 : 1.0;
+    if (fp) fclose(fp);
+
+    // save value in tree or on argstack
+
+    if (tree) {
+      Tree *newtree = new Tree();
+      newtree->type = VALUE;
+      newtree->value = value;
+      newtree->left = newtree->middle = newtree->right = NULL;
+      treestack[ntreestack++] = newtree;
+    } else argstack[nargstack++] = value;
   }
 
   delete [] arg1;
