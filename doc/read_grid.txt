@@ -64,7 +64,7 @@ attributes and specification of their values.  See the "Section
 6.17"_Section_howto.html#howto_17 doc page for an explanation of
 custom per-grid attributes.  Custom vectors or arrays associate a
 single value or multiple values with each grid cell.  They can be
-output by the "dump grid"_dump.html command and uses as inputs by
+output by the "dump grid"_dump.html command and used as inputs by
 other commands.  For example, the
 "create_particles"_create_particles.html command can use per-grid
 values to influence the creation of particles in each grid cell and
