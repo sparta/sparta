@@ -48,7 +48,7 @@
     vxvar,vyvar,vzvar = names of equal-style variables for vx,vy,vz
     xvar,yvar,zvar = names of internal-style variables for x,y,z
   <I>custom</I> values = attribute g_name
-    attribute = <I>nrho</I> or <I>temp</I> or <I>temp</I> or <I>vstream</I> or <I>fractions</I>
+    attribute = <I>density</I> or <I>temperature</I> or <I>vstream</I> or <I>fractions</I>
     g_name = custom per-grid vector or array with name 
 </PRE>
 <PRE>  <I>twopass</I> values = none 
@@ -190,11 +190,12 @@ region.
 </P>
 <HR>
 
-<P>The <I>species</I>, <I>density</I>, <I>temp</I>, and <I>vstream</I> keywords can be used
-to create particles with properties which are spatially dependent.
-This is done by defined <A HREF = "variable.html">equal-style variables</A> with
-formulas that include the coordinates of the created particle or the
-coordinates of the grid cell containing the particle.
+<P>The <I>species</I>, <I>density</I>, <I>temperature</I>, and <I>vstream</I> keywords can be
+used to create particles with properties which are spatially
+dependent.  This is done by defined <A HREF = "variable.html">equal-style
+variables</A> with formulas that include the coordinates of
+the created particle or the coordinates of the grid cell containing
+the particle.
 </P>
 <P>The formulas for these 4 keywords should be in the following form,
 where (x,y,z) are the coordinates of the created particle, and
@@ -203,16 +204,16 @@ the particle is in.
 </P>
 <UL><LI>species formula = f(x,y,z) produces an integer from 1 to Nspecies
 <LI>density = f(cx,cy,cz) produces a unitless scale factor
-<LI>temp = f(x,y,z) = produces a unitless scale factor
+<LI>temperature = f(x,y,z) = produces a unitless scale factor
 <LI>vstream = 3 formulas for vx,vy,vz = vx(x,y,z) (and vy,vz) produces a value in velocity units 
 </UL>
-<P>Note that the <I>species</I>, <I>temp</I>, <I>vstream</I> keywords define particle
-attributes based on the position of an individual particle.  This is
-in contrast to the <I>custom nrho</I>, <I>custom temp</I>, <I>custom vstream</I>, and
-<I>custom fractions</I> keywords described below, which define particle
-attributes at the resolution of individual grid cells.  The <I>density</I>
-keyword is similar to the <I>custom nrho</I> keyword, in that it operates
-on individual grid cells.
+<P>Note that the <I>species</I>, <I>temperature</I>, <I>vstream</I> keywords define
+particle attributes based on the position of an individual particle.
+This is in contrast to the <I>custom density</I>, <I>custom temperature</I>,
+<I>custom vstream</I>, and <I>custom fractions</I> keywords described below,
+which define particle attributes at the resolution of individual grid
+cells.  The <I>density</I> keyword is similar to the <I>custom density</I>
+keyword, in that it operates on individual grid cells.
 </P>
 <P>The <I>species</I> keyword can be used to create particles with a
 spatially-dependent separation of species.  The specified <I>svar</I> is
@@ -379,8 +380,8 @@ of custom per-grid attributes.
 <P>The <I>attribute</I> values of the <I>custom</I> keyword can be any of the
 following:
 </P>
-<UL><LI>nrho = number density (# per volume or area units) = per-grid vector
-<LI>temp = temperature (temperature units) = per-grid vector
+<UL><LI>density = number density (# per volume or area units) = per-grid vector
+<LI>temperature = temperature (temperature units) = per-grid vector
 <LI>vstream = 3-component streaming velocity (velocity units) = per-grid array with 3 columns
 <LI>fractions = species fractions (unitless) = per-grid array 
 </UL>
@@ -390,14 +391,14 @@ a vector or array, as indicated in the list above.
 </P>
 <P>Note that the <I>custom</I> keyword defines particle attributes at the
 resolution of individual grid cells.  This is in contrast to the
-<I>species</I>, <I>temp</I>, <I>vstream</I> keywords described above, which can
-define particle attributes based on the position of an individual
-particle.  The <I>custom density</I> keyword is similar to the <I>nrho</I>
+<I>species</I>, <I>temperature</I>, <I>vstream</I> keywords described above, which
+can define particle attributes based on the position of an individual
+particle.  The <I>custom density</I> keyword is similar to the <I>density</I>
 keyword, in that it operates on individual grid cells.
 </P>
-<P>The <I>custom</I> attribute <I>nrho</I> sets a number density for each grid cell
-from a per-grid custom vector.  The values are used to calculate the
-count of particles created within each grid cell.  The nrho values
+<P>The <I>custom</I> attribute <I>density</I> sets a number density for each grid
+cell from a per-grid custom vector.  The values are used to calculate
+the count of particles created within each grid cell.  The nrho values
 should be in per-volume units = per-length^3 for 3d models or
 axisymmetric models.  The values should be in per-area units =
 per-length^2 for 2d models.
@@ -411,10 +412,10 @@ same scale factor custom_nrho/mixture_nrho, only now the scale factor
 is applied to the count of particles for the grid cell calculated as
 explained above when <I>Np</I> > 0.
 </P>
-<P>The <I>custom</I> attribute <I>temp</I> sets a temperature for each grid cell
-from a per-grid vector.  This temperature is divided by the mixture
-thermal temperature to calculate a scale factor.  The scale factor is
-applied to all 3 mixture temperatures (thermal, rotational,
+<P>The <I>custom</I> attribute <I>temperature</I> sets a temperature for each grid
+cell from a per-grid vector.  This temperature is divided by the
+mixture thermal temperature to calculate a scale factor.  The scale
+factor is applied to all 3 mixture temperatures (thermal, rotational,
 vibrational) used to initialize the velocity and internal energies, as
 explained above, for each particle created in the grid cell.  Thus a
 scale factor of 0.5 would create particles using temperatures half of
@@ -484,9 +485,9 @@ effectively.
 
 <P><B>Restrictions:</B>
 </P>
-<P>The keywords <I>density</I> and <I>custom nrho</I> cannot both be used.  This is
-because they are both methods for setting the number of particles
-created.  Ditto for <I>temperature</I> amd <I>custom temp</I>.  Ditto for
+<P>The keywords <I>density</I> and <I>custom density</I> cannot both be used.  This
+is because they are both methods for setting the number of particles
+created.  Ditto for <I>temperature</I> amd <I>custom temperature</I>.  Ditto for
 <I>vstream</I> and <I>custom vstream</I>.  Ditto for <I>species</I> and <I>custom
 fractions</I>.
 </P>

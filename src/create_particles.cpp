@@ -177,23 +177,23 @@ void CreateParticles::command(int narg, char **arg)
 
       if (iarg+3 > narg) error->all(FLERR,"Illegal create_particles command");
 
-      if (strcmp(arg[iarg+1],"nrho") == 0) {
+      if (strcmp(arg[iarg+1],"density") == 0) {
         nrho_custom_flag = 1;
         if (strstr(arg[iarg+2],"s_") != arg[iarg+2])
           error->all(FLERR,"Illegal create_particles command");
         nrho_custom_id = &arg[iarg+2][2];
         
+      } else if (strcmp(arg[iarg+1],"temperature") == 0) {
+        temp_custom_flag = 1;
+        if (strstr(arg[iarg+2],"s_") != arg[iarg+2])
+          error->all(FLERR,"Illegal create_particles command");
+        temp_custom_id = &arg[iarg+2][2];
+
       } else if (strcmp(arg[iarg+1],"vstream") == 0) {
         vstream_custom_flag = 1;
         if (strstr(arg[iarg+2],"s_") != arg[iarg+2])
           error->all(FLERR,"Illegal create_particles command");
         vstream_custom_id = &arg[iarg+2][2];
-
-      } else if (strcmp(arg[iarg+1],"temp") == 0) {
-        temp_custom_flag = 1;
-        if (strstr(arg[iarg+2],"s_") != arg[iarg+2])
-          error->all(FLERR,"Illegal create_particles command");
-        temp_custom_id = &arg[iarg+2][2];
 
       } else if (strcmp(arg[iarg+1],"fractions") == 0) {
         fractions_custom_flag = 1;
@@ -218,9 +218,9 @@ void CreateParticles::command(int narg, char **arg)
   if (speciesflag && fractions_custom_flag)
     error->all(FLERR,"Create_particles cannot use species and custom fractions together");
   if (densflag && nrho_custom_flag)
-    error->all(FLERR,"Create_particles cannot use density and custom nrho together");
+    error->all(FLERR,"Create_particles cannot use density and custom density together");
   if (tempflag && temp_custom_flag)
-    error->all(FLERR,"Create_particles cannot use temperature and custom temp together");
+    error->all(FLERR,"Create_particles cannot use temperature and custom temperature together");
   if (vstreamflag && vstream_custom_flag)
     error->all(FLERR,"Create_particles cannot use vstream and custom vstream together");
   
