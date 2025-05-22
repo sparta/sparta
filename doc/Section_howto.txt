@@ -1645,10 +1645,14 @@ attricute stores can be either integer or floating point numbers.
 
 The "custom"_custom.html command can create and set/reset custom
 attribute values for all 3 flavors of attributes.  Either by invoking
-per-particle, per-grid, or per-surf variables, or by reading a file.
-The "fix custom"_fix_custom.html command can do the same thing
-periodically as a simulation runs.  "Dump"_dump.html commands can
-output all 3 flavors of attributes.
+per-particle, per-grid, or per-surf variables, or by reading a file
+with one line of attribute values per particle/grid/surf.  In the case
+of per-grid attributes, it can also read a coarse file with values for
+coarse grid points.  The attributed values for each grid cell are set
+to values of the nearset coarse grid point.  The "fix
+custom"_fix_custom.html command can do the same thing periodically as
+a simulation runs.  "Dump"_dump.html commands can output all 3 flavors
+of attributes.
 
 Here are lists of current commands which use custom attributes in
 various ways:

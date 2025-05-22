@@ -40,6 +40,8 @@ enum{TEXT,BINARY};
 #define MAXLINE 256
 #define CHUNK 4     // NOTE: make this larger after debugging
 #define BIG 1.0e20
+#define MAXTIE 2    // NOTE: make this larger after debugging
+#define EPSCUT 1.0e-6
 
 /* ---------------------------------------------------------------------- */
 
@@ -517,7 +519,6 @@ bigint Custom::process_actions(int narg, char **arg, int external)
         // set grid cell attributes to average of closest coarse point values
         
         // NOTE: gather search stats internal to KDTree class, so can print them
-        // NOTE: what to do about inside and split cells
         // NOTE: do other uses of grid-style vars set inside = 0.0 ?
         //       maybe should just use a far-away coarse point?
         //       or have user flag to choose zero or far-away
@@ -527,36 +528,49 @@ bigint Custom::process_actions(int narg, char **arg, int external)
         double ctr[3];
         double distsq;
 
+        int *closest;
+        double *closest_distsq;
+        memory->create(closest,nglocal,"KDTree:closest");
+        memory->create(closest_distsq,nglocal,"KDTree:closest_distsq");
+        
         for (int i = 0; i < nglocal; i++) {
+          if (cells[i].nsplit <= 0) continue;
           ctr[0] = 0.5 * (cells[i].lo[0] + cells[i].hi[0]);
           ctr[1] = 0.5 * (cells[i].lo[1] + cells[i].hi[1]);
           ctr[2] = 0.5 * (cells[i].lo[2] + cells[i].hi[2]);
-          int icoarse = kdtree->find_nearest(ctr,0,distsq);
+          closest[i] = kdtree->find_nearest(ctr,0,closest_distsq[i]);
         }
 
         int ncount;
-        double cutsq;
-        int plist[16];
-        double dlist[16];
+        double cut,cutsq;
+        int plist[MAXTIE];
+        double dlist[MAXTIE];
+
+        int count;
         
-        for (int i = 0; i < nglocal; i++) {
+        for (int i = 0; i < nglocal; i++) { 
+          if (cells[i].nsplit <= 0) continue;
           ctr[0] = 0.5 * (cells[i].lo[0] + cells[i].hi[0]);
           ctr[1] = 0.5 * (cells[i].lo[1] + cells[i].hi[1]);
           ctr[2] = 0.5 * (cells[i].lo[2] + cells[i].hi[2]);
-          // compute cutsq for each nearest point
+          cut = sqrt(closest_distsq[i]) * (1.0*EPSCUT);
+          cutsq = cut*cut;
           ncount = 0;
           kdtree->find_within_cutoff(ctr,0,cutsq,ncount,plist,dlist);
+          count += ncount;
         }
         
         // print stats on tree searches
 
-        if (comm->me == 0) kdtree->stats_search();
+        int count_all;
+        MPI_Allreduce(&count,&count_all,1,MPI_INT,MPI_SUM,world);
+
+        if (comm->me == 0) printf("NEIGHS FOUND %g/n",1.0*count_all/nglocal);
+        
+        // if (comm->me == 0) kdtree->stats_search();
         
         // use search results to set custom attributes of each owned grid cell
 
-        
-
-        
         // for mode = GRID
         //   set estatus of all changed custom vecs/arrays to 1
         //   b/c file read stores values for owned+ghost cells
@@ -1056,6 +1070,9 @@ bigint Custom::set_grid(int groupbit, Region *region,
   Grid::ChildInfo *cinfo = grid->cinfo;
   int nglocal = grid->nlocal;
 
+  // select which cells to set, skip sub cells
+  // region criterion is based on cell center point
+  
   int *choose;
   memory->create(choose,nglocal,"set:choose");
   memset(choose,0,nglocal*sizeof(int));
@@ -1066,7 +1083,7 @@ bigint Custom::set_grid(int groupbit, Region *region,
   bigint count = 0;
   for (int i = 0; i < nglocal; i++) {
     flag = 1;
-    if (cells[i].nsplit < 0) flag = 0;
+    if (cells[i].nsplit <= 0) flag = 0;
     if (!(cinfo[i].mask & groupbit)) flag = 0;
     if (flag && region) {
       point[0] = 0.5 * (cells[i].lo[0] + cells[i].hi[0]);
@@ -1771,6 +1788,8 @@ void KDTree::find_within_cutoff(double *x, int inode, double cutsq,
   double distsq = dx*dx + dy*dy + dz*dz;
 
   if (distsq < cutsq) {
+    if (ncount == MAXTIE)
+      error->one(FLERR,"KDTree cutoff induces too may ties");
     plist[ncount] = ipoint;
     dlist[ncount] = sqrt(distsq);
     ncount++;
