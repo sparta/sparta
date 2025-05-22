@@ -39,7 +39,7 @@ keyword = {cut} or {global} or {region} or {species} or {density} or {temperatur
     vxvar,vyvar,vzvar = names of equal-style variables for vx,vy,vz
     xvar,yvar,zvar = names of internal-style variables for x,y,z
   {custom} values = attribute g_name
-    attribute = {nrho} or {temp} or {temp} or {vstream} or {fractions}
+    attribute = {density} or {temperature} or {vstream} or {fractions}
     g_name = custom per-grid vector or array with name :pre
   {twopass} values = none :pre
 :ule
@@ -179,11 +179,12 @@ region.
 
 :line
 
-The {species}, {density}, {temp}, and {vstream} keywords can be used
-to create particles with properties which are spatially dependent.
-This is done by defined "equal-style variables"_variable.html with
-formulas that include the coordinates of the created particle or the
-coordinates of the grid cell containing the particle.
+The {species}, {density}, {temperature}, and {vstream} keywords can be
+used to create particles with properties which are spatially
+dependent.  This is done by defined "equal-style
+variables"_variable.html with formulas that include the coordinates of
+the created particle or the coordinates of the grid cell containing
+the particle.
 
 The formulas for these 4 keywords should be in the following form,
 where (x,y,z) are the coordinates of the created particle, and
@@ -192,16 +193,16 @@ the particle is in.
 
 species formula = f(x,y,z) produces an integer from 1 to Nspecies
 density = f(cx,cy,cz) produces a unitless scale factor
-temp = f(x,y,z) = produces a unitless scale factor
+temperature = f(x,y,z) = produces a unitless scale factor
 vstream = 3 formulas for vx,vy,vz = vx(x,y,z) (and vy,vz) produces a value in velocity units :ul
 
-Note that the {species}, {temp}, {vstream} keywords define particle
-attributes based on the position of an individual particle.  This is
-in contrast to the {custom nrho}, {custom temp}, {custom vstream}, and
-{custom fractions} keywords described below, which define particle
-attributes at the resolution of individual grid cells.  The {density}
-keyword is similar to the {custom nrho} keyword, in that it operates
-on individual grid cells.
+Note that the {species}, {temperature}, {vstream} keywords define
+particle attributes based on the position of an individual particle.
+This is in contrast to the {custom density}, {custom temperature},
+{custom vstream}, and {custom fractions} keywords described below,
+which define particle attributes at the resolution of individual grid
+cells.  The {density} keyword is similar to the {custom density}
+keyword, in that it operates on individual grid cells.
 
 The {species} keyword can be used to create particles with a
 spatially-dependent separation of species.  The specified {svar} is
@@ -368,8 +369,8 @@ of custom per-grid attributes.
 The {attribute} values of the {custom} keyword can be any of the
 following:
 
-nrho = number density (# per volume or area units) = per-grid vector
-temp = temperature (temperature units) = per-grid vector
+density = number density (# per volume or area units) = per-grid vector
+temperature = temperature (temperature units) = per-grid vector
 vstream = 3-component streaming velocity (velocity units) = per-grid array with 3 columns
 fractions = species fractions (unitless) = per-grid array :ul
 
@@ -379,14 +380,14 @@ a vector or array, as indicated in the list above.
 
 Note that the {custom} keyword defines particle attributes at the
 resolution of individual grid cells.  This is in contrast to the
-{species}, {temp}, {vstream} keywords described above, which can
-define particle attributes based on the position of an individual
-particle.  The {custom density} keyword is similar to the {nrho}
+{species}, {temperature}, {vstream} keywords described above, which
+can define particle attributes based on the position of an individual
+particle.  The {custom density} keyword is similar to the {density}
 keyword, in that it operates on individual grid cells.
 
-The {custom} attribute {nrho} sets a number density for each grid cell
-from a per-grid custom vector.  The values are used to calculate the
-count of particles created within each grid cell.  The nrho values
+The {custom} attribute {density} sets a number density for each grid
+cell from a per-grid custom vector.  The values are used to calculate
+the count of particles created within each grid cell.  The nrho values
 should be in per-volume units = per-length^3 for 3d models or
 axisymmetric models.  The values should be in per-area units =
 per-length^2 for 2d models.
@@ -400,10 +401,10 @@ same scale factor custom_nrho/mixture_nrho, only now the scale factor
 is applied to the count of particles for the grid cell calculated as
 explained above when {Np} > 0.
 
-The {custom} attribute {temp} sets a temperature for each grid cell
-from a per-grid vector.  This temperature is divided by the mixture
-thermal temperature to calculate a scale factor.  The scale factor is
-applied to all 3 mixture temperatures (thermal, rotational,
+The {custom} attribute {temperature} sets a temperature for each grid
+cell from a per-grid vector.  This temperature is divided by the
+mixture thermal temperature to calculate a scale factor.  The scale
+factor is applied to all 3 mixture temperatures (thermal, rotational,
 vibrational) used to initialize the velocity and internal energies, as
 explained above, for each particle created in the grid cell.  Thus a
 scale factor of 0.5 would create particles using temperatures half of
@@ -473,9 +474,9 @@ effectively.
 
 [Restrictions:]
 
-The keywords {density} and {custom nrho} cannot both be used.  This is
-because they are both methods for setting the number of particles
-created.  Ditto for {temperature} amd {custom temp}.  Ditto for
+The keywords {density} and {custom density} cannot both be used.  This
+is because they are both methods for setting the number of particles
+created.  Ditto for {temperature} amd {custom temperature}.  Ditto for
 {vstream} and {custom vstream}.  Ditto for {species} and {custom
 fractions}.
 
