@@ -506,8 +506,10 @@ bigint Custom::process_actions(int narg, char **arg, int external)
         memory->create(list,ncoarse,"custom:list");
         for (int i = 0; i < ncoarse; i++) list[i] = i;
         
-        int ntree = kdtree->create_tree(-1,ncoarse,list);
+        kdtree->create_tree(-1,ncoarse,list);
 
+        memory->destroy(list);
+        
         // print stats on created KD tree
 
         if (comm->me == 0) kdtree->stats_tree();
@@ -539,6 +541,8 @@ bigint Custom::process_actions(int narg, char **arg, int external)
           ctr[1] = 0.5 * (cells[i].lo[1] + cells[i].hi[1]);
           ctr[2] = 0.5 * (cells[i].lo[2] + cells[i].hi[2]);
           closest[i] = kdtree->find_nearest(ctr,0,closest_distsq[i]);
+          printf("CLOSEST i %d icoarse %d distsq %g\n",i,closest[i],
+                 sqrt(closest_distsq[i]));
         }
 
         int ncount;
@@ -546,7 +550,7 @@ bigint Custom::process_actions(int narg, char **arg, int external)
         int plist[MAXTIE];
         double dlist[MAXTIE];
 
-        int count;
+        int count = 0;
         
         for (int i = 0; i < nglocal; i++) { 
           if (cells[i].nsplit <= 0) continue;
@@ -559,13 +563,13 @@ bigint Custom::process_actions(int narg, char **arg, int external)
           kdtree->find_within_cutoff(ctr,0,cutsq,ncount,plist,dlist);
           count += ncount;
         }
-        
+
         // print stats on tree searches
 
         int count_all;
         MPI_Allreduce(&count,&count_all,1,MPI_INT,MPI_SUM,world);
 
-        if (comm->me == 0) printf("NEIGHS FOUND %g/n",1.0*count_all/nglocal);
+        if (comm->me == 0) printf("NEIGHS FOUND %g\n",1.0*count_all/nglocal);
         
         // if (comm->me == 0) kdtree->stats_search();
         
@@ -592,6 +596,8 @@ bigint Custom::process_actions(int narg, char **arg, int external)
         delete kdtree;
         memory->destroy(xyz_coarse);
         memory->destroy(values_coarse);
+        memory->destroy(closest);
+        memory->destroy(closest_distsq);
         
       } else {
         actions[naction].action = action;
@@ -744,10 +750,10 @@ void Custom::read_coarse_files(char *fname, int external, int numfile, int colco
   
   for (int i = 0; i < ncoarse_me; i++) {
     flag = 0;
-    if (xyz_coarse[i][0] < boxlo[0] || xyz_coarse[i][0] > boxhi[0]) flag = 1;
-    if (xyz_coarse[i][1] < boxlo[1] || xyz_coarse[i][1] > boxhi[1]) flag = 1;
+    if (xyz_coarse_me[i][0] < boxlo[0] || xyz_coarse_me[i][0] > boxhi[0]) flag = 1;
+    if (xyz_coarse_me[i][1] < boxlo[1] || xyz_coarse_me[i][1] > boxhi[1]) flag = 1;
     if (domain->dimension == 3)
-      if (xyz_coarse[i][2] < boxlo[2] || xyz_coarse[i][2] > boxhi[2]) flag = 1;
+      if (xyz_coarse_me[i][2] < boxlo[2] || xyz_coarse_me[i][2] > boxhi[2]) flag = 1;
     if (flag) count++;
   }
 
@@ -798,10 +804,11 @@ void Custom::read_coarse_files(char *fname, int external, int numfile, int colco
     
   // clean up
 
+  delete [] line;
   memory->destroy(recvcounts);
   memory->destroy(displs);
   memory->destroy(xyz_coarse_me);
-  memory->sfree(values_coarse_me);
+  memory->destroy(values_coarse_me);
 }
 
 /* ----------------------------------------------------------------------
@@ -1588,7 +1595,7 @@ KDTree::~KDTree()
    plist = list of N indices into coords array
 ---------------------------------------------------------------------- */
 
-int KDTree::create_tree(int iparent, int n, int *plist)
+void KDTree::create_tree(int iparent, int n, int *plist)
 {
   // zero points, create STUB node
 
@@ -1600,7 +1607,7 @@ int KDTree::create_tree(int iparent, int n, int *plist)
     tree[ntree].which = STUB;
     tree[ntree].iparent = iparent;
     ntree++;
-    return ntree-1;
+    return;
   }
 
   // single point, create LEAF node
@@ -1614,7 +1621,7 @@ int KDTree::create_tree(int iparent, int n, int *plist)
     tree[ntree].iparent = iparent;
     tree[ntree].ipoint = plist[0];
     ntree++;
-    return ntree-1;
+    return;
   }
 
   // 2 or more points, create BRANCH node, continue recursing
@@ -1659,11 +1666,11 @@ int KDTree::create_tree(int iparent, int n, int *plist)
   double zdelta = bboxhi[2] - bboxlo[2];
 
   int splitdim;
-  if (xdelta <= ydelta) splitdim = 0;
+  if (xdelta >= ydelta) splitdim = 0;
   else splitdim = 1;
   if (dim == 3) {
-    if (splitdim == 0 && zdelta < xdelta) splitdim = 2;
-    if (splitdim == 1 && ydelta < xdelta) splitdim = 2;
+    if (splitdim == 0 && zdelta > xdelta) splitdim = 2;
+    if (splitdim == 1 && zdelta > ydelta) splitdim = 2;
   }
       
   double split = 0.5 * (bboxlo[splitdim] + bboxhi[splitdim]);
@@ -1690,15 +1697,43 @@ int KDTree::create_tree(int iparent, int n, int *plist)
   // recurse on left and right lists
 
   ntree++;
-  int itree = ntree-1;
+  int new_parent = ntree-1;
+
+  /*
+  printf("INITIAL TREE %d\n",itree);
+
+  printf("CREATE LEFT: itree %d nleft %d leftlist %p %d\n",itree,nleft,leftlist,leftlist[0]);
+  printf("   ");
+  for (int i = 0; i < nleft; i++) printf(" %d",leftlist[i]);
+  printf("\n");
+  */
   
-  tree[itree].left = create_tree(itree,nleft,leftlist);
+  tree[new_parent].left = ntree;
+  create_tree(new_parent,nleft,leftlist);
+  //printf("DESTROY LEFT: itree %d treeleft %d leftlist %p\n",itree,tree[itree].left,leftlist);
   memory->destroy(leftlist);
 
-  tree[itree].right = create_tree(itree,nright,rightlist);
+  /*
+  printf("CREATE RIGHT: itree %d nright %d rightlist %p %d\n",itree,nright,rightlist,rightlist[0]);
+  printf("   ");
+  for (int i = 0; i < nright; i++) printf(" %d",rightlist[i]);
+  printf("\n");
+  */
+  
+  //printf("ITREE on RIGHT %d\n",itree);
+
+  
+  tree[new_parent].right = ntree;
+  create_tree(new_parent,nright,rightlist);
+
+  /*
+  printf("DESTROY RIGHT: itree %d treeright %d rightlist %p\n",itree,tree[itree].right,rightlist);
+  */
   memory->destroy(rightlist);
 
-  return itree;
+  //printf("FINAL TREE %d\n",itree);
+  
+  //return itree;
 }
 
 /* ----------------------------------------------------------------------
@@ -1832,25 +1867,35 @@ void KDTree::stats_tree()
   for (int i = 0; i < ntree; i++) {
     if (tree[i].which == BRANCH) nbranch++;
     if (tree[i].which == LEAF) nleaf++;
+    if (tree[i].which == BRANCH) {
+      printf("BRANCH NODE %d iparent %d which %d left %d right %d splitdim %d split %g\n",
+             i,tree[i].iparent,tree[i].which,tree[i].left,tree[i].right,tree[i].splitdim,tree[i].split);
+    }
+    if (tree[i].which == LEAF) {
+      printf("LEAF NODE %d iparent %d which %d ipoint %d\n",
+             i,tree[i].iparent,tree[i].which,tree[i].ipoint);
+    }
   }
   
-  int maxdepth = depthwalk(0,0,0);
+  //int maxdepth = depthwalk(0,0,0);
 
   printf("KD tree stats:\n");
   printf("  %d = points stored\n",npoints);
   printf("  %d = # of nodes\n",ntree);
   printf("  %d = # of branches\n",nbranch);
   printf("  %d = # of leaves\n",nleaf);
-  printf("  %d = maxdepth\n",maxdepth);
+  //printf("  %d = maxdepth\n",maxdepth);
 }
 
 /* ---------------------------------------------------------------------- */
 
-int KDTree::depthwalk(int inode, int depth, int caller_maxdepth)
+int KDTree::depthwalk(int inode, int depth, int maxdepth)
 {
-  if (tree[inode].which == LEAF) return depth;
+  if (tree[inode].which == LEAF) return depth+1;
 
-  int maxdepth = caller_maxdepth;
+  //printf("DWALK inode %d %d %d\n",inode,depth,maxdepth);
+  
+  //int maxdepth = caller_maxdepth;
   maxdepth = MAX(maxdepth,depthwalk(tree[inode].left,depth+1,maxdepth));
   maxdepth = MAX(maxdepth,depthwalk(tree[inode].right,depth+1,maxdepth));
   return maxdepth;

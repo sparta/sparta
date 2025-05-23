@@ -74,7 +74,7 @@ class KDTree : protected Pointers {
  public:
   KDTree(class SPARTA *, int, int, double **);
   virtual ~KDTree();
-  int create_tree(int, int, int *);
+  void create_tree(int, int, int *);
   int find_nearest(double *, int, double &);
   void find_within_cutoff(double *, int, double, int &, int *, double *);
   void stats_tree();
