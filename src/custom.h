@@ -64,7 +64,8 @@ class Custom : protected Pointers {
   bigint set_grid(int, class Region *, int, int, int, int, double, double *);
   bigint set_surf(int, class Region *, int, int, int, int, double, double *);
   bigint read_file(int, int, int *, int *, int *, int *, char *);
-  void read_coarse_files(char *, int, int, int);
+  void read_coarse_files(char *, int, int);
+  bigint coarse_tree_neighbor_assign(int, int, int *, int *, int *, int *);
   int attribute_bracket(char *);
 };
 
@@ -79,11 +80,16 @@ class KDTree : protected Pointers {
   void find_within_cutoff(double *, int, double, int &, int *, double *);
   void stats_tree();
   void stats_search();
+  void stats_neighbor();
   
  private:
   int dim;
   double **points;
   int npoints;
+
+  int nsearch,nneigh;
+  double avedist;
+  int count_node,count_leaf;
   
   struct Node {
     int which;       // STUB, BRANCH, LEAF
@@ -101,7 +107,6 @@ class KDTree : protected Pointers {
   int depthwalk(int, int, int);
   int walk_to_leaf(int, double *);
 };
-
 
 }
 
