@@ -128,16 +128,6 @@ void PythonImpl::command(int narg, char **arg)
       }
     }
 
-    // NOTE to Richard - if this function returns a value,
-    //   I don't believe it will be accessible to the input script
-    //   b/c that only occurs if Variable::retreive() or Variable::compute_equal() is called
-    //   so if a Python function with a return is invoked this way,
-    //     it might be better to issue an error or warning ?
-    //     i.e. it only make sense to call a setup-style kind of Python function this way
-    //          one with no return value
-    //   it also means there is no need to call Variable::pythonstyle() here
-    //     or even define the pythonstyle() method in Variable ?
-
     invoke_function(ifunc, str, NULL);
     return;
   }
@@ -148,6 +138,7 @@ void PythonImpl::command(int narg, char **arg)
     int err = -1;
 
     if ((narg > 2) && (strcmp(arg[1], "here") == 0)) {
+      error->all(FLERR,"Python source here option not yet supported");
       err = execute_string(arg[2]);
     } else {
       int file_is_readable = 0;
@@ -217,6 +208,7 @@ void PythonImpl::command(int narg, char **arg)
       pyfile = utils::strdup(arg[iarg + 1]);
       iarg += 2;
     } else if (strcmp(arg[iarg], "here") == 0) {
+      error->all(FLERR,"Python function-name here keyword not yet supported");
       if (iarg+2 > narg) error->all(FLERR, "Invalid python here command");
       herestr = arg[iarg + 1];
       iarg += 2;
@@ -452,14 +444,18 @@ int PythonImpl::find(const char *name)
 
 int PythonImpl::function_match(const char *name, const char *varname, int numeric)
 {
-  // NOTE to Richard - any reason not to put error messages here instead of in Variable class ?
-  //   error messages appear 3x in Variable
-
   int ifunc = find(name);
-  if (ifunc < 0) return -1;
-  if (pfuncs[ifunc].noutput == 0) return -2;
-  if (strcmp(pfuncs[ifunc].ovarname, varname) != 0) return -3;
-  if (numeric && pfuncs[ifunc].otype == STRING) return -4;
+
+  if (ifunc < 0)
+    error->all(FLERR,"Python function specified by variable not found");
+  if (pfuncs[ifunc].noutput == 0)
+    error->all(FLERR,"Python function for variable does not return a value");
+  if (strcmp(pfuncs[ifunc].ovarname, varname) != 0)
+    error->all(FLERR,"Python variable does not match variable name "
+               "registered with Python function");
+  if (numeric && pfuncs[ifunc].otype == STRING)
+    error->all(FLERR,"Python function for variable returns a string");
+  
   return ifunc;
 }
 
@@ -478,17 +474,15 @@ int PythonImpl::function_match(const char *name, const char *varname, int numeri
 
 int PythonImpl::wrapper_match(const char *name, const char *varname, int narg, int *argvars)
 {
-  // NOTE to Richard - any reason not to put 2 extra error messages here instead of in Variable class ?
-  //   only this class knows the name of the missing internal var, so can generate better error message
-
   int ifunc = function_match(name, varname, 1);
-  if (ifunc < 0) return ifunc;
 
   int internal_count = 0;
   for (int i = 0; i < pfuncs[ifunc].ninput; i++)
     if (pfuncs[ifunc].ivarflag[i] == INTERNALVAR) internal_count++;
-  if (internal_count != narg) return -5;
-
+  if (internal_count != narg)
+    error->all(FLERR, "Mismatch in Python function and variable "
+               "use of internal variable args");
+  
   // set argvars of internal-style variables for use by Variable class
   //   in Python wrapper functions
   // also set internal_var for use by invoke_function()
@@ -498,7 +492,8 @@ int PythonImpl::wrapper_match(const char *name, const char *varname, int narg, i
   for (int i = 0; i < pfuncs[ifunc].ninput; i++)
     if (pfuncs[ifunc].ivarflag[i] == INTERNALVAR) {
       int ivar = input->variable->find(pfuncs[ifunc].svalue[i]);
-      if (ivar < 0) return -6;
+      if (ivar < 0)
+        error->all(FLERR,"Python function cannot find an internal variable");
       pfuncs[ifunc].internal_var[i] = ivar;
       argvars[j++] = ivar;
     }

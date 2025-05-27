@@ -60,21 +60,6 @@ def factorial(n):
   return n * factorial(n-1)
 """ :pre
 
-NOTE: need new SPRATA example here
-
-python loop input 1 SELF return v_value format pf here """
-def loop(spaptr,N,cut0):
-  from sparta import sparta
-  spa = sparta(ptr=spaptr)
-  # loop N times, increasing cutoff each time
-  for i in range(N):
-    cut = cut0 + i*0.1
-    lmp.set_variable("cut",cut)               # set a variable in SPARTA
-    spa.command("pair_style lj/cut ${cut}")   # SPARTA commands
-    spa.command("pair_coeff * * 1.0 1.0")
-    spa.command("run 10000")
-""" :pre
-
 [Description:]
 
 The {python} command interfaces SPARTA with an embedded Python
@@ -124,6 +109,10 @@ illustrates use of the python command.
 The first argument is the {mode} setting, which is either {source} or
 the {name} of a Python function.
 
+IMPORTANT NOTE: The {here} option of the {source} keyword is not yet
+supported in SPARTA.  It requires the use of triple quotes in the
+input script, which has not yet been implemented.
+
 If {source} is used, it is followed by either the {here} keyword or a
 file name containing Python code.  The {here} keyword is followed by a
 string containing python commands, either on a single line enclosed in
@@ -156,12 +145,6 @@ referenced by this command.  This invokes the Python function with the
 previously defined arguments and the return value is processed as
 explained below.  You can invoke a registered function as many times
 as you wish in your input script.
-
-NOTE for Richard: As indicated with a NOTE in python_impl.cpp, I don't
-think there is any access to a value returned by invoking a Py
-function in this way.  If that is correct, I think this should be
-clarified in the doc page, with a better explanation of the utility of
-using the *invoke* keyword.
 
 The {input} keyword defines how many arguments {N} the Python function
 expects.  If it takes no arguments, then the {input} keyword should
@@ -267,14 +250,20 @@ truncated.
 
 As noted above, either the {invoke}, {file}, {here}, or {exists}
 keyword must be used, but only one of them.  These keywords specify
-what Python code to load into the Python interpreter.  The {file}
-keyword gives the name of a file containing Python code, which should
-end with a ".py" suffix.  The code will be immediately loaded into and
-run in the "main" module of the Python interpreter.  The Python code
-will be executed in parallel on all MPI processes.  Note that Python
-code which contains a function definition does not "execute" the
-function when it is run; it simply defines the function so that it can
-be invoked later.
+what Python code to load into the Python interpreter.
+
+The {file} keyword gives the name of a file containing Python code,
+which should end with a ".py" suffix.  The code will be immediately
+loaded into and run in the "main" module of the Python interpreter.
+The Python code will be executed in parallel on all MPI processes.
+Note that Python code which contains a function definition does not
+"execute" the function when it is run; it simply defines the function
+so that it can be invoked later.
+
+IMPORTANT NOTE: The {here} keyword, when the {mode} keyword is a
+Python function name, is not yet supported in SPARTA.  It requires the
+use of triple quotes in the input script, which has not yet been
+implemented.  Use the {file} keyword instead.
 
 The {here} keyword does the same thing, except that the Python code
 follows as a single argument to the {here} keyword.  This can be done
@@ -438,41 +427,9 @@ The "Section python"_Section_python.html doc page describes the syntax
 for how Python wraps the various functions included in the SPARTA
 library interface.
 
-A more interesting example is in the ``examples/python/in.python`` script
-which loads and runs the following function from ``examples/python/funcs.py``:
-
-NOTE: need to modify this example and provied an examples/python dir
-      put circle script with grid-style var inside it
-      
-def loop(N,cut0,thresh,handle):
-  print("LOOP ARGS", N, cut0, thresh, lmpptr)
-  from SPARTA import SPARTA
-  sparta = SPARTA(ptr=handle)
-  natoms = sparta.get_natoms() :pre
-
-  for i in range(N):
-    cut = cut0 + i{0.1
-    sparta.set_variable("cut",cut)                 # set a variable in SPARTA
-    sparta.command("pair_style lj/cut ${cut}")     # SPARTA command
-    #sparta.command("pair_style lj/cut %d" % cut)  # alternate form of SPARTA command
-    sparta.command("pair_coeff } { 1.0 1.0")       # ditto
-    sparta.command("run 10")                       # ditto
-    pe = sparta.extract_compute("thermo_pe",0,0)   # extract total PE from SPARTA
-    print("PE", pe/natoms, thresh)
-    if pe/natoms < thresh: return :pre
-
-with these input script commands:
-
-python          loop input 4 10 1.0 -4.0 SELF format iffp file funcs.py
-python          loop invoke :pre
-
-This has the effect of looping over a series of 10 short runs (10
-timesteps each) where the pair style cutoff is increased from a value
-of 1.0 in distance units, in increments of 0.1.  The looping stops
-when the per-atom potential energy falls below a threshold of -4.0 in
-energy units.  More generally, Python can be used to implement a loop
-with complex logic, much more so than can be created using the SPARTA
-"jump"_jump.html and "if"_if.html commands.
+In general, Python can be used to implement a loop with complex logic,
+much more so than can be created using the SPARTA "jump"_jump.html and
+"if"_if.html commands.
 
 Several SPARTA library functions are called from the loop function.
 Get_natoms() returns the number of atoms in the simulation, so that it
@@ -488,7 +445,7 @@ next.  Alternatively, the "SPARTA command option" line could be used
 in place of the 2 preceding lines, to have Python insert the value
 into the SPARTA command string.
 
-IMPORTAN NOTE: When using the callback mechanism just described,
+IMPORTANT NOTE: When using the callback mechanism just described,
 recognize that there are some operations you should not attempt
 because SPARTA cannot execute them correctly.  If the Python function
 is invoked between runs in the SPARTA input script, then it should be
@@ -512,80 +469,86 @@ something illogical is being attempted.
 :line
 
 A Python function can also be invoked within the formula for an
-equal-style, or grid-style varaible.  This means the Python function
+equal-style or grid-style varaible.  This means the Python function
 will be invoked whenever the variable is invoked.  In the case of an
-atom-style variable, the Python function can be invoked once per atom.
+grid-style variable, the Python function can be invoked once per grid
+cell.
 
-NOTE: these code snippets need to be made more SPARTA-like
+Here are two simple examples using equal- and grid-style variables to
+trigger execution of a Python function.  See the
+examples/python/in.circle.pyvar input script for more details.  Assume
+the file truncate.py includes this Python code:
 
-Here are two simple examples using equal- and atom-style variables to
-trigger execution of a Python function:
-
- variable        foo python truncate
- python          truncate return v_foo input 1 iv_arg format fi here """
 def truncate(x):
-  return int(x)
-"""
-variable        ptrunc equal py_foo(press)
-print           "TRUNCATED pressure = ${ptrunc}" :pre
+  return int(x) :pre
+
+Then consider these input script lines:
+
+variable        foo python truncate
+python          truncate return v_foo input 1 iv_arg format fi file truncate.py
+variable        scalar equal py_foo(vol)
+print           "TRUNCATED volume ${vol+2.5}"
 
 The Python "truncate" function simply converts a floating-point value
 to an integer value.  When the SPARTA print command evaluates the
-equal-style "ptrunc" variable, the current thermodynamic pressure is
-passed to the Python function.  The truncated value is output to the
-screen and logfile by the print command.  Note that the {input}
-keyword for the {python} command, specifies an internal-style variable
-named "arg" as iv_arg which is required to invoke the Python function
-from a Python function wrapper.
+equal-style "scalar" variable, the system volume (plus 2.5) is passed
+to the Python function.  The truncated value is output to the screen
+and logfile by the print command.  Note that the {input} keyword for
+the {python} command, specifies an internal-style variable named "arg"
+as iv_arg which is required to invoke the Python function from a
+Python function wrapper.
 
 The last 2 lines of the equal-style variable example can be replaced
 by these to define grid-style variables which invoke the same Python
 "truncate" function:
 
- variable        xtrunc grid py_foo(x)
- variable        ytrunc grid py_foo(y)
- variable        ztrunc grid py_foo(z)
- dump            1 all grid 100 tmp.dump id x y z v_xtrunc v_ytrunc v_ztrunc :pre
+compute         1 property/grid all xc yc
+variable        xnew grid py_foo(c_1[1])
+variable        ynew grid py_foo(c_1[2])
+dump            1 grid all 1000 dump.grid.pyvar id xc yc v_xnew v_ynew :pre
 
-When the dump command invokes the 3 grid-style variables, their
-arguments x,y,z to the Python function wrapper are the current cell
+When the dump command invokes the 2 grid-style variables, their
+arguments c_1\[1\] and c_1\[2\] Python function wrapper are the cell
 center coordinates of each grid cell.  The Python "truncate" function
-is thus invoked 3 times for each grid cell, and the truncated
-coordinate values for each grid cell are written to the dump file.
+is thus invoked twice for each grid cell, and the truncated coordinate
+values for each grid cell are written to the dump file.
 
 Note that when using a Python function wrapper in a variable,
 arguments can be passed to the Python function either from the
-varaible formula or by *input* keyword to the *python command.  For
-example, consider these (made up) commands:
+varaible formula or by *input* keyword to the *python command.
+
+Assume the file mixedargs.py includes this Python code:
+
+def mixedargs(a,b,x,y,z,flag):
+  ...
+  return result :pre
+
+Now consider these (made up) commands:
 
 variable        foo python mixedargs
 python          mixedargs return v_foo input 6 7.5 v_myValue iv_arg1 iv_argy iv_argz v_flag &
-                format fffffsf here """
-def mixedargs(a,b,x,y,z,flag):
-  ...
-  return result
-"""
+                format fffffsf file mixedargs.pt
 variable        flag string optionABC
-variable        myValue equal "2.0*temp*c_pe"
-compute         pe all pe
-compute         peatom all pe/atom
-variable        field atom py_foo(x+3.0,sqrt(y),(z-zlo)*c_peatom) :pre
+variable        myValue equal "2.0*np"
+compute         1 property/grid all xc yc zc
+compute         2 grid all n
+variable        field grid py_foo(c_1[1]+3.0,sqrt(c_1[2]),(c_1[3]-zlo)*c_2[1]) :pre
 
 They define a Python "mixedargs" function with 6 arguments.  Three of
 them are internal-style variables, which the variable formula
 calculates as numeric values for each grid cell and passes to the
 function.  In this example, these arguments are themselves small
 formulas containing the x,y,z coordinates of each grid cell as well as
-a per-atom compute (c_peratom) and stats keyword (zlo).
+a per-grid compute (c_2) and stats keyword (zlo).
 
 The other three arguements (7.5,v_myValue,v_flag) are defined by the
 {python} command.  The first and last are constant values (7.5 and the
 optionABC string).  The second argument (myValue) is the result of an
-equal-style variable formula which accesses the system temperature and
-potential energy.
+equal-style variable formula which accesses the total particle count
+(np).
 
 The "result" returned by each invocation of the Python "mixedargs"
-function becomes the per-atom value in the atom-style "field"
+function becomes the per-grid value in the grid-style "field"
 variable, which could be output to a dump file or used elsewhere in
 the input script.
 

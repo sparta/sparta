@@ -40,9 +40,16 @@ timestep 	    0.0001
 variable        foo python truncate
 python          truncate return v_foo input 1 iv_arg format fi file truncate.py
 
-variable        scalar equal py_foo(4.5)
+# these lines should also work in place of the previous one 
+# once triple quotes are supported
+#python          truncate return v_foo input 1 iv_arg format fi here """
+#def truncate(x):
+#  return int(x)
+#"""
 
-print           "TRUNCATE ${scalar}"
+variable        scalar equal py_foo(vol+2.5)
+
+print           "TRUNCATED volume ${scalar}"
 
 compute         1 property/grid all xc yc
 variable        xnew grid py_foo(c_1[1])
@@ -53,4 +60,3 @@ dump            1 grid all 1000 dump.grid.pyvar id xc yc v_xnew v_ynew
 stats		    100
 stats_style	    step cpu np nattempt ncoll nscoll nscheck
 run 		    1000
-

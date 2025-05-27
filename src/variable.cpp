@@ -759,20 +759,6 @@ char *Variable::retrieve(char *name)
 
   } else if (style[ivar] == PYTHON) {
     int ifunc = python->function_match(data[ivar][0],name,0);
-    if (ifunc < 0) {
-      if (ifunc == -1) {
-        error->all(FLERR,"Could not find Python function linked to variable");
-      } else if (ifunc == -2) {
-        error->all(FLERR,"Python function for variable does not have a "
-                   "return value");
-      } else if (ifunc == -3) {
-        error->all(FLERR,"Python variable does not match variable name "
-                   "registered with Python function");
-      } else {
-        error->all(FLERR,"Unknown error verifying function linked to "
-                   "python-style variable");
-      }
-    }
     python->invoke_function(ifunc,data[ivar][1],NULL);
     str = data[ivar][1];
 
@@ -1030,21 +1016,7 @@ int Variable::equal_style(int ivar)
   if (style[ivar] == EQUAL || style[ivar] == INTERNAL) return 1;
   if (style[ivar] == PYTHON) {
     pyindex[ivar] = python->function_match(data[ivar][0],names[ivar],1);
-    if (pyindex[ivar] < 0) {
-      int ierror = pyindex[ivar];
-      if (ierror == -1) {
-        error->all(FLERR, "Python function specified by variable not found");
-      } else if (ierror == -2) {
-        error->all(FLERR, "Python function for variable does not return a value");
-      } else if (ierror == -3) {
-        error->all(FLERR, "Python function and variable do not not link to each other");
-      } else if (ierror == -4) {
-        error->all(FLERR, "Python function for variable returns a string");
-      } else {
-        error->all(FLERR, "Unknown error linking Python function to variable ");
-      }
-      return 0;
-    } else return 1;
+    return 1;
   }
   return 0;
 }
@@ -3570,25 +3542,8 @@ int Variable::math_function(char *word, char *contents, Tree **tree,
     // jvars = returned indices of narg internal variables used by Python function
 
     int *jvars = new int[narg];
-    pyindex[pyvar] = python->wrapper_match(data[pyvar][0],names[pyvar],narg,jvars);
-    if (pyindex[pyvar] < 0) {
-      int ierror = pyindex[pyvar];
-      if (ierror == -1) {
-        error->all(FLERR, "Python function specified by variable not found");
-      } else if (ierror == -2) {
-        error->all(FLERR, "Python function for variable does not return a value");
-      } else if (ierror == -3) {
-        error->all(FLERR, "Python function and variable do not not link to each other");
-      } else if (ierror == -4) {
-        error->all(FLERR, "Python function for variable returns a string");
-      } else if (ierror == -5) {
-        error->all(FLERR, "Python function does not use internal variable args");
-      } else if (ierror == -6) {
-        error->all(FLERR,"Python function cannot find an internal variable");
-      } else {
-        error->all(FLERR, "Unknown error linking Python function to variable");
-      }
-    }
+    pyindex[pyvar] = python->wrapper_match(data[pyvar][0],names[pyvar],
+                                           narg,jvars);
 
     // if tree: store python variable and arg info in tree for later eval
     // else: one-time eval of python-coded function now via python variable

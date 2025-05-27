@@ -19,12 +19,12 @@ create_box  	    0 10 0 10 -0.5 0.5
 Created orthogonal box = (0 0 -0.5) to (10 10 0.5)
 create_grid 	    20 20 1
 Created 400 child grid cells
-  CPU time = 0.00200266 secs
-  create/ghost percent = 90.8943 9.10565
+  CPU time = 0.00162107 secs
+  create/ghost percent = 90.9467 9.05335
 balance_grid        rcb cell
 Balance grid migrated 0 cells
-  CPU time = 0.000278307 secs
-  reassign/sort/migrate/ghost percent = 54.192 0.655391 13.9458 31.2069
+  CPU time = 0.000232129 secs
+  reassign/sort/migrate/ghost percent = 57.1006 0.563049 14.5432 27.7932
 
 global		    nrho 1.0 fnum 0.001
 
@@ -41,10 +41,10 @@ read_surf           data.circle
   264 88 48 = cells outside/inside/overlapping surfs
   48 = surf cells with 1,2,etc splits
   71.8 71.8 = cell-wise and global flow volume
-  CPU time = 0.000900184 secs
-  read/check/sort/surf2grid/ghost/inout/particle percent = 9.77467 17.5019 2.01637 61.3977 9.30943 7.74075 0.020107
-  surf2grid time = 0.000552692 secs
-  map/comm1/comm2/comm3/comm4/split percent = 48.2893 6.14447 12.0664 3.31631 16.3295 10.8455
+  CPU time = 0.000858381 secs
+  read/check/sort/surf2grid/ghost/inout/particle percent = 9.51908 19.7756 1.34031 62.193 7.17199 7.19005 0.0201542
+  surf2grid time = 0.000533853 secs
+  map/comm1/comm2/comm3/comm4/split percent = 48.9245 6.30998 11.7 2.7354 16.4425 9.78172
 surf_collide	    1 diffuse 300.0 0.0
 surf_modify         all collide 1
 
@@ -60,10 +60,17 @@ timestep 	    0.0001
 variable        foo python truncate
 python          truncate return v_foo input 1 iv_arg format fi file truncate.py
 
-variable        scalar equal py_foo(4.5)
+# these lines should also work in place of the previous one
+# once triple quotes are supported
+#python          truncate return v_foo input 1 iv_arg format fi here """
+#def truncate(x):
+#  return int(x)
+#"""
 
-print           "TRUNCATE ${scalar}"
-TRUNCATE 4
+variable        scalar equal py_foo(vol+2.5)
+
+print           "TRUNCATED volume ${scalar}"
+TRUNCATED volume 102
 
 compute         1 property/grid all xc yc
 variable        xnew grid py_foo(c_1[1])
@@ -81,28 +88,28 @@ Memory usage per proc in Mbytes:
   total     (ave,min,max) = 1.52505 1.52505 1.52505
 Step CPU Np Natt Ncoll Nscoll Nscheck 
        0            0        0        0        0        0        0 
-     100  0.020897237    19734        0        0      115     4277 
-     200   0.07052288    31409        0        0      167     6312 
-     300   0.13897074    36779        0        0      180     7700 
-     400   0.21323536    39635        0        0      191     7989 
-     500   0.29210304    41221        0        0      181     8208 
-     600   0.37362909    42136        0        0      194     8631 
-     700   0.45617486    42729        0        0      170     8110 
-     800    0.5403085    43118        0        0      190     8615 
-     900    0.6247309    43309        0        0      203     8253 
-    1000   0.71013646    43387        0        0      181     8370 
-Loop time of 0.710142 on 1 procs for 1000 steps with 43387 particles
+     100  0.018455572    19734        0        0      115     4277 
+     200  0.064728287    31409        0        0      167     6312 
+     300    0.1281069    36779        0        0      180     7700 
+     400   0.19754176    39635        0        0      191     7989 
+     500   0.27093418    41221        0        0      181     8208 
+     600   0.34674983    42136        0        0      194     8631 
+     700   0.42480859    42729        0        0      170     8110 
+     800   0.50303393    43118        0        0      190     8615 
+     900   0.58223977    43309        0        0      203     8253 
+    1000   0.66224067    43387        0        0      181     8370 
+Loop time of 0.662248 on 1 procs for 1000 steps with 43387 particles
 
 MPI task timing breakdown:
 Section |  min time  |  avg time  |  max time  |%varavg| %total
 ---------------------------------------------------------------
-Move    | 0.48056    | 0.48056    | 0.48056    |   0.0 | 67.67
-Coll    | 0.12391    | 0.12391    | 0.12391    |   0.0 | 17.45
-Sort    | 0.067573   | 0.067573   | 0.067573   |   0.0 |  9.52
-Comm    | 0.0022468  | 0.0022468  | 0.0022468  |   0.0 |  0.32
-Modify  | 0.03516    | 0.03516    | 0.03516    |   0.0 |  4.95
-Output  | 0.00044142 | 0.00044142 | 0.00044142 |   0.0 |  0.06
-Other   |            | 0.0002556  |            |       |  0.04
+Move    | 0.4504     | 0.4504     | 0.4504     |   0.0 | 68.01
+Coll    | 0.11352    | 0.11352    | 0.11352    |   0.0 | 17.14
+Sort    | 0.062999   | 0.062999   | 0.062999   |   0.0 |  9.51
+Comm    | 0.0020956  | 0.0020956  | 0.0020956  |   0.0 |  0.32
+Modify  | 0.032524   | 0.032524   | 0.032524   |   0.0 |  4.91
+Output  | 0.00043176 | 0.00043176 | 0.00043176 |   0.0 |  0.07
+Other   |            | 0.0002747  |            |       |  0.04
 
 Particle moves    = 36515437 (36.5M)
 Cells touched     = 41357241 (41.4M)
@@ -118,7 +125,7 @@ Reactions         = 0 (0K)
 Particles stuck   = 0
 Axisymm bad moves = 0
 
-Particle-moves/CPUsec/proc: 5.14199e+07
+Particle-moves/CPUsec/proc: 5.51386e+07
 Particle-moves/step: 36515.4
 Cell-touches/particle/step: 1.1326
 Particle comm iterations/step: 1
