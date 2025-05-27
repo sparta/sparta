@@ -229,7 +229,7 @@ or tetrahedron (3d).  Conceptually, the idea is that the small area
 (2d) or volume (3d) surrounding the point has properties represented
 by the coarse grid cell values in the file.
 </P>
-<P>All SPARTA grid cells have a center point (sx,sy,sz), which is the
+<P>All SPARTA grid cells define a center point (sx,sy,sz), which is the
 center of a rectangle (2d) or parallelepiped (3d).
 </P>
 <P>Both the coarse-grid code and SPARTA should operate on the same
@@ -240,14 +240,17 @@ set of all (sx,sy,sz) points.  For each (sx,sz,sz) point, the
 point are assigned to the custom per-grid values of that SPARTA grid
 cell cell.  Here are a few additional details.
 </P>
-<UL><LI>If two or more coarse grid points are equi-distant from a SPARTA
-center point, then their coarse grid values are averaged before
-assigning them to the SPARTA grid cell. 
+<UL><LI>If two or more coarse grid points are the "same" nearest distance from
+a SPARTA center point, then their coarse grid values are averaged
+before assigning them to the SPARTA grid cell.  Currently, "same" is
+defined as within a distance cdist*(1+1.0e-6) where cdist = closest
+distance from the SPARTA center point to any coarse grid
+point. I.e. one part in a million. 
 
-<P>SPARTA center points will never be on the boundary of the simulation
+<LI>SPARTA center points will never be on the boundary of the simulation
 domain.  But coarse grid points can be.  All coarse grid points must
-be inside the SPARTA simulation box or on its surface.
-</P>
+be inside the SPARTA simulation box or on its surface. 
+
 <LI>If surfaces are present in the two codes's simulations, then both
 codes should define an identical set of surface elements.  This is
 necessary to make flow parameters near surfaces consistent between the
@@ -263,17 +266,18 @@ In this case it should be fine to assign the grid cell values from the
 nearest coarse grid point in the flow. 
 </UL>
 <P>IMPORTANT NOTE: The current implementation of this "mapping" operation
-stores the entire coarse grid on every processor.  Each processor then
+stores the entire coarse grid on every processor, Each processor then
 loops over the SPARTA grid cells it own and searches the entire set of
-of coarse grid point for the nearest, using a k-d tree.  If either the
-coarse grid storage or tree search becomes a bottleneck for very
-large-scale problems, we could consider implementing a more parallel
-algorithm.
+of coarse grid point for the nearest, using a k-d tree (in 2 or 3
+dimensions).  If either the coarse grid storage or tree search becomes
+a bottleneck for very large-scale problems, we could consider
+implementing a more parallel algorithm.
 </P>
 <P>Creation of the file(s) read by this action is a pre-processing step.
 The <A HREF = "create_particles.html">create_particles</A> command can be used with
 its custom options to create particles with properties that match the
-coarse-grid NS values.  Using this action with the <A HREF = "fix_custom.html">fix
+coarse-grid NS values read in and assigned to custom per-grid vectors
+or arrays by this command.  Using this action with the <A HREF = "fix_custom.html">fix
 custom</A> command could assign per-grid custom values
 based on different time snapshots from the NS code.
 </P>
