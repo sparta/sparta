@@ -32,20 +32,21 @@ fix		    in emit/face air xlo twopass # subsonic 0.1 NULL
 
 timestep 	    0.0001
 
-#dump                2 image all 50 image.*.ppm type type pdiam 0.1 &
+#dump                2 image all 500 image.*.ppm type type pdiam 0.1 &
 #                    surf proc 0.01 size 512 512 zoom 1.75 &
 #                    gline yes 0.005 
 #dump_modify	    2 pad 4
 
 variable        foo python truncate
-python          truncate return v_foo input 1 iv_arg format fi file truncate.py
 
-# these lines should also work in place of the previous one 
-# once triple quotes are supported
-#python          truncate return v_foo input 1 iv_arg format fi here """
-#def truncate(x):
-#  return int(x)
-#"""
+# either form of python command works the same
+
+python          truncate return v_foo input 1 iv_arg format fi here """
+def truncate(x):
+  return int(x)
+"""
+
+#python          truncate return v_foo input 1 iv_arg format fi file truncate.py
 
 variable        scalar equal py_foo(vol+2.5)
 

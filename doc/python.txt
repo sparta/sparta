@@ -109,10 +109,6 @@ illustrates use of the python command.
 The first argument is the {mode} setting, which is either {source} or
 the {name} of a Python function.
 
-IMPORTANT NOTE: The {here} option of the {source} keyword is not yet
-supported in SPARTA.  It requires the use of triple quotes in the
-input script, which has not yet been implemented.
-
 If {source} is used, it is followed by either the {here} keyword or a
 file name containing Python code.  The {here} keyword is followed by a
 string containing python commands, either on a single line enclosed in
@@ -259,11 +255,6 @@ The Python code will be executed in parallel on all MPI processes.
 Note that Python code which contains a function definition does not
 "execute" the function when it is run; it simply defines the function
 so that it can be invoked later.
-
-IMPORTANT NOTE: The {here} keyword, when the {mode} keyword is a
-Python function name, is not yet supported in SPARTA.  It requires the
-use of triple quotes in the input script, which has not yet been
-implemented.  Use the {file} keyword instead.
 
 The {here} keyword does the same thing, except that the Python code
 follows as a single argument to the {here} keyword.  This can be done

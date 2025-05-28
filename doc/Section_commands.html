@@ -145,27 +145,41 @@ underscores, or punctuation characters.
 line are arguments.
 </P>
 <P>(6) If you want text with spaces to be treated as a single argument,
-it can be enclosed in either double or single quotes.  A long single
-argument enclosed in quotes can even span multiple lines if the "&"
-character is used, as described above.  E.g.
+it can be enclosed in either single (') or double (") or triple quotes
+(""").  A long single argument enclosed in single or double quotes can
+span multiple lines if the "&" character is used, as described above.
+When the lines are concatenated together by LAMMPS (and the "&"
+characters and line breaks removed), the combined text will become a
+single line.  If you want multiple lines of an argument to retain
+their line breaks, the text can be enclosed in triple quotes, in which
+case "&" characters are not needed and do not function as line
+continuation character.
 </P>
-<PRE>print "Volume = $v"
+<P>For example:
+</P>
+<P>print "Volume = $v"
 print 'Volume = $v'
+print """
+System volume = $v
+System temperature = $t
+"""
 variable a string "red green blue &
                    purple orange cyan"
-if "$<I>steps</I> > 1000" then quit 
-</PRE>
-<P>The quotes are removed when the single argument is stored internally.
+if "$<I>steps</I> > 1000" then quit
 </P>
-<P>See the <A HREF = "dump_modify.html">dump modify format</A> or <A HREF = "print.html">print</A> or
-<A HREF = "if.html">if</A> commands for examples.  A "#" or "$" character that is
-between quotes will not be treated as a comment indicator in (2) or
-substituted for as a variable in (3).
+<P>In each of these cases, the single, double, or triple quotes are
+removed and the enclosed text stored internally as a single argument.
+</P>
+<P>See the <A HREF = "dump_modify.html">dump modify format</A>, <A HREF = "print.html">print</A>,
+<A HREF = "if.html">if</A>, or <A HREF = "python.html">python</A> commands for examples.
+</P>
+<P>A "#" or "$" character that is between quotes will not be treated as a
+comment indicator in (2) or substituted for as a variable in (3).
 </P>
 <P>IMPORTANT NOTE: If the argument is itself a command that requires a
 quoted argument (e.g. using a <A HREF = "print.html">print</A> command as part of an
-<A HREF = "if.html">if</A> or <A HREF = "run.html">run every</A> command), then the double and
-single quotes can be nested in the usual manner.  See the doc pages
+<A HREF = "if.html">if</A> or <A HREF = "run.html">run every</A> command), then single, double, or
+triple quotes can be nested in the usual manner.  See the doc pages
 for those commands for examples.  Only one of level of nesting is
 allowed, but that should be sufficient for most use cases.
 </P>

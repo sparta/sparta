@@ -20,12 +20,12 @@ Created orthogonal box = (0 0 -0.5) to (10 10 0.5)
 create_grid 	    20 20 1
 WARNING: Could not acquire nearby ghost cells b/c grid partition is not clumped (../grid.cpp:472)
 Created 400 child grid cells
-  CPU time = 0.00139887 secs
-  create/ghost percent = 96.1054 3.89458
+  CPU time = 0.000862467 secs
+  create/ghost percent = 96.7302 3.26981
 balance_grid        rcb cell
 Balance grid migrated 280 cells
-  CPU time = 0.000498703 secs
-  reassign/sort/migrate/ghost percent = 62.0309 0.342087 20.7282 16.8988
+  CPU time = 0.000357571 secs
+  reassign/sort/migrate/ghost percent = 58.8233 0.399921 24.4251 16.3517
 
 global		    nrho 1.0 fnum 0.001
 
@@ -42,10 +42,10 @@ read_surf           data.circle
   264 88 48 = cells outside/inside/overlapping surfs
   48 = surf cells with 1,2,etc splits
   71.8 71.8 = cell-wise and global flow volume
-  CPU time = 0.000664289 secs
-  read/check/sort/surf2grid/ghost/inout/particle percent = 10.8721 19.5901 0.567675 60.5377 8.43247 7.64351 0.101311
-  surf2grid time = 0.000402145 secs
-  map/comm1/comm2/comm3/comm4/split percent = 58.4951 7.51918 7.64277 3.11753 13.8783 5.23294
+  CPU time = 0.000479756 secs
+  read/check/sort/surf2grid/ghost/inout/particle percent = 11.0733 30.2381 0.80666 49.3703 8.51162 7.23097 0.129649
+  surf2grid time = 0.000236857 secs
+  map/comm1/comm2/comm3/comm4/split percent = 27.4685 7.51677 6.4026 28.9643 17.8458 6.99832
 surf_collide	    1 diffuse 300.0 0.0
 surf_modify         all collide 1
 
@@ -55,18 +55,19 @@ fix		    in emit/face air xlo twopass # subsonic 0.1 NULL
 
 timestep 	    0.0001
 
-#dump                2 image all 50 image.*.ppm type type pdiam 0.1 #                    surf proc 0.01 size 512 512 zoom 1.75 #                    gline yes 0.005
+#dump                2 image all 500 image.*.ppm type type pdiam 0.1 #                    surf proc 0.01 size 512 512 zoom 1.75 #                    gline yes 0.005
 #dump_modify	    2 pad 4
 
 variable        foo python truncate
-python          truncate return v_foo input 1 iv_arg format fi file truncate.py
 
-# these lines should also work in place of the previous one
-# once triple quotes are supported
-#python          truncate return v_foo input 1 iv_arg format fi here """
-#def truncate(x):
-#  return int(x)
-#"""
+# either form of python command works the same
+
+python          truncate return v_foo input 1 iv_arg format fi here """
+def truncate(x):
+  return int(x)
+"""
+
+#python          truncate return v_foo input 1 iv_arg format fi file truncate.py
 
 variable        scalar equal py_foo(vol+2.5)
 
@@ -89,28 +90,28 @@ Memory usage per proc in Mbytes:
   total     (ave,min,max) = 1.52047 1.52047 1.52047
 Step CPU Np Natt Ncoll Nscoll Nscheck 
        0            0        0        0        0        0        0 
-     100  0.011361928    19726        0        0      110     4139 
-     200  0.033711303    31416        0        0      177     6661 
-     300  0.061560027    36914        0        0      179     7156 
-     400  0.092382601    39533        0        0      197     8003 
-     500   0.12525682    41089        0        0      205     8212 
-     600   0.16111134    42039        0        0      159     8099 
-     700   0.19741179    42715        0        0      186     8545 
-     800   0.23265324    43093        0        0      203     8658 
-     900   0.26894136    43246        0        0      169     8319 
-    1000   0.30564868    43518        0        0      183     8665 
-Loop time of 0.305659 on 4 procs for 1000 steps with 43518 particles
+     100     0.011351    19726        0        0      110     4139 
+     200  0.035587768    31416        0        0      177     6661 
+     300  0.065619508    36914        0        0      179     7156 
+     400   0.09931489    39533        0        0      197     8003 
+     500    0.1357824    41089        0        0      205     8212 
+     600   0.17472935    42039        0        0      159     8099 
+     700   0.21502093    42715        0        0      186     8545 
+     800   0.25403231    43093        0        0      203     8658 
+     900   0.29337904    43246        0        0      169     8319 
+    1000   0.33380478    43518        0        0      183     8665 
+Loop time of 0.333815 on 4 procs for 1000 steps with 43518 particles
 
 MPI task timing breakdown:
 Section |  min time  |  avg time  |  max time  |%varavg| %total
 ---------------------------------------------------------------
-Move    | 0.041934   | 0.12238    | 0.20204    |  22.6 | 40.04
-Coll    | 0.0090096  | 0.025234   | 0.041628   |  10.2 |  8.26
-Sort    | 0.0049715  | 0.014826   | 0.024768   |   8.0 |  4.85
-Comm    | 0.010869   | 0.01152    | 0.012002   |   0.4 |  3.77
-Modify  | 7.9853e-05 | 0.010043   | 0.020119   |   9.9 |  3.29
-Output  | 0.00022694 | 0.0005244  | 0.00079375 |   0.0 |  0.17
-Other   |            | 0.1211     |            |       | 39.63
+Move    | 0.045897   | 0.13295    | 0.22058    |  23.8 | 39.83
+Coll    | 0.009833   | 0.02753    | 0.045324   |  10.7 |  8.25
+Sort    | 0.0053536  | 0.016012   | 0.027207   |   8.4 |  4.80
+Comm    | 0.011412   | 0.012142   | 0.01272    |   0.5 |  3.64
+Modify  | 8.0915e-05 | 0.011639   | 0.02443    |  10.7 |  3.49
+Output  | 0.00025023 | 0.00055871 | 0.00084266 |   0.0 |  0.17
+Other   |            | 0.133      |            |       | 39.84
 
 Particle moves    = 36329373 (36.3M)
 Cells touched     = 41340924 (41.3M)
@@ -126,7 +127,7 @@ Reactions         = 0 (0K)
 Particles stuck   = 0
 Axisymm bad moves = 0
 
-Particle-moves/CPUsec/proc: 2.9714e+07
+Particle-moves/CPUsec/proc: 2.72077e+07
 Particle-moves/step: 36329.4
 Cell-touches/particle/step: 1.13795
 Particle comm iterations/step: 1.997
@@ -152,4 +153,3 @@ Surfs:    50 ave 50 max 50 min
 Histogram: 4 0 0 0 0 0 0 0 0 0
 GhostSurf: 0 ave 0 max 0 min
 Histogram: 4 0 0 0 0 0 0 0 0 0
-

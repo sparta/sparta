@@ -138,7 +138,6 @@ void PythonImpl::command(int narg, char **arg)
     int err = -1;
 
     if ((narg > 2) && (strcmp(arg[1], "here") == 0)) {
-      error->all(FLERR,"Python source here option not yet supported");
       err = execute_string(arg[2]);
     } else {
       int file_is_readable = 0;
@@ -208,7 +207,6 @@ void PythonImpl::command(int narg, char **arg)
       pyfile = utils::strdup(arg[iarg + 1]);
       iarg += 2;
     } else if (strcmp(arg[iarg], "here") == 0) {
-      error->all(FLERR,"Python function-name here keyword not yet supported");
       if (iarg+2 > narg) error->all(FLERR, "Invalid python here command");
       herestr = arg[iarg + 1];
       iarg += 2;
