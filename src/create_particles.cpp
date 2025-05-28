@@ -92,7 +92,7 @@ void CreateParticles::command(int narg, char **arg)
   int globalflag = 0;
   twopass = 0;
   region = NULL;
-  speciesflag = densflag = vstreamflag = tempflag = 0;
+  nrho_var_flag = vstream_var_flag = temp_var_flag = species_var_flag = 0;
   sstr = sxstr = systr = szstr = NULL;
   dstr = dxstr = dystr = dzstr = NULL;
   tstr = txstr = tystr = tzstr = NULL;
@@ -123,20 +123,9 @@ void CreateParticles::command(int narg, char **arg)
       region = domain->regions[iregion];
       iarg += 2;
       
-    } else if (strcmp(arg[iarg],"species") == 0) {
-      if (iarg+5 > narg) error->all(FLERR,"Illegal create_particles command");
-      speciesflag = 1;
-      sstr = arg[iarg+1];
-      if (strcmp(arg[iarg+2],"NULL") == 0) sxstr = NULL;
-      else sxstr = arg[iarg+2];
-      if (strcmp(arg[iarg+3],"NULL") == 0) systr = NULL;
-      else systr = arg[iarg+3];
-      if (strcmp(arg[iarg+4],"NULL") == 0) szstr = NULL;
-      else szstr = arg[iarg+4];
-      iarg += 5;
     } else if (strcmp(arg[iarg],"density") == 0) {
       if (iarg+5 > narg) error->all(FLERR,"Illegal create_particles command");
-      densflag = 1;
+      nrho_var_flag = 1;
       dstr = arg[iarg+1];
       if (strcmp(arg[iarg+2],"NULL") == 0) dxstr = NULL;
       else dxstr = arg[iarg+2];
@@ -147,7 +136,7 @@ void CreateParticles::command(int narg, char **arg)
       iarg += 5;
     } else if (strcmp(arg[iarg],"temperature") == 0) {
       if (iarg+5 > narg) error->all(FLERR,"Illegal create_particles command");
-      tempflag = 1;
+      temp_var_flag = 1;
       tstr = arg[iarg+1];
       if (strcmp(arg[iarg+2],"NULL") == 0) txstr = NULL;
       else txstr = arg[iarg+2];
@@ -158,7 +147,7 @@ void CreateParticles::command(int narg, char **arg)
       iarg += 5;
     } else if (strcmp(arg[iarg],"vstream") == 0) {
       if (iarg+7 > narg) error->all(FLERR,"Illegal create_particles command");
-      vstreamflag = 1;
+      vstream_var_flag = 1;
       if (strcmp(arg[iarg+1],"NULL") == 0) vxstr = NULL;
       else vxstr = arg[iarg+1];
       if (strcmp(arg[iarg+2],"NULL") == 0) vystr = NULL;
@@ -172,6 +161,17 @@ void CreateParticles::command(int narg, char **arg)
       if (strcmp(arg[iarg+6],"NULL") == 0) vstrz = NULL;
       else vstrz = arg[iarg+6];
       iarg += 7;
+    } else if (strcmp(arg[iarg],"species") == 0) {
+      if (iarg+5 > narg) error->all(FLERR,"Illegal create_particles command");
+      species_var_flag = 1;
+      sstr = arg[iarg+1];
+      if (strcmp(arg[iarg+2],"NULL") == 0) sxstr = NULL;
+      else sxstr = arg[iarg+2];
+      if (strcmp(arg[iarg+3],"NULL") == 0) systr = NULL;
+      else systr = arg[iarg+3];
+      if (strcmp(arg[iarg+4],"NULL") == 0) szstr = NULL;
+      else szstr = arg[iarg+4];
+      iarg += 5;
 
     } else if (strcmp(arg[iarg],"custom") == 0) {
 
@@ -215,18 +215,23 @@ void CreateParticles::command(int narg, char **arg)
   if (globalflag)
     error->all(FLERR,"Create_particles global option not yet implemented");
 
-  if (speciesflag && fractions_custom_flag)
-    error->all(FLERR,"Create_particles cannot use species and custom fractions together");
-  if (densflag && nrho_custom_flag)
+  if (nrho_var_flag && nrho_custom_flag)
     error->all(FLERR,"Create_particles cannot use density and custom density together");
-  if (tempflag && temp_custom_flag)
+  if (temp_var_flag && temp_custom_flag)
     error->all(FLERR,"Create_particles cannot use temperature and custom temperature together");
-  if (vstreamflag && vstream_custom_flag)
+  if (vstream_var_flag && vstream_custom_flag)
     error->all(FLERR,"Create_particles cannot use vstream and custom vstream together");
+  if (species_var_flag && fractions_custom_flag)
+    error->all(FLERR,"Create_particles cannot use species and custom fractions together");
+
+  nrho_flag = nrho_var_flag + nrho_custom_flag;
+  temp_flag = temp_var_flag + temp_custom_flag;
+  vstream_flag = vstream_var_flag + vstream_custom_flag;
+  species_flag = species_var_flag + fractions_custom_flag;
   
   // error checks and further setup for variables
 
-  if (speciesflag) {
+  if (species_var_flag) {
     svar = input->variable->find(sstr);
     if (svar < 0)
       error->all(FLERR,"Variable name for create_particles does not exist");
@@ -255,7 +260,7 @@ void CreateParticles::command(int narg, char **arg)
     }
   }
 
-  if (densflag) {
+  if (nrho_var_flag) {
     dvar = input->variable->find(dstr);
     if (dvar < 0)
       error->all(FLERR,"Variable name for create_particles does not exist");
@@ -284,7 +289,7 @@ void CreateParticles::command(int narg, char **arg)
     }
   }
 
-  if (tempflag) {
+  if (temp_var_flag) {
     tvar = input->variable->find(tstr);
     if (tvar < 0)
       error->all(FLERR,"Variable name for create_particles does not exist");
@@ -313,7 +318,7 @@ void CreateParticles::command(int narg, char **arg)
     }
   }
 
-  if (vstreamflag) {
+  if (vstream_var_flag) {
     if (vxstr) {
       vxvar = input->variable->find(vxstr);
       if (vxvar < 0)
@@ -432,7 +437,7 @@ void CreateParticles::command(int narg, char **arg)
   bigint nglobal;
   bigint nme = particle->nlocal;
   MPI_Allreduce(&nme,&nglobal,1,MPI_SPARTA_BIGINT,MPI_SUM,world);
-  if (!region && !densflag && nglobal-nprevious != np) {
+  if (!region && !nrho_var_flag && nglobal-nprevious != np) {
     char str[128];
     sprintf(str,"Created unexpected # of particles: "
 	    BIGINT_FORMAT " versus " BIGINT_FORMAT,
@@ -666,9 +671,11 @@ void CreateParticles::create_local()
     lo = cells[icell].lo;
     hi = cells[icell].hi;
 
-    if (densflag || nrho_custom_flag) {
-      if (densflag) scale = density_variable(lo,hi);
+    if (nrho_flag) {
+      if (nrho_var_flag) scale = nrho_variable(lo,hi);
       else scale = nrho_custom[icell] / nrho;
+      if (scale < 0.0)
+        error->one(FLERR,"Variable/custom density scale factor < 0.0");
       ntarget *= scale;
       ncreate = static_cast<int> (ntarget);
       if (random->uniform() < ntarget-ncreate) ncreate++;
@@ -728,8 +735,8 @@ void CreateParticles::create_local()
 
       rn = random->uniform();
 
-      if (speciesflag || fractions_custom_flag) {
-        if (speciesflag) {
+      if (species_flag) {
+        if (species_var_flag) {
           isp = species_variable(x) - 1;
           if (isp < 0 || isp >= nspecies) continue;
           ispecies = species[isp];
@@ -744,9 +751,11 @@ void CreateParticles::create_local()
         ispecies = species[isp];
       }
 
-      if (tempflag || temp_custom_flag) {
-        if (tempflag) tempscale = temperature_variable(x);
+      if (temp_flag) {
+        if (temp_var_flag) tempscale = temperature_variable(x);
         else tempscale = temp_custom[icell] / temp_thermal;
+        if (tempscale < 0.0)
+          error->one(FLERR,"Variable/custom temperature scale factor < 0.0");
         sqrttempscale = sqrt(tempscale);
       }
 
@@ -755,8 +764,8 @@ void CreateParticles::create_local()
       theta1 = MY_2PI * random->uniform();
       theta2 = MY_2PI * random->uniform();
 
-      if (vstreamflag || vstream_custom_flag) {
-        if (vstreamflag) {
+      if (vstream_flag) {
+        if (vstream_var_flag) {
           vstream_variable(x,vstream,vstream_var);
           v[0] = vstream_var[0] + vn*cos(theta1);
           v[1] = vstream_var[1] + vr*cos(theta2);
@@ -943,9 +952,11 @@ void CreateParticles::create_local_twopass()
     lo = cells[icell].lo;
     hi = cells[icell].hi;
 
-    if (densflag || nrho_custom_flag) {
-      if (densflag) scale = density_variable(lo,hi);
+    if (nrho_flag) {
+      if (nrho_var_flag) scale = nrho_variable(lo,hi);
       else scale = nrho_custom[icell] / nrho;
+      if (scale < 0.0)
+        error->one(FLERR,"Variable/custom density scale factor < 0.0");
       ntarget *= scale;
       ncreate = static_cast<int> (ntarget);
       if (random->uniform() < ntarget-ncreate) ncreate++;
@@ -1029,8 +1040,8 @@ void CreateParticles::create_local_twopass()
 
       rn = random->uniform();
 
-      if (speciesflag || fractions_custom_flag) {
-        if (speciesflag) {
+      if (species_flag) {
+        if (species_var_flag) {
           isp = species_variable(x) - 1;
           if (isp < 0 || isp >= nspecies) continue;
           ispecies = species[isp];
@@ -1045,9 +1056,11 @@ void CreateParticles::create_local_twopass()
         ispecies = species[isp];
       }
       
-      if (tempflag || temp_custom_flag) {
-        if (tempflag) tempscale = temperature_variable(x);
+      if (temp_flag) {
+        if (temp_var_flag) tempscale = temperature_variable(x);
         else tempscale = temp_custom[icell] / temp_thermal;
+        if (tempscale < 0.0)
+          error->one(FLERR,"Variable/custom temperature scale factor < 0.0");
         sqrttempscale = sqrt(tempscale);
       }
 
@@ -1056,8 +1069,8 @@ void CreateParticles::create_local_twopass()
       theta1 = MY_2PI * random->uniform();
       theta2 = MY_2PI * random->uniform();
 
-      if (vstreamflag || vstream_custom_flag) {
-        if (vstreamflag) {
+      if (vstream_flag) {
+        if (vstream_var_flag) {
           vstream_variable(x,vstream,vstream_var);
           v[0] = vstream_var[0] + vn*cos(theta1);
           v[1] = vstream_var[1] + vr*cos(theta2);
@@ -1134,7 +1147,7 @@ int CreateParticles::species_variable(double *x)
    first plug in grid x,y,z values into dxvar,dyvar,dzvar
 ------------------------------------------------------------------------- */
 
-double CreateParticles::density_variable(double *lo, double *hi)
+double CreateParticles::nrho_variable(double *lo, double *hi)
 {
   double center[3];
   center[0] = 0.5 * (lo[0]+hi[0]);

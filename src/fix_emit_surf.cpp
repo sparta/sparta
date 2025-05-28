@@ -93,8 +93,8 @@ FixEmitSurf::FixEmitSurf(SPARTA *sparta, int narg, char **arg) :
                "with perspecies yes");
 
   int custom_any = 0;
-  if (nrho_custom_flag || vstream_custom_flag || speed_custom_flag ||
-      temp_custom_flag || fractions_custom_flag) custom_any = 1;
+  if (nrho_custom_flag || temp_custom_flag || vstream_custom_flag ||
+      speed_custom_flag || fractions_custom_flag) custom_any = 1;
   if (custom_any && npmode != FLOW)
     error->all(FLERR,"Cannot use fix emit/surf with n != 0 and custom options");
   if (custom_any && subsonic)
@@ -1219,7 +1219,7 @@ int FixEmitSurf::option(int narg, char **arg)
   if (strcmp(arg[0],"custom") == 0) {
     if (3 > narg) error->all(FLERR,"Illegal fix emit/surf command");
 
-    if (strcmp(arg[1],"nrho") == 0) {
+    if (strcmp(arg[1],"density") == 0) {
       nrho_custom_flag = 1;
       if (strstr(arg[2],"s_") != arg[2])
         error->all(FLERR,"Illegal fix emit/surf command");
@@ -1227,6 +1227,15 @@ int FixEmitSurf::option(int narg, char **arg)
       delete [] nrho_custom_id;
       nrho_custom_id = new char[n];
       strcpy(nrho_custom_id,&arg[2][2]);
+
+    } else if (strcmp(arg[1],"temperature") == 0) {
+      temp_custom_flag = 1;
+      if (strstr(arg[2],"s_") != arg[2])
+        error->all(FLERR,"Illegal fix emit/surf command");
+      int n = strlen(arg[2]);
+      delete [] temp_custom_id;
+      temp_custom_id = new char[n];
+      strcpy(temp_custom_id,&arg[2][2]);
 
     } else if (strcmp(arg[1],"vstream") == 0) {
       vstream_custom_flag = 1;
@@ -1245,15 +1254,6 @@ int FixEmitSurf::option(int narg, char **arg)
       delete [] speed_custom_id;
       speed_custom_id = new char[n];
       strcpy(speed_custom_id,&arg[2][2]);
-
-    } else if (strcmp(arg[1],"temp") == 0) {
-      temp_custom_flag = 1;
-      if (strstr(arg[2],"s_") != arg[2])
-        error->all(FLERR,"Illegal fix emit/surf command");
-      int n = strlen(arg[2]);
-      delete [] temp_custom_id;
-      temp_custom_id = new char[n];
-      strcpy(temp_custom_id,&arg[2][2]);
 
     } else if (strcmp(arg[1],"fractions") == 0) {
       fractions_custom_flag = 1;
