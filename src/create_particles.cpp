@@ -92,14 +92,14 @@ void CreateParticles::command(int narg, char **arg)
   int globalflag = 0;
   twopass = 0;
   region = NULL;
-  nrho_var_flag = vstream_var_flag = temp_var_flag = species_var_flag = 0;
+  nrho_var_flag = temp_var_flag = vstream_var_flag = species_var_flag = 0;
   sstr = sxstr = systr = szstr = NULL;
   dstr = dxstr = dystr = dzstr = NULL;
   tstr = txstr = tystr = tzstr = NULL;
   vxstr = vystr = vzstr = vstrx = vstry = vstrz = NULL;
-  nrho_custom_flag = vstream_custom_flag = temp_custom_flag =
+  nrho_custom_flag = temp_custom_flag = vstream_custom_flag = 
     fractions_custom_flag = 0;
-  nrho_custom_id = vstream_custom_id = temp_custom_id =
+  nrho_custom_id = temp_custom_id = vstream_custom_id = 
     fractions_custom_id = NULL;
 
   while (iarg < narg) {
@@ -643,6 +643,7 @@ void CreateParticles::create_local()
   double ntarget,scale,rn,vn,vr,theta1,theta2,erot,evib;
   double *lo,*hi;
   
+  double *vstream_update_custom = vstream;
   double *cummulative_custom = new double[nspecies];
 
   double tempscale = 1.0;
@@ -770,10 +771,12 @@ void CreateParticles::create_local()
           v[0] = vstream_var[0] + vn*cos(theta1);
           v[1] = vstream_var[1] + vr*cos(theta2);
           v[2] = vstream_var[2] + vr*sin(theta2);
+          vstream_update_custom = vstream_var;
         } else {
           v[0] = vstream_custom[icell][0] + vn*cos(theta1);
           v[1] = vstream_custom[icell][1] + vr*cos(theta2);
           v[2] = vstream_custom[icell][2] + vr*sin(theta2);
+          vstream_update_custom = vstream_custom[icell];
         }
       } else {
         v[0] = vstream[0] + vn*cos(theta1);
@@ -788,9 +791,13 @@ void CreateParticles::create_local()
 
       particle->add_particle(id,ispecies,icell,x,v,erot,evib);
 
+      // tempscale and vstream_update_custom are set appropriately
+      // if using per-grid variables or per-grid custom attributes
+
       if (nfix_update_custom)
         modify->update_custom(particle->nlocal-1,tempscale*temp_thermal,
-                             tempscale*temp_rot,tempscale*temp_vib,vstream);
+                              tempscale*temp_rot,tempscale*temp_vib,
+                              vstream_update_custom);
     }
 
     // increment count without effect of density variation
@@ -972,6 +979,8 @@ void CreateParticles::create_local_twopass()
 
   // second pass, create particles using ncreate_values
 
+  double *vstream_update_custom = vstream;
+
   for (int icell = 0; icell < nglocal; icell++) {
     if (cinfo[icell].type == INSIDE) continue;
     if (cells[icell].nsplit > 1) continue;
@@ -1075,10 +1084,12 @@ void CreateParticles::create_local_twopass()
           v[0] = vstream_var[0] + vn*cos(theta1);
           v[1] = vstream_var[1] + vr*cos(theta2);
           v[2] = vstream_var[2] + vr*sin(theta2);
+          vstream_update_custom = vstream_var;
         } else {
           v[0] = vstream_custom[icell][0] + vn*cos(theta1);
           v[1] = vstream_custom[icell][1] + vr*cos(theta2);
           v[2] = vstream_custom[icell][2] + vr*sin(theta2);
+          vstream_update_custom = vstream_custom[icell];
         }
       } else {
         v[0] = vstream[0] + vn*cos(theta1);
@@ -1092,10 +1103,14 @@ void CreateParticles::create_local_twopass()
       id = MAXSMALLINT*random->uniform();
 
       particle->add_particle(id,ispecies,icell,x,v,erot,evib);
-
+ 
+      // tempscale and vstream_update_custom are set appropriately
+      // if using per-grid variables or per-grid custom attributes
+      
       if (nfix_update_custom)
         modify->update_custom(particle->nlocal-1,tempscale*temp_thermal,
-                              tempscale*temp_rot,tempscale*temp_vib,vstream);
+                              tempscale*temp_rot,tempscale*temp_vib,
+                              vstream_update_custom);
     }
   }
 
