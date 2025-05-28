@@ -57,6 +57,9 @@ custom grid create gvec int 0 create garray float 2 file grid.attributes gvec ga
 custom particle remove ivec
 custom surf remove darray :pre
 
+See examples using many of the "custom"_custom.html and "fix
+custom"_fix_custom.html command actions in examples/custom
+
 [Description:]
 
 Create or remove or initialize/reset custom attributes for particles,

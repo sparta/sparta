@@ -31,6 +31,9 @@ custom surf create temp double 0 create vstream double 3
 fix 1 custom 10000 surf file surf.temp.* 1 temp file surf.vstream.* 3 vstream[1] vstream[2] vstream[3]
 fix 1 custom 10000 surf file surf.flow.* 4 temp vstream[1] vstream[2] vstream[3]
 </P>
+<P>See examples using many of the <A HREF = "custom.html">custom</A> and <A HREF = "fix_custom.html">fix
+custom</A> command actions in examples/custom
+</P>
 <P><B>Description:</B>
 </P>
 <P>Reset one or more custom attributes for particles, grid cells, or

@@ -28,6 +28,9 @@ fix 1 custom 1000 particle set dvec v_dvec air NULL
 fix 1 custom 10000 surf file surf.temp.* 1 temp file surf.vstream.* 3 vstream\[1\] vstream\[2\] vstream\[3\]
 fix 1 custom 10000 surf file surf.flow.* 4 temp vstream\[1\] vstream\[2\] vstream\[3\]
 
+See examples using many of the "custom"_custom.html and "fix
+custom"_fix_custom.html command actions in examples/custom
+
 [Description:]
 
 Reset one or more custom attributes for particles, grid cells, or
