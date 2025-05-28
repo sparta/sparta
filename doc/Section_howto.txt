@@ -1669,6 +1669,7 @@ various ways:
 [Per-grid custom attributes:]
 
 "compute reduce"_compute_reduce.html - reduce a per-grid attribute to a scalar value
+"create_particles"_create_particles.html - use per-grid attributes when creating particles
 "custom"_custom.html - create or set or remove the values of a per-grid attribute
 "fix custom"_fix_custom.html - reset the values of a per-grid attribute during a simulation
 "dump grid"_dump.html - output per-grid attributes to a dump file
