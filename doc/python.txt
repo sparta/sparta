@@ -32,7 +32,7 @@ if mode is {name} of a Python function: :l
       value = integer number, floating point number, or string
       SELF = reference to SPARTA itself which can then be accessed by Python function
       variable = v_name, where name = name of SPARTA variable, e.g. v_abc
-      internal variable = iv_name, where name = name of a LAMMPS internal-style variable, e.g. iv_xyz
+      internal variable = iv_name, where name = name of a SPARTA internal-style variable, e.g. iv_xyz
   {return} arg = varReturn
     varReturn = v_name  = SPARTA variable name which the return value of the Python function will be assigned to
   {format} arg = fstring with M characters
@@ -131,7 +131,7 @@ see the *exists* keyword).  One or more keywords must follow the
 {here}, or {exists}.
 
 In all other cases, the first argument is the name of a Python function
-that will be registered with LAMMPS for future execution.  The function
+that will be registered with SPARTA for future execution.  The function
 may already be defined (see {exists} keyword) or must be defined using
 the {file} or {here} keywords as explained below.
 
