@@ -124,4 +124,4 @@ src/fix_lammps.cpp.
 :line
 
 :link(Linke25)
-[(Linke25)] T. Linke et al., TBD. (2025).
+[(Linke25)] T. Linke et al., A Concurrent Multiscale Framework Coupling Direct Simulation Monte Carlo and Molecular Dynamics (2025).
