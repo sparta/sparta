@@ -17,7 +17,7 @@ create_box  	    0 10 0 10 -0.5 0.5
 create_grid 	    20 20 1 
 balance_grid        rcb cell
 
-global		    nrho 1.0 fnum 0.001
+global		    nrho 1.0 fnum 0.1
 
 species		    air.species N O
 mixture		    air N O vstream 100.0 0 0 
@@ -57,6 +57,11 @@ variable        xnew grid py_foo(c_1[1])
 variable        ynew grid py_foo(c_1[2])
 
 dump            1 grid all 1000 dump.grid.pyvar id xc yc v_xnew v_ynew
+
+variable        xx particle py_foo(x)
+variable        yy particle py_foo(y)
+
+dump            2 particle all 1000 dump.particle.pyvar id x y v_xx v_yy
 
 stats		    100
 stats_style	    step cpu np nattempt ncoll nscoll nscheck

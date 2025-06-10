@@ -19,14 +19,14 @@ create_box  	    0 10 0 10 -0.5 0.5
 Created orthogonal box = (0 0 -0.5) to (10 10 0.5)
 create_grid 	    20 20 1
 Created 400 child grid cells
-  CPU time = 0.00163752 secs
-  create/ghost percent = 92.3722 7.62781
+  CPU time = 0.00246207 secs
+  create/ghost percent = 89.9885 10.0115
 balance_grid        rcb cell
 Balance grid migrated 0 cells
-  CPU time = 0.000214804 secs
-  reassign/sort/migrate/ghost percent = 55.9515 0.608462 13.0249 30.4152
+  CPU time = 0.000412013 secs
+  reassign/sort/migrate/ghost percent = 57.2247 0.584933 12.8265 29.3639
 
-global		    nrho 1.0 fnum 0.001
+global		    nrho 1.0 fnum 0.1
 
 species		    air.species N O
 mixture		    air N O vstream 100.0 0 0
@@ -41,10 +41,10 @@ read_surf           data.circle
   264 88 48 = cells outside/inside/overlapping surfs
   48 = surf cells with 1,2,etc splits
   71.8 71.8 = cell-wise and global flow volume
-  CPU time = 0.000707686 secs
-  read/check/sort/surf2grid/ghost/inout/particle percent = 9.52145 21.2029 1.29733 58.7913 9.18698 8.7878 0.023598
-  surf2grid time = 0.000416058 secs
-  map/comm1/comm2/comm3/comm4/split percent = 39.786 6.65196 12.679 3.28199 20.0381 12.4117
+  CPU time = 0.00134509 secs
+  read/check/sort/surf2grid/ghost/inout/particle percent = 10.5854 20.5554 1.69936 58.7485 8.41133 8.22829 0.0218573
+  surf2grid time = 0.000790221 secs
+  map/comm1/comm2/comm3/comm4/split percent = 36.4957 6.9249 13.2922 3.79185 18.3313 16.0316
 surf_collide	    1 diffuse 300.0 0.0
 surf_modify         all collide 1
 
@@ -79,6 +79,11 @@ variable        ynew grid py_foo(c_1[2])
 
 dump            1 grid all 1000 dump.grid.pyvar id xc yc v_xnew v_ynew
 
+variable        xx particle py_foo(x)
+variable        yy particle py_foo(y)
+
+dump            2 particle all 1000 dump.particle.pyvar id x y v_xx v_yy
+
 stats		    100
 stats_style	    step cpu np nattempt ncoll nscoll nscheck
 run 		    1000
@@ -89,36 +94,36 @@ Memory usage per proc in Mbytes:
   total     (ave,min,max) = 1.52505 1.52505 1.52505
 Step CPU Np Natt Ncoll Nscoll Nscheck 
        0            0        0        0        0        0        0 
-     100  0.019594795    19734        0        0      115     4277 
-     200  0.068221989    31409        0        0      167     6312 
-     300   0.13498235    36779        0        0      180     7700 
-     400   0.20822994    39635        0        0      191     7989 
-     500   0.28587195    41221        0        0      181     8208 
-     600   0.36618006    42136        0        0      194     8631 
-     700   0.44788459    42729        0        0      170     8110 
-     800   0.53026477    43118        0        0      190     8615 
-     900   0.61352891    43309        0        0      203     8253 
-    1000   0.69677519    43387        0        0      181     8370 
-Loop time of 0.696782 on 1 procs for 1000 steps with 43387 particles
+     100  0.000803388      195        0        0        1       32 
+     200   0.00137091      313        0        0        1       53 
+     300  0.002092558      358        0        0        2       73 
+     400  0.002852927      388        0        0        3       89 
+     500  0.003673803      392        0        0        2       84 
+     600  0.004532097      435        0        0        3      103 
+     700  0.005506588      433        0        0        3       88 
+     800  0.006491259      432        0        0        2       82 
+     900  0.007528704      435        0        0        3       99 
+    1000   0.00936211      438        0        0        2       78 
+Loop time of 0.00936539 on 1 procs for 1000 steps with 438 particles
 
 MPI task timing breakdown:
 Section |  min time  |  avg time  |  max time  |%varavg| %total
 ---------------------------------------------------------------
-Move    | 0.47285    | 0.47285    | 0.47285    |   0.0 | 67.86
-Coll    | 0.1199     | 0.1199     | 0.1199     |   0.0 | 17.21
-Sort    | 0.066891   | 0.066891   | 0.066891   |   0.0 |  9.60
-Comm    | 0.0021658  | 0.0021658  | 0.0021658  |   0.0 |  0.31
-Modify  | 0.034255   | 0.034255   | 0.034255   |   0.0 |  4.92
-Output  | 0.0004594  | 0.0004594  | 0.0004594  |   0.0 |  0.07
-Other   |            | 0.0002552  |            |       |  0.04
+Move    | 0.0041476  | 0.0041476  | 0.0041476  |   0.0 | 44.29
+Coll    | 0.0022757  | 0.0022757  | 0.0022757  |   0.0 | 24.30
+Sort    | 0.00075668 | 0.00075668 | 0.00075668 |   0.0 |  8.08
+Comm    | 6.1832e-05 | 6.1832e-05 | 6.1832e-05 |   0.0 |  0.66
+Modify  | 0.0012358  | 0.0012358  | 0.0012358  |   0.0 | 13.20
+Output  | 0.00080964 | 0.00080964 | 0.00080964 |   0.0 |  8.65
+Other   |            | 7.824e-05  |            |       |  0.84
 
-Particle moves    = 36515437 (36.5M)
-Cells touched     = 41357241 (41.4M)
+Particle moves    = 365815 (0.366M)
+Cells touched     = 414261 (0.414M)
 Particle comms    = 0 (0K)
-Boundary collides = 171829 (0.172M)
-Boundary exits    = 167336 (0.167M)
-SurfColl checks   = 7237854 (7.24M)
-SurfColl occurs   = 173634 (0.174M)
+Boundary collides = 1679 (1.68K)
+Boundary exits    = 1669 (1.67K)
+SurfColl checks   = 71055 (71.1K)
+SurfColl occurs   = 1655 (1.66K)
 Surf reactions    = 0 (0K)
 Collide attempts  = 0 (0K)
 Collide occurs    = 0 (0K)
@@ -126,21 +131,21 @@ Reactions         = 0 (0K)
 Particles stuck   = 0
 Axisymm bad moves = 0
 
-Particle-moves/CPUsec/proc: 5.24058e+07
-Particle-moves/step: 36515.4
-Cell-touches/particle/step: 1.1326
+Particle-moves/CPUsec/proc: 3.90603e+07
+Particle-moves/step: 365.815
+Cell-touches/particle/step: 1.13243
 Particle comm iterations/step: 1
 Particle fraction communicated: 0
-Particle fraction colliding with boundary: 0.00470565
-Particle fraction exiting boundary: 0.00458261
-Surface-checks/particle/step: 0.198214
-Surface-collisions/particle/step: 0.00475508
+Particle fraction colliding with boundary: 0.00458975
+Particle fraction exiting boundary: 0.00456242
+Surface-checks/particle/step: 0.194238
+Surface-collisions/particle/step: 0.00452414
 Surf-reactions/particle/step: 0
 Collision-attempts/particle/step: 0
 Collisions/particle/step: 0
 Reactions/particle/step: 0
 
-Particles: 43387 ave 43387 max 43387 min
+Particles: 438 ave 438 max 438 min
 Histogram: 1 0 0 0 0 0 0 0 0 0
 Cells:      400 ave 400 max 400 min
 Histogram: 1 0 0 0 0 0 0 0 0 0

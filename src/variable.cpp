@@ -3529,7 +3529,6 @@ int Variable::math_function(char *word, char *contents, Tree **tree,
   // text following py_ = python-style variable name tied to Python function
   // narg arguments are tied to internal variables defined by python command
 
-
   } else if (strstr(word,"py_") == word) {
 
     // pyvar = index of python-style variable which invokes Python function
@@ -3542,8 +3541,7 @@ int Variable::math_function(char *word, char *contents, Tree **tree,
     // jvars = returned indices of narg internal variables used by Python function
 
     int *jvars = new int[narg];
-    pyindex[pyvar] = python->wrapper_match(data[pyvar][0],names[pyvar],
-                                           narg,jvars);
+    pyindex[pyvar] = python->wrapper_match(data[pyvar][0],names[pyvar],narg,jvars);
 
     // if tree: store python variable and arg info in tree for later eval
     // else: one-time eval of python-coded function now via python variable

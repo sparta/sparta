@@ -18,6 +18,7 @@
 
 #include "python_impl.h"
 
+#include "comm.h"
 #include "error.h"
 #include "input.h"
 #include "memory.h"
@@ -104,10 +105,10 @@ PythonImpl::~PythonImpl()
 void PythonImpl::command(int narg, char **arg)
 {
   if (narg < 2) error->all(FLERR,"Illegal python command");
-
+  
   // if invoke is only keyword, invoke the previously defined function
 
-  if (narg == 2 && strcmp(arg[1], "invoke") == 0) {
+  if (strcmp(arg[1], "invoke") == 0) {
     int ifunc = find(arg[0]);
     if (ifunc < 0) {
       char msg[128];
@@ -128,7 +129,16 @@ void PythonImpl::command(int narg, char **arg)
       }
     }
 
+    bool logreturn = false;
+    if (narg == 3 && strcmp(arg[2], "logreturn") == 0) logreturn = true;
+    
     invoke_function(ifunc, str, NULL);
+
+    if (logreturn && str && (comm->me == 0)) {
+      if (screen) fprintf(screen,"Invoked python function %s returned %s\n",arg[0],str);
+      if (logfile) fprintf(logfile,"Invoked python function %s returned %s\n",arg[0],str);
+    }
+
     return;
   }
 
@@ -472,7 +482,7 @@ int PythonImpl::function_match(const char *name, const char *varname, int numeri
 
 int PythonImpl::wrapper_match(const char *name, const char *varname, int narg, int *argvars)
 {
-  int ifunc = function_match(name, varname, 1);
+  int ifunc = function_match(name,varname,1);
 
   int internal_count = 0;
   for (int i = 0; i < pfuncs[ifunc].ninput; i++)
