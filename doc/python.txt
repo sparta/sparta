@@ -34,20 +34,20 @@ if mode is {name} of a Python function: :l
         SELF = reference to SPARTA itself which can then be accessed by Python function
         variable = v_name, where name = name of SPARTA variable, e.g. v_abc
         internal variable = iv_name, where name = name of a LAMMPS internal-style variable, e.g. iv_xyz
-  {return} arg = varReturn
-    varReturn = v_name  = SPARTA variable name which the return value of the Python function will be assigned to
-  {format} arg = fstring with M characters
-    M = N if no return value, where N = # of inputs
-    M = N+1 if there is a return value
-    fstring = each character (i,f,s,p) corresponds (in order) to an input or return value
-      'i' = integer, 'f' = floating point, 's' = string, 'p' = SELF
-   {length} arg = Nlen
-     Nlen = max length of string returned from Python function
-   {file} arg = filename
-     filename = file of Python code, which defines the Python function
-   {here} arg = one or more lines of Python code which defines the Python function
-                must be a single argument, typically enclosed between triple quotes
-   {exists} arg = none = Python code has been loaded by previous python command :pre
+    {return} arg = varReturn
+      varReturn = v_name  = SPARTA variable name which the return value of the Python function will be assigned to
+    {format} arg = fstring with M characters
+      M = N if no return value, where N = # of inputs
+      M = N+1 if there is a return value
+      fstring = each character (i,f,s,p) corresponds (in order) to an input or return value
+        'i' = integer, 'f' = floating point, 's' = string, 'p' = SELF
+     {length} arg = Nlen
+       Nlen = max length of string returned from Python function
+     {file} arg = filename
+       filename = file of Python code, which defines the Python function
+     {here} arg = one or more lines of Python code which defines the Python function
+                  must be a single argument, typically enclosed between triple quotes
+     {exists} arg = none = Python code has been loaded by previous python command :pre
 
 [Examples:]
 

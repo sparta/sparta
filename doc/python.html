@@ -39,20 +39,20 @@
         SELF = reference to SPARTA itself which can then be accessed by Python function
         variable = v_name, where name = name of SPARTA variable, e.g. v_abc
         internal variable = iv_name, where name = name of a LAMMPS internal-style variable, e.g. iv_xyz
-  <I>return</I> arg = varReturn
-    varReturn = v_name  = SPARTA variable name which the return value of the Python function will be assigned to
-  <I>format</I> arg = fstring with M characters
-    M = N if no return value, where N = # of inputs
-    M = N+1 if there is a return value
-    fstring = each character (i,f,s,p) corresponds (in order) to an input or return value
-      'i' = integer, 'f' = floating point, 's' = string, 'p' = SELF
-   <I>length</I> arg = Nlen
-     Nlen = max length of string returned from Python function
-   <I>file</I> arg = filename
-     filename = file of Python code, which defines the Python function
-   <I>here</I> arg = one or more lines of Python code which defines the Python function
-                must be a single argument, typically enclosed between triple quotes
-   <I>exists</I> arg = none = Python code has been loaded by previous python command 
+    <I>return</I> arg = varReturn
+      varReturn = v_name  = SPARTA variable name which the return value of the Python function will be assigned to
+    <I>format</I> arg = fstring with M characters
+      M = N if no return value, where N = # of inputs
+      M = N+1 if there is a return value
+      fstring = each character (i,f,s,p) corresponds (in order) to an input or return value
+        'i' = integer, 'f' = floating point, 's' = string, 'p' = SELF
+     <I>length</I> arg = Nlen
+       Nlen = max length of string returned from Python function
+     <I>file</I> arg = filename
+       filename = file of Python code, which defines the Python function
+     <I>here</I> arg = one or more lines of Python code which defines the Python function
+                  must be a single argument, typically enclosed between triple quotes
+     <I>exists</I> arg = none = Python code has been loaded by previous python command 
 </PRE>
 <P><B>Examples:</B>
 </P>

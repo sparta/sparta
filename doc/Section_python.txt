@@ -507,7 +507,7 @@ when Python wraps SPARTA.
 
 See the python/README file for more details.
 
-LAMMPS has several commands which can be used to invoke Python
+SPARTA has several commands which can be used to invoke Python
 code directly from an input script:
 
 11.7 Calling Python from SPARTA :link(py_7),h4
