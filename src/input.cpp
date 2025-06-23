@@ -122,33 +122,74 @@ Input::~Input()
 
 void Input::file()
 {
-  int m,n;
+  int m,n,mstart,ntriple,endfile;
 
   while (1) {
 
     // read a line from input script
     // n = length of line including str terminator, 0 if end of file
     // if line ends in continuation char '&', concatenate next line
+    // if triple quotes are used, read until closing triple quotes
 
     if (me == 0) {
+      ntriple = 0;
+      endfile = 0;
       m = 0;
+
       while (1) {
-        if (maxline-m < 2) reallocate(line,maxline,0);
-        if (fgets(&line[m],maxline-m,infile) == NULL) {
-          if (m) n = strlen(line) + 1;
-          else n = 0;
+
+        mstart = m;
+
+        while (true) {
+          if (maxline-m < 2) reallocate(line,maxline,0);
+
+          // end of file reached, so break
+          // n == 0 if nothing read, else n = line with str terminator
+
+          if (fgets(&line[m],maxline-m,infile) == NULL) {
+            endfile = 1;
+            if (m) n = strlen(line) + 1;
+            else n = 0;
+            break;
+          }
+
+          // continue if last char read was not a newline
+          // can happen if line is very long
+
+          m += strlen(&line[m]);
+          if (line[m-1] != '\n') continue;
           break;
         }
-        m = strlen(line);
-        if (line[m-1] != '\n') continue;
+
+        if (endfile) break;
+
+        // add # of triple quotes in just-read line to ntriple
+
+        ntriple += numtriple(&line[mstart]);
+
+        // trim whitespace from end of line
+        // line[m] = last printable char
 
         m--;
         while (m >= 0 && isspace(line[m])) m--;
-        if (m < 0 || line[m] != '&') {
-          line[m+1] = '\0';
-          n = m+2;
-          break;
+
+        // continue reading if final printable char is "&"
+
+        if (m >= 0 && line[m] == '&') continue;
+
+        // continue reading if odd number of triple quotes
+
+        if (ntriple % 2) {
+          line[m+1] = '\n';
+          m += 2;
+          continue;
         }
+
+        // done, break with n = length of line with str terminator
+
+        line[m+1] = '\0';
+        n = m+2;
+        break;
       }
     }
 
@@ -160,7 +201,8 @@ void Input::file()
 
     MPI_Bcast(&n,1,MPI_INT,0,world);
     if (n == 0) {
-      if (label_active) error->all(FLERR,"Label wasn't found in input script");
+      if (label_active)error->all(FLERR,"Label wasn't found in input script");
+
       if (me == 0) {
         if (infile != stdin) {
           fclose(infile);
@@ -279,7 +321,7 @@ char *Input::one(const char *single)
    command = first word
    narg = # of args
    arg[] = individual args
-   treat text between single/double quotes as one arg
+   treat text between single/double/triple quotes as one arg via nextword()
 ------------------------------------------------------------------------- */
 
 void Input::parse()
@@ -290,19 +332,35 @@ void Input::parse()
   if (n > maxcopy) reallocate(copy,maxcopy,n);
   strcpy(copy,line);
 
-  // strip any # comment by replacing it with 0
-  // do not strip # inside single/double quotes
+  // strip a # comment by replacing it with 0
+  // do not treat a # inside single/double/triple quotes as a comment
 
-  char quote = '\0';
+  char *ptrmatch;
   char *ptr = copy;
+
   while (*ptr) {
-    if (*ptr == '#' && !quote) {
+    if (*ptr == '#') {
       *ptr = '\0';
       break;
     }
-    if (*ptr == quote) quote = '\0';
-    else if (*ptr == '"' || *ptr == '\'') quote = *ptr;
-    ptr++;
+    if (*ptr == '\'') {
+      ptrmatch = strchr(ptr+1,'\'');
+      if (ptrmatch == nullptr)
+        error->all(FLERR,"Unmatched single quote in command");
+      ptr = ptrmatch + 1;
+    } else if (*ptr == '"') {
+      if (strstr(ptr,"\"\"\"") == ptr) {
+        ptrmatch = strstr(ptr+3,"\"\"\"");
+        if (ptrmatch == nullptr)
+          error->all(FLERR,"Unmatched triple quote in command");
+        ptr = ptrmatch + 3;
+      } else {
+        ptrmatch = strchr(ptr+1,'"');
+        if (ptrmatch == nullptr)
+          error->all(FLERR,"Unmatched double quote in command");
+        ptr = ptrmatch + 1;
+      }
+    } else ptr++;
   }
 
   // perform $ variable substitution (print changes)
@@ -338,31 +396,53 @@ void Input::parse()
    find next word in str
    insert 0 at end of word
    ignore leading whitespace
-   treat text between single/double quotes as one arg
+   treat text between single/double/triple quotes as one arg
    matching quote must be followed by whitespace char if not end of string
    strip quotes from returned word
-   return ptr to start of word
-   return next = ptr after word or NULL if word ended with 0
-   return NULL if no word in string
+   return ptr to start of word or null pointer if no word in string
+   also return next = ptr after word
 ------------------------------------------------------------------------- */
 
 char *Input::nextword(char *str, char **next)
 {
   char *start,*stop;
 
-  start = &str[strspn(str," \t\n\v\f\r")];
-  if (*start == '\0') return NULL;
+  // start = first non-whitespace char
 
-  if (*start == '"' || *start == '\'') {
+  start = &str[strspn(str," \t\n\v\f\r")];
+  if (*start == '\0') return nullptr;
+
+  // if start is single/double/triple quote:
+  //   start = first char beyond quote
+  //   stop = first char of matching quote
+  //   next = first char beyond matching quote
+  //   next must be null char or whitespace
+  // if start is not single/double/triple quote:
+  //   stop = first whitespace char after start
+  //   next = char after stop, or stop itself if stop is null char
+
+  if (strstr(start,"\"\"\"") == start) {
+    stop = strstr(&start[3],"\"\"\"");
+    if (!stop) error->all(FLERR,"Unbalanced quotes in input line");
+    start += 3;
+    *next = stop+3;
+    if (**next && !isspace(**next))
+      error->all(FLERR,"Input line quote not followed by white-space");
+  } else if (*start == '"' || *start == '\'') {
     stop = strchr(&start[1],*start);
     if (!stop) error->all(FLERR,"Unbalanced quotes in input line");
-    if (stop[1] && !isspace(stop[1]))
-      error->all(FLERR,"Input line quote not followed by whitespace");
     start++;
-  } else stop = &start[strcspn(start," \t\n\v\f\r")];
+    *next = stop+1;
+    if (**next && !isspace(**next))
+      error->all(FLERR,"Input line quote not followed by white-space");
+  } else {
+    stop = &start[strcspn(start," \t\n\v\f\r")];
+    if (*stop == '\0') *next = stop;
+    else *next = stop+1;
+  }
 
-  if (*stop == '\0') *next = NULL;
-  else *next = stop+1;
+  // set stop to null char to terminate word
+
   *stop = '\0';
   return start;
 }
@@ -378,16 +458,17 @@ void Input::substitute(char *&str, char *&str2, int &max, int &max2, int flag)
 {
   // use str2 as scratch space to expand str, then copy back to str
   // reallocate str and str2 as necessary
-  // do not replace $ inside single/double quotes
+  // do not replace $ inside single/double/triple quotes
   // var = pts at variable name, ended by NULL
   //   if $ is followed by '{', trailing '}' becomes NULL
   //   else $x becomes x followed by NULL
   // beyond = points to text following variable
 
-  int i,n,paren_count;
+  int i,n,paren_count,nchars;
   char immediate[256];
   char *var,*value,*beyond;
-  char quote = '\0';
+  char *ptrmatch;
+
   char *ptr = str;
 
   n = strlen(str) + 1;
@@ -396,9 +477,10 @@ void Input::substitute(char *&str, char *&str2, int &max, int &max2, int flag)
   char *ptr2 = str2;
 
   while (*ptr) {
+
     // variable substitution
 
-    if (*ptr == '$' && !quote) {
+    if (*ptr == '$') {
 
       // value = ptr to expanded variable
       // variable name between curly braces, e.g. ${a}
@@ -414,7 +496,7 @@ void Input::substitute(char *&str, char *&str2, int &max, int &max2, int flag)
         beyond = ptr + strlen(var) + 3;
         value = variable->retrieve(var);
 
-        // immediate variable between parenthesis, e.g. $(1/2)
+      // immediate variable between parenthesis, e.g. $(1/2)
 
       } else if (*(ptr+1) == '(') {
         var = ptr+2;
@@ -436,7 +518,7 @@ void Input::substitute(char *&str, char *&str2, int &max, int &max2, int flag)
         sprintf(immediate,"%.20g",variable->compute_equal(var));
         value = immediate;
 
-        // single character variable name, e.g. $a
+      // single character variable name, e.g. $a
 
       } else {
         var = ptr;
@@ -464,15 +546,41 @@ void Input::substitute(char *&str, char *&str2, int &max, int &max2, int flag)
         if (echo_log && logfile) fprintf(logfile,"%s%s\n",str2,beyond);
       }
 
-      continue;
-    }
+    // check for single/double/triple quotes and skip past them
 
-    if (*ptr == quote) quote = '\0';
-    else if (*ptr == '"' || *ptr == '\'') quote = *ptr;
+    } else if (*ptr == '\'') {
+      ptrmatch = strchr(ptr+1,'\'');
+      if (ptrmatch == nullptr)
+        error->all(FLERR,"Unmatched single quote in command");
+      nchars = ptrmatch+1 - ptr;
+      strncpy(ptr2,ptr,nchars);
+      ptr += nchars;
+      ptr2 += nchars;
+    } else if (*ptr == '"') {
+      if (strstr(ptr,"\"\"\"") == ptr) {
+        ptrmatch = strstr(ptr+3,"\"\"\"");
+        if (ptrmatch == nullptr)
+          error->all(FLERR,"Unmatched triple quote in command");
+        nchars = ptrmatch+3 - ptr;
+        strncpy(ptr2,ptr,nchars);
+        ptr += nchars;
+        ptr2 += nchars;
+      } else {
+        ptrmatch = strchr(ptr+1,'"');
+        if (ptrmatch == nullptr)
+          error->all(FLERR,"Unmatched double quote in command");
+        nchars = ptrmatch+1 - ptr;
+        strncpy(ptr2,ptr,nchars);
+        ptr += nchars;
+        ptr2 += nchars;
+      }
 
-    // copy current character into str2
+    // else copy current single character into str2
 
-    *ptr2++ = *ptr++;
+    } else *ptr2++ = *ptr++;
+
+    // terminate current str2 so variable sub can perform strlen()
+
     *ptr2 = '\0';
   }
 
@@ -681,6 +789,21 @@ int Input::expand_args(int narg, char **arg, int mode, char **&earg)
 }
 
 /* ----------------------------------------------------------------------
+   return number of triple quotes in line
+------------------------------------------------------------------------- */
+
+int Input::numtriple(char *line)
+{
+  int count = 0;
+  char *ptr = line;
+  while ((ptr = strstr(ptr,"\"\"\""))) {
+    ptr += 3;
+    count++;
+  }
+  return count;
+}
+
+/* ----------------------------------------------------------------------
    rellocate a string
    if n > 0: set max >= n in increments of DELTALINE
    if n = 0: just increment max by DELTALINE
@@ -714,6 +837,7 @@ int Input::execute_command()
   else if (!strcmp(command,"next")) next_command();
   else if (!strcmp(command,"partition")) partition();
   else if (!strcmp(command,"print")) print();
+  else if (!strcmp(command,"python")) python();
   else if (!strcmp(command,"quit")) quit();
   else if (!strcmp(command,"shell")) shell();
   else if (!strcmp(command,"variable")) variable_command();
@@ -1139,6 +1263,13 @@ void Input::print()
       fclose(fp);
     }
   }
+}
+
+/* ---------------------------------------------------------------------- */
+
+void Input::python()
+{
+  variable->python_command(narg,arg);
 }
 
 /* ---------------------------------------------------------------------- */
