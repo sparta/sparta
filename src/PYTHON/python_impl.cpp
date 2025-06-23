@@ -105,7 +105,7 @@ PythonImpl::~PythonImpl()
 void PythonImpl::command(int narg, char **arg)
 {
   if (narg < 2) error->all(FLERR,"Illegal python command");
-  
+
   // if invoke is only keyword, invoke the previously defined function
 
   if (strcmp(arg[1], "invoke") == 0) {
@@ -131,7 +131,7 @@ void PythonImpl::command(int narg, char **arg)
 
     bool logreturn = false;
     if (narg == 3 && strcmp(arg[2], "logreturn") == 0) logreturn = true;
-    
+
     invoke_function(ifunc, str, NULL);
 
     if (logreturn && str && (comm->me == 0)) {
@@ -402,7 +402,7 @@ void PythonImpl::invoke_function(int ifunc, char *result, double *dvalue)
   // if dvalue is non-NULL, assign numeric value directly to dvalue
 
   char python2str[64];
-  
+
   if (pfuncs[ifunc].noutput) {
     int otype = pfuncs[ifunc].otype;
     if (otype == INT) {
@@ -463,7 +463,7 @@ int PythonImpl::function_match(const char *name, const char *varname, int numeri
                "registered with Python function");
   if (numeric && pfuncs[ifunc].otype == STRING)
     error->all(FLERR,"Python function for variable returns a string");
-  
+
   return ifunc;
 }
 
@@ -490,7 +490,7 @@ int PythonImpl::wrapper_match(const char *name, const char *varname, int narg, i
   if (internal_count != narg)
     error->all(FLERR, "Mismatch in Python function and variable "
                "use of internal variable args");
-  
+
   // set argvars of internal-style variables for use by Variable class
   //   in Python wrapper functions
   // also set internal_var for use by invoke_function()

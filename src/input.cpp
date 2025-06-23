@@ -135,7 +135,7 @@ void Input::file()
       ntriple = 0;
       endfile = 0;
       m = 0;
-      
+
       while (1) {
 
         mstart = m;
@@ -202,7 +202,7 @@ void Input::file()
     MPI_Bcast(&n,1,MPI_INT,0,world);
     if (n == 0) {
       if (label_active)error->all(FLERR,"Label wasn't found in input script");
-      
+
       if (me == 0) {
         if (infile != stdin) {
           fclose(infile);
@@ -215,7 +215,7 @@ void Input::file()
       if (me == 0) infile = infiles[nfile-1];
       continue;
     }
-    
+
     if (n > maxline) reallocate(line,maxline,n);
     MPI_Bcast(line,n,MPI_CHAR,0,world);
 
@@ -362,7 +362,7 @@ void Input::parse()
       }
     } else ptr++;
   }
-  
+
   // perform $ variable substitution (print changes)
   // except if searching for a label since earlier variable may not be defined
 
@@ -406,7 +406,7 @@ void Input::parse()
 char *Input::nextword(char *str, char **next)
 {
   char *start,*stop;
-  
+
   // start = first non-whitespace char
 
   start = &str[strspn(str," \t\n\v\f\r")];
@@ -468,7 +468,7 @@ void Input::substitute(char *&str, char *&str2, int &max, int &max2, int flag)
   char immediate[256];
   char *var,*value,*beyond;
   char *ptrmatch;
-  
+
   char *ptr = str;
 
   n = strlen(str) + 1;
@@ -477,7 +477,7 @@ void Input::substitute(char *&str, char *&str2, int &max, int &max2, int flag)
   char *ptr2 = str2;
 
   while (*ptr) {
-    
+
     // variable substitution
 
     if (*ptr == '$') {
@@ -576,11 +576,11 @@ void Input::substitute(char *&str, char *&str2, int &max, int &max2, int flag)
       }
 
     // else copy current single character into str2
-      
+
     } else *ptr2++ = *ptr++;
 
     // terminate current str2 so variable sub can perform strlen()
-    
+
     *ptr2 = '\0';
   }
 

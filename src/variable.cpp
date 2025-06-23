@@ -961,7 +961,7 @@ void Variable::internal_create(char *name, double value)
     sprintf(str,"Creation of internal-style variable %s which already exists", name);
     error->all(FLERR,str);
   }
-  
+
   if (nvar == maxvar) grow();
   style[nvar] = INTERNAL;
   num[nvar] = 1;
@@ -975,7 +975,7 @@ void Variable::internal_create(char *name, double value)
     char str[128];
     sprintf(str,"Variable name %s must have only letters, numbers, or underscores", name);
     error->all(FLERR,str);
-  }    
+  }
 
   names[nvar] = utils::strdup(name);
   nvar++;
