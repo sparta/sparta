@@ -38,7 +38,7 @@
         value = integer number, floating point number, or string
         SELF = reference to SPARTA itself which can then be accessed by Python function
         variable = v_name, where name = name of SPARTA variable, e.g. v_abc
-        internal variable = iv_name, where name = name of a LAMMPS internal-style variable, e.g. iv_xyz
+        internal variable = iv_name, where name = name of a SPARTA internal-style variable, e.g. iv_xyz
     <I>return</I> arg = varReturn
       varReturn = v_name  = SPARTA variable name which the return value of the Python function will be assigned to
     <I>format</I> arg = fstring with M characters
@@ -196,7 +196,7 @@ syntax.
 </P>
 <P>The <I>exists</I> keyword takes no argument.  It simply means that Python
 code containing the needed Python function has already been loaded
-into the LAMMPS Python interpreter, for example by previous <I>python
+into the SPARTA Python interpreter, for example by previous <I>python
 source</I> command or in a file that was loaded previously with the
 <I>file</I> keyword. This allows use of a single file of Python code which
 contains multiple functions, any of which can be used in the same (or
