@@ -70,7 +70,7 @@ class DumpImage : public DumpParticle {
   int gridindex;                   // index of compute, fix, variable
   int gridcol;                     // column of compute/fix array, 0 for vector
   int grid_groupbit;               // bit mask for dump_modify gridgroup
-  
+
   double *gcolorproc;              // grid color for me
 
   // grid plane drawing

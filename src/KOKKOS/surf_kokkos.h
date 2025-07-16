@@ -38,6 +38,7 @@ class SurfKokkos : public Surf {
   void reallocate_custom() override;
   void remove_custom(int) override;
   void spread_custom(int) override;
+  void spread_inverse_custom(int) override;
   int pack_custom(int, char *) override;
   int unpack_custom(char *, double *) override;
 

@@ -239,6 +239,8 @@ void SurfKokkos::allocate_custom(int index)
     }
   }
 
+  size_custom_local[index] = 0;
+
   k_eivec.modify_host();
   k_eiarray.modify_host();
   k_edvec.modify_host();
@@ -331,46 +333,65 @@ void SurfKokkos::remove_custom(int index)
 {
   // modifies the outer host view, deletes the inner dual view
 
+  if (!ename || !ename[index]) return;
+
   delete [] ename[index];
   ename[index] = NULL;
 
   if (etype[index] == INT) {
     if (esize[index] == 0) {
+      memoryKK->destroy_kokkos(k_eivec.h_view[ewhich[index]].k_view,eivec[ewhich[index]]);
+      memoryKK->destroy_kokkos(k_eivec_local.h_view[ewhich[index]].k_view,eivec_local[ewhich[index]]);
       ncustom_ivec--;
       for (int i = ewhich[index]; i < ncustom_ivec; i++) {
         icustom_ivec[i] = icustom_ivec[i+1];
         ewhich[icustom_ivec[i]] = i;
         eivec[i] = eivec[i+1];
+        eivec_local[i] = eivec_local[i+1];
         k_eivec.h_view[i] = k_eivec.h_view[i+1];
+        k_eivec_local.h_view[i] = k_eivec_local.h_view[i+1];
       }
+      k_eivec.modify_host();
     } else {
+      memoryKK->destroy_kokkos(k_eiarray.h_view[ewhich[index]].k_view,eiarray[ewhich[index]]);
+      memoryKK->destroy_kokkos(k_eiarray_local.h_view[ewhich[index]].k_view,eiarray_local[ewhich[index]]);
       ncustom_iarray--;
       for (int i = ewhich[index]; i < ncustom_iarray; i++) {
         icustom_iarray[i] = icustom_iarray[i+1];
         ewhich[icustom_iarray[i]] = i;
-        eiarray[i] = eiarray[i+1];
         eicol[i] = eicol[i+1];
+        eiarray[i] = eiarray[i+1];
+        eiarray_local[i] = eiarray_local[i+1];
         k_eiarray.h_view[i] = k_eiarray.h_view[i+1];
+        k_eiarray_local.h_view[i] = k_eiarray_local.h_view[i+1];
       }
+      k_eiarray.modify_host();
     }
   } else if (etype[index] == DOUBLE) {
     if (esize[index] == 0) {
+      memoryKK->destroy_kokkos(k_edvec.h_view[ewhich[index]].k_view,edvec[ewhich[index]]);
       ncustom_dvec--;
       for (int i = ewhich[index]; i < ncustom_dvec; i++) {
         icustom_dvec[i] = icustom_dvec[i+1];
         ewhich[icustom_dvec[i]] = i;
         edvec[i] = edvec[i+1];
+        edvec_local[i] = edvec_local[i+1];
         k_edvec.h_view[i] = k_edvec.h_view[i+1];
+        k_edvec_local.h_view[i] = k_edvec_local.h_view[i+1];
       }
       k_edvec.modify_host();
     } else {
+      memoryKK->destroy_kokkos(k_edarray.h_view[ewhich[index]].k_view,edarray[ewhich[index]]);
+      memoryKK->destroy_kokkos(k_edarray_local.h_view[ewhich[index]].k_view,edarray_local[ewhich[index]]);
       ncustom_darray--;
       for (int i = ewhich[index]; i < ncustom_darray; i++) {
         icustom_darray[i] = icustom_darray[i+1];
         ewhich[icustom_darray[i]] = i;
-        edarray[i] = edarray[i+1];
         edcol[i] = edcol[i+1];
+        edarray[i] = edarray[i+1];
+        edarray_local[i] = edarray_local[i+1];
         k_edarray.h_view[i] = k_edarray.h_view[i+1];
+        k_edarray_local.h_view[i] = k_edarray_local.h_view[i+1];
       }
       k_edarray.modify_host();
     }
@@ -406,9 +427,6 @@ void SurfKokkos::spread_custom(int index)
 
       if (nlocal+nghost != size_custom_local[index]) {
 
-        error->all(FLERR,"Custom 'spread' routine with local data not "
-                           "(yet) supported by KOKKOS package");
-
         size_custom_local[index] = nlocal + nghost;
         int *ivector_local = eivec_local[ewhich[index]];
         auto k_ivector_local = k_eivec_local.h_view[ewhich[index]].k_view;
@@ -421,12 +439,13 @@ void SurfKokkos::spread_custom(int index)
         k_eivec_local.modify_host();
       }
 
-      k_eivec.h_view[index].k_view.sync_host();
+      k_eivec.h_view[ewhich[index]].k_view.sync_host();
+      k_eivec_local.h_view[ewhich[index]].k_view.sync_host();
 
       spread_own2local(1,INT,eivec[ewhich[index]],
                        eivec_local[ewhich[index]]);
 
-      k_eivec_local.h_view[index].k_view.modify_host();
+      k_eivec_local.h_view[ewhich[index]].k_view.modify_host();
 
     } else if (esize[index]) {
       k_eiarray.sync_host();
@@ -434,22 +453,20 @@ void SurfKokkos::spread_custom(int index)
 
       if (nlocal+nghost != size_custom_local[index]) {
 
-        error->all(FLERR,"Custom 'spread' routine with local data not "
-                           "(yet) supported by KOKKOS package");
-
         size_custom_local[index] = nlocal + nghost;
         int **iarray_local = eiarray_local[ewhich[index]];
         auto k_iarray_local = k_eiarray_local.h_view[ewhich[index]].k_view;
         k_iarray_local.modify_host(); // force resize on host
         memoryKK->grow_kokkos(k_iarray_local,iarray_local,size_custom_local[index],
-                              "surf/spread:eiarray_local_array");
+                              esize[index],"surf/spread:eiarray_local_array");
         k_eiarray_local.h_view[ewhich[index]].k_view = k_iarray_local;
         eiarray_local[ewhich[index]] = iarray_local;
 
         k_eiarray_local.modify_host();
       }
 
-      k_eiarray.h_view[index].k_view.sync_host();
+      k_eiarray.h_view[ewhich[index]].k_view.sync_host();
+      k_eiarray_local.h_view[ewhich[index]].k_view.sync_host();
 
       int *in,*out;
       if (nown == 0) in = NULL;
@@ -458,7 +475,7 @@ void SurfKokkos::spread_custom(int index)
       else out = &eiarray_local[ewhich[index]][0][0];
       spread_own2local(esize[index],INT,in,out);
 
-      k_eiarray_local.h_view[index].k_view.modify_host();
+      k_eiarray_local.h_view[ewhich[index]].k_view.modify_host();
     }
 
   } else if (etype[index] == DOUBLE) {
@@ -467,9 +484,6 @@ void SurfKokkos::spread_custom(int index)
       k_edvec_local.sync_host();
 
       if (nlocal+nghost != size_custom_local[index]) {
-
-        error->all(FLERR,"Custom 'spread' routine with local data not "
-                           "(yet) supported by KOKKOS package");
 
         size_custom_local[index] = nlocal + nghost;
         double *dvector_local = edvec_local[ewhich[index]];
@@ -483,12 +497,13 @@ void SurfKokkos::spread_custom(int index)
         k_edvec_local.modify_host();
       }
 
-      k_edvec.h_view[index].k_view.sync_host();
+      k_edvec.h_view[ewhich[index]].k_view.sync_host();
+      k_edvec_local.h_view[ewhich[index]].k_view.sync_host();
 
       spread_own2local(1,DOUBLE,edvec[ewhich[index]],
                        edvec_local[ewhich[index]]);
 
-      k_edvec_local.h_view[index].k_view.modify_host();
+      k_edvec_local.h_view[ewhich[index]].k_view.modify_host();
 
     } else if (esize[index]) {
       k_edarray.sync_host();
@@ -496,22 +511,20 @@ void SurfKokkos::spread_custom(int index)
 
       if (nlocal+nghost != size_custom_local[index]) {
 
-        error->all(FLERR,"Custom 'spread' routine with local data not "
-                           "(yet) supported by KOKKOS package");
-
         size_custom_local[index] = nlocal + nghost;
         double **darray_local = edarray_local[ewhich[index]];
         auto k_darray_local = k_edarray_local.h_view[ewhich[index]].k_view;
         k_darray_local.modify_host(); // force resize on host
         memoryKK->grow_kokkos(k_darray_local,darray_local,size_custom_local[index],
-                              "surf/spread:edarray_local_array");
+                              esize[index],"surf/spread:edarray_local_array");
         k_edarray_local.h_view[ewhich[index]].k_view = k_darray_local;
         edarray_local[ewhich[index]] = darray_local;
 
         k_edarray_local.modify_host();
       }
 
-      k_edarray.h_view[index].k_view.sync_host();
+      k_edarray.h_view[ewhich[index]].k_view.sync_host();
+      k_edarray_local.h_view[ewhich[index]].k_view.sync_host();
 
       double *in,*out;
       if (nown == 0) in = NULL;
@@ -520,11 +533,23 @@ void SurfKokkos::spread_custom(int index)
       else out = &edarray_local[ewhich[index]][0][0];
       spread_own2local(esize[index],DOUBLE,in,out);
 
-      k_edarray_local.h_view[index].k_view.modify_host();
+      k_edarray_local.h_view[ewhich[index]].k_view.modify_host();
     }
   }
 
   estatus[index] = 1;
+}
+
+/* ----------------------------------------------------------------------
+   spread values for a custom attribute from local+ghost to owned vec/array
+   only unique surfs within local list are used
+------------------------------------------------------------------------- */
+
+void SurfKokkos::spread_inverse_custom(int index)
+{
+  this->sync(Host,CUSTOM_MASK);
+  Surf::spread_inverse_custom(index);
+  this->modify(Host,CUSTOM_MASK);
 }
 
 /* ----------------------------------------------------------------------
@@ -545,6 +570,7 @@ int SurfKokkos::pack_custom(int isurf, char *buf)
 
 int SurfKokkos::unpack_custom(char *buf, double *custom)
 {
+  this->sync(Host,CUSTOM_MASK);
   int n = Surf::unpack_custom(buf,custom);
   this->modify(Host,CUSTOM_MASK);
   return n;

@@ -61,7 +61,7 @@ class SurfCollideTransparentKokkos : public SurfCollideTransparent {
     if (ATOMIC_REDUCTION == 0)
       d_nsingle()++;
     else
-      Kokkos::atomic_increment(&d_nsingle());
+      Kokkos::atomic_inc(&d_nsingle());
 
     return NULL;
   }
