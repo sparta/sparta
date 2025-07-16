@@ -588,6 +588,7 @@ ZEN | HOST | AMD Zen architecture |
 ZEN2 | HOST | AMD Zen2 architecture |
 ZEN3 | HOST | AMD Zen3 architecture |
 ZEN4 | HOST | AMD Zen4 architecture |
+ZEN5 | HOST | AMD Zen5 architecture |
 RISCV_SG2042 | HOST | SG2042 (RISC-V) CPUs |
 RISCV_RVA22V | HOST | RVA22V (RISC-V) CPUs |
 KEPLER30 | GPU | NVIDIA Kepler generation CC 3.0 |
@@ -606,6 +607,8 @@ AMPERE80 | GPU | NVIDIA Ampere generation CC 8.0 |
 AMPERE86 | GPU | NVIDIA Ampere generation CC 8.6 |
 ADA89 | GPU | NVIDIA Ada generation CC 8.9 |
 HOPPER90 | GPU | NVIDIA Hopper generation CC 9.0 |
+BLACKWELL100 | GPU | NVIDIA Blackwell generation CC 10.0 |
+BLACKWELL120 | GPU | NVIDIA Blackwell generation CC 12.0 |
 AMD_GFX906 | GPU | AMD GPU MI50/60 |
 AMD_GFX908 | GPU | AMD GPU MI100 |
 AMD_GFX90A | GPU | AMD GPU MI200 |
@@ -622,6 +625,7 @@ INTEL_GEN11 | GPU | Intel GPU Gen11 |
 INTEL_GEN12LP | GPU | Intel GPU Gen12LP |
 INTEL_XEHP | GPU | Intel GPU Xe-HP |
 INTEL_PVC | GPU | Intel GPU Ponte Vecchio |
+INTEL_DG2 | GPU | Intel GPU DG2 |
 :tb(c=3,s=|)
 
 The CMake option Kokkos_ENABLE_CUDA_{OPTION} or the makefile setting KOKKOS_CUDA_OPTIONS={OPTION} are 

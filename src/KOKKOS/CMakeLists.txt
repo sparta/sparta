@@ -4,7 +4,7 @@ if(PKG_KOKKOS)
   # CMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}")
 
   ########################################################################
-  # consistency checks and Kokkos options/settings required by LAMMPS
+  # consistency checks and Kokkos options/settings required by SPARTA
   if(Kokkos_ENABLE_CUDA)
     option(Kokkos_ENABLE_IMPL_CUDA_MALLOC_ASYNC "CUDA asynchronous malloc support" OFF)
     mark_as_advanced(Kokkos_ENABLE_IMPL_CUDA_MALLOC_ASYNC)

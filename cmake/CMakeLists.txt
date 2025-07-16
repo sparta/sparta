@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.12.0)
+cmake_minimum_required(VERSION 3.16.0)
 
 project(SPARTA)
 
@@ -6,9 +6,11 @@ set(SPARTA_BUILD_VER "1.0.0")
 set(SPARTA_API_VER "1")
 
 # ######### BEGIN CMAKE POLICY SETTINGS ##########
-if(${CMAKE_VERSION} VERSION_GREATER_EQUAL "3.12.0")
-  message(STATUS "Setting policy CMP0074 to use <TPL>_ROOT variables")
-  cmake_policy(SET CMP0074 NEW)
+message(STATUS "Setting policy CMP0074 to use <TPL>_ROOT variables")
+cmake_policy(SET CMP0074 NEW)
+
+if(POLICY CMP0144)
+  cmake_policy(SET CMP0144 NEW)
 endif()
 # ######### END CMAKE POLICY SETTINGS ##########
 

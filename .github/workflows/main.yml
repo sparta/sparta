@@ -24,6 +24,7 @@ jobs:
         cd build
         cmake -C ../cmake/presets/mpi.cmake \
           -DSPARTA_ENABLE_TESTING=ON \
+          -DPKG_PYTHON=ON \
           ../cmake
 
     - name: Build
@@ -54,6 +55,7 @@ jobs:
         cmake -C ../cmake/presets/serial.cmake \
           -DSPARTA_ENABLE_TESTING=ON \
           -DPKG_FFT=ON \
+          -DPKG_PYTHON=ON \
            ../cmake
 
     - name: Build
@@ -86,6 +88,7 @@ jobs:
           -DSPARTA_DEFAULT_CXX_COMPILE_FLAGS='-DSPARTA_KOKKOS_EXACT' \
           -DPKG_KOKKOS=ON \
           -DPKG_FFT=ON \
+          -DPKG_PYTHON=ON \
           ../cmake
 
     - name: Build
@@ -118,6 +121,7 @@ jobs:
         cd build
         cmake -C ../cmake/presets/kokkos_omp.cmake \
           -DPKG_FFT=ON \
+          -DPKG_PYTHON=ON \
           -DSPARTA_DEFAULT_CXX_COMPILE_FLAGS='-DSPARTA_BIGBIG' \
           ../cmake
 
