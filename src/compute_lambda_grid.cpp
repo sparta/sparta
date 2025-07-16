@@ -44,12 +44,14 @@ ComputeLambdaGrid::ComputeLambdaGrid(SPARTA *sparta, int narg, char **arg) :
   if (narg < 5 || narg > 10)
     error->all(FLERR,"Illegal compute lambda/grid command");
 
-  // parse three required input fields
-  // customize a new keyword by adding to if statement
+  // parse temperature field
 
   id_temp = NULL;
 
-  if (strncmp(arg[3],"c_",2) == 0 || strncmp(arg[3],"f_",2) == 0) {
+  if (strcmp(arg[3],"NULL") == 0) {
+    tempwhich = NONE;
+    
+  } else if (strncmp(arg[3],"c_",2) == 0 || strncmp(arg[3],"f_",2) == 0) {
     int n = strlen(arg[3]);
     id_temp = new char[n];
     strcpy(id_temp,&arg[3][2]);
@@ -68,40 +70,42 @@ ComputeLambdaGrid::ComputeLambdaGrid(SPARTA *sparta, int narg, char **arg) :
     if (tempwhich == COMPUTE) {
       int n = modify->find_compute(id_temp);
       if (n < 0)
-        error->all(FLERR,"Could not find compute lambda/grid compute ID");
+        error->all(FLERR,"Could not find compute lambda/grid temp compute ID");
       if (modify->compute[n]->per_grid_flag == 0)
-        error->all(FLERR,"Compute lambda/grid compute does not "
+        error->all(FLERR,"Compute lambda/grid temp compute does not "
                    "compute per-grid info");
       if (tempindex == 0 && modify->compute[n]->size_per_grid_cols > 0)
         error->all(FLERR,
-                   "Compute lambda/grid compute does not "
+                   "Compute lambda/grid temp compute does not "
                    "compute per-grid vector");
       if (tempindex > 0 && modify->compute[n]->size_per_grid_cols == 0)
         error->all(FLERR,
-                   "Compute lambda/grid compute does not "
+                   "Compute lambda/grid temp compute does not "
                    "compute per-grid array");
       if (tempindex > 0 && tempindex > modify->compute[n]->size_per_grid_cols)
-        error->all(FLERR,"Compute lambda compute vector is "
+        error->all(FLERR,"Compute lambda/grid temp compute vector is "
                    "accessed out-of-range");
     } else {
       int n = modify->find_fix(id_temp);
-      if (n < 0) error->all(FLERR,"Could not find compute lambda/grid fix ID");
+      if (n < 0) error->all(FLERR,"Could not find compute lambda/grid temp fix ID");
       if (modify->fix[n]->per_grid_flag == 0)
-        error->all(FLERR,"Compute lambda/grid fix does not "
+        error->all(FLERR,"Compute lambda/grid temp fix does not "
                    "compute per-grid info");
       if (tempindex == 0 && modify->fix[n]->size_per_grid_cols > 0)
-        error->all(FLERR,"Compute lambda/grid fix does not "
+        error->all(FLERR,"Compute lambda/grid temp fix does not "
                    "compute per-grid vector");
       if (tempindex > 0 && modify->fix[n]->size_per_grid_cols == 0)
-        error->all(FLERR,"Compute lambda/grid fix does not "
+        error->all(FLERR,"Compute lambda/grid temp fix does not "
                    "compute per-grid array");
       if (tempindex > 0 && tempindex > modify->fix[n]->size_per_grid_cols)
-        error->all(FLERR,"Compute lambda/grid fix array is "
+        error->all(FLERR,"Compute lambda/grid temp fix array is "
                    "accessed out-of-range");
     }
-  } else if (strcmp(arg[3],"NULL") == 0) tempwhich = NONE;
-  else error->all(FLERR,"Illegal compute lambda/grid command");
+    
+  } else error->all(FLERR,"Invalid temp in compute lambda/grid command");
 
+  // parse one or more output options
+  
   lambdaflag = 0;
   tauflag = 0;
   knallflag = 0;
@@ -113,12 +117,12 @@ ComputeLambdaGrid::ComputeLambdaGrid(SPARTA *sparta, int narg, char **arg) :
   noutputs = narg - 4;
 
   output_order = new int[MAXOUTPUT];
-  for (int i = 0; i < MAXOUTPUT; i++)
-   output_order[i] = -1;
+  for (int i = 0; i < MAXOUTPUT; i++) output_order[i] = -1;
 
-  int ioutput = 0;
   int iarg = 4;
+  int ioutput = 0;
   int dupflag = 0;
+
   while (iarg < narg) {
     if (strcmp(arg[iarg],"lambda") == 0) {
       if (output_order[LAMBDA] != -1) dupflag = 1;
@@ -144,40 +148,45 @@ ComputeLambdaGrid::ComputeLambdaGrid(SPARTA *sparta, int narg, char **arg) :
       if (output_order[KNZ] != -1) dupflag = 1;
       output_order[KNZ] = ioutput;
       knzflag = 1;
-    } else error->all(FLERR,"Illegal compute lambda/grid command");
+    } else error->all(FLERR,"Illegal compute lambda/grid output option");
 
     ioutput++;
     iarg++;
   }
 
-  if (dupflag)
-    error->all(FLERR,"Duplicated output in compute lambda/grid");
-
+  if (dupflag) error->all(FLERR,"Duplicated output in compute lambda/grid");
   if (knzflag && domain->dimension == 2)
     error->all(FLERR,"Cannot use compute lambda/grid knz for 2d simulation");
 
-  // expand args if any have wildcard character "*"
-  // this can reset nvalues
+  // any Knudsen number requires lambda be calculated internally even if not output
 
+  knanyflag = (knallflag || knxflag || knyflag || knzflag);
+  if (knanyflag && !lambdaflag) lambdaflag = 1;
+
+  // all other args have now been procsesed
+  // can now expand single nrho argument in case it has wildcard character "*"
+  // nrho_values = 1 or expanded number
+  // nrho_values must equal count of all species - checked below
+  
   int expand = 0;
   char **earg;
-  nvalues = input->expand_args(1,&arg[2],1,earg);
+  nrho_values = input->expand_args(1,&arg[2],1,earg);
 
   if (earg != &arg[2]) expand = 1;
   arg = earg;
 
   // parse values
 
-  nrhowhich = new int[nvalues];
-  nrhoindex = new int[nvalues];
-  value2index = new int[nvalues];
-  post_process = new int[nvalues];
-  ids_nrho = new char*[nvalues];
+  nrhowhich = new int[nrho_values];
+  nrhoindex = new int[nrho_values];
+  value2index = new int[nrho_values];
+  post_process = new int[nrho_values];
+  ids_nrho = new char*[nrho_values];
 
-  for (int i = 0; i < nvalues; i++) {
+  for (int i = 0; i < nrho_values; i++) {
     if (arg[i][0] == 'c') nrhowhich[i] = COMPUTE;
     else if (arg[i][0] == 'f') nrhowhich[i] = FIX;
-    else error->all(FLERR,"Illegal compute lambda/grid command");
+    else error->all(FLERR,"Invalid nrho in compute lambda/grid command");
 
     int n = strlen(arg[i]);
     char *suffix = new char[n];
@@ -186,7 +195,7 @@ ComputeLambdaGrid::ComputeLambdaGrid(SPARTA *sparta, int narg, char **arg) :
     char *ptr = strchr(suffix,'[');
     if (ptr) {
       if (suffix[strlen(suffix)-1] != ']')
-        error->all(FLERR,"Illegal compute lambda/grid command");
+        error->all(FLERR,"Invalid nrho in compute lambda/grid command");
       nrhoindex[i] = atoi(ptr+1);
       *ptr = '\0';
     } else nrhoindex[i] = 0;
@@ -200,7 +209,7 @@ ComputeLambdaGrid::ComputeLambdaGrid(SPARTA *sparta, int narg, char **arg) :
     if (nrhowhich[i] == COMPUTE) {
       int icompute = modify->find_compute(ids_nrho[i]);
       if (icompute < 0)
-        error->all(FLERR,"Compute ID for compute lambda/grid does not exist");
+        error->all(FLERR,"Compute ID for compute lambda/grid nrho does not exist");
       post_process[i] =
         modify->compute[icompute]->post_process_grid_flag;
     }
@@ -210,64 +219,53 @@ ComputeLambdaGrid::ComputeLambdaGrid(SPARTA *sparta, int narg, char **arg) :
   // wait to do this until after file comment lines are printed
 
   if (expand) {
-    for (int i = 0; i < nvalues; i++) delete [] earg[i];
+    for (int i = 0; i < nrho_values; i++) delete [] earg[i];
     memory->sfree(earg);
   }
 
   // setup and error check
 
-  for (int i = 0; i < nvalues; i++) {
+  for (int i = 0; i < nrho_values; i++) {
     if (nrhowhich[i] == COMPUTE) {
       int icompute = modify->find_compute(ids_nrho[i]);
       if (icompute < 0)
-        error->all(FLERR,"Compute ID for compute lambda/grid does not exist");
+        error->all(FLERR,"Compute ID for compute lambda/grid nrho does not exist");
       if (modify->compute[icompute]->per_grid_flag == 0)
         error->all(FLERR,
-                   "Compute lambda/grid compute does not calculate per-grid values");
+                   "Compute lambda/grid nrho compute does not calculate per-grid values");
       if (nrhoindex[i] == 0 &&
           modify->compute[icompute]->size_per_grid_cols != 0)
-        error->all(FLERR,"Compute lambda/grid compute does not "
+        error->all(FLERR,"Compute lambda/grid nrho compute does not "
                    "calculate per-grid vector");
       if (nrhoindex[i] && modify->compute[icompute]->size_per_grid_cols == 0)
-        error->all(FLERR,"Compute lambda/grid compute does not "
+        error->all(FLERR,"Compute lambda/grid nrho compute does not "
                    "calculate per-grid array");
       if (nrhoindex[i] &&
           nrhoindex[i] > modify->compute[icompute]->size_per_grid_cols)
-        error->all(FLERR,"Compute lambda/grid compute array is accessed out-of-range");
+        error->all(FLERR,"Compute lambda/grid nrho compute array is accessed out-of-range");
 
     } else if (nrhowhich[i] == FIX) {
       int ifix = modify->find_fix(ids_nrho[i]);
       if (ifix < 0)
-        error->all(FLERR,"Fix ID for compute lambda/grid does not exist");
+        error->all(FLERR,"Fix ID for compute lambda/grid nrho does not exist");
       if (modify->fix[ifix]->per_grid_flag == 0)
-        error->all(FLERR,"Compute lambda/grid fix does not calculate per-grid values");
+        error->all(FLERR,"Compute lambda/grid nrho fix does not calculate per-grid values");
       if (nrhoindex[i] == 0 && modify->fix[ifix]->size_per_grid_cols != 0)
         error->all(FLERR,
-                   "Compute lambda/grid fix does not calculate per-grid vector");
+                   "Compute lambda/grid nrho fix does not calculate per-grid vector");
       if (nrhoindex[i] && modify->fix[ifix]->size_per_grid_cols == 0)
         error->all(FLERR,
-                   "Compute lambda/grid fix does not calculate per-grid array");
+                   "Compute lambda/grid nrho fix does not calculate per-grid array");
       if (nrhoindex[i] && nrhoindex[i] > modify->fix[ifix]->size_per_grid_cols)
         error->all(FLERR,"Compute lambda/grid fix array is accessed out-of-range");
-    } else error->all(FLERR,"Illegal compute lambda/grid command");
+    }
   }
 
   // initialize data structures
 
-  nparams = particle->nspecies;
-
   per_grid_flag = 1;
   if (noutputs > 1) size_per_grid_cols = noutputs;
   else size_per_grid_cols = 0;
-
-  // knudsen number needs lambda
-
-  knanyflag = (knallflag || knxflag || knyflag || knzflag);
-
-  if (knanyflag && !lambdaflag) {
-    lambdaflag = 1;
-    output_order[LAMBDA] = 0;
-  }
 
   nglocal = 0;
   vector_grid = NULL;
@@ -275,14 +273,15 @@ ComputeLambdaGrid::ComputeLambdaGrid(SPARTA *sparta, int narg, char **arg) :
   array_grid1 = NULL;
   nrho = NULL;
   temp = NULL;
+  lambda_grid = NULL;
   lambdainv = NULL;
   tauinv = NULL;
 
   // determine size of map/umap/uomap data structs and allocate them
-  // tmax = max # of tally quantities for any value
+  // tmax = max # of tally quantities for any rho value
 
   tmax = 1;
-  for (int m = 0; m < nvalues; m++) {
+  for (int m = 0; m < nrho_values; m++) {
     int n = -1;
     int j = nrhoindex[m];
     if (nrhowhich[m] != COMPUTE) continue;
@@ -294,17 +293,17 @@ ComputeLambdaGrid::ComputeLambdaGrid(SPARTA *sparta, int narg, char **arg) :
     tmax = MAX(tmax,ncount);
   }
 
-  nmap = new int[nvalues];
-  memory->create(map,nvalues,tmax,"compute lambda/grid:map");
-  numap = new int[nvalues];
-  memory->create(umap,nvalues,tmax,"compute lambda/grid:umap");
-  memory->create(uomap,nvalues,tmax,"compute lambda/grid:uomap");
+  nmap = new int[nrho_values];
+  memory->create(map,nrho_values,tmax,"compute lambda/grid:map");
+  numap = new int[nrho_values];
+  memory->create(umap,nrho_values,tmax,"compute lambda/grid:umap");
+  memory->create(uomap,nrho_values,tmax,"compute lambda/grid:uomap");
 
-  // setup nmap/map and numap/umap/uomap data structs for all values
+  // setup nmap/map and numap/umap/uomap data structs for all nrho_values
   // ntotal = total # of unique tally quantities = columns in tally array
 
   ntotal = 0;
-  for (int m = 0; m < nvalues; m++) {
+  for (int m = 0; m < nrho_values; m++) {
     int n = -1;
     int j = nrhoindex[m];
 
@@ -365,10 +364,12 @@ ComputeLambdaGrid::ComputeLambdaGrid(SPARTA *sparta, int narg, char **arg) :
     }
   }
 
-  if (nparams != ntotal)
-      error->all(FLERR,"Number of species does not match size of compute vector or array");
+  // ntotal must match count of species in system
+  
   if (ntotal == 0)
     error->all(FLERR,"Cannot use compute lambda/grid command with no species defined");
+  if (ntotal != particle->nspecies)
+    error->all(FLERR,"Compute lambda/grid nrho does not match system species count");
 }
 
 /* ---------------------------------------------------------------------- */
@@ -381,7 +382,7 @@ ComputeLambdaGrid::~ComputeLambdaGrid()
   delete [] nrhoindex;
   delete [] value2index;
   delete [] post_process;
-  for (int i = 0; i < nvalues; i++) delete [] ids_nrho[i];
+  for (int i = 0; i < nrho_values; i++) delete [] ids_nrho[i];
   delete [] ids_nrho;
 
   delete [] nmap;
@@ -392,13 +393,15 @@ ComputeLambdaGrid::~ComputeLambdaGrid()
 
   delete [] output_order;
 
-  if (nvalues == 1) memory->destroy(vector_grid);
-  else memory->destroy(array_grid1);
+  memory->destroy(vector_grid);
   memory->destroy(array_grid);
+  memory->destroy(array_grid1);
 
   memory->destroy(nrho);
+  memory->destroy(lambda_grid);
   memory->destroy(lambdainv);
   memory->destroy(tauinv);
+  
   delete [] id_temp;
   memory->destroy(temp);
 }
@@ -409,16 +412,14 @@ void ComputeLambdaGrid::init()
 {
   reallocate();
 
-  // initially read-in per-species params must match current species list
+  // initial count of system species must match current count
 
-  if (nparams != particle->nspecies)
-    error->all(FLERR,"VSS parameters do not match current species");
   if (ntotal != particle->nspecies)
-    error->all(FLERR,"Compute array size does not match current species");
+    error->all(FLERR,"Compute lambda/grid requires unchanging system species count");
 
   // setup computes and fixes
 
-  for (int m = 0; m < nvalues; m++) {
+  for (int m = 0; m < nrho_values; m++) {
     if (nrhowhich[m] == COMPUTE) {
       int icompute = modify->find_compute(ids_nrho[m]);
       if (icompute < 0)
@@ -462,11 +463,13 @@ void ComputeLambdaGrid::compute_per_grid()
   int *itmp;
   double **ctally;
 
+  int nspecies = ntotal;
+  
   for (i = 0; i < nglocal; i++) {
-    for (j = 0; j < ntotal; j++) {
-        nrho[i][j] = 0.0;
-        lambdainv[i][j] = 0.0;
-        tauinv[i][j] = 0.0;
+    for (j = 0; j < nspecies; j++) {
+      nrho[i][j] = 0.0;
+      lambdainv[i][j] = 0.0;
+      tauinv[i][j] = 0.0;
     }
   }
 
@@ -478,7 +481,7 @@ void ComputeLambdaGrid::compute_per_grid()
   // grab nrho and temp values from compute or fix
   // invoke nrho and temp computes as needed
 
-  for (int m = 0; m < nvalues; m++) {
+  for (int m = 0; m < nrho_values; m++) {
     n = value2index[m];
     j = nrhoindex[m];
 
@@ -509,12 +512,12 @@ void ComputeLambdaGrid::compute_per_grid()
 
         k = umap[m][0];
         int jm1 = j - 1;
-        if (nvalues == 1) {
-            compute->post_process_grid(j,1,nrho,map[0],vector_grid,1);
-            for (i = 0; i < nglocal; i++) nrho[i][k] = vector_grid[i];
+        if (nrho_values == 1) {
+          compute->post_process_grid(j,1,nrho,map[0],vector_grid,1);
+          for (i = 0; i < nglocal; i++) nrho[i][k] = vector_grid[i];
         } else {
-            compute->post_process_grid(j,1,nrho,map[m],&array_grid1[0][m],nvalues);
-            for (i = 0; i < nglocal; i++) nrho[i][k] = array_grid1[i][jm1];
+          compute->post_process_grid(j,1,nrho,map[m],&array_grid1[0][m],nrho_values);
+          for (i = 0; i < nglocal; i++) nrho[i][k] = array_grid1[i][jm1];
         }
       } else {
         k = umap[m][0];
@@ -581,12 +584,13 @@ void ComputeLambdaGrid::compute_per_grid()
   // formula from Bird, eq 4.77
 
   double nrhosum,lambda,tau;
+  double dref,tref,omega,mj,mk,mr;
 
   for (int i = 0; i < nglocal; i++) {
     nrhosum = lambda = tau = 0.0;
-    for (int j = 0; j < ntotal; j++) {
+    for (int j = 0; j < nspecies; j++) {
       nrhosum += nrho[i][j];
-      for (int k = 0; k < ntotal; k++) {
+      for (int k = 0; k < nspecies; k++) {
         dref = collide->extract(j,k,"diam");
         tref = collide->extract(j,k,"tref");
         omega = collide->extract(j,k,"omega");
@@ -608,15 +612,21 @@ void ComputeLambdaGrid::compute_per_grid()
       }
     }
 
-    for (int j = 0; j < ntotal; j++) {
+    for (int j = 0; j < nspecies; j++) {
       if (lambdaflag && lambdainv[i][j] > 1e-30) lambda += nrho[i][j] / (nrhosum * lambdainv[i][j]);
       if (tauflag && tauinv[i][j] > 1e-30) tau += nrho[i][j] / (nrhosum * tauinv[i][j]);
     }
 
+    // store per-grid lambda for possible later use in Knudsen numbers
+    // lambdaflag may be set with no output of lambda
+    
     if (lambdaflag) {
       if (lambda == 0.0) lambda = BIG;
-      if (noutputs == 1 && !knanyflag) vector_grid[i] = lambda;
-      else array_grid[i][output_order[LAMBDA]] = lambda;
+      lambda_grid[i] = lambda;
+      if (output_order[LAMBDA] >= 0) {
+        if (noutputs == 1) vector_grid[i] = lambda;
+        else array_grid[i][output_order[LAMBDA]] = lambda;
+      }
     }
 
     if (tauflag) {
@@ -625,8 +635,8 @@ void ComputeLambdaGrid::compute_per_grid()
       else array_grid[i][output_order[TAU]] = tau;
     }
   }
-
-  // calculate per-cell Knudsen number
+    
+  // calculate per-cell Knudsen number using stored lambda_grid
 
   if (!knanyflag) return;
 
@@ -635,7 +645,7 @@ void ComputeLambdaGrid::compute_per_grid()
   double sizeall,sizex,sizey,sizez;
 
   for (int i = 0; i < nglocal; i++) {
-    double lambda = array_grid[i][output_order[LAMBDA]];
+    double lambda = lambda_grid[i];
 
     if (knxflag || knallflag)
       sizex = (cells[i].hi[0] - cells[i].lo[0]);
@@ -690,20 +700,22 @@ void ComputeLambdaGrid::reallocate()
   memory->create(vector_grid,nglocal,"lambda/grid:vector_grid");
   for (int i = 0; i < nglocal; i++) vector_grid[i] = 0.0;
 
-  if (nvalues > 1) {
+  if (nrho_values > 1) {
     memory->destroy(array_grid1);
-    memory->create(array_grid1,nglocal,nvalues,"lambda/grid:array_grid1");
+    memory->create(array_grid1,nglocal,nrho_values,"lambda/grid:array_grid1");
     for (int i = 0; i < nglocal; i++)
-      for (int m = 0; m < nvalues; m++) array_grid1[i][m] = 0.0;
+      for (int m = 0; m < nrho_values; m++) array_grid1[i][m] = 0.0;
   }
 
-  if (noutputs > 1 || knanyflag) {
+  if (noutputs > 1) {
     memory->destroy(array_grid);
     memory->create(array_grid,nglocal,noutputs,"lambda/grid:array_grid");
     for (int i = 0; i < nglocal; i++)
       for (int m = 0; m < noutputs; m++) array_grid[i][m] = 0.0;
   }
 
+  memory->destroy(lambda_grid);
+  memory->create(lambda_grid,nglocal,"lambda/grid:lambda_grid");
   memory->destroy(lambdainv);
   memory->create(lambdainv,nglocal,ntotal,"lambda/grid:lambdainv");
   memory->destroy(tauinv);
@@ -726,9 +738,10 @@ bigint ComputeLambdaGrid::memory_usage()
 {
   bigint bytes;
   bytes = nglocal * sizeof(double);                            // vector_grid
-  if (nvalues > 1)
-    bytes = nglocal * nvalues * sizeof(double);                // array_grid1
+  if (nrho_values > 1)
+    bytes = nglocal * nrho_values * sizeof(double);            // array_grid1
   bytes += nglocal * noutputs * sizeof(double);                // array_grid
+  bytes += nglocal * sizeof(double);                           // lambda_grid
   bytes += 2 * nglocal * ntotal * sizeof(double);              // lambdainv + tauinv
   bytes += nglocal * ntotal * sizeof(double);                  // nrho
   if (tempwhich != NONE) bytes += nglocal * sizeof(double);    // temp
