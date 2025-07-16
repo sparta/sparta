@@ -50,11 +50,11 @@ ComputeLambdaGridKokkos::ComputeLambdaGridKokkos(SPARTA *sparta, int narg, char 
 {
   kokkos_flag = 1;
 
-  auto k_numap = DAT::tdual_float_1d("lambda/grid:numap",nvalues);
-  auto k_umap = DAT::tdual_float_2d("lambda/grid:umap",nvalues,tmax);
-  auto k_uomap = DAT::tdual_float_2d("lambda/grid:uomap",nvalues,tmax);
+  auto k_numap = DAT::tdual_float_1d("lambda/grid:numap",nrho_values);
+  auto k_umap = DAT::tdual_float_2d("lambda/grid:umap",nrho_values,tmax);
+  auto k_uomap = DAT::tdual_float_2d("lambda/grid:uomap",nrho_values,tmax);
 
-  for (int i = 0; i < nvalues; i++) {
+  for (int i = 0; i < nrho_values; i++) {
     k_numap.h_view(i) = numap[i];
     for (int j = 0; j < tmax; j++) {
       k_umap.h_view(i,j) = umap[i][j];
@@ -109,6 +109,8 @@ void ComputeLambdaGridKokkos::compute_per_grid()
 
 void ComputeLambdaGridKokkos::compute_per_grid_kokkos()
 {
+  nspecies = ntotal;
+
   Kokkos::deep_copy(d_nrho,0.0);
   Kokkos::deep_copy(d_lambdainv,0.0);
   Kokkos::deep_copy(d_tauinv,0.0);
@@ -123,7 +125,7 @@ void ComputeLambdaGridKokkos::compute_per_grid_kokkos()
 
   auto l_nrho = d_nrho;
 
-  for (int m = 0; m < nvalues; m++) {
+  for (int m = 0; m < nrho_values; m++) {
     const int n = value2index[m];
     const int j = nrhoindex[m];
 
@@ -161,7 +163,7 @@ void ComputeLambdaGridKokkos::compute_per_grid_kokkos()
 
         const int k = umap[m][0];
         const int jm1 = j - 1;
-        if (nvalues == 1) {
+        if (nrho_values == 1) {
             cKKBase->post_process_grid_kokkos(j,1,d_nrho,map[0],d_vector_grid);
             auto l_vector_grid = d_vector_grid;
             Kokkos::parallel_for(nglocal, SPARTA_LAMBDA(int i) {
@@ -265,7 +267,7 @@ void ComputeLambdaGridKokkos::compute_per_grid_kokkos()
   d_params_const = collide_kk->d_params_const;
 
   // compute mean free path for each grid cell
-  // formula from Bird, eq 4.65
+  // formula from Bird, eq 4.77
 
   copymode = 1;
   Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagComputeLambdaGrid_ComputePerGrid>(0,nglocal),*this);
@@ -278,6 +280,7 @@ void ComputeLambdaGridKokkos::compute_per_grid_kokkos()
     GridKokkos* grid_kk = ((GridKokkos*)grid);
     grid_kk->sync(Device,CELL_MASK);
     auto l_cells = grid_kk->k_cells.d_view;
+    auto l_lambda_grid = d_lambda_grid;
     auto l_vector_grid = d_vector_grid;
     auto l_array_grid = d_array_grid;
     auto l_output_order = d_output_order;
@@ -289,7 +292,7 @@ void ComputeLambdaGridKokkos::compute_per_grid_kokkos()
     auto l_noutputs = noutputs;
 
     Kokkos::parallel_for(nglocal, SPARTA_LAMBDA(int i) {
-      const double lambda = l_array_grid(i,l_output_order[LAMBDA]);
+      const double lambda = l_lambda_grid(i);
       double sizex,sizey,sizez,sizeall;
 
       if (l_knxflag || l_knallflag)
@@ -345,9 +348,9 @@ KOKKOS_INLINE_FUNCTION
 void ComputeLambdaGridKokkos::operator()(TagComputeLambdaGrid_ComputePerGrid, const int &i) const {
   double nrhosum,lambda,tau;
   nrhosum = lambda = tau = 0.0;
-  for (int j = 0; j < ntotal; j++) {
+  for (int j = 0; j < nspecies; j++) {
     nrhosum += d_nrho(i,j);
-    for (int k = 0; k < ntotal; k++) {
+    for (int k = 0; k < nspecies; k++) {
       const double dref = d_params_const(j,k).diam;
       const double tref = d_params_const(j,k).tref;
       const double omega = d_params_const(j,k).omega;
@@ -370,15 +373,21 @@ void ComputeLambdaGridKokkos::operator()(TagComputeLambdaGrid_ComputePerGrid, co
     }
   }
 
-  for (int j = 0; j < ntotal; j++) {
+  for (int j = 0; j < nspecies; j++) {
     if (lambdaflag && d_lambdainv(i,j) > 1e-30) lambda += d_nrho(i,j) / (nrhosum * d_lambdainv(i,j));
     if (tauflag && d_tauinv(i,j) > 1e-30) tau += d_nrho(i,j) / (nrhosum * d_tauinv(i,j));
   }
 
+  // store per-grid lambda for possible later use in Knudsen numbers
+  // lambdaflag may be set with no output of lambda
+
   if (lambdaflag) {
     if (lambda == 0.0) lambda = BIG;
-    if (noutputs == 1 && !knanyflag) d_vector_grid[i] = lambda;
-    else d_array_grid(i,d_output_order[LAMBDA]) = lambda;
+    lambda_grid[i] = lambda;
+    if (output_order[LAMBDA] >= 0) {
+      if (noutputs == 1) d_vector_grid[i] = lambda;
+      else d_array_grid(i,d_output_order[LAMBDA]) = lambda;
+    }
   }
 
   if (tauflag) {
@@ -403,15 +412,16 @@ void ComputeLambdaGridKokkos::reallocate()
   memoryKK->create_kokkos(k_vector_grid,vector_grid,nglocal,"lambda/grid:vector_grid");
   d_vector_grid = k_vector_grid.d_view;
 
-  if (nvalues > 1)
-    d_array_grid1 = decltype(d_array_grid1)("lambda/grid:array_grid1",nglocal,nvalues);
+  if (nrho_values > 1)
+    d_array_grid1 = decltype(d_array_grid1)("lambda/grid:array_grid1",nglocal,nrho_values);
 
-  if (noutputs > 1 || knanyflag) {
+  if (noutputs > 1) {
     memoryKK->destroy_kokkos(k_array_grid,array_grid);
     memoryKK->create_kokkos(k_array_grid,array_grid,nglocal,noutputs,"lambda/grid:array_grid");
     d_array_grid = k_array_grid.d_view;
   }
 
+  d_lambda_grid = decltype(d_lambda_grid)("lambda/grid:lambda_grid",nglocal,ntotal);
   d_lambdainv = decltype(d_lambdainv)("lambda/grid:lambdainv",nglocal,ntotal);
   d_tauinv = decltype(d_tauinv)("lambda/grid:tauinv",nglocal,ntotal);
   d_nrho = decltype(d_nrho)("lambda/grid:nrho",nglocal,ntotal);
