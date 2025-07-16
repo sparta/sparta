@@ -383,7 +383,7 @@ void ComputeLambdaGridKokkos::operator()(TagComputeLambdaGrid_ComputePerGrid, co
 
   if (lambdaflag) {
     if (lambda == 0.0) lambda = BIG;
-    lambda_grid[i] = lambda;
+    d_lambda_grid[i] = lambda;
     if (output_order[LAMBDA] >= 0) {
       if (noutputs == 1) d_vector_grid[i] = lambda;
       else d_array_grid(i,d_output_order[LAMBDA]) = lambda;
