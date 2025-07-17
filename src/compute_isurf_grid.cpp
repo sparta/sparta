@@ -269,6 +269,14 @@ void ComputeISurfGrid::surf_tally(int isurf, int icell, int reaction,
   if (ip) imass = particle->species[ip->ispecies].mass * weight;
   if (jp) jmass = particle->species[jp->ispecies].mass * weight;
 
+  // SWS - variables
+  double worig = 1.0;   
+  double wi = 1.0;      
+  double wj = 1.0;     
+  worig = particle->species[origspecies].specwt;   
+  if (ip) wi = particle->species[ip->ispecies].specwt;
+  if (jp) wj = particle->species[jp->ispecies].specwt;
+
   double *vorig = iorig->v;
   double mvv2e = update->mvv2e;
 
@@ -287,50 +295,50 @@ void ComputeISurfGrid::surf_tally(int isurf, int icell, int reaction,
       vec[k++] += weight;
       break;
     case MFLUX:
-      vec[k] += origmass * fluxscale;
-      if (ip) vec[k] -= imass * fluxscale;
-      if (jp) vec[k] -= jmass * fluxscale;
+      vec[k] += origmass * fluxscale * worig;  // SWS
+      if (ip) vec[k] -= imass * fluxscale * wi;  // SWS
+      if (jp) vec[k] -= jmass * fluxscale * wj;  // SWS
       k++;
       break;
     case FX:
       if (!fflag) {
         fflag = 1;
-        MathExtra::scale3(-origmass,vorig,pdelta_force);
-        if (ip) MathExtra::axpy3(imass,ip->v,pdelta_force);
-        if (jp) MathExtra::axpy3(jmass,jp->v,pdelta_force);
+        MathExtra::scale3(-origmass*worig,vorig,pdelta_force);  // SWS
+        if (ip) MathExtra::axpy3(imass*wi,ip->v,pdelta_force);  // SWS
+        if (jp) MathExtra::axpy3(jmass*wj,jp->v,pdelta_force);  // SWS
       }
       vec[k++] -= pdelta_force[0] * nfactor_inverse;
       break;
     case FY:
       if (!fflag) {
         fflag = 1;
-        MathExtra::scale3(-origmass,vorig,pdelta_force);
-        if (ip) MathExtra::axpy3(imass,ip->v,pdelta_force);
-        if (jp) MathExtra::axpy3(jmass,jp->v,pdelta_force);
+        MathExtra::scale3(-origmass*worig,vorig,pdelta_force);  // SWS
+        if (ip) MathExtra::axpy3(imass*wi,ip->v,pdelta_force);  // SWS
+        if (jp) MathExtra::axpy3(jmass*wj,jp->v,pdelta_force);  // SWS
       }
       vec[k++] -= pdelta_force[1] * nfactor_inverse;
       break;
     case FZ:
       if (!fflag) {
         fflag = 1;
-        MathExtra::scale3(-origmass,vorig,pdelta_force);
-        if (ip) MathExtra::axpy3(imass,ip->v,pdelta_force);
-        if (jp) MathExtra::axpy3(jmass,jp->v,pdelta_force);
+        MathExtra::scale3(-origmass*worig,vorig,pdelta_force);  // SWS
+        if (ip) MathExtra::axpy3(imass*wi,ip->v,pdelta_force);  // SWS
+        if (jp) MathExtra::axpy3(jmass*wj,jp->v,pdelta_force);  // SWS
       }
       vec[k++] -= pdelta_force[2] * nfactor_inverse;
       break;
     case PRESS:
-      MathExtra::scale3(-origmass,vorig,pdelta);
-      if (ip) MathExtra::axpy3(imass,ip->v,pdelta);
-      if (jp) MathExtra::axpy3(jmass,jp->v,pdelta);
+      MathExtra::scale3(-origmass*worig,vorig,pdelta);  // SWS
+      if (ip) MathExtra::axpy3(imass*wi,ip->v,pdelta);  // SWS
+      if (jp) MathExtra::axpy3(jmass*wj,jp->v,pdelta);  // SWS
       vec[k++] += MathExtra::dot3(pdelta,norm) * fluxscale;
       break;
     case XPRESS:
       if (!nflag) {
         nflag = 1;
-        MathExtra::scale3(-origmass,vorig,pdelta);
-        if (ip) MathExtra::axpy3(imass,ip->v,pdelta);
-        if (jp) MathExtra::axpy3(jmass,jp->v,pdelta);
+        MathExtra::scale3(-origmass*worig,vorig,pdelta);  // SWS
+        if (ip) MathExtra::axpy3(imass*wi,ip->v,pdelta);  // SWS
+        if (jp) MathExtra::axpy3(jmass*wj,jp->v,pdelta);  // SWS
         MathExtra::scale3(MathExtra::dot3(pdelta,norm),norm,pnorm);
       }
       vec[k++] -= pnorm[0] * fluxscale;
@@ -338,9 +346,9 @@ void ComputeISurfGrid::surf_tally(int isurf, int icell, int reaction,
     case YPRESS:
       if (!nflag) {
         nflag = 1;
-        MathExtra::scale3(-origmass,vorig,pdelta);
-        if (ip) MathExtra::axpy3(imass,ip->v,pdelta);
-        if (jp) MathExtra::axpy3(jmass,jp->v,pdelta);
+        MathExtra::scale3(-origmass*worig,vorig,pdelta);  // SWS
+        if (ip) MathExtra::axpy3(imass*wi,ip->v,pdelta);  // SWS
+        if (jp) MathExtra::axpy3(jmass*wj,jp->v,pdelta);  // SWS
         MathExtra::scale3(MathExtra::dot3(pdelta,norm),norm,pnorm);
       }
       vec[k++] -= pnorm[1] * fluxscale;
@@ -348,9 +356,9 @@ void ComputeISurfGrid::surf_tally(int isurf, int icell, int reaction,
     case ZPRESS:
       if (!nflag) {
         nflag = 1;
-        MathExtra::scale3(-origmass,vorig,pdelta);
-        if (ip) MathExtra::axpy3(imass,ip->v,pdelta);
-        if (jp) MathExtra::axpy3(jmass,jp->v,pdelta);
+        MathExtra::scale3(-origmass*worig,vorig,pdelta);  // SWS
+        if (ip) MathExtra::axpy3(imass*wi,ip->v,pdelta);  // SWS
+        if (jp) MathExtra::axpy3(jmass*wj,jp->v,pdelta);  // SWS
         MathExtra::scale3(MathExtra::dot3(pdelta,norm),norm,pnorm);
       }
       vec[k++] -= pnorm[2] * fluxscale;
@@ -358,9 +366,9 @@ void ComputeISurfGrid::surf_tally(int isurf, int icell, int reaction,
     case XSHEAR:
       if (!tflag) {
         tflag = 1;
-        MathExtra::scale3(-origmass,vorig,pdelta);
-        if (ip) MathExtra::axpy3(imass,ip->v,pdelta);
-        if (jp) MathExtra::axpy3(jmass,jp->v,pdelta);
+        MathExtra::scale3(-origmass*worig,vorig,pdelta);  // SWS
+        if (ip) MathExtra::axpy3(imass*wi,ip->v,pdelta);  // SWS
+        if (jp) MathExtra::axpy3(jmass*wj,jp->v,pdelta);  // SWS
         MathExtra::scale3(MathExtra::dot3(pdelta,norm),norm,pnorm);
         MathExtra::sub3(pdelta,pnorm,ptang);
       }
@@ -369,9 +377,9 @@ void ComputeISurfGrid::surf_tally(int isurf, int icell, int reaction,
     case YSHEAR:
       if (!tflag) {
         tflag = 1;
-        MathExtra::scale3(-origmass,vorig,pdelta);
-        if (ip) MathExtra::axpy3(imass,ip->v,pdelta);
-        if (jp) MathExtra::axpy3(jmass,jp->v,pdelta);
+        MathExtra::scale3(-origmass*worig,vorig,pdelta);  // SWS
+        if (ip) MathExtra::axpy3(imass*wi,ip->v,pdelta);  // SWS
+        if (jp) MathExtra::axpy3(jmass*wj,jp->v,pdelta);  // SWS
         MathExtra::scale3(MathExtra::dot3(pdelta,norm),norm,pnorm);
         MathExtra::sub3(pdelta,pnorm,ptang);
       }
@@ -380,9 +388,9 @@ void ComputeISurfGrid::surf_tally(int isurf, int icell, int reaction,
     case ZSHEAR:
       if (!tflag) {
         tflag = 1;
-        MathExtra::scale3(-origmass,vorig,pdelta);
-        if (ip) MathExtra::axpy3(imass,ip->v,pdelta);
-        if (jp) MathExtra::axpy3(jmass,jp->v,pdelta);
+        MathExtra::scale3(-origmass*worig,vorig,pdelta);  // SWS
+        if (ip) MathExtra::axpy3(imass*wi,ip->v,pdelta);  // SWS
+        if (jp) MathExtra::axpy3(jmass*wj,jp->v,pdelta);  // SWS
         MathExtra::scale3(MathExtra::dot3(pdelta,norm),norm,pnorm);
         MathExtra::sub3(pdelta,pnorm,ptang);
       }
@@ -394,21 +402,21 @@ void ComputeISurfGrid::surf_tally(int isurf, int icell, int reaction,
       else ivsqpost = 0.0;
       if (jp) jvsqpost = jmass * MathExtra::lensq3(jp->v);
       else jvsqpost = 0.0;
-      vec[k++] -= 0.5*mvv2e * (ivsqpost + jvsqpost - vsqpre) * fluxscale;
+      vec[k++] -= 0.5*mvv2e * (ivsqpost * wi + jvsqpost * wj - vsqpre * worig) * fluxscale;  // SWS
       break;
     case EROT:
       if (ip) ierot = ip->erot;
       else ierot = 0.0;
       if (jp) jerot = jp->erot;
       else jerot = 0.0;
-      vec[k++] -= weight * (ierot + jerot - iorig->erot) * fluxscale;
+      vec[k++] -= weight * (ierot * wi + jerot *wj - iorig->erot * worig) * fluxscale;  // SWS
       break;
     case EVIB:
       if (ip) ievib = ip->evib;
       else ievib = 0.0;
       if (jp) jevib = jp->evib;
       else jevib = 0.0;
-      vec[k++] -= weight * (ievib + jevib - iorig->evib) * fluxscale;
+      vec[k++] -= weight * (ievib * wi + jevib * wj - iorig->evib * worig) * fluxscale;  // SWS
       break;
     case ETOT:
       vsqpre = origmass * MathExtra::lensq3(vorig);
@@ -421,8 +429,8 @@ void ComputeISurfGrid::surf_tally(int isurf, int icell, int reaction,
         jvsqpost = jmass * MathExtra::lensq3(jp->v);
         jother = jp->erot + jp->evib;
       } else jvsqpost = jother = 0.0;
-      etot = 0.5*mvv2e*(ivsqpost + jvsqpost - vsqpre) +
-        weight * (iother + jother - otherpre);
+      etot = 0.5*mvv2e*(ivsqpost * wi + jvsqpost * wj - vsqpre * worig) +
+        weight * (iother * wi + jother * wj - otherpre * worig);  // SWS
       vec[k++] -= etot * fluxscale;
       break;
     }

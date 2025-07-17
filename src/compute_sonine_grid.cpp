@@ -167,6 +167,8 @@ void ComputeSonineGrid::compute_per_grid()
   double *v,*vec;
   double vthermal[3];
 
+  double specwt; // SWS
+
   // compute COM velocity on this timestep for each cell and group
 
   for (i = 0; i < nglocal; i++) {
@@ -187,11 +189,12 @@ void ComputeSonineGrid::compute_per_grid()
 
     mass = species[ispecies].mass;
     v = particles[i].v;
+    specwt = species[ispecies].specwt;  // SWS
 
-    vcom[icell][igroup][0] += mass * v[0];
-    vcom[icell][igroup][1] += mass * v[1];
-    vcom[icell][igroup][2] += mass * v[2];
-    vcom[icell][igroup][3] += mass;
+    vcom[icell][igroup][0] += mass * v[0] * specwt;  // SWS
+    vcom[icell][igroup][1] += mass * v[1] * specwt;  // SWS
+    vcom[icell][igroup][2] += mass * v[2] * specwt;  // SWS
+    vcom[icell][igroup][3] += mass * specwt;         // SWS
   }
 
   for (i = 0; i < nglocal; i++)
@@ -225,7 +228,8 @@ void ComputeSonineGrid::compute_per_grid()
     k = igroup*npergroup;
 
     mass = species[ispecies].mass;
-    vec[k++] += mass;
+    specwt = species[ispecies].specwt;  // SWS
+    vec[k++] += mass*specwt;  // SWS
 
     v = particles[i].v;
     vthermal[0] = v[0] - vcom[icell][igroup][0];
@@ -236,14 +240,14 @@ void ComputeSonineGrid::compute_per_grid()
 
     for (m = 0; m < nvalue; m++) {
       if (which[m] == AMOM) {
-        value = mass*vthermal[moment[m]] * csq;
+        value = mass*vthermal[moment[m]] * csq * specwt;
         vec[k++] += value;
         for (n = 1; n < order[m]; n++) {
           value *= csq;
           vec[k++] += value;
         }
       } else {
-        value = mass * vthermal[moment[m]/3] * vthermal[moment[m]%3] * csq;
+        value = mass * vthermal[moment[m]/3] * vthermal[moment[m]%3] * csq * specwt;
         vec[k++] += value;
         for (n = 1; n < order[m]; n++) {
           value *= csq;

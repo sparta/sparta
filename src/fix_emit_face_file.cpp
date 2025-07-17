@@ -944,7 +944,7 @@ int FixEmitFaceFile::interpolate(int icell)
   for (isp = 0; isp < nspecies; isp++) {
     ntargetsp = frac_user *
       mol_inflow(indot,tasks[ntask].vscale[isp],tasks[ntask].fraction[isp]);
-    ntargetsp *= tasks[ntask].nrho*area*dt / fnum;
+      ntargetsp *= tasks[ntask].nrho*area*dt / (fnum*particle->species[isp].specwt); // SWS
     ntargetsp /= cinfo[icell].weight;
     tasks[ntask].ntarget += ntargetsp;
     if (perspecies) tasks[ntask].ntargetsp[isp] = ntargetsp;
@@ -1070,7 +1070,7 @@ void FixEmitFaceFile::subsonic_inflow()
       mass = species[mspecies[isp]].mass;
       vscale = sqrt(2.0 * boltz * temp_thermal / mass);
       ntargetsp = mol_inflow(indot,vscale,tasks[i].fraction[isp]);
-      ntargetsp *= nrho*area*dt / fnum;
+      ntargetsp *= nrho*area*dt / (fnum*particle->species[isp].specwt);  // SWS
       ntargetsp /= cinfo[icell].weight;
       tasks[i].ntarget += ntargetsp;
       if (perspecies) tasks[i].ntargetsp[isp] = ntargetsp;
@@ -1148,6 +1148,7 @@ void FixEmitFaceFile::subsonic_grid()
 {
   int m,ip,np,icell,ispecies;
   double mass,masstot,gamma,ke,sign;
+  double masstot_wi;  // SWS
   double nrho_cell,massrho_cell,temp_thermal_cell,press_cell;
   double mass_cell,gamma_cell,soundspeed_cell;
   double mv[4];
@@ -1172,6 +1173,7 @@ void FixEmitFaceFile::subsonic_grid()
 
     mv[0] = mv[1] = mv[2] = mv[3] = 0.0;
     masstot = gamma = 0.0;
+    masstot_wi = 0.0;  // SWS
 
     ip = cinfo[icell].first;
     while (ip >= 0) {
@@ -1183,6 +1185,7 @@ void FixEmitFaceFile::subsonic_grid()
       mv[2] += mass*v[2];
       mv[3] += mass * (v[0]*v[0]+v[1]*v[1]+v[2]*v[2]);
       masstot += mass;
+      masstot_wi += mass*species[ispecies].specwt;  // SWS
       gamma += 1.0 + 2.0 / (3.0 + species[ispecies].rotdof);
       ip = next[ip];
     }
@@ -1204,8 +1207,20 @@ void FixEmitFaceFile::subsonic_grid()
       temp_thermal_cell = tasks[i].temp_thermal;
 
     } else {
-      nrho_cell = np * fnum / cinfo[icell].volume;
-      massrho_cell = masstot * fnum / cinfo[icell].volume;
+    // ========================================================================
+    // Using the species weighting scheme, the total number of 
+    // physical particles is given by:
+    // Sum (wi*fnum) = cinfo[icell].count_wi * fnum
+    // and the total mass by:
+    // Sum (mi*wi*fnum) = masstot_wi * fnum
+    // ========================================================================
+    // Baseline code:
+      //~ nrho_cell = np * fnum / cinfo[icell].volume;
+      //~ massrho_cell = masstot * fnum / cinfo[icell].volume;
+    // SWS - Modified code:
+      nrho_cell = cinfo[icell].count_wi * fnum / cinfo[icell].volume;
+      massrho_cell = masstot_wi * fnum / cinfo[icell].volume;
+
       if (np > 1) {
         ke = mv[3]/np - (mv[0]*mv[0] + mv[1]*mv[1] + mv[2]*mv[2])/np/masstot;
         temp_thermal_cell = tprefactor * ke;
