@@ -59,19 +59,7 @@ SurfReactProbKokkos::SurfReactProbKokkos(SPARTA *sparta) :
 #endif
             )
 {
-  random = NULL;
-  random_backup = NULL;
-
-  id = NULL;
-  style = NULL;
-  tally_single = NULL;
-  tally_total = NULL;
-  tally_single_all = NULL;
-  tally_total_all = NULL;
-
-  rlist = NULL;
-  reactions = NULL;
-  indices = NULL;
+  copy = 1;
 }
 
 /* ---------------------------------------------------------------------- */

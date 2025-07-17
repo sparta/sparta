@@ -60,9 +60,7 @@ FixVibmodeKokkos::FixVibmodeKokkos(SPARTA *sparta) :
 #endif
             )
 {
-  random = NULL;
-  id = NULL;
-  style = NULL;
+  copy = 1;
 }
 
 /* ---------------------------------------------------------------------- */

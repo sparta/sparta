@@ -34,11 +34,7 @@ SurfCollideTransparentKokkos::SurfCollideTransparentKokkos(SPARTA *sparta, int n
 SurfCollideTransparentKokkos::SurfCollideTransparentKokkos(SPARTA *sparta) :
   SurfCollideTransparent(sparta)
 {
-  id = NULL;
-  style = NULL;
-
-  t_owned = NULL;
-  t_localghost = NULL;
+  copy = 1;
 }
 
 /* ---------------------------------------------------------------------- */

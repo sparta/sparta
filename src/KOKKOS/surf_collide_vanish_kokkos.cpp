@@ -35,11 +35,7 @@ SurfCollideVanishKokkos::SurfCollideVanishKokkos(SPARTA *sparta, int narg, char 
 SurfCollideVanishKokkos::SurfCollideVanishKokkos(SPARTA *sparta) :
   SurfCollideVanish(sparta)
 {
-  id = NULL;
-  style = NULL;
-
-  t_owned = NULL;
-  t_localghost = NULL;
+  copy = 1;
 }
 
 /* ---------------------------------------------------------------------- */

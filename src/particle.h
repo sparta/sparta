@@ -68,15 +68,15 @@ class Particle : protected Pointers {
   int nmixture;
   int maxmixture;
 
-  struct SPARTA_ALIGN(64) OnePart {
+  struct SPARTA_ALIGN(16) OnePart {
     int id;                 // particle ID
     int ispecies;           // particle species index
     int icell;              // which local Grid::cells the particle is in
+    int flag;               // used for migration status
     double x[3];            // particle position
     double v[3];            // particle velocity
     double erot;            // rotational energy
     double evib;            // vibrational energy
-    int flag;               // used for migration status
     double dtremain;        // portion of move timestep remaining
     double weight;          // particle or cell weight, if weighting enabled
   };
