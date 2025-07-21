@@ -1437,7 +1437,7 @@ void DumpImage::create_image()
     for (int icell = 0; icell < nglocal; icell++) {
       if (cells[icell].nsplit <= 0) continue;
       if (!(cinfo[icell].mask & grid_groupbit)) continue;
-      
+
       lo = cells[icell].lo;
       hi = cells[icell].hi;
 
@@ -1971,6 +1971,6 @@ int DumpImage::modify_param(int narg, char **arg)
     surf_groupbit = surf->bitmask[igroup];
     return 2;
   }
-  
+
   return 0;
 }

@@ -290,7 +290,7 @@ class Surf : protected Pointers {
   virtual void remove_custom(int);
 
   virtual void spread_custom(int);
-  void spread_inverse_custom(int);
+  virtual void spread_inverse_custom(int);
   int extract_custom(double **&);
 
   void write_restart_custom(FILE *);

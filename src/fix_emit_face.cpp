@@ -26,6 +26,7 @@
 #include "modify.h"
 #include "geometry.h"
 #include "input.h"
+#include "variable.h"
 #include "random_knuth.h"
 #include "math_const.h"
 #include "memory.h"
@@ -79,6 +80,7 @@ FixEmitFace::FixEmitFace(SPARTA *sparta, int narg, char **arg) :
   // optional args
 
   np = 0;
+  modvar = NULL;
   subsonic = 0;
   subsonic_style = NOSUBSONIC;
   subsonic_warning = 0;
@@ -98,6 +100,8 @@ FixEmitFace::FixEmitFace(SPARTA *sparta, int narg, char **arg) :
     error->all(FLERR,"Cannot use fix emit/face n > 0 with perspecies yes");
   if (np > 0 && subsonic)
     error->all(FLERR,"Cannot use fix emit/face n > 0 with subsonic");
+  if (np > 0 && modvar)
+    error->all(FLERR,"Cannot use fix emit/face n > 0 with modulate option");
 
   // task list and subsonic data structs
 
@@ -113,6 +117,8 @@ FixEmitFace::FixEmitFace(SPARTA *sparta, int narg, char **arg) :
 FixEmitFace::~FixEmitFace()
 {
   if (copymode) return;
+
+  delete [] modvar;
 
   if (tasks) {
     for (int i = 0; i < ntaskmax; i++) {
@@ -141,6 +147,14 @@ void FixEmitFace::init()
   nspecies = particle->mixture[imix]->nspecies;
   fraction = particle->mixture[imix]->fraction;
   cummulative = particle->mixture[imix]->cummulative;
+
+  // set current index for modvar variable
+
+  if (modvar) {
+    imodvar = input->variable->find(modvar);
+    if (imodvar < 0)
+      error->all(FLERR,"Fix emit/face modulate variable does not exist");
+  }
 
   // subsonic prefactor
 
@@ -476,6 +490,14 @@ void FixEmitFace::perform_task_onepass()
 
   if (subsonic) subsonic_inflow();
 
+  // if modulate variable set, evaluate it as prefactor for this timestep
+
+  double prefactor = 1.0;
+  if (modvar) {
+    prefactor = input->variable->compute_equal(imodvar);
+    if (prefactor < 0.0) error->all(FLERR,"Fix emit/face modulation < 0.0");
+  }
+
   // insert particles for each task = cell/face pair
   // ntarget/ninsert is either perspecies or for all species
   // for one particle:
@@ -516,7 +538,7 @@ void FixEmitFace::perform_task_onepass()
     if (perspecies) {
       for (isp = 0; isp < nspecies; isp++) {
         ispecies = species[isp];
-        ntarget = tasks[i].ntargetsp[isp]+random->uniform();
+        ntarget = prefactor*tasks[i].ntargetsp[isp] + random->uniform();
         ninsert = static_cast<int> (ntarget);
         scosine = indot / vscale[isp];
 
@@ -565,7 +587,7 @@ void FixEmitFace::perform_task_onepass()
 
     } else {
       if (np == 0) {
-        ntarget = tasks[i].ntarget+random->uniform();
+        ntarget = prefactor*tasks[i].ntarget + random->uniform();
         ninsert = static_cast<int> (ntarget);
       } else {
         ninsert = npertask;
@@ -647,6 +669,14 @@ void FixEmitFace::perform_task_twopass()
 
   if (subsonic) subsonic_inflow();
 
+  // if modulate variable set, evaluate it as prefactor for this timestep
+
+  double prefactor = 1.0;
+  if (modvar) {
+    prefactor = input->variable->compute_equal(imodvar);
+    if (prefactor < 0.0) error->all(FLERR,"Fix emit/face modulation < 0.0");
+  }
+
   // insert particles for each task = cell/face pair
   // ntarget/ninsert is either perspecies or for all species
   // for one particle:
@@ -672,13 +702,13 @@ void FixEmitFace::perform_task_twopass()
   for (int i = 0; i < ntask; i++) {
     if (perspecies) {
       for (isp = 0; isp < nspecies; isp++) {
-        ntarget = tasks[i].ntargetsp[isp]+random->uniform();
+        ntarget = prefactor*tasks[i].ntargetsp[isp] + random->uniform();
         ninsert = static_cast<int> (ntarget);
         ninsert_values[i][isp] = ninsert;
       }
     } else {
       if (np == 0) {
-        ntarget = tasks[i].ntarget+random->uniform();
+        ntarget = prefactor*tasks[i].ntarget + random->uniform();
         ninsert = static_cast<int> (ntarget);
       } else {
         ninsert = npertask;
@@ -1132,6 +1162,21 @@ int FixEmitFace::option(int narg, char **arg)
     if (2 > narg) error->all(FLERR,"Illegal fix emit/face command");
     np = atoi(arg[1]);
     if (np <= 0) error->all(FLERR,"Illegal fix emit/face command");
+    return 2;
+  }
+
+  if (strcmp(arg[0],"modulate") == 0) {
+    if (2 > narg) error->all(FLERR,"Illegal fix emit/face command");
+    if (strncmp(arg[1],"v_",2) == 0) {
+      int n = strlen(arg[1]);
+      modvar = new char[n];
+      strcpy(modvar,&arg[1][2]);
+      n = input->variable->find(modvar);
+      if (n < 0)
+        error->all(FLERR,"Could not find fix emit/face modulate variable name");
+      if (input->variable->equal_style(n) == 0)
+        error->all(FLERR,"Fix emit/face modulate variable is not equal-style");
+    } else error->all(FLERR,"Invalid fix emit/face modulate variable syntax");
     return 2;
   }
 

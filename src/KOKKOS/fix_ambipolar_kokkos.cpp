@@ -65,10 +65,7 @@ FixAmbipolarKokkos::FixAmbipolarKokkos(SPARTA *sparta) :
 #endif
             )
 {
-  ions = NULL;
-  random = NULL;
-  id = NULL;
-  style = NULL;
+  copy = 1;
 }
 
 /* ---------------------------------------------------------------------- */

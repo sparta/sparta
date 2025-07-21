@@ -46,12 +46,13 @@ namespace SPARTA_NS {
     DAT::tdual_float_2d_lr k_array_grid;
 
   private:
+    int nspecies;
     double boltz;
 
     t_species_1d d_species;
     CollideVSSKokkos::t_params_2d_const d_params_const;
 
-    DAT::t_float_1d d_temp;
+    DAT::t_float_1d d_temp,d_lambda_grid;
     DAT::t_float_2d d_array_grid1,d_lambdainv,d_tauinv;
     DAT::t_float_2d_lr d_nrho;
 

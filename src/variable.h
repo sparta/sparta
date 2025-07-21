@@ -22,6 +22,8 @@ namespace SPARTA_NS {
 
 class Variable : protected Pointers {
  public:
+  static constexpr int VALUELENGTH = 64;
+
   Variable(class SPARTA *);
   ~Variable();
   void set(int, char **);
@@ -29,10 +31,13 @@ class Variable : protected Pointers {
   int next(int, char **);
   int find(char *);
 
+  void python_command(int, char **);
+
   int equal_style(int);
   int particle_style(int);
   int grid_style(int);
   int surf_style(int);
+  char *python_style(char *, char *);
   int internal_style(int);
 
   char *retrieve(char *);
@@ -42,6 +47,7 @@ class Variable : protected Pointers {
   void compute_grid(int, double *, int, int);
   void compute_surf(int, double *, int, int);
   void internal_set(int, double);
+  void internal_create(char *, double);
 
   int int_between_brackets(char *&, int, const char * = "variable");
   double evaluate_boolean(char *);
@@ -55,6 +61,7 @@ class Variable : protected Pointers {
   int *num;                // # of values for each variable
   int *which;              // next available value for each variable
   int *pad;                // 1 = pad loop/uloop variables with 0s, 0 = no pad
+  int *pyindex;                // indices to Python funcs for python-style vars
   class VarReader **reader;   // variable that reads from file
   char ***data;            // str value of each variable's values
   double *dvalue;          // single numeric value for internal variables
@@ -82,9 +89,18 @@ class Variable : protected Pointers {
     char *carray;          // ptr into data struct with nstride = sizeof(struct)
     int type;              // operation, see enum{} in variable.cpp
     int nstride;           // stride between atoms if array is a 2d array
-    int selfalloc;         // 1 if array is allocated here, else 0
-    int ivalue1,ivalue2;   // extra values for needed for gmask,rmask,grmask
-    Tree *left,*middle,*right;    // ptrs further down tree
+
+    int nextra;              // # of additional args beyond first 2
+    Tree *first, *second;    // ptrs further down tree for first 2 args
+    Tree **extra;            // ptrs further down tree for nextra args
+
+    int pyvar;               // index of Python variable invoked as py_name()
+    int argcount;            // # of args to associated Python function
+    int *argvars;            // indices of internal variables for each arg
+
+    Tree() :
+      array(nullptr), iarray(nullptr), carray(nullptr), nextra(0),
+      first(nullptr), second(nullptr), extra(nullptr), argvars(nullptr) {}
   };
 
   void remove(int);
@@ -105,6 +121,7 @@ class Variable : protected Pointers {
   virtual void grid_vector(char *, Tree **, Tree **, int &);
   int is_constant(char *);
   double constant(char *);
+  int parse_args(char *, char **);
   char *find_next_comma(char *);
   void print_tree(Tree *, int);
   double *add_storage(double *);
