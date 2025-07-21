@@ -39,7 +39,9 @@ using namespace SPARTA_NS;
 using namespace MathConst;
 
 enum{UNKNOWN,OUTSIDE,INSIDE,OVERLAP};   // same as Grid
+enum{INT,DOUBLE};                       // several files
 
+#define MAXATTEMPT 1024      // max attempts to insert a particle into cut/split cell
 #define EPSZERO 1.0e-14
 
 CreateParticlesKokkos::CreateParticlesKokkos(SPARTA* spa):
@@ -55,52 +57,67 @@ void CreateParticlesKokkos::create_local(bigint np)
   RanKnuth *random = new RanKnuth(update->ranmaster->uniform());
   double seed = update->ranmaster->uniform();
   random->reset(seed,me,100);
+
   Grid::ChildCell *cells = grid->cells;
   Grid::ChildInfo *cinfo = grid->cinfo;
+  Grid::SplitInfo *sinfo = grid->sinfo;
   GridKokkos* grid_kk = ((GridKokkos*)grid);
-  grid_kk->sync(Host,CINFO_MASK|CELL_MASK);
+  grid_kk->sync(Host,CINFO_MASK|CELL_MASK|SINFO_MASK);
   int nglocal = grid->nlocal;
 
-  // volme = volume of grid cells I own that are OUTSIDE surfs
-  // skip cells entirely outside region
-  // Nme = # of particles I will create
-  // MPI_Scan() logic insures sum of nme = Np
+  // flowvol = total weighted flow volume of all cells
+  //   skip cells inside surfs and split cells
+  //   skip cells outside defined region
+  // insertvol = subset of flowvol for cells eligible for insertion
+  //   insertvol = flowvol if cutflag = 1
+  //   insertvol < flowvol possible if cutflag = 0 (no cut cells)
 
-  double *lo,*hi;
-  double volone;
+  double flowvolme = 0.0;
+  double insertvolme = 0.0;
 
-  double volme = 0.0;
-  for (int i = 0; i < nglocal; i++) {
-    if (cinfo[i].type != OUTSIDE) continue;
-    lo = cells[i].lo;
-    hi = cells[i].hi;
-    if (region && region->bboxflag && outside_region(dimension,lo,hi))
+  for (int icell = 0; icell < nglocal; icell++) {
+    if (cinfo[icell].type == INSIDE) continue;
+    if (cells[icell].nsplit > 1) continue;
+    if (region && region->bboxflag &&
+        outside_region(dimension,cells[icell].lo,cells[icell].hi))
       continue;
 
-    if (dimension == 3) volone = (hi[0]-lo[0]) * (hi[1]-lo[1]) * (hi[2]-lo[2]);
-    else if (domain->axisymmetric)
-      volone = (hi[0]-lo[0]) * (hi[1]*hi[1]-lo[1]*lo[1])*MY_PI;
-    else volone = (hi[0]-lo[0]) * (hi[1]-lo[1]);
-    volme += volone / cinfo[i].weight;
+    flowvolme += cinfo[icell].volume / cinfo[icell].weight;
+    if (!cutflag && cells[icell].nsurf) continue;
+    insertvolme += cinfo[icell].volume / cinfo[icell].weight;
   }
 
+  // calculate total Np if not set explicitly
+  // based on total flowvol and mixture density
+
+  if (np == 0) {
+    double flowvol;
+    MPI_Allreduce(&flowvolme,&flowvol,1,MPI_DOUBLE,MPI_SUM,world);
+    np = particle->mixture[imix]->nrho * flowvol / update->fnum;
+  }
+
+  // gather cummulative insertion volumes across all procs
+
   double volupto;
-  MPI_Scan(&volme,&volupto,1,MPI_DOUBLE,MPI_SUM,world);
+  MPI_Scan(&insertvolme,&volupto,1,MPI_DOUBLE,MPI_SUM,world);
 
   double *vols;
   int nprocs = comm->nprocs;
   memory->create(vols,nprocs,"create_particles:vols");
   MPI_Allgather(&volupto,1,MPI_DOUBLE,vols,1,MPI_DOUBLE,world);
 
-  // nme = # of particles for me to create
   // gathered Scan results not guaranteed to be monotonically increasing
-  // can cause epsilon mis-counts for huge particle counts
-  // enforce that by brute force
+  //   can cause epsilon mis-counts for huge particle counts
+  //   so enforce monotonic increase by brute force
 
   for (int i = 1; i < nprocs; i++)
     if (vols[i] != vols[i-1] &&
         fabs(vols[i]-vols[i-1])/vols[nprocs-1] < EPSZERO)
       vols[i] = vols[i-1];
+
+  // nme = # of particles for me to create
+  // based on fraction of insertvol I own
+  // loop over procs insures sum of nme = Np
 
   bigint nstart,nstop;
   if (me > 0) nstart = static_cast<bigint> (np * (vols[me-1]/vols[nprocs-1]));
@@ -116,14 +133,14 @@ void CreateParticlesKokkos::create_local(bigint np)
   int nfix_update_custom = modify->n_update_custom;
 
   // loop over cells I own
-  // only add particles to OUTSIDE cells
-  // skip cells entirely outside region
+  // only add particles to cells eligible for insertion
   // ntarget = floating point # of particles to create in one cell
   // npercell = integer # of particles to create in one cell
   // basing ntarget on accumulated volume and nprev insures Nme total creations
   // particle species = random value based on mixture fractions
   // particle velocity = stream velocity + thermal velocity
 
+  double nrho = particle->mixture[imix]->nrho;
   int *species = particle->mixture[imix]->species;
   double *cummulative = particle->mixture[imix]->cummulative;
   double *vstream = particle->mixture[imix]->vstream;
@@ -133,54 +150,70 @@ void CreateParticlesKokkos::create_local(bigint np)
   double temp_rot = particle->mixture[imix]->temp_rot;
   double temp_vib = particle->mixture[imix]->temp_vib;
 
+  int npercell,ncreate,isp,ispecies,id,pflag,subcell;
+  double x[3],v[3],xcell[3],vstream_var[3];
+  double ntarget,scale,rn,vn,vr,theta1,theta2,erot,evib;
+  double *lo,*hi;
+
+  double *cummulative_custom = new double[nspecies];
+
   double tempscale = 1.0;
   double sqrttempscale = 1.0;
 
   double volsum = 0.0;
   bigint nprev = 0;
 
-  double vstream_variable[3];
+  // first pass, just calculate # of particles to create
+  // ncreate_values[icell] = # of particles to create in ICELL
 
-  Kokkos::View<int*, DeviceType> d_npercell("npercell", nglocal);
-  auto h_npercell = Kokkos::create_mirror_view(d_npercell);
+  Kokkos::View<int*, DeviceType> d_ncreate_values("create_particles:ncreate", nglocal);
+  auto h_ncreate_values = Kokkos::create_mirror_view(d_ncreate_values);
 
-  for (int i = 0; i < nglocal; i++) {
-    if (cinfo[i].type != OUTSIDE) continue;
-    lo = cells[i].lo;
-    hi = cells[i].hi;
-    if (region && region->bboxflag && outside_region(dimension,lo,hi))
+  for (int icell = 0; icell < nglocal; icell++) {
+    if (cinfo[icell].type == INSIDE) continue;
+    if (cells[icell].nsplit > 1) continue;
+    if (cinfo[icell].volume == 0.0) continue;
+    if (region && region->bboxflag &&
+        outside_region(dimension,cells[icell].lo,cells[icell].hi))
       continue;
+    if (!cutflag && cells[icell].nsurf) continue;
 
-    if (dimension == 3) volone = (hi[0]-lo[0]) * (hi[1]-lo[1]) * (hi[2]-lo[2]);
-    else if (domain->axisymmetric)
-      volone = (hi[0]-lo[0]) * (hi[1]*hi[1]-lo[1]*lo[1])*MY_PI;
-    else volone = (hi[0]-lo[0]) * (hi[1]-lo[1]);
-    volsum += volone / cinfo[i].weight;
+    volsum += cinfo[icell].volume / cinfo[icell].weight;
 
-    double ntarget = nme * volsum/volme - nprev;
+    double ntarget = nme * volsum/insertvolme - nprev;
     auto npercell = static_cast<int> (ntarget);
+
     if (random->uniform() < ntarget-npercell) npercell++;
     auto ncreate = npercell;
 
-    if (densflag) {
-      auto scale = density_variable(lo,hi);
+    lo = cells[icell].lo;
+    hi = cells[icell].hi;
+
+    if (nrho_flag) {
+      if (nrho_var_flag) scale = nrho_variable(lo,hi);
+      else scale = nrho_custom[icell] / nrho;
+      if (scale < 0.0)
+        error->one(FLERR,"Variable/custom density scale factor < 0.0");
       ntarget *= scale;
       ncreate = static_cast<int> (ntarget);
       if (random->uniform() < ntarget-ncreate) ncreate++;
     }
 
-    if (ncreate < 0) ncreate = 0;
-    h_npercell(i) = ncreate;
+    h_ncreate_values[icell] = ncreate;
 
     // increment count without effect of density variation
     // so that target insertion count is undisturbed
 
     nprev += npercell;
   }
-  Kokkos::deep_copy(d_npercell, h_npercell);
+  Kokkos::deep_copy(d_ncreate_values, h_ncreate_values);
+
+  // second pass, create particles using ncreate_values
+
+  double *vstream_update_custom = vstream;
 
   int ncands;
-  auto d_cells2cands = offset_scan(d_npercell, ncands);
+  auto d_cells2cands = offset_scan(d_ncreate_values, ncands);
   auto h_cells2cands = Kokkos::create_mirror_view(d_cells2cands);
   Kokkos::deep_copy(h_cells2cands, d_cells2cands);
 
@@ -199,17 +232,36 @@ void CreateParticlesKokkos::create_local(bigint np)
   auto h_id = Kokkos::create_mirror_view(d_id);
   auto h_v = Kokkos::create_mirror_view(d_v);
 
-  for (int i = 0; i < nglocal; i++) {
-    auto ncreate = h_npercell(i);
-    lo = cells[i].lo;
-    hi = cells[i].hi;
+  for (int icell = 0; icell < nglocal; icell++) {
+    if (cinfo[icell].type == INSIDE) continue;
+    if (cells[icell].nsplit > 1) continue;
+    if (cinfo[icell].volume == 0.0) continue;
+    if (region && region->bboxflag &&
+        outside_region(dimension,cells[icell].lo,cells[icell].hi))
+      continue;
+    if (!cutflag && cells[icell].nsurf) continue;
+
+    lo = cells[icell].lo;
+    hi = cells[icell].hi;
+
+    auto ncreate = h_ncreate_values(icell);
+
+    if (fractions_custom_flag)
+      fractions_to_cummulative(nspecies,fractions_custom[icell],cummulative_custom);
+
+    // if surfs in cell, use xcell for all created particle attempts
+
+    if (cells[icell].nsurf)
+      pflag = grid->point_outside_surfs(icell,xcell);
 
     for (int m = 0; m < ncreate; m++) {
-      auto cand = h_cells2cands(i) + m;
+      auto cand = h_cells2cands(icell) + m;
       auto rn = random->uniform();
       int isp = 0;
       while (cummulative[isp] < rn) isp++;
       auto ispecies = species[isp];
+
+      // generate random position X for new particle
 
       double x[3];
       x[0] = lo[0] + random->uniform() * (hi[0]-lo[0]);
@@ -217,10 +269,56 @@ void CreateParticlesKokkos::create_local(bigint np)
       x[2] = lo[2] + random->uniform() * (hi[2]-lo[2]);
       if (dimension == 2) x[2] = 0.0;
 
+      // if surfs, check if random position is in flow region
+      // if subcell, also check if in correct subcell
+      // if not, attempt new insertion up to MAXATTEMPT times
+
+      if (cells[icell].nsurf && pflag) {
+        int nattempt = 0;
+        while (nattempt < MAXATTEMPT) {
+          if (grid->outside_surfs(icell,x,xcell)) {
+            if (cells[icell].nsplit == 1) break;
+            int splitcell = sinfo[cells[icell].isplit].icell;
+            if (dimension == 2) subcell = update->split2d(splitcell,x);
+            else subcell = update->split3d(splitcell,x);
+            if (subcell == icell) break;
+          }
+
+          nattempt++;
+
+          x[0] = lo[0] + random->uniform() * (hi[0]-lo[0]);
+          x[1] = lo[1] + random->uniform() * (hi[1]-lo[1]);
+          x[2] = lo[2] + random->uniform() * (hi[2]-lo[2]);
+          if (dimension == 2) x[2] = 0.0;
+        }
+
+        // particle insertion was unsuccessful
+
+        if (nattempt >= MAXATTEMPT) continue;
+      }
+
+      // if region defined, skip if particle outside region
+
       if (region && !region->match(x)) continue;
-      if (speciesflag) {
-        isp = species_variable(x) - 1;
-        if (isp < 0 || isp >= nspecies) continue;
+
+      // insertion of particle at position X is accepted
+      // calculate all other particle properties
+
+      rn = random->uniform();
+
+      if (species_flag) {
+        if (species_var_flag) {
+          isp = species_variable(x) - 1;
+          if (isp < 0 || isp >= nspecies) continue;
+          ispecies = species[isp];
+        } else {
+          isp = 0;
+          while (cummulative_custom[isp] < rn) isp++;
+          ispecies = species[isp];
+        }
+      } else {
+        isp = 0;
+        while (cummulative[isp] < rn) isp++;
         ispecies = species[isp];
       }
 
@@ -228,14 +326,16 @@ void CreateParticlesKokkos::create_local(bigint np)
       h_isp(cand) = isp;
       for (int d = 0; d < 3; ++d) h_x(cand, d) = x[d];
 
-      if (tempflag) {
-        tempscale = temperature_variable(x);
+      if (temp_flag) {
+        if (temp_var_flag) tempscale = temperature_variable(x);
+        else tempscale = temp_custom[icell] / temp_thermal;
+        if (tempscale < 0.0)
+          error->one(FLERR,"Variable/custom temperature scale factor < 0.0");
         sqrttempscale = sqrt(tempscale);
       }
 
       auto vn = vscale[isp] * sqrttempscale * sqrt(-log(random->uniform()));
       auto vr = vscale[isp] * sqrttempscale * sqrt(-log(random->uniform()));
-
       auto theta1 = MY_2PI * random->uniform();
       auto theta2 = MY_2PI * random->uniform();
 
@@ -246,11 +346,19 @@ void CreateParticlesKokkos::create_local(bigint np)
       h_id(cand) = MAXSMALLINT*random->uniform();
 
       double v[3];
-      if (velflag) {
-        velocity_variable(x,vstream,vstream_variable);
-        v[0] = vstream_variable[0] + vn*cos(theta1);
-        v[1] = vstream_variable[1] + vr*cos(theta2);
-        v[2] = vstream_variable[2] + vr*sin(theta2);
+      if (vstream_flag) {
+        if (vstream_var_flag) {
+          vstream_variable(x,vstream,vstream_var);
+          v[0] = vstream_var[0] + vn*cos(theta1);
+          v[1] = vstream_var[1] + vr*cos(theta2);
+          v[2] = vstream_var[2] + vr*sin(theta2);
+          vstream_update_custom = vstream_var;
+        } else {
+          v[0] = vstream_custom[icell][0] + vn*cos(theta1);
+          v[1] = vstream_custom[icell][1] + vr*cos(theta2);
+          v[2] = vstream_custom[icell][2] + vr*sin(theta2);
+          vstream_update_custom = vstream_custom[icell];
+        }
       } else {
         v[0] = vstream[0] + vn*cos(theta1);
         v[1] = vstream[1] + vr*cos(theta2);
@@ -281,10 +389,10 @@ void CreateParticlesKokkos::create_local(bigint np)
   Kokkos::deep_copy(d_species, h_species);
   auto nlocal_before = particleKK->nlocal;
 
-  Kokkos::parallel_for(nglocal, SPARTA_LAMBDA(int i) {
-    auto ncreate = d_npercell(i);
+  Kokkos::parallel_for(nglocal, SPARTA_LAMBDA(int icell) {
+    auto ncreate = d_ncreate_values(icell);
     for (int m = 0; m < ncreate; m++) {
-      auto cand = d_cells2cands(i) + m;
+      auto cand = d_cells2cands(icell) + m;
       if (!d_keep(cand)) continue;
       auto inew = d_cands2new(cand) + nlocal_before;
       auto id = d_id(cand);
@@ -294,7 +402,7 @@ void CreateParticlesKokkos::create_local(bigint np)
       for (int d = 0; d < 3; ++d) v[d] = d_v(cand, d);
       auto erot = d_erot(cand);
       auto evib = d_evib(cand);
-      ParticleKokkos::add_particle_kokkos(d_particles,inew,id,ispecies,i,x,v,erot,evib);
+      ParticleKokkos::add_particle_kokkos(d_particles,inew,id,ispecies,icell,x,v,erot,evib);
     }
   });
   particleKK->modify(Device,PARTICLE_MASK);
@@ -304,17 +412,26 @@ void CreateParticlesKokkos::create_local(bigint np)
   auto h_cands2new = Kokkos::create_mirror_view(d_cands2new);
   Kokkos::deep_copy(h_cands2new, d_cands2new);
 
-  for (int i = 0; i < nglocal; i++) {
-    auto ncreate = h_npercell(i);
+  for (int icell = 0; icell < nglocal; icell++) {
+    auto ncreate = h_ncreate_values(icell);
     for (int m = 0; m < ncreate; m++) {
-      auto cand = h_cells2cands(i) + m;
+      auto cand = h_cells2cands(icell) + m;
       if (!h_keep(cand)) continue;
       auto inew = h_cands2new(cand) + nlocal_before;
+
+      // tempscale and vstream_update_custom are set appropriately
+      // if using per-grid variables or per-grid custom attributes
+
       if (nfix_update_custom)
-        modify->update_custom(inew,temp_thermal,temp_rot,temp_vib,vstream);
+        modify->update_custom(particle->nlocal-1,tempscale*temp_thermal,
+                              tempscale*temp_rot,tempscale*temp_vib,
+                              vstream_update_custom);
     }
   }
 
+  // clean up
+
+  delete [] cummulative_custom;
   delete random;
 }
 
