@@ -264,4 +264,9 @@ void FixSurfTemp::end_of_step()
   // flag custom attribute as updated
 
   surf->estatus[tindex] = 0;
+
+  // invoke fixes which use per-surf custom attributes
+  // example: fix emit/surf
+  
+  modify->custom_surf_changed();
 }

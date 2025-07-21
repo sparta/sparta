@@ -10,22 +10,36 @@ custom command :h3
 
 [Syntax:]
 
-custom style attribute action args ... keyword value ... :pre
+custom style action args ... action args ... :pre
 
 style = {particle} or {grid} or {surf} :ulb,l
-attribute = name of custom attribute :l
-  name = custom vector attribute with name
-  name\[N\] = Nth column of custom array attribute with name :pre
-action = {set} or {remove} :l
-  {set} args = v_name subset-ID region-ID
+action = {create} or {remove} or {set} or {file} :l
+  {create} args = cname datatype Nc
+    cname = name of custom vector or array to create and initialize with zeroes
+    datatype = {int} or {float} = for integer or floating point values
+    Nc = 0 for a vector (single value), Nc >= 1 for an array (one or more values)
+  {remove} arg2 = cname
+    cname = name of custom vector or array to remove
+  {set} args = cname v_name subset-ID region-ID
+    cname = specify as name (no brackets) for custom vector with name
+            or as name\[N\] for Nth column of custom array with name
     v_name = equal-, particle-, grid-, or surf-style variable with name
     subset-ID = mixture ID (particles) or group ID (grid cells or surf elements)
     region-ID = only apply to particle/grid/surf in region, NULL to not test
-  {remove} args = none :pre
-zero of more keyword/arg pairs may be appended (only for action = set) :l
-keyword = {type} or {size}
-  {type} arg = {int} or {float}
-  {size} arg = M for number of columns in a new custom array :pre
+  {file} args = fname M cname1 cname2 ... cnameM
+    fname = name of file with custom attributes for grid cells or surf elements
+    M = # of custom values listed on each line of the file
+    cname1,cname2,...,cnameM = which attribute each line's values are assigned to
+      cnameI = name of a custom vector
+      cnameI = name\[N\] for Nth column of a custom array with name
+  {file/coarse} args = Nfile filestyle fname M cname1 cname2 ... cnameM
+    Nfile = number of coarse files
+    filestyle = {text} or {binary}
+    fname = name of file with custom attributes for coarse grid cells
+    M = # of custom values listed for each coarse cell entry in the file
+    cname1,cname2,...,cnameM = which attribute each coarse cell's values are assigned to
+      cnameI = name of a custom vector
+      cnameI = name\[N\] for Nth column of a custom array with name :pre
 :ule
 
 [Examples:]
@@ -35,82 +49,89 @@ variable sdvec surf c_1*10+3.5
 variable sdarray1 surf s_dvec+1
 variable sdarray2 surf v_sdarray1+1 :pre
 
-custom particle ivec set v_ivec air NULL type int
-custom surf dvec set v_sdvec all NULL
-custom surf darray\[1\] set v_sdarray1 all NULL size 2
-custom surf darray\[2\] set v_sdarray2 all NULL
-custom particle ivec remove
-custom surf darray remove :pre
+custom particle create ivec int 0 set ivec v_ivec air NULL
+custom surf create sdvec float 0 set sdvec v_sdvec all NULL
+custom surf create darray float 2 set darray\[1\] v_sdarray1 all NULL
+custom surf set darray\[2\] v_sdarray2 all NULL
+custom grid create gvec int 0 create garray float 2 file grid.attributes gvec garray[1] garray[2]
+custom particle remove ivec
+custom surf remove darray :pre
+
+See examples using many of the "custom"_custom.html and "fix
+custom"_fix_custom.html command actions in examples/custom
 
 [Description:]
 
-Create or reset or remove a custom attribute for individual particles,
-grid cells, or surface elements.  To create or reset an attribute a
-variable is specified and evaluated.  Custom attributes can be can be
-vectors (single value per entity) or arrays (mutiple values per
-entity).  They can also be integer or floating point values.  See
-"Section 6.17"_Section_howto.html#howto_17 for more discussion of
-custom attributes.
+Create or remove or initialize/reset custom attributes for particles,
+grid cells, or surface elements.
 
-The specified {style} setting is {particle} or {grid} or {surf}
-for per-particle, per-grid, or per-surf attributes.
+To create a new attribute, the {create} action is specified.  To
+remove an attribute, the {remove} action is specified.  The {set}
+action evaluates a variable to reset the values for an attribute.  The
+{file} action reads a file with lines starting with a grid cell ID or
+surface element ID followed by values for one or more per-grid or
+per-surf attributes.  Particle-style attributes cannot be reset with
+the {file} action.
 
-The {attribute} specifies the name of the attribute to operate on.
-The same name can be used for attributes of different styles.
-E.g. there can be a custom attribute with the name "flag" for both
-particles and surface elements.  If the attribute name is specified
-without brackets, it refers to a custom vector (single value per
-entity).  If the attribute name is specified with a bracketed integer,
-it refers to the column of a custom array (one or more values per
-entity).  The integer {N} must be between 1 and M = # of columns in
-the array (values per entity).  See the {size} keyword discussion
-below for how to specify M if it is a new custom array.
+Custom attributes can be vectors (single value per entity) or arrays
+(mutiple values per entity).  They can also be integer or floating
+point values.  See "Section 6.17"_Section_howto.html#howto_17 for an
+explanation of custom attributes.
 
-The {action} is specified as {set} or {remove}.
+The {style} setting is {particle} or {grid} or {surf} for custom
+per-particle, per-grid, or per-surf attributes.
 
-If {remove} is used, then the {attribute} should be simply the name of
-the attribute, whether it is a vector or array.  No trailing brackets
-are specified.  The attribute will be removed from the system.  No
-further arguments can be specified.
+The {action} setting is {create} or {remove} or {set} or {file} or
+{file/coarse}.
 
-If {set} is used, then the attribute is created if it does not already
-exist and its values are initialized.  If it already exists, its
-values are reset.  Custom attributes can be vectors (single value per
-entity) or arrays (mutiple values per entity).  To set the values for
-a custom vector, use an {attribute} name without brackets,
-e.g. temperature.  To set the values for a single column of a custom
-array, use an {attribute} name suffixed by a bracketed integer,
-e.g. dipole\[3\].  The integer must be a value from 1 to M, where M is
-the number of columns (values per entity) in the array.
+The {create} action creates a new custom attribute called {cname} and
+initializes all its values to zero.  The {datatype} is specified as
+{int} or {float} and determines what kind of values the attribute
+stores.  {Nc} is specified as 0 for custom vector which stores a
+single value per entity.  Specify {Nc} >= 1 for a custom array which
+stores Nc values per entity.
 
-The specified {v_name} is the name of a previously defined variable
-which this command will evaluate.  It must be either an equal-style or
-particle-style or grid-style or surf-style variable.  All of these
-styles define a mathematical formula which is used to compute the
-value(s) of the variable.  See the "variable"_variable.html for
-details.
+The {remove} action deletes the custom attribute called {cname},
+whether it is a vector or array.
+
+The {set} and {file} and {file/coarse} actions reset the values of
+custom attribute(s) which must already exist.
+
+:line
+
+The {set} action resets the values of a custom attribute by evaluating
+a variable.  To operate on a custom vector, {cname} is simply the name
+of the vector.  To operate on a single column of a custom array,
+{cname} is specified as name\[N\] for the Nth column of a custom array
+with name.
+
+The specified {v_name} is the name of the variable which is evaluated.
+It must be either an equal-style or particle-style or grid-style or
+surf-style variable.  All of these define a mathematical formula which
+is used to compute the value(s) of the variable.  See the
+"variable"_variable.html command for details.
 
 If an equal-style variable is specified, it produces a single value
-which will be assigned as the custom value to all particles or grid
-cells or surface elements.  Otherwise a particle-style variable must
-be used for style = {particle}, a grid-style variable for style =
-{grid}, or a surf-style variable for style = {surf}.  When it is
-evaluated it generates one value for each particle, grid cell, or
-surface element, which is assigned to the custom vector or to a column
-of the custom array.
+which will be assigned as the custom value to all the particles or
+grid cells or surface elements (see subset-ID and region-ID discussion
+below).  Otherwise a particle-style variable must be used for {style
+particle}, a grid-style variable for {style grid}, or a surf-style
+variable for {style surf}.  When it is evaluated it generates one
+value for each particle, grid cell, or surface element, which is
+assigned to the custom vector or to a column of the custom array.
 
 Note that the latter 3 variable styles can include outputs from
 "compute"_compute.html or "fix"_fix.html commands.  They can also
-include the current timestep or the spatial position of a particle,
-grid cell, or surface element in their formula. So it is easy to
-calculate values for each entity which vary spatially or which depend
-on the current timestep.
+include the current timestep (as can equal-style variables) or the
+spatial position of a particle, grid cell, or surface element in their
+formula.  So it is easy to calculate a value for each entity which
+varies in time or spatially.
 
 The next two arguments, {subset-ID} and {region-ID}, can limit which
 particles, grid cells, or surface elements are assigned a custom
 value.  An individual particle, grid cell, or surface element must
 meet both criteria to have its custom value set, otherwise its value
-is set to zero.
+is unchanged.
 
 The {subset-ID} is the ID of a mixture for particles or the ID of a
 group of grid cells or surface elements.  Only particles in the
@@ -118,7 +139,7 @@ mixture or grid cells/surface elements in the group will be assigned a
 value.  See the "mixture"_mixture.html and "group"_group.html commands
 for more details.  Note that "all" is a pre-defined mixture ID which
 contains all particles.  Likewise "all" is the name of a pre-defined
-group with all grid cells or surface elements.
+group with all grid cells or all surface elements.
 
 The {region-ID} is the ID of a geometric region defined by the
 "region"_region.html command.  Only particles or grid cells or surface
@@ -127,21 +148,255 @@ of a grid cell or surface element is used for the region check.  If
 {region-ID} is specified as NULL, then the region criterion is not
 applied.
 
-Two optional keywords affect the creation of a new custom vector or
-array.  They are ignored if the custom vector or array already exists.
+:line
 
-The {type} keyword can be used with {int} or {float} as its arg.  The
-created custom attribute will then store either integer or
-floating-point values.  Floating point values are the default.
+The {file} action resets the values of one or more custom attributes
+by reading them from the {fname} file.  It can only be used with
+{style grid} or {style surf}, not with {style particle}.
 
-The {size} keyword can be used with arg = 0 to create a custom vector
-(which is the default).  It can also be used with an arg M >= 1 to
-create an array with M columns (values per entity).  This means that
-if a new {attribute} name is specified with no brackets, the {size}
-keyword is not necessary, because it's default value refers to a
-custom vector.  But if a new {attribute} name with a bracket is used,
-the {size} keyword must be used so that the column dimension of the
-array is known.
+The specified {M} is the number of {cname1,cname2,...,cnameM} values
+that follow and must match the number of values listed on each line in
+the file, as explained below.  A {cnameI} with no brackets is the name
+of a custom vector.  For a custom array, {cnameI} must be of the form
+name\[N\] for the Nth column of the array.
+
+The format of the file is as follows.  Note that the number of grid
+cells or surf elements specified in the file does not have to equal
+the total number of grid cells or surface elements.  If the ID of a
+grid cell or surface element does not appear in the file, then its
+custom attribute value(s) will be unchanged.
+
+The file can start with any number of comment or blank lines.
+A comment line starts with the "#" character.
+
+The first non-comment, non-blank line has this format:
+
+N Nvalue :pre
+
+N is the count of attribute value lines which follow.  These N lines
+must immediately follow the count line and contain no blank lines.
+Any remaining lines in the file are ignored.  Nvalue is the
+number of attribute values per line and must equal the specified {M}.
+
+The format of each attribute value line is as follows:
+
+ID value1 value2 ... valueM
+
+ID is the integer ID of the grid cell or surface element.  Note that
+for hierarchial grids, it must be the integer form of the ID, not the
+string form (possibly with dashes).  M values follow, corresponding to
+the {M} argument in the input script, following the {fname} argument.
+
+The following is an example of a correctly formatted file to set the
+values for a per-surf custom array with 2 columns.  Only the values
+for 3 surface elements are set.
+
+# custom values for a few surface elements
+# calculated for test problem XYZ :pre
+
+3 2
+1 10.0 5.0
+20 12.0 6.5
+21 8.0 4.55 :pre
+
+This file could be read with an input script command like this:
+
+custom surf create darray float 2 file file.surf 2 darray\[1\] darray\[2\] :pre
+
+:line
+
+The {file/coarse} action resets the values of one or more custom
+attributes by reading coarse grid values from one or more files.  It
+can only be used with {style grid}, not with {style surf} or {style
+particle}.
+
+This action is designed to allow input of custom values for some
+number of "coarse" grid cells.  The coarse cells and their values
+could be output from another code, such as a continuum Navier-Stokes
+(NS) code or even from an experiment.  The coarse cell values are
+"mapped" to individual SPARTA grid cells, so that per-grid custom
+attributes for each SPARTA grid cell are set by the values from one of
+the coarse cells.  This is done in the following manner.
+
+Each coarse grid cell is associated with a (cx,cy,cz) point.  This
+could be the center point of grid cell in a NS code which uses
+finite-volume grid cells.  Or it could be a grid point in a NS code
+which uses finite elements, e.g. the corner point of a triangle (2d)
+or tetrahedron (3d).  Conceptually, the idea is that the small area
+(2d) or volume (3d) surrounding the point has properties represented
+by the coarse grid cell values in the file.
+
+All SPARTA grid cells define a center point (sx,sy,sz), which is the
+center of a rectangle (2d) or parallelepiped (3d).
+
+Both the coarse-grid code and SPARTA should operate on the same
+simulation domain, which is the simulation box in the case of SPARTA.
+The set of all (cx,cy,cz) points should "cover" this domain, as do the
+set of all (sx,sy,sz) points.  For each (sx,sz,sz) point, the
+{nearest} (cx,cy,cz) point is found.  The coarse grid values for that
+point are assigned to the custom per-grid values of that SPARTA grid
+cell cell.  Here are a few additional details.
+
+If two or more coarse grid points are the "same" nearest distance from
+a SPARTA center point, then their coarse grid values are averaged
+before assigning them to the SPARTA grid cell.  Currently, "same" is
+defined as within a distance cdist*(1+1.0e-6) where cdist = closest
+distance from the SPARTA center point to any coarse grid
+point. I.e. one part in a million. :ulb,l
+
+SPARTA center points will never be on the boundary of the simulation
+domain.  But coarse grid points can be.  All coarse grid points must
+be inside the SPARTA simulation box or on its surface. :l
+
+If surfaces are present in the two codes's simulations, then both
+codes should define an identical set of surface elements.  This is
+necessary to make flow parameters near surfaces consistent between the
+two codes. :l
+
+SPARTA can define grid cells wholly inside of surface objects. The
+coarse grid code may not, e.g. if finite elements conform to the
+surface of an object.  The mapping operation described above is not
+performed for SPARTA grid cells wholly inside surface objects; their
+custom attribute values are set to zero.  If a SPARTA grid cell is cut
+by surface elements, its center point may be inside a suface object.
+In this case it should be fine to assign the grid cell values from the
+nearest coarse grid point in the flow. :l,ule
+
+IMPORTANT NOTE: The current implementation of this "mapping" operation
+stores the entire coarse grid on every processor, Each processor then
+loops over the SPARTA grid cells it own and searches the entire set of
+of coarse grid point for the nearest, using a k-d tree (in 2 or 3
+dimensions).  If either the coarse grid storage or tree search becomes
+a bottleneck for very large-scale problems, we could consider
+implementing a more parallel algorithm.
+
+Creation of the file(s) read by this action is a pre-processing step.
+The "create_particles"_create_particles.html command can be used with
+its custom options to create particles with properties that match the
+coarse-grid NS values read in and assigned to custom per-grid vectors
+or arrays by this command.  Using this action with the "fix
+custom"_fix_custom.html command could assign per-grid custom values
+based on different time snapshots from the NS code.
+
+The {Nfile} argument is the number of files to read.  If {Nfile} > 1,
+then the specified {fname} must contain a a wildcard "%" character
+which is replaced by the numbers from 1 to Nfile to generate each
+filename.  For example, if {Nfile} = 3 and {fname} is specified as
+surf.%.attribute, then files surf.1.attribute, surf.2.attribute,
+surf.3.attribute, etc will be read.  Note that if the "fix
+custom"_fix_custom.html command uses this action, and there are also
+multiple coarse files for different timesteps, then the specified
+{fname} must contain both a wildcard "%" and "*" character.
+
+The reason to use multiple files is that a single file could be
+extremely large and/or to enable more parallelism by having different
+processors read different files simultaneously.  Conceptually, the
+information being read is the union of the information from all the
+individual files.  There must be no duplicate coarse grid points
+(based on point coordinates) in a single or multiple files.
+
+The {filestyle} argument is {text} or {binary}.  The format for both
+kinds of files is explained below.  NOTE: The binary format is not yet
+supported by this command.
+
+The specified (M) number of {cname1,cname2,...,cnameM} arguments must
+match the number of values listed on each line in each file.  A
+{cnameI} with no brackets is the name of a custom vector.  For a
+custom array, {cnameI} must be of the form cnameI\[N\] for the Nth
+column of the array.
+
+For {filestyle} = {text}, the format of each file is as follows.  It
+can start with any number of comment or blank lines.  A comment line
+starts with the "#" character.  It is a good idea to document in a
+comment what coarse grid values are listed on each line.
+
+The first non-comment, non-blank line has this format:
+
+N Nvalue :pre
+
+N is the count of coarse cell value lines which follow (in this file).
+These N lines must immediately follow the count line and contain no
+blank lines.  Any remaining lines in the file are ignored.  Nvalue is
+the number of attribute values per line and must equal the specified
+{M}.
+
+The format of each coarse cell value line is as follows:
+
+coarse-ID x y z value1 value2 ... valueM
+
+Coarse-ID is an integer ID of the coarse grid cell.  SPARTA ignores
+this ID, but it may be convenient for indexing the coarse grid cells
+from another code.  Or for indexing the coarse cells across multiple
+coarse grid files.
+
+The x, y, z values are the coordinates of the coarse grid point
+associated with the values which follow.  Z must be zero for a 2d or
+axisymmetric simulation.
+
+M values follow, corresponding to the {M} argument in the input
+script, following the {fname} argument.
+
+The following is an example of a correctly formatted file to set the
+values for a per-grid custom array with 2 columns.
+
+# custom values for a few 2d Navier-Stokes elements
+# calculated for test problem XYZ
+# attribute columns = density temperature :pre
+
+4 2
+1 5.0 5.0 0.0 10.0 5.0
+1 15.0 5.0 0.0 12.0 6.5
+1 5.0 15.0 0.0 8.0 4.55
+1 15.0 15.0 0.0 9.0 5.5 :pre
+
+This file could be read with an input script command like either of these:
+
+custom grid create nrho float 0 create temp float 0 file/coarse 1 text cfile.grid 2 nrho temp
+custom grid create nrho float 0 create temp float 0 file/coarse 3 text cfile.grid.% 2 nrho temp :pre
+
+The latter command assumes there are 2 other files like this one, with
+names cfile.grid.1, cfile.grid.2, and cfile.grid.3.
+
+For {filestyle} = {binary}, the format of each file is as follows.
+NOTE: The binary format is not yet supported by this command.
+
+Ncoarse (4-byte integer)
+Nvalue (4-byte integer)
+x y z (three 8-byte doubles for 1st coarse cell)
+Nvalue custom values 1 (Nvalue 8-byte doubles for 1st coarse cell)
+x y z (three 8-byte doubles for 2nd cell)
+Nvalue custom values (Nvalue 8-byte doubles for 2nd cell)
+...
+x y z (three 8-byte doubles for Ncoarse cell)
+Nvaluecustom values (Nvalue 8-byte doubles for Ncoarse cell) :pre
+
+Ncoarse is the number of coarse grid entries in this file.  Nvalue is
+the number of values per coarse grid; it must match the specified {M}.
+
+X,y,z are the coordinates of the point associated with the values
+which follow.
+
+Each of the Nvalue values are 8-byte floating point values (doubles).
+If the corresponding custom attribute in SPARTA is of type {int}, then
+the floating point value read from the file will be truncated to an
+integer.  E.g. 12.0 --> 12, 12.3 --> 12.
+
+The coarse grid binary file that corresponds to the coarse grid text file
+above would store these numbers (without the newlines):
+
+4 2
+5.0 5.0 0.0 10.0 5.0
+15.0 5.0 0.0 12.0 6.5
+5.0 15.0 0.0 8.0 4.55
+15.0 15.0 9.0 5.5 :pre
+
+This file could be read with an input script command like either of these:
+
+custom grid create nrho float 0 create temp float 0 file/coarse 1 binary cfile.grid 2 nrho temp
+custom grid create nrho float 0 create temp float 0 file/coarse 3 binary cfile.grid.% 2 nrho temp :pre
+
+The latter command assumes there are 2 other binary files like this
+one, with names cfile.grid.1, cfile.grid.2, and cfile.grid.3.
 
 :line
 
@@ -149,9 +404,8 @@ array is known.
 
 [Related commands:]
 
-"mixture"_mixture.html, "group"_group.html, "region"_region.html
+"fix custom"_fix_custom.html, "mixture"_mixture.html,
+"group"_group.html, "region"_region.html,
+"create_particles"_create_particles.html
 
-[Default:]
-
-The default settings for creation of a new custom attibute are type =
-float and size = 0.
+[Default:] none

@@ -23,12 +23,12 @@
 <I>ftrans</I> or <I>scale</I> or <I>rotate</I> or <I>transparent</I> or <I>invert</I> or <I>clip</I> or <I>group</I> or <I>typeadd</I> or <I>particle</I> or <I>file</I> 
 
 <PRE>  <I>type</I> arg = none
-    NOTE: if the type or custom keywords are used, they must come first
+    NOTE: if the type or custom keywords are used, they must come first, in any order
   <I>custom</I> args = name datatype Nc
+    NOTE: if the type or custom keywords are used, they must come first, in any order
     name = name of custom per-surf vector or array
     datatype = <I>int</I> or <I>float</I> = for integer or floating point values
     Nc = 0 for a vector (single value), Nc >= 1 for an array (one or more values)
-    NOTE: if the type or custom keywords are used, they must come first
   <I>origin</I> args = Ox Oy Oz
     Ox,Oy,Oz = set origin of surface to this point (distance units)
   <I>trans</I> args = Dx Dy Dz
@@ -74,14 +74,24 @@ read_surf surf.file trans 10 5 0 scale 3 3 3 invert clip file tmp.surfs.% points
 <P>Read the geometry of a surface from the specified file.  In SPARTA, a
 "surface" is a collection of surface elements that represent the
 surface(s) of one or more physical objects which will be embedded in
-the global simulation box.  Surfaces can be explicit or implicit.
-This command reads explicit surfaces from a file containing a list of
-explicit surfaces.  See the <A HREF = "read_isurf.html">read_isurf</A> command to
-read implicit surfaces from a different kind of file.  See the <A HREF = "Section_howto.html#howto_13">Howto
+the global simulation box.
+</P>
+<P>Surfaces can be explicit or implicit.  This command reads explicit
+surfaces from a file containing a list of explicit surfaces.  See the
+<A HREF = "read_isurf.html">read_isurf</A> command to read implicit surfaces from a
+different kind of file.  See the <A HREF = "Section_howto.html#howto_13">Howto
 6.13</A> section of the manual for an
 explantion of explicit versus implicit surfaces as well as distributed
 versus non-distributed storage.  You cannot mix explicit and implicit
 surfaces in the same simulation.
+</P>
+<P>The specified file can also (optionally) include a type for each
+surface element and/or values for custom per-surf attributes which
+will be created.  This is done via the <I>type</I> and <I>custom</I> keywords
+and is explained below in the format for the <I>Lines</I> and <I>Triangles</I>
+sections of the file.  See the <A HREF = "Section_howto.html#howto_17">Section
+6.17</A> doc page for an explanation of
+custom per-surf attributes.
 </P>
 <P>Surface elements are triangles in 3d or line segments in 2d.  Surface
 elements for each physical object are required to be a complete,
@@ -265,11 +275,11 @@ listed by ID order; they can be in any order.
 exist, i.e. to add new lines, then each line-ID is incremented by
 Nprevious = the # of lines that already exist.
 </P>
-<P><I>Type</I> is an optional integer value and can only be specified if the
-<I>type</I> keyword is used.  It must be a positive integer for each line.
-If not specified, the type of each line is set to 1.  Line IDs and
-types can be used to assign lines to surface groups via the <A HREF = "group.html">group
-surf</A> command.
+<P><I>Type</I> is an optional integer value and can only be included in the
+file if the <I>type</I> keyword is used.  It must be a positive integer for
+each line.  If not specified, the type of each line is set to 1.  Line
+IDs and types can be used to assign lines to surface groups via the
+<A HREF = "group.html">group surf</A> command.
 </P>
 <P>For format A, <I>p1</I> and <I>p2</I> are the indices of the 2 end points of the
 line segment, as found in the Points section.  Each is a value from 1
@@ -284,20 +294,22 @@ This is defined by a right-hand rule.  The outward normal N = (0,0,1)
 x (p2-p1).  In other words, a unit z-direction vector is crossed into
 the vector from <I>p1</I> to <I>p2</I> to determine the normal.
 </P>
-<P>The <I>custom</I> values are optional and can only be specified if the
-<I>custom</I> keyword is used one or more times.  Each use of the <I>custom</I>
-keyword determines how many values are appended to each line.  For a
-custom per-surf vector, a single value is appended.  For a custom
-per-surf array, Nc values are appended.  The values are assigned to
-custom vectors or arrays in the order the <I>custom</I> keywords are
-specified.  For example, for this read_surf command, 4 custom values
-should be added to the end of each line in the Lines section of the
-input file:
+<P>The <I>custom</I> values are optional and can only be included in the file
+if the <I>custom</I> keyword is used one or more times.  Each use of the
+<I>custom</I> keyword determines how many additional values are appended to
+each line in the <I>Lines</I> section.  For a custom per-surf vector, a
+single value is appended.  For a custom per-surf array, Nc values are
+appended.  The values are assigned to custom vectors or arrays in the
+order the <I>custom</I> keywords are specified.  For example, for this
+read_surf command, 4 custom values must be added to the end of each
+line in the Lines section of the input file:
 </P>
 <PRE>read_surf surf.sphere type custom temperature float 0 custom flags int 3 
 </PRE>
-<P>The first floating-point value will be the temperature, the next 3
-integers will be flags.
+<P>The first floating-point value will be the assigned to a custom
+per-surf vector named temperature which stores a single value per
+line.  The next 3 integers will be assigned to a custom per-surf array
+named flags which stores 3 values per line.
 </P>
 <HR>
 
@@ -347,25 +359,31 @@ crossed into the edge from <I>p1</I> to <I>p3</I> to determine the normal.
 </P>
 <P>The <I>custom</I> values are optional and can only be specified if the
 <I>custom</I> keyword is used one or more times.  Each use of the <I>custom</I>
-keyword determines how many values are appended to each triangle.  For
-a custom per-surf vector, a single value is appended.  For a custom
-per-surf array, Nc values are appended.  The values are assigned to
-custom vectors or arrays in the order the <I>custom</I> keywords are
-specified.  For example, for this read_surf command, 4 custom values
-should be added to the end of each triangle in the Triangles section:
+keyword determines how many additional values are appended to each
+line in the <I>Triangles</I> section.  For a custom per-surf vector, a
+single value is appended.  For a custom per-surf array, Nc values are
+appended.  The values are assigned to custom vectors or arrays in the
+order the <I>custom</I> keywords are specified.  For example, for this
+read_surf command, 4 custom values should be added to the end of each
+triangle in the Triangles section:
 </P>
 <PRE>read_surf surf.sphere type custom temperature float 0 custom flags int 3 
 </PRE>
-<P>The first floating-point value will be the temperature, the next 3
-integers will be flags.
+<P>The first floating-point value will be the assigned to a custom
+per-surf vector named temperature which stores a single value per
+triangle.  The next 3 integers will be assigned to a custom per-surf
+array named flags which stores 3 values per triangle.
 </P>
 <HR>
 
 <HR>
 
-<P>The following optional keywords affect the format of the surface
-file(s) that are read.  If used, these two keywords must come before
-any other keywords.
+<P>The following two optional keywords affect the format of the surface
+file(s) that are read.
+</P>
+<P>IMPORTANT NOTE: if the <I>type</I> or <I>custom</I> keywords are used, they must
+come first, before any other keywords.  The two keywords themselves
+can be in any order.
 </P>
 <P>The <I>type</I> keyword means that each surface element in the Lines or
 Triangles section will include a surface element type, which is a
@@ -576,14 +594,13 @@ object.
 </P>
 <HR>
 
-<P>IMPORTANT NOTE: The final optional keyword is <I>file</I>, which must be
-must be the last keyword specified.  This is because all the remaining
-arguments in the read_surf command are passed to the
-<A HREF = "write_surf.html">write_surf</A> command.
-</P>
 <P>If the <I>file</I> keyword is used, the surfaces will be written out to the
 specified <I>filename</I> immediately after they are read in (and
 transformed by any of the optional keywords).
+</P>
+<P>IMPORTANT NOTE: If the <I>file</I> keyword is used, it must be must be the
+last keyword specified.  This is because all the remaining arguments
+after <I>file</I> are passed to the <A HREF = "write_surf.html">write_surf</A> command.
 </P>
 <P>The arguments for this keyword are identical to those used for the
 <A HREF = "write_surf.html">write_surf</A> command.  This includes a file name with

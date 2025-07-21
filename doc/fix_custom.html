@@ -1,0 +1,105 @@
+<HTML>
+<CENTER><A HREF = "https://sparta.github.io">SPARTA WWW Site</A> - <A HREF = "Manual.html">SPARTA Documentation</A> - <A HREF = "Section_commands.html#comm">SPARTA Commands</A> 
+</CENTER>
+
+
+
+
+
+
+<HR>
+
+<H3>fix custom command 
+</H3>
+<P><B>Syntax:</B>
+</P>
+<PRE>fix ID custom Nfreq style action args ... action args ... 
+</PRE>
+<UL><LI>ID is documented in <A HREF = "fix.html">fix</A> command
+<LI>custom = style name of this fix command
+<LI>Nfreq = reset custom values every this many steps
+<LI>style = <I>particle</I> or <I>grid</I> or <I>surf</I>
+<LI>action args = all remaining args are identical to those defined for the <A HREF = "custom.html">custom</A> command 
+</UL>
+<P><B>Examples:</B>
+</P>
+<P>variable dvec particle (x+y)/2.0
+custom particle create dvec double 0
+custom surf create temp double 0 create vstream double 3
+</P>
+<P>fix 1 custom 1000 particle set dvec v_dvec air NULL
+fix 1 custom 10000 surf file surf.temp.* 1 temp file surf.vstream.* 3 vstream[1] vstream[2] vstream[3]
+fix 1 custom 10000 surf file surf.flow.* 4 temp vstream[1] vstream[2] vstream[3]
+</P>
+<P>See examples using many of the <A HREF = "custom.html">custom</A> and <A HREF = "fix_custom.html">fix
+custom</A> command actions in examples/custom
+</P>
+<P><B>Description:</B>
+</P>
+<P>Reset one or more custom attributes for particles, grid cells, or
+surface elements.  This operation is performed once every <I>Nfreq</I>
+timesteps.
+</P>
+<P>The syntax for <I>actions</I> and their arguments are the same as for the
+<A HREF = "custom.html">custom</A> command with two differences.
+</P>
+<P>First, only the <I>set</I>, <I>file</I>, and <I>file/coarse</I> actions are supported
+for this fix.  The <I>create</I> and <I>remove</I> actions are not, since they
+do not make sense to perform multiple times during a run.
+</P>
+<P>Second, the <I>file</I> and <I>file/coarse</I> actions take a filename as an
+argument.  The filename must contain a wildcard "*" character which
+will be replaced by the timestep.  This is to allow a sequence of
+files to be read during the simulation.  The filename wildcard "*"
+cannot be used with the <A HREF = "custom.html">custom</A> command.
+</P>
+<P>All of the actions supported by this command reset the values of
+custom attribute(s) which must already exist.  See the
+<A HREF = "custom.html">custom</A> and <A HREF = "read_surf.html">read_surf</A> and
+<A HREF = "read_grid.html">read_grid</A> commands for different ways to define and
+initialize custom attributes.
+</P>
+<P>Note that the resetting of attributes by this fix takes place at the
+end of timesteps determined by <I>Nfreq</I>.  If custom attributes are
+output by a <A HREF = "dump.html">dump</A> command on the same timestep, that takes
+place after this fix has performed the reset.  This means that if this
+fix and a dump command both reset/output every 1000 steps, then a dump
+file snapshot for step 3000 could include custom attributes which were
+reset at the end of step 3000.  But the new attribute values will not
+influence particles or grid cells or surface elements until the
+following step 3001 and beyond.
+</P>
+<P>Also note that this command DOES NOT reset attribute values at the
+beginning of any run, even if an input script contains multiple
+<A HREF = "run.html">run</A> commands.  For example, if <I>Nfreq</I> = 1000 and the input
+script performs a series of 10000-step runs, then no resetting of
+attributes takes place (due to this command) on timestep 0, before the
+first run.  Likewise, between runs, this command DOES reset attribute
+values at the end of the last step (10000, 20000, etc) of each run,
+but DOES NOT reset them again before the first step of the next run.
+</P>
+<P>IMPORTANT NOTE: If needed, resetting of custom values can be performed
+before the first run or between runs using the <A HREF = "custom.html">custom</A>
+command.
+</P>
+<P>IMPORTANT NOTE: If <I>Nfreq</I> triggers the reading of a file on the last
+step of the last run in the input script, then the
+wildcard-substituted filename (explained below) must exist.  This is
+the case, even though the new values will have no effect in the
+current input script, since there are no subsequent timestep
+operations which will use them.  Note, however that if a restart file
+is written on the last timestep, or following the last run, the
+updated custom values will be written to the restart file.
+</P>
+<HR>
+
+<P><B>Restrictions:</B> none
+</P>
+<P><B>Related commands:</B>
+</P>
+<P><A HREF = "custom.html">custom</A>, <A HREF = "mixture.html">mixture</A>, <A HREF = "group.html">group</A>,
+<A HREF = "region.html">region</A>
+</P>
+<P><B>Default:</B> none
+</P>
+</HTML>
