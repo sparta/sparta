@@ -11,14 +11,14 @@ compute dt/grid/kk command :h3
 
 [Syntax:]
 
-compute ID dt/grid group-ID tfraction cfraction lambda temperature usq vsq wsq :pre
+compute ID dt/grid group-ID tfraction cfraction tau temperature usq vsq wsq :pre
 
 ID is documented in "compute"_compute.html command :ulb,l
 dt/grid = style name of this compute command :l
 group-ID = group ID for which grid cells to perform calculation on :l
 tfraction = fraction of grid cell transit time used to calculate timestep :l
 cfraction = fraction of grid cell mean collision time used to calculate timestep :l
-lambda = compute or fix column for mean free path, prefaced by "c_" or "f_" :l
+tau = compute or fix column for mean collision time, prefaced by "c_" or "f_" :l
 temperature = compute or fix column for temperature, prefaced by "c_" or "f_" :l
 usq = compute or fix column for x component of velocity squared, prefaced by "c_" or "f_" :l
 vsq = compute or fix column for y component of velocity squared, prefaced by "c_" or "f_" :l
@@ -29,8 +29,8 @@ wsq = compute or fix column for z component of velocity squared, prefaced by "c_
 
 compute 1 grid all mymixture nrho temp usq vsq wsq
 fix 1 ave/grid all 10 50 500 c_1\[*\]
-compute lambda lambda/grid f_1\[1\] f_1\[2\] Ar
-compute tstep dt/grid all 0.25 0.1 c_lambda f_1\[2\] f_1\[3\] f_1\[4\] f_1\[5\] :pre
+compute mct lambda/grid f_1\[1\] f_1\[2\] tau
+compute tstep dt/grid all 0.25 0.1 c_mct f_1\[2\] f_1\[3\] f_1\[4\] f_1\[5\] :pre
 
 [Description:]
 
@@ -38,9 +38,9 @@ Calculate a current timestep for each grid cell in a grid cell group,
 based on the properties of particles currently in the cell and the
 grid cell size.  The per-grid cell timesteps can be output in a
 per-grid dump file for post analyses.  Or they can be used as input to
-the "fix dt/reset"_fit_dt_reset.html command to adjust the global
+the "fix dt/reset"_fix_dt_reset.html command to adjust the global
 timestep for a variable timestep simulation.  See this
-"section"_Section_howto.html#howto_17 of the manual for more
+"section"_Section_howto.html#howto_18 of the manual for more
 information on variable timestep simulations.
 
 Only grid cells in the grid group specified by {group-ID} are included
@@ -67,14 +67,14 @@ fractions.
 The remaining 5 arguments specify either computes which calculate various per
 grid cell quantities or fixes which time average those
 per grid cell quantities.  The 5 quantities are per grid cell mean
-free path (lambda), temperature, and the xyz components of the
-velocity squared for particles in the grid cell.  The "compute
-lambda"_compute_lambda.html calculates a mean free path.  The "compute
-grid"_compute_grid.html command can calculate the other 4 quantities.
+collision time (tau), temperature, and the xyz components of the
+velocity squared for particles in the grid cell. A mean collision time can be
+calculated with the "compute lambda/grid"_compute_lambda_grid.html command using the
+tau option. The "compute grid"_compute_grid.html command can calculate the other 4 quantities.
 The "compute thermal/grid"_compute_thermal_grid.html command can also
 compute a per grid cell temperature.
 
-This is done by specifying the lambda, temperature, usq, vsq, wsq
+This is done by specifying the tau, temperature, usq, vsq, wsq
 arguments like this:
 
 c_ID = compute with ID that calculates a per grid cell quantity as a vector output
@@ -109,9 +109,8 @@ This is because their sub-cells actually contain the particles that are
 geometrically inside the split cell.  Additionally, any cell that is able
 to store particles but does not have any particles when this compute is
 invoked produces a zero result.  Finally, a zero result is produced if any
-cell data to be used in the timestep calculation is sufficiently close to
-zero (including the maximum most probable speed, the velocity magnitude, and
-the mean free path).
+cell data to be used in the timestep calculation is
+zero (including temperature, speed, and mean collision time).
 
 The vector can be accessed by any command that uses per-grid values
 from a compute as input.  See "Section 4.4"_Section_howto.html#howto_4
@@ -134,7 +133,7 @@ SPARTA"_Section_start.html#start_3 section for more info.
 
 You can specify the accelerated styles explicitly in your input script
 by including their suffix, or you can use the "-suffix command-line
-switch"_Section_start.html#start_6 when you invoke SPARTA, or you can
+switch"_Section_start.html#start_7 when you invoke SPARTA, or you can
 use the "suffix"_suffix.html command in your input script.
 
 See the "Accelerating SPARTA"_Section_accelerate.html section of the
@@ -154,8 +153,8 @@ output.
 [Related commands:]
 
 "fix dt/reset"_fix_dt_reset.html, "compute grid"_compute_grid.html,
-"compute thermal/grid"_compute_thermal/grid.html, "fix
-ave/grid"_fix_ave_grid.html
+"compute thermal/grid"_compute_thermal_grid.html, "compute lambda/grid"_compute_lambda_grid.html,
+"fix ave/grid"_fix_ave_grid.html
 
 [Default:] none
 
@@ -163,3 +162,4 @@ ave/grid"_fix_ave_grid.html
 
 :link(Bird2013)
 [(Bird2013)] G. A. Bird, The DSMC method, CreateSpace Independent Publishing Platform, 2013.
+

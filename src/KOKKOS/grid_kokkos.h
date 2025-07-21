@@ -182,24 +182,10 @@ class GridKokkos : public Grid {
   tdual_struct_tdual_int_2d_1d k_eiarray;
   tdual_struct_tdual_float_2d_1d k_edarray;
 
-  tdual_struct_tdual_int_1d_1d k_eivec_local;
-  tdual_struct_tdual_float_1d_1d k_edvec_local;
-  tdual_struct_tdual_int_2d_1d k_eiarray_local;
-  tdual_struct_tdual_float_2d_1d k_edarray_local;
-
  private:
-  void grow_cells(int, int);
-  void grow_sinfo(int);
-  void grow_pcells();
-
-  template <class TYPE>
-  void deallocate_views_of_views(TYPE h_view)
-  {
-    // deallocate views of views in serial to prevent race conditions
-
-    for (int i = 0; i < h_view.extent(0); i++)
-      h_view(i).k_view = {};
-  }
+  void grow_cells(int, int) override;
+  void grow_sinfo(int) override;
+  void grow_pcells() override;
 };
 
 }

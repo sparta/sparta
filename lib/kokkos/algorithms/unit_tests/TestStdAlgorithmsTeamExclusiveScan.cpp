@@ -67,8 +67,8 @@ struct TestFunctorA {
     switch (m_apiPick) {
       case 0: {
         auto it    = KE::exclusive_scan(member, KE::cbegin(rowViewSrc),
-                                     KE::cend(rowViewSrc),
-                                     KE::begin(rowViewDest), initVal);
+                                        KE::cend(rowViewSrc),
+                                        KE::begin(rowViewDest), initVal);
         resultDist = KE::distance(KE::begin(rowViewDest), it);
         Kokkos::single(Kokkos::PerTeam(member),
                        [=, *this] { m_distancesView(rowIndex) = resultDist; });
@@ -224,6 +224,7 @@ void test_A(std::size_t numTeams, std::size_t numCols, int apiId) {
         break;
       }
 #endif
+      default: Kokkos::abort("unreachable");
     }
 
 #undef exclusive_scan

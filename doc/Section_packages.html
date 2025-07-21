@@ -68,18 +68,19 @@ and use the package:
 </H4>
 <P><B>Contents:</B>
 </P>
-<P>Apply Fast Fourier Transforms (FFTs) to simulation data. The FFT library is
-specified in the Makefile.machine using the FFT_INC, FFT_PATH, and FFT_LIB
-variables. Supported external FFT libraries that can be specified include FFTW3
-and MKL. If no FFT library is specified in the Makefile, SPARTA will use the
-internal KISS FFT library that is included with SPARTA.
+<P>Apply Fast Fourier Transforms (FFTs) to simulation data. The FFT
+library is specified in the Makefile.machine or CMake using the
+FFT_INC, FFT_PATH, and FFT_LIB variables. Supported external FFT
+libraries that can be specified include FFTW3 or MKL. If no FFT
+library is specified, SPARTA will use the internal KISS FFT library
+that is included with SPARTA.
 </P>
-<P>Similarly an external FFT library can be specified for the KOKKOS package.
-Options are CUFFT, HIPFFT, FFTW3, and MKL. If no FFT library is specified in
-the Makefile, SPARTA will use the internal Kokkos version of the KISS FFT
-library that is included with SPARTA.
+<P>Similarly an external FFT library can be specified for the KOKKOS
+package.  Options are CUFFT, HIPFFT, FFTW3, MKL, or MKL_GPU. If no FFT
+library is specified in the Makefile, SPARTA will use the internal
+Kokkos version of the KISS FFT library that is included with SPARTA.
 </P>
-<P>See the see discussion in doc/Section_start.html#2_2 (step 6).
+<P>See the see discussion in <A HREF = "Section_start.html#2_2">Section 2.2</A> (step 6).
 </P>
 <P><B>Install or un-install with make:</B>
 </P>
@@ -115,7 +116,7 @@ CPUs, KNLs, or GPUs.  All the styles have a "kk" as a suffix in their
 style name.  <A HREF = "Section_accelerate.html#acc_3">Section 5.3</A> gives details
 of what hardware and software is required on your system, and how to
 build and use this package.  Its styles can be invoked at run time via
-the "-sf kk" or "-suffix kk" <A HREF = "Section_start.html#start_6">command-line
+the "-sf kk" or "-suffix kk" <A HREF = "Section_start.html#start_7">command-line
 switches</A>.
 </P>
 <P>You must have a C++17 compatible compiler to use this package.
@@ -212,9 +213,9 @@ make
 <LI>lib/kokkos/README
 <LI>the <A HREF = "Section_accelerate.html#acc_3">Accelerating SPARTA</A> section
 <LI><A HREF = "Section_accelerate.html#acc_3">Section 5.3</A>
-<LI><A HREF = "Section_start.html#start_6">Section 2.6 -k on ...</A>
-<LI><A HREF = "Section_start.html#start_6">Section 2.6 -sf kk</A>
-<LI><A HREF = "Section_start.html#start_6">Section 2.6 -pk kokkos</A>
+<LI><A HREF = "Section_start.html#start_7">Section 2.6 -k on ...</A>
+<LI><A HREF = "Section_start.html#start_7">Section 2.6 -sf kk</A>
+<LI><A HREF = "Section_start.html#start_7">Section 2.6 -pk kokkos</A>
 <LI><A HREF = "package.html">package kokkos</A>
 <LI><A HREF = "https://sparta.github.io/bench.html">Benchmarks page</A> of web site 
 </UL>

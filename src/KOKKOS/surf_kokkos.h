@@ -38,6 +38,7 @@ class SurfKokkos : public Surf {
   void reallocate_custom() override;
   void remove_custom(int) override;
   void spread_custom(int) override;
+  void spread_inverse_custom(int) override;
   int pack_custom(int, char *) override;
   int unpack_custom(char *, double *) override;
 
@@ -58,15 +59,6 @@ class SurfKokkos : public Surf {
   tdual_struct_tdual_float_1d_1d k_edvec_local;
   tdual_struct_tdual_int_2d_1d k_eiarray_local;
   tdual_struct_tdual_float_2d_1d k_edarray_local;
-
-  template <class TYPE>
-  void deallocate_views_of_views(TYPE h_view)
-  {
-    // deallocate views of views in serial to prevent race conditions
-
-    for (int i = 0; i < h_view.extent(0); i++)
-      h_view(i).k_view = {};
-  }
 };
 
 }

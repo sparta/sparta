@@ -14,10 +14,11 @@
 //
 //@HEADER
 
-#include <Kokkos_Core.hpp>
-#include <sstream>
+#include <Kokkos_Macros.hpp>
 
 // Suppress "'long double' is treated as 'double' in device code"
+// The suppression needs to happen before Kokkos_Complex.hpp is included to be
+// effective
 #ifdef KOKKOS_COMPILER_NVCC
 #ifdef __NVCC_DIAG_PRAGMA_SUPPORT__
 #pragma nv_diagnostic push
@@ -25,10 +26,13 @@
 #else
 #ifdef __CUDA_ARCH__
 #pragma diagnostic push
-#pragma diag_suppress 20208
+#pragma diag_suppress 3245
 #endif
 #endif
 #endif
+
+#include <Kokkos_Core.hpp>
+#include <sstream>
 
 namespace {
 template <typename... Ts>
@@ -363,7 +367,6 @@ struct TestComplexSpecialFunctions {
   KOKKOS_INLINE_FUNCTION
   void operator()(const int & /*i*/) const {
     Kokkos::complex<double> a(1.5, 2.5);
-    Kokkos::complex<double> b(3.25, 5.75);
     double c = 9.3;
 
     d_results(0)  = Kokkos::complex<double>(Kokkos::real(a), Kokkos::imag(a));
@@ -417,8 +420,8 @@ TEST(TEST_CATEGORY, complex_trivially_copyable) {
   using RealType = double;
   // clang claims compatibility with gcc 4.2.1 but all versions tested know
   // about std::is_trivially_copyable.
-  ASSERT_TRUE(std::is_trivially_copyable<Kokkos::complex<RealType>>::value ||
-              !std::is_trivially_copyable<RealType>::value);
+  ASSERT_TRUE(std::is_trivially_copyable_v<Kokkos::complex<RealType>> ||
+              !std::is_trivially_copyable_v<RealType>);
 }
 
 template <class ExecSpace>
@@ -514,21 +517,19 @@ TEST(TEST_CATEGORY, complex_operations_arithmetic_types_overloads) {
   static_assert(Kokkos::real(2.f) == 2.f);
   static_assert(Kokkos::real(3.) == 3.);
   static_assert(Kokkos::real(4.l) == 4.l);
-  static_assert((std::is_same<decltype(Kokkos::real(1)), double>::value));
-  static_assert((std::is_same<decltype(Kokkos::real(2.f)), float>::value));
-  static_assert((std::is_same<decltype(Kokkos::real(3.)), double>::value));
-  static_assert(
-      (std::is_same<decltype(Kokkos::real(4.l)), long double>::value));
+  static_assert((std::is_same_v<decltype(Kokkos::real(1)), double>));
+  static_assert((std::is_same_v<decltype(Kokkos::real(2.f)), float>));
+  static_assert((std::is_same_v<decltype(Kokkos::real(3.)), double>));
+  static_assert((std::is_same_v<decltype(Kokkos::real(4.l)), long double>));
 
   static_assert(Kokkos::imag(1) == 0.);
   static_assert(Kokkos::imag(2.f) == 0.f);
   static_assert(Kokkos::imag(3.) == 0.);
   static_assert(Kokkos::imag(4.l) == 0.l);
-  static_assert((std::is_same<decltype(Kokkos::imag(1)), double>::value));
-  static_assert((std::is_same<decltype(Kokkos::imag(2.f)), float>::value));
-  static_assert((std::is_same<decltype(Kokkos::imag(3.)), double>::value));
-  static_assert(
-      (std::is_same<decltype(Kokkos::real(4.l)), long double>::value));
+  static_assert((std::is_same_v<decltype(Kokkos::imag(1)), double>));
+  static_assert((std::is_same_v<decltype(Kokkos::imag(2.f)), float>));
+  static_assert((std::is_same_v<decltype(Kokkos::imag(3.)), double>));
+  static_assert((std::is_same_v<decltype(Kokkos::real(4.l)), long double>));
 
   // FIXME in principle could be checked at compile time too
   ASSERT_EQ(Kokkos::conj(1), Kokkos::complex<double>(1));
@@ -538,15 +539,15 @@ TEST(TEST_CATEGORY, complex_operations_arithmetic_types_overloads) {
 // power of two.
 #ifndef KOKKOS_IMPL_32BIT
   ASSERT_EQ(Kokkos::conj(4.l), Kokkos::complex<long double>(4.l));
-  static_assert((
-      std::is_same<decltype(Kokkos::conj(1)), Kokkos::complex<double>>::value));
+  static_assert(
+      (std::is_same_v<decltype(Kokkos::conj(1)), Kokkos::complex<double>>));
 #endif
-  static_assert((std::is_same<decltype(Kokkos::conj(2.f)),
-                              Kokkos::complex<float>>::value));
-  static_assert((std::is_same<decltype(Kokkos::conj(3.)),
-                              Kokkos::complex<double>>::value));
-  static_assert((std::is_same<decltype(Kokkos::conj(4.l)),
-                              Kokkos::complex<long double>>::value));
+  static_assert(
+      (std::is_same_v<decltype(Kokkos::conj(2.f)), Kokkos::complex<float>>));
+  static_assert(
+      (std::is_same_v<decltype(Kokkos::conj(3.)), Kokkos::complex<double>>));
+  static_assert((std::is_same_v<decltype(Kokkos::conj(4.l)),
+                                Kokkos::complex<long double>>));
 }
 
 template <class ExecSpace>
@@ -685,6 +686,46 @@ TEST(TEST_CATEGORY, complex_structured_bindings) {
   TestComplexStructuredBindings<TEST_EXECSPACE> test;
   test.testit();
 }
+
+#define CHECK_COMPLEX(_value_, _real_, _imag_) \
+  (void)_value_;                               \
+  if (_value_.real() != _real_) return false;  \
+  if (_value_.imag() != _imag_) return false;
+
+constexpr bool can_appear_in_constant_expressions() {
+  const Kokkos::complex<double> from_single{1.2};
+  const Kokkos::complex<double> from_both{1.2, 3.4};
+  const Kokkos::complex<double> from_none{};
+
+  CHECK_COMPLEX(from_single, 1.2, 0.);
+  CHECK_COMPLEX(from_both, 1.2, 3.4);
+  CHECK_COMPLEX(from_none, 0., 0.);
+
+  Kokkos::complex<double> from_copy_assign;
+  from_copy_assign = from_both;
+  const auto from_copy_constr(from_both);
+
+  CHECK_COMPLEX(from_copy_assign, 1.2, 3.4);
+  CHECK_COMPLEX(from_copy_constr, 1.2, 3.4);
+
+  Kokkos::complex<double> from_move_assign;
+  from_move_assign = std::move(from_both);
+  const auto from_move_constr(std::move(from_copy_assign));
+
+  CHECK_COMPLEX(from_move_assign, 1.2, 3.4);
+  CHECK_COMPLEX(from_move_constr, 1.2, 3.4);
+
+  Kokkos::complex<double> from_real;
+  from_real = 4.;
+
+  CHECK_COMPLEX(from_real, 4., 0.);
+
+  return true;
+}
+
+#undef CHECK_COMPLEX
+
+static_assert(can_appear_in_constant_expressions());
 
 }  // namespace Test
 

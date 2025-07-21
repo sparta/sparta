@@ -63,18 +63,19 @@ FFT package :link(FFT),h4
 
 [Contents:]
 
-Apply Fast Fourier Transforms (FFTs) to simulation data. The FFT library is
-specified in the Makefile.machine using the FFT_INC, FFT_PATH, and FFT_LIB
-variables. Supported external FFT libraries that can be specified include FFTW3
-and MKL. If no FFT library is specified in the Makefile, SPARTA will use the
-internal KISS FFT library that is included with SPARTA.
+Apply Fast Fourier Transforms (FFTs) to simulation data. The FFT
+library is specified in the Makefile.machine or CMake using the
+FFT_INC, FFT_PATH, and FFT_LIB variables. Supported external FFT
+libraries that can be specified include FFTW3 or MKL. If no FFT
+library is specified, SPARTA will use the internal KISS FFT library
+that is included with SPARTA.
 
-Similarly an external FFT library can be specified for the KOKKOS package.
-Options are CUFFT, HIPFFT, FFTW3, and MKL. If no FFT library is specified in
-the Makefile, SPARTA will use the internal Kokkos version of the KISS FFT
-library that is included with SPARTA.
+Similarly an external FFT library can be specified for the KOKKOS
+package.  Options are CUFFT, HIPFFT, FFTW3, MKL, or MKL_GPU. If no FFT
+library is specified in the Makefile, SPARTA will use the internal
+Kokkos version of the KISS FFT library that is included with SPARTA.
 
-See the see discussion in doc/Section_start.html#2_2 (step 6).
+See the see discussion in "Section 2.2"_Section_start.html#2_2 (step 6).
 
 [Install or un-install with make:]
 
@@ -111,7 +112,7 @@ style name.  "Section 5.3"_Section_accelerate.html#acc_3 gives details
 of what hardware and software is required on your system, and how to
 build and use this package.  Its styles can be invoked at run time via
 the "-sf kk" or "-suffix kk" "command-line
-switches"_Section_start.html#start_6.
+switches"_Section_start.html#start_7.
 
 You must have a C++17 compatible compiler to use this package.
 
@@ -207,8 +208,8 @@ src/KOKKOS/README
 lib/kokkos/README
 the "Accelerating SPARTA"_Section_accelerate.html#acc_3 section
 "Section 5.3"_Section_accelerate.html#acc_3
-"Section 2.6 -k on ..."_Section_start.html#start_6
-"Section 2.6 -sf kk"_Section_start.html#start_6
-"Section 2.6 -pk kokkos"_Section_start.html#start_6
+"Section 2.6 -k on ..."_Section_start.html#start_7
+"Section 2.6 -sf kk"_Section_start.html#start_7
+"Section 2.6 -pk kokkos"_Section_start.html#start_7
 "package kokkos"_package.html
 "Benchmarks page"_https://sparta.github.io/bench.html of web site :ul

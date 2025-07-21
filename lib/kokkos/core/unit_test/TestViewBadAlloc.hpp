@@ -54,15 +54,21 @@ TEST(TEST_CATEGORY, view_bad_alloc) {
   }
 #endif
 #endif
-#if ((HIP_VERSION_MAJOR == 5) && (HIP_VERSION_MINOR == 3))
+#if ((HIP_VERSION_MAJOR == 5) && (HIP_VERSION_MINOR < 7))
   if (std::is_same_v<ExecutionSpace, Kokkos::HIP>) {
-    GTEST_SKIP()
-        << "ROCm 5.3 segfaults when trying to allocate too much memory";
+    GTEST_SKIP() << "ROCm 5.6 and earlier segfaults when trying to allocate "
+                    "too much memory";
   }
 #endif
 #if defined(KOKKOS_ENABLE_OPENACC)  // FIXME_OPENACC
   if (std::is_same_v<ExecutionSpace, Kokkos::Experimental::OpenACC>) {
     GTEST_SKIP() << "acc_malloc() not properly returning nullptr";
+  }
+#endif
+
+#if defined(_WIN32) && defined(KOKKOS_ENABLE_CUDA)
+  if (std::is_same_v<ExecutionSpace, Kokkos::Cuda>) {
+    GTEST_SKIP() << "MSVC/CUDA segfaults when allocating too much memory";
   }
 #endif
 
@@ -74,12 +80,12 @@ TEST(TEST_CATEGORY, view_bad_alloc) {
                       Kokkos::DefaultHostExecutionSpace>;
 
   if constexpr (execution_space_is_device) {
-    if constexpr (Kokkos::has_shared_space) {
-      test_view_bad_alloc<Kokkos::SharedSpace>();
-    }
-    if constexpr (Kokkos::has_shared_host_pinned_space) {
-      test_view_bad_alloc<Kokkos::SharedHostPinnedSpace>();
-    }
+#ifdef KOKKOS_HAS_SHARED_SPACE
+    test_view_bad_alloc<Kokkos::SharedSpace>();
+#endif
+#ifdef KOKKOS_HAS_SHARED_HOST_PINNED_SPACE
+    test_view_bad_alloc<Kokkos::SharedHostPinnedSpace>();
+#endif
   }
 }
 

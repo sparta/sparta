@@ -59,8 +59,6 @@ KOKKOS_FUNCTION constexpr bool test_array_structured_binding_support() {
 
 static_assert(test_array_structured_binding_support());
 
-// Disable ctad test for intel versions < 2021, see issue #6702
-#if !defined(KOKKOS_COMPILER_INTEL) || KOKKOS_COMPILER_INTEL >= 2021
 KOKKOS_FUNCTION constexpr bool test_array_ctad() {
   constexpr int x = 10;
   constexpr Kokkos::Array a{1, 2, 3, 5, x};
@@ -70,7 +68,6 @@ KOKKOS_FUNCTION constexpr bool test_array_ctad() {
 }
 
 static_assert(test_array_ctad());
-#endif
 
 KOKKOS_FUNCTION constexpr bool test_array_aggregate_initialization() {
   // Initialize arrays from brace-init-list as for std::array.
@@ -172,8 +169,7 @@ constexpr bool test_to_array() {
   maybe_unused(a2);
 
 // gcc8, icc, and nvcc 11.3 do not support the implicit conversion
-#if !(defined(KOKKOS_COMPILER_GNU) && (KOKKOS_COMPILER_GNU < 910)) &&      \
-    !(defined(KOKKOS_COMPILER_INTEL) && (KOKKOS_COMPILER_INTEL < 2021)) && \
+#if !(defined(KOKKOS_COMPILER_GNU) && (KOKKOS_COMPILER_GNU < 910)) && \
     !(defined(KOKKOS_COMPILER_NVCC) && (KOKKOS_COMPILER_NVCC < 1140))
   // deduces length with element type specified
   // implicit conversion happens
@@ -186,6 +182,102 @@ constexpr bool test_to_array() {
 }
 
 static_assert(test_to_array());
+
+// making sure we cover both const and non-const cases by having a function that
+// writes to an array and another one that reads from it
+// also checking that it supports host device annotations
+template <class T, size_t N>
+KOKKOS_FUNCTION constexpr void iota(Kokkos::Array<T, N>& a, T value) {
+  for (auto& e : a) {
+    e = value++;
+  }
+}
+
+template <class T, size_t N>
+KOKKOS_FUNCTION constexpr T accumulate(Kokkos::Array<T, N> const& a, T init) {
+  T acc = init;
+  for (auto const& e : a) {
+    acc = acc + e;
+  }
+  return acc;
+}
+
+constexpr bool test_range_based_for_loop() {
+  // making sure zero-sized arrays are supported
+  constexpr Kokkos::Array<int, 0> a0 = [] {
+    Kokkos::Array<int, 0> a{};
+    iota(a, 1);
+    return a;
+  }();
+  static_assert(accumulate(a0, 0) == 0);
+
+  constexpr Kokkos::Array<int, 1> a1 = [] {
+    Kokkos::Array<int, 1> a{};
+    iota(a, 1);
+    return a;
+  }();
+  static_assert(accumulate(a1, 0) == 1);
+
+  constexpr Kokkos::Array<int, 2> a2 = [] {
+    Kokkos::Array<int, 2> a{};
+    iota(a, 1);
+    return a;
+  }();
+  static_assert(accumulate(a2, 0) == 3);
+
+  constexpr Kokkos::Array<int, 3> a3 = [] {
+    Kokkos::Array<int, 3> a{};
+    iota(a, 1);
+    return a;
+  }();
+  static_assert(accumulate(a3, 0) == 6);
+
+  return true;
+}
+
+static_assert(test_range_based_for_loop());
+
+constexpr bool test_begin_end() {
+  constexpr Kokkos::Array<float, 0> a0{};
+  static_assert(begin(a0) == nullptr);
+  static_assert(end(a0) == nullptr);
+
+  constexpr Kokkos::Array<float, 1> a1{};
+  static_assert(begin(a1) == &a1[0]);
+  static_assert(end(a1) == &a1[0] + a1.size());
+
+  [[maybe_unused]] Kokkos::Array<double, 0> n0{};
+  static_assert(std::is_same_v<decltype(begin(n0)), double*>);
+  static_assert(std::is_same_v<decltype(end(n0)), double*>);
+  static_assert(std::is_same_v<double*, decltype(n0)::pointer>);
+  static_assert(noexcept(begin(n0)));
+  static_assert(noexcept(end(n0)));
+
+  [[maybe_unused]] Kokkos::Array<double, 0> const c0{};
+  static_assert(std::is_same_v<decltype(begin(c0)), double const*>);
+  static_assert(std::is_same_v<decltype(end(c0)), double const*>);
+  static_assert(std::is_same_v<double const*, decltype(c0)::const_pointer>);
+  static_assert(noexcept(begin(c0)));
+  static_assert(noexcept(end(c0)));
+
+  [[maybe_unused]] Kokkos::Array<double, 1> n1{};
+  static_assert(std::is_same_v<decltype(begin(n1)), double*>);
+  static_assert(std::is_same_v<decltype(end(n1)), double*>);
+  static_assert(std::is_same_v<double*, decltype(n1)::pointer>);
+  static_assert(noexcept(begin(n1)));
+  static_assert(noexcept(end(n1)));
+
+  [[maybe_unused]] Kokkos::Array<double, 1> const c1{};
+  static_assert(std::is_same_v<decltype(begin(c1)), double const*>);
+  static_assert(std::is_same_v<decltype(end(c1)), double const*>);
+  static_assert(std::is_same_v<double const*, decltype(c1)::const_pointer>);
+  static_assert(noexcept(begin(c1)));
+  static_assert(noexcept(end(c1)));
+
+  return true;
+}
+
+static_assert(test_begin_end());
 
 constexpr bool test_array_equality_comparable() {
   using C0 = Kokkos::Array<char, 0>;

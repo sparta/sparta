@@ -46,7 +46,7 @@ timings; you can simply extrapolate from short runs.
 
 For the set of runs, look at the timing data printed to the screen and
 log file at the end of each SPARTA run.  "This
-section"_Section_start.html#start_7 of the manual has an overview.
+section"_Section_start.html#start_8 of the manual has an overview.
 
 Running on one (or a few processors) should give a good estimate of
 the serial performance and what portions of the timestep are taking
@@ -140,11 +140,11 @@ Then do the following:
 
 prepare and test a regular SPARTA simulation |
   lmp_kokkos_cuda -in in.script; mpirun -np 32 lmp_kokkos_cuda -in in.script |
-enable specific accelerator support via '-k on' "command-line switch"_Section_start.html#start_6, |
+enable specific accelerator support via '-k on' "command-line switch"_Section_start.html#start_7, |
   -k on g 1 |
-set any needed options for the package via "-pk" "command-line switch"_Section_start.html#start_6 or "package"_package.html command, |
+set any needed options for the package via "-pk" "command-line switch"_Section_start.html#start_7 or "package"_package.html command, |
   only if defaults need to be changed, -pk kokkos react/retry yes |
-use accelerated styles in your input via "-sf" "command-line switch"_Section_start.html#start_6 or "suffix"_suffix.html command | lmp_kokkos_cuda -in in.script -sf kk
+use accelerated styles in your input via "-sf" "command-line switch"_Section_start.html#start_7 or "suffix"_suffix.html command | lmp_kokkos_cuda -in in.script -sf kk
 :tb(c=2,s=|)
 
 Note that the first 3 steps can be done as a single command with
@@ -565,58 +565,67 @@ As described above, the CMake option Kokkos_ARCH_{TYPE}=ON or the makefile setti
 
 [Arch-ID]	| [HOST or GPU] |	[Description] |
 NATIVE | HOST | Local machine |
-AMDAVX | HOST | AMD 64-bit x86 CPU (AVX 1) |
-ZEN | HOST | AMD Zen class CPU (AVX 2) |
-ZEN2 | HOST | AMD Zen2 class CPU (AVX 2) |
-ZEN3 | HOST | AMD Zen3 class CPU (AVX 2) |
+AMDAVX | HOST | AMD chip |
 ARMV80 | HOST | ARMv8.0 Compatible CPU |
 ARMV81 | HOST | ARMv8.1 Compatible CPU |
 ARMV8_THUNDERX | HOST | ARMv8 Cavium ThunderX CPU |
 ARMV8_THUNDERX2 | HOST | ARMv8 Cavium ThunderX2 CPU |
 A64FX | HOST | ARMv8.2 with SVE Support |
 ARMV9_GRACE | HOST | ARMv9 NVIDIA Grace CPU |
-SNB | HOST | Intel Sandy/Ivy Bridge CPU (AVX 1) |
-HSW | HOST | Intel Haswell CPU (AVX 2) |
-BDW | HOST | Intel Broadwell Xeon E-class CPU (AVX 2 + transactional
-mem) |
-SKL | HOST | Intel Skylake Client CPU |
-SKX | HOST | Intel Skylake Xeon Server CPU (AVX512) |
-ICL | HOST | Intel Ice Lake Client CPU (AVX512) |
-ICX | HOST | Intel Ice Lake Xeon Server CPU (AVX512) |
-SPR | HOST | Intel Sapphire Rapids Xeon Server CPU (AVX512) |
+SNB | HOST | Intel Sandy/Ivy Bridge CPUs |
+HSW | HOST | Intel Haswell CPUs |
+BDW | HOST | Intel Broadwell Xeon E-class CPUs |
+ICL | HOST | Intel Ice Lake Client CPUs (AVX512) |
+ICX | HOST | Intel Ice Lake Xeon Server CPUs (AVX512) |
+SKL | HOST | Intel Skylake Client CPUs |
+SKX | HOST | Intel Skylake Xeon Server CPUs (AVX512) |
 KNC | HOST | Intel Knights Corner Xeon Phi |
 KNL | HOST | Intel Knights Landing Xeon Phi |
-POWER8 | HOST | IBM POWER8 CPU |
-POWER9 | HOST | IBM POWER9 CPU |
-RISCV_SG2042 | HOST | SG2042 (RISC-V) CPU |
-KEPLER30 | GPU | NVIDIA Kepler generation CC 3.0 GPU |
-KEPLER32 | GPU | NVIDIA Kepler generation CC 3.2 GPU |
-KEPLER35 | GPU | NVIDIA Kepler generation CC 3.5 GPU |
-KEPLER37 | GPU | NVIDIA Kepler generation CC 3.7 GPU |
-MAXWELL50 | GPU | NVIDIA Maxwell generation CC 5.0 GPU |
-MAXWELL52 | GPU | NVIDIA Maxwell generation CC 5.2 GPU |
-MAXWELL53 | GPU | NVIDIA Maxwell generation CC 5.3 GPU |
-PASCAL60 | GPU | NVIDIA Pascal generation CC 6.0 GPU |
-PASCAL61 | GPU | NVIDIA Pascal generation CC 6.1 GPU |
-VOLTA70 | GPU | NVIDIA Volta generation CC 7.0 GPU |
-VOLTA72 | GPU | NVIDIA Volta generation CC 7.2 GPU |
-TURING75 | GPU | NVIDIA Turing generation CC 7.5 GPU |
-AMPERE80 | GPU | NVIDIA Ampere generation CC 8.0 GPU |
-AMPERE86 | GPU | NVIDIA Ampere generation CC 8.6 GPU |
-ADA89 | GPU | NVIDIA Ada Lovelace generation CC 8.9 GPU |
-HOPPER90 | GPU | NVIDIA Hopper generation CC 9.0 GPU |
+SPR | HOST | Intel Sapphire Rapids Xeon Server CPUs (AVX512) |
+POWER8 | HOST | IBM POWER8 CPUs |
+POWER9 | HOST | IBM POWER9 CPUs |
+ZEN | HOST | AMD Zen architecture |
+ZEN2 | HOST | AMD Zen2 architecture |
+ZEN3 | HOST | AMD Zen3 architecture |
+ZEN4 | HOST | AMD Zen4 architecture |
+ZEN5 | HOST | AMD Zen5 architecture |
+RISCV_SG2042 | HOST | SG2042 (RISC-V) CPUs |
+RISCV_RVA22V | HOST | RVA22V (RISC-V) CPUs |
+KEPLER30 | GPU | NVIDIA Kepler generation CC 3.0 |
+KEPLER32 | GPU | NVIDIA Kepler generation CC 3.2 |
+KEPLER35 | GPU | NVIDIA Kepler generation CC 3.5 |
+KEPLER37 | GPU | NVIDIA Kepler generation CC 3.7 |
+MAXWELL50 | GPU | NVIDIA Maxwell generation CC 5.0 |
+MAXWELL52 | GPU | NVIDIA Maxwell generation CC 5.2 |
+MAXWELL53 | GPU | NVIDIA Maxwell generation CC 5.3 |
+PASCAL60 | GPU | NVIDIA Pascal generation CC 6.0 |
+PASCAL61 | GPU | NVIDIA Pascal generation CC 6.1 |
+VOLTA70 | GPU | NVIDIA Volta generation CC 7.0 |
+VOLTA72 | GPU | NVIDIA Volta generation CC 7.2 |
+TURING75 | GPU | NVIDIA Turing generation CC 7.5 |
+AMPERE80 | GPU | NVIDIA Ampere generation CC 8.0 |
+AMPERE86 | GPU | NVIDIA Ampere generation CC 8.6 |
+ADA89 | GPU | NVIDIA Ada generation CC 8.9 |
+HOPPER90 | GPU | NVIDIA Hopper generation CC 9.0 |
+BLACKWELL100 | GPU | NVIDIA Blackwell generation CC 10.0 |
+BLACKWELL120 | GPU | NVIDIA Blackwell generation CC 12.0 |
+AMD_GFX906 | GPU | AMD GPU MI50/60 |
 AMD_GFX908 | GPU | AMD GPU MI100 |
 AMD_GFX90A | GPU | AMD GPU MI200 |
+AMD_GFX940 | GPU | AMD GPU MI300 |
 AMD_GFX942 | GPU | AMD GPU MI300 |
+AMD_GFX942_APU | GPU | AMD APU MI300A |
 AMD_GFX1030 | GPU | AMD GPU V620/W6800 |
 AMD_GFX1100 | GPU | AMD GPU RX7900XTX |
-INTEL_GEN GPU SPIR64-based devices, e.g. Intel GPUs, using JIT |
+AMD_GFX1103 | GPU | AMD GPU PHOENIX |
+INTEL_GEN | GPU | SPIR64-based devices, e.g. Intel GPUs, using JIT |
 INTEL_DG1 | GPU | Intel Iris XeMAX GPU |
 INTEL_GEN9 | GPU | Intel GPU Gen9 |
 INTEL_GEN11 | GPU | Intel GPU Gen11 |
 INTEL_GEN12LP | GPU | Intel GPU Gen12LP |
 INTEL_XEHP | GPU | Intel GPU Xe-HP |
 INTEL_PVC | GPU | Intel GPU Ponte Vecchio |
+INTEL_DG2 | GPU | Intel GPU DG2 |
 :tb(c=3,s=|)
 
 The CMake option Kokkos_ENABLE_CUDA_{OPTION} or the makefile setting KOKKOS_CUDA_OPTIONS={OPTION} are 

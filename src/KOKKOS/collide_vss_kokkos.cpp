@@ -313,6 +313,7 @@ void CollideVSSKokkos::init()
   k_params.modify_host();
   k_params.sync_device();
   d_params = k_params.d_view;
+  d_params_const = k_params.d_view;
 
   k_prefactor.modify_host();
   k_prefactor.sync_device();
@@ -705,7 +706,7 @@ void CollideVSSKokkos::operator()(TagCollideCollisionsOne< NEARCP, ATOMIC_REDUCT
                                                    recomb_part3,recomb_species,recomb_density,index_kpart);
 
     if (ATOMIC_REDUCTION == 1)
-      Kokkos::atomic_increment(&d_ncollide_one());
+      Kokkos::atomic_inc(&d_ncollide_one());
     else if (ATOMIC_REDUCTION == 0)
       d_ncollide_one()++;
     else
@@ -713,7 +714,7 @@ void CollideVSSKokkos::operator()(TagCollideCollisionsOne< NEARCP, ATOMIC_REDUCT
 
     if (reactflag) {
       if (ATOMIC_REDUCTION == 1)
-        Kokkos::atomic_increment(&d_nreact_one());
+        Kokkos::atomic_inc(&d_nreact_one());
       else if (ATOMIC_REDUCTION == 0)
         d_nreact_one()++;
       else

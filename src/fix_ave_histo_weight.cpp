@@ -332,7 +332,7 @@ void FixAveHistoWeight::bin_particles(int attribute, int index)
     if (regionflag && mixflag) {
       for (int i = 0; i < nlocal; i++) {
         if (region->match(particles[i].x) &&
-            s2g[particles[i].ispecies] < 0)
+            s2g[particles[i].ispecies] >= 0)
           bin_one_weight(particles[i].x[index],weights[mwt]);
         mwt += stridewt;
       }
@@ -359,7 +359,7 @@ void FixAveHistoWeight::bin_particles(int attribute, int index)
     if (regionflag && mixflag) {
       for (int i = 0; i < nlocal; i++) {
         if (region->match(particles[i].x) &&
-            s2g[particles[i].ispecies] < 0)
+            s2g[particles[i].ispecies] >= 0)
           bin_one_weight(particles[i].v[index],weights[mwt]);
         mwt += stridewt;
       }
@@ -418,7 +418,7 @@ void FixAveHistoWeight::bin_particles(double *values, int stride)
     }
   } else if (mixflag) {
     for (int i = 0; i < nlocal; i++) {
-      if (s2g[particles[i].ispecies] < 0)
+      if (s2g[particles[i].ispecies] >= 0)
         bin_one_weight(values[m],weights[mwt]);
       m += stride;
       mwt += stridewt;

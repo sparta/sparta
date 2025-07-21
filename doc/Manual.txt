@@ -1,6 +1,6 @@
 <HEAD>
 <TITLE>SPARTA Users Manual</TITLE>
-<META NAME="docnumber" CONTENT="4 Sep 2024 version">
+<META NAME="docnumber" CONTENT="20 Jan 2025 version">
 <META NAME="author" CONTENT="https://sparta.github.io - Sandia National Laboratories">
 <META NAME="copyright" CONTENT="Copyright (2014) Sandia Corporation.  This software and manual is distributed under the GNU General Public License.">
 </HEAD>
@@ -18,7 +18,7 @@
 <H1></H1>
 
 SPARTA Documentation :c,h3
-4 Sep 2024 version :c,h4
+20 Jan 2025 version :c,h4
 
 Version info: :h4
 
@@ -90,9 +90,10 @@ it gives quick access to documentation for all SPARTA commands.
   2.2 "Making SPARTA"_start_2 :b
   2.3 "Building SPARTA with optional packages"_start_3 :b
   2.4 "Building SPARTA as a library"_start_4 :b
-  2.5 "Running SPARTA"_start_5 :b
-  2.6 "Command-line options"_start_6 :b
-  2.7 "Screen output"_start_7 :ule,b
+  2.5 "Testing SPARTA"_start_5 :b
+  2.6 "Running SPARTA"_start_6 :b
+  2.7 "Command-line options"_start_7 :b
+  2.8 "Screen output"_start_8 :ule,b
 "Commands"_Section_commands.html :l
   3.1 "SPARTA input script"_cmd_1 :ulb,b
   3.2 "Parsing rules"_cmd_2 :b

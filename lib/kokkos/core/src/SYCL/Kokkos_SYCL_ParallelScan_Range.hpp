@@ -145,7 +145,7 @@ class ParallelScanSYCLBase {
   using value_type     = typename Analysis::value_type;
   using reference_type = typename Analysis::reference_type;
   using functor_type   = FunctorType;
-  using size_type      = Kokkos::Experimental::SYCL::size_type;
+  using size_type      = Kokkos::SYCL::size_type;
   using index_type     = typename Policy::index_type;
 
  protected:
@@ -161,8 +161,8 @@ class ParallelScanSYCLBase {
   sycl::event sycl_direct_launch(const FunctorWrapper& functor_wrapper,
                                  sycl::event memcpy_event) {
     // Convenience references
-    const Kokkos::Experimental::SYCL& space = m_policy.space();
-    Kokkos::Experimental::Impl::SYCLInternal& instance =
+    const Kokkos::SYCL& space = m_policy.space();
+    Kokkos::Impl::SYCLInternal& instance =
         *space.impl_internal_space_instance();
     sycl::queue& q = space.sycl_queue();
 
@@ -199,7 +199,7 @@ class ParallelScanSYCLBase {
         value_type local_value;
         reducer.init(&local_value);
         if (global_id < size) {
-          if constexpr (std::is_void<WorkTag>::value)
+          if constexpr (std::is_void_v<WorkTag>)
             functor(global_id + begin, local_value, false);
           else
             functor(WorkTag(), global_id + begin, local_value, false);
@@ -346,7 +346,7 @@ class ParallelScanSYCLBase {
 
               reducer.join(&update, &group_results[item.get_group_linear_id()]);
 
-              if constexpr (std::is_void<WorkTag>::value)
+              if constexpr (std::is_void_v<WorkTag>)
                 functor(global_id + begin, update, true);
               else
                 functor(WorkTag(), global_id + begin, update, true);
@@ -374,11 +374,11 @@ class ParallelScanSYCLBase {
     std::scoped_lock<std::mutex> scratch_buffers_lock(
         instance.m_mutexScratchSpace);
 
-    Kokkos::Experimental::Impl::SYCLInternal::IndirectKernelMem&
-        indirectKernelMem = instance.get_indirect_kernel_mem();
+    Kokkos::Impl::SYCLInternal::IndirectKernelMem& indirectKernelMem =
+        instance.get_indirect_kernel_mem();
 
-    auto functor_wrapper = Experimental::Impl::make_sycl_function_wrapper(
-        m_functor_reducer, indirectKernelMem);
+    auto functor_wrapper =
+        Impl::make_sycl_function_wrapper(m_functor_reducer, indirectKernelMem);
 
     sycl::event event =
         sycl_direct_launch(functor_wrapper, functor_wrapper.get_copy_event());
@@ -399,7 +399,7 @@ class ParallelScanSYCLBase {
 
 template <class FunctorType, class... Traits>
 class Kokkos::Impl::ParallelScan<FunctorType, Kokkos::RangePolicy<Traits...>,
-                                 Kokkos::Experimental::SYCL>
+                                 Kokkos::SYCL>
     : private ParallelScanSYCLBase<FunctorType, void, Traits...> {
  public:
   using Base = ParallelScanSYCLBase<FunctorType, void, Traits...>;
@@ -417,13 +417,12 @@ class Kokkos::Impl::ParallelScan<FunctorType, Kokkos::RangePolicy<Traits...>,
 
 template <class FunctorType, class ReturnType, class... Traits>
 class Kokkos::Impl::ParallelScanWithTotal<
-    FunctorType, Kokkos::RangePolicy<Traits...>, ReturnType,
-    Kokkos::Experimental::SYCL>
+    FunctorType, Kokkos::RangePolicy<Traits...>, ReturnType, Kokkos::SYCL>
     : public ParallelScanSYCLBase<FunctorType, ReturnType, Traits...> {
  public:
   using Base = ParallelScanSYCLBase<FunctorType, ReturnType, Traits...>;
 
-  const Kokkos::Experimental::SYCL& m_exec;
+  const Kokkos::SYCL& m_exec;
 
   inline void execute() {
     Base::impl_execute([&]() {
@@ -435,7 +434,8 @@ class Kokkos::Impl::ParallelScanWithTotal<
             "Kokkos::Impl::ParallelReduce<SYCL, MDRangePolicy>::execute: "
             "result not device-accessible");
         const int size = Base::m_functor_reducer.get_reducer().value_size();
-        std::memcpy(Base::m_result_ptr, Base::m_scratch_host, size);
+        std::memcpy(static_cast<void*>(Base::m_result_ptr),
+                    static_cast<const void*>(Base::m_scratch_host), size);
       }
     });
   }
@@ -445,7 +445,7 @@ class Kokkos::Impl::ParallelScanWithTotal<
                         const typename Base::Policy& arg_policy,
                         const ViewType& arg_result_view)
       : Base(arg_functor, arg_policy, arg_result_view.data(),
-             MemorySpaceAccess<Experimental::SYCLDeviceUSMSpace,
+             MemorySpaceAccess<SYCLDeviceUSMSpace,
                                typename ViewType::memory_space>::accessible),
         m_exec(arg_policy.space()) {}
 };

@@ -98,7 +98,7 @@ class SurfCollideSpecularKokkos : public SurfCollideSpecular {
     if (ATOMIC_REDUCTION == 0)
       d_nsingle()++;
     else
-      Kokkos::atomic_increment(&d_nsingle());
+      Kokkos::atomic_inc(&d_nsingle());
 
     // if surface chemistry defined, attempt reaction
     // reaction = 1 to N for which reaction took place, 0 for none
@@ -127,7 +127,7 @@ class SurfCollideSpecularKokkos : public SurfCollideSpecular {
         if (ATOMIC_REDUCTION == 0)
           d_nreact_one()++;
         else
-          Kokkos::atomic_increment(&d_nreact_one());
+          Kokkos::atomic_inc(&d_nreact_one());
       }
     }
 

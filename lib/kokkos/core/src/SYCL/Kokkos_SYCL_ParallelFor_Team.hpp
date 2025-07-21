@@ -27,11 +27,11 @@
 
 template <typename FunctorType, typename... Properties>
 class Kokkos::Impl::ParallelFor<FunctorType, Kokkos::TeamPolicy<Properties...>,
-                                Kokkos::Experimental::SYCL> {
+                                Kokkos::SYCL> {
  public:
   using Policy       = TeamPolicy<Properties...>;
   using functor_type = FunctorType;
-  using size_type    = ::Kokkos::Experimental::SYCL::size_type;
+  using size_type    = ::Kokkos::SYCL::size_type;
 
  private:
   using member_type   = typename Policy::member_type;
@@ -52,8 +52,8 @@ class Kokkos::Impl::ParallelFor<FunctorType, Kokkos::TeamPolicy<Properties...>,
                                  const FunctorWrapper& functor_wrapper,
                                  const sycl::event& memcpy_event) const {
     // Convenience references
-    const Kokkos::Experimental::SYCL& space = m_policy.space();
-    sycl::queue& q                          = space.sycl_queue();
+    const Kokkos::SYCL& space = m_policy.space();
+    sycl::queue& q            = space.sycl_queue();
 
     desul::ensure_sycl_lock_arrays_on_device(q);
 
@@ -76,7 +76,7 @@ class Kokkos::Impl::ParallelFor<FunctorType, Kokkos::TeamPolicy<Properties...>,
             global_scratch_ptr + item.get_group(1) * scratch_size[1],
             scratch_size[1], item, item.get_group_linear_id(),
             item.get_group_range(1));
-        if constexpr (std::is_void<work_tag>::value)
+        if constexpr (std::is_void_v<work_tag>)
           functor_wrapper.get_functor()(team_member);
         else
           functor_wrapper.get_functor()(work_tag(), team_member);
@@ -106,7 +106,8 @@ class Kokkos::Impl::ParallelFor<FunctorType, Kokkos::TeamPolicy<Properties...>,
 #endif
       cgh.parallel_for(
           sycl::nd_range<2>(
-              sycl::range<2>(m_team_size, m_league_size * final_vector_size),
+              sycl::range<2>(m_team_size, static_cast<size_t>(m_league_size) *
+                                              final_vector_size),
               sycl::range<2>(m_team_size, final_vector_size)),
           lambda);
     };
@@ -146,11 +147,11 @@ class Kokkos::Impl::ParallelFor<FunctorType, Kokkos::TeamPolicy<Properties...>,
             scratch_pool_id,
             static_cast<ptrdiff_t>(m_scratch_size[1]) * m_league_size));
 
-    Kokkos::Experimental::Impl::SYCLInternal::IndirectKernelMem&
-        indirectKernelMem = instance.get_indirect_kernel_mem();
+    Kokkos::Impl::SYCLInternal::IndirectKernelMem& indirectKernelMem =
+        instance.get_indirect_kernel_mem();
 
-    auto functor_wrapper = Experimental::Impl::make_sycl_function_wrapper(
-        m_functor, indirectKernelMem);
+    auto functor_wrapper =
+        Impl::make_sycl_function_wrapper(m_functor, indirectKernelMem);
 
     sycl::event event = sycl_direct_launch(global_scratch_ptr, functor_wrapper,
                                            functor_wrapper.get_copy_event());
@@ -164,10 +165,14 @@ class Kokkos::Impl::ParallelFor<FunctorType, Kokkos::TeamPolicy<Properties...>,
         m_league_size(arg_policy.league_size()),
         m_team_size(arg_policy.team_size()),
         m_vector_size(arg_policy.impl_vector_length()) {
-    // FIXME_SYCL optimize
-    if (m_team_size < 0)
+    if (m_team_size < 0) {
       m_team_size =
           m_policy.team_size_recommended(arg_functor, ParallelForTag{});
+      if (m_team_size <= 0)
+        Kokkos::Impl::throw_runtime_exception(
+            "Kokkos::Impl::ParallelFor<SYCL, TeamPolicy> could not find a "
+            "valid execution configuration.");
+    }
 
     m_shmem_begin = (sizeof(double) * (m_team_size + 2));
     m_shmem_size =

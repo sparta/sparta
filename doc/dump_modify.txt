@@ -76,6 +76,8 @@ keyword = {bcolor} or {bdiam} or {backcolor} or {bitrate} or {boxcolor} or {cmap
     color = name of color or color1/color2/...
   {glinecolor} arg = color
     color = name of color for grid cell outlines
+  {gridgroup} arg = group-ID
+    group-ID = name of a user-defined grid group, see the "group"_group.html command
   {pcolor} args = type color
     type = particle type or range of types or proc ID or range of IDs (see below)
     color = name of color or color1/color2/...
@@ -87,6 +89,8 @@ keyword = {bcolor} or {bdiam} or {backcolor} or {bitrate} or {boxcolor} or {cmap
     color = name of color for surf one option
   {slinecolor} arg = color
     color = name of color for surface element outlines :pre
+  {surfgroup} arg = group-ID
+    group-ID = name of a user-defined surf group, see the "group"_group.html command
 :ule
 
 [Examples:]
@@ -501,6 +505,14 @@ a color name defined by the dump_modify color option.
 
 :line
 
+The {gridgroup} keyword can be used with the "dump
+image"_dump_image.html command to only draw a subset of the grid cells
+in the simulation.  By default all the grid cells are rendered.  The
+group-ID argument can be any valid grid group name, as defined by the
+"group grid"_group.html command.
+
+:line
+
 The {pcolor} keyword can be used one or more times with the "dump
 image"_dump_image.html command, only when its particle color setting is
 {type} or {procs}, to set the color that particles will be drawn in
@@ -590,6 +602,14 @@ option.
 
 :line
 
+The {surfgroup} keyword can be used with the "dump
+image"_dump_image.html command to only draw a subset of the surface
+elements in the simulation.  By default all the surface elements are
+rendered.  The group-ID argument can be any valid surf group name, as
+defined by the "group surf"_group.html command.
+
+:line
+
 [Restrictions:] none
 
 [Related commands:]
@@ -613,6 +633,7 @@ flush = yes
 format = %d and %g for each integer or floating point value
 gcolor = * red/green/blue/yellow/aqua/cyan
 glinecolor = white
+gridgroup = all
 nfile = 1
 pad = 0
 pcolor = * red/green/blue/yellow/aqua/cyan
@@ -620,6 +641,7 @@ pdiam = * 1.0
 region = none
 scolor = * gray
 slinecolor = white
+surfgroup = all
 thresh = none :ul
 
 :line

@@ -722,12 +722,12 @@ void ComputeFFTGrid::fft_create()
 
   int tmp;
   if (dimension == 3) {
-    fft3d = new FFT3D(sparta,world,nx,ny,nz,
+    fft3d = new FFT3d(sparta,world,nx,ny,nz,
                       nxlo,nxhi,nylo,nyhi,nzlo,nzhi,
                       nxlo,nxhi,nylo,nyhi,nzlo,nzhi,
                       0,0,&tmp,collective_flag);
   } else {
-    fft2d = new FFT2D(sparta,world,nx,ny,
+    fft2d = new FFT2d(sparta,world,nx,ny,
                       nxlo,nxhi,nylo,nyhi,nxlo,nxhi,nylo,nyhi,
                       0,0,&tmp,collective_flag);
   }
@@ -789,8 +789,10 @@ void ComputeFFTGrid::irregular_create()
   if (nrecv != nfft)
     error->one(FLERR,"Compute fft/grid FFT mapping is inconsistent");
 
-  memory->create(sbuf1,nglocal*sizeof(cellint),"fft/grid:sbuf1");
-  memory->create(rbuf1,nfft*sizeof(cellint),"fft/grid:rbuf1");
+  // must use smalloc since buffers can be larger than 2 GB
+
+  sbuf1 = (char *) memory->smalloc((bigint)nglocal*sizeof(cellint),"fft/grid:sbuf1");
+  rbuf1 = (char *) memory->smalloc((bigint)nfft*sizeof(cellint),"fft/grid:rbuf1");
 
   cellint *idsend = (cellint *) sbuf1;
   for (i = 0; i < nglocal; i++) idsend[i] = cells[i].id;
@@ -829,8 +831,10 @@ void ComputeFFTGrid::irregular_create()
   if (nrecv != nglocal)
     error->one(FLERR,"Compute fft/grid FFT mapping is inconsistent");
 
-  memory->create(sbuf2,nfft*sizeof(cellint),"fft/grid:sbuf2");
-  memory->create(rbuf2,nglocal*sizeof(cellint),"fft/grid:rbuf2");
+  // must use smalloc since buffers can be larger than 2 GB
+
+  sbuf2 = (char *) memory->smalloc((bigint)nfft*sizeof(cellint),"fft/grid:sbuf2");
+  rbuf2 = (char *) memory->smalloc((bigint)nglocal*sizeof(cellint),"fft/grid:rbuf2");
 
   idsend = (cellint *) sbuf2;
   for (i = 0; i < nfft; i++) idsend[map1[i]] = idrecv[i];
@@ -862,10 +866,10 @@ void ComputeFFTGrid::irregular_create()
   memory->destroy(proclist1);
   memory->destroy(proclist2);
   memory->destroy(proclist3);
-  memory->destroy(sbuf1);
-  memory->destroy(rbuf1);
-  memory->destroy(sbuf2);
-  memory->destroy(rbuf2);
+  memory->sfree(sbuf1);
+  memory->sfree(rbuf1);
+  memory->sfree(sbuf2);
+  memory->sfree(rbuf2);
 }
 
 /* ----------------------------------------------------------------------
