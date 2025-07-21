@@ -383,8 +383,8 @@ void ComputeLambdaGridKokkos::operator()(TagComputeLambdaGrid_ComputePerGrid, co
 
   if (lambdaflag) {
     if (lambda == 0.0) lambda = BIG;
-    lambda_grid[i] = lambda;
-    if (output_order[LAMBDA] >= 0) {
+    d_lambda_grid[i] = lambda;
+    if (d_output_order[LAMBDA] >= 0) {
       if (noutputs == 1) d_vector_grid[i] = lambda;
       else d_array_grid(i,d_output_order[LAMBDA]) = lambda;
     }
@@ -421,7 +421,7 @@ void ComputeLambdaGridKokkos::reallocate()
     d_array_grid = k_array_grid.d_view;
   }
 
-  d_lambda_grid = decltype(d_lambda_grid)("lambda/grid:lambda_grid",nglocal,ntotal);
+  d_lambda_grid = decltype(d_lambda_grid)("lambda/grid:lambda_grid",nglocal);
   d_lambdainv = decltype(d_lambdainv)("lambda/grid:lambdainv",nglocal,ntotal);
   d_tauinv = decltype(d_tauinv)("lambda/grid:tauinv",nglocal,ntotal);
   d_nrho = decltype(d_nrho)("lambda/grid:nrho",nglocal,ntotal);
