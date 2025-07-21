@@ -255,6 +255,7 @@ void CreateParticlesKokkos::create_local(bigint np)
       pflag = grid->point_outside_surfs(icell,xcell);
 
     for (int m = 0; m < ncreate; m++) {
+      auto cand = h_cells2cands(i) + m;
 
       // generate random position X for new particle
 
