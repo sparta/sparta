@@ -155,7 +155,7 @@ void CreateParticlesKokkos::create_local(bigint np)
   double ntarget,scale,rn,vn,vr,theta1,theta2,erot,evib;
   double *lo,*hi;
 
-  double *cummulative_custom = new double[nspecies]; ////////
+  double *cummulative_custom = new double[nspecies];
 
   double tempscale = 1.0;
   double sqrttempscale = 1.0;
