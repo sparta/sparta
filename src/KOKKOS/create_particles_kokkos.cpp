@@ -180,11 +180,11 @@ void CreateParticlesKokkos::create_local(bigint np)
 
     volsum += cinfo[icell].volume / cinfo[icell].weight;
 
-    double ntarget = nme * volsum/insertvolme - nprev;
-    auto npercell = static_cast<int> (ntarget);
+    ntarget = nme * volsum/insertvolme - nprev;
+    npercell = static_cast<int> (ntarget);
 
     if (random->uniform() < ntarget-npercell) npercell++;
-    auto ncreate = npercell;
+    ncreate = npercell;
 
     lo = cells[icell].lo;
     hi = cells[icell].hi;
@@ -244,7 +244,7 @@ void CreateParticlesKokkos::create_local(bigint np)
     lo = cells[icell].lo;
     hi = cells[icell].hi;
 
-    auto ncreate = h_ncreate_values(icell);
+    ncreate = h_ncreate_values(icell);
 
     if (fractions_custom_flag)
       fractions_to_cummulative(nspecies,fractions_custom[icell],cummulative_custom);
@@ -259,7 +259,6 @@ void CreateParticlesKokkos::create_local(bigint np)
 
       // generate random position X for new particle
 
-      double x[3];
       x[0] = lo[0] + random->uniform() * (hi[0]-lo[0]);
       x[1] = lo[1] + random->uniform() * (hi[1]-lo[1]);
       x[2] = lo[2] + random->uniform() * (hi[2]-lo[2]);
@@ -330,10 +329,10 @@ void CreateParticlesKokkos::create_local(bigint np)
         sqrttempscale = sqrt(tempscale);
       }
 
-      auto vn = vscale[isp] * sqrttempscale * sqrt(-log(random->uniform()));
-      auto vr = vscale[isp] * sqrttempscale * sqrt(-log(random->uniform()));
-      auto theta1 = MY_2PI * random->uniform();
-      auto theta2 = MY_2PI * random->uniform();
+      vn = vscale[isp] * sqrttempscale * sqrt(-log(random->uniform()));
+      vr = vscale[isp] * sqrttempscale * sqrt(-log(random->uniform()));
+      theta1 = MY_2PI * random->uniform();
+      theta2 = MY_2PI * random->uniform();
 
       //these two functions also use random variables...
       h_erot(cand) = particle->erot(ispecies,temp_rot*tempscale,random);
@@ -341,7 +340,6 @@ void CreateParticlesKokkos::create_local(bigint np)
 
       h_id(cand) = MAXSMALLINT*random->uniform();
 
-      double v[3];
       if (vstream_flag) {
         if (vstream_var_flag) {
           vstream_variable(x,vstream,vstream_var);
