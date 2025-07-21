@@ -758,7 +758,7 @@ void FixEmitSurf::perform_task()
 
           // if using per-surf custom attributes,
           // temps/vstream already set to custom attributes in create_task
-          
+
           if (nfix_update_custom)
             modify->update_custom(particle->nlocal-1,temp_thermal,
                                  temp_rot,temp_vib,vstream);
