@@ -28,7 +28,7 @@ keyword = {n} or {normal} or {nevery} or {perspecies} or {region} or {subsonic} 
     Psub = pressure setting at inflow boundary (pressure units)
     Tsub = temperature setting at inflow boundary, can be NULL (temperature units)
   {custom} values = attribute s_name
-    attribute = {density} or {temperature} or {vstream} or {speed} or {fractions}
+    attribute = {nrho} or {vstream} or {speed} or {temp} or {fractions}
     s_name = custom per-surf vector or array with name :pre
 :ule
 

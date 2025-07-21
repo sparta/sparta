@@ -277,7 +277,7 @@ void Mixture::init()
 
 int Mixture::init_fraction(int *fflag, double *fuser, double *f, double *c)
 {
-  // sum = total frac for species with explicitly set fractions
+  // sum = total frac for species with explicity set fractions
   // nimplicit = number of unset species
 
   double sum = 0.0;
