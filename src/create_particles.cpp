@@ -97,9 +97,9 @@ void CreateParticles::command(int narg, char **arg)
   dstr = dxstr = dystr = dzstr = NULL;
   tstr = txstr = tystr = tzstr = NULL;
   vxstr = vystr = vzstr = vstrx = vstry = vstrz = NULL;
-  nrho_custom_flag = temp_custom_flag = vstream_custom_flag = 
+  nrho_custom_flag = temp_custom_flag = vstream_custom_flag =
     fractions_custom_flag = 0;
-  nrho_custom_id = temp_custom_id = vstream_custom_id = 
+  nrho_custom_id = temp_custom_id = vstream_custom_id =
     fractions_custom_id = NULL;
 
   while (iarg < narg) {
@@ -122,7 +122,7 @@ void CreateParticles::command(int narg, char **arg)
         error->all(FLERR,"Create_particles region does not exist");
       region = domain->regions[iregion];
       iarg += 2;
-      
+
     } else if (strcmp(arg[iarg],"density") == 0) {
       if (iarg+5 > narg) error->all(FLERR,"Illegal create_particles command");
       nrho_var_flag = 1;
@@ -182,7 +182,7 @@ void CreateParticles::command(int narg, char **arg)
         if (strstr(arg[iarg+2],"s_") != arg[iarg+2])
           error->all(FLERR,"Illegal create_particles command");
         nrho_custom_id = &arg[iarg+2][2];
-        
+
       } else if (strcmp(arg[iarg+1],"temperature") == 0) {
         temp_custom_flag = 1;
         if (strstr(arg[iarg+2],"s_") != arg[iarg+2])
@@ -228,7 +228,7 @@ void CreateParticles::command(int narg, char **arg)
   temp_flag = temp_var_flag + temp_custom_flag;
   vstream_flag = vstream_var_flag + vstream_custom_flag;
   species_flag = species_var_flag + fractions_custom_flag;
-  
+
   // error checks and further setup for variables
 
   if (species_var_flag) {
@@ -642,7 +642,7 @@ void CreateParticles::create_local()
   double x[3],v[3],xcell[3],vstream_var[3];
   double ntarget,scale,rn,vn,vr,theta1,theta2,erot,evib;
   double *lo,*hi;
-  
+
   double *vstream_update_custom = vstream;
   double *cummulative_custom = new double[nspecies];
 
@@ -684,7 +684,7 @@ void CreateParticles::create_local()
 
     if (fractions_custom_flag)
       fractions_to_cummulative(nspecies,fractions_custom[icell],cummulative_custom);
-    
+
     // if surfs in cell, use xcell for all created particle attempts
 
     if (cells[icell].nsurf)
@@ -807,7 +807,7 @@ void CreateParticles::create_local()
   }
 
   // clean up
-  
+
   delete [] cummulative_custom;
   delete random;
 }
@@ -1064,7 +1064,7 @@ void CreateParticles::create_local_twopass()
         while (cummulative[isp] < rn) isp++;
         ispecies = species[isp];
       }
-      
+
       if (temp_flag) {
         if (temp_var_flag) tempscale = temperature_variable(x);
         else tempscale = temp_custom[icell] / temp_thermal;
@@ -1103,10 +1103,10 @@ void CreateParticles::create_local_twopass()
       id = MAXSMALLINT*random->uniform();
 
       particle->add_particle(id,ispecies,icell,x,v,erot,evib);
- 
+
       // tempscale and vstream_update_custom are set appropriately
       // if using per-grid variables or per-grid custom attributes
-      
+
       if (nfix_update_custom)
         modify->update_custom(particle->nlocal-1,tempscale*temp_thermal,
                               tempscale*temp_rot,tempscale*temp_vib,
@@ -1238,7 +1238,7 @@ void CreateParticles::fractions_to_cummulative(int nspecies,
   // cummulative = cummulative fraction across species
 
   double value;
-  
+
   for (int i = 0; i < nspecies; i++) {
     if (fractions[i] >= 0.0) value = fractions[i];
     else value = (1.0-sum) / nimplicit;

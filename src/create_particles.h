@@ -40,7 +40,7 @@ class CreateParticles : protected Pointers {
   class Region *region;
 
   int nrho_flag,temp_flag,vstream_flag,species_flag;
-  
+
   int nrho_var_flag,vstream_var_flag,temp_var_flag,species_var_flag,normflag;
   char *sstr,*sxstr,*systr,*szstr;
   char *dstr,*dxstr,*dystr,*dzstr;
@@ -60,7 +60,7 @@ class CreateParticles : protected Pointers {
   int nrho_custom_index,vstream_custom_index,temp_custom_index,fractions_custom_index;
   double *nrho_custom,*temp_custom;
   double **vstream_custom,**fractions_custom;
-  
+
   virtual void create_single();
   void create_local();
   void create_local_twopass();
