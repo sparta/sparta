@@ -981,7 +981,7 @@ KOKKOS_INLINE_FUNCTION void parallel_scan(
   using closure_value_type = typename Kokkos::Impl::FunctorAnalysis<
       Kokkos::Impl::FunctorPatternInterface::SCAN, void, Closure,
       void>::value_type;
-  static_assert(std::is_same<closure_value_type, ValueType>::value,
+  static_assert(std::is_same_v<closure_value_type, ValueType>,
                 "Non-matching value types of closure and return type");
 
   ValueType accum;
@@ -1016,8 +1016,17 @@ KOKKOS_INLINE_FUNCTION void single(
   const auto grange1          = item.get_local_range(1);
   const auto sg               = item.get_sub_group();
   if (item.get_local_id(1) == 0) lambda(val);
-  val = Kokkos::Impl::SYCLReduction::select_from_group(
-      sg, val, (sg.get_local_id() / grange1) * grange1);
+  // FIXME_SYCL oneAPI broke pointer support in sycl::select_from_group past the
+  // 2025.0.0 release. It's supposed to be fixed in the 2025.2.0 release.
+  if constexpr (std::is_pointer_v<ValueType>) {
+    uintptr_t tmp = reinterpret_cast<uintptr_t>(val);
+    tmp           = Kokkos::Impl::SYCLReduction::select_from_group(
+        sg, tmp, (sg.get_local_id() / grange1) * grange1);
+    val = reinterpret_cast<ValueType>(tmp);
+  } else {
+    val = Kokkos::Impl::SYCLReduction::select_from_group(
+        sg, val, (sg.get_local_id() / grange1) * grange1);
+  }
 }
 
 template <class FunctorType, class ValueType>
