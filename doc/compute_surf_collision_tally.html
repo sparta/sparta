@@ -1,0 +1,135 @@
+<HTML>
+<CENTER><A HREF = "http://sparta.sandia.gov">SPARTA WWW Site</A> - <A HREF = "Manual.html">SPARTA Documentation</A> - <A HREF = "Section_commands.html#comm">SPARTA Commands</A> 
+</CENTER>
+
+
+
+
+
+
+<HR>
+
+<H3>compute surf/collision/tally command 
+</H3>
+<P><B>Syntax:</B>
+</P>
+<PRE>compute ID surf/collision/tally group-ID mix-ID value1 value2 ... 
+</PRE>
+<UL><LI>ID is documented in <A HREF = "compute.html">compute</A> command 
+
+<LI>surf/collision/tally = style name of this compute command 
+
+<LI>group-ID = group ID for which surface elements to perform calculation on 
+
+<LI>mix-ID = mixture ID to perform calculation on 
+
+<LI>one or more values can be appended 
+
+<LI>value = <I>id/surf</I> or <I>id</I> or <I>type</I> or <I>time</I> or <I>xc</I> or <I>yc</I> or <I>zc</I> or <I>vx/pre</I> or <I>vy/pre</I> or <I>vz/pre</I> or <I>vx/post</I> or <I>vy/post</I> or <I>vz/post</I> 
+
+<PRE>  <I>id/surf</I> = surface element ID
+  <I>id</I> = particle ID
+  <I>type</I> = particle species
+  <I>time</I> = time of collision (within timestep, see below)
+  <I>xc</I>, <I>yc</I>, <I>zc</I> = coordinates of collision point
+  <I>vx/pre</I>, <I>vy/pre</I>, <I>vz/pre</I> = velocity components before collision
+  <I>vx/post</I>, <I>vy/post</I>, <I>vz/post</I> = velocity components after collision 
+</PRE>
+
+</UL>
+<P><B>Examples:</B>
+</P>
+<PRE>compute 1 surf/collision/tally all all id id/surf time xc yc zc 
+</PRE>
+<P>This command will dump the tallies in the previous command to a dump
+file every 10 steps:
+</P>
+<PRE>dump 1 tally all 10 tmp.tally c_1[*] 
+</PRE>
+<P><B>Description:</B>
+</P>
+<P>Tally various values for each collision of a particle with a surface
+element during the current timestep.  Only surface collisions which do
+not result in chemical reactions are tallied by this command.  See the
+related <A HREF = "compute_reaction_tally.html">compute surf/reaction/tally</A>
+command to tally collisions which induce reactions.  It provides
+different tally value options than this compute.
+</P>
+<P>Only surface elements in the surface group specified by <I>group-ID</I> and
+particles with species in the mixture specified by <I>mix-ID</I> are
+included.  See the <A HREF = "group.html">group grid</A> command for info on how
+surface elements can be assigned to surface groups.
+</P>
+<P>This compute can be used for simulations with either explicit or
+implicit surface elements.  See <A HREF = "Section_howto_13">Section 6.13</A> for
+more discussion of explicit and implicit surfaces.
+</P>
+<P>The results of this compute can be used by different commands in
+different ways.  The values for a single timestep can be output by the
+<A HREF = "dump.html">dump tally</A> command.  Currently this is the only option for
+accessing the tallied values.
+</P>
+<HR>
+
+<P>The <I>id/surf</I> value is the ID of the surface element.  For explicit
+surfaces, surface element IDs are unique.  For implicit surfaces, the
+surface ID of all the surface elements within a grid cell are the grid
+cell ID.  See <A HREF = "Section_howto_13">Section 6.13</A> for more discussion of
+explicit and implicit surfaces.
+</P>
+<P>The <I>id</I> value is the ID of the particle.  Note that particle IDs are
+generated randomly.  Thus multiple particles in the system can
+potentially have the same ID.  See <A HREF = "Section_howto_17">Section 6.17</A> for
+more details on particle IDs.
+</P>
+<P>The <I>type</I> value is an integer index for the particle species.  It is
+a value from 1 to Nspecies. The value corresponds to the order in
+which species were defined via the <A HREF = "species.html">species</A> command.
+See <A HREF = "Section_howto_17">Section 6.17</A> for more details on particle
+types.
+</P>
+<P>The <I>time</I> value is the point in time within the timestep when the
+collision occured.  Thus if the timestep size is DT, as set by the
+<A HREF = "timestep.html">timestep</A> command, the <I>time</I> values will all be within
+the range of 0.0 to DT, for all collisions tallied by this compute on
+each timestep it is invoked.
+</P>
+<P>The <I>xc</I>, <I>yc</I>, and <I>zc</I> are the coordinates of the collision point
+between the particle and the surface element.
+</P>
+<P>The <I>vx/pre</I>, <I>vy/pre</I>, <I>vz/pre</I> values are the velocity components of
+the incident particle before it collides with the surface element.
+</P>
+<P>The <I>vx/post</I>, <I>vy/post</I>, <I>vz/post</I> values are the velocity components
+of the particle after it collides with the surface element.
+</P>
+<HR>
+
+<P><B>Output info:</B>
+</P>
+<P>This compute calculates a per-tally array, with the number of columns
+equal to the number of values.
+</P>
+<P>The array can be accessed by any command that uses per-tally values
+from a compute as input.  See <A HREF = "Section_howto.html#howto_4">Section 6.4</A>
+for an overview of SPARTA output options.
+</P>
+<P>The per-tally array values will be in the <A HREF = "units.html">units</A>
+appropriate to the individual values as described above.  <I>Time</I> is in
+time units; see above for details.  <I>Xc</I>, <I>yc</I>, and <I>zc</I> are in
+distance units.  <I>Vx/pre</I>, <I>vy/pre</I>, <I>vz/pre</I> are in velocity units, as
+are <I>vx/post</I>, <I>vy/post</I>, <I>vz/post</I>.
+</P>
+<HR>
+
+<P><B>Restrictions:</B> none
+</P>
+<P><B>Related commands:</B>
+</P>
+<P><A HREF = "compute_surf_reaction_tally.html">compute surf/reaction/tally</A>,
+<A HREF = "compute_gas_collision_tally.html">compute gas/collision/tally</A>,
+<A HREF = "dump.html">dump tally</A>
+</P>
+<P><B>Default:</B> none
+</P>
+</HTML>
