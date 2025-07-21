@@ -233,16 +233,28 @@ void CreateParticlesKokkos::create_local(bigint np)
   auto h_v = Kokkos::create_mirror_view(d_v);
 
   for (int icell = 0; icell < nglocal; icell++) {
-    auto ncreate = h_ncreate_values(icell);
+    if (cinfo[icell].type == INSIDE) continue;
+    if (cells[icell].nsplit > 1) continue;
+    if (cinfo[icell].volume == 0.0) continue;
+    if (region && region->bboxflag &&
+        outside_region(dimension,cells[icell].lo,cells[icell].hi))
+      continue;
+    if (!cutflag && cells[icell].nsurf) continue;
+
     lo = cells[icell].lo;
     hi = cells[icell].hi;
 
+    auto ncreate = h_ncreate_values(icell);
+
+    if (fractions_custom_flag)
+      fractions_to_cummulative(nspecies,fractions_custom[icell],cummulative_custom);
+
+    // if surfs in cell, use xcell for all created particle attempts
+
+    if (cells[icell].nsurf)
+      pflag = grid->point_outside_surfs(icell,xcell);
+
     for (int m = 0; m < ncreate; m++) {
-      auto cand = h_cells2cands(icell) + m;
-      auto rn = random->uniform();
-      int isp = 0;
-      while (cummulative[isp] < rn) isp++;
-      auto ispecies = species[isp];
 
       // generate random position X for new particle
 
