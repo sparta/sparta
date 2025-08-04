@@ -11,14 +11,15 @@
 
    See the README file in the top-level SPARTA directory.
 ------------------------------------------------------------------------- */
-#if defined(FIX_CLASS) && defined(SPARTA_ENABLE_LAMMPS)
+#ifdef FIX_CLASS
    FixStyle(lammps,FixLAMMPS)
 #else
 
-#if !defined(SPARTA_FIX_LAMMPS_H) && defined(SPARTA_ENABLE_LAMMPS)
+#ifndef SPARTA_FIX_LAMMPS_H
 #define SPARTA_FIX_LAMMPS_H
 
 #include "fix.h"
+
 #include "grid.h"
 #include "surf.h"
 #include <string>

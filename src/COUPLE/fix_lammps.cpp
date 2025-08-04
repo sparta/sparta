@@ -39,13 +39,13 @@
 
 // these are LAMMPS files
 #include "lammps.h"
-#include "../../lammps/src/input.h"
-#include "../../lammps/src/atom.h"
-#include "../../lammps/src/library.h"
-#include "../../lammps/src/modify.h"
-#include "../../lammps/src/fix.h"
-#include "../../lammps/src/force.h"
-#include "../../lammps/src/compute.h"
+#include "../lib/lammps/src/input.h"
+#include "../lib/lammps/src/atom.h"
+#include "../lib/lammps/src/library.h"
+#include "../lib/lammps/src/modify.h"
+#include "../lib/lammps/src/fix.h"
+#include "../lib/lammps/src/force.h"
+#include "../lib/lammps/src/compute.h"
 
 
 using namespace SPARTA_NS;

@@ -24,6 +24,10 @@ sparta_option(PKG_FFT "Enable or disable sparta fft package. Default: OFF." OFF
 sparta_option(
   PKG_KOKKOS "Enable or disable sparta kokkos package. Default: OFF." OFF
   SPARTA_PKG_LIST)
+
+sparta_option(
+  PKG_COUPLE "Enable LAMMPS coupling. Default: OFF" OFF
+  SPARTA_PKG_LIST)
 # ######### END   SPARTA OPTIONAL DEPENDENCIES ##########
 
 # ######### BEGIN SPARTA TPL DEPENDENCIES ##########
@@ -108,9 +112,6 @@ sparta_option(
   SPARTA_EXTRA_OPTIONS_LIST)
 
 sparta_option(SPARTA_ENABLE_PARAVIEW_TESTING "Enable ParaView testing. Default: OFF" OFF
-              SPARTA_EXTRA_OPTIONS_LIST)
-
-sparta_option(SPARTA_ENABLE_LAMMPS "Enable LAMMPS coupling. Default: OFF" OFF
               SPARTA_EXTRA_OPTIONS_LIST)
 
 if(SPARTA_CTEST_CONFIGS)

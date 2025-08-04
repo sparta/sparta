@@ -200,6 +200,19 @@ endif()
   # PKG_KOKKOS depends on BUILD_KOKKOS
   set(BUILD_KOKKOS ON)
 endif()
+
+if(PKG_COUPLE)
+
+  # LAMMPS requires C++17
+  if(CMAKE_CXX_STANDARD LESS 17)
+    message(FATAL_ERROR "The COUPLE package requires the C++ standard to
+  be set to at least C++17")
+  endif()
+
+  set(TARGET_SPARTA_PKG_COUPLE pkg_couple)
+  list(APPEND TARGET_SPARTA_PKGS ${TARGET_SPARTA_PKG_COUPLE})
+endif()
+
 # ################### END PROCESS PKGS ####################
 
 # ################### BEGIN PROCESS TPLS ####################
@@ -233,7 +246,7 @@ endif()
 # ################### BEGIN COMBINE CXX FLAGS ####################
 set(SPARTA_DEFAULT_CXX_COMPILE_FLAGS ${SPARTA_CXX_COMPILE_FLAGS}
                                      ${SPARTA_DEFAULT_CXX_COMPILE_FLAGS})
-# ################### BEGIN COMBINE CXX FLAGS ####################
+# ################### END COMBINE CXX FLAGS ####################
 
 if(BUILD_MPI)
   set_property(
@@ -243,13 +256,4 @@ endif()
 
 if(SPARTA_CTEST_CONFIGS)
   string(REPLACE " " ";" SPARTA_CTEST_CONFIGS "${SPARTA_CTEST_CONFIGS}")
-endif()
-
-if(SPARTA_ENABLE_LAMMPS)
-
-  # LAMMPS requires C++17
-  if(CMAKE_CXX_STANDARD LESS 17)
-    message(FATAL_ERROR "The LAMMPS package requires the C++ standard to
-  be set to at least C++17")
-  endif()
 endif()
