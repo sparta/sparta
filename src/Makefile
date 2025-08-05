@@ -40,7 +40,7 @@ endif
 
 # Package variables
 
-PACKAGE = couple fft kokkos
+PACKAGE = couple fft kokkos python
 
 PACKALL = $(PACKAGE)
 

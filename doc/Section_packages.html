@@ -60,7 +60,10 @@ and use the package:
 <TR ALIGN="center"><TD  ALIGN ="left">Package</TD><TD > Description</TD><TD > Doc page</TD><TD > Example</TD><TD > Library</TD></TR>
 <TR ALIGN="center"><TD  ALIGN ="left"><A HREF = "#FFT">FFT</A></TD><TD > fast Fourier transforms</TD><TD > <A HREF = "compute_fft_grid.html">compute_style compute/fft/grid</A></TD><TD > fft</TD><TD > int or ext</TD></TR>
 <TR ALIGN="center"><TD  ALIGN ="left"><A HREF = "#KOKKOS">KOKKOS</A></TD><TD > Kokkos-enabled styles</TD><TD > <A HREF = "Section_howto.html#acc_3">Section 5.3</A></TD><TD > <A HREF = "https://sparta.github.io/bench.html">Benchmarks</A></TD><TD > - 
-</TD></TR></TABLE></DIV>
+</TD></TR>
+<TR ALIGN="center"><TD  ALIGN ="left"><A HREF = "#COUPLE">COUPLE</A></TD><TD > Coupling to LAMMPS</TD><TD > <A HREF = "fix_lammps.html">fix_style fix/lammps</A></TD><TD > couple</TD><TD > ext</TD></TR>
+
+</TABLE></DIV>
 
 <HR>
 
@@ -206,6 +209,7 @@ make
 <PRE>cmake -C /path/to/sparta/cmake/presets/machine.cmake -DPKG_KOKKOS=OFF /path/to/sparta/cmake
 make 
 </PRE>
+
 <P><B>Supporting info:</B>
 </P>
 <UL><LI>src/KOKKOS: filenames -> commands
@@ -219,4 +223,18 @@ make
 <LI><A HREF = "package.html">package kokkos</A>
 <LI><A HREF = "https://sparta.github.io/bench.html">Benchmarks page</A> of web site 
 </UL>
+
+<HR>
+
+<A NAME = "COUPLE"></A><H4>COUPLE package 
+</H4>
+<P><B>Contents:</B>
+</P>
+<P>Concurrently couple the molecular dynamics solver LAMMPS. The 
+LAMMPS software must be downloaded into the lib/ folder and built 
+separately. Detailed instructions on linking it to SPARTA using 
+either CMake or make can be found in the documentation at 
+<A HREF = "fix_lammps.html">fix lammps</A>.
+</P>
+
 </HTML>

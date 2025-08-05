@@ -93,6 +93,8 @@ If using GNU Make, do:
 4. cd ../../../src
 5. make yes-couple
 6. make mpi -j
+Note that if you use a custom makefile, it must include the command 
+"include Makefile.package".
 
 The examples/couple directory can test the setup. Should errors occur for either LAMMPS or SPARTA, then they will be shown in
 their respective log files. 

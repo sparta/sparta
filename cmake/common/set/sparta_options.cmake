@@ -28,6 +28,10 @@ sparta_option(
 sparta_option(
   PKG_COUPLE "Enable LAMMPS coupling. Default: OFF" OFF
   SPARTA_PKG_LIST)
+
+sparta_option(
+  PKG_PYTHON "Enable or disable sparta python package. Default: OFF." OFF
+  SPARTA_PKG_LIST)
 # ######### END   SPARTA OPTIONAL DEPENDENCIES ##########
 
 # ######### BEGIN SPARTA TPL DEPENDENCIES ##########
