@@ -149,7 +149,7 @@ if(PKG_FFT)
         message(WARNING "Using KISS FFT with the SYCL backend of Kokkos may be sub-optimal.")
       elseif(FFT_KOKKOS STREQUAL "MKL_GPU")
         find_package(MKL REQUIRED)
-        target_link_libraries(lammps PRIVATE mkl_sycl_dft mkl_intel_ilp64 mkl_tbb_thread mkl_core tbb)
+        link_libraries(mkl_sycl_dft mkl_intel_ilp64 mkl_tbb_thread mkl_core tbb)
       endif()
     endif()
 
@@ -228,6 +228,23 @@ if(BUILD_PNG)
   set(SPARTA_DEFAULT_CXX_COMPILE_FLAGS -DSPARTA_PNG
                                        ${SPARTA_DEFAULT_CXX_COMPILE_FLAGS})
 endif()
+
+if(PKG_PYTHON)
+
+  set(TARGET_SPARTA_PKG_PYTHON pkg_python)
+  list(APPEND TARGET_SPARTA_PKGS ${TARGET_SPARTA_PKG_PYTHON})
+  set(SPARTA_DEFAULT_CXX_COMPILE_FLAGS -DSPARTA_PYTHON
+                                       ${SPARTA_DEFAULT_CXX_COMPILE_FLAGS})
+
+  if(NOT Python_INTERPRETER)
+    find_package(Python COMPONENTS Interpreter)
+  endif()
+  find_package(Python REQUIRED COMPONENTS Interpreter Development)
+  link_libraries(Python::Python)
+  set(SPARTA_DEFAULT_CXX_COMPILE_FLAGS -DSPARTA_PYTHON
+                                       ${SPARTA_DEFAULT_CXX_COMPILE_FLAGS})
+endif()
+
 # ################### END PROCESS TPLS ####################
 
 # ################### BEGIN COMBINE CXX FLAGS ####################
