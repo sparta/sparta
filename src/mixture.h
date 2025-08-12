@@ -55,7 +55,7 @@ class Mixture : protected Pointers {
 
   // set by init()
 
-  double *cummulative;        // cummulative fraction for each species
+  double *cummulative;        // cummulative fraction for each species (modified to handle SWS)
   int *groupsize;             // # of species in each group
   int **groupspecies;         // list of particle species indices in each group
   int *species2group;         // s2g[i] = group that particle species I is in
@@ -70,7 +70,9 @@ class Mixture : protected Pointers {
   void copy(Mixture *);
   void command(int, char **);
   void init();
+
   int init_fraction(int *, double *, double *, double *);
+
   void add_species_default(char *);
   int find_group(const char *);
   void write_restart(FILE *fp);

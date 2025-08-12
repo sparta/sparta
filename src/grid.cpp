@@ -292,6 +292,7 @@ void Grid::add_child_cell(cellint id, int level, double *lo, double *hi)
 
   ChildInfo *ci = &cinfo[nlocal];
   ci->count = 0;
+  ci->count_wi = 0; // SWS - initialize the child cell information of the wi sum to 0
   ci->first = -1;
   ci->mask = 1;
   ci->type = OUTSIDE;

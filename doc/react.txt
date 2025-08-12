@@ -66,6 +66,10 @@ styles interpret and compute the specified reactions in different
 ways.  The data directory in the SPARTA distribution contains reaction
 files for these reaction models, all with the suffix ".tce".
 
+Note: the react styles are all enable for reactive SWS 
+computations.
+
+
 :line
 
 The {tce} style is Bird's Total Collision Energy (TCE) model.  When

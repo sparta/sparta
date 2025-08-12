@@ -481,7 +481,23 @@ void CreateParticles::create_local()
   if (np == 0) {
     double flowvol;
     MPI_Allreduce(&flowvolme,&flowvol,1,MPI_DOUBLE,MPI_SUM,world);
-    np = particle->mixture[imix]->nrho * flowvol / update->fnum;
+
+    // ========================================================================
+    // SWS - scale the total number of created particles based on the 
+    // species weight. More particles are created when using
+    // small weight. 
+    // ========================================================================
+    // Baseline code:
+    // np = particle->mixture[imix]->nrho * flowvol / update->fnum;
+    // Modified code:
+    int *species = particle->mixture[imix]->species;
+    Particle::Species *species_weight = particle->species;
+    int nspecies = particle->mixture[imix]->nspecies;
+    double *fraction = particle->mixture[imix]->fraction;
+    
+    for (int isp = 0; isp < nspecies; isp++) {
+      np += particle->mixture[imix]->nrho * flowvol * fraction[isp] / (update->fnum * species_weight[species[isp]].specwt);
+    }
   }
 
   // gather cummulative insertion volumes across all procs
@@ -628,6 +644,7 @@ void CreateParticles::create_local()
       rn = random->uniform();
 
       isp = 0;
+
       while (cummulative[isp] < rn) isp++;
       ispecies = species[isp];
 
@@ -730,7 +747,18 @@ void CreateParticles::create_local_twopass()
   if (np == 0) {
     double flowvol;
     MPI_Allreduce(&flowvolme,&flowvol,1,MPI_DOUBLE,MPI_SUM,world);
-    np = particle->mixture[imix]->nrho * flowvol / update->fnum;
+    // SWS
+    // Baseline code:
+    // np = particle->mixture[imix]->nrho * flowvol / update->fnum;
+    // Modified code:
+    int *species = particle->mixture[imix]->species;
+    Particle::Species *species_weight = particle->species;
+    int nspecies = particle->mixture[imix]->nspecies;
+    double *fraction = particle->mixture[imix]->fraction;
+    
+    for (int isp = 0; isp < nspecies; isp++) {
+      np += particle->mixture[imix]->nrho * flowvol * fraction[isp] / (update->fnum * species_weight[species[isp]].specwt);
+    }
   }
 
   // gather cummulative insertion volumes across all procs

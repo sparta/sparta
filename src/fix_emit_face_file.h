@@ -50,6 +50,7 @@ class FixEmitFaceFile : public FixEmit {
   double nrho_mix,temp_thermal_mix,temp_rot_mix,temp_vib_mix;
   double *vstream_mix,*vscale_mix,*fraction_mix;
   double *cummulative_mix,*fraction_user_mix;
+  double *cummulative_weighted_mix;  // SWS
   int *fraction_flag_mix,*species2species_mix;
 
   Surf::Line *lines;
@@ -93,6 +94,7 @@ class FixEmitFaceFile : public FixEmit {
     double vstream[3];
     double *fraction;
     double *cummulative;
+    double *cummulative_weighted;  // SWS
     double *vscale;
   };
 
