@@ -13,6 +13,7 @@
 ------------------------------------------------------------------------- */
 
 #include "fix_custom.h"
+#include "stdlib.h"
 #include "custom.h"
 #include "modify.h"
 #include "error.h"
