@@ -39,7 +39,9 @@ class CreateParticles : protected Pointers {
   double xp,yp,zp,vx,vy,vz;
   class Region *region;
 
-  int speciesflag,densflag,velflag,tempflag,normflag;
+  int nrho_flag,temp_flag,vstream_flag,species_flag;
+
+  int nrho_var_flag,vstream_var_flag,temp_var_flag,species_var_flag,normflag;
   char *sstr,*sxstr,*systr,*szstr;
   char *dstr,*dxstr,*dystr,*dzstr;
   char *tstr,*txstr,*tystr,*tzstr;
@@ -53,14 +55,21 @@ class CreateParticles : protected Pointers {
   char *txstr_copy,*tystr_copy,*tzstr_copy;
   char *vstrx_copy,*vstry_copy,*vstrz_copy;
 
+  int nrho_custom_flag,vstream_custom_flag,temp_custom_flag,fractions_custom_flag;
+  char *nrho_custom_id,*vstream_custom_id,*temp_custom_id,*fractions_custom_id;
+  int nrho_custom_index,vstream_custom_index,temp_custom_index,fractions_custom_index;
+  double *nrho_custom,*temp_custom;
+  double **vstream_custom,**fractions_custom;
+
   virtual void create_single();
   void create_local();
   void create_local_twopass();
   int species_variable(double *);
-  double density_variable(double *, double *);
+  double nrho_variable(double *, double *);
   double temperature_variable(double *);
-  void velocity_variable(double *, double *, double *);
+  void vstream_variable(double *, double *, double *);
   int outside_region(int, double *, double *);
+  void fractions_to_cummulative(int, double *, double *);
 };
 
 }

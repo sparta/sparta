@@ -71,10 +71,10 @@ FixEmitSurf::FixEmitSurf(SPARTA *sparta, int narg, char **arg) :
   subsonic_style = NOSUBSONIC;
   subsonic_warning = 0;
 
-  nrho_custom_flag = vstream_custom_flag = speed_custom_flag =
-    temp_custom_flag = fractions_custom_flag = 0;
-  nrho_custom_id = vstream_custom_id = speed_custom_id =
-    temp_custom_id = fractions_custom_id = NULL;
+  nrho_custom_flag = temp_custom_flag = vstream_custom_flag =
+    speed_custom_flag = fractions_custom_flag = 0;
+  nrho_custom_id = temp_custom_id = vstream_custom_id =
+    speed_custom_id = fractions_custom_id = NULL;
 
   max_cummulative = 0;
   cummulative_custom = NULL;
@@ -93,8 +93,8 @@ FixEmitSurf::FixEmitSurf(SPARTA *sparta, int narg, char **arg) :
                "with perspecies yes");
 
   int custom_any = 0;
-  if (nrho_custom_flag || vstream_custom_flag || speed_custom_flag ||
-      temp_custom_flag || fractions_custom_flag) custom_any = 1;
+  if (nrho_custom_flag || temp_custom_flag || vstream_custom_flag ||
+      speed_custom_flag || fractions_custom_flag) custom_any = 1;
   if (custom_any && npmode != FLOW)
     error->all(FLERR,"Cannot use fix emit/surf with n != 0 and custom options");
   if (custom_any && subsonic)
@@ -125,9 +125,9 @@ FixEmitSurf::~FixEmitSurf()
   delete [] npstr;
 
   delete [] nrho_custom_id;
+  delete [] temp_custom_id;
   delete [] vstream_custom_id;
   delete [] speed_custom_id;
-  delete [] temp_custom_id;
   delete [] fractions_custom_id;
   memory->destroy(cummulative_custom);
 
@@ -232,6 +232,15 @@ void FixEmitSurf::init()
       error->all(FLERR,"Fix emit/surf nrho custom attribute must be a vector");
   }
 
+  if (temp_custom_flag) {
+    temp_custom_index = surf->find_custom(temp_custom_id);
+    if (temp_custom_index < 0) error->all(FLERR,"Could not find fix surf/emit temp custom attribute");
+    if (surf->etype[temp_custom_index] != DOUBLE)
+      error->all(FLERR,"Fix emit/surf temp custom attribute must be floating point");
+    if (surf->esize[temp_custom_index] != 0)
+      error->all(FLERR,"Fix emit/surf temp custom attribute must be a vector");
+  }
+
   if (vstream_custom_flag) {
     vstream_custom_index = surf->find_custom(vstream_custom_id);
     if (vstream_custom_index < 0)
@@ -249,15 +258,6 @@ void FixEmitSurf::init()
       error->all(FLERR,"Fix emit/surf speed custom attribute must be floating point");
     if (surf->esize[speed_custom_index] != 0)
       error->all(FLERR,"Fix emit/surf speed custom attribute must be a vector");
-  }
-
-  if (temp_custom_flag) {
-    temp_custom_index = surf->find_custom(temp_custom_id);
-    if (temp_custom_index < 0) error->all(FLERR,"Could not find fix surf/emit temp custom attribute");
-    if (surf->etype[temp_custom_index] != DOUBLE)
-      error->all(FLERR,"Fix emit/surf temp custom attribute must be floating point");
-    if (surf->esize[temp_custom_index] != 0)
-      error->all(FLERR,"Fix emit/surf temp custom attribute must be a vector");
   }
 
   if (fractions_custom_flag) {
@@ -319,12 +319,12 @@ void FixEmitSurf::grid_changed()
 
   if (nrho_custom_flag && surf->estatus[nrho_custom_index] == 0)
     surf->spread_custom(nrho_custom_index);
+  if (temp_custom_flag && surf->estatus[temp_custom_index] == 0)
+    surf->spread_custom(temp_custom_index);
   if (vstream_custom_flag && surf->estatus[vstream_custom_index] == 0)
     surf->spread_custom(vstream_custom_index);
   if (speed_custom_flag && surf->estatus[speed_custom_index] == 0)
     surf->spread_custom(speed_custom_index);
-  if (temp_custom_flag && surf->estatus[temp_custom_index] == 0)
-    surf->spread_custom(temp_custom_index);
   if (fractions_custom_flag && surf->estatus[fractions_custom_index] == 0)
     surf->spread_custom(fractions_custom_index);
 
@@ -412,14 +412,14 @@ void FixEmitSurf::create_task(int icell)
   Surf::Tri *tris = surf->tris;
 
   double nrho = particle->mixture[imix]->nrho;
+  double temp_thermal = particle->mixture[imix]->temp_thermal;
   double *vstream = particle->mixture[imix]->vstream;
   double *vscale = particle->mixture[imix]->vscale;
-  double temp_thermal = particle->mixture[imix]->temp_thermal;
 
   if (nrho_custom_flag) nrho_custom = surf->edvec_local[surf->ewhich[nrho_custom_index]];
+  if (temp_custom_flag) temp_custom = surf->edvec_local[surf->ewhich[temp_custom_index]];
   if (vstream_custom_flag) vstream_custom = surf->edarray_local[surf->ewhich[vstream_custom_index]];
   if (speed_custom_flag) speed_custom = surf->edvec_local[surf->ewhich[speed_custom_index]];
-  if (temp_custom_flag) temp_custom = surf->edvec_local[surf->ewhich[temp_custom_index]];
   if (fractions_custom_flag) fractions_custom =
                                surf->edarray_local[surf->ewhich[fractions_custom_index]];
   double temp_thermal_custom;
@@ -444,9 +444,9 @@ void FixEmitSurf::create_task(int icell)
     // if requested, override mixture properties with custom per-surf attributes
 
     if (nrho_custom_flag) nrho = nrho_custom[isurf];
+    if (temp_custom_flag) temp_thermal_custom = temp_custom[isurf];
     if (vstream_custom_flag) vstream = vstream_custom[isurf];
     if (speed_custom_flag) magvstream = speed_custom[isurf];
-    if (temp_custom_flag) temp_thermal_custom = temp_custom[isurf];
     if (fractions_custom_flag) fraction = fractions_custom[isurf];
 
     // set cell parameters of task
@@ -765,6 +765,9 @@ void FixEmitSurf::perform_task()
             for (int k = 0; k < nsurf_tally; k++)
               slist_active[k]->surf_tally(isurf,pcell,0,NULL,p,NULL);
 
+          // if using per-surf custom attributes,
+          // temps/vstream already set to custom attributes in create_task
+
           if (nfix_update_custom)
             modify->update_custom(particle->nlocal-1,temp_thermal,
                                   temp_rot,temp_vib,vstream);
@@ -873,6 +876,9 @@ void FixEmitSurf::perform_task()
         if (nsurf_tally)
           for (int k = 0; k < nsurf_tally; k++)
             slist_active[k]->surf_tally(isurf,pcell,0,NULL,p,NULL);
+
+        // temps/vstream already set to custom attributes in create_task
+        // if per-surf custom attributes are being used
 
         if (nfix_update_custom)
           modify->update_custom(particle->nlocal-1,temp_thermal,
@@ -1228,7 +1234,7 @@ int FixEmitSurf::option(int narg, char **arg)
   if (strcmp(arg[0],"custom") == 0) {
     if (3 > narg) error->all(FLERR,"Illegal fix emit/surf command");
 
-    if (strcmp(arg[1],"nrho") == 0) {
+    if (strcmp(arg[1],"density") == 0) {
       nrho_custom_flag = 1;
       if (strstr(arg[2],"s_") != arg[2])
         error->all(FLERR,"Illegal fix emit/surf command");
@@ -1236,6 +1242,15 @@ int FixEmitSurf::option(int narg, char **arg)
       delete [] nrho_custom_id;
       nrho_custom_id = new char[n];
       strcpy(nrho_custom_id,&arg[2][2]);
+
+    } else if (strcmp(arg[1],"temperature") == 0) {
+      temp_custom_flag = 1;
+      if (strstr(arg[2],"s_") != arg[2])
+        error->all(FLERR,"Illegal fix emit/surf command");
+      int n = strlen(arg[2]);
+      delete [] temp_custom_id;
+      temp_custom_id = new char[n];
+      strcpy(temp_custom_id,&arg[2][2]);
 
     } else if (strcmp(arg[1],"vstream") == 0) {
       vstream_custom_flag = 1;
@@ -1254,15 +1269,6 @@ int FixEmitSurf::option(int narg, char **arg)
       delete [] speed_custom_id;
       speed_custom_id = new char[n];
       strcpy(speed_custom_id,&arg[2][2]);
-
-    } else if (strcmp(arg[1],"temp") == 0) {
-      temp_custom_flag = 1;
-      if (strstr(arg[2],"s_") != arg[2])
-        error->all(FLERR,"Illegal fix emit/surf command");
-      int n = strlen(arg[2]);
-      delete [] temp_custom_id;
-      temp_custom_id = new char[n];
-      strcpy(temp_custom_id,&arg[2][2]);
 
     } else if (strcmp(arg[1],"fractions") == 0) {
       fractions_custom_flag = 1;

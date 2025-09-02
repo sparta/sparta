@@ -1679,7 +1679,7 @@ various ways:
 <P><B>Per-grid custom attributes:</B>
 </P>
 <UL><LI><A HREF = "compute_reduce.html">compute reduce</A> - reduce a per-grid attribute to a scalar value
-<LI><A HREF = "create_particles.html">create_particles</A> - use per-grid attributes when creating particles
+<LI><A HREF = "create_particles.html">create_particles</A> - create particles based on per-grid attributes
 <LI><A HREF = "custom.html">custom</A> - create or set or remove the values of a per-grid attribute
 <LI><A HREF = "fix_custom.html">fix custom</A> - reset the values of a per-grid attribute during a simulation
 <LI><A HREF = "dump.html">dump grid</A> - output per-grid attributes to a dump file
@@ -1696,7 +1696,7 @@ various ways:
 <LI><A HREF = "fix_custom.html">fix custom</A> - reset the values of a per-surf attribute during a simulation
 <LI><A HREF = "dump.html">dump surf</A> - output per-surf attributes to a dump file
 <LI><A HREF = "fix_ave_surf.html">fix ave/surf</A> - time-average a per-surf attribute
-<LI><A HREF = "fix_emit_surf.html">fix emit/surf</A> - use per-surf attributes to adjust particle emission from each surf
+<LI><A HREF = "fix_emit_surf.html">fix emit/surf</A> - use per-surf attributes to vary particle emission from each surf
 <LI><A HREF = "fix_surf_temp.html">fix surf/temp</A> - set the temperature of each surf based on gas collisions
 <LI><A HREF = "read_surf.html">read_surf</A> - define and initialize per-surf attributes
 <LI><A HREF = "surf_collide.html">surf_collide</A> - use a per-surf attribute as temperature for particle/surf collisions
@@ -1767,15 +1767,15 @@ advance the solution locally. The benefit of the global timestep
 calculation is that it will automatically reduce the timestep if the
 intial value is too large, leading to higher accuracy, and it will
 automatically increase the timestep if the initial value is too small,
-speeding up the simulation. The overhead of using the variable timestep
-option is the computational time involved in computing the cell-based
-time quantities and performing parallel reductions over the grid to
-construct the global minimum and average cell timesteps needed for the
-global timestep calculation. For scenarios where ensembles of similar
-problems are being run, one strategy to mitigate this cost is to
-determine an optimal timestep using the variable timestep option for
-the first run and then to utilize this timestep as a user-specified
-value for the subsequent runs.
+speeding up the simulation. The overhead of using the variable
+timestep option is the computational time involved in computing the
+cell-based time quantities and performing parallel reductions over the
+grid to construct the global minimum and average cell timesteps needed
+for the global timestep calculation. For scenarios where ensembles of
+similar problems are being run, one strategy to mitigate this cost is
+to determine an optimal timestep using the variable timestep option
+for the first run and then to utilize this timestep as a
+user-specified value for the subsequent runs.
 </P>
 <P>The <A HREF = "compute_dt_grid.html">compute dt/grid</A> command is used to
 calculate the cell-based timesteps, and the <A HREF = "fix_dt_reset.html">fix
