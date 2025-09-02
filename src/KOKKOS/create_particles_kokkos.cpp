@@ -65,6 +65,12 @@ void CreateParticlesKokkos::create_local(bigint np)
   grid_kk->sync(Host,CINFO_MASK|CELL_MASK|SINFO_MASK);
   int nglocal = grid->nlocal;
 
+  if (nrho_custom_flag) nrho_custom = grid->edvec[grid->ewhich[nrho_custom_index]];
+  if (temp_custom_flag) temp_custom = grid->edvec[grid->ewhich[temp_custom_index]];
+  if (vstream_custom_flag) vstream_custom = grid->edarray[grid->ewhich[vstream_custom_index]];
+  if (fractions_custom_flag) fractions_custom =
+                               grid->edarray[grid->ewhich[fractions_custom_index]];
+
   // flowvol = total weighted flow volume of all cells
   //   skip cells inside surfs and split cells
   //   skip cells outside defined region

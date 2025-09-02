@@ -179,25 +179,25 @@ void CreateParticles::command(int narg, char **arg)
 
       if (strcmp(arg[iarg+1],"density") == 0) {
         nrho_custom_flag = 1;
-        if (strstr(arg[iarg+2],"s_") != arg[iarg+2])
+        if (strstr(arg[iarg+2],"g_") != arg[iarg+2])
           error->all(FLERR,"Illegal create_particles command");
         nrho_custom_id = &arg[iarg+2][2];
 
       } else if (strcmp(arg[iarg+1],"temperature") == 0) {
         temp_custom_flag = 1;
-        if (strstr(arg[iarg+2],"s_") != arg[iarg+2])
+        if (strstr(arg[iarg+2],"g_") != arg[iarg+2])
           error->all(FLERR,"Illegal create_particles command");
         temp_custom_id = &arg[iarg+2][2];
 
       } else if (strcmp(arg[iarg+1],"vstream") == 0) {
         vstream_custom_flag = 1;
-        if (strstr(arg[iarg+2],"s_") != arg[iarg+2])
+        if (strstr(arg[iarg+2],"g_") != arg[iarg+2])
           error->all(FLERR,"Illegal create_particles command");
         vstream_custom_id = &arg[iarg+2][2];
 
       } else if (strcmp(arg[iarg+1],"fractions") == 0) {
         fractions_custom_flag = 1;
-        if (strstr(arg[iarg+2],"s_") != arg[iarg+2])
+        if (strstr(arg[iarg+2],"g_") != arg[iarg+2])
           error->all(FLERR,"Illegal create_particles command");
         fractions_custom_id = &arg[iarg+2][2];
 
@@ -552,6 +552,12 @@ void CreateParticles::create_local()
   Grid::SplitInfo *sinfo = grid->sinfo;
   int nglocal = grid->nlocal;
 
+  if (nrho_custom_flag) nrho_custom = grid->edvec[grid->ewhich[nrho_custom_index]];
+  if (temp_custom_flag) temp_custom = grid->edvec[grid->ewhich[temp_custom_index]];
+  if (vstream_custom_flag) vstream_custom = grid->edarray[grid->ewhich[vstream_custom_index]];
+  if (fractions_custom_flag) fractions_custom =
+                               grid->edarray[grid->ewhich[fractions_custom_index]];
+
   // flowvol = total weighted flow volume of all cells
   //   skip cells inside surfs and split cells
   //   skip cells outside defined region
@@ -834,6 +840,12 @@ void CreateParticles::create_local_twopass()
   Grid::ChildInfo *cinfo = grid->cinfo;
   Grid::SplitInfo *sinfo = grid->sinfo;
   int nglocal = grid->nlocal;
+
+  if (nrho_custom_flag) nrho_custom = grid->edvec[grid->ewhich[nrho_custom_index]];
+  if (temp_custom_flag) temp_custom = grid->edvec[grid->ewhich[temp_custom_index]];
+  if (vstream_custom_flag) vstream_custom = grid->edarray[grid->ewhich[vstream_custom_index]];
+  if (fractions_custom_flag) fractions_custom =
+                               grid->edarray[grid->ewhich[fractions_custom_index]];
 
   // flowvol = total weighted flow volume of all cells
   //   skip cells inside surfs and split cells
