@@ -133,7 +133,7 @@ Grid::Grid(SPARTA *sparta) : Pointers(sparta)
 
   ncustom = 0;
   ename = NULL;
-  etype = esize = ewhich = NULL;
+  etype = esize = estatus = ewhich = NULL;
 
   ncustom_ivec = ncustom_iarray = 0;
   icustom_ivec = icustom_iarray = NULL;
@@ -187,6 +187,7 @@ Grid::~Grid()
   memory->sfree(ename);
   memory->destroy(etype);
   memory->destroy(esize);
+  memory->destroy(estatus);
   memory->destroy(ewhich);
 
   for (int i = 0; i < ncustom_ivec; i++)
@@ -472,6 +473,8 @@ void Grid::acquire_ghosts(int surfflag)
     error->warning(FLERR,"Could not acquire nearby ghost cells b/c "
                    "grid partition is not clumped");
 
+  for (int i = 0; i < ncustom; i++) grid->estatus[i] = 1;
+ 
   if (surf->distributed && !surf->implicit) {
     surf->hash->clear();
     surf->hashfilled = 0;

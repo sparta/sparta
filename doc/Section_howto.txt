@@ -1645,10 +1645,14 @@ attricute stores can be either integer or floating point numbers.
 
 The "custom"_custom.html command can create and set/reset custom
 attribute values for all 3 flavors of attributes.  Either by invoking
-per-particle, per-grid, or per-surf variables, or by reading a file.
-The "fix custom"_fix_custom.html command can do the same thing
-periodically as a simulation runs.  "Dump"_dump.html commands can
-output all 3 flavors of attributes.
+per-particle, per-grid, or per-surf variables, or by reading a file
+with one line of attribute values per particle/grid/surf.  In the case
+of per-grid attributes, it can also read a coarse file with values for
+coarse grid points.  The attributed values for each grid cell are set
+to values of the nearset coarse grid point.  The "fix
+custom"_fix_custom.html command can do the same thing periodically as
+a simulation runs.  "Dump"_dump.html commands can output all 3 flavors
+of attributes.
 
 Here are lists of current commands which use custom attributes in
 various ways:
@@ -1682,7 +1686,7 @@ surf_react implicit - use per-grid vectors and an array to store chemical state 
 "fix custom"_fix_custom.html - reset the values of a per-surf attribute during a simulation
 "dump surf"_dump.html - output per-surf attributes to a dump file
 "fix ave/surf"_fix_ave_surf.html - time-average a per-surf attribute
-"fix emit/surf"_fix_emit_surf.html - use per-surf attributes to varu particle emission from each surf
+"fix emit/surf"_fix_emit_surf.html - use per-surf attributes to vary particle emission from each surf
 "fix surf/temp"_fix_surf_temp.html - set the temperature of each surf based on gas collisions
 "read_surf"_read_surf.html - define and initialize per-surf attributes
 "surf_collide"_surf_collide.html - use a per-surf attribute as temperature for particle/surf collisions

@@ -34,7 +34,7 @@ compute             2 property/grid all id
 run                 0
 
 variable            gdvec grid c_2*1e20
-custom              grid dvec set v_gdvec all NULL
+custom              grid create dvec float 0 set dvec v_gdvec all NULL
 
 create_particles    air n 0 custom density g_dvec 
 

@@ -1655,10 +1655,14 @@ attricute stores can be either integer or floating point numbers.
 </P>
 <P>The <A HREF = "custom.html">custom</A> command can create and set/reset custom
 attribute values for all 3 flavors of attributes.  Either by invoking
-per-particle, per-grid, or per-surf variables, or by reading a file.
-The <A HREF = "fix_custom.html">fix custom</A> command can do the same thing
-periodically as a simulation runs.  <A HREF = "dump.html">Dump</A> commands can
-output all 3 flavors of attributes.
+per-particle, per-grid, or per-surf variables, or by reading a file
+with one line of attribute values per particle/grid/surf.  In the case
+of per-grid attributes, it can also read a coarse file with values for
+coarse grid points.  The attributed values for each grid cell are set
+to values of the nearset coarse grid point.  The <A HREF = "fix_custom.html">fix
+custom</A> command can do the same thing periodically as
+a simulation runs.  <A HREF = "dump.html">Dump</A> commands can output all 3 flavors
+of attributes.
 </P>
 <P>Here are lists of current commands which use custom attributes in
 various ways:
@@ -1692,7 +1696,7 @@ various ways:
 <LI><A HREF = "fix_custom.html">fix custom</A> - reset the values of a per-surf attribute during a simulation
 <LI><A HREF = "dump.html">dump surf</A> - output per-surf attributes to a dump file
 <LI><A HREF = "fix_ave_surf.html">fix ave/surf</A> - time-average a per-surf attribute
-<LI><A HREF = "fix_emit_surf.html">fix emit/surf</A> - use per-surf attributes to varu particle emission from each surf
+<LI><A HREF = "fix_emit_surf.html">fix emit/surf</A> - use per-surf attributes to vary particle emission from each surf
 <LI><A HREF = "fix_surf_temp.html">fix surf/temp</A> - set the temperature of each surf based on gas collisions
 <LI><A HREF = "read_surf.html">read_surf</A> - define and initialize per-surf attributes
 <LI><A HREF = "surf_collide.html">surf_collide</A> - use a per-surf attribute as temperature for particle/surf collisions
