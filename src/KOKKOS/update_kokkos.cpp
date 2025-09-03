@@ -12,6 +12,12 @@
    See the README file in the top-level SPARTA directory.
 ------------------------------------------------------------------------- */
 
+/* ----------------------------------------------------------------------
+   Optimizations contributed by Matt Bettencourt (NVIDIA) are:
+    Copyright (c) 2025 NVIDIA CORPORATION & AFFILIATES. All rights
+    reserved.
+------------------------------------------------------------------------- */
+
 #include "spatype.h"
 #include "mpi.h"
 #include "math.h"
@@ -579,6 +585,13 @@ template < int DIM, int SURF, int REACT, int OPT > void UpdateKokkos::move()
     if (niterate == 1 && !continue_loop_flag) {
       pstart = 0;
       pstop = particle->nlocal;
+#if defined SPARTA_KOKKOS_GPU
+      if (fstyle == NOFIELD && d_not_updated.extent(0) < pstop) {
+        d_not_updated = DAT::t_int_1d("not_updated",pstop*1.05);
+        d_not_updated_cnt = DAT::t_int_scalar("not_updated_cnt");
+        h_not_updated_cnt = HAT::t_int_scalar("h_not_updated_cnt");
+      }
+#endif
     }
 
     UPDATE_REDUCE reduce;
@@ -608,13 +621,20 @@ template < int DIM, int SURF, int REACT, int OPT > void UpdateKokkos::move()
                          0 = don't need atomics
                         -1 = use parallel_reduce
     */
-
 #if defined SPARTA_KOKKOS_GPU
-  #if defined(KOKKOS_ARCH_AMD_GFX940) || defined(KOKKOS_ARCH_AMD_GFX942) || defined(KOKKOS_ARCH_AMD_GFX942_APU)
+    if (fstyle == NOFIELD && niterate == 1 && !continue_loop_flag) {
+
+      // on the first pass, split the move on GPU
+
+      Kokkos::deep_copy(d_not_updated_cnt,0);
+      Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagUpdateMoveFirstPass<DIM> >(pstart,pstop),*this);
+      Kokkos::deep_copy(h_not_updated_cnt,d_not_updated_cnt);
+      int team_size = 128;
+      int num_teams = (std::min<int>(DeviceType::concurrency(),h_not_updated_cnt())-1)/team_size+1;
+      auto policy = Kokkos::TeamPolicy<DeviceType, TagUpdateMoveIndirect<DIM,SURF,REACT,OPT,-1> >(num_teams,team_size);
+      Kokkos::parallel_reduce(policy,*this,reduce);
+    } else
       Kokkos::parallel_reduce(Kokkos::RangePolicy<DeviceType, TagUpdateMove<DIM,SURF,REACT,OPT,-1> >(pstart,pstop),*this,reduce);
-  #else
-      Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagUpdateMove<DIM,SURF,REACT,OPT,1> >(pstart,pstop),*this);
-  #endif
 #elif defined KOKKOS_ENABLE_SERIAL
       if constexpr(std::is_same<DeviceType,Kokkos::Serial>::value)
         Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagUpdateMove<DIM,SURF,REACT,OPT,0> >(pstart,pstop),*this);
@@ -813,10 +833,79 @@ void UpdateKokkos::operator()(TagUpdateMove<DIM,SURF,REACT,OPT,ATOMIC_REDUCTION>
 }
 
 /*-----------------------------------------------------------------------------*/
+template<int DIM>
+KOKKOS_INLINE_FUNCTION
+void UpdateKokkos::operator()(TagUpdateMoveFirstPass<DIM>, const int i) const {
+  Particle::OnePart &particle_i = d_particles[i];
+
+  int &pflag = particle_i.flag;
+  if (pflag != PKEEP ) {
+    if (pflag == PDONE)
+      pflag = PKEEP;
+    else {
+      const int indx = Kokkos::atomic_fetch_add(&d_not_updated_cnt(),1);
+      d_not_updated(indx) = i;
+      return;
+    }
+  }
+
+  const double* const v = particle_i.v;
+  double* x = particle_i.x;
+  double xnew[DIM];
+  xnew[0] = x[0] + dt*v[0];
+  if (DIM > 1) xnew[1] = x[1] + dt*v[1];
+  if (DIM > 2) xnew[2] = x[2] + dt*v[2];
+
+  int icell = particle_i.icell;
+  int nsurf = d_cells[icell].nsurf;
+  if (nsurf) {
+    const int indx = Kokkos::atomic_fetch_add(&d_not_updated_cnt(),1);
+    d_not_updated(indx) = i;
+    return;
+  }
+
+  const double* const lo = d_cells[icell].lo;
+  const double* const hi = d_cells[icell].hi;
+  bool leave = false;
+  if (xnew[0] < lo[0] || xnew[0] >= hi[0]) leave=true;
+  if (DIM > 1 && (xnew[1] < lo[1] || xnew[1] >= hi[1])) leave = true;
+  if (DIM > 2 && (xnew[2] < lo[2] || xnew[2] >= hi[2])) leave = true;
+
+  if (leave) {
+    const int indx = Kokkos::atomic_fetch_add(&d_not_updated_cnt(),1);
+    d_not_updated(indx) = i;
+    return;
+  }
+
+  x[0] = xnew[0];
+  if (DIM > 1) x[1] = xnew[1];
+  if (DIM > 2) x[2] = xnew[2];
+  pflag = PKEEP;
+
+}
+/*-----------------------------------------------------------------------------*/
 
 template<int DIM, int SURF, int REACT, int OPT, int ATOMIC_REDUCTION>
 KOKKOS_INLINE_FUNCTION
 void UpdateKokkos::operator()(TagUpdateMove<DIM,SURF,REACT,OPT,ATOMIC_REDUCTION>, const int &i, UPDATE_REDUCE &reduce) const {
+  moveOne<DIM,SURF,REACT,OPT,ATOMIC_REDUCTION>(i,reduce);
+}
+
+/*-----------------------------------------------------------------------------*/
+
+template<int DIM, int SURF, int REACT, int OPT, int ATOMIC_REDUCTION>
+KOKKOS_INLINE_FUNCTION
+void UpdateKokkos::operator()(TagUpdateMoveIndirect<DIM,SURF,REACT,OPT,ATOMIC_REDUCTION>,
+     const typename Kokkos::TeamPolicy<DeviceType, TagUpdateMove<DIM,SURF,REACT,OPT,ATOMIC_REDUCTION>>::member_type &team,
+     UPDATE_REDUCE &reduce) const {
+  int i = team.team_rank() + team.team_size()*team.league_rank();
+  for (; i < d_not_updated_cnt(); i += team.league_size()*team.team_size())
+    moveOne<DIM,SURF,REACT,OPT,ATOMIC_REDUCTION>(d_not_updated(i),reduce);
+}
+
+template<int DIM, int SURF, int REACT, int OPT, int ATOMIC_REDUCTION>
+KOKKOS_INLINE_FUNCTION
+void UpdateKokkos::moveOne(const int &i, UPDATE_REDUCE &reduce) const {
   if (d_error_flag() || d_retry()) return;
 
   // int m;
