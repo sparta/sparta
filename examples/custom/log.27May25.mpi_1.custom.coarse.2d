@@ -1,0 +1,125 @@
+SPARTA (20 Jan 2025)
+Running on 1 MPI task(s)
+# advect particles via VSS collisional flow on a uniform grid
+# particles reflect off global box boundaries
+
+variable            x index 4
+variable            y index 4
+variable            z index 1
+
+variable            lx equal 4
+variable            ly equal 4
+
+seed	    	    12345
+dimension   	    2
+#global              gridcut 1.0e-5
+
+boundary	    rr rr p
+
+create_box  	    0 ${lx} 0 ${ly} -0.5 0.5
+create_box  	    0 4 0 ${ly} -0.5 0.5
+create_box  	    0 4 0 4 -0.5 0.5
+Created orthogonal box = (0 0 -0.5) to (4 4 0.5)
+create_grid 	    $x $y $z
+create_grid 	    4 $y $z
+create_grid 	    4 4 $z
+create_grid 	    4 4 1
+Created 16 child grid cells
+  CPU time = 0.000597128 secs
+  create/ghost percent = 96.3107 3.68933
+
+species		    air.species N O
+mixture		    air N O vstream 0.0 0.0 0.0 temp 273.15
+
+global              nrho 1.0
+global              fnum 1.0
+
+#collide		    vss air air.vss
+
+#create_particles    air n $n
+
+stats		    10
+compute             temp temp
+stats_style	    step cpu np nattempt ncoll c_temp
+
+custom              grid create rho float 0 create vstream float 3
+Custom grid attributes set = 0
+custom              grid file/coarse 1 text file.coarse.2d                     4 rho vstream[1] vstream[2] vstream[3]
+Reading custom file/coarse file.coarse.2d ...
+  4 coarse grid points with 4 values each
+  KD tree stats:
+    4 = points stored
+    7 = # of nodes
+    3 = # of branches
+    4 = # of leaves
+    3 = maxdepth
+    16 = number of grid cell searches
+    0.707107 = ave distance of nearest points
+    2.5 = ave node count to find nearest points
+    2.5 = ave leaf count to find nearest points
+    1 = ave count of neighbor points
+    2.5 = ave node count to find neighbor points
+    2.25 = ave leaf count to find neighbor points
+Custom grid attributes set = 64
+
+dump                1 grid all 10 dump.coarse.2d id xc yc g_rho g_vstream[*]
+
+timestep 	    0.1
+run                 10
+Memory usage per proc in Mbytes:
+  particles (ave,min,max) = 0 0 0
+  grid      (ave,min,max) = 1.51379 1.51379 1.51379
+  surf      (ave,min,max) = 0 0 0
+  total     (ave,min,max) = 1.51379 1.51379 1.51379
+Step CPU Np Natt Ncoll c_temp 
+       0            0        0        0        0            0 
+      10   2.1471e-05        0        0        0            0 
+Loop time of 2.5267e-05 on 1 procs for 10 steps with 0 particles
+
+MPI task timing breakdown:
+Section |  min time  |  avg time  |  max time  |%varavg| %total
+---------------------------------------------------------------
+Move    | 1.189e-06  | 1.189e-06  | 1.189e-06  |   0.0 |  4.71
+Coll    | 0          | 0          | 0          |   0.0 |  0.00
+Sort    | 0          | 0          | 0          |   0.0 |  0.00
+Comm    | 1.395e-06  | 1.395e-06  | 1.395e-06  |   0.0 |  5.52
+Modify  | 0          | 0          | 0          |   0.0 |  0.00
+Output  | 2.1831e-05 | 2.1831e-05 | 2.1831e-05 |   0.0 | 86.40
+Other   |            | 8.52e-07   |            |       |  3.37
+
+Particle moves    = 0 (0K)
+Cells touched     = 0 (0K)
+Particle comms    = 0 (0K)
+Boundary collides = 0 (0K)
+Boundary exits    = 0 (0K)
+SurfColl checks   = 0 (0K)
+SurfColl occurs   = 0 (0K)
+Surf reactions    = 0 (0K)
+Collide attempts  = 0 (0K)
+Collide occurs    = 0 (0K)
+Reactions         = 0 (0K)
+Particles stuck   = 0
+Axisymm bad moves = 0
+
+Particle-moves/CPUsec/proc: 0
+Particle-moves/step: 0
+Cell-touches/particle/step: 0
+Particle comm iterations/step: 0
+Particle fraction communicated: 0
+Particle fraction colliding with boundary: 0
+Particle fraction exiting boundary: 0
+Surface-checks/particle/step: 0
+Surface-collisions/particle/step: 0
+Surf-reactions/particle/step: 0
+Collision-attempts/particle/step: 0
+Collisions/particle/step: 0
+Reactions/particle/step: 0
+
+Particles: 0 ave 0 max 0 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+Cells:      16 ave 16 max 16 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+GhostCell: 0 ave 0 max 0 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+EmptyCell: 0 ave 0 max 0 min
+Histogram: 1 0 0 0 0 0 0 0 0 0

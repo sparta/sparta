@@ -1,0 +1,214 @@
+SPARTA (20 Jan 2025)
+Running on 1 MPI task(s)
+################################################################################
+# 2d flow around a circle
+#
+# Note:
+#  - The "comm/sort” option to the “global” command is used to match MPI runs.
+#  - The “twopass” option is used to match Kokkos runs.
+# The "comm/sort" and "twopass" options should not be used for production runs.
+################################################################################
+
+seed	    	    12345
+dimension   	    2
+global              gridcut 0.0 comm/sort yes
+global              surfs explicit/distributed
+
+boundary	    o r p
+
+create_box  	    0 10 0 10 -0.5 0.5
+Created orthogonal box = (0 0 -0.5) to (10 10 0.5)
+create_grid 	    20 20 1
+Created 400 child grid cells
+  CPU time = 0.00191595 secs
+  create/ghost percent = 90.9043 9.09568
+balance_grid        rcb cell
+Balance grid migrated 0 cells
+  CPU time = 0.000282178 secs
+  reassign/sort/migrate/ghost percent = 57.182 0.687864 14.7875 27.3427
+
+global		    nrho 1.0 fnum 1.0
+
+species		    air.species N O
+mixture		    air N O vstream 100.0 0 0
+
+read_surf           data.circle
+  50 lines
+  2 8 xlo xhi
+  2.00592 7.99408 ylo yhi
+  0 0 zlo zhi
+  0.376743 min line length
+  48 0 = cells overlapping surfs, overlap cells with unmarked corner pts
+  264 88 48 = cells outside/inside/overlapping surfs
+  48 = surf cells with 1,2,etc splits
+  71.8 71.8 = cell-wise and global flow volume
+  CPU time = 0.000995766 secs
+  read/check/sort/surf2grid/ghost/inout/particle percent = 10.0043 10.1827 1.39963 71.9293 6.48405 5.09407 0.0210893
+  surf2grid time = 0.000716248 secs
+  map/comm1/comm2/comm3/comm4/split percent = 39.4196 6.22494 9.92128 3.8502 17.7859 6.89272
+
+custom              surf create tsurf float 0 file file.custom.0 1 tsurf
+Custom surf attributes set = 50
+
+surf_collide	    1 diffuse s_tsurf 0.0
+surf_modify         all collide 1
+
+collide             vss air air.vss
+
+fix		    in emit/face air xlo twopass # subsonic 0.1 NULL
+
+timestep 	    0.0001
+
+#dump                2 image all 50 image.*.ppm type type pdiam 0.1 #                    surf proc 0.01 size 512 512 zoom 1.75 #                    gline yes 0.005
+#dump_modify	    2 pad 4
+
+#dump                1 surf all 500 tmp.custom id type s_tsurf
+
+stats		    100
+stats_style	    step cpu np nattempt ncoll nscoll nscheck
+run 		    1000
+Memory usage per proc in Mbytes:
+  particles (ave,min,max) = 0 0 0
+  grid      (ave,min,max) = 1.51379 1.51379 1.51379
+  surf      (ave,min,max) = 0.00991821 0.00991821 0.00991821
+  total     (ave,min,max) = 1.52371 1.52371 1.52371
+Step CPU Np Natt Ncoll Nscoll Nscheck 
+       0            0        0        0        0        0        0 
+     100    0.0010896       22        0        0        0        0 
+     200  0.001338804       35        0        0        0        9 
+     300  0.001586346       40        0        0        0        5 
+     400   0.00180666       35        0        0        1        8 
+     500  0.002027538       36        0        0        0        8 
+     600  0.002237258       42        0        0        0        1 
+     700  0.002466882       47        0        0        0       15 
+     800  0.002673515       46        0        0        1       17 
+     900  0.002890502       53        0        0        0        8 
+    1000   0.00309455       37        0        0        0       12 
+Loop time of 0.00309699 on 1 procs for 1000 steps with 37 particles
+
+MPI task timing breakdown:
+Section |  min time  |  avg time  |  max time  |%varavg| %total
+---------------------------------------------------------------
+Move    | 0.00064865 | 0.00064865 | 0.00064865 |   0.0 | 20.94
+Coll    | 0.00038754 | 0.00038754 | 0.00038754 |   0.0 | 12.51
+Sort    | 0.00050212 | 0.00050212 | 0.00050212 |   0.0 | 16.21
+Comm    | 5.8451e-05 | 5.8451e-05 | 5.8451e-05 |   0.0 |  1.89
+Modify  | 0.0013697  | 0.0013697  | 0.0013697  |   0.0 | 44.23
+Output  | 3.8057e-05 | 3.8057e-05 | 3.8057e-05 |   0.0 |  1.23
+Other   |            | 9.244e-05  |            |       |  2.98
+
+Particle moves    = 36734 (36.7K)
+Cells touched     = 41555 (41.6K)
+Particle comms    = 0 (0K)
+Boundary collides = 172 (0.172K)
+Boundary exits    = 167 (0.167K)
+SurfColl checks   = 7698 (7.7K)
+SurfColl occurs   = 165 (0.165K)
+Surf reactions    = 0 (0K)
+Collide attempts  = 0 (0K)
+Collide occurs    = 0 (0K)
+Reactions         = 0 (0K)
+Particles stuck   = 0
+Axisymm bad moves = 0
+
+Particle-moves/CPUsec/proc: 1.18612e+07
+Particle-moves/step: 36.734
+Cell-touches/particle/step: 1.13124
+Particle comm iterations/step: 1
+Particle fraction communicated: 0
+Particle fraction colliding with boundary: 0.00468231
+Particle fraction exiting boundary: 0.0045462
+Surface-checks/particle/step: 0.209561
+Surface-collisions/particle/step: 0.00449175
+Surf-reactions/particle/step: 0
+Collision-attempts/particle/step: 0
+Collisions/particle/step: 0
+Reactions/particle/step: 0
+
+Particles: 37 ave 37 max 37 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+Cells:      400 ave 400 max 400 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+GhostCell: 0 ave 0 max 0 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+EmptyCell: 0 ave 0 max 0 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+Surfs:    50 ave 50 max 50 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+GhostSurf: 0 ave 0 max 0 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+
+custom              surf file file.custom.1000 1 tsurf
+Custom surf attributes set = 50
+
+run 		    1000
+Memory usage per proc in Mbytes:
+  particles (ave,min,max) = 1.6875 1.6875 1.6875
+  grid      (ave,min,max) = 1.51379 1.51379 1.51379
+  surf      (ave,min,max) = 0.00991821 0.00991821 0.00991821
+  total     (ave,min,max) = 3.21121 3.21121 3.21121
+Step CPU Np Natt Ncoll Nscoll Nscheck 
+    1000            0       37        0        0        0        0 
+    1100  0.000197964       52        0        0        0        8 
+    1200  0.000391257       54        0        0        1        4 
+    1300  0.000560937       47        0        0        0        2 
+    1400  0.000724607       47        0        0        0        9 
+    1500   0.00089507       50        0        0        0        8 
+    1600  0.001055008       41        0        0        0        7 
+    1700  0.001205228       51        0        0        0       10 
+    1800  0.001356773       47        0        0        0        9 
+    1900  0.001505102       41        0        0        1       29 
+    2000  0.001640341       43        0        0        0        6 
+Loop time of 0.00164217 on 1 procs for 1000 steps with 43 particles
+
+MPI task timing breakdown:
+Section |  min time  |  avg time  |  max time  |%varavg| %total
+---------------------------------------------------------------
+Move    | 0.00054177 | 0.00054177 | 0.00054177 |   0.0 | 32.99
+Coll    | 0.00028233 | 0.00028233 | 0.00028233 |   0.0 | 17.19
+Sort    | 0.00036506 | 0.00036506 | 0.00036506 |   0.0 | 22.23
+Comm    | 3.9592e-05 | 3.9592e-05 | 3.9592e-05 |   0.0 |  2.41
+Modify  | 0.00033277 | 0.00033277 | 0.00033277 |   0.0 | 20.26
+Output  | 2.1639e-05 | 2.1639e-05 | 2.1639e-05 |   0.0 |  1.32
+Other   |            | 5.9e-05    |            |       |  3.59
+
+Particle moves    = 46459 (46.5K)
+Cells touched     = 52452 (52.5K)
+Particle comms    = 0 (0K)
+Boundary collides = 227 (0.227K)
+Boundary exits    = 214 (0.214K)
+SurfColl checks   = 10053 (10.1K)
+SurfColl occurs   = 229 (0.229K)
+Surf reactions    = 0 (0K)
+Collide attempts  = 0 (0K)
+Collide occurs    = 0 (0K)
+Reactions         = 0 (0K)
+Particles stuck   = 0
+Axisymm bad moves = 0
+
+Particle-moves/CPUsec/proc: 2.82912e+07
+Particle-moves/step: 46.459
+Cell-touches/particle/step: 1.129
+Particle comm iterations/step: 1
+Particle fraction communicated: 0
+Particle fraction colliding with boundary: 0.00488603
+Particle fraction exiting boundary: 0.00460621
+Surface-checks/particle/step: 0.216384
+Surface-collisions/particle/step: 0.00492908
+Surf-reactions/particle/step: 0
+Collision-attempts/particle/step: 0
+Collisions/particle/step: 0
+Reactions/particle/step: 0
+
+Particles: 43 ave 43 max 43 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+Cells:      400 ave 400 max 400 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+GhostCell: 0 ave 0 max 0 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+EmptyCell: 0 ave 0 max 0 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+Surfs:    50 ave 50 max 50 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+GhostSurf: 0 ave 0 max 0 min
+Histogram: 1 0 0 0 0 0 0 0 0 0

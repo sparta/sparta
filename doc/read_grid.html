@@ -66,24 +66,26 @@ read, to assign child cells to processors in different ways.  The "fix
 balance" command can be used to re-assign them in a load-balanced
 manner periodically during a running simulation.
 </P>
-<P>The <I>custom</I> keyword allows a custom per-grid vector or array to be
-created and initialized.  Custom vectors or arrays associate a single
-value or multiple values with each grid cell.  They can be output by
-the <A HREF = "dump.html">dump grid</A> command and uses as inputs by other
-commands.  For example, many of the models for the
-<A HREF = "surf_collide.html">surf_collide</A> command take temperature as an input;
-use of a per-surf vector allows the temperature of individual surface
-elements to be specified.
+<P>The <I>custom</I> keyword allows for the creation of custom per-grid
+attributes and specification of their values.  See the <A HREF = "Section_howto.html#howto_17">Section
+6.17</A> doc page for an explanation of
+custom per-grid attributes.  Custom vectors or arrays associate a
+single value or multiple values with each grid cell.  They can be
+output by the <A HREF = "dump.html">dump grid</A> command and used as inputs by
+other commands.  For example, the
+<A HREF = "create_particles.html">create_particles</A> command can use per-grid
+values to influence the creation of particles in each grid cell and
+their properties.
 </P>
 <P>The <I>name</I> argument is the name assigned to the new custom vector or
 array.  The <I>datatytpe</I> argument is <I>int</I> or <I>float</I> which determines
 whether the vector/array stores integer or floating point values.  The
-<I>Nc</I> argument is 0 for a per-surgrid vector and an integer >= 1 for an
+<I>Nc</I> argument is 0 for a per-grid vector and an integer >= 1 for an
 array with <I>Nc</I> columns.  A per-grid vector stores a single value per
 grid cell; a per-grid array stores Nc values per grid cell.
 </P>
 <P>Each use of the <I>custom</I> keyword determines how many values are
-appended for each line following the grid cell ID.  For a custom
+appended to each line following the grid cell ID.  For a custom
 per-grid vector, a single value is appended.  For a custom per-grid
 array, Nc values are appended.  The values are assigned to custom
 vectors or arrays in the order the <I>custom</I> keywords are specified.
@@ -92,8 +94,10 @@ added to the end of each line in the Cells section of the input file:
 </P>
 <PRE>read_grid grid.data custom temperature float 0 custom flags int 3 
 </PRE>
-<P>The first floating-point value will be the temperature, the next 3
-integers will be flags.
+<P>The first floating-point value will be the assigned to a custom
+per-grid vector named temperature which stores a single value per grid
+cell.  The next 3 integers will be assigned to a custom per-grid array
+named flags which stores 3 values per grid cell.
 </P>
 <P><B>Restrictions:</B>
 </P>

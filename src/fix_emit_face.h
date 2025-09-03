@@ -70,7 +70,7 @@ class FixEmitFace : public FixEmit {
 
   int imodvar;
   char *modvar;
-  
+
   // copies of data from other classes
 
   int dimension,nspecies;

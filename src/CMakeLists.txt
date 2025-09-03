@@ -21,6 +21,7 @@ add_subdirectory(${SPARTA_SRC_DIR}/COUPLE)
 add_subdirectory(${SPARTA_SRC_DIR}/KOKKOS)
 add_subdirectory(${SPARTA_SRC_DIR}/FFT)
 add_subdirectory(${SPARTA_SRC_DIR}/STUBS)
+add_subdirectory(${SPARTA_SRC_DIR}/PYTHON)
 # message(VERBOSE "${CMAKE_CURRENT_SOURCE_DIR}:
 # CMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}")
 # ######### END   PROCESSING PACKAGES - RECURSE COMMANDS ##########

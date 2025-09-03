@@ -102,7 +102,7 @@ FixEmitFace::FixEmitFace(SPARTA *sparta, int narg, char **arg) :
     error->all(FLERR,"Cannot use fix emit/face n > 0 with subsonic");
   if (np > 0 && modvar)
     error->all(FLERR,"Cannot use fix emit/face n > 0 with modulate option");
-    
+
   // task list and subsonic data structs
 
   tasks = NULL;
@@ -119,7 +119,7 @@ FixEmitFace::~FixEmitFace()
   if (copymode) return;
 
   delete [] modvar;
-  
+
   if (tasks) {
     for (int i = 0; i < ntaskmax; i++) {
       delete [] tasks[i].ntargetsp;
@@ -155,7 +155,7 @@ void FixEmitFace::init()
     if (imodvar < 0)
       error->all(FLERR,"Fix emit/face modulate variable does not exist");
   }
-  
+
   // subsonic prefactor
 
   tprefactor = update->mvv2e / (3.0*update->boltz);
@@ -638,7 +638,7 @@ void FixEmitFace::perform_task_onepass()
 
         if (nfix_update_custom)
           modify->update_custom(particle->nlocal-1,temp_thermal,
-                               temp_rot,temp_vib,vstream);
+                                temp_rot,temp_vib,vstream);
       }
 
       nsingle += nactual;

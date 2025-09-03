@@ -1,0 +1,43 @@
+# advect particles via VSS collisional flow on a uniform grid
+# particles reflect off global box boundaries
+
+variable            x index 20
+variable            y index 20
+variable            z index 20
+
+variable            lx equal 10
+variable            ly equal 10
+variable            lz equal 10
+
+seed	    	    12345
+dimension   	    3
+#global              gridcut 1.0e-5
+
+boundary	    rr rr rr
+
+create_box  	    0 ${lx} 0 ${ly} 0 ${lz}
+create_grid 	    $x $y $z
+
+species		    air.species N O
+mixture		    air N O vstream 0.0 0.0 0.0 temp 273.15
+
+global              nrho 1.0
+global              fnum 1.0
+
+#collide		    vss air air.vss
+
+#create_particles    air n $n
+
+stats		    10
+compute             temp temp
+stats_style	    step cpu np nattempt ncoll c_temp
+
+custom              grid create rho float 0 create vstream float 3
+custom              grid file/coarse 1 text file.coarse.3d &
+                    4 rho vstream[1] vstream[2] vstream[3]
+                    
+dump                1 grid all 10 dump.coarse.3d id xc yc g_rho g_vstream[*]
+
+timestep 	    0.1
+run                 10
+

@@ -142,27 +142,41 @@ underscores, or punctuation characters.
 line are arguments.
 
 (6) If you want text with spaces to be treated as a single argument,
-it can be enclosed in either double or single quotes.  A long single
-argument enclosed in quotes can even span multiple lines if the "&"
-character is used, as described above.  E.g.
+it can be enclosed in either single (') or double (") or triple quotes
+(""").  A long single argument enclosed in single or double quotes can
+span multiple lines if the "&" character is used, as described above.
+When the lines are concatenated together by SPARTA (and the "&"
+characters and line breaks removed), the combined text will become a
+single line.  If you want multiple lines of an argument to retain
+their line breaks, the text can be enclosed in triple quotes, in which
+case "&" characters are not needed and do not function as line
+continuation character.
+
+For example:
 
 print "Volume = $v"
 print 'Volume = $v'
+print """
+System volume = $v
+System temperature = $t
+"""
 variable a string "red green blue &
                    purple orange cyan"
-if "${steps} > 1000" then quit :pre
+if "${steps} > 1000" then quit
+   
+In each of these cases, the single, double, or triple quotes are
+removed and the enclosed text stored internally as a single argument.
+   
+See the "dump modify format"_dump_modify.html, "print"_print.html,
+"if"_if.html, or "python"_python.html commands for examples.
 
-The quotes are removed when the single argument is stored internally.
-
-See the "dump modify format"_dump_modify.html or "print"_print.html or
-"if"_if.html commands for examples.  A "#" or "$" character that is
-between quotes will not be treated as a comment indicator in (2) or
-substituted for as a variable in (3).
+A "#" or "$" character that is between quotes will not be treated as a
+comment indicator in (2) or substituted for as a variable in (3).
 
 IMPORTANT NOTE: If the argument is itself a command that requires a
 quoted argument (e.g. using a "print"_print.html command as part of an
-"if"_if.html or "run every"_run.html command), then the double and
-single quotes can be nested in the usual manner.  See the doc pages
+"if"_if.html or "run every"_run.html command), then single, double, or
+triple quotes can be nested in the usual manner.  See the doc pages
 for those commands for examples.  Only one of level of nesting is
 allowed, but that should be sufficient for most use cases.
 
@@ -388,6 +402,7 @@ This is indicated by additional letters in parenthesis: k = KOKKOS.
 "ave/surf"_fix_ave_surf.html,
 "ave/time"_fix_ave_time.html,
 "balance (k)"_fix_balance.html,
+"custom"_fix_custom.html,
 "dt/reset (k)"_fix_dt_reset.html,
 "emit/face (k)"_fix_emit_face.html,
 "emit/face/file"_fix_emit_face_file.html,
