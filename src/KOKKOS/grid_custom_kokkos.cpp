@@ -68,6 +68,7 @@ int GridKokkos::add_custom(char *name, int type, int size)
                                        "grid:ename");
     memory->grow(etype,ncustom,"grid:etype");
     memory->grow(esize,ncustom,"grid:esize");
+    memory->grow(estatus,ncustom,"grid:estatus");
     memoryKK->grow_kokkos(k_ewhich,ewhich,ncustom,"grid:ewhich");
   }
 
@@ -76,6 +77,7 @@ int GridKokkos::add_custom(char *name, int type, int size)
   strcpy(ename[index],name);
   etype[index] = type;
   esize[index] = size;
+  estatus[index] = 0;
 
   if (type == INT) {
     if (size == 0) {
