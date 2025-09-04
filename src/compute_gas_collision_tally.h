@@ -47,7 +47,7 @@ class ComputeGasCollisionTally : public Compute {
 
   Grid::ChildCell *cells;    // local copies
   Grid::ChildInfo *cinfo;
-  
+
   virtual void grow_tally();
 };
 

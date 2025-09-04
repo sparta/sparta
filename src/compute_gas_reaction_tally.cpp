@@ -164,14 +164,14 @@ void ComputeGasReactionTally::gas_tally(int icell, int reaction,
   if (igroup < 0 || jgroup < 0) return;
 
   // grow tally array if necessary
-  
+
   if (ntally == maxtally) grow_tally();
 
   // tally all values associated with group into array
   // particle iorig,ip have same collision point but before/after velocities
-  
+
   double *vec = array_tally[ntally++];
-  
+
   for (int m = 0; m < nvalue; m++) {
     switch (which[m]) {
     case REACTION:
@@ -183,13 +183,13 @@ void ComputeGasReactionTally::gas_tally(int icell, int reaction,
       break;
     case ID1PRE:
       vec[m] = ubuf(iorig->id).d;
-      break; 
+      break;
     case ID2PRE:
       vec[m] = ubuf(jorig->id).d;
       break;
     case ID1POST:
       vec[m] = ubuf(ip->id).d;
-      break; 
+      break;
     case ID2POST:
       if (jp == NULL) vec[m] = ubuf(0).d;
       else vec[m] = ubuf(jp->id).d;
@@ -198,7 +198,7 @@ void ComputeGasReactionTally::gas_tally(int icell, int reaction,
       if (kp == NULL) vec[m] = ubuf(0).d;
       else vec[m] = ubuf(kp->id).d;
       break;
-      
+
     case TYPE1PRE:
       vec[m] = ubuf(iorig->ispecies+1).d;
       break;
@@ -216,44 +216,44 @@ void ComputeGasReactionTally::gas_tally(int icell, int reaction,
       if (kp == NULL) vec[m] = ubuf(0).d;
       else vec[m] = ubuf(kp->ispecies+1).d;
       break;
-      
+
     case VX1PRE:
       vec[m] = iorig->v[0];
       break;
-    case VY1PRE: 
+    case VY1PRE:
       vec[m] = iorig->v[1];
       break;
-    case VZ1PRE: 
+    case VZ1PRE:
       vec[m] = iorig->v[2];
       break;
     case VX2PRE:
       vec[m] = jorig->v[0];
       break;
-    case VY2PRE: 
+    case VY2PRE:
       vec[m] = jorig->v[1];
       break;
-    case VZ2PRE: 
+    case VZ2PRE:
       vec[m] = jorig->v[2];
       break;
-      
+
     case VX1POST:
       vec[m] = ip->v[0];
       break;
-    case VY1POST: 
+    case VY1POST:
       vec[m] = ip->v[1];
       break;
-    case VZ1POST: 
+    case VZ1POST:
       vec[m] = ip->v[2];
       break;
     case VX2POST:
       if (jp == NULL) vec[m] = 0.0;
       else vec[m] = jp->v[0];
       break;
-    case VY2POST: 
+    case VY2POST:
       if (jp == NULL) vec[m] = 0.0;
       else vec[m] = jp->v[1];
       break;
-    case VZ2POST: 
+    case VZ2POST:
       if (jp == NULL) vec[m] = 0.0;
       else vec[m] = jp->v[2];
       break;
@@ -261,11 +261,11 @@ void ComputeGasReactionTally::gas_tally(int icell, int reaction,
       if (kp == NULL) vec[m] = 0.0;
       else vec[m] = kp->v[0];
       break;
-    case VY3POST: 
+    case VY3POST:
       if (kp == NULL) vec[m] = 0.0;
       else vec[m] = kp->v[1];
       break;
-    case VZ3POST: 
+    case VZ3POST:
       if (kp == NULL) vec[m] = 0.0;
       else vec[m] = kp->v[2];
       break;

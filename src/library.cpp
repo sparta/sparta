@@ -255,7 +255,7 @@ void *sparta_extract_compute(void *ptr, char *id, int style, int type)
       return (void *) compute->array_tally;
     }
   }
-  
+
   return NULL;
 }
 

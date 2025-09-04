@@ -103,7 +103,7 @@ class Collide : protected Pointers {
 
   int ngas_tally;            // copy of gas/gas Compute info setup by Update
   class Compute **glist_active;
-  
+
   // recombination reactions
 
   int recombflag;               // 1 if recomb reactions enabled, 0 if not
@@ -165,11 +165,11 @@ class Collide : protected Pointers {
   template < int,int > void collisions_group();
   template < int > void collisions_one_ambipolar();
   template < int > void collisions_group_ambipolar();
-  
+
   void ambi_reset(int, int, int, Particle::OnePart *, Particle::OnePart *,
                   Particle::OnePart *, int *);
   void ambi_check();
-  
+
   void grow_percell(int);
 
   int find_nn(int, int);

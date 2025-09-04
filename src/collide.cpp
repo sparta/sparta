@@ -126,7 +126,7 @@ Collide::~Collide()
     delete [] glist;
     memory->destroy(gpair);
   }
-  
+
   memory->destroy(dellist);
   memory->sfree(elist);
   memory->destroy(vremax);
@@ -354,7 +354,7 @@ void Collide::collisions()
   // copy Update count of gas/gas collision computes active on this timestep
 
   ngas_tally = update->ngas_tally;
-  
+
   // counters
 
   ncollide_one = nattempt_one = nreact_one = 0;
@@ -375,7 +375,7 @@ void Collide::collisions()
         if (ngroups == 1) collisions_one<0,1>();
         else collisions_group<0,1>();
       }
-    } else if (nearcp) { 
+    } else if (nearcp) {
       if (!ngas_tally) {
         if (ngroups == 1) collisions_one<1,0>();
         else collisions_group<1,0>();
@@ -430,7 +430,7 @@ template < int NEARCP, int GASTALLY > void Collide::collisions_one()
   for (int icell = 0; icell < nglocal; icell++) {
     np = cinfo[icell].count;
     if (np <= 1) continue;
-    
+
     if (NEARCP) {
       if (np > max_nn) realloc_nn(np,nn_last_partner);
       memset(nn_last_partner,0,np*sizeof(int));
@@ -1182,7 +1182,7 @@ template < int GASTALLY > void Collide::collisions_group_ambipolar()
   for (int icell = 0; icell < nglocal; icell++) {
     np = cinfo[icell].count;
     if (np <= 1) continue;
-        
+
     ip = cinfo[icell].first;
     volume = cinfo[icell].volume / cinfo[icell].weight;
     if (volume == 0.0) error->one(FLERR,"Collision cell volume is zero");
@@ -1366,7 +1366,7 @@ template < int GASTALLY > void Collide::collisions_group_ambipolar()
           memcpy(&iorig,ipart,sizeof(Particle::OnePart));
           memcpy(&jorig,jpart,sizeof(Particle::OnePart));
         }
-        
+
         ispecies = ipart->ispecies;
         jspecies = jpart->ispecies;
         setup_collision(ipart,jpart);

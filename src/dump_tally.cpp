@@ -47,7 +47,7 @@ DumpTally::DumpTally(SPARTA *sparta, int narg, char **arg) :
   //   Dump::convert_string() to use ubuf like DumpTally::write_text() does
   // will require other dumps and computes/fixes to use datatype()
   //   like DumpTally and ComputeCollideTally do
-  
+
   //buffer_allow = 1;
   //buffer_flag = 1;
 
@@ -232,7 +232,7 @@ int DumpTally::count()
   // tally count for each compute must be equal
 
   int flag = 0;
-  
+
   if (ncompute) {
     for (int i = 0; i < ncompute; i++)
       if (!(compute[i]->invoked_flag & INVOKED_PER_TALLY)) {
@@ -298,7 +298,7 @@ void DumpTally::write_text(int n, double *mybuf)
       if (vtype[j] == DOUBLE) fprintf(fp,vformat[j],mybuf[m]);
       else if (vtype[j] == INT) fprintf(fp,vformat[j],(int) ubuf(mybuf[m]).i);
       else if (vtype[j] == BIGINT) fprintf(fp,vformat[j],(bigint) ubuf(mybuf[m]).i);
-      else if (vtype[j] == UINT) fprintf(fp,vformat[j],(uint32_t) ubuf(mybuf[m]).i); 
+      else if (vtype[j] == UINT) fprintf(fp,vformat[j],(uint32_t) ubuf(mybuf[m]).i);
       else if (vtype[j] == BIGUINT) fprintf(fp,vformat[j],(uint64_t) ubuf(mybuf[m]).i);
       m++;
     }
@@ -322,7 +322,7 @@ int DumpTally::parse_fields(int narg, char **arg)
 
     if (strncmp(arg[iarg],"c_",2) == 0) {
       pack_choice[i] = &DumpTally::pack_compute;
-      
+
       int n = strlen(arg[iarg]);
       char *suffix = new char[n];
       strcpy(suffix,&arg[iarg][2]);
@@ -350,11 +350,11 @@ int DumpTally::parse_fields(int narg, char **arg)
 
       // set vtype by querying compute column
       // if returns -1, error b/c it doesn't provide datatype() func
-      
+
       vtype[i] = modify->compute[n]->datatype(argindex[i]);
       if (vtype[i] < 0)
         error->all(FLERR,"Dump tally compute ID does not provide datatypes");
-      
+
       field2index[i] = add_compute(suffix);
       delete [] suffix;
 

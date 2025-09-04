@@ -116,15 +116,15 @@ Update::~Update()
   delete [] unit_style;
   delete [] fieldID;
   memory->destroy(mlist);
-  
+
   delete [] glist_compute;
   delete [] slist_compute;
   delete [] blist_compute;
-  
+
   delete [] glist_active;
   delete [] slist_active;
   delete [] blist_active;
-  
+
   delete [] dlist_surfcollide;
 
   delete ranmaster;
@@ -1526,7 +1526,7 @@ int Update::tally_setup()
   delete [] glist_compute;
   delete [] slist_compute;
   delete [] blist_compute;
-  
+
   delete [] glist_active;
   delete [] slist_active;
   delete [] blist_active;
@@ -1543,7 +1543,7 @@ int Update::tally_setup()
   if (nglist_compute) glist_compute = new Compute*[nglist_compute];
   if (nslist_compute) slist_compute = new Compute*[nslist_compute];
   if (nblist_compute) blist_compute = new Compute*[nblist_compute];
-  
+
   if (nglist_compute) glist_active = new Compute*[nglist_compute];
   if (nslist_compute) slist_active = new Compute*[nslist_compute];
   if (nblist_compute) blist_active = new Compute*[nblist_compute];

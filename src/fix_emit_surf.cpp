@@ -101,7 +101,7 @@ FixEmitSurf::FixEmitSurf(SPARTA *sparta, int narg, char **arg) :
     error->all(FLERR,"Cannot use fix emit/surf with subsonic and custom options");
 
   if (custom_any) flag_custom_surf_changed = 1;
-  
+
   // task list and subsonic data structs
 
   tasks = NULL;

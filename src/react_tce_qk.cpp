@@ -97,7 +97,7 @@ int ReactTCEQK::attempt(Particle::OnePart *ip, Particle::OnePart *jp,
                             pre_evib,post_etotal,kspecies);
 
     // return reaction from 1 to N
-    
+
     if (reaction) {
       tally_reactions[list[i]]++;
       return list[i] + 1;
@@ -105,7 +105,7 @@ int ReactTCEQK::attempt(Particle::OnePart *ip, Particle::OnePart *jp,
   }
 
   // no reaction performed
-  
+
   return 0;
 }
 

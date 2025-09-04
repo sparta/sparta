@@ -44,9 +44,9 @@ class Compute : protected Pointers {
 
   double *vector_tally;      // computed per-tally vector
   double **array_tally;      // computed per-tally array
-  
+
   // data flags and sizes
-  
+
   int scalar_flag;          // 0/1 if compute_scalar() function exists
   int vector_flag;          // 0/1 if compute_vector() function exists
   int array_flag;           // 0/1 if compute_array() function exists
@@ -71,9 +71,9 @@ class Compute : protected Pointers {
 
   int per_tally_flag;         // 1 if compute_per_tally() function exists
   int size_per_tally_cols;    //  0 = vector, N = columns in per-tally array
-  
+
   // timestep and invocation info
-  
+
   int timeflag;       // 1 if Compute stores list of timesteps it's called on
   int ntime;          // # of entries in time list
   int maxtime;        // max # of entries time list can hold
@@ -90,7 +90,7 @@ class Compute : protected Pointers {
   bigint invoked_per_tally;    // ditto for compute_per_tally()
 
   // public methods
-  
+
   Compute(class SPARTA *, int, char **);
   Compute(class SPARTA* sparta) : Pointers(sparta) {} // needed for Kokkos
   virtual ~Compute();
@@ -106,7 +106,7 @@ class Compute : protected Pointers {
   virtual void compute_per_surf() {}
   virtual void compute_per_tally() {}
   virtual void clear() {}
-  
+
   virtual void surf_tally(double, int, int, int, Particle::OnePart *,
                           Particle::OnePart *, Particle::OnePart *) {}
   virtual void boundary_tally(double, int, int, int, Particle::OnePart *,
@@ -115,7 +115,7 @@ class Compute : protected Pointers {
                          Particle::OnePart *, Particle::OnePart *,
                          Particle::OnePart *, Particle::OnePart *,
                          Particle::OnePart *) {}
-  
+
   virtual void post_process_grid(int, int, double **, int *, double *, int) {}
   // NOTE: get rid of this method at some point
   virtual void post_process_grid_old(void *, void *, int, int, double *, int) {}
@@ -126,7 +126,7 @@ class Compute : protected Pointers {
 
   virtual int tallyinfo(surfint *&) {return 0;}
   virtual int datatype(int) {return -1;}
-  
+
   virtual void reallocate() {}
   virtual bigint memory_usage();
 

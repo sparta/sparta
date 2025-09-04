@@ -100,7 +100,7 @@ int ReactTCE::attempt(Particle::OnePart *ip, Particle::OnePart *jp,
     }
 
     // Cover cases where coeff[1].neq.coeff[4]
-    
+
     if (r->coeff[1]>((-1)*r->coeff[4])) e_excess = ecc - r->coeff[1];
     else e_excess = ecc + r->coeff[4];
     if (e_excess <= 0.0) continue;
@@ -231,16 +231,16 @@ int ReactTCE::attempt(Particle::OnePart *ip, Particle::OnePart *jp,
         else kspecies = -1;
 
         post_etotal = pre_etotal + r->coeff[4];
-        
+
         // return reaction from 1 to N
-      
+
         return list[i] + 1;
       }
     }
   }
 
   // no reaction performed
-  
+
   return 0;
 }
 

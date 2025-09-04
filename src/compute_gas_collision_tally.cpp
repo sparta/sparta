@@ -114,7 +114,7 @@ void ComputeGasCollisionTally::clear()
 {
   cells = grid->cells;
   cinfo = grid->cinfo;
-  
+
   ntally = 0;
 }
 
@@ -140,7 +140,7 @@ void ComputeGasCollisionTally::gas_tally(int icell, int reaction,
   // reactions can be tallied by compute gas/reaction/tally command
 
   if (reaction) return;
-  
+
   // skip if icell not in grid group
 
   if (!(cinfo[icell].mask & groupbit)) return;
@@ -152,14 +152,14 @@ void ComputeGasCollisionTally::gas_tally(int icell, int reaction,
   if (igroup < 0 || jgroup < 0) return;
 
   // grow tally array if necessary
-  
+
   if (ntally == maxtally) grow_tally();
 
   // tally all values associated with group into array
   // particle iorig,ip have same collision point but before/after velocities
-  
+
   double *vec = array_tally[ntally++];
-  
+
   for (int m = 0; m < nvalue; m++) {
     switch (which[m]) {
     case IDCELL:
@@ -167,53 +167,53 @@ void ComputeGasCollisionTally::gas_tally(int icell, int reaction,
       break;
     case ID1:
       vec[m] = ubuf(ip->id).d;
-      break; 
+      break;
     case ID2:
       vec[m] = ubuf(jp->id).d;
       break;
-      
+
     case TYPE1:
       vec[m] = ubuf(ip->ispecies+1).d;
       break;
     case TYPE2:
       vec[m] = ubuf(jp->ispecies+1).d;
       break;
-      
-    case VX1PRE: 
+
+    case VX1PRE:
       vec[m] = iorig->v[0];
       break;
-    case VY1PRE: 
+    case VY1PRE:
       vec[m] = iorig->v[1];
       break;
-    case VZ1PRE: 
+    case VZ1PRE:
       vec[m] = iorig->v[2];
       break;
-    case VX2PRE: 
+    case VX2PRE:
       vec[m] = jorig->v[0];
       break;
-    case VY2PRE: 
+    case VY2PRE:
       vec[m] = jorig->v[1];
       break;
-    case VZ2PRE: 
+    case VZ2PRE:
       vec[m] = jorig->v[2];
       break;
-      
+
     case VX1POST:
       vec[m] = ip->v[0];
       break;
-    case VY1POST: 
+    case VY1POST:
       vec[m] = ip->v[1];
       break;
-    case VZ1POST: 
+    case VZ1POST:
       vec[m] = ip->v[2];
       break;
     case VX2POST:
       vec[m] = jp->v[0];
       break;
-    case VY2POST: 
+    case VY2POST:
       vec[m] = jp->v[1];
       break;
-    case VZ2POST: 
+    case VZ2POST:
       vec[m] = jp->v[2];
       break;
     }

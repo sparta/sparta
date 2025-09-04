@@ -78,7 +78,7 @@ ComputeSurfCollisionTally::ComputeSurfCollisionTally(SPARTA *sparta, int narg, c
 
   ntally = maxtally = 0;
   array_tally = NULL;
-  
+
   dim = domain->dimension;
 }
 
@@ -125,7 +125,7 @@ void ComputeSurfCollisionTally::clear()
 }
 
 /* ----------------------------------------------------------------------
-   tally values for a single particle in icell colliding with 
+   tally values for a single particle in icell colliding with
      surface element isurf
    reaction = 0 for collision only
    reaction = 1 to N for which reaction
@@ -147,7 +147,7 @@ void ComputeSurfCollisionTally::surf_tally(double dtremain, int isurf,
   // reactions can be tallied by compute surf/reaction/tally command
 
   if (reaction) return;
-  
+
   // skip if isurf not in surface group
 
   if (dim == 2) {
@@ -163,14 +163,14 @@ void ComputeSurfCollisionTally::surf_tally(double dtremain, int isurf,
   if (igroup < 0) return;
 
   // grow tally array if necessary
-  
+
   if (ntally == maxtally) grow_tally();
 
   // tally all values associated with group into array
   // particle iorig,ip have same collision point but before/after velocities
-  
+
   double *vec = array_tally[ntally++];
-  
+
   for (int m = 0; m < nvalue; m++) {
     switch (which[m]) {
     case IDSURF:
@@ -186,31 +186,31 @@ void ComputeSurfCollisionTally::surf_tally(double dtremain, int isurf,
     case XC:
       vec[m] = iorig->x[0];
       break;
-    case YC: 
+    case YC:
       vec[m] = iorig->x[1];
       break;
-    case ZC: 
+    case ZC:
       vec[m] = iorig->x[2];
       break;
-    case TIME: 
+    case TIME:
       vec[m] = update->dt - dtremain;
       break;
     case VXPRE:
       vec[m] = iorig->v[0];
       break;
-    case VYPRE: 
+    case VYPRE:
       vec[m] = iorig->v[1];
       break;
-    case VZPRE: 
+    case VZPRE:
       vec[m] = iorig->v[2];
       break;
     case VXPOST:
       vec[m] = ip->v[0];
       break;
-    case VYPOST: 
+    case VYPOST:
       vec[m] = ip->v[1];
       break;
-    case VZPOST: 
+    case VZPOST:
       vec[m] = ip->v[2];
       break;
     }

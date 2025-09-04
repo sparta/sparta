@@ -45,23 +45,23 @@ ComputeGasReactionGrid::ComputeGasReactionGrid(SPARTA *sparta, int narg, char **
 
   selectlist = NULL;
   reaction2col = NULL;
-  
+
   if (strcmp(arg[4],"all") == 0) {
     if (narg != 5) error->all(FLERR,"Illegal compute gas/reaction/grid command");
     mode = ALL;
     ncol = 0;
-    
+
   } else if (strcmp(arg[4],"every") == 0) {
     if (narg != 5) error->all(FLERR,"Illegal compute gas/reaction/grid command");
     mode = EVERY;
     ncol = react->nlist;
-    
+
   } else {
     if (narg < 6) error->all(FLERR,"Illegal compute gas/reaction/grid command");
     mode = SELECT;
     ncol = narg-5;
     selectlist = new int[ncol];
-    
+
     int index;
     int iarg = 5;
     for (int icol = 0; icol < ncol; icol++) {
@@ -75,14 +75,14 @@ ComputeGasReactionGrid::ComputeGasReactionGrid(SPARTA *sparta, int narg, char **
 
   // convert selectlist to reaction2col
   // reaction2col[I] = column index (0 to Ncol-1) in array_grid for reaction I (1 to M)
-  
+
   if (mode == SELECT) {
     reaction2col = new int[react->nlist + 1];
     for (int i = 0; i <= react->nlist; i++) reaction2col[i] = -1;
     for (int icol = 0; icol < ncol; icol++)
       reaction2col[selectlist[icol]] = icol;
   }
-  
+
   // setup
 
   per_grid_flag = 1;
@@ -104,7 +104,7 @@ ComputeGasReactionGrid::~ComputeGasReactionGrid()
 
   delete [] selectlist;
   delete [] reaction2col;
-  
+
   if (ncol == 0) memory->destroy(vector_grid);
   else memory->destroy(array_grid);
 }
@@ -160,7 +160,7 @@ void ComputeGasReactionGrid::gas_tally(int icell, int reaction,
   // collisions can be tallied by compute gas/collision/grid command
 
   if (!reaction) return;
-  
+
   // skip if icell not in grid group
 
   if (!(cinfo[icell].mask & groupbit)) return;
@@ -173,7 +173,7 @@ void ComputeGasReactionGrid::gas_tally(int icell, int reaction,
 
   // simply tally the reaction to its grid cell
   // for EVERY and SELECT mode, reaction index determines column of array_grid
-  
+
   if (mode == ALL) vector_grid[icell] += 1.0;
   else if (mode == EVERY) {
     int icol = reaction - 1;

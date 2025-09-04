@@ -2941,7 +2941,7 @@ void SurfReactAdsorb::PS_react(int isurf, int isc, double *norm)
         //   Update::run() does same thing for gas/surf reactions
         // pass 1st arg = 0.0 to surf_tally() since on-surf reactions
         //   are at the end of the current timestep
-        
+
         nsingle++;
         ireaction = nlist_gs + reactions_ps_list[i];
         tally_single[ireaction]++;

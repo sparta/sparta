@@ -87,7 +87,7 @@ ComputeSurfReactionTally::ComputeSurfReactionTally(SPARTA *sparta, int narg, cha
 
   ntally = maxtally = 0;
   array_tally = NULL;
-  
+
   dim = domain->dimension;
 }
 
@@ -134,7 +134,7 @@ void ComputeSurfReactionTally::clear()
 }
 
 /* ----------------------------------------------------------------------
-   tally values for a single particle in icell colliding with 
+   tally values for a single particle in icell colliding with
      surface element isurf
    reaction = 0 for collision only
    reaction = 1 to N for which reaction
@@ -172,20 +172,20 @@ void ComputeSurfReactionTally::surf_tally(double dtremain, int isurf,
   if (igroup < 0) return;
 
   // grow tally array if necessary
-  
+
   if (ntally == maxtally) grow_tally();
 
   // tally all values associated with group into array
   // particle iorig,ip have same collision point but before/after velocities
-  
+
   double *vec = array_tally[ntally++];
-  
+
   for (int m = 0; m < nvalue; m++) {
-    switch (which[m]) { 
+    switch (which[m]) {
     case REACTION:
       vec[m] = ubuf(reaction).d;
       break;
-      
+
     case IDSURF:
       if (dim == 2) vec[m] = ubuf(lines[isurf].id).d;
       else vec[m] = ubuf(tris[isurf].id).d;
@@ -213,38 +213,38 @@ void ComputeSurfReactionTally::surf_tally(double dtremain, int isurf,
       if (jp == NULL) vec[m] = ubuf(0).d;
       else vec[m] = ubuf(jp->ispecies+1).d;
       break;
-      
-    case TIME: 
+
+    case TIME:
       vec[m] = update->dt - dtremain;
       break;
     case XC:
       vec[m] = iorig->x[0];
       break;
-    case YC: 
+    case YC:
       vec[m] = iorig->x[1];
       break;
-    case ZC: 
+    case ZC:
       vec[m] = iorig->x[2];
       break;
 
     case VXPRE:
       vec[m] = iorig->v[0];
       break;
-    case VYPRE: 
+    case VYPRE:
       vec[m] = iorig->v[1];
       break;
-    case VZPRE: 
+    case VZPRE:
       vec[m] = iorig->v[2];
       break;
     case VX1POST:
       if (ip == NULL) vec[m] = 0.0;
       else vec[m] = ip->v[0];
       break;
-    case VY1POST: 
+    case VY1POST:
       if (ip == NULL) vec[m] = 0.0;
       else vec[m] = ip->v[1];
       break;
-    case VZ1POST: 
+    case VZ1POST:
       if (ip == NULL) vec[m] = 0.0;
       else vec[m] = ip->v[2];
       break;
@@ -252,11 +252,11 @@ void ComputeSurfReactionTally::surf_tally(double dtremain, int isurf,
       if (jp == NULL) vec[m] = 0.0;
       else vec[m] = jp->v[0];
       break;
-    case VY2POST: 
+    case VY2POST:
       if (jp == NULL) vec[m] = 0.0;
       else vec[m] = jp->v[1];
       break;
-    case VZ2POST: 
+    case VZ2POST:
       if (jp == NULL) vec[m] = 0.0;
       else vec[m] = jp->v[2];
       break;

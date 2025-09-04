@@ -126,7 +126,7 @@ class Update : protected Pointers {
   class RanKnuth *random;     // RNG for particle timestep moves
 
   // optional operations that occur while timestepping
-  
+
   int collide_react;         // 1 if any SurfCollide or React classes defined
 
   int nsc,nsr;               // copy of Collide/React data in Surf class
@@ -140,14 +140,14 @@ class Update : protected Pointers {
 
   int dynamic;               // 1 if any classes do dynamic updates of params
   int ndlist_surfcollide;    // # of SurfCollide classes with dynamic updates
-  
+
   class Compute **glist_compute;  // list of all gas/gas Computes
   class Compute **slist_compute;  // list of all gas/surf Computes
   class Compute **blist_compute;  // list of all gas/boundary Computes
   class SurfCollide **dlist_surfcollide;  // list of all dynamic SurfCollides
 
   // methods
-  
+
   int collide_react_setup();
   void collide_react_reset();
   void collide_react_update();
@@ -209,7 +209,7 @@ class Update : protected Pointers {
 
   // NOTE: cannot be inline b/c ref to modify->fix[] is not supported
   //       unless possibly include modify.h and fix.h in this file
-  
+
   void field_per_particle(int, int, double, double *, double *);
   void field_per_grid(int, int, double, double *, double *);
 };

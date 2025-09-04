@@ -108,7 +108,7 @@ void ComputeGasCollisionGrid::gas_tally(int icell, int reaction,
   // reactions can be tallied by compute gas/reaction/grid command
 
   if (reaction) return;
-  
+
   // skip if icell not in grid group
 
   if (!(cinfo[icell].mask & groupbit)) return;
@@ -120,7 +120,7 @@ void ComputeGasCollisionGrid::gas_tally(int icell, int reaction,
   if (igroup < 0 || jgroup < 0) return;
 
   // simply tally the collision to its grid cell
-  
+
   vector_grid[icell] += 1.0;
 }
 
@@ -142,7 +142,7 @@ void ComputeGasCollisionGrid::reallocate()
   //   this is different than compute_grid.cpp b/c compute_per_grid() is a no-op
   // also note if load-balancing is done, tallies will be lost
   //   would need to implement (un)pack_grid_one() to avoid this
-  
+
   memset(vector_grid,0,nglocal*sizeof(double));
 }
 

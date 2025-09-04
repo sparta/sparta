@@ -631,7 +631,7 @@ void DumpParticle::write_text(int n, double *mybuf)
       if (vtype[j] == DOUBLE) fprintf(fp,vformat[j],mybuf[m]);
       else if (vtype[j] == INT) fprintf(fp,vformat[j],(int) ubuf(mybuf[m]).i);
       else if (vtype[j] == BIGINT) fprintf(fp,vformat[j],(bigint) ubuf(mybuf[m]).i);
-      else if (vtype[j] == UINT) fprintf(fp,vformat[j],(uint32_t) ubuf(mybuf[m]).i); 
+      else if (vtype[j] == UINT) fprintf(fp,vformat[j],(uint32_t) ubuf(mybuf[m]).i);
       else if (vtype[j] == BIGUINT) fprintf(fp,vformat[j],(uint64_t) ubuf(mybuf[m]).i);
       m++;
     }

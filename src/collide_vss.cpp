@@ -265,14 +265,14 @@ int CollideVSS::perform_collision(Particle::OnePart *&ip,
   // reaction = 0 if no reaction occurs
   // reaction = 1 to N for which reaction occurs
   // reaction is returned to caller
-  
+
   if (react)
     reaction = react->attempt(ip,jp,precoln.etrans,precoln.erot,
                               precoln.evib,postcoln.etotal,kspecies);
   else reaction = 0;
 
   // just collision, no reaction
-    
+
   if (!reaction) {
     if (precoln.ave_dof > 0.0) EEXCHANGE_NonReactingEDisposal(ip,jp);
     SCATTER_TwoBodyScattering(ip,jp);
@@ -291,7 +291,7 @@ int CollideVSS::perform_collision(Particle::OnePart *&ip,
   // if add_particle() performs a realloc:
   //   make copy of x,v, then repoint ip,jp to new particles data struct
   //   unless electron
-  
+
   if (kspecies >= 0) {
     int id = MAXSMALLINT*random->uniform();
 
@@ -308,7 +308,7 @@ int CollideVSS::perform_collision(Particle::OnePart *&ip,
       if (!jelectron_flag)
         jp = particle->particles + (jp - particles);
     }
-    
+
     kp = &particle->particles[particle->nlocal-1];
     EEXCHANGE_ReactingEDisposal(ip,jp,kp);
     SCATTER_ThreeBodyScattering(ip,jp,kp);
@@ -367,7 +367,7 @@ int CollideVSS::perform_collision(Particle::OnePart *&ip,
     EEXCHANGE_ReactingEDisposal(ip,jp,kp);
     SCATTER_TwoBodyScattering(ip,jp);
   }
-  
+
   return reaction;
 }
 

@@ -202,6 +202,6 @@ int ReactQK::attempt(Particle::OnePart *ip, Particle::OnePart *jp,
   }
 
   // no reaction performed
-  
+
   return 0;
 }
