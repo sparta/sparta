@@ -568,6 +568,8 @@ KOKKOS_DEVICES=CUDA means an NVIDIA GPU running CUDA will be used.
 <TR><TD >AMDAVX </TD><TD > HOST </TD><TD > AMD chip </TD></TR>
 <TR><TD >ARMV80 </TD><TD > HOST </TD><TD > ARMv8.0 Compatible CPU </TD></TR>
 <TR><TD >ARMV81 </TD><TD > HOST </TD><TD > ARMv8.1 Compatible CPU </TD></TR>
+<TR><TD >ARMV84 </TD><TD > HOST </TD><TD > ARMv8.4 Compatible CPU </TD></TR>
+<TR><TD >ARMV84_SVE </TD><TD > HOST </TD><TD > Generic ARMv8.4 with SVE support (-march=armv8.4-a+sve) </TD></TR>
 <TR><TD >ARMV8_THUNDERX </TD><TD > HOST </TD><TD > ARMv8 Cavium ThunderX CPU </TD></TR>
 <TR><TD >ARMV8_THUNDERX2 </TD><TD > HOST </TD><TD > ARMv8 Cavium ThunderX2 CPU </TD></TR>
 <TR><TD >A64FX </TD><TD > HOST </TD><TD > ARMv8.2 with SVE Support </TD></TR>
@@ -591,42 +593,43 @@ KOKKOS_DEVICES=CUDA means an NVIDIA GPU running CUDA will be used.
 <TR><TD >ZEN5 </TD><TD > HOST </TD><TD > AMD Zen5 architecture </TD></TR>
 <TR><TD >RISCV_SG2042 </TD><TD > HOST </TD><TD > SG2042 (RISC-V) CPUs </TD></TR>
 <TR><TD >RISCV_RVA22V </TD><TD > HOST </TD><TD > RVA22V (RISC-V) CPUs </TD></TR>
-<TR><TD >KEPLER30 </TD><TD > GPU </TD><TD > NVIDIA Kepler generation CC 3.0 </TD></TR>
-<TR><TD >KEPLER32 </TD><TD > GPU </TD><TD > NVIDIA Kepler generation CC 3.2 </TD></TR>
-<TR><TD >KEPLER35 </TD><TD > GPU </TD><TD > NVIDIA Kepler generation CC 3.5 </TD></TR>
-<TR><TD >KEPLER37 </TD><TD > GPU </TD><TD > NVIDIA Kepler generation CC 3.7 </TD></TR>
-<TR><TD >MAXWELL50 </TD><TD > GPU </TD><TD > NVIDIA Maxwell generation CC 5.0 </TD></TR>
-<TR><TD >MAXWELL52 </TD><TD > GPU </TD><TD > NVIDIA Maxwell generation CC 5.2 </TD></TR>
-<TR><TD >MAXWELL53 </TD><TD > GPU </TD><TD > NVIDIA Maxwell generation CC 5.3 </TD></TR>
-<TR><TD >PASCAL60 </TD><TD > GPU </TD><TD > NVIDIA Pascal generation CC 6.0 </TD></TR>
-<TR><TD >PASCAL61 </TD><TD > GPU </TD><TD > NVIDIA Pascal generation CC 6.1 </TD></TR>
-<TR><TD >VOLTA70 </TD><TD > GPU </TD><TD > NVIDIA Volta generation CC 7.0 </TD></TR>
-<TR><TD >VOLTA72 </TD><TD > GPU </TD><TD > NVIDIA Volta generation CC 7.2 </TD></TR>
-<TR><TD >TURING75 </TD><TD > GPU </TD><TD > NVIDIA Turing generation CC 7.5 </TD></TR>
-<TR><TD >AMPERE80 </TD><TD > GPU </TD><TD > NVIDIA Ampere generation CC 8.0 </TD></TR>
-<TR><TD >AMPERE86 </TD><TD > GPU </TD><TD > NVIDIA Ampere generation CC 8.6 </TD></TR>
-<TR><TD >ADA89 </TD><TD > GPU </TD><TD > NVIDIA Ada generation CC 8.9 </TD></TR>
-<TR><TD >HOPPER90 </TD><TD > GPU </TD><TD > NVIDIA Hopper generation CC 9.0 </TD></TR>
-<TR><TD >BLACKWELL100 </TD><TD > GPU </TD><TD > NVIDIA Blackwell generation CC 10.0 </TD></TR>
-<TR><TD >BLACKWELL120 </TD><TD > GPU </TD><TD > NVIDIA Blackwell generation CC 12.0 </TD></TR>
-<TR><TD >AMD_GFX906 </TD><TD > GPU </TD><TD > AMD GPU MI50/60 </TD></TR>
-<TR><TD >AMD_GFX908 </TD><TD > GPU </TD><TD > AMD GPU MI100 </TD></TR>
-<TR><TD >AMD_GFX90A </TD><TD > GPU </TD><TD > AMD GPU MI200 </TD></TR>
-<TR><TD >AMD_GFX940 </TD><TD > GPU </TD><TD > AMD GPU MI300 </TD></TR>
-<TR><TD >AMD_GFX942 </TD><TD > GPU </TD><TD > AMD GPU MI300 </TD></TR>
-<TR><TD >AMD_GFX942_APU </TD><TD > GPU </TD><TD > AMD APU MI300A </TD></TR>
-<TR><TD >AMD_GFX1030 </TD><TD > GPU </TD><TD > AMD GPU V620/W6800 </TD></TR>
-<TR><TD >AMD_GFX1100 </TD><TD > GPU </TD><TD > AMD GPU RX7900XTX </TD></TR>
-<TR><TD >AMD_GFX1103 </TD><TD > GPU </TD><TD > AMD GPU PHOENIX </TD></TR>
-<TR><TD >INTEL_GEN </TD><TD > GPU </TD><TD > SPIR64-based devices, e.g. Intel GPUs, using JIT </TD></TR>
-<TR><TD >INTEL_DG1 </TD><TD > GPU </TD><TD > Intel Iris XeMAX GPU </TD></TR>
-<TR><TD >INTEL_GEN9 </TD><TD > GPU </TD><TD > Intel GPU Gen9 </TD></TR>
-<TR><TD >INTEL_GEN11 </TD><TD > GPU </TD><TD > Intel GPU Gen11 </TD></TR>
-<TR><TD >INTEL_GEN12LP </TD><TD > GPU </TD><TD > Intel GPU Gen12LP </TD></TR>
-<TR><TD >INTEL_XEHP </TD><TD > GPU </TD><TD > Intel GPU Xe-HP </TD></TR>
-<TR><TD >INTEL_PVC </TD><TD > GPU </TD><TD > Intel GPU Ponte Vecchio </TD></TR>
-<TR><TD >INTEL_DG2 </TD><TD > GPU </TD><TD > Intel GPU DG2 </TD></TR>
-<TR><TD >
+<TR><TD >RISCV_U74MC </TD><TD > HOST U74MC (RISC-V) CPUs </TD><TD >KEPLER30 </TD></TR>
+<TR><TD > GPU </TD><TD > NVIDIA Kepler generation CC 3.0 </TD><TD >KEPLER32 </TD></TR>
+<TR><TD > GPU </TD><TD > NVIDIA Kepler generation CC 3.2 </TD><TD >KEPLER35 </TD></TR>
+<TR><TD > GPU </TD><TD > NVIDIA Kepler generation CC 3.5 </TD><TD >KEPLER37 </TD></TR>
+<TR><TD > GPU </TD><TD > NVIDIA Kepler generation CC 3.7 </TD><TD >MAXWELL50 </TD></TR>
+<TR><TD > GPU </TD><TD > NVIDIA Maxwell generation CC 5.0 </TD><TD >MAXWELL52 </TD></TR>
+<TR><TD > GPU </TD><TD > NVIDIA Maxwell generation CC 5.2 </TD><TD >MAXWELL53 </TD></TR>
+<TR><TD > GPU </TD><TD > NVIDIA Maxwell generation CC 5.3 </TD><TD >PASCAL60 </TD></TR>
+<TR><TD > GPU </TD><TD > NVIDIA Pascal generation CC 6.0 </TD><TD >PASCAL61 </TD></TR>
+<TR><TD > GPU </TD><TD > NVIDIA Pascal generation CC 6.1 </TD><TD >VOLTA70 </TD></TR>
+<TR><TD > GPU </TD><TD > NVIDIA Volta generation CC 7.0 </TD><TD >VOLTA72 </TD></TR>
+<TR><TD > GPU </TD><TD > NVIDIA Volta generation CC 7.2 </TD><TD >TURING75 </TD></TR>
+<TR><TD > GPU </TD><TD > NVIDIA Turing generation CC 7.5 </TD><TD >AMPERE80 </TD></TR>
+<TR><TD > GPU </TD><TD > NVIDIA Ampere generation CC 8.0 </TD><TD >AMPERE86 </TD></TR>
+<TR><TD > GPU </TD><TD > NVIDIA Ampere generation CC 8.6 </TD><TD >AMPERE87 </TD></TR>
+<TR><TD > GPU </TD><TD > NVIDIA Ampere generation CC 8.7 </TD><TD >ADA89 </TD></TR>
+<TR><TD > GPU </TD><TD > NVIDIA Ada generation CC 8.9 </TD><TD >HOPPER90 </TD></TR>
+<TR><TD > GPU </TD><TD > NVIDIA Hopper generation CC 9.0 </TD><TD >BLACKWELL100 </TD></TR>
+<TR><TD > GPU </TD><TD > NVIDIA Blackwell generation CC 10.0 </TD><TD >BLACKWELL120 </TD></TR>
+<TR><TD > GPU </TD><TD > NVIDIA Blackwell generation CC 12.0 </TD><TD >AMD_GFX906 </TD></TR>
+<TR><TD > GPU </TD><TD > AMD GPU MI50/60 </TD><TD >AMD_GFX908 </TD></TR>
+<TR><TD > GPU </TD><TD > AMD GPU MI100 </TD><TD >AMD_GFX90A </TD></TR>
+<TR><TD > GPU </TD><TD > AMD GPU MI200 </TD><TD >AMD_GFX940 </TD></TR>
+<TR><TD > GPU </TD><TD > AMD GPU MI300 </TD><TD >AMD_GFX942 </TD></TR>
+<TR><TD > GPU </TD><TD > AMD GPU MI300 </TD><TD >AMD_GFX942_APU </TD></TR>
+<TR><TD > GPU </TD><TD > AMD APU MI300A </TD><TD >AMD_GFX1030 </TD></TR>
+<TR><TD > GPU </TD><TD > AMD GPU V620/W6800 </TD><TD >AMD_GFX1100 </TD></TR>
+<TR><TD > GPU </TD><TD > AMD GPU RX7900XTX </TD><TD >AMD_GFX1103 </TD></TR>
+<TR><TD > GPU </TD><TD > AMD GPU PHOENIX </TD><TD >INTEL_GEN </TD></TR>
+<TR><TD > GPU </TD><TD > SPIR64-based devices, e.g. Intel GPUs, using JIT </TD><TD >INTEL_DG1 </TD></TR>
+<TR><TD > GPU </TD><TD > Intel Iris XeMAX GPU </TD><TD >INTEL_GEN9 </TD></TR>
+<TR><TD > GPU </TD><TD > Intel GPU Gen9 </TD><TD >INTEL_GEN11 </TD></TR>
+<TR><TD > GPU </TD><TD > Intel GPU Gen11 </TD><TD >INTEL_GEN12LP </TD></TR>
+<TR><TD > GPU </TD><TD > Intel GPU Gen12LP </TD><TD >INTEL_XEHP </TD></TR>
+<TR><TD > GPU </TD><TD > Intel GPU Xe-HP </TD><TD >INTEL_PVC </TD></TR>
+<TR><TD > GPU </TD><TD > Intel GPU Ponte Vecchio </TD><TD >INTEL_DG2 </TD></TR>
+<TR><TD > GPU </TD><TD > Intel GPU DG2 </TD><TD >
 </TD></TR></TABLE></DIV>
 
 <P>The CMake option Kokkos_ENABLE_CUDA_<I>OPTION</I> or the makefile setting KOKKOS_CUDA_OPTIONS=<I>OPTION</I> are 

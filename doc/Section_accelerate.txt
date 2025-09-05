@@ -568,6 +568,8 @@ NATIVE | HOST | Local machine |
 AMDAVX | HOST | AMD chip |
 ARMV80 | HOST | ARMv8.0 Compatible CPU |
 ARMV81 | HOST | ARMv8.1 Compatible CPU |
+ARMV84 | HOST | ARMv8.4 Compatible CPU |
+ARMV84_SVE | HOST | Generic ARMv8.4 with SVE support (-march=armv8.4-a+sve) |
 ARMV8_THUNDERX | HOST | ARMv8 Cavium ThunderX CPU |
 ARMV8_THUNDERX2 | HOST | ARMv8 Cavium ThunderX2 CPU |
 A64FX | HOST | ARMv8.2 with SVE Support |
@@ -591,6 +593,7 @@ ZEN4 | HOST | AMD Zen4 architecture |
 ZEN5 | HOST | AMD Zen5 architecture |
 RISCV_SG2042 | HOST | SG2042 (RISC-V) CPUs |
 RISCV_RVA22V | HOST | RVA22V (RISC-V) CPUs |
+RISCV_U74MC | HOST U74MC (RISC-V) CPUs |
 KEPLER30 | GPU | NVIDIA Kepler generation CC 3.0 |
 KEPLER32 | GPU | NVIDIA Kepler generation CC 3.2 |
 KEPLER35 | GPU | NVIDIA Kepler generation CC 3.5 |
@@ -605,6 +608,7 @@ VOLTA72 | GPU | NVIDIA Volta generation CC 7.2 |
 TURING75 | GPU | NVIDIA Turing generation CC 7.5 |
 AMPERE80 | GPU | NVIDIA Ampere generation CC 8.0 |
 AMPERE86 | GPU | NVIDIA Ampere generation CC 8.6 |
+AMPERE87 | GPU | NVIDIA Ampere generation CC 8.7 |
 ADA89 | GPU | NVIDIA Ada generation CC 8.9 |
 HOPPER90 | GPU | NVIDIA Hopper generation CC 9.0 |
 BLACKWELL100 | GPU | NVIDIA Blackwell generation CC 10.0 |
