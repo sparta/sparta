@@ -29,7 +29,8 @@ SPARTA works.
 6.15 "Transparent surface elements"_#howto_15
 6.16 "Visualizing SPARTA output with ParaView"_#howto_16
 6.17 "Custom per-particle, per-grid, per-surf attributes"_#howto_17
-6.18 "Variable timestep simulations"_#howto_18 :all(b)
+6.18 "Variable timestep simulations"_#howto_18
+6.19 "Details of particles in SPARTA"_#howto_19 :all(b)
 
 The example input scripts included in the SPARTA distribution and
 highlighted in "Section 5"_Section_example.html of the manual also
@@ -222,7 +223,7 @@ can then be output with these commands.
 The following sub-sections discuss different SPARTA commands related
 to output and the kind of data they operate on and produce:
 
-"Global/per-particle/per-grid/per-surf data"_#global
+"Global/per-particle/per-grid/per-surf/per-tally data"_#global
 "Scalar/vector/array data"_#scalar
 "Statistical output"_#stat
 "Dump file output"_#dump
@@ -233,7 +234,7 @@ to output and the kind of data they operate on and produce:
 "Variables that generate values to output"_#variable
 "Summary table of output options and data flow between commands"_#table :ul
 
-Global/per-particle/per-grid/per-surf data :h5,link(global)
+Global/per-particle/per-grid/per-surf/pre-tally data :h5,link(global)
 
 Various output-related commands work with four different styles of
 data: global, per particle, per grid, or per surf.  A global datum is
@@ -242,15 +243,19 @@ per particle datum is one or more values per partice, e.g. the kinetic
 energy of each particle.  A per grid datum is one or more values per
 grid cell, e.g. the temperature of the particles in the grid cell.  A
 per surf datum is one or more values per surface element, e.g. the
-count of particles that collided with the surface element.
+count of particles that collided with the surface element.  A
+per-tally datum is one or more values per event, e.g. a particle
+colliding or reacting with a surface element.
 
 Scalar/vector/array data :h5,link(scalar)
 
-Global, per particle, per grid, and per surf datums can each come in
-three kinds: a single scalar value, a vector of values, or a 2d array
-of values.  The doc page for a "compute" or "fix" or "variable" that
-generates data will specify both the style and kind of data it
-produces, e.g. a per grid vector.
+Global, per particle, per grid, per surf, and per tally datums can
+each come in two kinds: a single scalar value, a vector of values.
+Additionally, global quantities can also be a 2d array of values.  The
+doc page for a "compute" or "fix" or "variable" that generates data
+will specify both the style and kind of data it produces, e.g. a
+per-particle vector.  Some computes can produce more than one form of
+a single style, e.g. a global scalar and a global vector.
 
 When a quantity is accessed, as in many of the output commands
 discussed below, it can be referenced via the following bracket
@@ -285,7 +290,8 @@ Dump file output :h5,link(dump)
 
 Dump file output is specified by the "dump"_dump.html and
 "dump_modify"_dump_modify.html commands.  There are several
-pre-defined formats: dump particle, dump grid, dump surf, etc.
+pre-defined formats: dump particle, dump grid, dump surf, dump tally,
+etc.
 
 Each of these allows specification of what values are output with each
 particle, grid cell, or surface element.  Pre-defined attributes can
@@ -407,9 +413,10 @@ Command: Input: Output:
 "dump particle"_dump.html: per particle vectors: dump file:
 "dump grid"_dump.html: per grid vectors: dump file:
 "dump surf"_dump.html: per surf vectors: dump file:
+"dump tally"_dump.html: per tally vectors: dump file:
 "fix print"_fix_print.html: global scalar from variable: screen, file:
 "print"_print.html: global scalar from variable: screen:
-"computes"_compute.html: N/A: global or per particle/grid/surf scalar/vector/array:
+"computes"_compute.html: N/A: global or per particle/grid/surf/tally scalar/vector/array:
 "fixes"_fix.html: N/A: global or per particle/grid/surf scalar/vector/array:
 "variables"_variable.html: global scalars, per particle vectors: global scalar, per particle vector:
 "compute reduce"_compute_reduce.html: per particle/grid/surf vectors: global scalar/vector:
@@ -1776,3 +1783,73 @@ the current timestep can be output using the {time} and {dt} keywords
 in the "stats_style"_stats_style.html command. These {time} and {dt}
 values are also included in the "read_restart"_read_restart.html and
 "write restart"_write_restart.html commands.
+
+:line
+
+6.19 Details of particles in SPARTA :link(howto_19),h4
+
+Individual simulation particles in SPARTA are conceptually a
+collection of physical gas particles of the same molecular species.
+If the species is atomic, then one gas particle is an atom.  If the
+species is molecular then one gas particle is a molecule.  The number
+of gas particles represented by one SPARTA particle is set by the
+"global fnum"_global.html command.  If cell weighting is enabled, as
+set by the "global weight"_global.html command, it is also affected by
+the weight of the cell the particle is currently in.
+
+Each simulation particle stores the following properties:
+
+ID
+type
+processor that currently owns it
+position (3 components)
+velocity (3 components)
+kinetic, vibrational, and rotation energy :ul
+
+The "dump particle"_dump.html command can output all of these
+properties, see its doc page for the associated keywords and a further
+description of each property.  Various commands in SPARTA can define
+and set additional per-particle properties.  The fix
+ambipolar"_fix_ambipolar.html command is an example.
+
+The ID of each particle is a random integer from 1 to 2^31 in size,
+which is approximately 2 billion possible IDs.  The ID is assigned
+when a particle is created.  This is the list of commands or
+operations in SPARTA which can currently create particles:
+
+"create_particles"_create_particles.html
+fix emit commands: "fix emit/face"_fix_emit_face.html, "fix emit/face/file"_fix_emit_face_file.html, "fix emit/surf"_fix_emit_surf.html
+"scale_particles"_scale_particles.html
+cell weighting: "global weight"_global.html command
+gas phase reactions: "react"_react.html command
+gas/surface reactions: "surf_react"_surf_react.html commands :ul
+
+The {ID} for a particle will persist as it moves through the simulation
+domain and from processor to processor.  If a reaction occurs (gas or
+surface) which creates two particles from one particle, then one of
+the two new particles will have the same ID as the original particle.
+The second particle will be a assigned a new random ID.  Likewise, if
+a particle is cloned (cell weighting or scale_particles), one of the
+new particles will have the same ID as the original particle, the rest
+will be assigned new random IDs.
+
+Note that because IDs are assigned to particles randomly, it is
+probable that multiple particles will have the same ID, even if a
+simulation uses far less than 2 billion particles.  Statistically this
+probability is related to the binomial coefficient C(n,k) which is the
+number of ways to choose K items from N possible items.  In the case
+of SPARTA particles, N = number of possible IDs = 2^31 = 2 billion.
+And K = the number of actual particles in a simulation.
+
+For example, for a 10 million particle simulation, there will be
+~23175 pairs of particles with the same ID and ~36 triplets of
+particles with the same ID.  The remaining particle IDs will be
+unique.
+
+The {type} of a particle is its chemical species.  Internally this is
+an integer from 1 to N, where N is the number of defined species.
+This is the value output to a "dump particle"_dump.html file if the
+{type} keyword is used.  The mapping of integer types to species names
+is determined by the "species"_species.html commands used in the input
+script. The first species name used is type=1, the next is type=2,
+etc.

@@ -50,7 +50,7 @@ ComputeLambdaGrid::ComputeLambdaGrid(SPARTA *sparta, int narg, char **arg) :
 
   if (strcmp(arg[3],"NULL") == 0) {
     tempwhich = NONE;
-    
+
   } else if (strncmp(arg[3],"c_",2) == 0 || strncmp(arg[3],"f_",2) == 0) {
     int n = strlen(arg[3]);
     id_temp = new char[n];
@@ -101,11 +101,11 @@ ComputeLambdaGrid::ComputeLambdaGrid(SPARTA *sparta, int narg, char **arg) :
         error->all(FLERR,"Compute lambda/grid temp fix array is "
                    "accessed out-of-range");
     }
-    
+
   } else error->all(FLERR,"Invalid temp in compute lambda/grid command");
 
   // parse one or more output options
-  
+
   lambdaflag = 0;
   tauflag = 0;
   knallflag = 0;
@@ -167,7 +167,7 @@ ComputeLambdaGrid::ComputeLambdaGrid(SPARTA *sparta, int narg, char **arg) :
   // can now expand single nrho argument in case it has wildcard character "*"
   // nrho_values = 1 or expanded number
   // nrho_values must equal count of all species - checked below
-  
+
   int expand = 0;
   char **earg;
   nrho_values = input->expand_args(1,&arg[2],1,earg);
@@ -365,7 +365,7 @@ ComputeLambdaGrid::ComputeLambdaGrid(SPARTA *sparta, int narg, char **arg) :
   }
 
   // ntotal must match count of species in system
-  
+
   if (ntotal == 0)
     error->all(FLERR,"Cannot use compute lambda/grid command with no species defined");
   if (ntotal != particle->nspecies)
@@ -401,7 +401,7 @@ ComputeLambdaGrid::~ComputeLambdaGrid()
   memory->destroy(lambda_grid);
   memory->destroy(lambdainv);
   memory->destroy(tauinv);
-  
+
   delete [] id_temp;
   memory->destroy(temp);
 }
@@ -464,7 +464,7 @@ void ComputeLambdaGrid::compute_per_grid()
   double **ctally;
 
   int nspecies = ntotal;
-  
+
   for (i = 0; i < nglocal; i++) {
     for (j = 0; j < nspecies; j++) {
       nrho[i][j] = 0.0;
@@ -619,7 +619,7 @@ void ComputeLambdaGrid::compute_per_grid()
 
     // store per-grid lambda for possible later use in Knudsen numbers
     // lambdaflag may be set with no output of lambda
-    
+
     if (lambdaflag) {
       if (lambda == 0.0) lambda = BIG;
       lambda_grid[i] = lambda;
@@ -635,7 +635,7 @@ void ComputeLambdaGrid::compute_per_grid()
       else array_grid[i][output_order[TAU]] = tau;
     }
   }
-    
+
   // calculate per-cell Knudsen number using stored lambda_grid
 
   if (!knanyflag) return;

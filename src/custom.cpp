@@ -53,7 +53,7 @@ Custom::Custom(SPARTA *sparta) : Pointers(sparta) {}
 Custom::~Custom()
 {
   // delete data in Action list which consumes memory
-  
+
   for (int i = 0; i < naction; i++) {
     int action = actions[i].action;
     if (action == FILESTYLE) {
@@ -64,7 +64,7 @@ Custom::~Custom()
       delete [] actions[i].ccol_file;
     }
   }
-  
+
   memory->sfree(actions);
 }
 
@@ -77,7 +77,7 @@ void Custom::command(int narg, char **arg)
   // process mode and sequence of actions
   // perform them one by one
   // final arg = 0 for calling from Custom
-  
+
   bigint count = process_actions(narg,arg,0);
 
   // print stats
@@ -114,7 +114,7 @@ void Custom::command(int narg, char **arg)
 bigint Custom::process_actions(int narg, char **arg, int external)
 {
   // mode
-  
+
   if (strcmp(arg[0],"particle") == 0) mode = PARTICLE;
   else if (strcmp(arg[0],"grid") == 0) mode = GRID;
   else if (strcmp(arg[0],"surf") == 0) mode = SURF;
@@ -132,9 +132,9 @@ bigint Custom::process_actions(int narg, char **arg, int external)
   naction = 0;
   actions = NULL;
   bigint count = 0;
-  
+
   int iarg = 1;
-    
+
   while (iarg < narg) {
 
     // grow list of stored Actions for FixCustom
@@ -152,12 +152,12 @@ bigint Custom::process_actions(int narg, char **arg, int external)
     else error->all(FLERR,"Illegal custom command action");
 
     // create new custom attribute
-    
+
     if (action == CREATE) {
 
       if (external) error->all(FLERR,"Fix custom cannot use create action");
       if (iarg+4 > narg) error->all(FLERR,"Illegal custom command");
-      
+
       int n = strlen(arg[iarg+1]) + 1;
       char *aname = new char[n];
       strcpy(aname,arg[iarg+1]);
@@ -184,11 +184,11 @@ bigint Custom::process_actions(int narg, char **arg, int external)
 
       delete [] aname;
       iarg += 4;
-      
+
     // remove a custom attribute
 
     } else if (action == REMOVE) {
-      
+
       if (external) error->all(FLERR,"Fix custom cannot use remove action");
       if (iarg+2 > narg) error->all(FLERR,"Illegal custom command");
 
@@ -244,16 +244,16 @@ bigint Custom::process_actions(int narg, char **arg, int external)
         error->all(FLERR,"Custom attribute array requires bracketed index");
       if (csize == 0 && ccol)
         error->all(FLERR,"Custom attribute vector cannot use bracketed index");
-    
+
       // variable name
 
       if (strncmp(arg[iarg+2],"v_",2) != 0)
         error->all(FLERR,"Custom variable name is invalid");
-        
+
       n = strlen(arg[iarg+2]);
       char *vname = new char[n];
       strcpy(vname,&arg[iarg+2][2]);
-      
+
       Variable *variable = input->variable;
       int vindex = variable->find(vname);
       if (vindex < 0) error->all(FLERR,"Custom variable name does not exist");
@@ -271,7 +271,7 @@ bigint Custom::process_actions(int narg, char **arg, int external)
 
       Mixture *mixture;
       int groupbit;
-      
+
       if (mode == PARTICLE) {
         int imix = particle->find_mixture(arg[iarg+3]);
         if (imix < 0) error->all(FLERR,"Custom mixture ID does not exist");
@@ -315,23 +315,23 @@ bigint Custom::process_actions(int narg, char **arg, int external)
         actions[naction].region = region;
         naction++;
       }
-      
+
       delete [] aname;
       delete [] vname;
       iarg += 5;
-      
+
     // set multiple custom attributes from a file
 
     } else if (action == FILESTYLE) {
-      
+
       if (iarg+3 > narg) error->all(FLERR,"Illegal custom command");
 
       if (mode == PARTICLE)
         error->all(FLERR,"Custom command cannot use action file with style particle");
-      
+
       // file name
       // if external check that fname has wildcard char
-      
+
       int n = strlen(arg[iarg+1]) + 1;
       char *fname = new char[n];
       strcpy(fname,arg[iarg+1]);
@@ -340,7 +340,7 @@ bigint Custom::process_actions(int narg, char **arg, int external)
         error->all(FLERR,"Fix custom filename must have * wildcard char");
 
       // colcount = # of attribute values per file line
-      
+
       int colcount = input->inumeric(FLERR,arg[iarg+2]);
       if (colcount < 1) error->all(FLERR,"Custom command file column count is invalid");
       if (iarg+3+colcount > narg) error->all(FLERR,"Illegal custom command");
@@ -353,7 +353,7 @@ bigint Custom::process_actions(int narg, char **arg, int external)
       int *ccol = new int[colcount];
 
       for (int i = 0; i < colcount; i++) {
-        int n = strlen(arg[iarg+3+i]) + 1;  
+        int n = strlen(arg[iarg+3+i]) + 1;
         char *aname = new char[n];
         strcpy(aname,arg[iarg+3+i]);
         ccol[i] = attribute_bracket(aname);
@@ -415,13 +415,13 @@ bigint Custom::process_actions(int narg, char **arg, int external)
         actions[naction].ccol_file = ccol;
         naction++;
       }
-      
+
       iarg += 3 + colcount;
 
     // set multiple custom attributes from a coarse file
 
     } else if (action == FILECOARSE) {
-      
+
       if (iarg+5 > narg) error->all(FLERR,"Illegal custom command");
 
       if (mode == PARTICLE || mode == SURF)
@@ -434,11 +434,11 @@ bigint Custom::process_actions(int narg, char **arg, int external)
       int filestyle;
       if (strcmp(arg[iarg+2],"text") == 0) filestyle = TEXT;
       else if (strcmp(arg[iarg+2],"binary") == 0) filestyle = BINARY;
-      
+
       // file name
       // if numfile > 1, fname must have "%" wildcard char
       // if external, fname must have "*" wildcard char
-      
+
       int n = strlen(arg[iarg+3]) + 1;
       char *fname = new char[n];
       strcpy(fname,arg[iarg+3]);
@@ -449,7 +449,7 @@ bigint Custom::process_actions(int narg, char **arg, int external)
         error->all(FLERR,"Fix custom filename must have * wildcard char");
 
       // colcount = # of attribute values per file line
-      
+
       int colcount = input->inumeric(FLERR,arg[iarg+4]);
       if (colcount < 1)
         error->all(FLERR,"Custom command file/coarse column count is invalid");
@@ -463,7 +463,7 @@ bigint Custom::process_actions(int narg, char **arg, int external)
       int *ccol = new int[colcount];
 
       for (int i = 0; i < colcount; i++) {
-        int n = strlen(arg[iarg+5+i]) + 1;  
+        int n = strlen(arg[iarg+5+i]) + 1;
         char *aname = new char[n];
         strcpy(aname,arg[iarg+5+i]);
         ccol[i] = attribute_bracket(aname);
@@ -512,12 +512,12 @@ bigint Custom::process_actions(int narg, char **arg, int external)
         // for mode = GRID
         //   set estatus of all changed custom vecs/arrays to 0
         //   b/c only looping above over only owned cells
-        
+
         for (int i = 0; i < colcount; i++)
           grid->estatus[cindex[i]] = 0;
 
         // clean up
-        
+
         delete [] fname;
         delete [] cindex;
         delete [] ctype;
@@ -526,7 +526,7 @@ bigint Custom::process_actions(int narg, char **arg, int external)
 
         memory->destroy(xyz_coarse);
         memory->destroy(values_coarse);
-        
+
       } else {
         actions[naction].action = action;
         actions[naction].numfile = numfile;
@@ -539,7 +539,7 @@ bigint Custom::process_actions(int narg, char **arg, int external)
         actions[naction].ccol_file = ccol;
         naction++;
       }
-      
+
       iarg += 5 + colcount;
     }
   }
@@ -556,12 +556,12 @@ bigint Custom::process_actions(int narg, char **arg, int external)
 bigint Custom::process_actions()
 {
   bigint count = 0;
-  
+
   // process list of stored actions
   // only SET and FILESTYLE actions for
 
   for (int i = 0; i < naction; i++) {
-      
+
    // set a custom vector or column of custom array via a variable
 
     if (actions[i].action == SET) {
@@ -577,7 +577,7 @@ bigint Custom::process_actions()
 
       count += action_set(vstyle,vindex,cindex,ctype,csize,ccol,
                           groupbit,mixture,region);
-      
+
     // set multiple custom attributes from a file
 
     } else if (actions[i].action == FILESTYLE) {
@@ -601,7 +601,7 @@ bigint Custom::process_actions()
 
       count += read_file(mode,colcount,
                          cindex,ctype,csize,ccol,filecurrent);
-      
+
       delete [] filecurrent;
 
       // for mode = GRID
@@ -609,7 +609,7 @@ bigint Custom::process_actions()
       //   b/c grid cell hash stores owned+ghost cells
       // for mode = SURF
       //   set estatus of all changed custom vecs/arrays to 0
-      
+
       if (mode == GRID)
         for (int i = 0; i < colcount; i++)
           grid->estatus[cindex[i]] = 1;
@@ -637,12 +637,12 @@ bigint Custom::process_actions()
       sprintf(filecurrent,"%s" BIGINT_FORMAT "%s",
               fname,update->ntimestep,ptr+1);
       *ptr = '*';
-      
+
       // read all coarse files, share results with all procs
       // sets ncoarse, xyz_coarse, values_coarse
 
       read_coarse_files(filecurrent,numfile,colcount);
-      
+
       delete [] filecurrent;
 
       // form KD tree for coarse grid points
@@ -654,7 +654,7 @@ bigint Custom::process_actions()
       // for mode = GRID
       //   set estatus of all changed custom vecs/arrays to 0
       //   b/c only looping above over only owned cells
-      
+
       if (mode == GRID)
         for (int i = 0; i < colcount; i++)
           grid->estatus[cindex[i]] = 0;
@@ -675,7 +675,7 @@ bigint Custom::action_set(int vstyle, int vindex,
                           int groupbit, Mixture *mixture, Region *region)
 {
   bigint count = 0;
-  
+
   double scalar = 0.0;
   double *vector = NULL;
 
@@ -707,7 +707,7 @@ bigint Custom::action_set(int vstyle, int vindex,
   else if (mode == SURF)
     count = set_surf(groupbit,region,
                      cindex,ctype,csize,ccol,scalar,vector);
-  
+
   memory->destroy(vector);
 
   // for mode = GRID
@@ -720,7 +720,7 @@ bigint Custom::action_set(int vstyle, int vindex,
   else if (mode == SURF) surf->estatus[cindex] = 0;
 
   return count;
-}    
+}
 
 /* ----------------------------------------------------------------------
    set a PARTICLE custom vector or column of custom array via a variable
@@ -835,7 +835,7 @@ bigint Custom::set_grid(int groupbit, Region *region,
 
   // select which cells to set, skip sub cells
   // region criterion is based on cell center point
-  
+
   int *choose;
   memory->create(choose,nglocal,"set:choose");
   memset(choose,0,nglocal*sizeof(int));
@@ -1067,13 +1067,13 @@ bigint Custom::read_file(int mode, int colcount,
 {
   // setup read buffers
   // NOTE: should these be created by Memory class ?
-  
+
   char *line = new char[MAXLINE];
   char *buffer = new char[CHUNK*MAXLINE];
 
   // set ivec,dvec,iarray,darray pointers
   // only one will be active for each value in input line
-  
+
   int **ivec = new int*[colcount];
   double **dvec = new double*[colcount];
   int ***iarray = new int**[colcount];
@@ -1106,9 +1106,9 @@ bigint Custom::read_file(int mode, int colcount,
       }
     }
   }
-  
+
   // ensure grid cell IDs are hashed
-  
+
   Grid::MyHash *hash;
 
   if (mode == GRID) {
@@ -1117,10 +1117,10 @@ bigint Custom::read_file(int mode, int colcount,
   }
 
   // nsurf = max ID of a surf in file
-  
+
   bigint nsurf;
   if (mode == SURF) nsurf = surf->nsurf;
-  
+
   // read file
 
   MPI_Barrier(world);
@@ -1136,17 +1136,17 @@ bigint Custom::read_file(int mode, int colcount,
     fp = fopen(filename,"r");
     if (fp == NULL) error->one(FLERR,"Could not open custom attribute file");
   }
-  
+
   // read header portion of file
   // comments or blank lines are allowed
   // nfile = count of attribute lines in file
   // NOTE: allow for nfile to be a bigint ?
-  
+
   int nfile,nvalues;
-  
+
   if (me == 0) {
     char *eof,*ptr;
-    
+
     while (1) {
       eof = fgets(line,MAXLINE,fp);
       if (eof == NULL) error->one(FLERR,"Unexpected end of custom attribute file");
@@ -1181,7 +1181,7 @@ bigint Custom::read_file(int mode, int colcount,
   int i,m,nchunk,index,iproc;
   char *next,*buf,*idptr;
   cellint id;
-  
+
   while (nread < nfile) {
     if (nfile-nread > CHUNK) nchunk = CHUNK;
     else nchunk = nfile-nread;
@@ -1206,7 +1206,7 @@ bigint Custom::read_file(int mode, int colcount,
 
     // process nchunk lines and assign attribute values if I store grid/surf ID
     // store means as owned or ghost grid cell
-    
+
     buf = buffer;
 
     for (i = 0; i < nchunk; i++) {
@@ -1219,7 +1219,7 @@ bigint Custom::read_file(int mode, int colcount,
 	error->all(FLERR,"Incorrect line format in custom attribute file");
 
       // grid ID will match either an owned or ghost grid cell
-      
+
       if (mode == GRID) {
         idptr = strtok(buf," \t\n\r\f");
         id = ATOCELLINT(idptr);
@@ -1268,11 +1268,11 @@ bigint Custom::read_file(int mode, int colcount,
     }
 
     // increment nread and fcount and continue to next chunk
-    
+
     nread += nchunk;
     fcount++;
   }
-  
+
   // close file
 
   if (me == 0) {
@@ -1280,9 +1280,9 @@ bigint Custom::read_file(int mode, int colcount,
     //else fclose(fp);
     fclose(fp);
   }
-  
+
   // free read buffers and vec/array ptrs
-  
+
   delete [] line;
   delete [] buffer;
   delete [] ivec;
@@ -1316,18 +1316,18 @@ void Custom::read_coarse_files(char *fname, int numfile, int colcount)
   char *line = new char[MAXLINE];
 
   // storage for coarse grid points I read in
-  
+
   int ncoarse_me = 0;
   double **xyz_coarse_me = NULL;
   double **values_coarse_me = NULL;
-  
+
   for (int iproc = comm->me; iproc < numfile; iproc += comm->nprocs) {
 
     // if multiple files:
-    // filewhich = replace '*' in filecurrent with current timestep 
+    // filewhich = replace '*' in filecurrent with current timestep
 
     char *filewhich;
-    
+
     if (numfile > 1) {
       filewhich = new char[strlen(fname) + 16];
       char *ptr = strchr(fname,'%');
@@ -1335,18 +1335,18 @@ void Custom::read_coarse_files(char *fname, int numfile, int colcount)
       sprintf(filewhich,"%s%d%s",fname,iproc+1,ptr+1);
       *ptr = '%';
     } else filewhich = fname;
-    
+
     // read a single coarse file = filewhich
-  
+
     // NOTE: print name of bad file ?
     FILE *fp = fopen(filewhich,"r");
     if (fp == NULL) error->one(FLERR,"Could not open custom coarse file");
-  
+
     // read past header portion of file
     // comments or blank lines are allowed
-  
+
     char *eof,*ptr;
-    
+
     while (1) {
       eof = fgets(line,MAXLINE,fp);
       if (eof == NULL) error->one(FLERR,"Unexpected end of custom coarse file");
@@ -1404,7 +1404,7 @@ void Custom::read_coarse_files(char *fname, int numfile, int colcount)
   double *boxhi = domain->boxhi;
   int count = 0;
   int flag;
-  
+
   for (int i = 0; i < ncoarse_me; i++) {
     flag = 0;
     if (xyz_coarse_me[i][0] < boxlo[0] || xyz_coarse_me[i][0] > boxhi[0]) flag = 1;
@@ -1428,10 +1428,10 @@ void Custom::read_coarse_files(char *fname, int numfile, int colcount)
 
   if (comm->me == 0 && ncoarse > MAXCOARSE)
     error->warning(FLERR,"Custom coarse grid points > MAXCOARSE");
-  
+
   memory->create(xyz_coarse,ncoarse,domain->dimension,"custom:xyz_coarse");
   memory->create(values_coarse,ncoarse,colcount,"custom:values_coarse");
-  
+
   int nprocs = comm->nprocs;
   int *recvcounts,*displs;
   memory->create(recvcounts,nprocs,"custom:recvcounts");
@@ -1462,7 +1462,7 @@ void Custom::read_coarse_files(char *fname, int numfile, int colcount)
   else
     MPI_Allgatherv(NULL,nper,MPI_DOUBLE,
                    values_coarse[0],recvcounts,displs,MPI_DOUBLE,world);
-    
+
   // clean up
 
   delete [] line;
@@ -1490,22 +1490,22 @@ bigint Custom::coarse_tree_neighbor_assign(int external, int colcount,
 {
   // create KD tree for ncoarse 2d or 3d points
   // copy for global ncoarse points on all procs
-  
+
   KDTree *kdtree = new KDTree(sparta,domain->dimension,ncoarse,xyz_coarse);
-  
+
   int *list;
   memory->create(list,ncoarse,"custom:list");
   for (int i = 0; i < ncoarse; i++) list[i] = i;
-  
+
   kdtree->create_tree(-1,ncoarse,list);
-  
+
   memory->destroy(list);
   if (!external) kdtree->stats_tree();
-        
+
   // loop over my owned grid cells
   // find closest coarse point
   // find all coarse points within cutoff = closest distance + EPSILON
-  
+
   Grid::ChildCell *cells = grid->cells;
   int nglocal = grid->nlocal;
   double ctr[3];
@@ -1517,7 +1517,7 @@ bigint Custom::coarse_tree_neighbor_assign(int external, int colcount,
   memory->create(closest_distsq,nglocal,"KDTree:closest_distsq");
 
   bigint count = 0;
-  
+
   for (int i = 0; i < nglocal; i++) {
     if (cells[i].nsplit <= 0) continue;
     ctr[0] = 0.5 * (cells[i].lo[0] + cells[i].hi[0]);
@@ -1530,10 +1530,10 @@ bigint Custom::coarse_tree_neighbor_assign(int external, int colcount,
   // print stats on nearest searches
 
   if (!external) kdtree->stats_search();
-  
+
   // set ivec,dvec,iarray,darray pointers
   // only one will be active for each value in input line
-  
+
   int **ivec = new int*[colcount];
   double **dvec = new double*[colcount];
   int ***iarray = new int**[colcount];
@@ -1576,7 +1576,7 @@ bigint Custom::coarse_tree_neighbor_assign(int external, int colcount,
   int plist[MAXTIE];
   double dlist[MAXTIE];
 
-  for (int i = 0; i < nglocal; i++) { 
+  for (int i = 0; i < nglocal; i++) {
     if (cells[i].nsplit <= 0) continue;
     ctr[0] = 0.5 * (cells[i].lo[0] + cells[i].hi[0]);
     ctr[1] = 0.5 * (cells[i].lo[1] + cells[i].hi[1]);
@@ -1589,7 +1589,7 @@ bigint Custom::coarse_tree_neighbor_assign(int external, int colcount,
     // assign all attribute values for this grid cell or surf
     // average over coarse neighbors if more than one
     // note that for INT values, averaging rounds down
-    
+
     for (int ic = 0; ic < ncount; ic++) {
       for (int j = 0; j < colcount; j++) {
         if (ctype[j] == INT) {
@@ -1625,7 +1625,7 @@ bigint Custom::coarse_tree_neighbor_assign(int external, int colcount,
       }
     }
   }
-  
+
   // print stats on neighbor searches
 
   if (!external) kdtree->stats_neighbor();
@@ -1644,7 +1644,7 @@ bigint Custom::coarse_tree_neighbor_assign(int external, int colcount,
   return count;
 }
 
-/* ---------------------------------------------------------------------- 
+/* ----------------------------------------------------------------------
   process an attribute name with optional bracketed index name[N]
    ccol = 0 if no brackets (vector attribute)
    ccol = N if bracktes (Nth column of array attribute)
@@ -1663,7 +1663,7 @@ int Custom::attribute_bracket(char *aname)
   } else ccol = 0;
 
   return ccol;
-} 
+}
 
 // ----------------------------------------------------------------------
 // ----------------------------------------------------------------------
@@ -1682,7 +1682,7 @@ KDTree::KDTree(SPARTA *sparta, int dimension, int n, double **coords) :
   dim = dimension;
   points = coords;
   npoints = n;
-  
+
   tree = NULL;
   ntree = maxtree = 0;
 
@@ -1707,7 +1707,7 @@ KDTree::~KDTree()
 void KDTree::create_tree(int iparent, int n, int *plist)
 {
   // single point, create LEAF node
-  
+
   if (n == 1) {
     if (ntree == maxtree) {
       maxtree += DELTANODE;
@@ -1730,7 +1730,7 @@ void KDTree::create_tree(int iparent, int n, int *plist)
   tree[ntree].iparent = iparent;
 
   // calculate bbox around list of points
-  
+
   double bboxlo[3] = {BIG,BIG,BIG};
   double bboxhi[3] = {-BIG,-BIG,-BIG};
 
@@ -1753,10 +1753,10 @@ void KDTree::create_tree(int iparent, int n, int *plist)
   if (dim == 3 && bboxlo[0] == bboxhi[0] && bboxlo[1] == bboxhi[1] &&
       bboxlo[2] == bboxhi[2]) flag = 1;
   if (flag) error->one(FLERR,"Multiple coarse grid points with same coords");
-  
+
   // splitdim = which dim to split points in (minimum bbox edge)
   // split = splitting value in that dim
-  
+
   double xdelta = bboxhi[0] - bboxlo[0];
   double ydelta = bboxhi[1] - bboxlo[1];
   double zdelta = bboxhi[2] - bboxlo[2];
@@ -1768,9 +1768,9 @@ void KDTree::create_tree(int iparent, int n, int *plist)
     if (splitdim == 0 && zdelta > xdelta) splitdim = 2;
     if (splitdim == 1 && zdelta > ydelta) splitdim = 2;
   }
-      
+
   double split = 0.5 * (bboxlo[splitdim] + bboxhi[splitdim]);
-  
+
   tree[ntree].splitdim = splitdim;
   tree[ntree].split = split;
 
@@ -1784,7 +1784,7 @@ void KDTree::create_tree(int iparent, int n, int *plist)
   int nright = 0;
   int maxleft = 0;
   int maxright = 0;
-  
+
   for (int i = 0; i < n; i++) {
     if (points[plist[i]][splitdim] <= split) leftlist[nleft++] = plist[i];
     else rightlist[nright++] = plist[i];
@@ -1834,7 +1834,7 @@ int KDTree::find_nearest(double *x, int inode, double &distsq)
 
   int ipoint_new;
   double distsq_new;
-  
+
   while (inode != startnode) {
     int ichild = inode;
     inode = tree[inode].iparent;
@@ -1857,7 +1857,7 @@ int KDTree::find_nearest(double *x, int inode, double &distsq)
     nsearch++;
     avedist += sqrt(distsq);
   }
-  
+
   return ipoint;
 }
 
@@ -1945,7 +1945,7 @@ void KDTree::stats_tree()
     if (tree[i].which == BRANCH) nbranch++;
     if (tree[i].which == LEAF) nleaf++;
   }
-  
+
   int maxdepth = depthwalk(0,0,0);
 
   if (comm->me == 0) {
@@ -1973,7 +1973,7 @@ void KDTree::stats_tree()
 int KDTree::depthwalk(int inode, int depth, int maxdepth)
 {
   if (tree[inode].which == LEAF) return depth+1;
-  
+
   maxdepth = MAX(maxdepth,depthwalk(tree[inode].left,depth+1,maxdepth));
   maxdepth = MAX(maxdepth,depthwalk(tree[inode].right,depth+1,maxdepth));
   return maxdepth;
@@ -1995,7 +1995,7 @@ void KDTree::stats_search()
   int count_leaf_all;
   MPI_Allreduce(&count_leaf,&count_leaf_all,1,MPI_INT,MPI_SUM,world);
   double avecount_leaf = (double) count_leaf_all / nsearch_all;
-  
+
   if (comm->me == 0) {
     if (screen) {
       fprintf(screen,"    %d = number of grid cell searches\n",nsearch_all);
@@ -2032,7 +2032,7 @@ void KDTree::stats_neighbor()
   int count_leaf_all;
   MPI_Allreduce(&count_leaf,&count_leaf_all,1,MPI_INT,MPI_SUM,world);
   double avecount_leaf = (double) count_leaf_all / nsearch_all;
-  
+
   if (comm->me == 0) {
     if (screen) {
       fprintf(screen,"    %g = ave count of neighbor points\n",(double) nneigh_all/nsearch_all);

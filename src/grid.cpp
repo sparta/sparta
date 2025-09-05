@@ -474,7 +474,7 @@ void Grid::acquire_ghosts(int surfflag)
                    "grid partition is not clumped");
 
   for (int i = 0; i < ncustom; i++) grid->estatus[i] = 1;
- 
+
   if (surf->distributed && !surf->implicit) {
     surf->hash->clear();
     surf->hashfilled = 0;

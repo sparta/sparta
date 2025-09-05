@@ -42,7 +42,7 @@ class ComputeLambdaGrid : public Compute {
 
   int nglocal;               // current count of owned grid cells
   int tmax;                  // max tally count for nrho compute/fix
-  
+
   int nrho_values;           // # of species with nrho values
   char **ids_nrho;           // ID/name of compute,fix,variable to access
   int *nrhowhich;            // COMPUTE or FIX or VARIABLE
@@ -69,7 +69,7 @@ class ComputeLambdaGrid : public Compute {
   int tempindex;
   class Compute *cnrho,*ctemp;
   class Fix *fnrho,*ftemp;
-  
+
   double **nrho,*temp;
   double *lambda_grid;
   double **lambdainv,**tauinv;

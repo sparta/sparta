@@ -32,7 +32,8 @@ SPARTA works.
 6.15 <A HREF = "#howto_15">Transparent surface elements</A><BR>
 6.16 <A HREF = "#howto_16">Visualizing SPARTA output with ParaView</A><BR>
 6.17 <A HREF = "#howto_17">Custom per-particle, per-grid, per-surf attributes</A><BR>
-6.18 <A HREF = "#howto_18">Variable timestep simulations</A> <BR>
+6.18 <A HREF = "#howto_18">Variable timestep simulations</A><BR>
+6.19 <A HREF = "#howto_19">Details of particles in SPARTA</A> <BR>
 
 <P>The example input scripts included in the SPARTA distribution and
 highlighted in <A HREF = "Section_example.html">Section 5</A> of the manual also
@@ -226,7 +227,7 @@ can then be output with these commands.
 <P>The following sub-sections discuss different SPARTA commands related
 to output and the kind of data they operate on and produce:
 </P>
-<UL><LI><A HREF = "#global">Global/per-particle/per-grid/per-surf data</A>
+<UL><LI><A HREF = "#global">Global/per-particle/per-grid/per-surf/per-tally data</A>
 <LI><A HREF = "#scalar">Scalar/vector/array data</A>
 <LI><A HREF = "#stat">Statistical output</A>
 <LI><A HREF = "#dump">Dump file output</A>
@@ -237,7 +238,7 @@ to output and the kind of data they operate on and produce:
 <LI><A HREF = "#variable">Variables that generate values to output</A>
 <LI><A HREF = "#table">Summary table of output options and data flow between commands</A> 
 </UL>
-<H5><A NAME = "global"></A>Global/per-particle/per-grid/per-surf data 
+<H5><A NAME = "global"></A>Global/per-particle/per-grid/per-surf/pre-tally data 
 </H5>
 <P>Various output-related commands work with four different styles of
 data: global, per particle, per grid, or per surf.  A global datum is
@@ -246,15 +247,19 @@ per particle datum is one or more values per partice, e.g. the kinetic
 energy of each particle.  A per grid datum is one or more values per
 grid cell, e.g. the temperature of the particles in the grid cell.  A
 per surf datum is one or more values per surface element, e.g. the
-count of particles that collided with the surface element.
+count of particles that collided with the surface element.  A
+per-tally datum is one or more values per event, e.g. a particle
+colliding or reacting with a surface element.
 </P>
 <H5><A NAME = "scalar"></A>Scalar/vector/array data 
 </H5>
-<P>Global, per particle, per grid, and per surf datums can each come in
-three kinds: a single scalar value, a vector of values, or a 2d array
-of values.  The doc page for a "compute" or "fix" or "variable" that
-generates data will specify both the style and kind of data it
-produces, e.g. a per grid vector.
+<P>Global, per particle, per grid, per surf, and per tally datums can
+each come in two kinds: a single scalar value, a vector of values.
+Additionally, global quantities can also be a 2d array of values.  The
+doc page for a "compute" or "fix" or "variable" that generates data
+will specify both the style and kind of data it produces, e.g. a
+per-particle vector.  Some computes can produce more than one form of
+a single style, e.g. a global scalar and a global vector.
 </P>
 <P>When a quantity is accessed, as in many of the output commands
 discussed below, it can be referenced via the following bracket
@@ -291,7 +296,8 @@ global values to be used as an argument of the
 </H5>
 <P>Dump file output is specified by the <A HREF = "dump.html">dump</A> and
 <A HREF = "dump_modify.html">dump_modify</A> commands.  There are several
-pre-defined formats: dump particle, dump grid, dump surf, etc.
+pre-defined formats: dump particle, dump grid, dump surf, dump tally,
+etc.
 </P>
 <P>Each of these allows specification of what values are output with each
 particle, grid cell, or surface element.  Pre-defined attributes can
@@ -414,9 +420,10 @@ vector input could be a column of an array.
 <TR><TD ><A HREF = "dump.html">dump particle</A></TD><TD > per particle vectors</TD><TD > dump file</TD><TD ></TD></TR>
 <TR><TD ><A HREF = "dump.html">dump grid</A></TD><TD > per grid vectors</TD><TD > dump file</TD><TD ></TD></TR>
 <TR><TD ><A HREF = "dump.html">dump surf</A></TD><TD > per surf vectors</TD><TD > dump file</TD><TD ></TD></TR>
+<TR><TD ><A HREF = "dump.html">dump tally</A></TD><TD > per tally vectors</TD><TD > dump file</TD><TD ></TD></TR>
 <TR><TD ><A HREF = "fix_print.html">fix print</A></TD><TD > global scalar from variable</TD><TD > screen, file</TD><TD ></TD></TR>
 <TR><TD ><A HREF = "print.html">print</A></TD><TD > global scalar from variable</TD><TD > screen</TD><TD ></TD></TR>
-<TR><TD ><A HREF = "compute.html">computes</A></TD><TD > N/A</TD><TD > global or per particle/grid/surf scalar/vector/array</TD><TD ></TD></TR>
+<TR><TD ><A HREF = "compute.html">computes</A></TD><TD > N/A</TD><TD > global or per particle/grid/surf/tally scalar/vector/array</TD><TD ></TD></TR>
 <TR><TD ><A HREF = "fix.html">fixes</A></TD><TD > N/A</TD><TD > global or per particle/grid/surf scalar/vector/array</TD><TD ></TD></TR>
 <TR><TD ><A HREF = "variable.html">variables</A></TD><TD > global scalars, per particle vectors</TD><TD > global scalar, per particle vector</TD><TD ></TD></TR>
 <TR><TD ><A HREF = "compute_reduce.html">compute reduce</A></TD><TD > per particle/grid/surf vectors</TD><TD > global scalar/vector</TD><TD ></TD></TR>
@@ -1786,5 +1793,75 @@ the current timestep can be output using the <I>time</I> and <I>dt</I> keywords
 in the <A HREF = "stats_style.html">stats_style</A> command. These <I>time</I> and <I>dt</I>
 values are also included in the <A HREF = "read_restart.html">read_restart</A> and
 <A HREF = "write_restart.html">write restart</A> commands.
+</P>
+<HR>
+
+<A NAME = "howto_19"></A><H4>6.19 Details of particles in SPARTA 
+</H4>
+<P>Individual simulation particles in SPARTA are conceptually a
+collection of physical gas particles of the same molecular species.
+If the species is atomic, then one gas particle is an atom.  If the
+species is molecular then one gas particle is a molecule.  The number
+of gas particles represented by one SPARTA particle is set by the
+<A HREF = "global.html">global fnum</A> command.  If cell weighting is enabled, as
+set by the <A HREF = "global.html">global weight</A> command, it is also affected by
+the weight of the cell the particle is currently in.
+</P>
+<P>Each simulation particle stores the following properties:
+</P>
+<UL><LI>ID
+<LI>type
+<LI>processor that currently owns it
+<LI>position (3 components)
+<LI>velocity (3 components)
+<LI>kinetic, vibrational, and rotation energy 
+</UL>
+<P>The <A HREF = "dump.html<A HREF = "fix_ambipolar.html">>dump particle</A> command can output all of these
+properties, see its doc page for the associated keywords and a further
+description of each property.  Various commands in SPARTA can define
+and set additional per-particle properties.  The fix
+ambipolar</A> command is an example.
+</P>
+<P>The ID of each particle is a random integer from 1 to 2^31 in size,
+which is approximately 2 billion possible IDs.  The ID is assigned
+when a particle is created.  This is the list of commands or
+operations in SPARTA which can currently create particles:
+</P>
+<UL><LI><A HREF = "create_particles.html">create_particles</A>
+<LI>fix emit commands: <A HREF = "fix_emit_face.html">fix emit/face</A>, <A HREF = "fix_emit_face_file.html">fix emit/face/file</A>, <A HREF = "fix_emit_surf.html">fix emit/surf</A>
+<LI><A HREF = "scale_particles.html">scale_particles</A>
+<LI>cell weighting: <A HREF = "global.html">global weight</A> command
+<LI>gas phase reactions: <A HREF = "react.html">react</A> command
+<LI>gas/surface reactions: <A HREF = "surf_react.html">surf_react</A> commands 
+</UL>
+<P>The <I>ID</I> for a particle will persist as it moves through the simulation
+domain and from processor to processor.  If a reaction occurs (gas or
+surface) which creates two particles from one particle, then one of
+the two new particles will have the same ID as the original particle.
+The second particle will be a assigned a new random ID.  Likewise, if
+a particle is cloned (cell weighting or scale_particles), one of the
+new particles will have the same ID as the original particle, the rest
+will be assigned new random IDs.
+</P>
+<P>Note that because IDs are assigned to particles randomly, it is
+probable that multiple particles will have the same ID, even if a
+simulation uses far less than 2 billion particles.  Statistically this
+probability is related to the binomial coefficient C(n,k) which is the
+number of ways to choose K items from N possible items.  In the case
+of SPARTA particles, N = number of possible IDs = 2^31 = 2 billion.
+And K = the number of actual particles in a simulation.
+</P>
+<P>For example, for a 10 million particle simulation, there will be
+~23175 pairs of particles with the same ID and ~36 triplets of
+particles with the same ID.  The remaining particle IDs will be
+unique.
+</P>
+<P>The <I>type</I> of a particle is its chemical species.  Internally this is
+an integer from 1 to N, where N is the number of defined species.
+This is the value output to a <A HREF = "dump.html">dump particle</A> file if the
+<I>type</I> keyword is used.  The mapping of integer types to species names
+is determined by the <A HREF = "species.html">species</A> commands used in the input
+script. The first species name used is type=1, the next is type=2,
+etc.
 </P>
 </HTML>

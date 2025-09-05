@@ -267,6 +267,6 @@ void FixSurfTemp::end_of_step()
 
   // invoke fixes which use per-surf custom attributes
   // example: fix emit/surf
-  
+
   modify->custom_surf_changed();
 }

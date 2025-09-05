@@ -189,6 +189,7 @@ int attempt_kk(Particle::OnePart *ip, Particle::OnePart *jp,
     }
 
     // Cover cases where coeff[1].neq.coeff[4]
+
     if (r->d_coeff[1]>((-1)*r->d_coeff[4])) e_excess = ecc - r->d_coeff[1];
     else e_excess = ecc + r->d_coeff[4];
     if (e_excess <= 0.0) continue;
@@ -318,12 +319,14 @@ int attempt_kk(Particle::OnePart *ip, Particle::OnePart *jp,
 
         post_etotal = pre_etotal + r->d_coeff[4];
 
-        return 1;
-      } else {
-        return 0;
+        // return reaction from 1 to N
+
+        return d_list[i] + 1;
       }
     }
   }
+
+  // no reaction performed
 
   return 0;
 }
