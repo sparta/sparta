@@ -593,7 +593,7 @@ ZEN4 | HOST | AMD Zen4 architecture |
 ZEN5 | HOST | AMD Zen5 architecture |
 RISCV_SG2042 | HOST | SG2042 (RISC-V) CPUs |
 RISCV_RVA22V | HOST | RVA22V (RISC-V) CPUs |
-RISCV_U74MC | HOST U74MC (RISC-V) CPUs |
+RISCV_U74MC | HOST | U74MC (RISC-V) CPUs |
 KEPLER30 | GPU | NVIDIA Kepler generation CC 3.0 |
 KEPLER32 | GPU | NVIDIA Kepler generation CC 3.2 |
 KEPLER35 | GPU | NVIDIA Kepler generation CC 3.5 |
