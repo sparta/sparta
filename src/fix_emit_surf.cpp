@@ -763,7 +763,7 @@ void FixEmitSurf::perform_task()
 
           if (nsurf_tally)
             for (int k = 0; k < nsurf_tally; k++)
-              slist_active[k]->surf_tally(isurf,pcell,0,NULL,p,NULL);
+              slist_active[k]->surf_tally(p->dtremain,isurf,pcell,0,NULL,p,NULL);
 
           // if using per-surf custom attributes,
           // temps/vstream already set to custom attributes in create_task
@@ -875,7 +875,7 @@ void FixEmitSurf::perform_task()
 
         if (nsurf_tally)
           for (int k = 0; k < nsurf_tally; k++)
-            slist_active[k]->surf_tally(isurf,pcell,0,NULL,p,NULL);
+            slist_active[k]->surf_tally(p->dtremain,isurf,pcell,0,NULL,p,NULL);
 
         // temps/vstream already set to custom attributes in create_task
         // if per-surf custom attributes are being used

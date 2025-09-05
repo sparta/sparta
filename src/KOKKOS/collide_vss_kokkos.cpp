@@ -380,9 +380,13 @@ void CollideVSSKokkos::collisions()
   boltz = update->boltz;
 
   // perform collisions:
-  // variant for single group or multiple groups (not yet supported)
-  // variant for nearcp flag or not
   // variant for ambipolar approximation or not
+  // variant for nearcp flag or not
+  // variant for ngas_tally active or not
+  // variant for single group or multiple groups
+
+  if (ngas_tally)
+    error->all(FLERR,"Gas tally not yet supported with Kokkos");
 
   if (ngroups != 1)
     error->all(FLERR,"Group collisions not yet supported with Kokkos");
@@ -390,12 +394,25 @@ void CollideVSSKokkos::collisions()
   COLLIDE_REDUCE reduce;
 
   if (!ambiflag) {
-    if (nearcp == 0)
-      collisions_one<0>(reduce);
-    else
-      collisions_one<1>(reduce);
-  } else {
-    collisions_one_ambipolar(reduce);
+    if (!nearcp) {
+      if (!ngas_tally) {
+        collisions_one<0,0>(reduce);
+      } else if (ngas_tally) {
+        collisions_one<0,1>(reduce);
+      }
+    } else if (nearcp) {
+      if (!ngas_tally) {
+        collisions_one<1,0>(reduce);
+      } else if (ngas_tally) {
+        collisions_one<1,1>(reduce);
+      }
+    }
+  } else if (ambiflag) {
+    if (!ngas_tally) {
+      collisions_one_ambipolar<0>(reduce);
+    } else if (!ngas_tally) {
+      collisions_one_ambipolar<1>(reduce);
+    }
   }
 
   // remove any particles deleted in chemistry reactions
@@ -438,7 +455,7 @@ void CollideVSSKokkos::collisions()
    NTC algorithm for a single group
 ------------------------------------------------------------------------- */
 
-template < int NEARCP > void CollideVSSKokkos::collisions_one(COLLIDE_REDUCE &reduce)
+template < int NEARCP, int GASTALLY > void CollideVSSKokkos::collisions_one(COLLIDE_REDUCE &reduce)
 {
   // loop over cells I own
 
@@ -533,11 +550,11 @@ template < int NEARCP > void CollideVSSKokkos::collisions_one(COLLIDE_REDUCE &re
 
     if (sparta->kokkos->atomic_reduction) {
       if (sparta->kokkos->need_atomics)
-        Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagCollideCollisionsOne<NEARCP,1> >(0,nglocal),*this);
+        Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagCollideCollisionsOne<NEARCP,GASTALLY,1> >(0,nglocal),*this);
       else
-        Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagCollideCollisionsOne<NEARCP,0> >(0,nglocal),*this);
+        Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagCollideCollisionsOne<NEARCP,GASTALLY,0> >(0,nglocal),*this);
     } else
-      Kokkos::parallel_reduce(Kokkos::RangePolicy<DeviceType, TagCollideCollisionsOne<NEARCP,-1> >(0,nglocal),*this,reduce);
+      Kokkos::parallel_reduce(Kokkos::RangePolicy<DeviceType, TagCollideCollisionsOne<NEARCP,GASTALLY,-1> >(0,nglocal),*this,reduce);
 
     Kokkos::deep_copy(h_scalars,d_scalars);
 
@@ -598,16 +615,16 @@ void CollideVSSKokkos::operator()(TagCollideZeroNN, const int &icell) const {
     d_nn_last_partner(icell,i) = 0;
 }
 
-template < int NEARCP, int ATOMIC_REDUCTION >
+template < int NEARCP, int GASTALLY, int ATOMIC_REDUCTION >
 KOKKOS_INLINE_FUNCTION
-void CollideVSSKokkos::operator()(TagCollideCollisionsOne< NEARCP, ATOMIC_REDUCTION >, const int &icell) const {
+void CollideVSSKokkos::operator()(TagCollideCollisionsOne< NEARCP, GASTALLY, ATOMIC_REDUCTION >, const int &icell) const {
   COLLIDE_REDUCE reduce;
-  this->template operator()< NEARCP, ATOMIC_REDUCTION >(TagCollideCollisionsOne< NEARCP, ATOMIC_REDUCTION >(), icell, reduce);
+  this->template operator()< NEARCP, GASTALLY, ATOMIC_REDUCTION >(TagCollideCollisionsOne< NEARCP, GASTALLY, ATOMIC_REDUCTION >(), icell, reduce);
 }
 
-template < int NEARCP, int ATOMIC_REDUCTION >
+template < int NEARCP, int GASTALLY, int ATOMIC_REDUCTION >
 KOKKOS_INLINE_FUNCTION
-void CollideVSSKokkos::operator()(TagCollideCollisionsOne< NEARCP, ATOMIC_REDUCTION >, const int &icell, COLLIDE_REDUCE &reduce) const {
+void CollideVSSKokkos::operator()(TagCollideCollisionsOne< NEARCP, GASTALLY, ATOMIC_REDUCTION >, const int &icell, COLLIDE_REDUCE &reduce) const {
   if (d_retry()) return;
 
   int np = grid_kk_copy.obj.d_cellcount[icell];
@@ -698,6 +715,14 @@ void CollideVSSKokkos::operator()(TagCollideCollisionsOne< NEARCP, ATOMIC_REDUCT
     }
 
     // perform collision and possible reaction
+    // if GASTALLY: tally prep with iorig/jorig, then trigger tally
+
+    Particle::OnePart iorig,jorig;
+
+    if (GASTALLY) {
+      iorig = *ipart;
+      jorig = *jpart;
+    }
 
     int index_kpart;
 
@@ -711,6 +736,11 @@ void CollideVSSKokkos::operator()(TagCollideCollisionsOne< NEARCP, ATOMIC_REDUCT
       d_ncollide_one()++;
     else
       reduce.ncollide_one++;
+
+    //if (GASTALLY)
+    //  for (int m = 0; m < ngas_tally; m++)
+    //    glist_active[m]->gas_tally(icell,reactflag,
+    //                               &iorig,&jorig,ipart,jpart,kpart); //////
 
     if (reactflag) {
       if (ATOMIC_REDUCTION == 1)
@@ -768,6 +798,7 @@ void CollideVSSKokkos::operator()(TagCollideCollisionsOne< NEARCP, ATOMIC_REDUCT
    NTC algorithm for a single group with ambipolar approximation
 ------------------------------------------------------------------------- */
 
+template < int GASTALLY >
 void CollideVSSKokkos::collisions_one_ambipolar(COLLIDE_REDUCE &reduce)
 {
   // ambipolar vectors
@@ -872,11 +903,11 @@ void CollideVSSKokkos::collisions_one_ambipolar(COLLIDE_REDUCE &reduce)
 
     if (sparta->kokkos->atomic_reduction) {
       if (sparta->kokkos->need_atomics)
-        Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagCollideCollisionsOneAmbipolar<1> >(0,nglocal),*this);
+        Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagCollideCollisionsOneAmbipolar<GASTALLY,1> >(0,nglocal),*this);
       else
-        Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagCollideCollisionsOneAmbipolar<0> >(0,nglocal),*this);
+        Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagCollideCollisionsOneAmbipolar<GASTALLY,0> >(0,nglocal),*this);
     } else
-      Kokkos::parallel_reduce(Kokkos::RangePolicy<DeviceType, TagCollideCollisionsOneAmbipolar<-1> >(0,nglocal),*this,reduce);
+      Kokkos::parallel_reduce(Kokkos::RangePolicy<DeviceType, TagCollideCollisionsOneAmbipolar<GASTALLY,-1> >(0,nglocal),*this,reduce);
 
     Kokkos::deep_copy(h_scalars,d_scalars);
 
@@ -944,16 +975,16 @@ void CollideVSSKokkos::collisions_one_ambipolar(COLLIDE_REDUCE &reduce)
   d_plist = {};
 }
 
-template < int ATOMIC_REDUCTION >
+template < int GASTALLY, int ATOMIC_REDUCTION >
 KOKKOS_INLINE_FUNCTION
-void CollideVSSKokkos::operator()(TagCollideCollisionsOneAmbipolar< ATOMIC_REDUCTION >, const int &icell) const {
+void CollideVSSKokkos::operator()(TagCollideCollisionsOneAmbipolar< GASTALLY, ATOMIC_REDUCTION >, const int &icell) const {
   COLLIDE_REDUCE reduce;
-  this->template operator()< ATOMIC_REDUCTION >(TagCollideCollisionsOneAmbipolar< ATOMIC_REDUCTION >(), icell, reduce);
+  this->template operator()< GASTALLY, ATOMIC_REDUCTION >(TagCollideCollisionsOneAmbipolar< GASTALLY, ATOMIC_REDUCTION >(), icell, reduce);
 }
 
-template < int ATOMIC_REDUCTION >
+template < int GASTALLY, int ATOMIC_REDUCTION >
 KOKKOS_INLINE_FUNCTION
-void CollideVSSKokkos::operator()(TagCollideCollisionsOneAmbipolar< ATOMIC_REDUCTION >, const int &icell, COLLIDE_REDUCE &reduce) const {
+void CollideVSSKokkos::operator()(TagCollideCollisionsOneAmbipolar< GASTALLY, ATOMIC_REDUCTION >, const int &icell, COLLIDE_REDUCE &reduce) const {
   if (d_retry()) return;
 
   int np = grid_kk_copy.obj.d_cellcount[icell];
@@ -1087,7 +1118,14 @@ void CollideVSSKokkos::operator()(TagCollideCollisionsOneAmbipolar< ATOMIC_REDUC
 
     // perform collision
     // ijspecies = species before collision chemistry
-    // continue to next collision if no reaction
+    // if GASTALLY: tally prep with iorig/jorig, then trigger tally
+
+    Particle::OnePart iorig,jorig;
+
+    if (GASTALLY) {
+      iorig = *ipart;
+      jorig = *jpart;
+    }
 
     int index_kpart = 0;
 
@@ -1102,6 +1140,11 @@ void CollideVSSKokkos::operator()(TagCollideCollisionsOneAmbipolar< ATOMIC_REDUC
       d_ncollide_one()++;
     else
       reduce.ncollide_one++;
+
+    //if (GASTALLY)
+    //  for (int m = 0; m < ngas_tally; m++)
+    //    glist_active[m]->gas_tally(icell,reactflag,
+    //                               &iorig,&jorig,ipart,jpart,kpart); //////
 
     if (reactflag) {
       if (ATOMIC_REDUCTION == 1)
@@ -1388,110 +1431,114 @@ int CollideVSSKokkos::perform_collision_kokkos(Particle::OnePart *&ip,
                                   Particle::OnePart *&p3, int &recomb_species, double &recomb_density,
                                   int &index_kpart) const
 {
-  int reactflag,kspecies;
+  int reaction,kspecies;
   double x[3],v[3];
 
   // if gas-phase chemistry defined, attempt and perform reaction
   // if a 3rd particle is created, its kspecies >= 0 is returned
   // if 2nd particle is removed, its jspecies is set to -1
+  // reaction = 0 if no reaction occurs
+  // reaction = 1 to N for which reaction occurs
+  // reaction is returned to caller
 
   if (react_defined)
-    reactflag = react_kk_copy.obj.attempt_kk(ip,jp,
+    reaction = react_kk_copy.obj.attempt_kk(ip,jp,
                                              precoln.etrans,precoln.erot,
                                              precoln.evib,postcoln.etotal,kspecies,
                                              recomb_species,recomb_density,d_species);
-  else reactflag = 0;
+  else reaction = 0;
 
+  // just collision, no reaction
+
+  if (!reaction) {
+    if (precoln.ave_dof > 0.0) EEXCHANGE_NonReactingEDisposal(ip,jp,precoln,postcoln,rand_gen);
+    SCATTER_TwoBodyScattering(ip,jp,precoln,postcoln,rand_gen);
+    return reaction;
+  }
+
+  // reaction took place
   // repartition energy and perform velocity scattering for I,J,K particles
   // reaction may have changed species of I,J particles
   // J,K particles may have been removed or created by reaction
 
   kp = NULL;
 
-  if (reactflag) {
+  // add 3rd K particle if reaction created it
+  // index of new K particle = nlocal-1
+  // if add_particle() performs a realloc:
+  //   make copy of x,v
 
-    // add 3rd K particle if reaction created it
-    // index of new K particle = nlocal-1
-    // if add_particle() performs a realloc:
-    //   make copy of x,v
+  if (kspecies >= 0) {
+    int id = MAXSMALLINT*rand_gen.drand();
 
-    if (kspecies >= 0) {
-      int id = MAXSMALLINT*rand_gen.drand();
-
-      memcpy(x,ip->x,3*sizeof(double));
-      memcpy(v,ip->v,3*sizeof(double));
-      index_kpart = Kokkos::atomic_fetch_add(&d_nlocal(),1);
-      int reallocflag =
-        ParticleKokkos::add_particle_kokkos(d_particles,index_kpart,id,kspecies,ip->icell,x,v,0.0,0.0);
-      if (reallocflag) {
-        d_retry() = 1;
-        d_part_grow() = 1;
-        return 0;
-      }
-
-      kp = &d_particles[index_kpart];
-      EEXCHANGE_ReactingEDisposal(ip,jp,kp,precoln,postcoln,rand_gen);
-      SCATTER_ThreeBodyScattering(ip,jp,kp,precoln,postcoln,rand_gen);
-
-    // remove 2nd J particle if recombination reaction removed it
-    // p3 is 3rd particle participating in energy exchange
-
-    } else if (jp->ispecies < 0) {
-      double *vi = ip->v;
-      double *vj = jp->v;
-
-      const double divisor = 1.0 / (precoln.imass + precoln.jmass);
-      const double ucmf = ((precoln.imass*vi[0]) + (precoln.jmass*vj[0])) * divisor;
-      const double vcmf = ((precoln.imass*vi[1]) + (precoln.jmass*vj[1])) * divisor;
-      const double wcmf = ((precoln.imass*vi[2]) + (precoln.jmass*vj[2])) * divisor;
-
-      vi[0] = ucmf;
-      vi[1] = vcmf;
-      vi[2] = wcmf;
-
-      jp = NULL;
-
-      // account for 3rd body energy via another call to setup_collision()
-      // set precoln.vr2 = relative velocity between ip and 3rd body p3
-
-      const double *vp3 = p3->v;
-      const double du  = vi[0] - vp3[0];
-      const double dv  = vi[1] - vp3[1];
-      const double dw  = vi[2] - vp3[2];
-      const double vr2 = du*du + dv*dv + dw*dw;
-      precoln.vr2 = vr2;
-
-      // save postcoln.etotal from previous setup_collision()
-      // add 3rd body internal energy to it
-      // ip internal energy is already included in postcoln.etotal
-
-      double partial_energy =  postcoln.etotal + p3->erot + p3->evib;
-      ip->erot = 0.0;
-      ip->evib = 0.0;
-      p3->erot = 0.0;
-      p3->evib = 0.0;
-
-      // 2nd call to setup_collision() sets new postcoln.etotal
-      // then add saved partial_energy to it
-
-      setup_collision_kokkos(ip,p3,precoln,postcoln);
-      postcoln.etotal += partial_energy;
-
-      if (precoln.ave_dof > 0.0) EEXCHANGE_ReactingEDisposal(ip,p3,jp,precoln,postcoln,rand_gen);
-      SCATTER_TwoBodyScattering(ip,p3,precoln,postcoln,rand_gen);
-
-    } else {
-      EEXCHANGE_ReactingEDisposal(ip,jp,kp,precoln,postcoln,rand_gen);
-      SCATTER_TwoBodyScattering(ip,jp,precoln,postcoln,rand_gen);
+    memcpy(x,ip->x,3*sizeof(double));
+    memcpy(v,ip->v,3*sizeof(double));
+    index_kpart = Kokkos::atomic_fetch_add(&d_nlocal(),1);
+    int reallocflag =
+      ParticleKokkos::add_particle_kokkos(d_particles,index_kpart,id,kspecies,ip->icell,x,v,0.0,0.0);
+    if (reallocflag) {
+      d_retry() = 1;
+      d_part_grow() = 1;
+      return 0;
     }
 
+    kp = &d_particles[index_kpart];
+    EEXCHANGE_ReactingEDisposal(ip,jp,kp,precoln,postcoln,rand_gen);
+    SCATTER_ThreeBodyScattering(ip,jp,kp,precoln,postcoln,rand_gen);
+
+  // remove 2nd J particle if recombination reaction removed it
+  // p3 is 3rd particle participating in energy exchange
+
+  } else if (jp->ispecies < 0) {
+    double *vi = ip->v;
+    double *vj = jp->v;
+
+    const double divisor = 1.0 / (precoln.imass + precoln.jmass);
+    const double ucmf = ((precoln.imass*vi[0]) + (precoln.jmass*vj[0])) * divisor;
+    const double vcmf = ((precoln.imass*vi[1]) + (precoln.jmass*vj[1])) * divisor;
+    const double wcmf = ((precoln.imass*vi[2]) + (precoln.jmass*vj[2])) * divisor;
+
+    vi[0] = ucmf;
+    vi[1] = vcmf;
+    vi[2] = wcmf;
+
+    jp = NULL;
+
+    // account for 3rd body energy via another call to setup_collision()
+    // set precoln.vr2 = relative velocity between ip and 3rd body p3
+
+    const double *vp3 = p3->v;
+    const double du  = vi[0] - vp3[0];
+    const double dv  = vi[1] - vp3[1];
+    const double dw  = vi[2] - vp3[2];
+    const double vr2 = du*du + dv*dv + dw*dw;
+    precoln.vr2 = vr2;
+
+    // save postcoln.etotal from previous setup_collision()
+    // add 3rd body internal energy to it
+    // ip internal energy is already included in postcoln.etotal
+
+    double partial_energy =  postcoln.etotal + p3->erot + p3->evib;
+    ip->erot = 0.0;
+    ip->evib = 0.0;
+    p3->erot = 0.0;
+    p3->evib = 0.0;
+
+    // 2nd call to setup_collision() sets new postcoln.etotal
+    // then add saved partial_energy to it
+
+    setup_collision_kokkos(ip,p3,precoln,postcoln);
+    postcoln.etotal += partial_energy;
+
+    if (precoln.ave_dof > 0.0) EEXCHANGE_ReactingEDisposal(ip,p3,jp,precoln,postcoln,rand_gen);
+    SCATTER_TwoBodyScattering(ip,p3,precoln,postcoln,rand_gen);
+
   } else {
-    kp = NULL;
-    if (precoln.ave_dof > 0.0) EEXCHANGE_NonReactingEDisposal(ip,jp,precoln,postcoln,rand_gen);
+    EEXCHANGE_ReactingEDisposal(ip,jp,kp,precoln,postcoln,rand_gen);
     SCATTER_TwoBodyScattering(ip,jp,precoln,postcoln,rand_gen);
   }
 
-  return reactflag;
+  return reaction;
 }
 
 /* ---------------------------------------------------------------------- */

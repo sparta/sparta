@@ -560,7 +560,7 @@ template < int NEARCP, int GASTALLY > void Collide::collisions_one()
 }
 
 /* ----------------------------------------------------------------------
-   NTC algorithm for multiple group\s, loop over pairs of groups
+   NTC algorithm for multiple groups, loop over pairs of groups
    pre-compute # of attempts per group pair
 ------------------------------------------------------------------------- */
 
