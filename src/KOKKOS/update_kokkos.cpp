@@ -1965,6 +1965,9 @@ void UpdateKokkos::tally_set(bigint ntimestep)
       slist_active_copy[i].copy(compute_surf_kk);
     }
   }
+
+  if (ngas_tally)
+    error->all(FLERR,"Kokkos does not (yet) support tallying gas/gas collisions or reactions");
 }
 
 /* ---------------------------------------------------------------------- */

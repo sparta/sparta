@@ -386,7 +386,7 @@ void CollideVSSKokkos::collisions()
   // variant for single group or multiple groups
 
   if (ngas_tally)
-    error->all(FLERR,"Gas tally not yet supported with Kokkos");
+    error->all(FLERR,"Kokkos does not (yet) support tallying gas/gas collisions or reactions");
 
   if (ngroups != 1)
     error->all(FLERR,"Group collisions not yet supported with Kokkos");
