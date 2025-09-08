@@ -44,6 +44,8 @@ sparta_option(
 sparta_option(BUILD_KOKKOS "Enable or disable KOKKOS TPL. Default: OFF." OFF
               SPARTA_BUILD_TPL_LIST)
 
+option(USE_EXTERNAL_KOKKOS "Use an external KOKKOS build. Default: OFF." OFF)
+
 sparta_option(BUILD_JPEG "Enable or disable JPEG TPL. Default: OFF." OFF
               SPARTA_BUILD_TPL_LIST)
 

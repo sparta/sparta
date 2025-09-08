@@ -97,6 +97,9 @@ if(PKG_FFT)
     endif()
 
     string(TOUPPER ${FFT_KOKKOS} FFT_KOKKOS)
+    if(USE_EXTERNAL_KOKKOS)
+      find_package(Kokkos REQUIRED CONFIG)
+    endif()
 
     if(FFT_KOKKOS STREQUAL "CUFFT" AND NOT Kokkos_ENABLE_CUDA)
       message(FATAL_ERROR  "FFT_KOKKOS: ${FFT_KOKKOS} requires Kokkos_ENABLE_CUDA: ON.")
@@ -220,7 +223,12 @@ if(BUILD_KOKKOS)
   # The 2 lines below find an install version of Kokkos. We are using and
   # in-tree copy of kokkos in sparta for now. find_package(KOKKOS REQUIRED)
   # set(TARGET_SPARTA_BUILD_KOKKOS Kokkos::kokkos)
-  set(TARGET_SPARTA_BUILD_KOKKOS kokkos)
+  if(USE_EXTERNAL_KOKKOS)
+    find_package(Kokkos REQUIRED CONFIG)
+    set(TARGET_SPARTA_BUILD_KOKKOS Kokkos::kokkos)
+  else()
+    set(TARGET_SPARTA_BUILD_KOKKOS kokkos)
+  endif()
   list(APPEND TARGET_SPARTA_BUILD_TPLS ${TARGET_SPARTA_BUILD_KOKKOS})
   # BUILD_KOKKOS does not depend on PKG_KOKKOS, do not attempt to resolve
   # dependency
