@@ -31,7 +31,7 @@ using namespace SPARTA_NS;
 
 // customize by adding keyword
 
-enum{DOUBLE,INT,BIGINT,UINT,BIGUINT,STRING};    // same as Dump
+enum{INT,DOUBLE,BIGINT,UINT,BIGUINT,STRING};    // same as Dump
 enum{ID,PROC,XLO,YLO,ZLO,XHI,YHI,ZHI,XC,YC,ZC,VOL,
      CUSTOM,COMPUTE,FIX,VARIABLE};
 

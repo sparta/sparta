@@ -29,7 +29,7 @@ using namespace SPARTA_NS;
 
 // customize by adding keyword
 
-enum{DOUBLE,INT,BIGINT,UINT,BIGUINT,STRING};        // same as Dump
+enum{INT,DOUBLE,BIGINT,UINT,BIGUINT,STRING};        // same as Dump
 
 #define INVOKED_PER_TALLY 64
 #define CHUNK 8

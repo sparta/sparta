@@ -31,7 +31,7 @@ using namespace SPARTA_NS;
 
 // customize by adding keyword
 
-enum{DOUBLE,INT,BIGINT,UINT,BIGUINT,STRING};    // same as Dump
+enum{INT,DOUBLE,BIGINT,UINT,BIGUINT,STRING};    // same as Dump
 enum{PERIODIC,OUTFLOW,REFLECT,SURFACE,AXISYM};  // same as Domain
 
 #define INVOKED_PER_SURF 32
