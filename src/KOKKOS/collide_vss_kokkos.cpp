@@ -364,6 +364,10 @@ void CollideVSSKokkos::collisions()
     vre_next += vre_every;
   }
 
+  // copy Update count of gas/gas collision computes active on this timestep
+
+  ngas_tally = update->ngas_tally;
+
   // counters
 
   ncollide_one = nattempt_one = nreact_one = 0;
