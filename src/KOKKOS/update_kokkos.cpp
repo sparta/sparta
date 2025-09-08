@@ -1960,7 +1960,9 @@ void UpdateKokkos::tally_set(bigint ntimestep)
     for (i = 0; i < nsurf_tally; i++) {
       if (strcmp(slist_active[i]->style,"isurf/grid") == 0)
         error->all(FLERR,"Kokkos doesn't yet support compute isurf/grid");
-      ComputeSurfKokkos* compute_surf_kk = (ComputeSurfKokkos*)(slist_active[i]);
+      ComputeSurfKokkos* compute_surf_kk = dynamic_cast<ComputeSurfKokkos*>(slist_active[i]);
+      if (!compute_surf_kk)
+        error->all(FLERR,"Kokkos does not (yet) support compute surf/collision/tally or compute surf/reaction/tally");
       compute_surf_kk->pre_surf_tally();
       slist_active_copy[i].copy(compute_surf_kk);
     }
