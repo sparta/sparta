@@ -1,0 +1,67 @@
+"SPARTA WWW Site"_sws - "SPARTA Documentation"_sd - "SPARTA Commands"_sc :c
+
+:link(sws,http://sparta.sandia.gov)
+:link(sd,Manual.html)
+:link(sc,Section_commands.html#comm)
+
+:line
+
+compute gas/collision/grid command :h3
+
+[Syntax:]
+
+compute ID gas/collision/grid group-ID mix-ID :pre
+
+ID is documented in "compute"_compute.html command
+gas/collision/grid = style name of this compute command
+group-ID = group ID for which grid cells to perform calculation on
+mix-ID = mixture ID to perform calculation on :ul
+
+[Examples:]
+
+compute 1 gas/collision/grid all all
+compute 2 gas/collision/grid subset mymixture :pre
+
+[Description:]
+
+Count the number of gas-phase collisions bewteen pairs of particles
+which occur in each grid cell during the current timestep.  Only gas
+collisions which do not result in chemical reactions are counted by
+this command.  See the related "compute
+gas/reaction/grid"_compute_gas_reaction_grid.html command to count
+collisions which induce reactions.
+
+Only collisions within grid cells in the grid group specified by
+{group-ID} and pairs of particles with both species in the mixture
+specified by {mix-ID} are included.  See the "group grid"_group.html
+command for info on how grid cells can be assigned to grid groups.
+
+The results of this compute can be used by different commands in
+different ways.  The values for a single timestep can be output by the
+"dump grid"_dump.html command or used as inputs to the "compute
+reduce"_compute_reduce.html command.  The values can also be time
+averaged by the "fix ave/grid"_fix_ave_grid.html command.
+
+:line
+
+[Output info:]
+
+This compute calculates a per-grid vector with the count of collisions
+for each grid cell.
+
+The vector can be accessed by any command that uses per-grid values
+from a compute as input.  See "Section 6.4"_Section_howto.html#howto_4
+for an overview of SPARTA output options.
+
+:line
+
+[Restrictions:] none
+
+[Related commands:]
+
+"compute gas/reaction/grid"_compute_gas_reaction_grid.html, "compute
+gas/collision/tally"_compute_gas_collision_tally.html, "dump
+grid"_dump.html
+
+[Default:] none
+

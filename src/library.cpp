@@ -133,7 +133,9 @@ void *sparta_extract_global(void *ptr, char *name)
    extract a pointer to an internal SPARTA compute-based entity
    id = compute ID
    style = 0 for global data, 1 for per particle data,
-     2 for per grid data, 3 for per surf data
+     2 for per grid data, 3 for per surf data, 4 for per tally data
+     NOTE: for per tally data, some columns of double **array
+           may be int/bigint ubuf data, up to caller to decode correctly
    type
      for style global: 0 for scalar, 1 for vector, 2 for array
      for style = particle, grid, surf:
@@ -143,7 +145,7 @@ void *sparta_extract_global(void *ptr, char *name)
      compute's internal data structure for the entity
      caller should cast it to (double *) for a scalar or vector
      caller should cast it to (double **) for an array
-   for per particle or grid or surf data, returns a pointer to the
+   for per particle or grid or surf or tally data, returns a pointer to the
      compute's internal data structure for the entity
      caller should cast it to (double *) for a vector
      caller should cast it to (double **) for an array
@@ -237,6 +239,20 @@ void *sparta_extract_compute(void *ptr, char *id, int style, int type)
         compute->compute_per_surf();
       compute->post_process_surf();
       return (void *) compute->array_surf;
+    }
+  }
+
+  if (style == 4) {
+    if (!compute->per_tally_flag) return NULL;
+    if (type == 1) {
+      if (compute->invoked_per_tally != sparta->update->ntimestep)
+        compute->compute_per_tally();
+      return (void *) compute->vector_tally;
+    }
+    if (type > 1) {
+      if (compute->invoked_per_tally != sparta->update->ntimestep)
+        compute->compute_per_tally();
+      return (void *) compute->array_tally;
     }
   }
 
