@@ -37,8 +37,7 @@ using namespace SPARTA_NS;
 enum{ID,TYPE,PROC,CELLID,X,Y,Z,XS,YS,ZS,VX,VY,VZ,KE,EROT,EVIB,
      CUSTOM,COMPUTE,FIX,VARIABLE};
 enum{LT,LE,GT,GE,EQ,NEQ};
-enum{INT,DOUBLE,BIGINT,STRING};        // same as Dump
-
+enum{INT,DOUBLE,BIGINT,UINT,BIGUINT,STRING};    // same as Dump
 enum{PERIODIC,OUTFLOW,REFLECT,SURFACE,AXISYM};  // same as Domain
 
 #define INVOKED_PER_PARTICLE 8
@@ -132,11 +131,6 @@ DumpParticle::DumpParticle(SPARTA *sparta, int narg, char **arg) :
   dchoose = NULL;
   clist = NULL;
 
-  // element names
-
-  ntypes = particle->nspecies;
-  typenames = NULL;
-
   // setup format strings
 
   vformat = new char*[size_one];
@@ -145,8 +139,11 @@ DumpParticle::DumpParticle(SPARTA *sparta, int narg, char **arg) :
   format_default[0] = '\0';
 
   for (int i = 0; i < size_one; i++) {
-    if (vtype[i] == INT) strcat(format_default,"%d ");
-    else if (vtype[i] == DOUBLE) strcat(format_default,"%g ");
+    if (vtype[i] == DOUBLE) strcat(format_default,"%g ");
+    else if (vtype[i] == INT) strcat(format_default,"%d ");
+    else if (vtype[i] == BIGINT) strcat(format_default,BIGINT_FORMAT " ");
+    else if (vtype[i] == UINT) strcat(format_default,"%u ");
+    else if (vtype[i] == BIGUINT) strcat(format_default,BIGUINT_FORMAT " ");
     else if (vtype[i] == STRING) strcat(format_default,"%s ");
     vformat[i] = NULL;
   }
@@ -208,11 +205,6 @@ DumpParticle::~DumpParticle()
   memory->destroy(choose);
   memory->destroy(dchoose);
   memory->destroy(clist);
-
-  if (typenames) {
-    for (int i = 1; i <= ntypes; i++) delete [] typenames[i];
-    delete [] typenames;
-  }
 
   for (int i = 0; i < size_one; i++) delete [] vformat[i];
   delete [] vformat;
@@ -636,10 +628,11 @@ void DumpParticle::write_text(int n, double *mybuf)
   int m = 0;
   for (i = 0; i < n; i++) {
     for (j = 0; j < size_one; j++) {
-      if (vtype[j] == INT) fprintf(fp,vformat[j],static_cast<int> (mybuf[m]));
-      else if (vtype[j] == DOUBLE) fprintf(fp,vformat[j],mybuf[m]);
-      else if (vtype[j] == STRING)
-        fprintf(fp,vformat[j],typenames[(int) mybuf[m]]);
+      if (vtype[j] == DOUBLE) fprintf(fp,vformat[j],mybuf[m]);
+      else if (vtype[j] == INT) fprintf(fp,vformat[j],(int) ubuf(mybuf[m]).i);
+      else if (vtype[j] == BIGINT) fprintf(fp,vformat[j],(bigint) ubuf(mybuf[m]).i);
+      else if (vtype[j] == UINT) fprintf(fp,vformat[j],(uint32_t) ubuf(mybuf[m]).i);
+      else if (vtype[j] == BIGUINT) fprintf(fp,vformat[j],(uint64_t) ubuf(mybuf[m]).i);
       m++;
     }
     fprintf(fp,"\n");
@@ -1310,7 +1303,7 @@ void DumpParticle::pack_id(int n)
   Particle::OnePart *particles = particle->particles;
 
   for (int i = 0; i < nchoose; i++) {
-    buf[n] = particles[clist[i]].id;
+    buf[n] = ubuf(particles[clist[i]].id).d;
     n += size_one;
   }
 }
@@ -1322,7 +1315,7 @@ void DumpParticle::pack_type(int n)
   Particle::OnePart *particles = particle->particles;
 
   for (int i = 0; i < nchoose; i++) {
-    buf[n] = particles[clist[i]].ispecies + 1;
+    buf[n] = ubuf(particles[clist[i]].ispecies + 1).d;
     n += size_one;
   }
 }
@@ -1332,7 +1325,7 @@ void DumpParticle::pack_type(int n)
 void DumpParticle::pack_proc(int n)
 {
   for (int i = 0; i < nchoose; i++) {
-    buf[n] = me;
+    buf[n] = ubuf(me).d;
     n += size_one;
   }
 }

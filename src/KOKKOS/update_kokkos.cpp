@@ -341,7 +341,8 @@ void UpdateKokkos::run(int nsteps)
     ntimestep++;
 
     if (collide_react) collide_react_reset();
-    if (bounce_tally) bounce_set(ntimestep);
+    if (tallyflag) tally_set(ntimestep);
+    if (dynamic) dynamic_update();
 
     timer->stamp();
 
@@ -1347,7 +1348,7 @@ void UpdateKokkos::operator()(TagUpdateMove<DIM,SURF,REACT,OPT,ATOMIC_REDUCTION>
           // must update particle's icell to current icell so that
           //   if jpart is created, it will be added to correct cell
           // if jpart, add new particle to this iteration via pstop++
-          // tally surface statistics if requested using iorig
+          // tally surface collision stats if requested using iorig
 
           ipart = &particle_i;
           ipart->icell = icell;
@@ -1408,7 +1409,7 @@ void UpdateKokkos::operator()(TagUpdateMove<DIM,SURF,REACT,OPT,ATOMIC_REDUCTION>
           if (nsurf_tally)
             for (m = 0; m < nsurf_tally; m++)
               slist_active_copy[m].obj.
-                    surf_tally_kk<ATOMIC_REDUCTION>(minsurf,icell,reaction,&iorig,ipart,jpart);
+                    surf_tally_kk<ATOMIC_REDUCTION>(dtremain,minsurf,icell,reaction,&iorig,ipart,jpart);
 
           // stuck_iterate = consecutive iterations particle is immobile
 
@@ -1662,7 +1663,7 @@ void UpdateKokkos::operator()(TagUpdateMove<DIM,SURF,REACT,OPT,ATOMIC_REDUCTION>
       if (nboundary_tally)
         for (int m = 0; m < nboundary_tally; m++)
           blist_active_copy[m].obj.
-            boundary_tally_kk<ATOMIC_REDUCTION>(outface,bflag,reaction,&iorig,ipart,jpart,domain_kk_copy.obj.norm[outface]);
+            boundary_tally_kk<ATOMIC_REDUCTION>(dtremain,outface,bflag,reaction,&iorig,ipart,jpart,domain_kk_copy.obj.norm[outface]);
 
       if (DIM == 1) {
         xnew[0] = x[0] + dtremain*v[0];
@@ -1935,9 +1936,9 @@ int UpdateKokkos::split2d(int icell, double *x) const
    clear accumulators in computes that will be invoked this step
 ------------------------------------------------------------------------- */
 
-void UpdateKokkos::bounce_set(bigint ntimestep)
+void UpdateKokkos::tally_set(bigint ntimestep)
 {
-  Update::bounce_set(ntimestep);
+  Update::tally_set(ntimestep);
 
   int i;
 
@@ -1959,11 +1960,16 @@ void UpdateKokkos::bounce_set(bigint ntimestep)
     for (i = 0; i < nsurf_tally; i++) {
       if (strcmp(slist_active[i]->style,"isurf/grid") == 0)
         error->all(FLERR,"Kokkos doesn't yet support compute isurf/grid");
-      ComputeSurfKokkos* compute_surf_kk = (ComputeSurfKokkos*)(slist_active[i]);
+      ComputeSurfKokkos* compute_surf_kk = dynamic_cast<ComputeSurfKokkos*>(slist_active[i]);
+      if (!compute_surf_kk)
+        error->all(FLERR,"Kokkos does not (yet) support compute surf/collision/tally or compute surf/reaction/tally");
       compute_surf_kk->pre_surf_tally();
       slist_active_copy[i].copy(compute_surf_kk);
     }
   }
+
+  if (ngas_tally)
+    error->all(FLERR,"Kokkos does not (yet) support tallying gas/gas collisions or reactions");
 }
 
 /* ---------------------------------------------------------------------- */

@@ -28,7 +28,7 @@ namespace SPARTA_NS {
 class Custom : protected Pointers {
  public:
   int mode;            // accessed by fix custom
-  
+
   Custom(class SPARTA *);
   virtual ~Custom();
   void command(int, char **);
@@ -70,7 +70,7 @@ class Custom : protected Pointers {
 };
 
 // K-D tree class
-  
+
 class KDTree : protected Pointers {
  public:
   KDTree(class SPARTA *, int, int, double **);
@@ -81,7 +81,7 @@ class KDTree : protected Pointers {
   void stats_tree();
   void stats_search();
   void stats_neighbor();
-  
+
  private:
   int dim;
   double **points;
@@ -90,7 +90,7 @@ class KDTree : protected Pointers {
   int nsearch,nneigh;
   double avedist;
   int count_node,count_leaf;
-  
+
   struct Node {
     int which;       // STUB, BRANCH, LEAF
     int iparent;     // index of parent node

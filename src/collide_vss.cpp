@@ -23,6 +23,7 @@
 #include "collide.h"
 #include "react.h"
 #include "comm.h"
+#include "compute.h"
 #include "fix_vibmode.h"
 #include "random_knuth.h"
 #include "math_const.h"
@@ -254,116 +255,120 @@ int CollideVSS::perform_collision(Particle::OnePart *&ip,
                                   Particle::OnePart *&jp,
                                   Particle::OnePart *&kp)
 {
-  int reactflag,kspecies;
+  int m,reaction,kspecies;
   double x[3],v[3];
   Particle::OnePart *p3;
 
   // if gas-phase chemistry defined, attempt and perform reaction
   // if a 3rd particle is created, its kspecies >= 0 is returned
   // if 2nd particle is removed, its jspecies is set to -1
+  // reaction = 0 if no reaction occurs
+  // reaction = 1 to N for which reaction occurs
+  // reaction is returned to caller
 
   if (react)
-    reactflag = react->attempt(ip,jp,
-                               precoln.etrans,precoln.erot,
-                               precoln.evib,postcoln.etotal,kspecies);
-  else reactflag = 0;
+    reaction = react->attempt(ip,jp,precoln.etrans,precoln.erot,
+                              precoln.evib,postcoln.etotal,kspecies);
+  else reaction = 0;
 
+  // just collision, no reaction
+
+  if (!reaction) {
+    if (precoln.ave_dof > 0.0) EEXCHANGE_NonReactingEDisposal(ip,jp);
+    SCATTER_TwoBodyScattering(ip,jp);
+    return reaction;
+  }
+
+  // reaction took place
   // repartition energy and perform velocity scattering for I,J,K particles
   // reaction may have changed species of I,J particles
   // J,K particles may have been removed or created by reaction
 
   kp = NULL;
 
-  if (reactflag) {
+  // add 3rd K particle if reaction created it
+  // index of new K particle = nlocal-1
+  // if add_particle() performs a realloc:
+  //   make copy of x,v, then repoint ip,jp to new particles data struct
+  //   unless electron
 
-    // add 3rd K particle if reaction created it
-    // index of new K particle = nlocal-1
-    // if add_particle() performs a realloc:
-    //   make copy of x,v, then repoint ip,jp to new particles data struct
-    //   unless electron
+  if (kspecies >= 0) {
+    int id = MAXSMALLINT*random->uniform();
 
-    if (kspecies >= 0) {
-      int id = MAXSMALLINT*random->uniform();
-
-      Particle::OnePart *particles = particle->particles;
-      memcpy(x,ip->x,3*sizeof(double));
-      memcpy(v,ip->v,3*sizeof(double));
-      int ielectron_flag = (ambiflag && ip->ispecies == ambispecies);
-      int jelectron_flag = (ambiflag && jp->ispecies == ambispecies);
-      int reallocflag =
-        particle->add_particle(id,kspecies,ip->icell,x,v,0.0,0.0);
-      if (reallocflag) {
-        if (!ielectron_flag)
-          ip = particle->particles + (ip - particles);
-        if (!jelectron_flag)
-          jp = particle->particles + (jp - particles);
-      }
-
-      kp = &particle->particles[particle->nlocal-1];
-      EEXCHANGE_ReactingEDisposal(ip,jp,kp);
-      SCATTER_ThreeBodyScattering(ip,jp,kp);
-
-    // remove 2nd J particle if recombination reaction removed it
-    // p3 is 3rd particle participating in energy exchange
-
-    } else if (jp->ispecies < 0) {
-      double *vi = ip->v;
-      double *vj = jp->v;
-
-      double divisor = 1.0 / (precoln.imass + precoln.jmass);
-      double ucmf = ((precoln.imass*vi[0]) + (precoln.jmass*vj[0])) * divisor;
-      double vcmf = ((precoln.imass*vi[1]) + (precoln.jmass*vj[1])) * divisor;
-      double wcmf = ((precoln.imass*vi[2]) + (precoln.jmass*vj[2])) * divisor;
-
-      vi[0] = ucmf;
-      vi[1] = vcmf;
-      vi[2] = wcmf;
-
-      jp = NULL;
-      p3 = react->recomb_part3;
-
-      // properly account for 3rd body energy with another call to setup_collision()
-      // it needs relative velocity of recombined species and 3rd body
-
-      double *vp3 = p3->v;
-      double du  = vi[0] - vp3[0];
-      double dv  = vi[1] - vp3[1];
-      double dw  = vi[2] - vp3[2];
-      double vr2 = du*du + dv*dv + dw*dw;
-      precoln.vr2 = vr2;
-
-      // internal energy of ip particle is already included
-      //   in postcoln.etotal returned from react->attempt()
-      // but still need to add 3rd body internal energy
-
-      double partial_energy =  postcoln.etotal + p3->erot + p3->evib;
-
-      ip->erot = 0;
-      ip->evib = 0;
-      p3->erot = 0;
-      p3->evib = 0;
-
-      // returned postcoln.etotal will increment only the
-      //   relative translational energy between recombined species and 3rd body
-      // add back partial_energy to get full total energy
-
-      setup_collision(ip,p3);
-      postcoln.etotal += partial_energy;
-
-      if (precoln.ave_dof > 0.0) EEXCHANGE_ReactingEDisposal(ip,p3,jp);
-      SCATTER_TwoBodyScattering(ip,p3);
-
-    } else {
-      EEXCHANGE_ReactingEDisposal(ip,jp,kp);
-      SCATTER_TwoBodyScattering(ip,jp);
+    Particle::OnePart *particles = particle->particles;
+    memcpy(x,ip->x,3*sizeof(double));
+    memcpy(v,ip->v,3*sizeof(double));
+    int ielectron_flag = (ambiflag && ip->ispecies == ambispecies);
+    int jelectron_flag = (ambiflag && jp->ispecies == ambispecies);
+    int reallocflag =
+      particle->add_particle(id,kspecies,ip->icell,x,v,0.0,0.0);
+    if (reallocflag) {
+      if (!ielectron_flag)
+        ip = particle->particles + (ip - particles);
+      if (!jelectron_flag)
+        jp = particle->particles + (jp - particles);
     }
 
+    kp = &particle->particles[particle->nlocal-1];
+    EEXCHANGE_ReactingEDisposal(ip,jp,kp);
+    SCATTER_ThreeBodyScattering(ip,jp,kp);
+
+  // remove 2nd J particle if recombination reaction removed it
+  // p3 is 3rd particle participating in energy exchange
+
+  } else if (jp->ispecies < 0) {
+    double *vi = ip->v;
+    double *vj = jp->v;
+
+    double divisor = 1.0 / (precoln.imass + precoln.jmass);
+    double ucmf = ((precoln.imass*vi[0]) + (precoln.jmass*vj[0])) * divisor;
+    double vcmf = ((precoln.imass*vi[1]) + (precoln.jmass*vj[1])) * divisor;
+    double wcmf = ((precoln.imass*vi[2]) + (precoln.jmass*vj[2])) * divisor;
+
+    vi[0] = ucmf;
+    vi[1] = vcmf;
+    vi[2] = wcmf;
+
+    jp = NULL;
+    p3 = react->recomb_part3;
+
+    // properly account for 3rd body energy with another call to setup_collision()
+    // it needs relative velocity of recombined species and 3rd body
+
+    double *vp3 = p3->v;
+    double du  = vi[0] - vp3[0];
+    double dv  = vi[1] - vp3[1];
+    double dw  = vi[2] - vp3[2];
+    double vr2 = du*du + dv*dv + dw*dw;
+    precoln.vr2 = vr2;
+
+    // internal energy of ip particle is already included
+    //   in postcoln.etotal returned from react->attempt()
+    // but still need to add 3rd body internal energy
+
+    double partial_energy =  postcoln.etotal + p3->erot + p3->evib;
+
+    ip->erot = 0;
+    ip->evib = 0;
+    p3->erot = 0;
+    p3->evib = 0;
+
+    // returned postcoln.etotal will increment only the
+    //   relative translational energy between recombined species and 3rd body
+    // add back partial_energy to get full total energy
+
+    setup_collision(ip,p3);
+    postcoln.etotal += partial_energy;
+
+    if (precoln.ave_dof > 0.0) EEXCHANGE_ReactingEDisposal(ip,p3,jp);
+    SCATTER_TwoBodyScattering(ip,p3);
+
   } else {
-    if (precoln.ave_dof > 0.0) EEXCHANGE_NonReactingEDisposal(ip,jp);
+    EEXCHANGE_ReactingEDisposal(ip,jp,kp);
     SCATTER_TwoBodyScattering(ip,jp);
   }
 
-  return reactflag;
+  return reaction;
 }
 
 /* ---------------------------------------------------------------------- */

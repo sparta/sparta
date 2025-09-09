@@ -1,0 +1,152 @@
+<HTML>
+<CENTER><A HREF = "http://sparta.sandia.gov">SPARTA WWW Site</A> - <A HREF = "Manual.html">SPARTA Documentation</A> - <A HREF = "Section_commands.html#comm">SPARTA Commands</A> 
+</CENTER>
+
+
+
+
+
+
+<HR>
+
+<H3>compute reaction/tally command 
+</H3>
+<P><B>Syntax:</B>
+</P>
+<PRE>compute ID reaction/tally group-ID mix-ID value1 value2 ... 
+</PRE>
+<UL><LI>ID is documented in <A HREF = "compute.html">compute</A> command 
+
+<LI>reaction/tally = style name of this compute command 
+
+<LI>group-ID = group ID for which surface elements to perform calculation on 
+
+<LI>mix-ID = mixture ID to perform calculation on 
+
+<LI>one or more values can be appended 
+
+<LI>value = <I>id/pre</I> or <I>id/post</I> or <I>id/post2</I> or <I>type/pre</I> or <I>type/post</I> or <I>type/post2</I> or <I>id/surf</I> or <I>time</I> or <I>xc</I> or <I>yc</I> or <I>zc</I> or <I>vx/pre</I> or <I>vy/pre</I> or <I>vz/pre</I> or <I>vx/post</I> or <I>vy/post</I> or <I>vz/post</I> or <I>vx/post2</I> or <I>vy/post2</I> or <I>vz/post2</I> 
+
+<PRE>  <I>reaction</I> = which reaction occurred (1 to N)
+  <I>id/cell</I> = grid cell ID
+  <I>id1/pre</I> = particle ID of first particle before reaction
+  <I>id2/pre</I> = particle ID of second particle before reaction
+  <I>id1/post</I> = particle ID of first particle after reaction
+  <I>id2/post</I> = particle ID of second particle after reaction
+  <I>id3/post</I> = particle ID of third particle after reaction
+  <I>type1/pre</I> = particle species of first particle before reaction
+  <I>type2/pre</I> = particle species of second particle before reaction
+  <I>type1/post</I> = particle species of first particle before reaction
+  <I>type2/post</I> = particle species of second particle before reaction
+  <I>type3/post</I> = particle species of third particle before reaction
+  <I>vx1/pre</I>, <I>vy1/pre</I>, <I>vz1/pre</I> = velocity components of first particle before reaction
+  <I>vx2/pre</I>, <I>vy2/pre</I>, <I>vz2/pre</I> = velocity components of second particle before reaction
+  <I>vx1/post</I>, <I>vy1/post</I>, <I>vz1/post</I> = velocity components of first particle after reaction
+  <I>vx2/post</I>, <I>vy2/post</I>, <I>vz2/post</I> = velocity components of second particle after reaction
+  <I>vx3/post</I>, <I>vy3/post</I>, <I>vz3/post</I> = velocity components of thrid particle after reaction 
+</PRE>
+
+</UL>
+<P><B>Examples:</B>
+</P>
+<PRE>compute 1 reaction/tally all all id/pre id/post id/post2 type/pre type/post type/post2 id/surf time xc yc zc 
+</PRE>
+<P>This command will dump the tallies in the previous command to a dump
+file every 10 steps:
+</P>
+<PRE>dump 1 tally all 10 tmp.tally c_1[*] 
+</PRE>
+<P><B>Description:</B>
+</P>
+<P>Tally various values for each gas-phase reaction of two particles
+during the current timestep.  Only gas collisions which result in a
+chemical reactions are tallied by this command, as enabled by the
+<A HREF = "react.html">react</A> command.  See the related <A HREF = "compute_gas_collide_tally.html">compute
+gas/collide/tally</A> command to tally
+collisions which do not induce reactions.  It provides different tally
+value options than this compute.
+</P>
+<P>Only collisions within grid cells in the grid group specified by
+<I>group-ID</I> and pairs of particles with both species in the mixture
+specified by <I>mix-ID</I> are included.  See the <A HREF = "group.html">group grid</A>
+command for info on how grid cells can be assigned to grid groups.
+</P>
+<P>The results of this compute can be used by different commands in
+different ways.  The values for a single timestep can be output by the
+<A HREF = "dump.html">dump tally</A> command.  Currently this is the only option for
+accessing the tallied values.
+</P>
+<P>Note that if a gas-phase reaction takes place then a collision of two
+particles can result in 1, 2, or 3 particles being produced.  The
+species of the 1, 2, or product particles may be different than the
+species of the reactants.  All of these attributes can be tallied
+using the values explained next.
+</P>
+<HR>
+
+<P>The <I>reaction</I> value is the index of which reaction occurred.  It is a
+number from 1 to N, where N is the number of reactions defined by the
+<A HREF = "react.html">react</A> command.
+</P>
+<P>The <I>id1/pre</I> and <I>id2/pre</I> values are the IDs of the reacting
+particles before the reaction.  Note that particle IDs are generated
+randomly.  Thus multiple particles in the system can potentially have
+the same ID.  See <A HREF = "Section_howto_17">Section 6.17</A> for more details on
+particle IDs.
+</P>
+<P>The <I>id1/post</I>, <I>id2/post</I>, and <I>id3/post</I> values are the
+post-reaction IDs of the 1, 2, or 3 resulting particles.  If one of
+the particles vanished in the reaction, then <I>id2/post</I> will be 0.  If
+<I>id3/post</I> is 0, no 3rd particle was created by the reaction,
+otherwise it is the random ID assigned to the newly created particle.
+</P>
+<P>The <I>type1/pre</I> and <I>type2/pre</I> value are the integer indices for the
+species of the reacting particles before the reaction.  They are
+values from 1 to Nspecies.  The values correspond to the order in
+which species were defined via the <A HREF = "species.html">species</A> command.
+See <A HREF = "Section_howto_17">Section 6.17</A> for more details on particle
+types.
+</P>
+<P>The <I>type1/post</I>, <I>type/post2</I>, and <I>type/post3</I> values are the
+post-collision integer indices for the particle species of the 0, 1,
+or 2 resulting particles.  If one of the particles vanished in the
+reaction, then <I>type2/post</I> will be 0.  If <I>type/post3</I> is 0, no 3rd
+particle was created by the reaction, otherwise it is the species
+index of the newly created particle.
+</P>
+<P>The values starting with <I>v</I> for particles 1 and 2 with a <I>pre</I> suffix
+are the velocity components of the two reacting particles before the
+reaction.
+</P>
+<P>The values starting with <I>v</I> for particles 1 and 2 and 3 with a <I>post</I>
+suffix are the velocity components of the 1, 2, or 3 resulting
+particles after the reaction.  Velocity components will be zero if the
+2nd or 3rd particle does not exist due to the reaction.
+</P>
+<HR>
+
+<P><B>Output info:</B>
+</P>
+<P>This compute calculates a per-tally array, with the number of columns
+equal to the number of values.
+</P>
+<P>The array can be accessed by any command that uses per-tally values
+from a compute as input.  See <A HREF = "Section_howto.html#howto_4">Section 6.4</A>
+for an overview of SPARTA output options.
+</P>
+<P>The per-tally array values will be in the <A HREF = "units.html">units</A>
+appropriate to the individual values as described above.  All the
+velocity components are in velocity units.
+</P>
+<HR>
+
+<P><B>Restrictions:</B> none
+</P>
+<P><B>Related commands:</B>
+</P>
+<P><A HREF = "compute_gas_collision_tally.html">compute gas/collision/tally</A>, <A HREF = "dump.html">dump
+tally</A>
+</P>
+<P><B>Default:</B> none
+</P>
+</HTML>
