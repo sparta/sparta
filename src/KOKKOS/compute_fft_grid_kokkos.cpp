@@ -110,7 +110,7 @@ void ComputeFFTGridKokkos::post_constructor()
   d_fft_char = DAT::t_char_1d((char *)d_fft.data(),d_fft.size()*sizeof(FFT_SCALAR));
 
   memoryKK->create_kokkos(k_fftwork, fftwork, nfft, "fft/grid:fftwork");
-  d_fftwork = k_fftwork.d_view;
+  d_fftwork = k_fftwork.view_device();
   d_fftwork_char = DAT::t_char_1d((char *)d_fftwork.data(),d_fftwork.size()*sizeof(double));
 
   reallocate();
@@ -192,7 +192,7 @@ void ComputeFFTGridKokkos::compute_per_grid_kokkos()
         d_ingrid = cKKBase->d_vector_grid;
       } else {
         auto d_carray = cKKBase->d_array_grid;
-        auto d_ingrid = k_ingrid.d_view;
+        auto d_ingrid = k_ingrid.view_device();
         const int n = grid->nlocal;
         const int aidxm1 = aidx - 1;
 
@@ -219,7 +219,7 @@ void ComputeFFTGridKokkos::compute_per_grid_kokkos()
         d_ingrid = fixKKBase->d_vector_grid;
       } else {
         auto d_farray = fixKKBase->d_array_grid;
-        auto d_ingrid = k_ingrid.d_view;
+        auto d_ingrid = k_ingrid.view_device();
         const int n = grid->nlocal;
         const int aidxm1 = aidx - 1;
 
@@ -366,7 +366,7 @@ void ComputeFFTGridKokkos::reallocate()
   nglocal = grid->nlocal;
 
   memoryKK->create_kokkos(k_ingrid,ingrid,nglocal,"fft/grid:ingrid");
-  d_ingrid = k_ingrid.d_view;
+  d_ingrid = k_ingrid.view_device();
 
   if (startcol || conjugate) {
     MemKK::realloc_kokkos(d_gridwork,"fft/grid:gridwork",nglocal);
@@ -380,10 +380,10 @@ void ComputeFFTGridKokkos::reallocate()
 
   if (ncol == 1) {
     memoryKK->create_kokkos(k_vector_grid,vector_grid,nglocal,"fft/grid:vector_grid");
-    d_vector_grid = k_vector_grid.d_view;
+    d_vector_grid = k_vector_grid.view_device();
   } else {
     memoryKK->create_kokkos(k_array_grid,array_grid,nglocal,ncol,"fft/grid:array_grid");
-    d_array_grid = k_array_grid.d_view;
+    d_array_grid = k_array_grid.view_device();
   }
 
   // one-time setup of vector of K-space vector magnitudes if requested
@@ -560,12 +560,12 @@ void ComputeFFTGridKokkos::irregular_create()
       h_cells[i] = grid->cells[i];
     Kokkos::deep_copy(d_cells,h_cells);
   } else {
-    d_cells = gridKK->k_cells.d_view;
+    d_cells = gridKK->k_cells.view_device();
     gridKK->sync(Device,CELL_MASK);
   }
 
   memoryKK->create_kokkos(k_proclist1,proclist1,nglocal,"fft/grid:proclist1");
-  auto d_proclist1 = k_proclist1.d_view;
+  auto d_proclist1 = k_proclist1.view_device();
 
   // use cell ID to determine which proc owns it in FFT partitioning
   // while loops are for case where some procs own nothing in FFT partition,
@@ -635,14 +635,14 @@ void ComputeFFTGridKokkos::irregular_create()
   irregular2KK = new IrregularKokkos(sparta);
 
   memoryKK->create_kokkos(k_proclist3,proclist3,nfft,"fft/grid:proclist3");
-  auto d_proclist3 = k_proclist3.d_view;
+  auto d_proclist3 = k_proclist3.view_device();
   irregular1KK->reverse(nrecv,proclist3);
 
   k_proclist3.modify_host();
   k_proclist3.sync_device();
 
   memoryKK->create_kokkos(k_proclist2,proclist2,nfft,"fft/grid:proclist2");
-  auto d_proclist2 = k_proclist2.d_view;
+  auto d_proclist2 = k_proclist2.view_device();
 
   Kokkos::parallel_for(nfft, SPARTA_CLASS_LAMBDA(int i) {
     d_proclist2[d_map1[i]] = d_proclist3[i];

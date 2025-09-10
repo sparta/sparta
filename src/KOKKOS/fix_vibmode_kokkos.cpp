@@ -82,11 +82,11 @@ void FixVibmodeKokkos::pre_update_custom_kokkos()
 
   ParticleKokkos* particle_kk = (ParticleKokkos*) particle;
   particle_kk->sync(Device,PARTICLE_MASK|SPECIES_MASK|CUSTOM_MASK);
-  d_particles = particle_kk->k_particles.d_view;
-  d_species = particle_kk->k_species.d_view;
-  auto h_ewhich = particle_kk->k_ewhich.h_view;
+  d_particles = particle_kk->k_particles.view_device();
+  d_species = particle_kk->k_species.view_device();
+  auto h_ewhich = particle_kk->k_ewhich.view_host();
   auto k_eiarray = particle_kk->k_eiarray;
-  d_vibmode = k_eiarray.h_view[h_ewhich[vibmodeindex]].k_view.d_view;
+  d_vibmode = k_eiarray.view_host()[h_ewhich[vibmodeindex]].k_view.view_device();
 }
 
 /* ----------------------------------------------------------------------

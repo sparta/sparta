@@ -65,9 +65,9 @@ class GridKokkos : public Grid {
   void id_child_lohi(int plevel, double *plo, double *phi,
                      cellint ichild, double *clo, double *chi) const
   {
-    int nx = k_plevels.d_view[plevel].nx;
-    int ny = k_plevels.d_view[plevel].ny;
-    int nz = k_plevels.d_view[plevel].nz;
+    int nx = k_plevels.view_device()[plevel].nx;
+    int ny = k_plevels.view_device()[plevel].ny;
+    int nz = k_plevels.view_device()[plevel].nz;
 
     ichild--;
     int ix = ichild % nx;
@@ -111,9 +111,9 @@ class GridKokkos : public Grid {
     double *hi = ophi;
 
     while (level < maxlevel) {
-      nx = k_plevels.d_view[level].nx;
-      ny = k_plevels.d_view[level].ny;
-      nz = k_plevels.d_view[level].nz;
+      nx = k_plevels.view_device()[level].nx;
+      ny = k_plevels.view_device()[level].ny;
+      nz = k_plevels.view_device()[level].nz;
       ix = static_cast<int> ((x[0]-lo[0]) * nx/(hi[0]-lo[0]));
       iy = static_cast<int> ((x[1]-lo[1]) * ny/(hi[1]-lo[1]));
       iz = static_cast<int> ((x[2]-lo[2]) * nz/(hi[2]-lo[2]));
@@ -122,7 +122,7 @@ class GridKokkos : public Grid {
       if (iz == nz) iz--;
 
       ichild = (cellint) iz*nx*ny + (cellint) iy*nx + ix + 1;
-      childID = (ichild << k_plevels.d_view[level].nbits) | id;
+      childID = (ichild << k_plevels.view_device()[level].nbits) | id;
 
       size_type h_index = hash_kk.find(static_cast<key_type>(childID));
       if (hash_kk.valid_at(h_index)) return static_cast<int>(hash_kk.value_at(h_index));

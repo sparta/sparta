@@ -249,7 +249,7 @@ void FixAveHistoWeightKokkos::calculate_weights()
       input->variable->compute_particle(m,vectorwt,1,0);
       k_vectorwt.modify_host();
       k_vectorwt.sync_device();
-      auto d_vectorwt = k_vectorwt.d_view;
+      auto d_vectorwt = k_vectorwt.view_device();
       d_weights = d_vectorwt;
 
     } else if (which[i] == VARIABLE && kind == PERGRID) {
@@ -261,7 +261,7 @@ void FixAveHistoWeightKokkos::calculate_weights()
       input->variable->compute_grid(m,vectorwt,1,0);
       k_vectorwt.modify_host();
       k_vectorwt.sync_device();
-      auto d_vectorwt = k_vectorwt.d_view;
+      auto d_vectorwt = k_vectorwt.view_device();
       d_weights = d_vectorwt;
     }
 
@@ -481,7 +481,7 @@ void
 FixAveHistoWeightKokkos::operator()(TagFixAveHistoWeight_BinGridCells1, const int i,
                                     minmax_type::value_type& lminmax) const
 {
-  if (grid_kk->k_cinfo.d_view[i].mask & groupbit)
+  if (grid_kk->k_cinfo.view_device()[i].mask & groupbit)
   {
     bin_one(lminmax, d_values(i), d_weights(i));
   }

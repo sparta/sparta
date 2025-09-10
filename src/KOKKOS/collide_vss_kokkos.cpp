@@ -216,20 +216,20 @@ void CollideVSSKokkos::init()
 
     k_vremax_initial = DAT::tdual_float_2d("collide:vremax_initial",ngroups,ngroups);
     k_vremax = DAT::tdual_float_3d("collide:vremax",nglocalmax,ngroups,ngroups);
-    d_vremax = k_vremax.d_view;
+    d_vremax = k_vremax.view_device();
     k_remain = DAT::tdual_float_3d("collide:remain",nglocalmax,ngroups,ngroups);
-    d_remain = k_remain.d_view;
+    d_remain = k_remain.view_device();
 
     for (int igroup = 0; igroup < ngroups; igroup++) {
       for (int jgroup = 0; jgroup < ngroups; jgroup++) {
         vremax_initial[igroup][jgroup] = vremax_init(igroup,jgroup);
-        k_vremax_initial.h_view(igroup,jgroup) = vremax_initial[igroup][jgroup];
+        k_vremax_initial.view_host()(igroup,jgroup) = vremax_initial[igroup][jgroup];
       }
     }
 
     k_vremax_initial.modify_host();
     k_vremax_initial.sync_device();
-    d_vremax_initial = k_vremax_initial.d_view;
+    d_vremax_initial = k_vremax_initial.view_device();
   }
 
   // if recombination reactions exist, set flags per species pair
@@ -305,19 +305,19 @@ void CollideVSSKokkos::init()
 
   for (int i = 0; i < nparams; i++) {
     for (int j = 0; j < nparams; j++){
-      k_params.h_view(i,j) = params[i][j];
-      k_prefactor.h_view(i,j) = prefactor[i][j];
+      k_params.view_host()(i,j) = params[i][j];
+      k_prefactor.view_host()(i,j) = prefactor[i][j];
     }
   }
 
   k_params.modify_host();
   k_params.sync_device();
-  d_params = k_params.d_view;
-  d_params_const = k_params.d_view;
+  d_params = k_params.view_device();
+  d_params_const = k_params.view_device();
 
   k_prefactor.modify_host();
   k_prefactor.sync_device();
-  d_prefactor = k_prefactor.d_view;
+  d_prefactor = k_prefactor.view_device();
 
   // initialize running stats before each run
 
@@ -466,9 +466,9 @@ template < int NEARCP, int GASTALLY > void CollideVSSKokkos::collisions_one(COLL
   ParticleKokkos* particle_kk = (ParticleKokkos*) particle;
   particle_kk->sync(Device,PARTICLE_MASK|SPECIES_MASK);
   if (vibstyle == DISCRETE) particle_kk->sync(Device,CUSTOM_MASK);
-  d_particles = particle_kk->k_particles.d_view;
-  d_species = particle_kk->k_species.d_view;
-  d_ewhich = particle_kk->k_ewhich.d_view;
+  d_particles = particle_kk->k_particles.view_device();
+  d_species = particle_kk->k_species.view_device();
+  d_ewhich = particle_kk->k_ewhich.view_device();
   k_eiarray = particle_kk->k_eiarray;
 
   GridKokkos* grid_kk = (GridKokkos*) grid;
@@ -511,7 +511,7 @@ template < int NEARCP, int GASTALLY > void CollideVSSKokkos::collisions_one(COLL
     if (d_dellist.extent(0) < maxdelete_extra) {
       memoryKK->destroy_kokkos(k_dellist,dellist);
       memoryKK->create_kokkos(k_dellist,dellist,maxdelete_extra,"collide:dellist");
-      d_dellist = k_dellist.d_view;
+      d_dellist = k_dellist.view_device();
     }
 
     maxcellcount = particle_kk->get_maxcellcount();
@@ -527,7 +527,7 @@ template < int NEARCP, int GASTALLY > void CollideVSSKokkos::collisions_one(COLL
     auto nlocal_extra = particle->nlocal*extra_factor;
     if (d_particles.extent(0) < nlocal_extra) {
       particle->grow(nlocal_extra - particle->nlocal);
-      d_particles = particle_kk->k_particles.d_view;
+      d_particles = particle_kk->k_particles.view_device();
       k_eiarray = particle_kk->k_eiarray;
     }
   }
@@ -576,7 +576,7 @@ template < int NEARCP, int GASTALLY > void CollideVSSKokkos::collisions_one(COLL
       if (d_dellist.extent(0) < maxdelete) {
         memoryKK->destroy_kokkos(k_dellist,dellist);
         memoryKK->grow_kokkos(k_dellist,dellist,maxdelete,"collide:dellist");
-        d_dellist = k_dellist.d_view;
+        d_dellist = k_dellist.view_device();
       }
 
       maxcellcount = h_maxcellcount();
@@ -590,7 +590,7 @@ template < int NEARCP, int GASTALLY > void CollideVSSKokkos::collisions_one(COLL
       auto nlocal_new = h_nlocal();
       if (d_particles.extent(0) < nlocal_new) {
         particle->grow(nlocal_new - particle->nlocal);
-        d_particles = particle_kk->k_particles.d_view;
+        d_particles = particle_kk->k_particles.view_device();
         k_eiarray = particle_kk->k_eiarray;
       }
     }
@@ -639,7 +639,7 @@ void CollideVSSKokkos::operator()(TagCollideCollisionsOne< NEARCP, GASTALLY, ATO
       d_nn_last_partner(icell,i) = 0;
   }
 
-  const double volume = grid_kk_copy.obj.k_cinfo.d_view[icell].volume / grid_kk_copy.obj.k_cinfo.d_view[icell].weight;
+  const double volume = grid_kk_copy.obj.k_cinfo.view_device()[icell].volume / grid_kk_copy.obj.k_cinfo.view_device()[icell].weight;
   if (volume == 0.0) d_error_flag() = 1;
 
   struct State precoln;       // state before collision
@@ -809,15 +809,15 @@ void CollideVSSKokkos::collisions_one_ambipolar(COLLIDE_REDUCE &reduce)
 
   ParticleKokkos* particle_kk = (ParticleKokkos*) particle;
   particle_kk->sync(Device,PARTICLE_MASK|SPECIES_MASK|CUSTOM_MASK);
-  d_particles = particle_kk->k_particles.d_view;
-  d_species = particle_kk->k_species.d_view;
-  d_ewhich = particle_kk->k_ewhich.d_view;
-  auto h_ewhich = particle_kk->k_ewhich.h_view;
+  d_particles = particle_kk->k_particles.view_device();
+  d_species = particle_kk->k_species.view_device();
+  d_ewhich = particle_kk->k_ewhich.view_device();
+  auto h_ewhich = particle_kk->k_ewhich.view_host();
   k_eivec = particle_kk->k_eivec;
   k_eiarray = particle_kk->k_eiarray;
   k_edarray = particle_kk->k_edarray;
-  d_ionambi = k_eivec.h_view[h_ewhich[index_ionambi]].k_view.d_view;
-  d_velambi = k_edarray.h_view[h_ewhich[index_velambi]].k_view.d_view;
+  d_ionambi = k_eivec.view_host()[h_ewhich[index_ionambi]].k_view.view_device();
+  d_velambi = k_edarray.view_host()[h_ewhich[index_velambi]].k_view.view_device();
 
   GridKokkos* grid_kk = (GridKokkos*) grid;
   grid_kk->sync(Device,CINFO_MASK);
@@ -861,7 +861,7 @@ void CollideVSSKokkos::collisions_one_ambipolar(COLLIDE_REDUCE &reduce)
     if (d_dellist.extent(0) < maxdelete_extra) {
       memoryKK->destroy_kokkos(k_dellist,dellist);
       memoryKK->grow_kokkos(k_dellist,dellist,maxdelete_extra,"collide:dellist");
-      d_dellist = k_dellist.d_view;
+      d_dellist = k_dellist.view_device();
     }
 
     auto maxcellcount_extra = maxcellcount*extra_factor;
@@ -874,13 +874,13 @@ void CollideVSSKokkos::collisions_one_ambipolar(COLLIDE_REDUCE &reduce)
     auto nlocal_extra = particle->nlocal*extra_factor;
     if (d_particles.extent(0) < nlocal_extra) {
       particle->grow(nlocal_extra - particle->nlocal);
-      d_particles = particle_kk->k_particles.d_view;
-      auto h_ewhich = particle_kk->k_ewhich.h_view;
+      d_particles = particle_kk->k_particles.view_device();
+      auto h_ewhich = particle_kk->k_ewhich.view_host();
       k_eivec = particle_kk->k_eivec;
       k_eiarray = particle_kk->k_eiarray;
       k_edarray = particle_kk->k_edarray;
-      d_ionambi = k_eivec.h_view[h_ewhich[index_ionambi]].k_view.d_view;
-      d_velambi = k_edarray.h_view[h_ewhich[index_velambi]].k_view.d_view;
+      d_ionambi = k_eivec.view_host()[h_ewhich[index_ionambi]].k_view.view_device();
+      d_velambi = k_edarray.view_host()[h_ewhich[index_velambi]].k_view.view_device();
     }
   }
 
@@ -937,7 +937,7 @@ void CollideVSSKokkos::collisions_one_ambipolar(COLLIDE_REDUCE &reduce)
       if (d_dellist.extent(0) < maxdelete) {
         memoryKK->destroy_kokkos(k_dellist,dellist);
         memoryKK->grow_kokkos(k_dellist,dellist,maxdelete,"collide:dellist");
-        d_dellist = k_dellist.d_view;
+        d_dellist = k_dellist.view_device();
       }
 
       maxcellcount = h_maxcellcount();
@@ -951,13 +951,13 @@ void CollideVSSKokkos::collisions_one_ambipolar(COLLIDE_REDUCE &reduce)
       auto nlocal_new = h_nlocal();
       if (d_particles.extent(0) < nlocal_new) {
         particle->grow(nlocal_new - particle->nlocal);
-        d_particles = particle_kk->k_particles.d_view;
-        auto h_ewhich = particle_kk->k_ewhich.h_view;
+        d_particles = particle_kk->k_particles.view_device();
+        auto h_ewhich = particle_kk->k_ewhich.view_host();
         k_eivec = particle_kk->k_eivec;
         k_eiarray = particle_kk->k_eiarray;
         k_edarray = particle_kk->k_edarray;
-        d_ionambi = k_eivec.h_view[h_ewhich[index_ionambi]].k_view.d_view;
-        d_velambi = k_edarray.h_view[h_ewhich[index_velambi]].k_view.d_view;
+        d_ionambi = k_eivec.view_host()[h_ewhich[index_ionambi]].k_view.view_device();
+        d_velambi = k_edarray.view_host()[h_ewhich[index_velambi]].k_view.view_device();
       }
     }
   }
@@ -994,7 +994,7 @@ void CollideVSSKokkos::operator()(TagCollideCollisionsOneAmbipolar< GASTALLY, AT
   int np = grid_kk_copy.obj.d_cellcount[icell];
   if (np <= 1) return;
 
-  const double volume = grid_kk_copy.obj.k_cinfo.d_view[icell].volume / grid_kk_copy.obj.k_cinfo.d_view[icell].weight;
+  const double volume = grid_kk_copy.obj.k_cinfo.view_device()[icell].volume / grid_kk_copy.obj.k_cinfo.view_device()[icell].weight;
   if (volume == 0.0) d_error_flag() = 1;
 
   struct State precoln;       // state before collision
@@ -1708,7 +1708,7 @@ void CollideVSSKokkos::EEXCHANGE_NonReactingEDisposal(Particle::OnePart *ip,
               p->evib = 0.0;
 
               int nmode = d_species[sp].nvibmode;
-              auto &d_vibmode = k_eiarray.d_view[d_ewhich[index_vibmode]].k_view.d_view;
+              const auto &d_vibmode = k_eiarray.view_device()[d_ewhich[index_vibmode]].k_view.view_device();
               int pindex = p - d_particles.data();
 
               for (int imode = 0; imode < nmode; imode++) {
@@ -1911,7 +1911,7 @@ void CollideVSSKokkos::EEXCHANGE_ReactingEDisposal(Particle::OnePart *ip,
         p->evib = 0.0;
 
         int nmode = d_species[sp].nvibmode;
-        auto &d_vibmode = k_eiarray.d_view[d_ewhich[index_vibmode]].k_view.d_view;
+        const auto &d_vibmode = k_eiarray.view_device()[d_ewhich[index_vibmode]].k_view.view_device();
         int pindex = p - d_particles.data();
 
         for (int imode = 0; imode < nmode; imode++) {
@@ -2187,9 +2187,9 @@ int CollideVSSKokkos::pack_grid_one(int icell, char *buf_char, int memflag)
   if (memflag) {
     for (int igroup = 0; igroup < ngroups; igroup++) {
       for (int jgroup = 0; jgroup < ngroups; jgroup++) {
-        buf[n++] = k_vremax.h_view(icell,igroup,jgroup);
+        buf[n++] = k_vremax.view_host()(icell,igroup,jgroup);
         if (remainflag)
-          buf[n++] = k_remain.h_view(icell,igroup,jgroup);
+          buf[n++] = k_remain.view_host()(icell,igroup,jgroup);
       }
     }
   } else {
@@ -2206,9 +2206,9 @@ int CollideVSSKokkos::pack_grid_one(int icell, char *buf_char, int memflag)
       if (memflag) {
         for (int igroup = 0; igroup < ngroups; igroup++) {
           for (int jgroup = 0; jgroup < ngroups; jgroup++) {
-            buf[n++] = k_vremax.h_view(m,igroup,jgroup);
+            buf[n++] = k_vremax.view_host()(m,igroup,jgroup);
             if (remainflag)
-              buf[n++] = k_remain.h_view(m,igroup,jgroup);
+              buf[n++] = k_remain.view_host()(m,igroup,jgroup);
           }
         }
       } else {
@@ -2239,9 +2239,9 @@ int CollideVSSKokkos::unpack_grid_one(int icell, char *buf_char)
   int n = 0;
   for (int igroup = 0; igroup < ngroups; igroup++) {
     for (int jgroup = 0; jgroup < ngroups; jgroup++) {
-      k_vremax.h_view(icell,igroup,jgroup) = buf[n++];
+      k_vremax.view_host()(icell,igroup,jgroup) = buf[n++];
       if (remainflag)
-        k_remain.h_view(icell,igroup,jgroup) = buf[n++];
+        k_remain.view_host()(icell,igroup,jgroup) = buf[n++];
     }
   }
   nglocal++;
@@ -2254,9 +2254,9 @@ int CollideVSSKokkos::unpack_grid_one(int icell, char *buf_char)
       int m = sinfo[isplit].csubs[i];
       for (int igroup = 0; igroup < ngroups; igroup++) {
         for (int jgroup = 0; jgroup < ngroups; jgroup++) {
-          k_vremax.h_view(m,igroup,jgroup) = buf[n++];
+          k_vremax.view_host()(m,igroup,jgroup) = buf[n++];
           if (remainflag)
-            k_remain.h_view(m,igroup,jgroup) = buf[n++];
+            k_remain.view_host()(m,igroup,jgroup) = buf[n++];
         }
       }
     }
@@ -2277,9 +2277,9 @@ void CollideVSSKokkos::copy_grid_one(int icell, int jcell)
   this->sync(Host,ALL_MASK);
   for (int igroup = 0; igroup < ngroups; igroup++) {
     for (int jgroup = 0; jgroup < ngroups; jgroup++) {
-      k_vremax.h_view(jcell,igroup,jgroup) = k_vremax.h_view(icell,igroup,jgroup);
+      k_vremax.view_host()(jcell,igroup,jgroup) = k_vremax.view_host()(icell,igroup,jgroup);
       if (remainflag)
-        k_remain.h_view(jcell,igroup,jgroup) = k_remain.h_view(icell,igroup,jgroup);
+        k_remain.view_host()(jcell,igroup,jgroup) = k_remain.view_host()(icell,igroup,jgroup);
     }
   }
   this->modified(Host,ALL_MASK);
@@ -2307,8 +2307,8 @@ void CollideVSSKokkos::add_grid_one()
   this->sync(Host,ALL_MASK);
   for (int igroup = 0; igroup < ngroups; igroup++)
     for (int jgroup = 0; jgroup < ngroups; jgroup++) {
-      k_vremax.h_view(nglocal,igroup,jgroup) = vremax_initial[igroup][jgroup];
-      if (remainflag) k_remain.h_view(nglocal,igroup,jgroup) = 0.0;
+      k_vremax.view_host()(nglocal,igroup,jgroup) = vremax_initial[igroup][jgroup];
+      if (remainflag) k_remain.view_host()(nglocal,igroup,jgroup) = 0.0;
     }
   this->modified(Host,ALL_MASK);
 
@@ -2335,17 +2335,17 @@ void CollideVSSKokkos::adapt_grid()
 
   nglocalmax = nglocal;
   k_vremax.resize(nglocalmax,ngroups,ngroups);
-  d_vremax = k_vremax.d_view;
+  d_vremax = k_vremax.view_device();
   if (remainflag) {
     k_remain.resize(nglocalmax,ngroups,ngroups);
-    d_remain = k_remain.d_view;
+    d_remain = k_remain.view_device();
   }
   this->sync(Host,ALL_MASK);
   for (int icell = nglocal_old; icell < nglocal; icell++)
     for (int igroup = 0; igroup < ngroups; igroup++)
       for (int jgroup = 0; jgroup < ngroups; jgroup++) {
-        k_vremax.h_view(icell,igroup,jgroup) = vremax_initial[igroup][jgroup];
-        if (remainflag) k_remain.h_view(icell,igroup,jgroup) = 0.0;
+        k_vremax.view_host()(icell,igroup,jgroup) = vremax_initial[igroup][jgroup];
+        if (remainflag) k_remain.view_host()(icell,igroup,jgroup) = 0.0;
       }
 
   this->modified(Host,ALL_MASK);
@@ -2363,10 +2363,10 @@ void CollideVSSKokkos::grow_percell(int n)
   this->sync(Device,ALL_MASK); // force resize on device
 
   k_vremax.resize(nglocalmax,ngroups,ngroups);
-  d_vremax = k_vremax.d_view;
+  d_vremax = k_vremax.view_device();
   if (remainflag) {
     k_remain.resize(nglocalmax,ngroups,ngroups);
-    d_remain = k_remain.d_view;
+    d_remain = k_remain.view_device();
   }
 
   this->modified(Device,ALL_MASK); // needed for auto sync
@@ -2448,8 +2448,8 @@ void CollideVSSKokkos::backup()
 void CollideVSSKokkos::restore()
 {
   ParticleKokkos* particle_kk = (ParticleKokkos*) particle;
-  Kokkos::deep_copy(particle_kk->k_particles.d_view,d_particles_backup);
-  d_particles = particle_kk->k_particles.d_view;
+  Kokkos::deep_copy(particle_kk->k_particles.view_device(),d_particles_backup);
+  d_particles = particle_kk->k_particles.view_device();
 
   GridKokkos* grid_kk = (GridKokkos*) grid;
   Kokkos::deep_copy(grid_kk->d_plist,d_plist_backup);
@@ -2459,15 +2459,15 @@ void CollideVSSKokkos::restore()
   Kokkos::deep_copy(d_remain,d_remain_backup);
 
   if (ambiflag) {
-    auto h_ewhich = particle_kk->k_ewhich.h_view;
+    auto h_ewhich = particle_kk->k_ewhich.view_host();
 
-    Kokkos::deep_copy(particle_kk->k_eivec.h_view[h_ewhich[index_ionambi]].k_view.d_view,d_ionambi_backup);
-    Kokkos::deep_copy(particle_kk->k_edarray.h_view[h_ewhich[index_velambi]].k_view.d_view,d_velambi_backup);
+    Kokkos::deep_copy(particle_kk->k_eivec.view_host()[h_ewhich[index_ionambi]].k_view.view_device(),d_ionambi_backup);
+    Kokkos::deep_copy(particle_kk->k_edarray.view_host()[h_ewhich[index_velambi]].k_view.view_device(),d_velambi_backup);
 
     k_eivec = particle_kk->k_eivec;
     k_edarray = particle_kk->k_edarray;
-    d_ionambi = k_eivec.h_view[h_ewhich[index_ionambi]].k_view.d_view;
-    d_velambi = k_edarray.h_view[h_ewhich[index_velambi]].k_view.d_view;
+    d_ionambi = k_eivec.view_host()[h_ewhich[index_ionambi]].k_view.view_device();
+    d_velambi = k_edarray.view_host()[h_ewhich[index_velambi]].k_view.view_device();
   }
 
   if (react) {
