@@ -61,12 +61,12 @@ FixAveHistoKokkos::FixAveHistoKokkos(SPARTA *spa, int narg, char **arg) :
   execution_space = Device;
 
   k_stats.resize(4);
-  d_stats = k_stats.d_view;
+  d_stats = k_stats.view_device();
 
   memory->destroy(bin);
   bin = NULL;
   memoryKK->grow_kokkos(k_bin, bin, nbins, "ave/histo:bin");
-  d_bin = k_bin.d_view;
+  d_bin = k_bin.view_device();
 
 }
 
@@ -136,19 +136,19 @@ void FixAveHistoKokkos::end_of_step()
 
   ParticleKokkos* particle_kk = (ParticleKokkos*) particle;
   particle_kk->sync(Device, PARTICLE_MASK|SPECIES_MASK);
-  d_particles = particle_kk->k_particles.d_view;
+  d_particles = particle_kk->k_particles.view_device();
 
-  d_s2g = particle_kk->k_species2group.d_view;
+  d_s2g = particle_kk->k_species2group.view_device();
 
   copymode = 1;
 
   // zero if first step
   if (irepeat == 0) {
-    for (int i = 0; i < 4; i++) k_stats.h_view(i) = 0.0;
+    for (int i = 0; i < 4; i++) k_stats.view_host()(i) = 0.0;
     k_stats.modify_host();
     k_stats.sync_device();
 
-    for (int i = 0; i < nbins; i++) k_bin.h_view(i) = 0.0;
+    for (int i = 0; i < nbins; i++) k_bin.view_host()(i) = 0.0;
     k_bin.modify_host();
     k_bin.sync_device();
   }
@@ -319,7 +319,7 @@ void FixAveHistoKokkos::end_of_step()
         input->variable->compute_grid(m,vector,1,0);
         k_vector.modify_host();
         k_vector.sync_device();
-        auto d_vector = k_vector.d_view;
+        auto d_vector = k_vector.view_device();
         bin_grid_cells(reducer,d_vector);
       }
 
@@ -335,8 +335,8 @@ void FixAveHistoKokkos::end_of_step()
   k_bin.sync_host();
 
   // Copy data back
-  stats[0] = k_stats.h_view(0);
-  stats[1] = k_stats.h_view(1);
+  stats[0] = k_stats.view_host()(0);
+  stats[1] = k_stats.view_host()(1);
   stats[2] = minmax.min_val;
   stats[3] = minmax.max_val;
 
@@ -695,7 +695,7 @@ void
 FixAveHistoKokkos::operator()(TagFixAveHisto_BinGridCells1, const int i,
                               minmax_type::value_type& lminmax) const
 {
-  if (grid_kk->k_cinfo.d_view[i].mask & groupbit)
+  if (grid_kk->k_cinfo.view_device()[i].mask & groupbit)
   {
     bin_one(lminmax, d_values(i));
   }

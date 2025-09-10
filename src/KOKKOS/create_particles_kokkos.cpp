@@ -382,7 +382,7 @@ void CreateParticlesKokkos::create_local(bigint np)
   auto particleKK = dynamic_cast<ParticleKokkos*>(particle);
   particleKK->grow(nnew);
   particleKK->sync(Device, PARTICLE_MASK | SPECIES_MASK);
-  auto d_particles = particleKK->k_particles.d_view;
+  auto d_particles = particleKK->k_particles.view_device();
   Kokkos::View<int*, DeviceType> d_species("species", nspecies);
   auto h_species = Kokkos::create_mirror_view(d_species);
   for (int i = 0; i < nspecies; ++i) h_species(i) = species[i];

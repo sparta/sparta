@@ -55,32 +55,32 @@ ComputeLambdaGridKokkos::ComputeLambdaGridKokkos(SPARTA *sparta, int narg, char 
   auto k_uomap = DAT::tdual_float_2d("lambda/grid:uomap",nrho_values,tmax);
 
   for (int i = 0; i < nrho_values; i++) {
-    k_numap.h_view(i) = numap[i];
+    k_numap.view_host()(i) = numap[i];
     for (int j = 0; j < tmax; j++) {
-      k_umap.h_view(i,j) = umap[i][j];
-      k_uomap.h_view(i,j) = uomap[i][j];
+      k_umap.view_host()(i,j) = umap[i][j];
+      k_uomap.view_host()(i,j) = uomap[i][j];
     }
   }
   k_numap.modify_host();
   k_numap.sync_device();
-  d_numap = k_numap.d_view;
+  d_numap = k_numap.view_device();
 
   k_umap.modify_host();
   k_umap.sync_device();
-  d_umap = k_umap.d_view;
+  d_umap = k_umap.view_device();
 
   k_uomap.modify_host();
   k_uomap.sync_device();
-  d_uomap = k_uomap.d_view;
+  d_uomap = k_uomap.view_device();
 
   auto k_output_order = DAT::tdual_int_1d("lambda/grid:output_order",MAXOUTPUT);
 
   for (int i = 0; i < MAXOUTPUT; i++)
-    k_output_order.h_view(i) = output_order[i];
+    k_output_order.view_host()(i) = output_order[i];
 
   k_output_order.modify_host();
   k_output_order.sync_device();
-  d_output_order = k_output_order.d_view;
+  d_output_order = k_output_order.view_device();
 }
 
 /* ---------------------------------------------------------------------- */
@@ -264,7 +264,7 @@ void ComputeLambdaGridKokkos::compute_per_grid_kokkos()
 
   ParticleKokkos* particle_kk = ((ParticleKokkos*)particle);
   particle_kk->sync(Device,SPECIES_MASK);
-  d_species = particle_kk->k_species.d_view;
+  d_species = particle_kk->k_species.view_device();
 
   CollideVSSKokkos* collide_kk = ((CollideVSSKokkos*)collide);
   d_params_const = collide_kk->d_params_const;
@@ -282,7 +282,7 @@ void ComputeLambdaGridKokkos::compute_per_grid_kokkos()
 
     GridKokkos* grid_kk = ((GridKokkos*)grid);
     grid_kk->sync(Device,CELL_MASK);
-    auto l_cells = grid_kk->k_cells.d_view;
+    auto l_cells = grid_kk->k_cells.view_device();
     auto l_lambda_grid = d_lambda_grid;
     auto l_vector_grid = d_vector_grid;
     auto l_array_grid = d_array_grid;
@@ -413,7 +413,7 @@ void ComputeLambdaGridKokkos::reallocate()
 
   memoryKK->destroy_kokkos(k_vector_grid,vector_grid);
   memoryKK->create_kokkos(k_vector_grid,vector_grid,nglocal,"lambda/grid:vector_grid");
-  d_vector_grid = k_vector_grid.d_view;
+  d_vector_grid = k_vector_grid.view_device();
 
   if (nrho_values > 1)
     d_array_grid1 = decltype(d_array_grid1)("lambda/grid:array_grid1",nglocal,nrho_values);
@@ -421,7 +421,7 @@ void ComputeLambdaGridKokkos::reallocate()
   if (noutputs > 1) {
     memoryKK->destroy_kokkos(k_array_grid,array_grid);
     memoryKK->create_kokkos(k_array_grid,array_grid,nglocal,noutputs,"lambda/grid:array_grid");
-    d_array_grid = k_array_grid.d_view;
+    d_array_grid = k_array_grid.view_device();
   }
 
   d_lambda_grid = decltype(d_lambda_grid)("lambda/grid:lambda_grid",nglocal);

@@ -119,7 +119,7 @@ int ParticleKokkos::add_custom(char *name, int type, int size)
         memory->srealloc(edarray,ncustom_darray*sizeof(double **),
                          "particle:edarray");
       edarray[ncustom_darray-1] = NULL;
-      auto h_edarray = k_edarray.h_view;
+      auto h_edarray = k_edarray.view_host();
       k_edarray.resize(Kokkos::view_alloc(Kokkos::SequentialHostInit),ncustom_darray);
       memory->grow(icustom_darray,ncustom_darray,"particle:icustom_darray");
       icustom_darray[ncustom_darray-1] = index;
@@ -162,34 +162,34 @@ void ParticleKokkos::grow_custom(int index, int nold, int nnew)
   if (etype[index] == INT) {
     if (esize[index] == 0) {
       int *ivector = eivec[ewhich[index]];
-      auto k_ivector = k_eivec.h_view[ewhich[index]].k_view;
+      auto k_ivector = k_eivec.view_host()[ewhich[index]].k_view;
       k_ivector.modify_host(); // force resize on host
       memoryKK->grow_kokkos(k_ivector,ivector,nold+nnew,"particle:eivec");
-      k_eivec.h_view[ewhich[index]].k_view = k_ivector;
+      k_eivec.view_host()[ewhich[index]].k_view = k_ivector;
       eivec[ewhich[index]] = ivector;
     } else {
       int **iarray = eiarray[ewhich[index]];
-      auto k_iarray = k_eiarray.h_view[ewhich[index]].k_view;
+      auto k_iarray = k_eiarray.view_host()[ewhich[index]].k_view;
       k_iarray.modify_host(); // force resize on host
       memoryKK->grow_kokkos(k_iarray,iarray,nold+nnew,esize[index],"particle:eiarray");
-      k_eiarray.h_view[ewhich[index]].k_view = k_iarray;
+      k_eiarray.view_host()[ewhich[index]].k_view = k_iarray;
       eiarray[ewhich[index]] = iarray;
     }
 
   } else {
     if (esize[index] == 0) {
       double *dvector = edvec[ewhich[index]];
-      auto k_dvector = k_edvec.h_view[ewhich[index]].k_view;
+      auto k_dvector = k_edvec.view_host()[ewhich[index]].k_view;
       k_dvector.modify_host(); // force resize on host
       memoryKK->grow_kokkos(k_dvector,dvector,nold+nnew,"particle:edvec");
-      k_edvec.h_view[ewhich[index]].k_view = k_dvector;
+      k_edvec.view_host()[ewhich[index]].k_view = k_dvector;
       edvec[ewhich[index]] = dvector;
     } else {
       double **darray = edarray[ewhich[index]];
-      auto k_darray = k_edarray.h_view[ewhich[index]].k_view;
+      auto k_darray = k_edarray.view_host()[ewhich[index]].k_view;
       k_darray.modify_host(); // force resize on host
       memoryKK->grow_kokkos(k_darray,darray,nold+nnew,esize[index],"particle:edarray");
-      k_edarray.h_view[ewhich[index]].k_view = k_darray;
+      k_edarray.view_host()[ewhich[index]].k_view = k_darray;
       edarray[ewhich[index]] = darray;
     }
   }
@@ -223,45 +223,45 @@ void ParticleKokkos::remove_custom(int index)
 
   if (etype[index] == INT) {
     if (esize[index] == 0) {
-      memoryKK->destroy_kokkos(k_eivec.h_view[ewhich[index]].k_view,eivec[ewhich[index]]);
+      memoryKK->destroy_kokkos(k_eivec.view_host()[ewhich[index]].k_view,eivec[ewhich[index]]);
       ncustom_ivec--;
       for (int i = ewhich[index]; i < ncustom_ivec; i++) {
         icustom_ivec[i] = icustom_ivec[i+1];
         ewhich[icustom_ivec[i]] = i;
         eivec[i] = eivec[i+1];
-        k_eivec.h_view[i] = k_eivec.h_view[i+1];
+        k_eivec.view_host()[i] = k_eivec.view_host()[i+1];
       }
     } else {
-      memoryKK->destroy_kokkos(k_eiarray.h_view[ewhich[index]].k_view,eiarray[ewhich[index]]);
+      memoryKK->destroy_kokkos(k_eiarray.view_host()[ewhich[index]].k_view,eiarray[ewhich[index]]);
       ncustom_iarray--;
       for (int i = ewhich[index]; i < ncustom_iarray; i++) {
         icustom_iarray[i] = icustom_iarray[i+1];
         ewhich[icustom_iarray[i]] = i;
         eiarray[i] = eiarray[i+1];
         eicol[i] = eicol[i+1];
-        k_eiarray.h_view[i] = k_eiarray.h_view[i+1];
+        k_eiarray.view_host()[i] = k_eiarray.view_host()[i+1];
       }
     }
   } else if (etype[index] == DOUBLE) {
     if (esize[index] == 0) {
-      memoryKK->destroy_kokkos(k_edvec.h_view[ewhich[index]].k_view,edvec[ewhich[index]]);
+      memoryKK->destroy_kokkos(k_edvec.view_host()[ewhich[index]].k_view,edvec[ewhich[index]]);
       ncustom_dvec--;
       for (int i = ewhich[index]; i < ncustom_dvec; i++) {
         icustom_dvec[i] = icustom_dvec[i+1];
         ewhich[icustom_dvec[i]] = i;
         edvec[i] = edvec[i+1];
-        k_edvec.h_view[i] = k_edvec.h_view[i+1];
+        k_edvec.view_host()[i] = k_edvec.view_host()[i+1];
       }
       k_edvec.modify_host();
     } else {
-      memoryKK->destroy_kokkos(k_edarray.h_view[ewhich[index]].k_view,edarray[ewhich[index]]);
+      memoryKK->destroy_kokkos(k_edarray.view_host()[ewhich[index]].k_view,edarray[ewhich[index]]);
       ncustom_darray--;
       for (int i = ewhich[index]; i < ncustom_darray; i++) {
         icustom_darray[i] = icustom_darray[i+1];
         ewhich[icustom_darray[i]] = i;
         edarray[i] = edarray[i+1];
         edcol[i] = edcol[i+1];
-        k_edarray.h_view[i] = k_edarray.h_view[i+1];
+        k_edarray.view_host()[i] = k_edarray.view_host()[i+1];
       }
       k_edarray.modify_host();
     }
