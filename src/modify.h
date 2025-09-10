@@ -82,8 +82,8 @@ class Modify : protected Pointers {
   int *list_surf_react;      // list of fixes with surf_react() method
 
   int n_custom_surf_changed; // list of fixes with custom_surf_changed() method
-  int *list_custom_surf_changed;  
-  
+  int *list_custom_surf_changed;
+
   int n_timeflag;            // list of computes that store time invocation
   int *list_timeflag;
 
