@@ -246,9 +246,12 @@ void ComputeLambdaGridKokkos::compute_per_grid_kokkos()
       error->all(FLERR,"Cannot (yet) use non-Kokkos fixes with compute lambda/grid/kk");
     KokkosBase* ftempKKBase = dynamic_cast<KokkosBase*>(ftemp);
 
-    if (tempindex == 0)
-      Kokkos::deep_copy(d_temp,ftempKKBase->d_vector_grid);
-    else {
+    if (tempindex == 0) {
+      DAT::t_float_1d ft_vector_grid = ftempKKBase->d_vector_grid;
+      if (ft_vector_grid.extent(0) != nglocal)
+        ft_vector_grid = Kokkos::subview(ftempKKBase->d_vector_grid,std::make_pair(0,nglocal));
+      Kokkos::deep_copy(d_temp,ft_vector_grid);
+    } else {
       auto l_array = ftempKKBase->d_array_grid;
       const int index = tempindex-1;
       Kokkos::parallel_for(nglocal, SPARTA_LAMBDA(int i) {
