@@ -126,6 +126,7 @@ void Modify::init()
     compute[i]->invoked_per_particle = -1;
     compute[i]->invoked_per_grid = -1;
     compute[i]->invoked_per_surf = -1;
+    compute[i]->invoked_per_tally = -1;
   }
   addstep_compute_all(update->ntimestep);
 }
@@ -172,7 +173,7 @@ void Modify::post_run()
   // must reset this to its default value, since computes may be added
   // or removed between runs and with this change we will redirect any
   // calls to addstep_compute() to addstep_compute_all() instead.
-  
+
   n_timeflag = -1;
 }
 

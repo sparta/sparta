@@ -60,7 +60,7 @@ enum{NUM,NUMWT,NFLUX,NFLUXIN,MFLUX,MFLUXIN,FX,FY,FZ,TX,TY,TZ,
 
 template <int ATOMIC_REDUCTION>
 KOKKOS_INLINE_FUNCTION
-void surf_tally_kk(int isurf, int icell, int reaction,
+void surf_tally_kk(double /*dtremain*/, int isurf, int icell, int reaction,
                    Particle::OnePart *iorig,
                    Particle::OnePart *ip, Particle::OnePart *jp) const
 {

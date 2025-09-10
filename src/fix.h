@@ -31,7 +31,7 @@ class Fix : protected Pointers {
   int flag_gas_react;            // 0/1 if has gas_react() method
   int flag_surf_react;           // 0/1 if has surf_react() method
   int flag_custom_surf_changed;  // 0/1 if depends on custom per-surf attributes
-  
+
   int scalar_flag;               // 0/1 if compute_scalar() function exists
   int vector_flag;               // 0/1 if compute_vector() function exists
   int array_flag;                // 0/1 if compute_array() function exists

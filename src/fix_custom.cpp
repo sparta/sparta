@@ -34,7 +34,7 @@ FixCustom::FixCustom(SPARTA *sparta, int narg, char **arg) :
   // instantiate Custom class for use by this fix
   // use Custom class to parse mode and list of SET and FILESTYLE actions
   // final arg = 1 for calling from FixCustom
-  
+
   custom = new Custom(sparta);
   custom->process_actions(narg-3,&arg[3],1);
 }
@@ -62,7 +62,7 @@ int FixCustom::setmask()
 void FixCustom::end_of_step()
 {
   // use Custom class to invoke list of SET and FILESTYLE actions
-  
+
   bigint count = custom->process_actions();
 
   // if per-surf custom attributes were changed,
@@ -70,13 +70,13 @@ void FixCustom::end_of_step()
   // example: fix emit/surf
   // fix surf/temp is NOT an example
   //   since it sets per-surf custom values, not uses them
-  
+
   int mode = custom->mode;
   if (mode == SURF) modify->custom_surf_changed();
 
   // sum counts across all procs
   // NOTE: could make count a scalar output of fix
-  
+
   bigint countall;
   MPI_Allreduce(&count,&countall,1,MPI_SPARTA_BIGINT,MPI_SUM,world);
 

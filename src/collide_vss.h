@@ -35,10 +35,11 @@ class CollideVSS : public Collide {
   double vremax_init(int, int);
   virtual double attempt_collision(int, int, double);
   double attempt_collision(int, int, int, double);
-  virtual int test_collision(int, int, int, Particle::OnePart *, Particle::OnePart *);
+  virtual int test_collision(int, int, int, Particle::OnePart *,
+                             Particle::OnePart *);
   virtual void setup_collision(Particle::OnePart *, Particle::OnePart *);
   virtual int perform_collision(Particle::OnePart *&, Particle::OnePart *&,
-                        Particle::OnePart *&);
+                                Particle::OnePart *&);
   double extract(int, int, const char *);
 
   struct State {      // two-particle state

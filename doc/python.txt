@@ -121,10 +121,10 @@ embedded in SPARTA.  More details about this process are given below.
 
 A broader overview of how Python can be used with SPARTA is given on
 the "Python interface to SPARTA"_Section_python.html doc page.  There
-is also an ``examples/python`` directory which illustrates use of the
+is also an "examples/python" directory which illustrates use of the
 python command.
 
-----------
+:line
 
 The first argument to the {python} command is the {mode} setting,
 which is either {source} or the {name} of a Python function.
@@ -184,10 +184,7 @@ The {here} keyword does the same thing, except that the Python code
 follows as a single argument to the {here} keyword.  This can be done
 using triple quotes as delimiters, as in the examples above and below.
 This allows Python code to be listed verbatim in your input script,
-with proper indentation, blank lines, and comments, as desired.  See
-the :doc:`Commands parse <Commands_parse>` doc page, for an
-explanation of how triple quotes can be used as part of input script
-syntax.
+with proper indentation, blank lines, and comments, as desired.
 
 The {exists} keyword takes no argument.  It simply means that Python
 code containing the needed Python function has already been loaded
@@ -249,7 +246,7 @@ wrapper with arguments in its formula.  Each of the arguments must be
 specified as an internal-style variable via the {input} keyword.
 
 In brief, the syntax for a Python function wrapper in a variable formula
-is ``py_varname(arg1,arg2,...argN)``, where "varname" is the name of a
+is "py_varname(arg1,arg2,...argN)", where "varname" is the name of a
 python-style variable associated with a Python function defined by this
 command.  One or more arguments to the function wrapper can themselves
 be sub-formulas which the variable command will evaluate and pass as
@@ -261,7 +258,7 @@ variable formulas are calculated with floating point arithmetic (any
 integer values are converted to floating point).  Note that the Python
 function can also have additional inputs, also specified by the {input}
 keyword, which are NOT arguments in the Python function wrapper.  See
-the example below for the ``mixedargs`` Python function.
+the example below for the "mixedargs" Python function.
 
 See the "variable"_varaible.html command doc page for full details on
 formula syntax including for Python function wrappers.  Examples using
@@ -317,7 +314,10 @@ however contain triple-quoted Python strings, since that will conflict
 with the triple-quote parsing that the SPARTA input script performs.
 
 All the Python code you specify via one or more python commands is
-loaded into the Python "main" module, i.e. ``__name__ == '__main__'``.
+loaded into the Python "main" module, i.e.
+
+__name__ == '__main__' :pre
+
 The code can define global variables, define global functions, define
 classes or execute statements that are outside of function
 definitions.  It can contain multiple functions, only one of which
@@ -537,7 +537,7 @@ for each particle are written to the dump file.
 
 Note that when using a Python function wrapper in a variable,
 arguments can be passed to the Python function either from the
-variable formula or by {input} keyword to the {python command.
+variable formula or by {input} keyword to the {python command}.
 
 Assume the file mixedargs.py includes this Python code:
 

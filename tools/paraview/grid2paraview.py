@@ -1538,13 +1538,27 @@ if __name__ == "__main__":
   if platform.system() == 'Linux' or platform.system() == 'Darwin':
     if num_procs == 1:
       import multiprocessing as mp
-      pool = mp.Pool()
-      for idx, chunk in enumerate(chunking):
-        pool.apply_async(create_and_write_grid_chunk, \
-                         args=(idx, chunk, len(chunking), grid_desc, \
-                               time_steps_dict, args.paraview_output_file, ))
-      pool.close()
-      pool.join()
+      
+      # ARM64 Mac fix - disable multiprocessing entirely
+      if platform.machine() == 'arm64' and platform.system() == 'Darwin':
+        # Process chunks sequentially on ARM64 Macs
+        for idx, chunk in enumerate(chunking):
+          create_and_write_grid_chunk(idx, chunk, len(chunking), grid_desc, 
+                                     time_steps_dict, args.paraview_output_file)
+      else:
+        # Use multiprocessing on other platforms
+        try:
+          mp.set_start_method('spawn', force=True)
+        except RuntimeError:
+          pass
+        
+        pool = mp.Pool()
+        for idx, chunk in enumerate(chunking):
+          pool.apply_async(create_and_write_grid_chunk, \
+                           args=(idx, chunk, len(chunking), grid_desc, \
+                                 time_steps_dict, args.paraview_output_file, ))
+        pool.close()
+        pool.join()
     else:
       pd = {}
       if local_proc_id == 0:

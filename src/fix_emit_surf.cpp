@@ -101,7 +101,7 @@ FixEmitSurf::FixEmitSurf(SPARTA *sparta, int narg, char **arg) :
     error->all(FLERR,"Cannot use fix emit/surf with subsonic and custom options");
 
   if (custom_any) flag_custom_surf_changed = 1;
-  
+
   // task list and subsonic data structs
 
   tasks = NULL;
@@ -763,7 +763,7 @@ void FixEmitSurf::perform_task()
 
           if (nsurf_tally)
             for (int k = 0; k < nsurf_tally; k++)
-              slist_active[k]->surf_tally(isurf,pcell,0,NULL,p,NULL);
+              slist_active[k]->surf_tally(p->dtremain,isurf,pcell,0,NULL,p,NULL);
 
           // if using per-surf custom attributes,
           // temps/vstream already set to custom attributes in create_task
@@ -875,7 +875,7 @@ void FixEmitSurf::perform_task()
 
         if (nsurf_tally)
           for (int k = 0; k < nsurf_tally; k++)
-            slist_active[k]->surf_tally(isurf,pcell,0,NULL,p,NULL);
+            slist_active[k]->surf_tally(p->dtremain,isurf,pcell,0,NULL,p,NULL);
 
         // temps/vstream already set to custom attributes in create_task
         // if per-surf custom attributes are being used
