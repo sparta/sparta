@@ -338,6 +338,11 @@ void UpdateKokkos::run(int nsteps)
 
   for (int i = 0; i < nsteps; i++) {
 
+    if (timer->check_timeout(i)) {
+      update->nsteps = i;
+      break;
+    }
+
     ntimestep++;
 
     if (collide_react) collide_react_reset();
@@ -345,10 +350,6 @@ void UpdateKokkos::run(int nsteps)
     if (dynamic) dynamic_update();
 
     timer->stamp();
-
-    // dynamic parameter updates
-
-    if (dynamic) dynamic_update();
 
     // start of step fixes
 
