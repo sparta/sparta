@@ -67,13 +67,13 @@ void ComputeKEParticleKokkos::compute_per_particle_kokkos()
     memoryKK->destroy_kokkos(k_vector_particle,vector_particle);
     nmax = particle->maxlocal;
     memoryKK->create_kokkos(k_vector_particle,vector_particle,nmax,"ke/particle:vector_particle");
-    d_vector_particle = k_vector_particle.d_view;
+    d_vector_particle = k_vector_particle.view_device();
   }
 
   ParticleKokkos* particle_kk = (ParticleKokkos*) particle;
   particle_kk->sync(Device,PARTICLE_MASK|SPECIES_MASK);
-  d_particles = particle_kk->k_particles.d_view;
-  d_species = particle_kk->k_species.d_view;
+  d_particles = particle_kk->k_particles.view_device();
+  d_species = particle_kk->k_species.view_device();
   int nlocal = particle->nlocal;
 
   // compute kinetic energy for each atom in group

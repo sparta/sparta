@@ -118,14 +118,14 @@ int IrregularKokkos::create_data_uniform(int n, int *proclist, int sort)
     indexmax = n;
     memoryKK->destroy_kokkos(k_index_send,index_send);
     memoryKK->create_kokkos(k_index_send,index_send,indexmax,"irregular:index_send");
-    d_index_send = k_index_send.d_view;
+    d_index_send = k_index_send.view_device();
   }
 
   if (work1[me] > indexselfmax) {
     indexselfmax = work1[me];
     memoryKK->destroy_kokkos(k_index_self,index_self);
     memoryKK->create_kokkos(k_index_self,index_self,indexselfmax,"irregular:index_self");
-    d_index_self = k_index_self.d_view;
+    d_index_self = k_index_self.view_device();
   }
 
   // proc_send = procs I send to
@@ -264,14 +264,14 @@ int IrregularKokkos::augment_data_uniform(int n, int *proclist)
     indexmax = n;
     memoryKK->destroy_kokkos(k_index_send,index_send);
     memoryKK->create_kokkos(k_index_send,index_send,indexmax,"irregular:index_send");
-    d_index_send = k_index_send.d_view;
+    d_index_send = k_index_send.view_device();
   }
 
   if (num_self > indexselfmax) {
     indexselfmax = num_self;
     memoryKK->destroy_kokkos(k_index_self,index_self);
     memoryKK->create_kokkos(k_index_self,index_self,indexselfmax,"irregular:index_self");
-    d_index_self = k_index_self.d_view;
+    d_index_self = k_index_self.view_device();
   }
 
   // work2 = offsets into index_send for each proc I send to
@@ -436,7 +436,7 @@ void IrregularKokkos::exchange_uniform(DAT::t_char_1d d_sendbuf_in, int nbytes_i
       k_index_self.sync_host();
 
       for (int i = 0; i < num_self; i++) {
-        const int m = k_index_self.h_view[i];
+        const int m = k_index_self.view_host()[i];
         memcpy(&h_recvbuf[(bigint)i*nbytes],&h_sendbuf[(bigint)m*nbytes],nbytes);
       }
     }

@@ -110,13 +110,13 @@ void FixEmitFaceKokkos::init()
   k_cummulative = DAT::tdual_float_1d("cummulative", nspecies);
   k_species     = DAT::tdual_int_1d("species", nspecies);
 
-  d_mix_vscale  = k_mix_vscale .d_view;
-  d_cummulative = k_cummulative.d_view;
-  d_species     = k_species    .d_view;
+  d_mix_vscale  = k_mix_vscale .view_device();
+  d_cummulative = k_cummulative.view_device();
+  d_species     = k_species    .view_device();
 
-  auto h_mix_vscale  = k_mix_vscale .h_view;
-  auto h_cummulative = k_cummulative.h_view;
-  auto h_species     = k_species    .h_view;
+  auto h_mix_vscale  = k_mix_vscale .view_host();
+  auto h_cummulative = k_cummulative.view_host();
+  auto h_species     = k_species    .view_host();
 
   for (int isp = 0; isp < nspecies; ++isp) {
     h_mix_vscale(isp) = particle->mixture[imix]->vscale[isp];
@@ -266,7 +266,7 @@ void FixEmitFaceKokkos::perform_task()
   auto nlocal_before = particleKK->nlocal;
   particleKK->grow(nnew);
   particleKK->sync(SPARTA_NS::Device, PARTICLE_MASK);
-  auto ld_particles = particleKK->k_particles.d_view;
+  auto ld_particles = particleKK->k_particles.view_device();
 
   Kokkos::parallel_for(ncands, SPARTA_LAMBDA(int cand) {
     if (!ld_keep(cand)) return;
@@ -512,8 +512,8 @@ void FixEmitFaceKokkos::grow_task()
     k_tasks.modify_host(); // force resize on host
     k_tasks.resize(ntaskmax);
   }
-  d_tasks = k_tasks.d_view;
-  tasks = k_tasks.h_view.data();
+  d_tasks = k_tasks.view_device();
+  tasks = k_tasks.view_host().data();
 
   // set all new task bytes to 0 so valgrind won't complain
   // if bytes between fields are uninitialized
@@ -526,18 +526,18 @@ void FixEmitFaceKokkos::grow_task()
     k_ntargetsp.sync_host();
     k_ntargetsp.modify_host(); // force resize on host
     k_ntargetsp.resize(ntaskmax,nspecies);
-    d_ntargetsp = k_ntargetsp.d_view;
+    d_ntargetsp = k_ntargetsp.view_device();
     for (int i = 0; i < ntaskmax; i++)
-      tasks[i].ntargetsp = k_ntargetsp.h_view.data() + i*k_ntargetsp.h_view.extent(1);
+      tasks[i].ntargetsp = k_ntargetsp.view_host().data() + i*k_ntargetsp.view_host().extent(1);
   }
 
   if (subsonic_style == PONLY) {
     k_vscale.modify_host(); // force resize on host
     k_vscale.sync_host();
     k_vscale.resize(ntaskmax,nspecies);
-    d_vscale = k_vscale.d_view;
+    d_vscale = k_vscale.view_device();
     for (int i = 0; i < ntaskmax; i++)
-      tasks[i].vscale = k_vscale.h_view.data() + i*k_vscale.h_view.extent(1);
+      tasks[i].vscale = k_vscale.view_host().data() + i*k_vscale.view_host().extent(1);
   }
 }
 
@@ -549,14 +549,14 @@ void FixEmitFaceKokkos::realloc_nspecies()
 {
   if (perspecies) {
     k_ntargetsp = DAT::tdual_float_2d_lr("emit/face:ntargetsp",ntaskmax,nspecies);
-    d_ntargetsp = k_ntargetsp.d_view;
+    d_ntargetsp = k_ntargetsp.view_device();
     for (int i = 0; i < ntaskmax; i++)
-      tasks[i].ntargetsp = k_ntargetsp.h_view.data() + i*k_ntargetsp.h_view.extent(1);
+      tasks[i].ntargetsp = k_ntargetsp.view_host().data() + i*k_ntargetsp.view_host().extent(1);
   }
   if (subsonic_style == PONLY) {
     k_vscale = DAT::tdual_float_2d_lr("emit/face:vscale",ntaskmax,nspecies);
-    d_vscale = k_vscale.d_view;
+    d_vscale = k_vscale.view_device();
     for (int i = 0; i < ntaskmax; i++)
-      tasks[i].vscale = k_vscale.h_view.data() + i*k_vscale.h_view.extent(1);
+      tasks[i].vscale = k_vscale.view_host().data() + i*k_vscale.view_host().extent(1);
   }
 }
