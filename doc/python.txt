@@ -6,7 +6,7 @@
 
 :line
 
-mixture command :h3
+python command :h3
 
 [Syntax:]
 
@@ -48,6 +48,7 @@ if mode is {name} of a Python function: :l
      {here} arg = one or more lines of Python code which defines the Python function
                   must be a single argument, typically enclosed between triple quotes
      {exists} arg = none = Python code has been loaded by previous python command :pre
+:ule
 
 [Examples:]
 
