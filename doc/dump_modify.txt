@@ -90,7 +90,7 @@ keyword = {bcolor} or {bdiam} or {backcolor} or {bitrate} or {boxcolor} or {cmap
   {slinecolor} arg = color
     color = name of color for surface element outlines
   {surfgroup} arg = group-ID
-    group-ID = name of a user-defined surf group, see the "group"_group.html command
+    group-ID = name of a user-defined surf group, see the "group"_group.html command :pre
 :ule
 
 [Examples:]
