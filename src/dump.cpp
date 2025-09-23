@@ -447,13 +447,20 @@ int Dump::convert_string(int n, double *mybuf)
     }
 
     for (j = 0; j < size_one; j++) {
-      if (vtype[j] == INT)
-        offset += sprintf(&sbuf[offset],vformat[j],static_cast<int> (mybuf[m]));
-      else if (vtype[j] == DOUBLE)
+      if (vtype[j] == DOUBLE)
         offset += sprintf(&sbuf[offset],vformat[j],mybuf[m]);
+      else if (vtype[j] == INT)
+        offset += sprintf(&sbuf[offset],vformat[j],
+                          static_cast<int> (ubuf(mybuf[m]).i));
       else if (vtype[j] == BIGINT)
         offset += sprintf(&sbuf[offset],vformat[j],
-                          static_cast<bigint> (mybuf[m]));
+                          static_cast<bigint> (ubuf(mybuf[m]).i));
+      else if (vtype[j] == UINT)
+        offset += sprintf(&sbuf[offset],vformat[j],
+                          static_cast<uint32_t> (ubuf(mybuf[m]).i));
+      else if (vtype[j] == BIGUINT)
+        offset += sprintf(&sbuf[offset],vformat[j],
+                          static_cast<uint64_t> (ubuf(mybuf[m]).i));
       else if (vtype[j] == STRING) {
         // NOTE: this is a kludge
         // assumes any STRING field from dump particle/grid/surf
