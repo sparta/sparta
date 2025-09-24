@@ -303,8 +303,8 @@ Miscellaneous:
 "clear"_clear.html, "echo"_echo.html, "if"_if.html,
 "include"_include.html, "jump"_jump.html, "label"_label.html,
 "log"_log.html, "next"_next.html, "partition"_partition.html,
-"print"_print.html, "quit"_quit.html, "shell"_shell.html,
-"variable"_variable.html
+"print"_print.html, "python"_python.html, "quit"_quit.html,
+"shell"_shell.html, "variable"_variable.html
 
 :line
 
@@ -347,6 +347,7 @@ section"_#cmd_4 lists many of the same commands, grouped by category.
 "package"_package.html,
 "partition"_partition.html,
 "print"_print.html,
+"python"_python.html,
 "quit"_quit.html,
 "react"_react.html,
 "react_modify"_react_modify.html,
