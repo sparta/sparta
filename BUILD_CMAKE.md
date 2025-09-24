@@ -40,6 +40,8 @@ cmake -C /path/to/<NAME>.cmake /path/to/sparta/cmake
 
 # SPARTA Keyword Listing
 ## Package options
+* PKG_COUPLE
+  * Link molecular dynamics library
 * PKG_FFT
   * Whether to enable the SPARTA FFT package.
 * PKG_KOKKOS
