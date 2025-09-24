@@ -40,7 +40,7 @@ keyword = {cut} or {global} or {region} or {species} or {density} or {temperatur
     xvar,yvar,zvar = names of internal-style variables for x,y,z
   {custom} values = attribute g_name
     attribute = {density} or {temperature} or {vstream} or {fractions}
-    g_name = custom per-grid vector or array with name :pre
+    g_name = custom per-grid vector or array with name
   {twopass} values = none :pre
 :ule
 
