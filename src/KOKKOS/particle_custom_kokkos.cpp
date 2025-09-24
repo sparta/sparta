@@ -314,6 +314,7 @@ void ParticleKokkos::pack_custom(int n, char *buf)
 
 void ParticleKokkos::unpack_custom(char *buf, int n)
 {
+  this->sync(Host,CUSTOM_MASK);
   Particle::unpack_custom(buf,n);
   this->modify(Host,CUSTOM_MASK);
 }
