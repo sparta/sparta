@@ -50,6 +50,7 @@ Modify::Modify(SPARTA *sparta) : Pointers(sparta)
   list_update_custom = NULL;
   list_gas_react = NULL;
   list_surf_react = NULL;
+  list_custom_surf_changed = NULL;
   list_timeflag = NULL;
 
   ncompute = maxcompute = 0;
@@ -85,6 +86,7 @@ Modify::~Modify()
   delete [] list_update_custom;
   delete [] list_gas_react;
   delete [] list_surf_react;
+  delete [] list_custom_surf_changed;
   delete [] list_timeflag;
 }
 
