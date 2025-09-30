@@ -607,8 +607,10 @@ void Modify::list_init_fixes()
   list_update_custom = new int[n_update_custom];
   list_gas_react = new int[n_gas_react];
   list_surf_react = new int[n_surf_react];
+  list_custom_surf_changed = new int[n_custom_surf_changed];
 
   n_pergrid = n_update_custom = n_gas_react = n_surf_react = 0;
+  n_custom_surf_changed = 0;
 
   for (int i = 0; i < nfix; i++) {
     if (fix[i]->gridmigrate) list_pergrid[n_pergrid++] = i;
