@@ -591,6 +591,7 @@ void Modify::list_init_fixes()
   delete [] list_update_custom;
   delete [] list_gas_react;
   delete [] list_surf_react;
+  delete [] list_custom_surf_changed;
 
   n_pergrid = n_update_custom = n_gas_react = n_surf_react = 0;
   n_custom_surf_changed = 0;
