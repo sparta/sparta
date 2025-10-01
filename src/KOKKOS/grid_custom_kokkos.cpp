@@ -375,6 +375,7 @@ int GridKokkos::pack_custom(int icell, char *buf, int memflag)
 
 int GridKokkos::unpack_custom(char *buf, int icell)
 {
+  this->sync(Host,CUSTOM_MASK);
   int n = Grid::unpack_custom(buf,icell);
   this->modify(Host,CUSTOM_MASK);
   return n;
