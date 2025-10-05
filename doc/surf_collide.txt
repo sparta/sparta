@@ -48,7 +48,7 @@ args = arguments for specific style :l
             Tsurf can be a variable or custom per-surf attribute (see below)
   {piston} or {piston/kk} args = Vwall
     Vwall = velocity of boundary wall (velocity units)
-  {transparent} args = none :pre
+  {transparent} or {transparent/kk} args = none :pre
   {vanish} or {vanish/kk} args = none :pre
 zero or more keyword/arg pairs may be appended :l
 keyword = {translate} or {rotate} or {temp/freq} or {partial} or {barrier} or {bond} or {init_energy} or {step} or {double} or {intenergy} :l

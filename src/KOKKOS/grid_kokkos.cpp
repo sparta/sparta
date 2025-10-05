@@ -86,13 +86,13 @@ GridKokkos::~GridKokkos()
   edcol = NULL;
 
   for (int i = 0; i < ncustom_ivec; i++)
-    memoryKK->destroy_kokkos(k_eivec.h_view[i].k_view,eivec[i]);
+    memoryKK->destroy_kokkos(k_eivec.view_host()[i].k_view,eivec[i]);
   for (int i = 0; i < ncustom_iarray; i++)
-    memoryKK->destroy_kokkos(k_eiarray.h_view[i].k_view,eiarray[i]);
+    memoryKK->destroy_kokkos(k_eiarray.view_host()[i].k_view,eiarray[i]);
   for (int i = 0; i < ncustom_dvec; i++)
-    memoryKK->destroy_kokkos(k_edvec.h_view[i].k_view,edvec[i]);
+    memoryKK->destroy_kokkos(k_edvec.view_host()[i].k_view,edvec[i]);
   for (int i = 0; i < ncustom_darray; i++)
-    memoryKK->destroy_kokkos(k_edarray.h_view[i].k_view,edarray[i]);
+    memoryKK->destroy_kokkos(k_edarray.view_host()[i].k_view,edarray[i]);
 
   ncustom_ivec = ncustom_iarray = 0;
   ncustom_dvec = ncustom_darray = 0;
@@ -122,7 +122,7 @@ void GridKokkos::grow_cells(int n, int m)
         k_cells.resize(maxcell);
         this->modify(Device,CELL_MASK); // needed for auto sync
       }
-      cells = k_cells.h_view.data();
+      cells = k_cells.view_host().data();
 
       if (ncustom) reallocate_custom(oldmax,maxcell);
     }
@@ -136,7 +136,7 @@ void GridKokkos::grow_cells(int n, int m)
         k_cinfo.resize(maxlocal);
         this->modify(Device,CINFO_MASK); // needed for auto sync
       }
-      cinfo = k_cinfo.h_view.data();
+      cinfo = k_cinfo.view_host().data();
     }
   }
 }
@@ -159,7 +159,7 @@ void GridKokkos::grow_pcells()
       k_pcells.resize(maxparent);
       this->modify(Device,PCELL_MASK); // needed for auto sync
     }
-    pcells = k_pcells.h_view.data();
+    pcells = k_pcells.view_host().data();
   }
 }
 
@@ -182,7 +182,7 @@ void GridKokkos::grow_sinfo(int n)
         k_sinfo.resize(maxsplit);
         this->modify(Device,SINFO_MASK); // needed for auto sync
       }
-      sinfo = k_sinfo.h_view.data();
+      sinfo = k_sinfo.view_host().data();
     }
   }
 }
@@ -266,44 +266,44 @@ void GridKokkos::wrap_kokkos()
 {
   // cells
 
-  if (cells != k_cells.h_view.data()) {
+  if (cells != k_cells.view_host().data()) {
     memoryKK->wrap_kokkos(k_cells,cells,maxcell,"grid:cells");
     k_cells.modify_host();
     k_cells.sync_device();
     memory->sfree(cells);
-    cells = k_cells.h_view.data();
+    cells = k_cells.view_host().data();
   }
 
   // cinfo
 
-  if (cinfo != k_cinfo.h_view.data()) {
+  if (cinfo != k_cinfo.view_host().data()) {
     memoryKK->wrap_kokkos(k_cinfo,cinfo,maxlocal,"grid:cinfo");
     k_cinfo.modify_host();
     k_cinfo.sync_device();
     memory->sfree(cinfo);
-    cinfo = k_cinfo.h_view.data();
+    cinfo = k_cinfo.view_host().data();
   }
 
   // sinfo
 
-  if (sinfo != k_sinfo.h_view.data()) {
+  if (sinfo != k_sinfo.view_host().data()) {
     memoryKK->wrap_kokkos(k_sinfo,sinfo,maxsplit,"grid:sinfo");
     k_sinfo.modify_host();
     k_sinfo.sync_device();
     memory->sfree(sinfo);
-    sinfo = k_sinfo.h_view.data();
+    sinfo = k_sinfo.view_host().data();
   }
 
   wrap_kokkos_graphs();
 
   // pcells
 
-  if (pcells != k_pcells.h_view.data()) {
+  if (pcells != k_pcells.view_host().data()) {
     memoryKK->wrap_kokkos(k_pcells,pcells,maxparent,"grid:pcells");
     k_pcells.modify_host();
     k_pcells.sync_device();
     memory->sfree(pcells);
-    pcells = k_pcells.h_view.data();
+    pcells = k_pcells.view_host().data();
   }
 
   // plevels doesn't need wrap but was modified on host
@@ -335,19 +335,19 @@ void GridKokkos::sync(ExecutionSpace space, unsigned int mask)
       if (ncustom) {
         if (ncustom_ivec)
           for (int i = 0; i < ncustom_ivec; i++)
-            k_eivec.h_view[i].k_view.sync_device();
+            k_eivec.view_host()[i].k_view.sync_device();
 
         if (ncustom_iarray)
           for (int i = 0; i < ncustom_iarray; i++)
-            k_eiarray.h_view[i].k_view.sync_device();
+            k_eiarray.view_host()[i].k_view.sync_device();
 
         if (ncustom_dvec)
           for (int i = 0; i < ncustom_dvec; i++)
-            k_edvec.h_view[i].k_view.sync_device();
+            k_edvec.view_host()[i].k_view.sync_device();
 
         if (ncustom_darray)
           for (int i = 0; i < ncustom_darray; i++)
-            k_edarray.h_view[i].k_view.sync_device();
+            k_edarray.view_host()[i].k_view.sync_device();
       }
     }
   } else {
@@ -359,19 +359,19 @@ void GridKokkos::sync(ExecutionSpace space, unsigned int mask)
     if (mask & CUSTOM_MASK) {
       if (ncustom_ivec)
         for (int i = 0; i < ncustom_ivec; i++)
-          k_eivec.h_view[i].k_view.sync_host();
+          k_eivec.view_host()[i].k_view.sync_host();
 
       if (ncustom_iarray)
         for (int i = 0; i < ncustom_iarray; i++)
-          k_eiarray.h_view[i].k_view.sync_host();
+          k_eiarray.view_host()[i].k_view.sync_host();
 
       if (ncustom_dvec)
         for (int i = 0; i < ncustom_dvec; i++)
-          k_edvec.h_view[i].k_view.sync_host();
+          k_edvec.view_host()[i].k_view.sync_host();
 
       if (ncustom_darray)
         for (int i = 0; i < ncustom_darray; i++)
-          k_edarray.h_view[i].k_view.sync_host();
+          k_edarray.view_host()[i].k_view.sync_host();
     }
   }
 }
@@ -397,19 +397,19 @@ void GridKokkos::modify(ExecutionSpace space, unsigned int mask)
       if (ncustom) {
         if (ncustom_ivec)
           for (int i = 0; i < ncustom_ivec; i++)
-            k_eivec.h_view[i].k_view.modify_device();
+            k_eivec.view_host()[i].k_view.modify_device();
 
         if (ncustom_iarray)
           for (int i = 0; i < ncustom_iarray; i++)
-            k_eiarray.h_view[i].k_view.modify_device();
+            k_eiarray.view_host()[i].k_view.modify_device();
 
         if (ncustom_dvec)
           for (int i = 0; i < ncustom_dvec; i++)
-            k_edvec.h_view[i].k_view.modify_device();
+            k_edvec.view_host()[i].k_view.modify_device();
 
         if (ncustom_darray)
           for (int i = 0; i < ncustom_darray; i++)
-            k_edarray.h_view[i].k_view.modify_device();
+            k_edarray.view_host()[i].k_view.modify_device();
       }
     }
     if (sparta->kokkos->auto_sync)
@@ -424,19 +424,19 @@ void GridKokkos::modify(ExecutionSpace space, unsigned int mask)
       if (ncustom) {
         if (ncustom_ivec)
           for (int i = 0; i < ncustom_ivec; i++)
-            k_eivec.h_view[i].k_view.modify_host();
+            k_eivec.view_host()[i].k_view.modify_host();
 
         if (ncustom_iarray)
           for (int i = 0; i < ncustom_iarray; i++)
-            k_eiarray.h_view[i].k_view.modify_host();
+            k_eiarray.view_host()[i].k_view.modify_host();
 
         if (ncustom_dvec)
           for (int i = 0; i < ncustom_dvec; i++)
-            k_edvec.h_view[i].k_view.modify_host();
+            k_edvec.view_host()[i].k_view.modify_host();
 
         if (ncustom_darray)
           for (int i = 0; i < ncustom_darray; i++)
-            k_edarray.h_view[i].k_view.modify_host();
+            k_edarray.view_host()[i].k_view.modify_host();
       }
     }
   }

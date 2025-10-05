@@ -260,7 +260,7 @@ void ComputeSurf::clear()
    jp != NULL means two particles after collision
 ------------------------------------------------------------------------- */
 
-void ComputeSurf::surf_tally(int isurf, int icell, int reaction,
+void ComputeSurf::surf_tally(double /*dtremain*/, int isurf, int icell, int reaction,
                              Particle::OnePart *iorig,
                              Particle::OnePart *ip, Particle::OnePart *jp)
 {

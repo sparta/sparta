@@ -171,7 +171,7 @@ void SurfReactProbKokkos::pre_react()
 {
   ParticleKokkos* particle_kk = (ParticleKokkos*) particle;
   particle_kk->sync(Device,PARTICLE_MASK);
-  d_particles = particle_kk->k_particles.d_view;
+  d_particles = particle_kk->k_particles.view_device();
 }
 
 /* ---------------------------------------------------------------------- */
@@ -179,7 +179,7 @@ void SurfReactProbKokkos::pre_react()
 void SurfReactProbKokkos::backup()
 {
   ParticleKokkos* particle_kk = (ParticleKokkos*) particle;
-  d_particles = particle_kk->k_particles.d_view;
+  d_particles = particle_kk->k_particles.view_device();
 
 #ifdef SPARTA_KOKKOS_EXACT
   if (!random_backup)

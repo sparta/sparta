@@ -497,6 +497,7 @@ DumpImage::DumpImage(SPARTA *sparta, int narg, char **arg) :
 
   // additional defaults for dump_modify options
 
+  int ntypes = particle->nspecies;
   pcolortype = new double*[ntypes+1];
   pdiamtype = new double[ntypes+1];
 
@@ -1161,7 +1162,7 @@ void DumpImage::create_image()
       j = clist[i];
 
       if (pcolor == TYPE) {
-        itype = static_cast<int> (buf[m]);
+        itype = ubuf(buf[m]).i;
         color = pcolortype[itype];
       } else if (pcolor == PROC) {
         color = pcolorproc;
@@ -1172,7 +1173,7 @@ void DumpImage::create_image()
       if (pdiam == NUMERIC) {
         diameter = pdiamvalue;
       } else if (pdiam == TYPE) {
-        itype = static_cast<int> (buf[m+1]);
+        itype = ubuf(buf[m+1]).i;
         diameter = pdiamtype[itype];
       } else if (pdiam == ATTRIBUTE) {
         diameter = buf[m+1];

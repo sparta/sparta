@@ -149,7 +149,7 @@ void SurfCollidePistonKokkos::pre_collide()
 
   ParticleKokkos* particle_kk = (ParticleKokkos*) particle;
   particle_kk->sync(Device,PARTICLE_MASK|SPECIES_MASK);
-  d_particles = particle_kk->k_particles.d_view;
+  d_particles = particle_kk->k_particles.view_device();
 
   Kokkos::deep_copy(d_scalars,0);
 }
@@ -174,7 +174,7 @@ void SurfCollidePistonKokkos::post_collide()
 void SurfCollidePistonKokkos::backup()
 {
   ParticleKokkos* particle_kk = (ParticleKokkos*) particle;
-  d_particles = particle_kk->k_particles.d_view;
+  d_particles = particle_kk->k_particles.view_device();
 
   if (surf->nsr > 0) {
     int nglob,nprob;

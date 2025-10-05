@@ -47,14 +47,14 @@ void FixGridCheckKokkos::end_of_step()
 
   auto particleKK = dynamic_cast<ParticleKokkos*>(particle);
   particleKK->k_particles.sync_device();
-  auto d_particles = particleKK->k_particles.d_view;
+  auto d_particles = particleKK->k_particles.view_device();
   auto gridKK = dynamic_cast<GridKokkos*>(grid);
   gridKK->k_cells.sync_device();
-  auto d_cells = gridKK->k_cells.d_view;
+  auto d_cells = gridKK->k_cells.view_device();
   gridKK->k_cinfo.sync_device();
-  auto d_cinfo = gridKK->k_cinfo.d_view;
+  auto d_cinfo = gridKK->k_cinfo.view_device();
   gridKK->k_sinfo.sync_device();
-  auto d_sinfo = gridKK->k_sinfo.d_view;
+  auto d_sinfo = gridKK->k_sinfo.view_device();
   int nglocal = grid->nlocal;
   int nlocal = particle->nlocal;
 

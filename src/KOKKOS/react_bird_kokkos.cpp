@@ -54,7 +54,7 @@ ReactBirdKokkos::ReactBirdKokkos(SPARTA *sparta, int narg, char **arg) :
   delete [] tally_reactions_all;
   memoryKK->create_kokkos(k_tally_reactions,tally_reactions,nlist,"react_bird:tally_reactions");
   memoryKK->create_kokkos(k_tally_reactions_all,tally_reactions_all,nlist,"react_bird:tally_reactions_all");
-  d_tally_reactions = k_tally_reactions.d_view;
+  d_tally_reactions = k_tally_reactions.view_device();
 
   random_backup = NULL;
 }
@@ -83,12 +83,12 @@ void ReactBirdKokkos::deallocate_views_of_views()
 {
   // deallocate views of views in serial to prevent race conditions
 
-  int nspecies = k_reactions.h_view.extent(0);
+  int nspecies = k_reactions.view_host().extent(0);
   for (int i = 0; i < nspecies; i++) {
     for (int j = 0; j < nspecies; j++) {
       if (d_reactions.data()) {
-        k_reactions.h_view(i,j).d_list = {};
-        k_reactions.h_view(i,j).d_sp2recomb = {};
+        k_reactions.view_host()(i,j).d_list = {};
+        k_reactions.view_host()(i,j).d_sp2recomb = {};
       }
     }
   }
@@ -129,26 +129,26 @@ void ReactBirdKokkos::init()
   for (int i = 0; i < nspecies; i++) {
     for (int j = 0; j < nspecies; j++) {
       const int n = reactions[i][j].n;
-      k_reactions.h_view(i,j).n = n;
+      k_reactions.view_host()(i,j).n = n;
 
-      k_reactions.h_view(i,j).d_list = DAT::t_int_1d("react/bird:list",n);
-      auto h_list = Kokkos::create_mirror_view(k_reactions.h_view(i,j).d_list);
+      k_reactions.view_host()(i,j).d_list = DAT::t_int_1d("react/bird:list",n);
+      auto h_list = Kokkos::create_mirror_view(k_reactions.view_host()(i,j).d_list);
       for (int k = 0; k < n; k++)
         h_list(k) = reactions[i][j].list[k];
-      Kokkos::deep_copy(k_reactions.h_view(i,j).d_list,h_list);
+      Kokkos::deep_copy(k_reactions.view_host()(i,j).d_list,h_list);
 
       if (!recombflag || !reactions[i][j].sp2recomb) continue;
 
-      k_reactions.h_view(i,j).d_sp2recomb = DAT::t_int_1d("react/bird:sp2recomb",nspecies);
-      auto h_sp2recomb = Kokkos::create_mirror_view(k_reactions.h_view(i,j).d_sp2recomb);
+      k_reactions.view_host()(i,j).d_sp2recomb = DAT::t_int_1d("react/bird:sp2recomb",nspecies);
+      auto h_sp2recomb = Kokkos::create_mirror_view(k_reactions.view_host()(i,j).d_sp2recomb);
       for (int k = 0; k < nspecies; k++)
         h_sp2recomb(k) = reactions[i][j].sp2recomb[k];
-      Kokkos::deep_copy(k_reactions.h_view(i,j).d_sp2recomb,h_sp2recomb);
+      Kokkos::deep_copy(k_reactions.view_host()(i,j).d_sp2recomb,h_sp2recomb);
     }
   }
   k_reactions.modify_host();
   k_reactions.sync_device();
-  d_reactions = k_reactions.d_view;
+  d_reactions = k_reactions.view_device();
 
 #ifdef SPARTA_KOKKOS_EXACT
   rand_pool.init(random);
@@ -165,14 +165,14 @@ double ReactBirdKokkos::extract_tally(int m)
     tally_flag = 1;
 
     if (sparta->kokkos->gpu_aware_flag) {
-      MPI_Allreduce(d_tally_reactions.data(),k_tally_reactions_all.d_view.data(),nlist,
+      MPI_Allreduce(d_tally_reactions.data(),k_tally_reactions_all.view_device().data(),nlist,
                     MPI_SPARTA_BIGINT,MPI_SUM,world);
       k_tally_reactions_all.modify_device();
       k_tally_reactions_all.sync_host();
     } else {
       k_tally_reactions.modify_device();
       k_tally_reactions.sync_host();
-      MPI_Allreduce(k_tally_reactions.h_view.data(),k_tally_reactions_all.h_view.data(),nlist,
+      MPI_Allreduce(k_tally_reactions.view_host().data(),k_tally_reactions_all.view_host().data(),nlist,
                     MPI_SPARTA_BIGINT,MPI_SUM,world);
     }
 

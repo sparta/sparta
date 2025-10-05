@@ -9,7 +9,7 @@
 
 <HR>
 
-<H3>mixture command 
+<H3>python command 
 </H3>
 <P><B>Syntax:</B>
 </P>
@@ -19,12 +19,12 @@
 
 <LI>if mode is <I>source</I>: 
 
-<P>  keyword = <I>here</I> or name of a <I>Python file</I>
+<PRE>  keyword = <I>here</I> or name of a <I>Python file</I>
     <I>here</I> arg = inline
        inline = one or more lines of Python code which will be executed immediately
                   must be a single argument, typically enclosed between triple quotes
-    <I>Python file</I> = name of a file with Python code which will be executed immediately
-</P>
+    <I>Python file</I> = name of a file with Python code which will be executed immediately 
+</PRE>
 <LI>if mode is <I>name</I> of a Python function: 
 
 <PRE>  one or more keywords with/without arguments must be appended
@@ -54,6 +54,8 @@
                   must be a single argument, typically enclosed between triple quotes
      <I>exists</I> arg = none = Python code has been loaded by previous python command 
 </PRE>
+
+</UL>
 <P><B>Examples:</B>
 </P>
 <PRE>python source funcdef.py
@@ -126,11 +128,11 @@ embedded in SPARTA.  More details about this process are given below.
 </P>
 <P>A broader overview of how Python can be used with SPARTA is given on
 the <A HREF = "Section_python.html">Python interface to SPARTA</A> doc page.  There
-is also an ``examples/python`` directory which illustrates use of the
+is also an "examples/python" directory which illustrates use of the
 python command.
 </P>
-<P>----------
-</P>
+<HR>
+
 <P>The first argument to the <I>python</I> command is the <I>mode</I> setting,
 which is either <I>source</I> or the <I>name</I> of a Python function.
 </P>
@@ -189,10 +191,7 @@ so that it can be invoked later.
 follows as a single argument to the <I>here</I> keyword.  This can be done
 using triple quotes as delimiters, as in the examples above and below.
 This allows Python code to be listed verbatim in your input script,
-with proper indentation, blank lines, and comments, as desired.  See
-the :doc:`Commands parse <Commands_parse>` doc page, for an
-explanation of how triple quotes can be used as part of input script
-syntax.
+with proper indentation, blank lines, and comments, as desired.
 </P>
 <P>The <I>exists</I> keyword takes no argument.  It simply means that Python
 code containing the needed Python function has already been loaded
@@ -254,7 +253,7 @@ wrapper with arguments in its formula.  Each of the arguments must be
 specified as an internal-style variable via the <I>input</I> keyword.
 </P>
 <P>In brief, the syntax for a Python function wrapper in a variable formula
-is ``py_varname(arg1,arg2,...argN)``, where "varname" is the name of a
+is "py_varname(arg1,arg2,...argN)", where "varname" is the name of a
 python-style variable associated with a Python function defined by this
 command.  One or more arguments to the function wrapper can themselves
 be sub-formulas which the variable command will evaluate and pass as
@@ -266,7 +265,7 @@ variable formulas are calculated with floating point arithmetic (any
 integer values are converted to floating point).  Note that the Python
 function can also have additional inputs, also specified by the <I>input</I>
 keyword, which are NOT arguments in the Python function wrapper.  See
-the example below for the ``mixedargs`` Python function.
+the example below for the "mixedargs" Python function.
 </P>
 <P>See the <A HREF = "varaible.html">variable</A> command doc page for full details on
 formula syntax including for Python function wrappers.  Examples using
@@ -322,8 +321,11 @@ however contain triple-quoted Python strings, since that will conflict
 with the triple-quote parsing that the SPARTA input script performs.
 </P>
 <P>All the Python code you specify via one or more python commands is
-loaded into the Python "main" module, i.e. ``__name__ == '__main__'``.
-The code can define global variables, define global functions, define
+loaded into the Python "main" module, i.e.
+</P>
+<PRE>__name__ == '__main__' 
+</PRE>
+<P>The code can define global variables, define global functions, define
 classes or execute statements that are outside of function
 definitions.  It can contain multiple functions, only one of which
 matches the name of the Python function specified in the python
@@ -542,7 +544,7 @@ for each particle are written to the dump file.
 </P>
 <P>Note that when using a Python function wrapper in a variable,
 arguments can be passed to the Python function either from the
-variable formula or by <I>input</I> keyword to the <I>python command.
+variable formula or by <I>input</I> keyword to the <I>python command</I>.
 </P>
 <P>Assume the file mixedargs.py includes this Python code:
 </P>

@@ -33,12 +33,19 @@ class Compute : protected Pointers {
   double **array_grid;      // computed per-grid array
 
   // vec/array surf are length = # of explicit surf elements owned
-  // vec/array tally are length = # of surf elements tallied
+  // vec/array surf tally are length = # of surf elements tallied
 
   double *vector_surf;        // computed per-surf vector
   double **array_surf;        // computed per-surf array
   double *vector_surf_tally;  // computed per-surf tally vector
   double **array_surf_tally;  // computed per-surf tally array
+
+  // vec/array tally are length = # of tallies
+
+  double *vector_tally;      // computed per-tally vector
+  double **array_tally;      // computed per-tally array
+
+  // data flags and sizes
 
   int scalar_flag;          // 0/1 if compute_scalar() function exists
   int vector_flag;          // 0/1 if compute_vector() function exists
@@ -58,8 +65,14 @@ class Compute : protected Pointers {
   int per_surf_flag;          // 0/1 if compute_per_surf() function exists
   int size_per_surf_cols;     // 0 = vector, N = columns in per-surf array
 
-  int surf_tally_flag;        // 1 if compute tallies surface bounce info
-  int boundary_tally_flag;    // 1 if compute tallies boundary bounce info
+  int gas_tally_flag;         // 1 if compute tallies gas collision info
+  int surf_tally_flag;        // 1 if compute tallies surface collision info
+  int boundary_tally_flag;    // 1 if compute tallies boundary collision info
+
+  int per_tally_flag;         // 1 if compute_per_tally() function exists
+  int size_per_tally_cols;    //  0 = vector, N = columns in per-tally array
+
+  // timestep and invocation info
 
   int timeflag;       // 1 if Compute stores list of timesteps it's called on
   int ntime;          // # of entries in time list
@@ -74,6 +87,9 @@ class Compute : protected Pointers {
   bigint invoked_per_particle; // ditto for compute_per_particle()
   bigint invoked_per_grid;     // ditto for compute_per_grid()
   bigint invoked_per_surf;     // ditto for compute_per_surf()
+  bigint invoked_per_tally;    // ditto for compute_per_tally()
+
+  // public methods
 
   Compute(class SPARTA *, int, char **);
   Compute(class SPARTA* sparta) : Pointers(sparta) {} // needed for Kokkos
@@ -88,11 +104,17 @@ class Compute : protected Pointers {
   virtual void compute_per_particle() {}
   virtual void compute_per_grid() {}
   virtual void compute_per_surf() {}
+  virtual void compute_per_tally() {}
   virtual void clear() {}
-  virtual void surf_tally(int, int, int, Particle::OnePart *,
+
+  virtual void surf_tally(double, int, int, int, Particle::OnePart *,
                           Particle::OnePart *, Particle::OnePart *) {}
-  virtual void boundary_tally(int, int, int, Particle::OnePart *,
+  virtual void boundary_tally(double, int, int, int, Particle::OnePart *,
                               Particle::OnePart *, Particle::OnePart *) {}
+  virtual void gas_tally(int, int,
+                         Particle::OnePart *, Particle::OnePart *,
+                         Particle::OnePart *, Particle::OnePart *,
+                         Particle::OnePart *) {}
 
   virtual void post_process_grid(int, int, double **, int *, double *, int) {}
   // NOTE: get rid of this method at some point
@@ -100,8 +122,10 @@ class Compute : protected Pointers {
   virtual void post_process_isurf_grid() {}
 
   virtual int query_tally_grid(int, double **&, int *&) {return 0;}
-  virtual int tallyinfo(surfint *&) {return 0;}
   virtual void post_process_surf() {}
+
+  virtual int tallyinfo(surfint *&) {return 0;}
+  virtual int datatype(int) {return -1;}
 
   virtual void reallocate() {}
   virtual bigint memory_usage();
@@ -117,6 +141,29 @@ class Compute : protected Pointers {
   int kokkos_flag;          // 1 if Kokkos-enabled
   int copy,uncopy,copymode; // prevent deallocation of
                             //  base class when child copy is destroyed
+
+ protected:
+
+  // union data struct for packing 32-bit and 64-bit ints into double bufs
+  // this avoids aliasing issues by having 2 pointers (double,int)
+  //   to same buf memory
+  // constructor for 32-bit int prevents compiler
+  //   from possibly calling the double constructor when passed an int
+  // copy to a double *buf:
+  //   buf[m++] = ubuf(foo).d where foo is a 32/64-bit int or unsigned int
+  // copy from a double *buf:
+  //   foo = (int) ubuf(buf[m++]).i where (int cast) matches foo
+  //   the cast prevents compiler warnings about possible truncation
+
+  union ubuf {
+    double d;
+    int64_t i;
+    ubuf(double arg) : d(arg) {}
+    ubuf(int arg) : i(arg) {}
+    ubuf(int64_t arg) : i(arg) {}
+    ubuf(uint32_t arg) : i(arg) {}
+    ubuf(uint64_t arg) : i(arg) {}
+  };
 };
 
 }

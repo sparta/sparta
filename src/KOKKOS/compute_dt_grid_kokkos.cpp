@@ -252,8 +252,8 @@ void ComputeDtGridKokkos::compute_per_grid_kokkos()
   // calculate per grid cell timestep for cells in group
   GridKokkos* grid_kk = ((GridKokkos*)grid);
   grid_kk->sync(Device,CELL_MASK);
-  d_cinfo = grid_kk->k_cinfo.d_view;
-  d_cells = grid_kk->k_cells.d_view;
+  d_cinfo = grid_kk->k_cinfo.view_device();
+  d_cells = grid_kk->k_cells.view_device();
   d_cellcount = grid_kk->d_cellcount;
 
   copymode = 1;
@@ -380,7 +380,7 @@ void ComputeDtGridKokkos::reallocate()
 
   memoryKK->destroy_kokkos(k_vector_grid,vector_grid);
   memoryKK->create_kokkos(k_vector_grid,vector_grid,nglocal,"ComputeDtGridKokkos:vector_grid");
-  d_vector_grid = k_vector_grid.d_view;
+  d_vector_grid = k_vector_grid.view_device();
 
   d_tau_vector = DAT::t_float_1d ("d_tau_vector", nglocal);
   d_temp_vector = DAT::t_float_1d ("d_temp_vector", nglocal);

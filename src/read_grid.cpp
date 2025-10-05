@@ -284,7 +284,7 @@ void ReadGrid::create_cells(int n, char *buf)
 
       idptr = strtok(buf," \t\n\r\f");
       id = ATOCELLINT(idptr);
-      if (id < 0) error->all(FLERR,"Invalid cell ID in grid file");
+      if (id < 0) error->one(FLERR,"Invalid cell ID in grid file");
 
       if (ncustom) {
 	icvalue = 0;

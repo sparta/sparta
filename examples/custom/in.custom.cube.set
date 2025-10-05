@@ -55,13 +55,13 @@ variable            sdarray1 surf s_dvec+1
 variable            sdarray2 surf v_sdarray1+1
 variable            sdarray3 surf v_sdarray2+1
 
-custom              surf ivec set v_sivec all NULL type int
-custom              surf iarray[1] set v_siarray1 all NULL type int size 2
-custom              surf iarray[2] set v_siarray2 all NULL type int size 2
-custom              surf dvec set v_sdvec all NULL
-custom              surf darray[1] set v_sdarray1 all NULL size 3
-custom              surf darray[2] set v_sdarray2 all NULL size 3
-custom              surf darray[3] set v_sdarray3 all NULL size 3
+custom              surf create ivec int 0 set ivec v_sivec all NULL
+custom              surf create iarray int 2 set iarray[1] v_siarray1 all NULL
+custom              surf set iarray[2] v_siarray2 all NULL
+custom              surf create dvec float 0 set dvec v_sdvec all NULL
+custom              surf create darray float 3 set darray[1] v_sdarray1 all NULL
+custom              surf set darray[2] v_sdarray2 all NULL
+custom              surf set darray[3] v_sdarray3 all NULL
 
 # setup up per-grid custom attributes
 
@@ -77,13 +77,13 @@ variable            gdarray1 grid g_dvec+1
 variable            gdarray2 grid v_gdarray1+1
 variable            gdarray3 grid v_gdarray2+1
 
-custom              grid ivec set v_givec all NULL type int
-custom              grid iarray[1] set v_giarray1 all NULL type int size 2
-custom              grid iarray[2] set v_giarray2 all NULL type int size 2
-custom              grid dvec set v_gdvec all NULL
-custom              grid darray[1] set v_gdarray1 all NULL size 3
-custom              grid darray[2] set v_gdarray2 all NULL size 3
-custom              grid darray[3] set v_gdarray3 all NULL size 3
+custom              grid create ivec int 0 set ivec v_givec all NULL
+custom              grid create iarray int 2 set iarray[1] v_giarray1 all NULL
+custom              grid set iarray[2] v_giarray2 all NULL
+custom              grid create dvec float 0 set dvec v_gdvec all NULL
+custom              grid create darray float 3 set darray[1] v_gdarray1 all NULL
+custom              grid set darray[2] v_gdarray2 all NULL
+custom              grid set darray[3] v_gdarray3 all NULL
 
 # emission fix
 
@@ -130,13 +130,13 @@ variable        pdarray1 particle p_dvec+1
 variable        pdarray2 particle v_pdarray1+1
 variable        pdarray3 particle v_pdarray2+1
 
-custom          particle ivec set v_pivec all NULL type int
-custom          particle iarray[1] set v_piarray1 all NULL type int size 2
-custom          particle iarray[2] set v_piarray2 all NULL type int size 2
-custom          particle dvec set v_pdvec all NULL
-custom          particle darray[1] set v_pdarray1 all NULL size 3
-custom          particle darray[2] set v_pdarray2 all NULL size 3
-custom          particle darray[3] set v_pdarray3 all NULL size 3
+custom          particle create ivec int 0 set ivec v_pivec all NULL
+custom          particle create iarray int 2 set iarray[1] v_piarray1 all NULL
+custom          particle set iarray[2] v_piarray2 all NULL
+custom          particle create dvec float 0 set dvec v_pdvec all NULL
+custom          particle create darray float 3 set darray[1] v_pdarray1 all NULL
+custom          particle set darray[2] v_pdarray2 all NULL
+custom          particle set darray[3] v_pdarray3 all NULL
 
 dump          3 particle all 100 tmp.cube.set.dump.particle id x y &
               p_ivec p_iarray[1] p_iarray[2] &
@@ -172,20 +172,20 @@ undump         1
 undump         2
 undump         3
 
-custom         surf ivec remove
-custom         surf iarray remove
-custom         surf dvec remove
-custom         surf darray remove
+custom         surf remove ivec
+custom         surf remove iarray
+custom         surf remove dvec
+custom         surf remove darray
 
-custom         grid ivec remove
-custom         grid iarray remove
-custom         grid dvec remove
-custom         grid darray remove
+custom         grid remove ivec
+custom         grid remove iarray
+custom         grid remove dvec
+custom         grid remove darray
 
-custom         particle ivec remove
-custom         particle iarray remove
-custom         particle dvec remove
-custom         particle darray remove
+custom         particle remove ivec
+custom         particle remove iarray
+custom         particle remove dvec
+custom         particle remove darray
 
 # third run
 

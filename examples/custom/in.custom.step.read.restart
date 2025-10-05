@@ -64,20 +64,20 @@ undump         1
 undump         2
 undump         3
 
-custom         surf ivec remove
-custom         surf iarray remove
-custom         surf dvec remove
-custom         surf darray remove
+custom         surf remove ivec
+custom         surf remove iarray
+custom         surf remove dvec
+custom         surf remove darray
 
-custom         grid ivec remove
-custom         grid iarray remove
-custom         grid dvec remove
-custom         grid darray remove
+custom         grid remove ivec
+custom         grid remove iarray
+custom         grid remove dvec
+custom         grid remove darray
 
-custom         particle ivec remove
-custom         particle iarray remove
-custom         particle dvec remove
-custom         particle darray remove
+custom         particle remove ivec
+custom         particle remove iarray
+custom         particle remove dvec
+custom         particle remove darray
 
 # fourth run
 

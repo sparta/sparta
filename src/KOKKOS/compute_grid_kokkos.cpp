@@ -51,10 +51,10 @@ ComputeGridKokkos::ComputeGridKokkos(SPARTA *sparta, int narg, char **arg) :
 
   k_unique = DAT::tdual_int_1d("compute/grid:unique",npergroup);
   for (int m = 0; m < npergroup; m++)
-    k_unique.h_view(m) = unique[m];
+    k_unique.view_host()(m) = unique[m];
   k_unique.modify_host();
   k_unique.sync_device();
-  d_unique = k_unique.d_view;
+  d_unique = k_unique.view_device();
 
 #if defined (SPARTA_KOKKOS_GPU)
   #if defined(FFT_KOKKOS_KISS)
@@ -97,16 +97,16 @@ void ComputeGridKokkos::compute_per_grid_kokkos()
 
   ParticleKokkos* particle_kk = (ParticleKokkos*) particle;
   particle_kk->sync(Device,PARTICLE_MASK|SPECIES_MASK);
-  d_particles = particle_kk->k_particles.d_view;
-  d_species = particle_kk->k_species.d_view;
+  d_particles = particle_kk->k_particles.view_device();
+  d_species = particle_kk->k_species.view_device();
 
   GridKokkos* grid_kk = (GridKokkos*) grid;
   d_cellcount = grid_kk->d_cellcount;
   d_plist = grid_kk->d_plist;
   grid_kk->sync(Device,CINFO_MASK);
-  d_cinfo = grid_kk->k_cinfo.d_view;
+  d_cinfo = grid_kk->k_cinfo.view_device();
 
-  d_s2g = particle_kk->k_species2group.d_view;
+  d_s2g = particle_kk->k_species2group.view_device();
   int nlocal = particle->nlocal;
 
   // zero all accumulators
@@ -346,7 +346,7 @@ void ComputeGridKokkos::post_process_grid_kokkos(int index, int nsample,
 
   GridKokkos* grid_kk = (GridKokkos*) grid;
   grid_kk->sync(Device,CINFO_MASK);
-  d_cinfo = grid_kk->k_cinfo.d_view;
+  d_cinfo = grid_kk->k_cinfo.view_device();
 
   fnum = update->fnum;
 
@@ -591,7 +591,7 @@ void ComputeGridKokkos::reallocate()
   memoryKK->destroy_kokkos(k_tally,tally);
   nglocal = grid->nlocal;
   memoryKK->create_kokkos(k_vector_grid,vector_grid,nglocal,"compute_grid:vector_grid");
-  d_vector_grid = k_vector_grid.d_view;
+  d_vector_grid = k_vector_grid.view_device();
   memoryKK->create_kokkos(k_tally,tally,nglocal,ntotal,"compute_grid:tally");
-  d_tally = k_tally.d_view;
+  d_tally = k_tally.view_device();
 }

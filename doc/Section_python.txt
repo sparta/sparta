@@ -19,7 +19,7 @@ together.
 11.6 "Example Python scripts that use SPARTA"_#py_6
 11.7 "Calling Python from SPARTA"_#py_7 :ul
 
-If you are not familiar with `Python <https://www.python.org>`_, it is
+If you are not familiar with "Python"_<https://www.python.org>, it is
 a powerful scripting and programming language which can do almost
 everything that compiled languages like C, C++, or Fortran can do in
 fewer lines of code. It also comes with a large collection of add-on
@@ -52,8 +52,8 @@ shell prompt.
 If you create interesting Python scripts that run SPARTA or
 interesting Python functions that can be called from a SPARTA input
 script, that you think would be generally useful, please post them as
-a pull request to our `GitHub site
-<https://github.com/sparta/sparta>`_, and they can be added to the
+a pull request to our "GitHub site"_
+https://github.com/sparta/sparta, and they can be added to the
 SPARTA distribution or web page.
 
 Before using SPARTA from a Python script, you need to do two things.
@@ -560,7 +560,7 @@ script to create a more complex loop with branching logic, than can be
 created using the simple looping and branching logic enabled by the
 "next"_next.html and "if"_if.html commands.
 
-See the "python"_python.html and "variable"_variable.htmle <variable>`
+See the "python"_python.html and "variable"_variable.html
 command doc pages for more info on using Python from a SPARTA input
 script including examples of Python code you can write for both pure
 Python operations and callbacks to SPARTA.

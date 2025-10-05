@@ -33,7 +33,7 @@ class ComputeReactBoundary : public Compute {
   virtual void init();
   virtual void compute_array();
   virtual void clear();
-  virtual void boundary_tally(int, int, int, Particle::OnePart *,
+  virtual void boundary_tally(double, int, int, int, Particle::OnePart *,
                               Particle::OnePart *, Particle::OnePart *);
 
  protected:
