@@ -13,11 +13,15 @@
 ------------------------------------------------------------------------- */
 
 #include "math.h"
+#include "math_extra.h"
+#include "math_eigen.h"
+#include "math_eigen_impl.h"
 #include "string.h"
 #include "collide.h"
 #include "particle.h"
 #include "mixture.h"
 #include "update.h"
+#include "domain.h"
 #include "grid.h"
 #include "comm.h"
 #include "react.h"
@@ -34,12 +38,15 @@ using namespace SPARTA_NS;
 
 enum{NONE,DISCRETE,SMOOTH};       // several files  (NOTE: change order)
 enum{PKEEP,PINSERT,PDONE,PDISCARD,PENTRY,PEXIT,PSURF};   // several files
+enum{ENERGY,HEAT,STRESS};   // particle reduction choices
+enum{BINARY,WEIGHT}; // grouping choices
 
 #define DELTAGRID 1000            // must be bigger than split cells per cell
 #define DELTADELETE 1024
 #define DELTAELECTRON 128
 
 #define BIG 1.0e20
+#define SMALL 1.0e-16
 
 /* ---------------------------------------------------------------------- */
 
@@ -91,6 +98,14 @@ Collide::Collide(SPARTA *sparta, int, char **arg) : Pointers(sparta)
   maxelectron = 0;
   elist = NULL;
 
+  // stochastic weighted particle method
+  swpmflag = 0;
+  sweight_max = update->fnum;
+  reduceflag = 0;
+  Ncmin = Ncmax = Ngmin = Ngmax = 0;
+  pL = NULL;
+  pLU = NULL;
+
   // used if near-neighbor model is invoked
 
   max_nn = 1;
@@ -137,6 +152,9 @@ Collide::~Collide()
   memory->destroy(nn_last_partner_jgroup);
 
   memory->destroy(recomb_ijflag);
+
+  memory->destroy(pL);
+  memory->destroy(pLU);
 }
 
 /* ---------------------------------------------------------------------- */
@@ -214,8 +232,12 @@ void Collide::init()
   if (ngroups != oldgroups) {
     if (oldgroups == 1) {
       memory->destroy(plist);
+      memory->destroy(pL);
+      memory->destroy(pLU);
       npmax = 0;
       plist = NULL;
+      pL = NULL;
+      pLU = NULL;
     }
     if (oldgroups > 1) {
       delete [] ngroup;
@@ -232,6 +254,10 @@ void Collide::init()
     if (ngroups == 1) {
       npmax = DELTAPART;
       memory->create(plist,npmax,"collide:plist");
+      if(swpmflag) {
+        memory->create(pL,npmax,"collide:pL");
+        memory->create(pLU,npmax,"collide:pLU");
+      }
     }
     if (ngroups > 1) {
       ngroup = new int[ngroups];
@@ -400,6 +426,7 @@ void Collide::collisions()
 
   if (ndelete) particle->compress_reactions(ndelete,dellist);
   if (react) particle->sorted = 0;
+  if (swpmflag) particle->sorted = 0;
 
   // accumulate running totals
 

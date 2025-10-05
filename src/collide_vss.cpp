@@ -135,7 +135,10 @@ double CollideVSS::vremax_init(int igroup, int jgroup)
 
 double CollideVSS::attempt_collision(int icell, int np, double volume)
 {
-  double fnum = update->fnum;
+  double fnum;
+  if (swpmflag) fnum = sweight_max*(1.0+pre_wtf*wtf);
+  else fnum = update->fnum;
+
   double dt = update->dt;
 
   double nattempt;
@@ -198,12 +201,20 @@ int CollideVSS::test_collision(int icell, int igroup, int jgroup,
   double vr2 = du*du + dv*dv + dw*dw;
   double vro  = pow(vr2,1.0-params[ispecies][jspecies].omega);
 
+  double ijsw = 1.0;
+  if (swpmflag) {
+    double isw = ip->weight*update->fnum;
+    double jsw = jp->weight*update->fnum;
+    ijsw = MAX(isw ,jsw)/sweight_max;
+  }
+
   // although the vremax is calculated for the group,
   // the individual collisions calculated species dependent vre
 
   double vre = vro*prefactor[ispecies][jspecies];
   vremax[icell][igroup][jgroup] = MAX(vre,vremax[icell][igroup][jgroup]);
-  if (vre/vremax[icell][igroup][jgroup] < random->uniform()) return 0;
+  if (1.0-params[ispecies][jspecies].omega < 1e-8) vre = vremax[icell][igroup][jgroup];
+  if (vre/vremax[icell][igroup][jgroup]*ijsw < random->uniform()) return 0;
   precoln.vr2 = vr2;
   return 1;
 }

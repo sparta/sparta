@@ -132,6 +132,25 @@ class Collide : protected Pointers {
                          //   base class when child copy is destroyed)
   int kokkos_flag;        // 1 if collide method supports Kokkos
 
+  // stochastic weighted particle method
+  // if Ncmin > Ncmax, then particles always split
+  int swpmflag;         // 1 if swpm option is enabled
+  int index_sweight;    // 1 custom for swpm
+  int Ncmin;            // minimum number of particles in cell to NOT split
+  int Ncmax;            // maximum number of particles in cell before reduce
+  int Ngmin;            // minimum number of particles in group to reduce
+  int Ngmax;            // maximum number of particles in group before reduce
+  int gbuf;             // group size buffer
+  double sweight_max;   // maximum particle weight in cell at time t
+  double wtf;           // weight transfer function
+  double pre_wtf;       // scale weight transfer function
+
+  int reduceflag;      // 1 if particles can reduce
+  int reduction_type;   // type of particle reduction to use
+  int group_type;       // type of grouping
+
+  int *pL, *pLU;
+
   // inline functions
   // add particle N to Igroup and set its g2p entry in plist to K
   // delete Ith entry in Igroup and reset g2p entries as well
@@ -171,6 +190,8 @@ class Collide : protected Pointers {
   void ambi_check();
 
   void grow_percell(int);
+
+  // functions for nearest neighbor
 
   int find_nn(int, int);
   int find_nn_group(int, int *, int, int *, int *, int *, int *);

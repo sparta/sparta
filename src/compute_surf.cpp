@@ -325,6 +325,27 @@ void ComputeSurf::surf_tally(double /*dtremain*/, int isurf, int icell, int reac
 
   double fluxscale = normflux[isurf];
 
+  // assume non-reacting and no splitting at boundary
+
+  double oswfrac, iswfrac, jswfrac;
+  iswfrac = jswfrac = oswfrac = 1.0;
+
+  if (particle->weightflag) {
+    int nout = 0;
+    oswfrac = 0.0;
+    if(ip) {
+      iswfrac = ip->weight;
+      oswfrac += iswfrac;
+      nout++;
+    }
+    if(jp) {
+      jswfrac = jp->weight;
+      oswfrac += jswfrac;
+      nout++;
+    }
+    if(nout > 0) oswfrac /= nout;
+  }
+
   // tally all values associated with group into array
   // set fflag after force computation is done once
   // set tqflag after torque computation is done once
@@ -347,9 +368,9 @@ void ComputeSurf::surf_tally(double /*dtremain*/, int isurf, int icell, int reac
   double imass,jmass;
   if (weightflag && iorig) weight = iorig->weight;
   else if (weightflag) weight = ip->weight;
-  if (origspecies >= 0) origmass = particle->species[origspecies].mass * weight;
-  if (ip) imass = particle->species[ip->ispecies].mass * weight;
-  if (jp) jmass = particle->species[jp->ispecies].mass * weight;
+  if (origspecies >= 0) origmass = particle->species[origspecies].mass * weight * oswfrac;
+  if (ip) imass = particle->species[ip->ispecies].mass * weight * iswfrac;
+  if (jp) jmass = particle->species[jp->ispecies].mass * weight * jswfrac;
 
   double *vorig = NULL;
   double oerot,oevib;
@@ -385,15 +406,15 @@ void ComputeSurf::surf_tally(double /*dtremain*/, int isurf, int icell, int reac
       vec[k++] += weight;
       break;
     case NFLUX:
-      if (iorig) vec[k] += weight * fluxscale;
+      if (iorig) vec[k] += weight * fluxscale * oswfrac;
       if (!transparent) {
-        if (ip) vec[k] -= weight * fluxscale;
-        if (jp) vec[k] -= weight * fluxscale;
+        if (ip) vec[k] -= weight * fluxscale * iswfrac;
+        if (jp) vec[k] -= weight * fluxscale * jswfrac;
       }
       k++;
       break;
     case NFLUXIN:
-      vec[k] += weight * fluxscale;
+      vec[k] += weight * fluxscale * oswfrac;
       k++;
       break;
     case MFLUX:
@@ -591,24 +612,24 @@ void ComputeSurf::surf_tally(double /*dtremain*/, int isurf, int icell, int reac
         vec[k++] -= 0.5*mvv2e * (ivsqpost + jvsqpost - vsqpre) * fluxscale;
       break;
     case EROT:
-      if (ip) ierot = ip->erot;
+      if (ip) ierot = ip->erot * iswfrac;
       else ierot = 0.0;
-      if (jp) jerot = jp->erot;
+      if (jp) jerot = jp->erot * jswfrac;
       else jerot = 0.0;
       if (transparent)
-        vec[k++] += weight * oerot * fluxscale;
+        vec[k++] += weight * oerot * fluxscale * oswfrac;
       else
-        vec[k++] -= weight * (ierot + jerot - oerot) * fluxscale;
+        vec[k++] -= weight * (ierot + jerot - oerot * oswfrac) * fluxscale;
       break;
     case EVIB:
-      if (ip) ievib = ip->evib;
+      if (ip) ievib = ip->evib * iswfrac;
       else ievib = 0.0;
-      if (jp) jevib = jp->evib;
+      if (jp) jevib = jp->evib * jswfrac;
       else jevib = 0.0;
       if (transparent)
-        vec[k++] += weight * oevib * fluxscale;
+        vec[k++] += weight * oevib * fluxscale * oswfrac;
       else
-        vec[k++] -= weight * (ievib + jevib - oevib) * fluxscale;
+        vec[k++] -= weight * (ievib + jevib - oevib * oswfrac) * fluxscale;
       break;
     case ECHEM:
       if (reaction && !transparent) {
@@ -618,16 +639,18 @@ void ComputeSurf::surf_tally(double /*dtremain*/, int isurf, int icell, int reac
       }
       break;
     case ETOT:
+
       if (iorig) vsqpre = origmass * MathExtra::lensq3(vorig);
       else vsqpre = 0.0;
-      otherpre = oerot + oevib;
+      otherpre = (oerot + oevib) * oswfrac;
+
       if (ip) {
         ivsqpost = imass * MathExtra::lensq3(ip->v);
-        iother = ip->erot + ip->evib;
+        iother = (ip->erot + ip->evib) * iswfrac;
       } else ivsqpost = iother = 0.0;
       if (jp) {
         jvsqpost = jmass * MathExtra::lensq3(jp->v);
-        jother = jp->erot + jp->evib;
+        jother = (jp->erot + jp->evib) * jswfrac;
       } else jvsqpost = jother = 0.0;
       if (transparent)
         etot = -0.5*mvv2e*vsqpre - weight*otherpre;
