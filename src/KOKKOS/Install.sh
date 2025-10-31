@@ -152,6 +152,8 @@ action create_particles_kokkos.cpp
 action create_particles_kokkos.h
 action fix_emit_face_kokkos.cpp
 action fix_emit_face_kokkos.h
+action fix_emit_surf_kokkos.cpp
+action fix_emit_surf_kokkos.h
 action fix_grid_check_kokkos.cpp
 action fix_grid_check_kokkos.h
 action read_surf_kokkos.cpp

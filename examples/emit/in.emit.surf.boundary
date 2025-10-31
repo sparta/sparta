@@ -32,7 +32,7 @@ surf_modify         all collide 1
 
 collide             vss air air.vss
 
-fix		    in emit/surf air boundary perspecies yes
+fix		    in emit/surf air boundary perspecies yes twopass
 
 timestep 	    0.0001
 
