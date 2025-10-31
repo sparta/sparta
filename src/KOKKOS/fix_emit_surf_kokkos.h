@@ -71,7 +71,7 @@ class FixEmitSurfKokkos : public FixEmitSurf {
 #endif
 
  private:
-  int npcurrent,nsurf_tally,nlocal_before;
+  int npcurrent,nsurf_tally,nlocal_before,nlocal_surf;
 
   KKCopy<ParticleKokkos> particle_kk_copy;
   KKCopy<ComputeSurfKokkos> slist_active_copy[KOKKOS_MAX_SLIST];

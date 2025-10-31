@@ -274,6 +274,7 @@ void FixEmitSurfKokkos::perform_task()
   surf_kk->sync(Device,ALL_MASK);
   d_lines = surf_kk->k_lines.view_device();
   d_tris = surf_kk->k_tris.view_device();
+  nlocal_surf = surf->nlocal;
 
   nsurf_tally = update->nsurf_tally;
   Compute **slist_active = update->slist_active;
@@ -469,7 +470,7 @@ void FixEmitSurfKokkos::operator()(TagFixEmitSurf_perform_task, const int &i, in
   vstream = task_i.vstream;
 
   const surfint isurf = task_i.isurf;
-  if (isurf >= surf->nlocal) Kokkos::abort("BAD surf index");
+  if (isurf >= nlocal_surf) Kokkos::abort("BAD surf index");
   if (dimension == 2) normal = d_lines[isurf].norm;
   else normal = d_tris[isurf].norm;
   atan = task_i.tan1;
