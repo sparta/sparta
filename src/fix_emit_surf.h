@@ -33,12 +33,12 @@ class FixEmitSurf : public FixEmit {
   ~FixEmitSurf();
   void init();
 
-  void grid_changed();
+  void grid_changed() override;
   void custom_surf_changed();
 
- private:
+ protected:
   int imix,groupbit,normalflag,subsonic,subsonic_style,subsonic_warning;
-  int npertask,nthresh;
+  int npertask,nthresh,twopass,max_npoint;
   double psubsonic,tsubsonic,nsubsonic;
   double tprefactor,soundspeed_mixture;
 
@@ -106,16 +106,19 @@ class FixEmitSurf : public FixEmit {
   int maxactive;
   int *activecell;
 
-  // private methods
+  // protected methods
 
-  void create_task(int);
-  void perform_task();
-  void grow_task();
+  virtual void create_task(int);
+  virtual void perform_task();
+  void perform_task_onepass();
+  virtual void perform_task_twopass();
+  virtual void grow_task();
 
   void subsonic_inflow();
   void subsonic_sort();
   void subsonic_grid();
 
+  virtual void realloc_nspecies();
   int option(int, char **);
 };
 

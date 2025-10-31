@@ -30,7 +30,7 @@ collide             vss air air.vss
 
 region              slit block INF INF 4.5 5.5 INF INF
 
-fix		    in emit/surf air all normal yes perspecies no region slit
+fix		    in emit/surf air all normal yes perspecies no region slit twopass
 
 timestep 	    0.0001
 
