@@ -25,11 +25,17 @@ FixStyle(emit/surf/kk,FixEmitSurfKokkos)
 #include "rand_pool_wrap.h"
 #include "kokkos_copy.h"
 #include "particle_kokkos.h"
+#include "compute_surf_kokkos.h"
 
 namespace SPARTA_NS {
 
+#define KOKKOS_MAX_SLIST 2
+
 struct TagFixEmitSurf_ninsert{};
 struct TagFixEmitSurf_perform_task{};
+
+template<int ATOMIC_REDUCTION>
+struct TagFixEmitSurf_insert_particles{};
 
 class FixEmitSurfKokkos : public FixEmitSurf {
  public:
@@ -49,6 +55,10 @@ class FixEmitSurfKokkos : public FixEmitSurf {
   KOKKOS_INLINE_FUNCTION
   void operator()(TagFixEmitSurf_perform_task, const int&, int&) const;
 
+  template<int ATOMIC_REDUCTION>
+  KOKKOS_INLINE_FUNCTION
+  void operator()(TagFixEmitSurf_insert_particles<ATOMIC_REDUCTION>, const int&) const;
+
 #ifndef SPARTA_KOKKOS_EXACT
   Kokkos::Random_XorShift64_Pool<DeviceType> rand_pool;
   typedef typename Kokkos::Random_XorShift64_Pool<DeviceType>::generator_type rand_type;
@@ -61,9 +71,10 @@ class FixEmitSurfKokkos : public FixEmitSurf {
 #endif
 
  private:
-  int npcurrent;
+  int npcurrent,nsurf_tally,nlocal_before;
 
   KKCopy<ParticleKokkos> particle_kk_copy;
+  KKCopy<ComputeSurfKokkos> slist_active_copy[KOKKOS_MAX_SLIST];
 
   typedef Kokkos::DualView<Task*, DeviceType::array_layout, DeviceType> tdual_task_1d;
   typedef tdual_task_1d::t_dev t_task_1d;
@@ -80,8 +91,9 @@ class FixEmitSurfKokkos : public FixEmitSurf {
   DAT::t_float_2d_lr d_fracarea;
 
   DAT::tdual_int_1d k_ninsert;
-  Kokkos::View<int*, DeviceType> d_ninsert;
+  Kokkos::View<int*, DeviceType> d_ninsert; // won't compile with DAT::t_int_1d type
   DAT::t_int_1d d_task2cand;
+  DAT::t_int_1d d_cands2new;
 
   DAT::t_float_2d d_x;
   DAT::t_float_2d d_v;
@@ -92,6 +104,8 @@ class FixEmitSurfKokkos : public FixEmitSurf {
   DAT::t_int_1d   d_isp;
   DAT::t_int_1d   d_task;
   Kokkos::View<int*, DeviceType> d_keep; // won't compile with DAT::t_int_1d type
+
+  t_particle_1d d_particles;
 
   DAT::tdual_float_1d k_vscale_mix;
   DAT::tdual_float_1d k_cummulative_mix;

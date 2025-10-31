@@ -19,6 +19,7 @@
 #include "domain.h"
 #include "region.h"
 #include "grid.h"
+#include "kokkos.h"
 #include "surf_kokkos.h"
 #include "particle.h"
 #include "mixture.h"
@@ -48,6 +49,9 @@ enum{INT,DOUBLE};                                        // several files
 #define DELTATASK 256
 #define TEMPLIMIT 1.0e5
 
+#define VAL_1(X) X
+#define VAL_2(X) VAL_1(X), VAL_1(X)
+
 /* ----------------------------------------------------------------------
    insert particles in grid cells with surfs touching inflow boundaries
 ------------------------------------------------------------------------- */
@@ -59,7 +63,8 @@ FixEmitSurfKokkos::FixEmitSurfKokkos(SPARTA *sparta, int narg, char **arg) :
             , sparta
 #endif
             ),
-  particle_kk_copy(sparta)
+  particle_kk_copy(sparta),
+  slist_active_copy{VAL_2(KKCopy<ComputeSurfKokkos>(sparta))}
 {
   kokkos_flag = 1;
   execution_space = Device;
@@ -74,6 +79,10 @@ FixEmitSurfKokkos::~FixEmitSurfKokkos()
   if (copymode) return;
 
   particle_kk_copy.uncopy();
+
+  for (int i=0; i<KOKKOS_MAX_SLIST; i++) {
+    slist_active_copy[i].uncopy();
+  }
 
 #ifdef SPARTA_KOKKOS_EXACT
   rand_pool.destroy();
@@ -223,7 +232,6 @@ void FixEmitSurfKokkos::create_tasks()
 void FixEmitSurfKokkos::perform_task()
 {
   dt = update->dt;
-  auto l_dimension = this->dimension;
 
   // if subsonic, re-compute particle inflow counts for each task
   // also computes current per-task temp_thermal and vstream
@@ -267,9 +275,20 @@ void FixEmitSurfKokkos::perform_task()
   d_lines = surf_kk->k_lines.view_device();
   d_tris = surf_kk->k_tris.view_device();
 
-  int nsurf_tally = update->nsurf_tally;
-  if (nsurf_tally)
-    error->all(FLERR,"Cannot (yet) use surface tallying in fix emit/surf/kk"); 
+  nsurf_tally = update->nsurf_tally;
+  Compute **slist_active = update->slist_active;
+
+  if (nsurf_tally) {
+    for (int i = 0; i < nsurf_tally; i++) {
+      if (strcmp(slist_active[i]->style,"isurf/grid") == 0)
+        error->all(FLERR,"Kokkos doesn't yet support compute isurf/grid");
+      ComputeSurfKokkos* compute_surf_kk = dynamic_cast<ComputeSurfKokkos*>(slist_active[i]);
+      if (!compute_surf_kk)
+        error->all(FLERR,"Kokkos does not (yet) support compute surf/collision/tally or compute surf/reaction/tally");
+      compute_surf_kk->pre_surf_tally();
+      slist_active_copy[i].copy(compute_surf_kk);
+    }
+  }
 
   auto ninsert_dim1 = perspecies ? nspecies : 1;
   if (d_ninsert.extent(0) < ntask * ninsert_dim1)
@@ -284,8 +303,8 @@ void FixEmitSurfKokkos::perform_task()
 
   if (ncands == 0) return;
 
-  if (d_x.extent(0) < ncands || d_x.extent(1) < l_dimension)
-    d_x = DAT::t_float_2d("x", ncands, l_dimension);
+  if (d_x.extent(0) < ncands || d_x.extent(1) < dimension)
+    d_x = DAT::t_float_2d("x", ncands, dimension);
 
   if (d_v.extent(0) < ncands)
     d_v = DAT::t_float_2d("v", ncands, 3);
@@ -301,16 +320,6 @@ void FixEmitSurfKokkos::perform_task()
   }
   Kokkos::deep_copy(d_keep,0); // needs to be initialized with zeros
 
-  auto ld_x        = d_x       ;
-  auto ld_v        = d_v       ;
-  auto ld_erot     = d_erot    ;
-  auto ld_evib     = d_evib    ;
-  auto ld_dtremain = d_dtremain;
-  auto ld_id       = d_id      ;
-  auto ld_isp      = d_isp     ;
-  auto ld_task     = d_task    ;
-  auto ld_keep     = d_keep    ;
-
   // copy needed task data to device
 
   k_tasks.sync_device();
@@ -322,8 +331,6 @@ void FixEmitSurfKokkos::perform_task()
   if (dimension != 2)
     k_fracarea.sync_device();
 
-  auto ld_tasks = d_tasks;
-
   // copy needed mixture data to device
 
   k_vscale_mix .sync_device();
@@ -333,9 +340,6 @@ void FixEmitSurfKokkos::perform_task()
     k_cummulative_custom.sync_device();
   else 
     k_cummulative_mix.sync_device();
-
-  auto ld_vscale_mix = d_vscale_mix;
-  auto ld_species    = d_species   ;
 
   ParticleKokkos* particle_kk = ((ParticleKokkos*)particle);
   particle_kk->update_class_variables();
@@ -351,50 +355,37 @@ void FixEmitSurfKokkos::perform_task()
   nsingle += nsingle_reduce;
 
   int nnew;
-  auto ld_cands2new = offset_scan(d_keep, nnew);
+  d_cands2new = offset_scan(d_keep, nnew);
 
   auto particleKK = dynamic_cast<ParticleKokkos*>(particle);
-  auto nlocal_before = particleKK->nlocal;
+  nlocal_before = particleKK->nlocal;
   particleKK->grow(nnew);
   particleKK->sync(SPARTA_NS::Device, PARTICLE_MASK);
-  auto ld_particles = particleKK->k_particles.view_device();
+  d_particles = particleKK->k_particles.view_device();
 
-  Kokkos::parallel_for(ncands, SPARTA_LAMBDA(int cand) {
-    if (!ld_keep(cand)) return;
+  /* ATOMIC_REDUCTION: 1 = use atomics
+                       0 = don't need atomics
+  */
 
-    auto i = ld_task(cand);
-    Task task_i = ld_tasks(i);
-
-    const int pcell = task_i.pcell;
-    const surfint isurf = task_i.isurf;
-
-    auto isp = ld_isp(cand);
-    auto ispecies = ld_species(isp);
-
-    double x[3];
-    for (int d = 0; d < l_dimension; ++d) x[d] = ld_x(cand, d);
-    for (int d = l_dimension; d < 3; ++d) x[d] = 0;
-
-    auto erot = ld_erot(cand);
-    auto evib = ld_evib(cand);
-    auto id = ld_id(cand);
-    auto dtremain = ld_dtremain(cand);
-
-    double v[3];
-    for (int d = 0; d < 3; ++d) v[d] = ld_v(cand, d);
-
-    auto inew = ld_cands2new(cand);
-    auto ilocal = nlocal_before + inew;
-
-    ParticleKokkos::add_particle_kokkos(ld_particles,ilocal,
-        id,ispecies,pcell,x,v,erot,evib);
-
-    ld_particles(ilocal).flag = PSURF + 1 + isurf;
-    ld_particles(ilocal).dtremain = dtremain;
-  });
+  copymode = 1;
+  if (sparta->kokkos->need_atomics)
+    Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagFixEmitSurf_insert_particles<1> >(0,ncands),*this);
+  else
+    Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagFixEmitSurf_insert_particles<0> >(0,ncands),*this);
+  copymode = 0;
 
   particleKK->nlocal = nlocal_before + nnew;
   particleKK->modify(SPARTA_NS::Device, PARTICLE_MASK);
+
+  if (nsurf_tally) {
+    for (int m = 0; m < nsurf_tally; m++) {
+      ComputeSurfKokkos* compute_surf_kk = (ComputeSurfKokkos*)(slist_active[m]);
+      compute_surf_kk->post_surf_tally();
+    }
+  }
+
+  // if using per-surf custom attributes,
+  // temps/vstream already set to custom attributes in create_task
 
   if (modify->n_update_custom) {
     auto h_keep = Kokkos::create_mirror_view(d_keep);
@@ -406,8 +397,8 @@ void FixEmitSurfKokkos::perform_task()
 
     k_tasks.sync_host();
 
-    auto h_cands2new = Kokkos::create_mirror_view(ld_cands2new);
-    Kokkos::deep_copy(h_cands2new, ld_cands2new);
+    auto h_cands2new = Kokkos::create_mirror_view(d_cands2new);
+    Kokkos::deep_copy(h_cands2new, d_cands2new);
     for (int cand = 0; cand < ncands; ++cand) {
       if (!h_keep(cand)) continue;
 
@@ -578,10 +569,6 @@ void FixEmitSurfKokkos::operator()(TagFixEmitSurf_perform_task, const int &i, in
         d_evib(cand) = particle_kk_copy.obj.evib(ispecies,temp_vib,rand_gen);
         d_id(cand) = MAXSMALLINT*rand_gen.drand();
         d_dtremain(cand) = dt * rand_gen.drand();
-
-        //if (nsurf_tally)
-        //  for (int k = 0; k < nsurf_tally; k++)
-        //    slist_active[k]->surf_tally(p->dtremain,isurf,pcell,0,NULL,p,NULL);
       }
 
       nsingle += nactual;
@@ -687,14 +674,56 @@ void FixEmitSurfKokkos::operator()(TagFixEmitSurf_perform_task, const int &i, in
       d_dtremain(cand) = dt * rand_gen.drand();
     }
 
-    //if (nsurf_tally)
-    //  for (int k = 0; k < nsurf_tally; k++)
-    //    slist_active[k]->surf_tally(p->dtremain,isurf,pcell,0,NULL,p,NULL);
-
     nsingle += nactual;
   }
 
   rand_pool.free_state(rand_gen);
+}
+
+/* ---------------------------------------------------------------------- */
+
+template<int ATOMIC_REDUCTION>
+KOKKOS_INLINE_FUNCTION
+void FixEmitSurfKokkos::operator()(TagFixEmitSurf_insert_particles<ATOMIC_REDUCTION>, const int &cand) const
+{
+  if (!d_keep(cand)) return;
+
+  auto i = d_task(cand);
+  Task task_i = d_tasks(i);
+
+  const int pcell = task_i.pcell;
+  const surfint isurf = task_i.isurf;
+
+  auto isp = d_isp(cand);
+  auto ispecies = d_species(isp);
+
+  double x[3];
+  for (int d = 0; d < dimension; ++d) x[d] = d_x(cand, d);
+  for (int d = dimension; d < 3; ++d) x[d] = 0;
+
+  auto erot = d_erot(cand);
+  auto evib = d_evib(cand);
+  auto id = d_id(cand);
+  auto dtremain = d_dtremain(cand);
+
+  double v[3];
+  for (int d = 0; d < 3; ++d) v[d] = d_v(cand, d);
+
+  auto inew = d_cands2new(cand);
+  auto ilocal = nlocal_before + inew;
+
+  ParticleKokkos::add_particle_kokkos(d_particles,ilocal,
+      id,ispecies,pcell,x,v,erot,evib);
+
+  auto p = &d_particles(ilocal);
+
+  p->flag = PSURF + 1 + isurf;
+  p->dtremain = dtremain;
+
+  if (nsurf_tally)
+    for (int k = 0; k < nsurf_tally; k++)
+      slist_active_copy[k].obj.
+            surf_tally_kk<ATOMIC_REDUCTION>(dtremain,isurf,pcell,0,NULL,p,NULL);
 }
 
 /* ----------------------------------------------------------------------
@@ -703,6 +732,7 @@ void FixEmitSurfKokkos::operator()(TagFixEmitSurf_perform_task, const int &i, in
 
 void FixEmitSurfKokkos::grow_task()
 {
+  int oldmax = ntaskmax;
   ntaskmax += DELTATASK;
 
   if (tasks == NULL)
@@ -740,12 +770,9 @@ void FixEmitSurfKokkos::grow_task()
       tasks[i].vscale = k_vscale.view_host().data() + i*k_vscale.view_host().extent(1);
   }
 
-  MemKK::realloc_kokkos(k_path,"fix_emit_surf:path",ntaskmax,max_npoint*3);
-  d_path = k_path.view_device();
-
-  if (dimension != 2) {
-    MemKK::realloc_kokkos(k_fracarea,"fix_emit_surf:fracarea",ntaskmax,max_npoint-2);
-    d_fracarea = k_fracarea.view_device();
+  for (int i = oldmax; i < ntaskmax; i++) {
+    tasks[i].path = NULL;
+    tasks[i].fracarea = NULL;
   }
 }
 
