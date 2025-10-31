@@ -36,28 +36,6 @@ class FixEmitSurf : public FixEmit {
   void grid_changed() override;
   void custom_surf_changed();
 
- protected:
-  int imix,groupbit,normalflag,subsonic,subsonic_style,subsonic_warning;
-  int npertask,nthresh,twopass,max_npoint;
-  double psubsonic,tsubsonic,nsubsonic;
-  double tprefactor,soundspeed_mixture;
-
-  int npmode,np;    // npmode = FLOW,CONSTANT,VARIABLE
-  int npvar;
-  char *npstr;
-
-  // copies of data from other classes
-
-  int dimension,nspecies;
-  double fnum,dt;
-  double nrho,temp_thermal,temp_rot,temp_vib;
-  double *fraction,*cummulative;
-
-  class Cut2d *cut2d;
-  class Cut3d *cut3d;
-
-  // one insertion task for a cell and a surf
-
   struct Task {
     double area;                // area of overlap of surf with cell
     double ntarget;             // # of mols to insert for all species
@@ -82,6 +60,28 @@ class FixEmitSurf : public FixEmit {
                                 // unsplit or sub cell (not split cell)
     int npoint;                 // # of points in path
   };
+
+ protected:
+  int imix,groupbit,normalflag,subsonic,subsonic_style,subsonic_warning;
+  int npertask,nthresh,twopass,max_npoint;
+  double psubsonic,tsubsonic,nsubsonic;
+  double tprefactor,soundspeed_mixture;
+
+  int npmode,np;    // npmode = FLOW,CONSTANT,VARIABLE
+  int npvar;
+  char *npstr;
+
+  // copies of data from other classes
+
+  int dimension,nspecies;
+  double fnum,dt;
+  double nrho,temp_thermal,temp_rot,temp_vib;
+  double *fraction,*cummulative;
+
+  class Cut2d *cut2d;
+  class Cut3d *cut3d;
+
+  // one insertion task for a cell and a surf
 
                          // ntask = # of tasks is stored by parent class
   Task *tasks;           // list of particle insertion tasks
