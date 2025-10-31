@@ -1,4 +1,4 @@
-SPARTA (13 Apr 2023)
+SPARTA (24 Sep 2025)
 Running on 4 MPI task(s)
 ################################################################################
 # particles emitted from a circle
@@ -18,14 +18,14 @@ boundary	    o r p
 create_box  	    0 10 0 10 -0.5 0.5
 Created orthogonal box = (0 0 -0.5) to (10 10 0.5)
 create_grid 	    10 10 1
-WARNING: Could not acquire nearby ghost cells b/c grid partition is not clumped (/home/runner/work/sparta/sparta/src/grid.cpp:465)
+WARNING: Could not acquire nearby ghost cells b/c grid partition is not clumped (/home/runner/work/sparta/sparta/src/grid.cpp:473)
 Created 100 child grid cells
-  CPU time = 0.0031108 secs
-  create/ghost percent = 82.1782 17.8218
+  CPU time = 0.000975835 secs
+  create/ghost percent = 94.7372 5.26277
 balance_grid        rcb cell
 Balance grid migrated 74 cells
-  CPU time = 0.0014474 secs
-  reassign/sort/migrate/ghost percent = 55.009 0.911979 13.2859 30.7932
+  CPU time = 0.000400639 secs
+  reassign/sort/migrate/ghost percent = 67.9138 0.582569 12.1583 19.3453
 
 global		    nrho 1.0 fnum 0.001
 
@@ -33,7 +33,6 @@ species		    air.species N O
 mixture		    air N O vstream 10.0 0 0 temp 10.0
 
 read_surf           data.circle
-  50 points
   50 lines
   2 8 xlo xhi
   2.00592 7.99408 ylo yhi
@@ -43,16 +42,16 @@ read_surf           data.circle
   60 16 24 = cells outside/inside/overlapping surfs
   24 = surf cells with 1,2,etc splits
   71.8 71.8 = cell-wise and global flow volume
-  CPU time = 0.0019771 secs
-  read/check/sort/surf2grid/ghost/inout/particle percent = 21.0409 12.0783 2.32158 48.3638 16.1954 14.587 0.955945
-  surf2grid time = 0.000956201 secs
-  map/comm1/comm2/comm3/comm4/split percent = 32.8174 15.4361 7.90629 7.70758 14.6413 10.8765
+  CPU time = 0.000774668 secs
+  read/check/sort/surf2grid/ghost/inout/particle percent = 11.5194 36.7113 0.292383 43.3538 8.12309 10.1601 0.249655
+  surf2grid time = 0.000335848 secs
+  map/comm1/comm2/comm3/comm4/split percent = 36.5939 9.33726 6.12718 4.86232 20.4524 10.1903
 surf_collide	    1 diffuse 300.0 0.0
 surf_modify         all collide 1
 
 collide             vss air air.vss
 
-fix		    in emit/surf air all perspecies yes
+fix		    in emit/surf air all perspecies yes twopass
 
 timestep 	    0.0001
 
@@ -71,29 +70,29 @@ Memory usage per proc in Mbytes:
   total     (ave,min,max) = 1.51894 1.51894 1.51894
 Step CPU Np Natt Ncoll Nscoll Nscheck 
        0            0        0        0        0        0        0 
-     100  0.032056329     5683        0        0        0     9354 
-     200  0.074237767    11032        0        0        0    11022 
-     300   0.11851751    15213        0        0        2    11604 
-Loop time of 0.117892 on 4 procs for 300 steps with 15213 particles
+     100  0.009217484     5691        0        0        0     9646 
+     200  0.022354448    10903        0        0        1    11044 
+     300   0.03950204    15084        0        0        1    11538 
+Loop time of 0.0395707 on 4 procs for 300 steps with 15084 particles
 
 MPI task timing breakdown:
 Section |  min time  |  avg time  |  max time  |%varavg| %total
 ---------------------------------------------------------------
-Move    | 0.015199   | 0.016638   | 0.018177   |   0.8 | 14.11
-Coll    | 0.0015015  | 0.0015237  | 0.0015512  |   0.0 |  1.29
-Sort    | 0.0010699  | 0.0013135  | 0.0014781  |   0.4 |  1.11
-Comm    | 0.018584   | 0.033579   | 0.041711   |   5.0 | 28.48
-Modify  | 0.031784   | 0.032233   | 0.033346   |   0.4 | 27.34
-Output  | 0.0001767  | 0.00032345 | 0.0005361  |   0.0 |  0.27
-Other   |            | 0.03228    |            |       | 27.38
+Move    | 0.017696   | 0.019303   | 0.020126   |   0.7 | 48.78
+Coll    | 0.0014613  | 0.0014819  | 0.0014966  |   0.0 |  3.74
+Sort    | 0.0029385  | 0.0030496  | 0.0031768  |   0.2 |  7.71
+Comm    | 0.0031885  | 0.0033521  | 0.0035139  |   0.3 |  8.47
+Modify  | 0.0089387  | 0.0092997  | 0.0095053  |   0.2 | 23.50
+Output  | 4.8631e-05 | 8.8709e-05 | 0.00019983 |   0.0 |  0.22
+Other   |            | 0.002995   |            |       |  7.57
 
-Particle moves    = 2460815 (2.46M)
-Cells touched     = 2500598 (2.5M)
-Particle comms    = 5145 (5.15K)
-Boundary collides = 1756 (1.76K)
-Boundary exits    = 1906 (1.91K)
-SurfColl checks   = 2800592 (2.8M)
-SurfColl occurs   = 135 (0.135K)
+Particle moves    = 2434759 (2.43M)
+Cells touched     = 2473941 (2.47M)
+Particle comms    = 5445 (5.45K)
+Boundary collides = 1732 (1.73K)
+Boundary exits    = 1898 (1.9K)
+SurfColl checks   = 2784226 (2.78M)
+SurfColl occurs   = 96 (0.096K)
 Surf reactions    = 0 (0K)
 Collide attempts  = 0 (0K)
 Collide occurs    = 0 (0K)
@@ -101,26 +100,26 @@ Reactions         = 0 (0K)
 Particles stuck   = 0
 Axisymm bad moves = 0
 
-Particle-moves/CPUsec/proc: 5.21836e+06
-Particle-moves/step: 8202.72
-Cell-touches/particle/step: 1.01617
-Particle comm iterations/step: 1.95
-Particle fraction communicated: 0.00209077
-Particle fraction colliding with boundary: 0.000713585
-Particle fraction exiting boundary: 0.00077454
-Surface-checks/particle/step: 1.13807
-Surface-collisions/particle/step: 5.48599e-05
+Particle-moves/CPUsec/proc: 1.53823e+07
+Particle-moves/step: 8115.86
+Cell-touches/particle/step: 1.01609
+Particle comm iterations/step: 1.96
+Particle fraction communicated: 0.00223636
+Particle fraction colliding with boundary: 0.000711364
+Particle fraction exiting boundary: 0.000779543
+Surface-checks/particle/step: 1.14353
+Surface-collisions/particle/step: 3.9429e-05
 Surf-reactions/particle/step: 0
 Collision-attempts/particle/step: 0
 Collisions/particle/step: 0
 Reactions/particle/step: 0
 
-Particles: 3803.25 ave 3870 max 3746 min
-Histogram: 2 0 0 0 0 0 0 1 0 1
-Cells:      25 ave 31 max 20 min
-Histogram: 1 0 0 1 1 0 0 0 0 1
-GhostCell: 17.25 ave 18 max 16 min
-Histogram: 1 0 0 0 0 1 0 0 0 2
+Particles: 3771 ave 3912 max 3674 min
+Histogram: 1 0 1 0 1 0 0 0 0 1
+Cells:      25 ave 29 max 21 min
+Histogram: 1 1 0 0 0 0 0 0 1 1
+GhostCell: 17.25 ave 20 max 14 min
+Histogram: 1 1 0 0 0 0 0 0 0 2
 EmptyCell: 12 ave 13 max 11 min
 Histogram: 1 0 0 0 0 2 0 0 0 1
 Surfs:    50 ave 50 max 50 min
