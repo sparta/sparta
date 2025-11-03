@@ -303,8 +303,8 @@ Miscellaneous:
 "clear"_clear.html, "echo"_echo.html, "if"_if.html,
 "include"_include.html, "jump"_jump.html, "label"_label.html,
 "log"_log.html, "next"_next.html, "partition"_partition.html,
-"print"_print.html, "quit"_quit.html, "shell"_shell.html,
-"variable"_variable.html
+"print"_print.html, "python"_python.html, "quit"_quit.html,
+"shell"_shell.html, "variable"_variable.html
 
 :line
 
@@ -347,6 +347,7 @@ section"_#cmd_4 lists many of the same commands, grouped by category.
 "package"_package.html,
 "partition"_partition.html,
 "print"_print.html,
+"python"_python.html,
 "quit"_quit.html,
 "react"_react.html,
 "react_modify"_react_modify.html,
@@ -445,6 +446,7 @@ letters in parenthesis: k = KOKKOS.
 "lambda/grid (k)"_compute_lambda_grid.html,
 "pflux/grid (k)"_compute_pflux_grid.html,
 "property/grid (k)"_compute_property_grid.html,
+"property/surf"_compute_property_surf.html,
 "react/boundary"_compute_react_boundary.html,
 "react/surf"_compute_react_surf.html,
 "react/isurf/grid"_compute_react_isurf_grid.html,
@@ -453,9 +455,9 @@ letters in parenthesis: k = KOKKOS.
 "surf (k)"_compute_surf.html,
 "surf/collision/tally"_compute_surf_collision_tally.html,
 "surf/reaction/tally"_compute_surf_reaction_tally.html,
-"thermal/grid (k)"_compute_thermal_grid.html,
 "temp (k)"_compute_temp.html,
-"tvib/grid"_compute_tvib_grid.html :tb(c=6,ea=c)
+"thermal/grid (k)"_compute_thermal_grid.html,
+"tvib/grid (k)"_compute_tvib_grid.html :tb(c=6,ea=c)
 
 :line
 
@@ -479,12 +481,14 @@ used if SPARTA is built with the "appropriate accelerated
 package"_Section_accelerate.html.  This is indicated by additional
 letters in parenthesis: k = KOKKOS.
 
+"adiabatic"_surf_collide.html,
 "cll"_surf_collide.html,
 "diffuse (k)"_surf_collide.html,
 "impulsive"_surf_collide.html,
 "piston (k)"_surf_collide.html,
 "specular (k)"_surf_collide.html,
 "td"_surf_collide.html,
+"transparent (k)"_surf_collide.html,
 "vanish (k)"_surf_collide.html :tb(c=3,ea=c)
 
 :line

@@ -44,7 +44,7 @@ class FixEmit : public Fix {
   virtual void create_task(int) = 0;
   virtual void perform_task() = 0;
 
-  void create_tasks();
+  virtual void create_tasks();
   double mol_inflow(double, double, double);
   int subsonic_temperature_check(int, double);
   void options(int, char **);
