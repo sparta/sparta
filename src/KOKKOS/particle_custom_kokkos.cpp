@@ -42,6 +42,15 @@ int ParticleKokkos::add_custom(char *name, int type, int size)
   // modifies eivec,eiarray,edvec,edarray on either host or device, probably device since host isn't modified. May just want to use host
   // modifies ewhich on host, sync to device here since it is never modified on the device
 
+  k_eivec.sync_host();
+  k_eiarray.sync_host();
+  k_edvec.sync_host();
+  k_edarray.sync_host();
+
+  k_ewhich.sync_host();
+  k_eicol.sync_host();
+  k_edcol.sync_host();
+
   // force resize on host
 
   k_eivec.modify_host();
