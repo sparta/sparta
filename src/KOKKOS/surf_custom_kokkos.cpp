@@ -279,6 +279,11 @@ void SurfKokkos::reallocate_custom()
       if (esize[index] == 0) {
         double *dvector = edvec[ewhich[index]];
         auto k_dvector = k_edvec.view_host()[ewhich[index]].k_view;
+        memoryKK->grow_kokkos(k_dvector,dvector,nnew,"surf:edvec");
+        k_edvec.view_host()[ewhich[index]].k_view = k_dvector;
+        edvec[ewhich[index]] = dvector;
+      } else {
+        double **darray = edarray[ewhich[index]];
         auto k_darray = k_edarray.view_host()[ewhich[index]].k_view;
         memoryKK->grow_kokkos(k_darray,darray,nnew,esize[index],"surf:edarray");
         k_edarray.view_host()[ewhich[index]].k_view = k_darray;
