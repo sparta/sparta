@@ -606,6 +606,7 @@ template < int NEARCP, int GASTALLY > void CollideVSSKokkos::collisions_one(COLL
     error->one(FLERR,"Collision cell volume is zero");
 
   particle_kk->modify(Device,PARTICLE_MASK);
+  if (vibstyle == DISCRETE) particle_kk->modify(Device,CUSTOM_MASK);
 
   d_particles = t_particle_1d(); // destroy reference to reduce memory use
   d_nn_last_partner = {};

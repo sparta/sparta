@@ -34,7 +34,7 @@ enum{INT,DOUBLE};                      // several files
 
 int SurfKokkos::add_custom(char *name, int type, int size)
 {
-  // modifies eivec,eiarray,edvec,edarray on either host or device, probably device since host isn't modified. May just want to use host
+  // modifies eivec,eiarray,edvec,edarray on host
   // modifies ewhich on host, sync to device here since it is never modified on the device
 
   // force resize on host
@@ -197,25 +197,18 @@ void SurfKokkos::allocate_custom(int index)
 {
   // modifies the inner part of eivec,eiarray,edvec,edarray on whatever, and the outer view on the host
 
-  k_eivec.sync_host();
-  k_eiarray.sync_host();
-  k_edvec.sync_host();
-  k_edarray.sync_host();
-
   int n = nown;
 
   if (etype[index] == INT) {
     if (esize[index] == 0) {
       int *ivector = eivec[ewhich[index]];
       auto k_ivector = k_eivec.view_host()[ewhich[index]].k_view;
-      k_ivector.modify_host(); // force resize on host
       memoryKK->grow_kokkos(k_ivector,ivector,n,"surf:eivec");
       k_eivec.view_host()[ewhich[index]].k_view = k_ivector;
       eivec[ewhich[index]] = ivector;
     } else {
       int **iarray = eiarray[ewhich[index]];
       auto k_iarray = k_eiarray.view_host()[ewhich[index]].k_view;
-      k_iarray.modify_host(); // force resize on host
       memoryKK->grow_kokkos(k_iarray,iarray,n,esize[index],"surf:eiarray");
       k_eiarray.view_host()[ewhich[index]].k_view = k_iarray;
       eiarray[ewhich[index]] = iarray;
@@ -225,14 +218,12 @@ void SurfKokkos::allocate_custom(int index)
     if (esize[index] == 0) {
       double *dvector = edvec[ewhich[index]];
       auto k_dvector = k_edvec.view_host()[ewhich[index]].k_view;
-      k_dvector.modify_host(); // force resize on host
       memoryKK->grow_kokkos(k_dvector,dvector,n,"surf:edvec");
       k_edvec.view_host()[ewhich[index]].k_view = k_dvector;
       edvec[ewhich[index]] = dvector;
     } else {
       double **darray = edarray[ewhich[index]];
       auto k_darray = k_edarray.view_host()[ewhich[index]].k_view;
-      k_darray.modify_host(); // force resize on host
       memoryKK->grow_kokkos(k_darray,darray,n,esize[index],"surf:edarray");
       k_edarray.view_host()[ewhich[index]].k_view = k_darray;
       edarray[ewhich[index]] = darray;
@@ -262,11 +253,6 @@ void SurfKokkos::reallocate_custom()
 {
   // modifies the inner part of eivec,eiarray,edvec,edarray on whatever, and the outer view on the host
 
-  k_eivec.sync_host();
-  k_eiarray.sync_host();
-  k_edvec.sync_host();
-  k_edarray.sync_host();
-
   int nold = size_custom;
   int nnew = nown;
   if (nnew == nold) return;
@@ -278,14 +264,12 @@ void SurfKokkos::reallocate_custom()
       if (esize[index] == 0) {
         int *ivector = eivec[ewhich[index]];
         auto k_ivector = k_eivec.view_host()[ewhich[index]].k_view;
-        k_ivector.modify_host(); // force resize on host
         memoryKK->grow_kokkos(k_ivector,ivector,nnew,"surf:eivec");
         k_eivec.view_host()[ewhich[index]].k_view = k_ivector;
         eivec[ewhich[index]] = ivector;
       } else {
         int **iarray = eiarray[ewhich[index]];
         auto k_iarray = k_eiarray.view_host()[ewhich[index]].k_view;
-        k_iarray.modify_host(); // force resize on host
         memoryKK->grow_kokkos(k_iarray,iarray,nnew,esize[index],"surf:eiarray");
         k_eiarray.view_host()[ewhich[index]].k_view = k_iarray;
         eiarray[ewhich[index]] = iarray;
@@ -295,14 +279,7 @@ void SurfKokkos::reallocate_custom()
       if (esize[index] == 0) {
         double *dvector = edvec[ewhich[index]];
         auto k_dvector = k_edvec.view_host()[ewhich[index]].k_view;
-        k_dvector.modify_host(); // force resize on host
-        memoryKK->grow_kokkos(k_dvector,dvector,nnew,"surf:edvec");
-        k_edvec.view_host()[ewhich[index]].k_view = k_dvector;
-        edvec[ewhich[index]] = dvector;
-      } else {
-        double **darray = edarray[ewhich[index]];
         auto k_darray = k_edarray.view_host()[ewhich[index]].k_view;
-        k_darray.modify_host(); // force resize on host
         memoryKK->grow_kokkos(k_darray,darray,nnew,esize[index],"surf:edarray");
         k_edarray.view_host()[ewhich[index]].k_view = k_darray;
         edarray[ewhich[index]] = darray;
@@ -419,18 +396,13 @@ void SurfKokkos::spread_custom(int index)
 {
   // modifies the inner part of eivec,eiarray,edvec,edarray on whatever, and the outer view on the host
 
-
   if (etype[index] == INT) {
     if (esize[index] == 0) {
-      k_eivec.sync_host();
-      k_eivec_local.sync_host();
-
       if (nlocal+nghost != size_custom_local[index]) {
 
         size_custom_local[index] = nlocal + nghost;
         int *ivector_local = eivec_local[ewhich[index]];
         auto k_ivector_local = k_eivec_local.view_host()[ewhich[index]].k_view;
-        k_ivector_local.modify_host(); // force resize on host
         memoryKK->grow_kokkos(k_ivector_local,ivector_local,size_custom_local[index],
                               "surf/spread:eivec_local_vec");
         k_eivec_local.view_host()[ewhich[index]].k_view = k_ivector_local;
@@ -448,15 +420,12 @@ void SurfKokkos::spread_custom(int index)
       k_eivec_local.view_host()[ewhich[index]].k_view.modify_host();
 
     } else if (esize[index]) {
-      k_eiarray.sync_host();
-      k_eiarray_local.sync_host();
 
       if (nlocal+nghost != size_custom_local[index]) {
 
         size_custom_local[index] = nlocal + nghost;
         int **iarray_local = eiarray_local[ewhich[index]];
         auto k_iarray_local = k_eiarray_local.view_host()[ewhich[index]].k_view;
-        k_iarray_local.modify_host(); // force resize on host
         memoryKK->grow_kokkos(k_iarray_local,iarray_local,size_custom_local[index],
                               esize[index],"surf/spread:eiarray_local_array");
         k_eiarray_local.view_host()[ewhich[index]].k_view = k_iarray_local;
@@ -480,15 +449,12 @@ void SurfKokkos::spread_custom(int index)
 
   } else if (etype[index] == DOUBLE) {
     if (esize[index] == 0) {
-      k_edvec.sync_host();
-      k_edvec_local.sync_host();
 
       if (nlocal+nghost != size_custom_local[index]) {
 
         size_custom_local[index] = nlocal + nghost;
         double *dvector_local = edvec_local[ewhich[index]];
         auto k_dvector_local = k_edvec_local.view_host()[ewhich[index]].k_view;
-        k_dvector_local.modify_host(); // force resize on host
         memoryKK->grow_kokkos(k_dvector_local,dvector_local,size_custom_local[index],
                               "surf/spread:edvec_local_vec");
         k_edvec_local.view_host()[ewhich[index]].k_view = k_dvector_local;
@@ -506,15 +472,12 @@ void SurfKokkos::spread_custom(int index)
       k_edvec_local.view_host()[ewhich[index]].k_view.modify_host();
 
     } else if (esize[index]) {
-      k_edarray.sync_host();
-      k_edarray_local.sync_host();
 
       if (nlocal+nghost != size_custom_local[index]) {
 
         size_custom_local[index] = nlocal + nghost;
         double **darray_local = edarray_local[ewhich[index]];
         auto k_darray_local = k_edarray_local.view_host()[ewhich[index]].k_view;
-        k_darray_local.modify_host(); // force resize on host
         memoryKK->grow_kokkos(k_darray_local,darray_local,size_custom_local[index],
                               esize[index],"surf/spread:edarray_local_array");
         k_edarray_local.view_host()[ewhich[index]].k_view = k_darray_local;
