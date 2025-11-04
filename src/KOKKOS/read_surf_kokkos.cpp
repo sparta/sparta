@@ -60,5 +60,6 @@ void ReadSurfKokkos::command(int narg, char **arg)
   ReadSurf::command(narg,arg);
 
   SurfKokkos* surf_kk = (SurfKokkos*) surf;
+  surf_kk->sync(Host,ALL_MASK);
   surf_kk->modify(Host,ALL_MASK);
 }

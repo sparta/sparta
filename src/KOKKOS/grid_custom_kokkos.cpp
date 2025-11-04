@@ -159,13 +159,13 @@ void GridKokkos::allocate_custom(int index)
     if (esize[index] == 0) {
       int *ivector = eivec[ewhich[index]];
       auto k_ivector = k_eivec.view_host()[ewhich[index]].k_view;
-      memoryKK->grow_kokkos(k_ivector,ivector,n,"surf:eivec");
+      memoryKK->grow_kokkos(k_ivector,ivector,n,"surf:ivector");
       k_eivec.view_host()[ewhich[index]].k_view = k_ivector;
       eivec[ewhich[index]] = ivector;
     } else {
       int **iarray = eiarray[ewhich[index]];
       auto k_iarray = k_eiarray.view_host()[ewhich[index]].k_view;
-      memoryKK->grow_kokkos(k_iarray,iarray,n,esize[index],"surf:eiarray");
+      memoryKK->grow_kokkos(k_iarray,iarray,n,esize[index],"surf:iarray");
       k_eiarray.view_host()[ewhich[index]].k_view = k_iarray;
       eiarray[ewhich[index]] = iarray;
     }
@@ -174,13 +174,13 @@ void GridKokkos::allocate_custom(int index)
     if (esize[index] == 0) {
       double *dvector = edvec[ewhich[index]];
       auto k_dvector = k_edvec.view_host()[ewhich[index]].k_view;
-      memoryKK->grow_kokkos(k_dvector,dvector,n,"surf:edvec");
+      memoryKK->grow_kokkos(k_dvector,dvector,n,"surf:dvector");
       k_edvec.view_host()[ewhich[index]].k_view = k_dvector;
       edvec[ewhich[index]] = dvector;
     } else {
       double **darray = edarray[ewhich[index]];
       auto k_darray = k_edarray.view_host()[ewhich[index]].k_view;
-      memoryKK->grow_kokkos(k_darray,darray,n,esize[index],"surf:edarray");
+      memoryKK->grow_kokkos(k_darray,darray,n,esize[index],"surf:darray");
       k_edarray.view_host()[ewhich[index]].k_view = k_darray;
       edarray[ewhich[index]] = darray;
     }
@@ -211,13 +211,13 @@ void GridKokkos::reallocate_custom(int /*nold*/, int nnew)
       if (esize[ic] == 0) {
         int *ivector = eivec[ewhich[ic]];
         auto k_ivector = k_eivec.view_host()[ewhich[ic]].k_view;
-        memoryKK->grow_kokkos(k_ivector,ivector,nnew,"surf:eivec");
+        memoryKK->grow_kokkos(k_ivector,ivector,nnew,"surf:ivector");
         k_eivec.view_host()[ewhich[ic]].k_view = k_ivector;
         eivec[ewhich[ic]] = ivector;
       } else {
         int **iarray = eiarray[ewhich[ic]];
         auto k_iarray = k_eiarray.view_host()[ewhich[ic]].k_view;
-        memoryKK->grow_kokkos(k_iarray,iarray,nnew,esize[ic],"surf:eiarray");
+        memoryKK->grow_kokkos(k_iarray,iarray,nnew,esize[ic],"surf:iarray");
         k_eiarray.view_host()[ewhich[ic]].k_view = k_iarray;
         eiarray[ewhich[ic]] = iarray;
       }
@@ -226,13 +226,13 @@ void GridKokkos::reallocate_custom(int /*nold*/, int nnew)
       if (esize[ic] == 0) {
         double *dvector = edvec[ewhich[ic]];
         auto k_dvector = k_edvec.view_host()[ewhich[ic]].k_view;
-        memoryKK->grow_kokkos(k_dvector,dvector,nnew,"surf:edvec");
+        memoryKK->grow_kokkos(k_dvector,dvector,nnew,"surf:dvector");
         k_edvec.view_host()[ewhich[ic]].k_view = k_dvector;
         edvec[ewhich[ic]] = dvector;
       } else {
         double **darray = edarray[ewhich[ic]];
         auto k_darray = k_edarray.view_host()[ewhich[ic]].k_view;
-        memoryKK->grow_kokkos(k_darray,darray,nnew,esize[ic],"surf:edarray");
+        memoryKK->grow_kokkos(k_darray,darray,nnew,esize[ic],"surf:darray");
         k_edarray.view_host()[ewhich[ic]].k_view = k_darray;
         edarray[ewhich[ic]] = darray;
       }
