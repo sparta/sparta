@@ -144,10 +144,12 @@ void FixAveHistoKokkos::end_of_step()
 
   // zero if first step
   if (irepeat == 0) {
+    k_stats.sync_host();
     for (int i = 0; i < 4; i++) k_stats.view_host()(i) = 0.0;
     k_stats.modify_host();
     k_stats.sync_device();
 
+    k_bin.sync_host();
     for (int i = 0; i < nbins; i++) k_bin.view_host()(i) = 0.0;
     k_bin.modify_host();
     k_bin.sync_device();

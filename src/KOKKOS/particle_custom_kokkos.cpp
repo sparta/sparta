@@ -39,7 +39,7 @@ enum{INT,DOUBLE};                      // several files
 
 int ParticleKokkos::add_custom(char *name, int type, int size)
 {
-  // modifies eivec,eiarray,edvec,edarray on either host or device, probably device since host isn't modified. May just want to use host
+  // modifies eivec,eiarray,edvec,edarray on host
   // modifies ewhich on host, sync to device here since it is never modified on the device
 
   // force resize on host
@@ -152,26 +152,25 @@ int ParticleKokkos::add_custom(char *name, int type, int size)
 
 void ParticleKokkos::grow_custom(int index, int nold, int nnew)
 {
-  // modifies the inner part of eivec,eiarray,edvec,edarray on whatever, and the outer view on the host
+  // modifies the inner part of eivec,eiarray,edvec,edarray on host, and the outer view on device
 
-  k_eivec.sync_host();
-  k_eiarray.sync_host();
-  k_edvec.sync_host();
-  k_edarray.sync_host();
+  if (sparta->kokkos->prewrap) {
+    sync(Host,CUSTOM_MASK);
+    modify(Host,CUSTOM_MASK);
+  } else
+    sync(Device,CUSTOM_MASK);
 
   if (etype[index] == INT) {
     if (esize[index] == 0) {
       int *ivector = eivec[ewhich[index]];
       auto k_ivector = k_eivec.view_host()[ewhich[index]].k_view;
-      k_ivector.modify_host(); // force resize on host
-      memoryKK->grow_kokkos(k_ivector,ivector,nold+nnew,"particle:eivec");
+      memoryKK->grow_kokkos(k_ivector,ivector,nold+nnew,"particle:ivector");
       k_eivec.view_host()[ewhich[index]].k_view = k_ivector;
       eivec[ewhich[index]] = ivector;
     } else {
       int **iarray = eiarray[ewhich[index]];
       auto k_iarray = k_eiarray.view_host()[ewhich[index]].k_view;
-      k_iarray.modify_host(); // force resize on host
-      memoryKK->grow_kokkos(k_iarray,iarray,nold+nnew,esize[index],"particle:eiarray");
+      memoryKK->grow_kokkos(k_iarray,iarray,nold+nnew,esize[index],"particle:iarray");
       k_eiarray.view_host()[ewhich[index]].k_view = k_iarray;
       eiarray[ewhich[index]] = iarray;
     }
@@ -180,15 +179,13 @@ void ParticleKokkos::grow_custom(int index, int nold, int nnew)
     if (esize[index] == 0) {
       double *dvector = edvec[ewhich[index]];
       auto k_dvector = k_edvec.view_host()[ewhich[index]].k_view;
-      k_dvector.modify_host(); // force resize on host
-      memoryKK->grow_kokkos(k_dvector,dvector,nold+nnew,"particle:edvec");
+      memoryKK->grow_kokkos(k_dvector,dvector,nold+nnew,"particle:dvector");
       k_edvec.view_host()[ewhich[index]].k_view = k_dvector;
       edvec[ewhich[index]] = dvector;
     } else {
       double **darray = edarray[ewhich[index]];
       auto k_darray = k_edarray.view_host()[ewhich[index]].k_view;
-      k_darray.modify_host(); // force resize on host
-      memoryKK->grow_kokkos(k_darray,darray,nold+nnew,esize[index],"particle:edarray");
+      memoryKK->grow_kokkos(k_darray,darray,nold+nnew,esize[index],"particle:darray");
       k_edarray.view_host()[ewhich[index]].k_view = k_darray;
       edarray[ewhich[index]] = darray;
     }
@@ -287,9 +284,9 @@ void ParticleKokkos::remove_custom(int index)
 
 void ParticleKokkos::copy_custom(int i, int j)
 {
-  this->sync(Host,CUSTOM_MASK);
+  sync(Host,CUSTOM_MASK);
   Particle::copy_custom(i,j);
-  this->modify(Host,CUSTOM_MASK);
+  modify(Host,CUSTOM_MASK);
 }
 
 /* ----------------------------------------------------------------------
@@ -299,7 +296,7 @@ void ParticleKokkos::copy_custom(int i, int j)
 
 void ParticleKokkos::pack_custom(int n, char *buf)
 {
-  this->sync(Host,CUSTOM_MASK);
+  sync(Host,CUSTOM_MASK);
   Particle::pack_custom(n,buf);
 }
 
@@ -310,7 +307,8 @@ void ParticleKokkos::pack_custom(int n, char *buf)
 
 void ParticleKokkos::unpack_custom(char *buf, int n)
 {
+  sync(Host,CUSTOM_MASK);
   Particle::unpack_custom(buf,n);
-  this->modify(Host,CUSTOM_MASK);
+  modify(Host,CUSTOM_MASK);
 }
 
