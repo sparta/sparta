@@ -205,7 +205,13 @@ int SurfKokkos::add_custom(char *name, int type, int size)
 
 void SurfKokkos::allocate_custom(int index)
 {
-  // modifies the inner part of eivec,eiarray,edvec,edarray on whatever, and the outer view on the host
+  // modifies the inner part of eivec,eiarray,edvec,edarray on host, and the outer view on device
+
+  if (sparta->kokkos->prewrap) {
+    sync(Host,CUSTOM_MASK);
+    modify(Host,CUSTOM_MASK);
+  } else
+    sync(Device,CUSTOM_MASK);
 
   int n = nown;
 
@@ -261,7 +267,10 @@ void SurfKokkos::allocate_custom(int index)
 
 void SurfKokkos::reallocate_custom()
 {
-  // modifies the inner part of eivec,eiarray,edvec,edarray on whatever, and the outer view on the host
+  // modifies the inner part of eivec,eiarray,edvec,edarray on host, and the outer view on the device
+
+  sync(Host,CUSTOM_MASK);
+  modify(Host,CUSTOM_MASK);
 
   int nold = size_custom;
   int nnew = nown;
@@ -424,7 +433,7 @@ void SurfKokkos::remove_custom(int index)
 
 void SurfKokkos::spread_custom(int index)
 {
-  // modifies the inner part of eivec,eiarray,edvec,edarray on whatever, and the outer view on the host
+  // modifies the inner part of eivec,eiarray,edvec,edarray on host, and the outer view on the host
 
   if (etype[index] == INT) {
     if (esize[index] == 0) {
@@ -545,9 +554,9 @@ void SurfKokkos::spread_custom(int index)
 
 void SurfKokkos::spread_inverse_custom(int index)
 {
-  this->sync(Host,CUSTOM_MASK);
+  sync(Host,CUSTOM_MASK);
   Surf::spread_inverse_custom(index);
-  this->modify(Host,CUSTOM_MASK);
+  modify(Host,CUSTOM_MASK);
 }
 
 /* ----------------------------------------------------------------------
@@ -557,7 +566,7 @@ void SurfKokkos::spread_inverse_custom(int index)
 
 int SurfKokkos::pack_custom(int isurf, char *buf)
 {
-  this->sync(Host,CUSTOM_MASK);
+  sync(Host,CUSTOM_MASK);
   return Surf::pack_custom(isurf,buf);
 }
 
@@ -568,8 +577,8 @@ int SurfKokkos::pack_custom(int isurf, char *buf)
 
 int SurfKokkos::unpack_custom(char *buf, double *custom)
 {
-  this->sync(Host,CUSTOM_MASK);
+  sync(Host,CUSTOM_MASK);
   int n = Surf::unpack_custom(buf,custom);
-  this->modify(Host,CUSTOM_MASK);
+  modify(Host,CUSTOM_MASK);
   return n;
 }

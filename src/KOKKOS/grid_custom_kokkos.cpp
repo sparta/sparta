@@ -151,7 +151,13 @@ int GridKokkos::add_custom(char *name, int type, int size)
 
 void GridKokkos::allocate_custom(int index)
 {
-  // modifies the inner part of eivec,eiarray,edvec,edarray on whatever, and the outer view on the host
+  // modifies the inner part of eivec,eiarray,edvec,edarray on host, and the outer view on device
+
+  if (sparta->kokkos->prewrap) {
+    sync(Host,CUSTOM_MASK);
+    modify(Host,CUSTOM_MASK);
+  } else
+    sync(Device,CUSTOM_MASK);
 
   int n = maxcell;
 
@@ -204,7 +210,13 @@ void GridKokkos::allocate_custom(int index)
 
 void GridKokkos::reallocate_custom(int /*nold*/, int nnew)
 {
-  // modifies the inner part of eivec,eiarray,edvec,edarray on whatever, and the outer view on the host
+  // modifies the inner part of eivec,eiarray,edvec,edarray on host, and the outer view on device
+
+  if (sparta->kokkos->prewrap) {
+    sync(Host,CUSTOM_MASK);
+    modify(Host,CUSTOM_MASK);
+  } else
+    sync(Device,CUSTOM_MASK);
 
   for (int ic = 0; ic < ncustom; ic++) {
     if (etype[ic] == INT) {
@@ -333,9 +345,9 @@ void GridKokkos::remove_custom(int index)
 
 void GridKokkos::copy_custom(int icell, int jcell)
 {
-  this->sync(Host,CUSTOM_MASK);
+  sync(Host,CUSTOM_MASK);
   Grid::copy_custom(icell,jcell);
-  this->modify(Host,CUSTOM_MASK);
+  modify(Host,CUSTOM_MASK);
 }
 
 /* ----------------------------------------------------------------------
@@ -346,7 +358,7 @@ void GridKokkos::copy_custom(int icell, int jcell)
 
 int GridKokkos::pack_custom(int icell, char *buf, int memflag)
 {
-  this->sync(Host,CUSTOM_MASK);
+  sync(Host,CUSTOM_MASK);
   return Grid::pack_custom(icell,buf,memflag);
 }
 
@@ -357,8 +369,8 @@ int GridKokkos::pack_custom(int icell, char *buf, int memflag)
 
 int GridKokkos::unpack_custom(char *buf, int icell)
 {
-  this->sync(Host,CUSTOM_MASK);
+  sync(Host,CUSTOM_MASK);
   int n = Grid::unpack_custom(buf,icell);
-  this->modify(Host,CUSTOM_MASK);
+  modify(Host,CUSTOM_MASK);
   return n;
 }

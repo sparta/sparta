@@ -12,55 +12,24 @@
    See the README file in the top-level SPARTA directory.
 ------------------------------------------------------------------------- */
 
-#include "mpi.h"
-#include "string.h"
-#include "stdlib.h"
-#include "ctype.h"
-#include "read_surf_kokkos.h"
-#include "math_extra.h"
+#include "remove_surf_kokkos.h"
 #include "surf_kokkos.h"
-#include "domain.h"
-#include "grid.h"
-#include "comm.h"
-#include "geometry.h"
-#include "input.h"
-#include "write_surf.h"
-#include "math_const.h"
-#include "memory_kokkos.h"
-#include "error.h"
-#include "kokkos_type.h"
 #include "sparta_masks.h"
-#include "kokkos.h"
 
 using namespace SPARTA_NS;
-using namespace MathConst;
-
-enum{NEITHER,BAD,GOOD};
-enum{NONE,CHECK,KEEP};
-enum{UNKNOWN,OUTSIDE,INSIDE,OVERLAP};           // several files
-
-#define MAXLINE 256
-#define CHUNK 1024
-#define EPSILON_NORM 1.0e-12
-#define EPSILON_GRID 1.0e-3
-#define BIG 1.0e20
-#define DELTA 1024
 
 /* ---------------------------------------------------------------------- */
 
-ReadSurfKokkos::ReadSurfKokkos(SPARTA *sparta) : ReadSurf(sparta)
-{
-
-}
+RemoveSurfKokkos::RemoveSurfKokkos(SPARTA *sparta) : RemoveSurf(sparta) {}
 
 /* ---------------------------------------------------------------------- */
 
-void ReadSurfKokkos::command(int narg, char **arg)
+void RemoveSurfKokkos::command(int narg, char **arg)
 {
   SurfKokkos* surf_kk = (SurfKokkos*) surf;
   surf_kk->sync(Host,ALL_MASK);
 
-  ReadSurf::command(narg,arg);
+  RemoveSurf::command(narg,arg);
 
   surf_kk->modify(Host,ALL_MASK);
 }

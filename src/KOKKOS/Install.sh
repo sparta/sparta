@@ -158,6 +158,8 @@ action fix_grid_check_kokkos.cpp
 action fix_grid_check_kokkos.h
 action read_surf_kokkos.cpp
 action read_surf_kokkos.h
+action remove_surf_kokkos.cpp
+action remove_surf_kokkos.h
 action variable_kokkos.cpp
 action variable_kokkos.h
 

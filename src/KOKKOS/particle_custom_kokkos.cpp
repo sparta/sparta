@@ -152,7 +152,13 @@ int ParticleKokkos::add_custom(char *name, int type, int size)
 
 void ParticleKokkos::grow_custom(int index, int nold, int nnew)
 {
-  // modifies the inner part of eivec,eiarray,edvec,edarray on whatever, and the outer view on the host
+  // modifies the inner part of eivec,eiarray,edvec,edarray on host, and the outer view on device
+
+  if (sparta->kokkos->prewrap) {
+    sync(Host,CUSTOM_MASK);
+    modify(Host,CUSTOM_MASK);
+  } else
+    sync(Device,CUSTOM_MASK);
 
   if (etype[index] == INT) {
     if (esize[index] == 0) {
@@ -278,9 +284,9 @@ void ParticleKokkos::remove_custom(int index)
 
 void ParticleKokkos::copy_custom(int i, int j)
 {
-  this->sync(Host,CUSTOM_MASK);
+  sync(Host,CUSTOM_MASK);
   Particle::copy_custom(i,j);
-  this->modify(Host,CUSTOM_MASK);
+  modify(Host,CUSTOM_MASK);
 }
 
 /* ----------------------------------------------------------------------
@@ -290,7 +296,7 @@ void ParticleKokkos::copy_custom(int i, int j)
 
 void ParticleKokkos::pack_custom(int n, char *buf)
 {
-  this->sync(Host,CUSTOM_MASK);
+  sync(Host,CUSTOM_MASK);
   Particle::pack_custom(n,buf);
 }
 
@@ -301,8 +307,8 @@ void ParticleKokkos::pack_custom(int n, char *buf)
 
 void ParticleKokkos::unpack_custom(char *buf, int n)
 {
-  this->sync(Host,CUSTOM_MASK);
+  sync(Host,CUSTOM_MASK);
   Particle::unpack_custom(buf,n);
-  this->modify(Host,CUSTOM_MASK);
+  modify(Host,CUSTOM_MASK);
 }
 
