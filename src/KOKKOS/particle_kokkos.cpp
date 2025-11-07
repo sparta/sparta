@@ -488,10 +488,15 @@ void ParticleKokkos::post_weight()
   constexpr int METHOD = 1;
   if (METHOD == 1) { // just call the host one
     this->sync(Host,PARTICLE_MASK|CUSTOM_MASK);
+
+    auto grid_kk = (GridKokkos*) grid;
+    grid_kk->sync(Host,CINFO_MASK);
+
     int prev_auto_sync = sparta->kokkos->auto_sync;
     sparta->kokkos->auto_sync = 1;
     Particle::post_weight();
     sparta->kokkos->auto_sync = prev_auto_sync;
+
     this->modify(Host,PARTICLE_MASK|CUSTOM_MASK);
   } /*else if (METHOD == 2) { // Kokkos-parallel, gives same (correct) answer
     Kokkos::View<double*> d_ratios("post_weight:ratios", nlocal);
