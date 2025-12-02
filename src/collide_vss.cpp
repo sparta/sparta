@@ -136,7 +136,7 @@ double CollideVSS::vremax_init(int igroup, int jgroup)
 double CollideVSS::attempt_collision(int icell, int np, double volume)
 {
   double fnum;
-  if (swpmflag) fnum = sweight_max*(1.0+pre_wtf*wtf);
+  if (stochastic_weight_flag) fnum = max_stochastic_weight*(1.0+pre_wtf*wtf);
   else fnum = update->fnum;
 
   double dt = update->dt;
@@ -202,10 +202,13 @@ int CollideVSS::test_collision(int icell, int igroup, int jgroup,
   double vro  = pow(vr2,1.0-params[ispecies][jspecies].omega);
 
   double ijsw = 1.0;
-  if (swpmflag) {
-    double isw = ip->weight*update->fnum;
-    double jsw = jp->weight*update->fnum;
-    ijsw = MAX(isw ,jsw)/sweight_max;
+  if (stochastic_weight_flag && index_stochastic_weight >= 0) {
+    double *stochastic_weights = particle->edvec[particle->ewhich[index_stochastic_weight]];
+    int i_index = ip - particle->particles;
+    int j_index = jp - particle->particles;
+    double isw = stochastic_weights[i_index]*update->fnum;
+    double jsw = stochastic_weights[j_index]*update->fnum;
+    ijsw = MAX(isw ,jsw)/max_stochastic_weight;
   }
 
   // although the vremax is calculated for the group,

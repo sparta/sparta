@@ -39,7 +39,8 @@ using namespace SPARTA_NS;
 enum{NONE,DISCRETE,SMOOTH};       // several files  (NOTE: change order)
 enum{PKEEP,PINSERT,PDONE,PDISCARD,PENTRY,PEXIT,PSURF};   // several files
 enum{ENERGY,HEAT,STRESS};   // particle reduction choices
-enum{BINARY,WEIGHT}; // grouping choices
+enum{BINARY,WEIGHT,OCTREE}; // grouping choices
+enum{INT,DOUBLE};                      // several files
 
 #define DELTAGRID 1000            // must be bigger than split cells per cell
 #define DELTADELETE 1024
@@ -99,12 +100,10 @@ Collide::Collide(SPARTA *sparta, int, char **arg) : Pointers(sparta)
   elist = NULL;
 
   // stochastic weighted particle method
-  swpmflag = 0;
-  sweight_max = update->fnum;
+  stochastic_weight_flag = 0;
+  max_stochastic_weight = update->fnum;
   reduceflag = 0;
   Ncmin = Ncmax = Ngmin = Ngmax = 0;
-  pL = NULL;
-  pLU = NULL;
 
   // used if near-neighbor model is invoked
 
@@ -152,9 +151,6 @@ Collide::~Collide()
   memory->destroy(nn_last_partner_jgroup);
 
   memory->destroy(recomb_ijflag);
-
-  memory->destroy(pL);
-  memory->destroy(pLU);
 }
 
 /* ---------------------------------------------------------------------- */
@@ -167,6 +163,14 @@ void Collide::init()
     error->all(FLERR,"Ambipolar collision model does not yet support "
                "near-neighbor collisions");
 
+  if (stochastic_weight_flag && ambiflag)
+    error->all(FLERR,"Stochastic weighting collision model does not yet support "
+               "ambipolar collisions");
+
+  if (stochastic_weight_flag && nearcp)
+    error->all(FLERR,"Stochastic weighting collision model does not yet support "
+               "near-neighbor collisions");
+
   // require mixture to contain all species
 
   int imix = particle->find_mixture(mixID);
@@ -175,6 +179,18 @@ void Collide::init()
 
   if (mixture->nspecies != particle->nspecies)
     error->all(FLERR,"Collision mixture does not contain all species");
+
+  // if stochastic weighted particle method is enabled,
+  // verify that fix stochastic_weight was declared (custom attribute exists)
+  // initialization from create_particles weights will happen in setup()
+
+  if (stochastic_weight_flag) {
+    index_stochastic_weight = particle->find_custom((char *) "stochastic_wt");
+    if (index_stochastic_weight < 0) {
+      error->all(FLERR,"collide_modify stochastic_weight yes requires "
+                      "fix stochastic_weight to be declared first");
+    }
+  }
 
   if (sparta->kokkos && !kokkos_flag)
     error->all(FLERR,"Must use Kokkos-supported collision style if "
@@ -232,12 +248,8 @@ void Collide::init()
   if (ngroups != oldgroups) {
     if (oldgroups == 1) {
       memory->destroy(plist);
-      memory->destroy(pL);
-      memory->destroy(pLU);
       npmax = 0;
       plist = NULL;
-      pL = NULL;
-      pLU = NULL;
     }
     if (oldgroups > 1) {
       delete [] ngroup;
@@ -254,10 +266,6 @@ void Collide::init()
     if (ngroups == 1) {
       npmax = DELTAPART;
       memory->create(plist,npmax,"collide:plist");
-      if(swpmflag) {
-        memory->create(pL,npmax,"collide:pL");
-        memory->create(pLU,npmax,"collide:pLU");
-      }
     }
     if (ngroups > 1) {
       ngroup = new int[ngroups];
@@ -392,7 +400,7 @@ void Collide::collisions()
   // variant for ngas_tally active or not
   // variant for single group or multiple groups
 
-  if (!ambiflag) {
+  if (!ambiflag and !stochastic_weight_flag) {
     if (!nearcp) {
       if (!ngas_tally) {
         if (ngroups == 1) collisions_one<0,0>();
@@ -414,9 +422,32 @@ void Collide::collisions()
     if (!ngas_tally) {
       if (ngroups == 1) collisions_one_ambipolar<0>();
       else collisions_group_ambipolar<0>();
-    } else if (!ngas_tally) {
+    } else if (ngas_tally) {
       if (ngroups == 1) collisions_one_ambipolar<1>();
       else collisions_group_ambipolar<1>();
+    }
+  } else if (stochastic_weight_flag) {
+    // verify custom attribute exists before using stochastic weighting
+    if (index_stochastic_weight < 0) {
+      error->all(FLERR,"collide_modify stochastic_weight yes requires "
+                      "fix stochastic_weight to be declared first");
+    }
+    if (!nearcp) {
+      if (!ngas_tally) {
+        if (ngroups == 1) collisions_one_stochastic_weighting<0,0>();
+        else error->all(FLERR,"Stochastic weighting not yet implemented for multiple groups");
+      } else if (ngas_tally) {
+        if (ngroups == 1) collisions_one_stochastic_weighting<0,1>();
+        else error->all(FLERR,"Stochastic weighting not yet implemented for multiple groups");
+      }
+    } else if (nearcp) {
+      if (!ngas_tally) {
+        if (ngroups == 1) collisions_one_stochastic_weighting<1,0>();
+        else error->all(FLERR,"Stochastic weighting not yet implemented for multiple groups");
+      } else if (ngas_tally) {
+        if (ngroups == 1) collisions_one_stochastic_weighting<1,1>();
+        else error->all(FLERR,"Stochastic weighting not yet implemented for multiple groups");
+      }
     }
   }
 
@@ -426,7 +457,7 @@ void Collide::collisions()
 
   if (ndelete) particle->compress_reactions(ndelete,dellist);
   if (react) particle->sorted = 0;
-  if (swpmflag) particle->sorted = 0;
+  if (stochastic_weight_flag) particle->sorted = 0;
 
   // accumulate running totals
 
@@ -1741,6 +1772,35 @@ void Collide::modify_params(int narg, char **arg)
       else if (strcmp(arg[iarg+1],"yes") == 0) ambiflag = 1;
       else error->all(FLERR,"Illegal collide_modify command");
       iarg += 2;
+    } else if (strcmp(arg[iarg],"stochastic_weight") == 0) {
+      if (iarg+2 > narg) error->all(FLERR,"Illegal collide_modify command");
+      if (strcmp(arg[iarg+1],"no") == 0) stochastic_weight_flag = 0;
+      else if (strcmp(arg[iarg+1],"yes") == 0) stochastic_weight_flag = 1;
+      else error->all(FLERR,"Illegal collide_modify command");
+      iarg += 2;
+    } else if (strcmp(arg[iarg],"split") == 0) {
+      if (iarg+3 > narg) error->all(FLERR,"Illegal collide_modify command");
+      Ncmin = atoi(arg[iarg+1]);
+      if (Ncmin < 0) error->all(FLERR,"Illegal collide_modify command");
+      wtf = atof(arg[iarg+2]);
+      if (wtf < 0.0) error->all(FLERR,"Illegal collide_modify command");
+      iarg += 3;
+    } else if (strcmp(arg[iarg],"reduce") == 0) {
+      if (iarg+6 > narg) error->all(FLERR,"Illegal collide_modify command");
+      Ncmax = atoi(arg[iarg+1]);
+      if (Ncmax < 0) error->all(FLERR,"Illegal collide_modify command");
+      Ngmin = atoi(arg[iarg+2]);
+      if (Ngmin < 0) error->all(FLERR,"Illegal collide_modify command");
+      Ngmax = atoi(arg[iarg+3]);
+      if (Ngmax < 0) error->all(FLERR,"Illegal collide_modify command");
+      if (strcmp(arg[iarg+4],"binary") == 0) group_type = BINARY;
+      else if (strcmp(arg[iarg+4],"weight") == 0) group_type = WEIGHT;
+      else error->all(FLERR,"Illegal collide_modify command");
+      if (strcmp(arg[iarg+5],"energy") == 0) reduction_type = ENERGY;
+      else if (strcmp(arg[iarg+5],"heat") == 0) reduction_type = HEAT;
+      else if (strcmp(arg[iarg+5],"stress") == 0) reduction_type = STRESS;
+      else error->all(FLERR,"Illegal collide_modify command");
+      iarg += 6;
     } else if (strcmp(arg[iarg],"nearcp") == 0) {
       if (iarg+3 > narg) error->all(FLERR,"Illegal collide_modify command");
       if (strcmp(arg[iarg+1],"yes") == 0) nearcp = 1;
