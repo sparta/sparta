@@ -463,6 +463,8 @@ template < int NEARCP, int GASTALLY > void CollideVSSKokkos::collisions_one(COLL
 {
   // loop over cells I own
 
+  this->sync(Device,ALL_MASK);
+
   ParticleKokkos* particle_kk = (ParticleKokkos*) particle;
   particle_kk->sync(Device,PARTICLE_MASK|SPECIES_MASK);
   if (vibstyle == DISCRETE) particle_kk->sync(Device,CUSTOM_MASK);
@@ -604,6 +606,8 @@ template < int NEARCP, int GASTALLY > void CollideVSSKokkos::collisions_one(COLL
 
   if (h_error_flag())
     error->one(FLERR,"Collision cell volume is zero");
+
+  this->modified(Device,ALL_MASK);
 
   particle_kk->modify(Device,PARTICLE_MASK);
   if (vibstyle == DISCRETE) particle_kk->modify(Device,CUSTOM_MASK);
@@ -796,6 +800,7 @@ void CollideVSSKokkos::operator()(TagCollideCollisionsOne< NEARCP, GASTALLY, ATO
 
     }
   }
+
   rand_pool.free_state(rand_gen);
 }
 
@@ -2186,6 +2191,8 @@ int CollideVSSKokkos::pack_grid_one(int icell, char *buf_char, int memflag)
 
   Grid::ChildCell *cells = grid->cells;
 
+  this->sync(Host,ALL_MASK);
+
   int n = 0;
   if (memflag) {
     for (int igroup = 0; igroup < ngroups; igroup++) {
@@ -2239,6 +2246,9 @@ int CollideVSSKokkos::unpack_grid_one(int icell, char *buf_char)
   Grid::SplitInfo *sinfo = grid->sinfo;
 
   grow_percell(1);
+
+  this->sync(Host,ALL_MASK);
+
   int n = 0;
   for (int igroup = 0; igroup < ngroups; igroup++) {
     for (int jgroup = 0; jgroup < ngroups; jgroup++) {
@@ -2249,10 +2259,15 @@ int CollideVSSKokkos::unpack_grid_one(int icell, char *buf_char)
   }
   nglocal++;
 
+  this->modified(Host,ALL_MASK);
+
   if (cells[icell].nsplit > 1) {
     int isplit = cells[icell].isplit;
     int nsplit = cells[icell].nsplit;
     grow_percell(nsplit);
+
+    this->sync(Host,ALL_MASK);
+
     for (int i = 0; i < nsplit; i++) {
       int m = sinfo[isplit].csubs[i];
       for (int igroup = 0; igroup < ngroups; igroup++) {
@@ -2264,6 +2279,8 @@ int CollideVSSKokkos::unpack_grid_one(int icell, char *buf_char)
       }
     }
     nglocal += nsplit;
+
+    this->modified(Host,ALL_MASK);
   }
 
   return n*sizeof(double);
