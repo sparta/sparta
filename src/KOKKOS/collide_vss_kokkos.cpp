@@ -608,7 +608,6 @@ template < int NEARCP, int GASTALLY > void CollideVSSKokkos::collisions_one(COLL
     error->one(FLERR,"Collision cell volume is zero");
 
   this->modified(Device,ALL_MASK);
-
   particle_kk->modify(Device,PARTICLE_MASK);
   if (vibstyle == DISCRETE) particle_kk->modify(Device,CUSTOM_MASK);
 
@@ -813,6 +812,8 @@ void CollideVSSKokkos::collisions_one_ambipolar(COLLIDE_REDUCE &reduce)
 {
   // ambipolar vectors
 
+  this->sync(Device,ALL_MASK);
+
   ParticleKokkos* particle_kk = (ParticleKokkos*) particle;
   particle_kk->sync(Device,PARTICLE_MASK|SPECIES_MASK|CUSTOM_MASK);
   d_particles = particle_kk->k_particles.view_device();
@@ -981,6 +982,7 @@ void CollideVSSKokkos::collisions_one_ambipolar(COLLIDE_REDUCE &reduce)
   else if (h_error_flag() == 2)
     error->one(FLERR,"Collisions in cell did not conserve electron count");
 
+  this->modified(Device,ALL_MASK);
   particle_kk->modify(Device,PARTICLE_MASK|CUSTOM_MASK);
 
   d_particles = t_particle_1d(); // destroy reference to reduce memory use
