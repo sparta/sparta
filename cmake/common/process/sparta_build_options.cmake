@@ -171,10 +171,10 @@ endif()
 
 if(PKG_KOKKOS)
 
-  # As of version 4.0.0 Kokkos requires C++17
-  if(CMAKE_CXX_STANDARD LESS 17)
+  # As of version 5.0.0 Kokkos requires C++20
+  if(CMAKE_CXX_STANDARD LESS 20)
     message(FATAL_ERROR "The KOKKOS package requires the C++ standard to
-  be set to at least C++17")
+  be set to at least C++20")
   endif()
 
 ########################################################################
