@@ -22,7 +22,10 @@ set(CMAKE_CXX_COMPILER
 set(Kokkos_ENABLE_CUDA
     ON
     CACHE STRING "")
-set(Kokkos_ARCH_KEPLER35
+set(Kokkos_ARCH_HOPPER90
     ON
     CACHE STRING "")
+
+# If KSPACE is also enabled, use CUFFT for FFTs
+set(FFT_KOKKOS "CUFFT" CACHE STRING "" FORCE)
 # ################### END   KOKKOS OPTIONS ####################
