@@ -5,7 +5,7 @@
 include(${CMAKE_CURRENT_LIST_DIR}/kokkos_common.cmake)
 # ################### BEGIN SPARTA OPTIONS ####################
 set(SPARTA_MACHINE
-    kokkos_cuda
+    kokkos_sycl
     CACHE STRING
           "Descriptive string to describe \"spa_\" executable configuration"
           FORCE)
