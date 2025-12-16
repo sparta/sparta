@@ -196,7 +196,7 @@ void GridKokkos::wrap_kokkos_graphs()
   // csurfs
 
   Kokkos::Crs<int, SPAHostType, void, int> h_csurfs;
-  auto csurfs_lambda = [=](int icell, int* fill) {
+  auto csurfs_lambda = [&](int icell, int* fill) {
     int nsurf = cells[icell].nsurf;
     if (nsurf < 0) nsurf = 0;
     else if (fill) {
@@ -218,7 +218,7 @@ void GridKokkos::wrap_kokkos_graphs()
   if (sinfo != NULL) {
 
     Kokkos::Crs<int, SPAHostType, void, int> h_csplits;
-    auto csplits_lambda = [=](int isplit, int* fill) {
+    auto csplits_lambda = [&](int isplit, int* fill) {
       int icell = sinfo[isplit].icell;
       int nsurf = cells[icell].nsurf;
       int nsplit = cells[icell].nsplit;
@@ -238,7 +238,7 @@ void GridKokkos::wrap_kokkos_graphs()
     Kokkos::deep_copy(d_csplits.entries, h_csplits.entries);
 
     Kokkos::Crs<int, SPAHostType, void, int> h_csubs;
-    auto csubs_lambda = [=](int isplit, int* fill) {
+    auto csubs_lambda = [&](int isplit, int* fill) {
       int icell = sinfo[isplit].icell;
       int nsurf = cells[icell].nsurf;
       int nsplit = cells[icell].nsplit;
