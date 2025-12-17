@@ -184,6 +184,27 @@ void ComputeBoundary::boundary_tally(double dtremain,
   int igroup = particle->mixture[imix]->species2group[origspecies];
   if (igroup < 0) return;
 
+  // assume non-reacting and no splitting at boundary
+
+  double oswfrac, iswfrac, jswfrac;
+  iswfrac = jswfrac = oswfrac = 1.0;
+
+  if (particle->weightflag) {
+    int nout = 0;
+    oswfrac = 0.0;
+    if(ip) {
+      iswfrac = ip->weight;
+      oswfrac += iswfrac;
+      nout++;
+    }
+    if(jp) {
+      jswfrac = jp->weight;
+      oswfrac += jswfrac;
+      nout++;
+    }
+    if(nout > 0) oswfrac /= nout;
+  }
+
   // tally all values associated with group into array
   // set nflag and tflag if normal and tangent computation already done once
   // particle weight used for all keywords except NUM
@@ -197,9 +218,9 @@ void ComputeBoundary::boundary_tally(double dtremain,
 
   double origmass,imass,jmass,pre;
   if (weightflag) weight = iorig->weight;
-  origmass = particle->species[origspecies].mass * weight;
-  if (ip) imass = particle->species[ip->ispecies].mass * weight;
-  if (jp) jmass = particle->species[jp->ispecies].mass * weight;
+  origmass = particle->species[origspecies].mass * weight * oswfrac;
+  if (ip) imass = particle->species[ip->ispecies].mass * weight * iswfrac;
+  if (jp) jmass = particle->species[jp->ispecies].mass * weight * jswfrac;
 
   double *vorig = iorig->v;
   double mvv2e = update->mvv2e;
@@ -226,7 +247,7 @@ void ComputeBoundary::boundary_tally(double dtremain,
         vec[k++] += weight;
         break;
       case NFLUX:
-        vec[k++] += weight;
+        vec[k++] += weight*oswfrac;
         break;
       case MFLUX:
         vec[k++] += origmass;
@@ -267,15 +288,15 @@ void ComputeBoundary::boundary_tally(double dtremain,
         vec[k++] += 0.5 * mvv2e * origmass * vsqpre;
         break;
       case EROT:
-        vec[k++] += weight * iorig->erot;
+        vec[k++] += weight * iorig->erot * oswfrac;
         break;
       case EVIB:
-        vec[k++] += weight * iorig->evib;
+        vec[k++] += weight * iorig->evib * oswfrac;
         break;
       case ETOT:
         vsqpre = MathExtra::lensq3(vorig);
         vec[k++] += 0.5*mvv2e*origmass*vsqpre +
-          weight*(iorig->erot+iorig->evib);
+          weight * (iorig->erot+iorig->evib);
         break;
       }
     }
@@ -290,9 +311,9 @@ void ComputeBoundary::boundary_tally(double dtremain,
         vec[k++] += weight;
         break;
       case NFLUX:
-        vec[k] += weight;
-        if (ip) vec[k] -= weight;
-        if (jp) vec[k] -= weight;
+        vec[k] += weight * oswfrac;
+        if (ip) vec[k] -= weight * iswfrac;
+        if (jp) vec[k] -= weight * jswfrac;
         k++;
         break;
       case MFLUX:
@@ -349,29 +370,29 @@ void ComputeBoundary::boundary_tally(double dtremain,
         vec[k++] -= 0.5*mvv2e * (ivsqpost + jvsqpost - vsqpre);
         break;
       case EROT:
-        if (ip) ierot = ip->erot;
+        if (ip) ierot = ip->erot * iswfrac;
         else ierot = 0.0;
-        if (jp) jerot = jp->erot;
+        if (jp) jerot = jp->erot * jswfrac;
         else jerot = 0.0;
-        vec[k++] -= weight * (ierot + jerot - iorig->erot);
+        vec[k++] -= weight * (ierot + jerot - iorig->erot * oswfrac);
         break;
       case EVIB:
-        if (ip) ievib = ip->evib;
+        if (ip) ievib = ip->evib * iswfrac;
         else ievib = 0.0;
-        if (jp) jevib = jp->evib;
+        if (jp) jevib = jp->evib * jswfrac;
         else jevib = 0.0;
-        vec[k++] -= weight * (ievib + jevib - iorig->evib);
+        vec[k++] -= weight * (ievib + jevib - iorig->evib * oswfrac);
         break;
       case ETOT:
         vsqpre = origmass * MathExtra::lensq3(vorig);
-        otherpre = iorig->erot + iorig->evib;
+        otherpre = (iorig->erot + iorig->evib) * oswfrac;
         if (ip) {
           ivsqpost = imass * MathExtra::lensq3(ip->v);
-          iother = ip->erot + ip->evib;
+          iother = (ip->erot + ip->evib) * iswfrac;
         } else ivsqpost = iother = 0.0;
         if (jp) {
           jvsqpost = jmass * MathExtra::lensq3(jp->v);
-          jother = jp->erot + jp->evib;
+          jother = (jp->erot + jp->evib) * jswfrac;
         } else jvsqpost = jother = 0.0;
         vec[k++] -= 0.5*mvv2e*(ivsqpost + jvsqpost - vsqpre) +
           weight * (iother + jother - otherpre);

@@ -52,6 +52,7 @@ Particle::Particle(SPARTA *sparta) : Pointers(sparta)
   MPI_Comm_rank(world,&me);
 
   exist = sorted = 0;
+  weightflag = 0;
   nglobal = 0;
   nlocal = maxlocal = 0;
   particles = NULL;
@@ -648,7 +649,7 @@ int Particle::add_particle(int id, int ispecies, int icell,
   p->flag = PKEEP;
 
   //p->dtremain = 0.0;    not needed due to memset in grow() ??
-  //p->weight = 1.0;      not needed due to memset in grow() ??
+  p->weight = 1.0;
 
   if (ncustom) zero_custom(nlocal);
 
@@ -1467,6 +1468,7 @@ int Particle::pack_restart(char *buf)
     pr->v[2] = p->v[2];
     pr->erot = p->erot;
     pr->evib = p->evib;
+    pr->weight = p->weight;
 
     ptr += sizeof(OnePartRestart);
     if (!ncustom) continue;
@@ -1520,6 +1522,7 @@ void Particle::pack_restart(char *buf, int step, int pass)
     pr->v[2] = p->v[2];
     pr->erot = p->erot;
     pr->evib = p->evib;
+    pr->weight = p->weight;
 
     ptr += sizeof(OnePartRestart);
     if (!ncustom) continue;

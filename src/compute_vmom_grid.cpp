@@ -1,6 +1,6 @@
 /* ----------------------------------------------------------------------
    SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
-   http://sparta.github.io
+   http://sparta.sandia.gov
    Steve Plimpton, sjplimp@gmail.com, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
@@ -13,7 +13,7 @@
 ------------------------------------------------------------------------- */
 
 #include "string.h"
-#include "compute_pflux_grid.h"
+#include "compute_vmom_grid.h"
 #include "particle.h"
 #include "mixture.h"
 #include "grid.h"
@@ -26,30 +26,30 @@ using namespace SPARTA_NS;
 
 // user keywords
 
-enum{MOMXX,MOMYY,MOMZZ,MOMXY,MOMYZ,MOMXZ};
+enum{V2,VX3,VY3,VZ3,V4};
 
 // internal accumulators
 
-enum{MASSSUM,MVX,MVY,MVZ,MVXSQ,MVYSQ,MVZSQ,MVXVY,MVYVZ,MVXVZ,LASTSIZE};
+enum{MASSSUM,mV2,mV4,mV3x,mV3y,mV3z,LASTSIZE};
 
 // max # of quantities to accumulate for any user value
 
-#define MAXACCUMULATE 4
+#define MAXACCUMULATE 12
 
 /* ---------------------------------------------------------------------- */
 
-ComputePFluxGrid::ComputePFluxGrid(SPARTA *sparta, int narg, char **arg) :
+ComputeVmomGrid::ComputeVmomGrid(SPARTA *sparta, int narg, char **arg) :
   Compute(sparta, narg, arg)
 {
-  if (narg < 5) error->all(FLERR,"Illegal compute pflux/grid command");
+  if (narg < 5) error->all(FLERR,"Illegal compute vmom/grid command");
 
   int igroup = grid->find_group(arg[2]);
   if (igroup < 0)
-    error->all(FLERR,"Compute pflux/grid group ID does not exist");
+    error->all(FLERR,"Compute vmom/grid group ID does not exist");
   groupbit = grid->bitmask[igroup];
 
   imix = particle->find_mixture(arg[3]);
-  if (imix < 0) error->all(FLERR,"Compute pflux/grid mixture ID "
+  if (imix < 0) error->all(FLERR,"Compute vmom/grid mixture ID "
                            "does not exist");
   ngroup = particle->mixture[imix]->ngroup;
 
@@ -59,46 +59,33 @@ ComputePFluxGrid::ComputePFluxGrid(SPARTA *sparta, int narg, char **arg) :
   npergroup = 0;
   unique = new int[LASTSIZE];
   nmap = new int[nvalue];
-  memory->create(map,ngroup*nvalue,MAXACCUMULATE,"pflux/grid:map");
+  memory->create(map,ngroup*nvalue,MAXACCUMULATE,"vmom/grid:map");
   for (int i = 0; i < nvalue; i++) nmap[i] = 0;
 
   int ivalue = 0;
   int iarg = 4;
   while (iarg < narg) {
-    if (strcmp(arg[iarg],"momxx") == 0) {
-      value[ivalue] = MOMXX;
+    if (strcmp(arg[iarg],"v2") == 0) {
+      value[ivalue] = V2;
       set_map(ivalue,MASSSUM);
-      set_map(ivalue,MVX);
-      set_map(ivalue,MVXSQ);
-    } else if (strcmp(arg[iarg],"momyy") == 0) {
-      value[ivalue] = MOMYY;
+      set_map(ivalue,mV2);
+    } else if (strcmp(arg[iarg],"v4") == 0) {
+      value[ivalue] = V4;
       set_map(ivalue,MASSSUM);
-      set_map(ivalue,MVY);
-      set_map(ivalue,MVYSQ);
-    } else if (strcmp(arg[iarg],"momzz") == 0) {
-      value[ivalue] = MOMZZ;
+      set_map(ivalue,mV4);
+    } else if (strcmp(arg[iarg],"vx3") == 0) {
+      value[ivalue] = VX3;
       set_map(ivalue,MASSSUM);
-      set_map(ivalue,MVZ);
-      set_map(ivalue,MVZSQ);
-    } else if (strcmp(arg[iarg],"momxy") == 0) {
-      value[ivalue] = MOMXY;
+      set_map(ivalue,mV3x);
+    } else if (strcmp(arg[iarg],"vy3") == 0) {
+      value[ivalue] = VY3;
       set_map(ivalue,MASSSUM);
-      set_map(ivalue,MVX);
-      set_map(ivalue,MVY);
-      set_map(ivalue,MVXVY);
-    } else if (strcmp(arg[iarg],"momyz") == 0) {
-      value[ivalue] = MOMYZ;
+      set_map(ivalue,mV3y);
+    } else if (strcmp(arg[iarg],"vz3") == 0) {
+      value[ivalue] = VZ3;
       set_map(ivalue,MASSSUM);
-      set_map(ivalue,MVY);
-      set_map(ivalue,MVZ);
-      set_map(ivalue,MVYVZ);
-    } else if (strcmp(arg[iarg],"momxz") == 0) {
-      value[ivalue] = MOMXZ;
-      set_map(ivalue,MASSSUM);
-      set_map(ivalue,MVX);
-      set_map(ivalue,MVZ);
-      set_map(ivalue,MVXVZ);
-    } else error->all(FLERR,"Illegal compute pflux/grid command");
+      set_map(ivalue,mV3z);
+    } else error->all(FLERR,"Illegal compute vmom/grid command");
 
     ivalue++;
     iarg++;
@@ -122,7 +109,7 @@ ComputePFluxGrid::ComputePFluxGrid(SPARTA *sparta, int narg, char **arg) :
 
 /* ---------------------------------------------------------------------- */
 
-ComputePFluxGrid::~ComputePFluxGrid()
+ComputeVmomGrid::~ComputeVmomGrid()
 {
   if (copymode) return;
 
@@ -138,10 +125,10 @@ ComputePFluxGrid::~ComputePFluxGrid()
 
 /* ---------------------------------------------------------------------- */
 
-void ComputePFluxGrid::init()
+void ComputeVmomGrid::init()
 {
   if (ngroup != particle->mixture[imix]->ngroup)
-    error->all(FLERR,"Number of groups in compute pflux/grid mixture "
+    error->all(FLERR,"Number of groups in compute vmom/grid mixture "
                "has changed");
 
   reallocate();
@@ -149,7 +136,7 @@ void ComputePFluxGrid::init()
 
 /* ---------------------------------------------------------------------- */
 
-void ComputePFluxGrid::compute_per_grid()
+void ComputeVmomGrid::compute_per_grid()
 {
   invoked_per_grid = update->ntimestep;
 
@@ -160,7 +147,7 @@ void ComputePFluxGrid::compute_per_grid()
   int nlocal = particle->nlocal;
 
   int i,j,k,m,ispecies,igroup,icell;
-  double mass;
+  double mass, vsq;
   double *v,*vec;
 
   // zero all accumulators - could do this with memset()
@@ -181,48 +168,37 @@ void ComputePFluxGrid::compute_per_grid()
     if (!(cinfo[icell].mask & groupbit)) continue;
 
     mass = species[ispecies].mass;
-    if (particle->weightflag) mass *= particles[i].weight;
     v = particles[i].v;
+    if(particle->weightflag) mass *= particles[i].weight;
 
     vec = tally[icell];
 
     // loop has all possible values particle needs to accumulate
     // subset defined by user values are indexed by accumulate vector
-    // NOTE: at some point may need prefactors v,v^2 converted to p,eng
+    // NOTE: at some point may need prefactors v,v^2,v^3 converted to p,eng
 
     k = igroup*npergroup;
+    vsq = (v[0]*v[0]+v[1]*v[1]+v[2]*v[2]);
 
     for (m = 0; m < npergroup; m++) {
       switch (unique[m]) {
       case MASSSUM:
         vec[k++] += mass;
         break;
-      case MVX:
-        vec[k++] += mass*v[0];
+      case mV2:
+        vec[k++] += mass*vsq;
         break;
-      case MVY:
-        vec[k++] += mass*v[1];
+      case mV3x:
+        vec[k++] += mass*vsq*v[0];
         break;
-      case MVZ:
-        vec[k++] += mass*v[2];
+      case mV3y:
+        vec[k++] += mass*vsq*v[1];
         break;
-      case MVXSQ:
-        vec[k++] += mass*v[0]*v[0];
+      case mV3z:
+        vec[k++] += mass*vsq*v[2];
         break;
-      case MVYSQ:
-        vec[k++] += mass*v[1]*v[1];
-        break;
-      case MVZSQ:
-        vec[k++] += mass*v[2]*v[2];
-        break;
-      case MVXVY:
-        vec[k++] += mass*v[0]*v[1];
-        break;
-      case MVYVZ:
-        vec[k++] += mass*v[1]*v[2];
-        break;
-      case MVXVZ:
-        vec[k++] += mass*v[0]*v[2];
+      case mV4:
+        vec[k++] += mass*v[0]*v[0]*v[0]*v[0];
         break;
       }
     }
@@ -237,7 +213,7 @@ void ComputePFluxGrid::compute_per_grid()
    also return cols = ptr to list of columns in tally for this index
 ------------------------------------------------------------------------- */
 
-int ComputePFluxGrid::query_tally_grid(int index, double **&array, int *&cols)
+int ComputeVmomGrid::query_tally_grid(int index, double **&array, int *&cols)
 {
   index--;
   int ivalue = index % nvalue;
@@ -250,17 +226,18 @@ int ComputePFluxGrid::query_tally_grid(int index, double **&array, int *&cols)
    tally accumulated info to compute final normalized values
    index = which column of output (0 for vec, 1 to N for array)
    for etally = NULL:
-     use internal tallied info for single timestep
+     use internal tallied info for single timestep, set nsample = 1
      compute values for all grid cells
        store results in vector_grid with nstride = 1 (single col of array_grid)
-   for etaylly = ptr to caller array:
+   for etally = ptr to caller array:
      use external tallied info for many timesteps
+     nsample = additional normalization factor used by some values
      emap = list of etally columns to use, # of columns determined by index
      store results in caller's vec, spaced by nstride
    if norm = 0.0, set result to 0.0 directly so do not divide by 0.0
 ------------------------------------------------------------------------- */
 
-void ComputePFluxGrid::post_process_grid(int index, int nsample,
+void ComputeVmomGrid::post_process_grid(int index, int nsample,
                                          double **etally, int *emap,
                                          double *vec, int nstride)
 {
@@ -279,67 +256,26 @@ void ComputePFluxGrid::post_process_grid(int index, int nsample,
     nstride = 1;
   }
 
-  // compute normalized final value for each grid cell
-  // Vcm = Sum mv / Sum m = (Wx,Wy,Wz)
-  // Wi = Sum mVi / M
-  // momii = F/V Sum m(Vi - Wi)^2
-  // momii = F/V [ Sum mVi^2 + M Wi^2 - 2 Wi Sum mVi ]
-  // momii = F/V [ Sum mVi^2 - (Sum mVi)^2 / M ]
-  // momij = F/V Sum m(Vi - Wi)(Vj - Wj)
-  // momij = F/V [ Sum mViVj + M Wi Wj - Wj Sum mVi - Wi Sum mVj ]
-  // momij = F/V [ Sum mViVj - Sum mVi Sum mVj / M ]
 
   switch (value[ivalue]) {
 
-  case MOMXX:
-  case MOMYY:
-  case MOMZZ:
+  case V2:
+  case VX3:
+  case VY3:
+  case VZ3:
+  case V4:
     {
-      double summass,summv,wt;
-      double fnum = update->fnum;
-      Grid::ChildInfo *cinfo = grid->cinfo;
-
-      int mass = emap[0];
-      int mv = emap[1];
-      int mvv = emap[2];
+      int summass = emap[0];
+      int mvn = emap[1];
       for (int icell = lo; icell < hi; icell++) {
-        summass = etally[icell][mass];
-        if (summass == 0.0) vec[k] = 0.0;
-        else {
-          wt = fnum * cinfo[icell].weight / cinfo[icell].volume;
-          summv = etally[icell][mv];
-          vec[k] = wt/nsample * (etally[icell][mvv] - summv*summv/summass);
-        }
+        vec[k] = etally[icell][mvn] / etally[icell][summass];
         k += nstride;
       }
       break;
     }
 
-  case MOMXY:
-  case MOMYZ:
-  case MOMXZ:
-    {
-      double summass,wt;
-      double fnum = update->fnum;
-      Grid::ChildInfo *cinfo = grid->cinfo;
-
-      int mass = emap[0];
-      int mv1 = emap[1];
-      int mv2 = emap[2];
-      int mvv = emap[3];
-      for (int icell = lo; icell < hi; icell++) {
-        summass = etally[icell][mass];
-        if (summass == 0.0) vec[k] = 0.0;
-        else {
-          wt = fnum * cinfo[icell].weight / cinfo[icell].volume;
-          vec[k] = wt/nsample * (etally[icell][mvv] -
-                                 etally[icell][mv1]*etally[icell][mv2]/summass);
-        }
-        k += nstride;
-      }
-      break;
-    }
   }
+
 }
 
 /* ----------------------------------------------------------------------
@@ -351,7 +287,7 @@ void ComputePFluxGrid::post_process_grid(int index, int nsample,
    npergroup = length of unique list
 ------------------------------------------------------------------------- */
 
-void ComputePFluxGrid::set_map(int ivalue, int name)
+void ComputeVmomGrid::set_map(int ivalue, int name)
 {
   // index = loc of name in current unique list if there, else npergroup
 
@@ -378,7 +314,7 @@ void ComputePFluxGrid::set_map(int ivalue, int name)
    reset map indices to reflect final npergroup = unique quantities/group
 ------------------------------------------------------------------------- */
 
-void ComputePFluxGrid::reset_map()
+void ComputeVmomGrid::reset_map()
 {
   for (int i = 0; i < ngroup*nvalue; i++) {
     int igroup = i / nvalue;
@@ -393,7 +329,7 @@ void ComputePFluxGrid::reset_map()
    called by init() and whenever grid changes
 ------------------------------------------------------------------------- */
 
-void ComputePFluxGrid::reallocate()
+void ComputeVmomGrid::reallocate()
 {
   if (grid->nlocal == nglocal) return;
 
@@ -408,7 +344,7 @@ void ComputePFluxGrid::reallocate()
    memory usage of local grid-based data
 ------------------------------------------------------------------------- */
 
-bigint ComputePFluxGrid::memory_usage()
+bigint ComputeVmomGrid::memory_usage()
 {
   bigint bytes;
   bytes = nglocal * sizeof(double);
