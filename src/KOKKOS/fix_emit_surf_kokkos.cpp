@@ -85,7 +85,6 @@ FixEmitSurfKokkos::~FixEmitSurfKokkos()
     slist_active_copy[i].uncopy();
   }
 
-  tmp_compute_surf_kk.copy = 0;
   tmp_compute_surf_kk.uncopy = 1;
 
 #ifdef SPARTA_KOKKOS_EXACT

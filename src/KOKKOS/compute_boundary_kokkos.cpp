@@ -48,6 +48,7 @@ ComputeBoundaryKokkos::ComputeBoundaryKokkos(SPARTA *sparta) :
   ComputeBoundary(sparta)
 {
   copy = 1;
+  uncopy = 0;
 }
 
 /* ---------------------------------------------------------------------- */

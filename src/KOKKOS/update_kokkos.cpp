@@ -136,9 +136,7 @@ UpdateKokkos::~UpdateKokkos()
   grid_kk_copy.uncopy();
   domain_kk_copy.uncopy();
 
-  tmp_compute_boundary_kk.copy = 0;
   tmp_compute_boundary_kk.uncopy = 1;
-  tmp_compute_surf_kk.copy = 0;
   tmp_compute_surf_kk.uncopy = 1;
 
   for (int i=0; i<KOKKOS_MAX_SURF_COLL_PER_TYPE; i++) {

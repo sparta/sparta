@@ -48,6 +48,7 @@ ComputeSurfKokkos::ComputeSurfKokkos(SPARTA *sparta) :
   sr_kk_prob_copy{VAL_2(KKCopy<SurfReactProbKokkos>(sparta))}
 {
   copy = 1;
+  uncopy = 0;
 }
 
 /* ---------------------------------------------------------------------- */
