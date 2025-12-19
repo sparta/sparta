@@ -107,7 +107,7 @@ void FixEmitSurfKokkos::init()
 {
   k_tasks.sync_host();
   if (perspecies) k_ntargetsp.sync_host();
-  if (subsonic_style == PONLY) k_vscale.sync_host();
+  if (subsonic_style == PONLY || temp_custom_flag) k_vscale.sync_host();
 
   k_path.sync_host();
 
@@ -118,7 +118,7 @@ void FixEmitSurfKokkos::init()
 
   k_tasks.modify_host();
   if (perspecies) k_ntargetsp.modify_host();
-  if (subsonic_style == PONLY) k_vscale.modify_host();
+  if (subsonic_style == PONLY || temp_custom_flag) k_vscale.modify_host();
 
   k_path.modify_host();
 
@@ -336,7 +336,7 @@ void FixEmitSurfKokkos::perform_task()
 
   k_tasks.sync_device();
   if (perspecies) k_ntargetsp.sync_device();
-  if (subsonic_style == PONLY) k_vscale.sync_device();
+  if (subsonic_style == PONLY || temp_custom_flag) k_vscale.sync_device();
 
   k_path.sync_device();
 
@@ -496,7 +496,7 @@ void FixEmitSurfKokkos::operator()(TagFixEmitSurf_perform_task, const int &i, in
   if (perspecies) {
     for (int isp = 0; isp < nspecies; isp++) {
 
-      double vscale = (subsonic_style == PONLY) ?
+      double vscale = (subsonic_style == PONLY || temp_custom_flag) ?
         d_vscale(i, isp) : d_vscale_mix(isp);
 
       const int ispecies = d_species[isp];
@@ -606,7 +606,7 @@ void FixEmitSurfKokkos::operator()(TagFixEmitSurf_perform_task, const int &i, in
       int isp = 0;
       while (cummulative[isp] < rn) isp++;
 
-      double vscale = (subsonic_style == PONLY) ?
+      double vscale = (subsonic_style == PONLY || temp_custom_flag) ?
         d_vscale(i, isp) : d_vscale_mix(isp);
 
       const int ispecies = d_species[isp];
@@ -773,7 +773,7 @@ void FixEmitSurfKokkos::grow_task()
       tasks[i].ntargetsp = k_ntargetsp.view_host().data() + i*k_ntargetsp.view_host().extent(1);
   }
 
-  if (subsonic_style == PONLY) {
+  if (subsonic_style == PONLY || temp_custom_flag) {
     k_vscale.modify_host(); // force resize on host
     k_vscale.sync_host();
     k_vscale.resize(ntaskmax,nspecies);
@@ -800,7 +800,7 @@ void FixEmitSurfKokkos::realloc_nspecies()
     for (int i = 0; i < ntaskmax; i++)
       tasks[i].ntargetsp = k_ntargetsp.view_host().data() + i*k_ntargetsp.view_host().extent(1);
   }
-  if (subsonic_style == PONLY) {
+  if (subsonic_style == PONLY || temp_custom_flag) {
     k_vscale = DAT::tdual_float_2d_lr("emit/surf:vscale",ntaskmax,nspecies);
     d_vscale = k_vscale.view_device();
     for (int i = 0; i < ntaskmax; i++)
