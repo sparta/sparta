@@ -64,7 +64,8 @@ FixEmitSurfKokkos::FixEmitSurfKokkos(SPARTA *sparta, int narg, char **arg) :
 #endif
             ),
   particle_kk_copy(sparta),
-  slist_active_copy{VAL_2(KKCopy<ComputeSurfKokkos>(sparta))}
+  slist_active_copy{VAL_2(KKCopy<ComputeSurfKokkos>(sparta))},
+  tmp_compute_surf_kk(sparta)
 {
   kokkos_flag = 1;
   execution_space = Device;
@@ -83,6 +84,9 @@ FixEmitSurfKokkos::~FixEmitSurfKokkos()
   for (int i=0; i<KOKKOS_MAX_SLIST; i++) {
     slist_active_copy[i].uncopy();
   }
+
+  tmp_compute_surf_kk.copy = 0;
+  tmp_compute_surf_kk.uncopy = 1;
 
 #ifdef SPARTA_KOKKOS_EXACT
   rand_pool.destroy();
@@ -183,7 +187,7 @@ void FixEmitSurfKokkos::grid_changed()
     }
 
     k_cummulative_custom.modify_host();
-  } 
+  }
 }
 
 /* ----------------------------------------------------------------------
@@ -217,7 +221,7 @@ void FixEmitSurfKokkos::create_tasks()
       k_path.view_host()(i,n) = task_i.path[n];
 
     if (dimension != 2)
-      for (int n = 0; n < npoint-2; n++) 
+      for (int n = 0; n < npoint-2; n++)
         k_fracarea.view_host()(i,n) = task_i.fracarea[n];
   }
 
@@ -289,6 +293,14 @@ void FixEmitSurfKokkos::perform_task()
       compute_surf_kk->pre_surf_tally();
       slist_active_copy[i].copy(compute_surf_kk);
     }
+  } else {
+    for (int i = 0; i < KOKKOS_MAX_SLIST; i++) {
+
+      // use temporary to avoid the copy getting stale leading to an issue
+      //  with view reference counting
+
+      slist_active_copy[i].copy(&tmp_compute_surf_kk);
+    }
   }
 
   auto ninsert_dim1 = perspecies ? nspecies : 1;
@@ -339,7 +351,7 @@ void FixEmitSurfKokkos::perform_task()
 
   if (fractions_custom_flag && !perspecies)
     k_cummulative_custom.sync_device();
-  else 
+  else
     k_cummulative_mix.sync_device();
 
   ParticleKokkos* particle_kk = ((ParticleKokkos*)particle);

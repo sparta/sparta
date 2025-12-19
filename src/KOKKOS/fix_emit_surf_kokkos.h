@@ -123,6 +123,8 @@ class FixEmitSurfKokkos : public FixEmitSurf {
   void create_tasks() override;
   void grow_task() override;
   void realloc_nspecies() override;
+
+  ComputeSurfKokkos tmp_compute_surf_kk;
 };
 
 }
