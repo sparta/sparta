@@ -333,7 +333,8 @@ void CollideVSSKokkos::reset_vremax()
 {
   grid_kk_copy.copy((GridKokkos*)grid);
 
-  this->sync(Device,ALL_MASK);
+  k_vremax.clear_sync_state();
+  if (remainflag) k_remain.clear_sync_state();
 
   copymode = 1;
   Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagCollideResetVremax>(0,nglocal),*this);
