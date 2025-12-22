@@ -134,7 +134,7 @@ void FixEmitFaceKokkos::init()
    add them to tasks list and increment ntasks
 ------------------------------------------------------------------------- */
 
-void FixEmitFaceKokkos::create_task(int icell)
+void FixEmitFaceKokkos::create_tasks()
 {
   k_tasks.sync_host();
   if (perspecies) k_ntargetsp.sync_host();
