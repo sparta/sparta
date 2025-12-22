@@ -196,11 +196,15 @@ void FixEmitSurfKokkos::grid_changed()
 
 void FixEmitSurfKokkos::create_tasks()
 {
+  k_tasks.sync_host();
+  if (perspecies) k_ntargetsp.sync_host();
+  if (subsonic_style == PONLY || temp_custom_flag) k_vscale.sync_host();
+
   FixEmit::create_tasks();
 
   k_tasks.modify_host();
-  k_ntargetsp.modify_host();
-  k_vscale.modify_host();
+  if (perspecies) k_ntargetsp.modify_host();
+  if (subsonic_style == PONLY || temp_custom_flag) k_vscale.modify_host();
 
   if (ntaskmax > k_path.extent(0) || max_npoint > k_path.extent(1)/3) {
     MemKK::realloc_kokkos(k_path,"fix_emit_surf:path",ntaskmax,max_npoint*3);
@@ -747,20 +751,10 @@ void FixEmitSurfKokkos::grow_task()
   int oldmax = ntaskmax;
   ntaskmax += DELTATASK;
 
-  if (tasks == NULL)
-    k_tasks = tdual_task_1d("emit/surf:tasks",ntaskmax);
-  else {
-    k_tasks.sync_host();
-    k_tasks.modify_host(); // force resize on host
-    k_tasks.resize(ntaskmax);
-  }
+  k_tasks.sync_host();
+  k_tasks.modify_host(); // force resize on host
+  memoryKK->grow_kokkos(k_tasks,tasks,ntaskmax,"emit/surf:tasks");
   d_tasks = k_tasks.view_device();
-  tasks = k_tasks.view_host().data();
-
-  // set all new task bytes to 0 so valgrind won't complain
-  // if bytes between fields are uninitialized
-
-  //memset(&tasks[oldmax],0,(ntaskmax-oldmax)*sizeof(Task));
 
   // allocate vectors in each new task or set to NULL
 
@@ -770,7 +764,7 @@ void FixEmitSurfKokkos::grow_task()
     k_ntargetsp.resize(ntaskmax,nspecies);
     d_ntargetsp = k_ntargetsp.view_device();
     for (int i = 0; i < ntaskmax; i++)
-      tasks[i].ntargetsp = k_ntargetsp.view_host().data() + i*k_ntargetsp.view_host().extent(1);
+      tasks[i].ntargetsp = &k_ntargetsp.view_host()(i,0);
   }
 
   if (subsonic_style == PONLY || temp_custom_flag) {
@@ -779,7 +773,7 @@ void FixEmitSurfKokkos::grow_task()
     k_vscale.resize(ntaskmax,nspecies);
     d_vscale = k_vscale.view_device();
     for (int i = 0; i < ntaskmax; i++)
-      tasks[i].vscale = k_vscale.view_host().data() + i*k_vscale.view_host().extent(1);
+      tasks[i].vscale = &k_vscale.view_host()(i,0);
   }
 
   for (int i = oldmax; i < ntaskmax; i++) {
@@ -798,12 +792,12 @@ void FixEmitSurfKokkos::realloc_nspecies()
     k_ntargetsp = DAT::tdual_float_2d_lr("emit/surf:ntargetsp",ntaskmax,nspecies);
     d_ntargetsp = k_ntargetsp.view_device();
     for (int i = 0; i < ntaskmax; i++)
-      tasks[i].ntargetsp = k_ntargetsp.view_host().data() + i*k_ntargetsp.view_host().extent(1);
+      tasks[i].ntargetsp = &k_ntargetsp.view_host()(i,0);
   }
   if (subsonic_style == PONLY || temp_custom_flag) {
     k_vscale = DAT::tdual_float_2d_lr("emit/surf:vscale",ntaskmax,nspecies);
     d_vscale = k_vscale.view_device();
     for (int i = 0; i < ntaskmax; i++)
-      tasks[i].vscale = k_vscale.view_host().data() + i*k_vscale.view_host().extent(1);
+      tasks[i].vscale = &k_vscale.view_host()(i,0);
   }
 }
