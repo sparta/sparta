@@ -440,7 +440,11 @@ void FixEmitSurf::create_task(int icell)
     // if requested, override mixture properties with custom per-surf attributes
 
     if (nrho_custom_flag) nrho = nrho_custom[isurf];
-    if (temp_custom_flag) temp_thermal_custom = temp_custom[isurf];
+    if (temp_custom_flag) {
+      temp_thermal_custom = temp_custom[isurf];
+      if (temp_thermal_custom <= 0.0)
+        error->one(FLERR,"Custom temperature for fix emit/surf must be > 0.0");
+    }
     if (vstream_custom_flag) vstream = vstream_custom[isurf];
     if (speed_custom_flag) magvstream = speed_custom[isurf];
     if (fractions_custom_flag) fraction = fractions_custom[isurf];
