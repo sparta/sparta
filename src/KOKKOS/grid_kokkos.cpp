@@ -116,10 +116,11 @@ void GridKokkos::grow_cells(int n, int m)
       const int oldmax = maxcell;
       while (maxcell < nlocal+nghost+n) maxcell += DELTA;
       if (cells == NULL)
-          k_cells = tdual_cell_1d("grid:cells",maxcell);
+        MemKK::realloc_kokkos(k_cells,"grid:cells",maxcell);
       else {
         this->sync(Device,CELL_MASK); // force resize on device
-        k_cells.resize(maxcell);
+        Kokkos::resize(Kokkos::view_alloc(Kokkos::WithoutInitializing),
+                       k_cells,maxcell);
         this->modify(Device,CELL_MASK); // needed for auto sync
       }
       cells = k_cells.view_host().data();
@@ -130,10 +131,11 @@ void GridKokkos::grow_cells(int n, int m)
     if (nlocal+m >= maxlocal) {
       while (maxlocal < nlocal+m) maxlocal += DELTA;
       if (cinfo == NULL)
-          k_cinfo = tdual_cinfo_1d("grid:cinfo",maxlocal);
+        MemKK::realloc_kokkos(k_cinfo,"grid:cinfo",maxlocal);
       else {
         this->sync(Device,CINFO_MASK); // force resize on device
-        k_cinfo.resize(maxlocal);
+        Kokkos::resize(Kokkos::view_alloc(Kokkos::WithoutInitializing),
+                       k_cinfo,maxlocal);
         this->modify(Device,CINFO_MASK); // needed for auto sync
       }
       cinfo = k_cinfo.view_host().data();
@@ -153,10 +155,11 @@ void GridKokkos::grow_pcells()
 
     maxparent += DELTA;
     if (pcells == NULL)
-        k_pcells = tdual_pcell_1d("grid:pcells",maxparent);
+      MemKK::realloc_kokkos(k_pcells,"grid:pcells",maxparent);
     else {
       this->sync(Device,PCELL_MASK); // force resize on device
-      k_pcells.resize(maxparent);
+      Kokkos::resize(Kokkos::view_alloc(Kokkos::WithoutInitializing),
+                     k_pcells,maxparent);
       this->modify(Device,PCELL_MASK); // needed for auto sync
     }
     pcells = k_pcells.view_host().data();
@@ -176,10 +179,11 @@ void GridKokkos::grow_sinfo(int n)
     if (nsplitlocal+nsplitghost+n >= maxsplit) {
       while (maxsplit < nsplitlocal+nsplitghost+n) maxsplit += DELTA;
       if (sinfo == NULL)
-          k_sinfo = tdual_sinfo_1d("grid:sinfo",maxsplit);
+        MemKK::realloc_kokkos(k_sinfo,"grid:sinfo",maxsplit);
       else {
         this->sync(Device,SINFO_MASK); // force resize on device
-        k_sinfo.resize(maxsplit);
+        Kokkos::resize(Kokkos::view_alloc(Kokkos::WithoutInitializing),
+                       k_sinfo,maxsplit);
         this->modify(Device,SINFO_MASK); // needed for auto sync
       }
       sinfo = k_sinfo.view_host().data();

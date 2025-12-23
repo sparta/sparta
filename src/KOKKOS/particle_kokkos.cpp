@@ -595,10 +595,11 @@ void ParticleKokkos::grow(int nextra)
 
   maxlocal = newmax;
   if (particles == NULL)
-    k_particles = tdual_particle_1d("particle:particles",maxlocal);
+    MemKK::realloc_kokkos(k_particles,"particle:particles",maxlocal);
   else {
     this->sync(Device,PARTICLE_MASK); // force resize on device
-    k_particles.resize(maxlocal);
+    Kokkos::resize(Kokkos::view_alloc(Kokkos::WithoutInitializing),
+                   k_particles,maxlocal);
     this->modify(Device,PARTICLE_MASK); // needed for auto sync
   }
   d_particles = k_particles.view_device();
@@ -623,9 +624,10 @@ void ParticleKokkos::grow_species()
     Particle::grow_species();
   } else {
     if (species == NULL)
-      k_species = tdual_species_1d("particle:species",maxspecies);
+      MemKK::realloc_kokkos(k_species,"particle:species",maxspecies);
     else
-      k_species.resize(maxspecies);
+      Kokkos::resize(Kokkos::view_alloc(Kokkos::WithoutInitializing),
+                     k_species,maxspecies);
     species = k_species.view_host().data();
   }
 }
