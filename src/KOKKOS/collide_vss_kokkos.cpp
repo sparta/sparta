@@ -215,9 +215,9 @@ void CollideVSSKokkos::init()
     memory->create(vremax_initial,ngroups,ngroups,"collide:vremax_initial");
 
     k_vremax_initial = DAT::tdual_float_2d("collide:vremax_initial",ngroups,ngroups);
-    k_vremax = DAT::tdual_float_3d("collide:vremax",nglocalmax,ngroups,ngroups);
+    MemKK::realloc_kokkos(k_vremax,"collide:vremax",nglocalmax,ngroups,ngroups);
     d_vremax = k_vremax.view_device();
-    k_remain = DAT::tdual_float_3d("collide:remain",nglocalmax,ngroups,ngroups);
+    MemKK::realloc_kokkos(k_remain,"collide:remain",nglocalmax,ngroups,ngroups);
     d_remain = k_remain.view_device();
 
     for (int igroup = 0; igroup < ngroups; igroup++) {
@@ -2357,10 +2357,12 @@ void CollideVSSKokkos::adapt_grid()
   this->modified(Host,ALL_MASK); // force resize on host
 
   nglocalmax = nglocal;
-  k_vremax.resize(nglocalmax,ngroups,ngroups);
+  k_vremax.resize(Kokkos::view_alloc(Kokkos::WithoutInitializing),
+                  nglocalmax,ngroups,ngroups);
   d_vremax = k_vremax.view_device();
   if (remainflag) {
-    k_remain.resize(nglocalmax,ngroups,ngroups);
+    k_remain.resize(Kokkos::view_alloc(Kokkos::WithoutInitializing),
+                    nglocalmax,ngroups,ngroups);
     d_remain = k_remain.view_device();
   }
   this->sync(Host,ALL_MASK);
@@ -2385,10 +2387,12 @@ void CollideVSSKokkos::grow_percell(int n)
 
   this->sync(Device,ALL_MASK); // force resize on device
 
-  k_vremax.resize(nglocalmax,ngroups,ngroups);
+  k_vremax.resize(Kokkos::view_alloc(Kokkos::WithoutInitializing),
+                  nglocalmax,ngroups,ngroups);
   d_vremax = k_vremax.view_device();
   if (remainflag) {
-    k_remain.resize(nglocalmax,ngroups,ngroups);
+    k_remain.resize(Kokkos::view_alloc(Kokkos::WithoutInitializing),
+                    nglocalmax,ngroups,ngroups);
     d_remain = k_remain.view_device();
   }
 
