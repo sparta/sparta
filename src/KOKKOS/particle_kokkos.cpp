@@ -557,7 +557,7 @@ void ParticleKokkos::post_weight()
 
       if (ratio < 1.0) {
         if (wrandom->uniform() > ratio) {
-          d_map[i] = d_map[nlocal-1];
+          h_map[i] = h_map[nlocal-1];
           if (nlocal > nlocal_original) i++;
           else nlocal_original--;
           nlocal--;
