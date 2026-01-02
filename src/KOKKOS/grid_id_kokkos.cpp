@@ -21,7 +21,7 @@ void GridKokkos::update_hash()
   typedef hash_type::size_type size_type;    // uint32_t
   typedef hash_type::key_type key_type;      // cellint
   typedef hash_type::value_type value_type;  // int
-  typedef hash_type::HostMirror host_hash_type;
+  typedef hash_type::host_mirror_type host_hash_type;
 
   size_type failed_count = 0;
 

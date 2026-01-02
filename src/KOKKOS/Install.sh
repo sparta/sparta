@@ -12,17 +12,6 @@ export LC_ALL
 action () {
   if (test $mode = 0) then
     rm -f ../$1
-  elif (! cmp -s $1 ../$1) then
-    if (test -z "$2" || test -e ../$2) then
-      cp $1 ..
-      if (test $mode = 2) then
-        echo "  updating src/$1"
-      fi
-    fi
-  elif (test -n "$2") then
-    if (test ! -e ../$2) then
-      rm -f ../$1
-    fi
   fi
 }
 
@@ -180,35 +169,10 @@ action remap3d_kokkos.h remap3d.h
 action kokkos_base_fft.h fftdata.h
 
 # edit 2 Makefile.package files to include/exclude package info
-# allow user to specify sed.  Useful on Mac OSX to specify SED=gsed
-SED="${SED:-sed}"
-if (test $1 = 1) then
 
-  if (test -e ../Makefile.package) then
-    $SED -i -e 's/[^ \t]*kokkos[^ \t]* //g' ../Makefile.package
-    $SED -i -e 's/[^ \t]*KOKKOS[^ \t]* //g' ../Makefile.package
-    $SED -i -e 's|^PKG_INC =[ \t]*|&-DSPARTA_KOKKOS |' ../Makefile.package
-#    $SED -i -e 's|^PKG_PATH =[ \t]*|&-L..\/..\/lib\/kokkos\/core\/src |' ../Makefile.package
-    $SED -i -e 's|^PKG_CPP_DEPENDS =[ \t]*|&$(KOKKOS_CPP_DEPENDS) |' ../Makefile.package
-    $SED -i -e 's|^PKG_LIB =[ \t]*|&$(KOKKOS_LIBS) |' ../Makefile.package
-    $SED -i -e 's|^PKG_LINK_DEPENDS =[ \t]*|&$(KOKKOS_LINK_DEPENDS) |' ../Makefile.package
-    $SED -i -e 's|^PKG_SYSINC =[ \t]*|&$(KOKKOS_CPPFLAGS) $(KOKKOS_CXXFLAGS) |' ../Makefile.package
-    $SED -i -e 's|^PKG_SYSLIB =[ \t]*|&$(KOKKOS_LDFLAGS) |' ../Makefile.package
-#    $SED -i -e 's|^PKG_SYSPATH =[ \t]*|&$(kokkos_SYSPATH) |' ../Makefile.package
-  fi
-
-  if (test -e ../Makefile.package.settings) then
-    $SED -i -e '/CXX\ =\ \$(CC)/d' ../Makefile.package.settings
-    $SED -i -e '/^include.*kokkos.*$/d' ../Makefile.package.settings
-    # multiline form needed for BSD $SED on Macs
-    $SED -i -e '4 i \
-CXX = $(CC)
-' ../Makefile.package.settings
-
-    $SED -i -e '5 i \
-include ..\/..\/lib\/kokkos\/Makefile.kokkos
-' ../Makefile.package.settings
-  fi
+if (test $1 = 1 || test $1 = 2) then
+  echo "The KOKKOS package no longer supports the GNU Makefile build system. Please build SPARTA with CMake instead."
+  exit 1
 
 elif (test $1 = 0) then
 
