@@ -48,13 +48,14 @@ ComputeBoundaryKokkos::ComputeBoundaryKokkos(SPARTA *sparta) :
   ComputeBoundary(sparta)
 {
   copy = 1;
+  uncopy = 0;
 }
 
 /* ---------------------------------------------------------------------- */
 
 ComputeBoundaryKokkos::~ComputeBoundaryKokkos()
 {
-  if (copy || copymode) return;
+  if (copy) return;
 
   memoryKK->destroy_kokkos(k_array,array);
   memoryKK->destroy_kokkos(k_myarray,myarray);

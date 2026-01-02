@@ -305,6 +305,7 @@ class SurfCollideDiffuseKokkos : public SurfCollideDiffuse {
       p->erot = erot(ispecies,twall,rand_gen,boltz);
       p->evib = evib(ispecies,twall,rand_gen,boltz);
     }
+
     rand_pool.free_state(rand_gen);
   }
 

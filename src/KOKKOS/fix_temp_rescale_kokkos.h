@@ -51,6 +51,7 @@ class FixTempRescaleKokkos : public FixTempRescale {
 
   FixTempRescaleKokkos(class SPARTA *, int, char **);
   virtual ~FixTempRescaleKokkos() {}
+  void end_of_step() override;
 
   KOKKOS_INLINE_FUNCTION
   void operator()(TagFixTempRescale_end_of_step_no_average, const int&) const;

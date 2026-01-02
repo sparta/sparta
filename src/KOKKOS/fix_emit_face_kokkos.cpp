@@ -134,12 +134,17 @@ void FixEmitFaceKokkos::init()
    add them to tasks list and increment ntasks
 ------------------------------------------------------------------------- */
 
-void FixEmitFaceKokkos::create_task(int icell)
+void FixEmitFaceKokkos::create_tasks()
 {
-  FixEmitFace::create_task(icell);
+  k_tasks.sync_host();
+  if (perspecies) k_ntargetsp.sync_host();
+  if (subsonic_style == PONLY) k_vscale.sync_host();
+
+  FixEmitFace::create_tasks();
+
   k_tasks.modify_host();
-  k_ntargetsp.modify_host();
-  k_vscale.modify_host();
+  if (perspecies) k_ntargetsp.modify_host();
+  if (subsonic_style == PONLY) k_vscale.modify_host();
 }
 
 /* ---------------------------------------------------------------------- */
@@ -492,8 +497,10 @@ void FixEmitFaceKokkos::operator()(TagFixEmitFace_perform_task, const int &i, in
       d_id(cand) = MAXSMALLINT*rand_gen.drand();
       d_dtremain(cand) = dt * rand_gen.drand();
     }
+
     nsingle += nactual;
   }
+
   rand_pool.free_state(rand_gen);
 }
 
@@ -505,20 +512,10 @@ void FixEmitFaceKokkos::grow_task()
 {
   ntaskmax += DELTATASK;
 
-  if (tasks == NULL)
-    k_tasks = tdual_task_1d("emit/face:tasks",ntaskmax);
-  else {
-    k_tasks.sync_host();
-    k_tasks.modify_host(); // force resize on host
-    k_tasks.resize(ntaskmax);
-  }
+  k_tasks.sync_host();
+  k_tasks.modify_host(); // force resize on host
+  memoryKK->grow_kokkos(k_tasks,tasks,ntaskmax,"emit/surf:tasks");
   d_tasks = k_tasks.view_device();
-  tasks = k_tasks.view_host().data();
-
-  // set all new task bytes to 0 so valgrind won't complain
-  // if bytes between fields are uninitialized
-
-  //memset(&tasks[oldmax],0,(ntaskmax-oldmax)*sizeof(Task));
 
   // allocate vectors in each new task or set to NULL
 
@@ -528,7 +525,7 @@ void FixEmitFaceKokkos::grow_task()
     k_ntargetsp.resize(ntaskmax,nspecies);
     d_ntargetsp = k_ntargetsp.view_device();
     for (int i = 0; i < ntaskmax; i++)
-      tasks[i].ntargetsp = k_ntargetsp.view_host().data() + i*k_ntargetsp.view_host().extent(1);
+      tasks[i].ntargetsp = &k_ntargetsp.view_host()(i,0);
   }
 
   if (subsonic_style == PONLY) {
@@ -537,7 +534,7 @@ void FixEmitFaceKokkos::grow_task()
     k_vscale.resize(ntaskmax,nspecies);
     d_vscale = k_vscale.view_device();
     for (int i = 0; i < ntaskmax; i++)
-      tasks[i].vscale = k_vscale.view_host().data() + i*k_vscale.view_host().extent(1);
+      tasks[i].vscale = &k_vscale.view_host()(i,0);
   }
 }
 
@@ -551,12 +548,12 @@ void FixEmitFaceKokkos::realloc_nspecies()
     k_ntargetsp = DAT::tdual_float_2d_lr("emit/face:ntargetsp",ntaskmax,nspecies);
     d_ntargetsp = k_ntargetsp.view_device();
     for (int i = 0; i < ntaskmax; i++)
-      tasks[i].ntargetsp = k_ntargetsp.view_host().data() + i*k_ntargetsp.view_host().extent(1);
+      tasks[i].ntargetsp = &k_ntargetsp.view_host()(i,0);
   }
   if (subsonic_style == PONLY) {
     k_vscale = DAT::tdual_float_2d_lr("emit/face:vscale",ntaskmax,nspecies);
     d_vscale = k_vscale.view_device();
     for (int i = 0; i < ntaskmax; i++)
-      tasks[i].vscale = k_vscale.view_host().data() + i*k_vscale.view_host().extent(1);
+      tasks[i].vscale = &k_vscale.view_host()(i,0);
   }
 }

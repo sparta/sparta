@@ -385,7 +385,7 @@ void FixEmitSurf::custom_surf_changed()
 
 void FixEmitSurf::create_task(int icell)
 {
-  int i,m,isurf,isp,npoint,isplit,subcell;
+  int i,m,isurf,isp,npoint,isplit,subcell,ispecies;
   double indot,area,areaone,ntargetsp;
   double *normal,*p1,*p2,*p3,*path;
   double cpath[36],delta[3],e1[3],e2[3];
@@ -440,7 +440,12 @@ void FixEmitSurf::create_task(int icell)
     // if requested, override mixture properties with custom per-surf attributes
 
     if (nrho_custom_flag) nrho = nrho_custom[isurf];
-    if (temp_custom_flag) temp_thermal_custom = temp_custom[isurf];
+    if (temp_custom_flag) {
+      temp_thermal_custom = temp_custom[isurf];
+      if (temp_thermal_custom <= 0.0)
+        error->one(FLERR,
+                   "Custom temperature for fix emit/surf must be greater than 0.0");
+    }
     if (vstream_custom_flag) vstream = vstream_custom[isurf];
     if (speed_custom_flag) magvstream = speed_custom[isurf];
     if (fractions_custom_flag) fraction = fractions_custom[isurf];
@@ -456,6 +461,13 @@ void FixEmitSurf::create_task(int icell)
     else {
       isplit = cells[icell].isplit;
       subcell = sinfo[isplit].csplits[i];
+
+      // subcell = -1 if the line did not end up in a polygon
+      // see create_surfmap() in cut2d/cut3d
+      // skip the surface in this case
+
+      if (subcell < 0) continue;
+
       tasks[ntask].pcell = sinfo[isplit].csubs[subcell];
     }
 
@@ -559,6 +571,15 @@ void FixEmitSurf::create_task(int icell)
       MathExtra::norm3(tasks[ntask].tan1);
       MathExtra::cross3(tris[isurf].norm,tasks[ntask].tan1,tasks[ntask].tan2);
       MathExtra::norm3(tasks[ntask].tan2);
+    }
+
+    if (temp_custom_flag) {
+      vscale = tasks[ntask].vscale;
+      for (m = 0; m < nspecies; m++) {
+        ispecies = particle->mixture[imix]->species[m];
+        vscale[m] = sqrt(2.0 * update->boltz * temp_thermal_custom /
+                         particle->species[ispecies].mass);
+      }
     }
 
     // set ntarget and ntargetsp via mol_inflow()
@@ -688,7 +709,7 @@ void FixEmitSurf::perform_task_onepass()
     magvstream = tasks[i].magvstream;
     vstream = tasks[i].vstream;
 
-    if (subsonic_style == PONLY) vscale = tasks[i].vscale;
+    if (subsonic_style == PONLY || temp_custom_flag) vscale = tasks[i].vscale;
     else vscale = particle->mixture[imix]->vscale;
     if (normalflag) indot = magvstream;
     else indot = vstream[0]*normal[0] + vstream[1]*normal[1] + vstream[2]*normal[2];
@@ -999,7 +1020,7 @@ void FixEmitSurf::perform_task_twopass()
     magvstream = tasks[i].magvstream;
     vstream = tasks[i].vstream;
 
-    if (subsonic_style == PONLY) vscale = tasks[i].vscale;
+    if (subsonic_style == PONLY || temp_custom_flag) vscale = tasks[i].vscale;
     else vscale = particle->mixture[imix]->vscale;
     if (normalflag) indot = magvstream;
     else indot = vstream[0]*normal[0] + vstream[1]*normal[1] + vstream[2]*normal[2];
@@ -1486,7 +1507,7 @@ void FixEmitSurf::grow_task()
       tasks[i].ntargetsp = NULL;
   }
 
-  if (subsonic_style == PONLY) {
+  if (subsonic_style == PONLY || temp_custom_flag) {
     for (int i = oldmax; i < ntaskmax; i++)
       tasks[i].vscale = new double[nspecies];
   } else {
@@ -1512,7 +1533,7 @@ void FixEmitSurf::realloc_nspecies()
       tasks[i].ntargetsp = new double[nspecies];
     }
   }
-  if (subsonic_style == PONLY) {
+  if (subsonic_style == PONLY || temp_custom_flag) {
     for (int i = 0; i < ntask; i++) {
       delete [] tasks[i].vscale;
       tasks[i].vscale = new double[nspecies];
