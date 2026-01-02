@@ -32,7 +32,7 @@ class FixTempRescale : public Fix {
   virtual ~FixTempRescale();
   int setmask();
   void init();
-  void end_of_step();
+  void end_of_step() override;
   double memory_usage();
 
  protected:

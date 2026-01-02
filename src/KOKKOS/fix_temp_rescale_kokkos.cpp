@@ -31,6 +31,29 @@ FixTempRescaleKokkos::FixTempRescaleKokkos(SPARTA *sparta, int narg, char **arg)
   datamask_modify = EMPTY_MASK;
 }
 
+/* ---------------------------------------------------------------------- */
+
+void FixTempRescaleKokkos::end_of_step()
+{
+  if (update->ntimestep % nevery) return;
+
+  // set current t_target
+
+  double delta = update->ntimestep - update->beginstep;
+  if (delta != 0.0) delta /= update->endstep - update->beginstep;
+  double t_target = tstart + delta * (tstop-tstart);
+
+  // sort particles by grid cell if needed
+
+  ParticleKokkos* particle_kk = (ParticleKokkos*) particle;
+  if (!particle_kk->sorted_kk) particle_kk->sort_kokkos();
+
+  // 2 variants of thermostatting
+
+  if (!aveflag) end_of_step_no_average(t_target);
+  else end_of_step_average(t_target);
+}
+
 /* ----------------------------------------------------------------------
    current thermal temperature is calculated on a per-cell basis
 ---------------------------------------------------------------------- */
