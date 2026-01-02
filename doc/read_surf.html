@@ -311,6 +311,10 @@ per-surf vector named temperature which stores a single value per
 line.  The next 3 integers will be assigned to a custom per-surf array
 named flags which stores 3 values per line.
 </P>
+<P>IMPORTANT NOTE: If the read_surf command is used when custom attributes already
+exist, and values for custom attributes aren’t defined in the current file
+being read, then the new custom values will be set to 0.0.
+</P>
 <HR>
 
 <P>The <I>Triangles</I> section is only allowed for 3d simulations and

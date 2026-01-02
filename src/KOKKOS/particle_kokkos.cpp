@@ -485,7 +485,9 @@ struct PostWeightPair { int i; int id; };
 
 void ParticleKokkos::post_weight()
 {
-  constexpr int METHOD = 1;
+  int METHOD = 2;
+  if (particle->ncustom) METHOD = 1;
+
   if (METHOD == 1) { // just call the host one
     this->sync(Host,PARTICLE_MASK|CUSTOM_MASK);
 
@@ -498,67 +500,107 @@ void ParticleKokkos::post_weight()
     sparta->kokkos->auto_sync = prev_auto_sync;
 
     this->modify(Host,PARTICLE_MASK|CUSTOM_MASK);
-  } /*else if (METHOD == 2) { // Kokkos-parallel, gives same (correct) answer
-    Kokkos::View<double*> d_ratios("post_weight:ratios", nlocal);
-    auto h_ratios = Kokkos::create_mirror_view(d_ratios);
+  } else if (METHOD == 2) { // Kokkos-parallel, gives same (correct) answer
+
+    DAT::tdual_float_1d k_ratios;
+    MemKK::realloc_kokkos(k_ratios,"post_weight:ratios",nlocal);
+    auto d_ratios = k_ratios.view_device();
+    auto h_ratios = k_ratios.view_host();
+
     auto grid_kk = dynamic_cast<GridKokkos*>(grid);
     auto& k_cinfo = grid_kk->k_cinfo;
     grid_kk->sync(Device,CINFO_MASK);
     this->sync(Device,PARTICLE_MASK);
+
     auto d_particles = k_particles.view_device();
     auto d_cinfo = k_cinfo.view_device();
-    Kokkos::vector<PostWeightPair> map;
-    map.set_overallocation(0.5);
-    map.resize(nlocal);
-    auto d_map = map.view_device();
+
+    typedef Kokkos::DualView<PostWeightPair*,SPADeviceType> tdual_pwp_1d;
+    tdual_pwp_1d k_map;
+    MemKK::realloc_kokkos(k_map,"post_weight:map",nlocal*1.5);
+    auto d_map = k_map.view_device();
+    auto h_map = k_map.view_host();
+
     Kokkos::parallel_for(nlocal, KOKKOS_LAMBDA(int i) {
       auto icell = d_particles[i].icell;
       d_ratios[i] = d_particles[i].weight / d_cinfo[icell].weight;
       d_map[i].id = d_particles[i].id;
       d_map[i].i = i;
     });
-    Kokkos::deep_copy(h_ratios, d_ratios);
-    map.device_to_host();
+
+    k_ratios.modify_device();
+    k_ratios.sync_host();
+
+    k_map.modify_device();
+    k_map.sync_host();
+
+    // nlocal_original-1 = index of last original particle
+
     int nlocal_original = nlocal;
     int i = 0;
+
     while (i < nlocal_original) {
-      auto ratio = h_ratios[map[i].i];
+
+      auto ratio = h_ratios[h_map[i].i];
+
+      // next particle will be an original particle
+      // skip it if no weight change
+
       if (ratio == 1.0) {
         i++;
-      } else if (ratio < 1.0) {
-        if (wrandom->uniform() > ratio) {
-          map[i] = map.back();
-          if (map.size() > nlocal_original) ++i;
-          else --nlocal_original;
-          map.pop_back();
-        } else {
-          ++i;
-        }
-      } else if (ratio > 1.0) {
-        int nclone = int(ratio);
-        double fraction = ratio - nclone;
-        --nclone;
-        if (wrandom->uniform() < fraction) ++nclone;
-        for (int m = 0; m < nclone; ++m) {
-          map.push_back(map[i]);
-          map.back().id = MAXSMALLINT * wrandom->uniform();
-        }
-        ++i;
+        continue;
       }
+
+      // ratio < 1.0 is candidate for deletion
+      // if deleted and particle that takes its place is cloned (Nloc > Norig)
+      //   then skip it via i++, else will examine it on next iteration
+
+      if (ratio < 1.0) {
+        if (wrandom->uniform() > ratio) {
+          h_map[i] = h_map[nlocal-1];
+          if (nlocal > nlocal_original) i++;
+          else nlocal_original--;
+          nlocal--;
+        } else i++;
+        continue;
+      }
+
+      // ratio > 1.0 is candidate for cloning
+      // create Nclone new particles each with unique ID
+
+      int nclone = static_cast<int>(ratio);
+      double fraction = ratio - nclone;
+      nclone--;
+      if (wrandom->uniform() < fraction) nclone++;
+
+      for (int m = 0; m < nclone; m++) {
+        if (k_map.extent(0) <= nlocal)
+          k_map.resize(k_map.extent(0)*1.5);
+
+        h_map[nlocal] = h_map[i];
+        h_map[nlocal-1].id = MAXSMALLINT*wrandom->uniform();
+        nlocal++;
+      }
+      i++;
     }
-    map.host_to_device();
-    nlocal = (int(map.size()));
+
+    k_map.modify_host();
+    k_map.sync_device();
+
     grow(0);
-    Kokkos::View<OnePart*> d_newparticles("post_weight:newparticles", maxlocal);
-    d_map = map.view_device();
+    t_particle_1d d_newparticles;
+    MemKK::realloc_kokkos(d_newparticles,"post_weight:newparticles", maxlocal);
+    d_map = k_map.view_device();
+
     Kokkos::parallel_for(nlocal, KOKKOS_LAMBDA(int i) {
       d_newparticles[i] = d_particles[d_map[i].i];
       d_newparticles[i].id = d_map[i].id;
     });
+
     Kokkos::deep_copy(k_particles.view_device(),d_newparticles);
     this->modify(Device,PARTICLE_MASK);
     d_particles = t_particle_1d();
-  }*/
+  }
 }
 
 /* ---------------------------------------------------------------------- */
@@ -595,10 +637,11 @@ void ParticleKokkos::grow(int nextra)
 
   maxlocal = newmax;
   if (particles == NULL)
-    k_particles = tdual_particle_1d("particle:particles",maxlocal);
+    MemKK::realloc_kokkos(k_particles,"particle:particles",maxlocal);
   else {
     this->sync(Device,PARTICLE_MASK); // force resize on device
-    k_particles.resize(maxlocal);
+    Kokkos::resize(Kokkos::view_alloc(Kokkos::WithoutInitializing),
+                   k_particles,maxlocal);
     this->modify(Device,PARTICLE_MASK); // needed for auto sync
   }
   d_particles = k_particles.view_device();
@@ -623,9 +666,10 @@ void ParticleKokkos::grow_species()
     Particle::grow_species();
   } else {
     if (species == NULL)
-      k_species = tdual_species_1d("particle:species",maxspecies);
+      MemKK::realloc_kokkos(k_species,"particle:species",maxspecies);
     else
-      k_species.resize(maxspecies);
+      Kokkos::resize(Kokkos::view_alloc(Kokkos::WithoutInitializing),
+                     k_species,maxspecies);
     species = k_species.view_host().data();
   }
 }

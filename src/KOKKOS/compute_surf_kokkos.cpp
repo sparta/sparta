@@ -48,6 +48,7 @@ ComputeSurfKokkos::ComputeSurfKokkos(SPARTA *sparta) :
   sr_kk_prob_copy{VAL_2(KKCopy<SurfReactProbKokkos>(sparta))}
 {
   copy = 1;
+  uncopy = 0;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -116,10 +117,12 @@ void ComputeSurfKokkos::clear()
   // reset all set surf2tally values to -1
   // called by Update at beginning of timesteps surf tallying is done
 
-  combined = 0;
   Kokkos::deep_copy(d_array_surf_tally,0);
 
   Kokkos::deep_copy(d_surf2tally,-1);
+
+  ntally = 0;
+  combined = 0;
 }
 
 /* ---------------------------------------------------------------------- */

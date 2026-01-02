@@ -27,7 +27,7 @@ void GridKokkos::update_hash()
 
   // Copy the keys:values from hash to Kokkos::UnorderedMap that lives on host
   host_hash_type hash_h(2*hash->size()); // double hash capacity to prevent insertion failure
-  hash_kk = hash_type(2*hash->size()); 
+  hash_kk = hash_type(2*hash->size());
   for (volatile auto it : *hash) { // volatile keyword works around a suspected compiler bug
     key_type key = static_cast<key_type>(it.first);
     value_type val = static_cast<value_type>(it.second);
