@@ -135,7 +135,10 @@ double CollideVSS::vremax_init(int igroup, int jgroup)
 
 double CollideVSS::attempt_collision(int icell, int np, double volume)
 {
-  double fnum = update->fnum;
+  double fnum;
+  if (stochastic_weight_flag) fnum = max_stochastic_weight*(1.0+pre_wtf*wtf);
+  else fnum = update->fnum;
+
   double dt = update->dt;
 
   double nattempt;
@@ -198,12 +201,23 @@ int CollideVSS::test_collision(int icell, int igroup, int jgroup,
   double vr2 = du*du + dv*dv + dw*dw;
   double vro  = pow(vr2,1.0-params[ispecies][jspecies].omega);
 
+  double ijsw = 1.0;
+  if (stochastic_weight_flag && index_stochastic_weight >= 0) {
+    double *stochastic_weights = particle->edvec[particle->ewhich[index_stochastic_weight]];
+    int i_index = ip - particle->particles;
+    int j_index = jp - particle->particles;
+    double isw = stochastic_weights[i_index]*update->fnum;
+    double jsw = stochastic_weights[j_index]*update->fnum;
+    ijsw = MAX(isw ,jsw)/max_stochastic_weight;
+  }
+
   // although the vremax is calculated for the group,
   // the individual collisions calculated species dependent vre
 
   double vre = vro*prefactor[ispecies][jspecies];
   vremax[icell][igroup][jgroup] = MAX(vre,vremax[icell][igroup][jgroup]);
-  if (vre/vremax[icell][igroup][jgroup] < random->uniform()) return 0;
+  if (1.0-params[ispecies][jspecies].omega < 1e-8) vre = vremax[icell][igroup][jgroup];
+  if (vre/vremax[icell][igroup][jgroup]*ijsw < random->uniform()) return 0;
   precoln.vr2 = vr2;
   return 1;
 }

@@ -33,7 +33,7 @@ enum{NUM,NRHO,NFRAC,MASS,MASSRHO,MASSFRAC,
 
 // internal accumulators
 
-enum{COUNT,MASSSUM,MVX,MVY,MVZ,MVXSQ,MVYSQ,MVZSQ,MVSQ,
+enum{COUNT,SIMCOUNT,MASSSUM,MVX,MVY,MVZ,MVXSQ,MVYSQ,MVZSQ,MVSQ,
      ENGROT,ENGVIB,DOFROT,DOFVIB,CELLCOUNT,CELLMASS,LASTSIZE};
 
 // max # of quantities to accumulate for any user value
@@ -71,7 +71,7 @@ ComputeGrid::ComputeGrid(SPARTA *sparta, int narg, char **arg) :
   while (iarg < narg) {
     if (strcmp(arg[iarg],"n") == 0) {
       value[ivalue] = NUM;
-      set_map(ivalue,COUNT);
+      set_map(ivalue,SIMCOUNT);
     } else if (strcmp(arg[iarg],"nrho") == 0) {
       value[ivalue] = NRHO;
       set_map(ivalue,COUNT);
@@ -237,6 +237,7 @@ void ComputeGrid::compute_per_grid()
   // perform all tallies needed for each particle
   // depends on its species group and the user-requested values
 
+  double swfrac = 1.0;
   for (i = 0; i < nlocal; i++) {
     ispecies = particles[i].ispecies;
     igroup = s2g[ispecies];
@@ -246,10 +247,13 @@ void ComputeGrid::compute_per_grid()
 
     mass = species[ispecies].mass;
     v = particles[i].v;
+    if (particle->weightflag) swfrac = particles[i].weight;
+
+    mass *= swfrac;
 
     vec = tally[icell];
     if (cellmass) vec[cellmass] += mass;
-    if (cellcount) vec[cellcount] += 1.0;
+    if (cellcount) vec[cellcount] += swfrac;
 
     // loop has all possible values particle needs to accumulate
     // subset defined by user values are indexed by accumulate vector
@@ -259,6 +263,9 @@ void ComputeGrid::compute_per_grid()
     for (m = 0; m < npergroup; m++) {
       switch (unique[m]) {
       case COUNT:
+        vec[k++] += swfrac;
+        break;
+      case SIMCOUNT:
         vec[k++] += 1.0;
         break;
       case MASSSUM:
@@ -283,19 +290,19 @@ void ComputeGrid::compute_per_grid()
         vec[k++] += mass*v[2]*v[2];
         break;
       case MVSQ:
-        vec[k++] += mass * (v[0]*v[0]+v[1]*v[1]+v[2]*v[2]);
+        vec[k++] += mass*(v[0]*v[0]+v[1]*v[1]+v[2]*v[2]);
         break;
       case ENGROT:
-        vec[k++] += particles[i].erot;
+        vec[k++] += particles[i].erot*swfrac;
         break;
       case ENGVIB:
-        vec[k++] += particles[i].evib;
+        vec[k++] += particles[i].evib*swfrac;
         break;
       case DOFROT:
-        vec[k++] += species[ispecies].rotdof;
+        vec[k++] += species[ispecies].rotdof*swfrac;
         break;
       case DOFVIB:
-        vec[k++] += species[ispecies].vibdof;
+        vec[k++] += species[ispecies].vibdof*swfrac;
         break;
       }
     }

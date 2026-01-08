@@ -91,6 +91,7 @@ void CreateParticles::command(int narg, char **arg)
   cutflag = 1;
   int globalflag = 0;
   twopass = 0;
+  bkw = 0;
   region = NULL;
   nrho_var_flag = temp_var_flag = vstream_var_flag = species_var_flag = 0;
   sstr = sxstr = systr = szstr = NULL;
@@ -209,6 +210,11 @@ void CreateParticles::command(int narg, char **arg)
       if (iarg+1 > narg) error->all(FLERR,"Illegal create_particles command");
       twopass = 1;
       iarg += 1;
+    } else if (strcmp(arg[iarg],"bkw") == 0) {
+      if (iarg+2 > narg) error->all(FLERR,"Illegal create_particles command");
+      bkw = 1;
+      beta0 = atof(arg[iarg+1]);
+      iarg += 2;
     } else error->all(FLERR,"Illegal create_particles command");
   }
 
@@ -785,9 +791,21 @@ void CreateParticles::create_local()
           vstream_update_custom = vstream_custom[icell];
         }
       } else {
-        v[0] = vstream[0] + vn*cos(theta1);
-        v[1] = vstream[1] + vr*cos(theta2);
-        v[2] = vstream[2] + vr*sin(theta2);
+        vn = vscale[isp] * sqrttempscale * sqrt(-log(random->uniform()));
+        vr = vscale[isp] * sqrttempscale * sqrt(-log(random->uniform()));
+        theta1 = MY_2PI * random->uniform();
+        theta2 = MY_2PI * random->uniform();
+
+        if (velflag) {
+          velocity_variable(x,vstream,vstream_variable);
+          v[0] = vstream_variable[0] + vn*cos(theta1);
+          v[1] = vstream_variable[1] + vr*cos(theta2);
+          v[2] = vstream_variable[2] + vr*sin(theta2);
+        } else {
+          v[0] = vstream[0] + vn*cos(theta1);
+          v[1] = vstream[1] + vr*cos(theta2);
+          v[2] = vstream[2] + vr*sin(theta2);
+        }
       }
 
       erot = particle->erot(ispecies,temp_rot*tempscale,random);

@@ -281,6 +281,8 @@ void ComputeTvibGrid::compute_per_grid()
   // mode = 0: tally vib eng and count for each species
   // mode >= 1: tally vib level and count for each species and each vib mode
 
+  double swfrac = 1.0;
+
   if (modeflag == 0) {
     for (i = 0; i < nlocal; i++) {
       ispecies = particles[i].ispecies;
@@ -290,9 +292,11 @@ void ComputeTvibGrid::compute_per_grid()
       icell = particles[i].icell;
       if (!(cinfo[icell].mask & groupbit)) continue;
 
+      if (particle->weightflag) swfrac = particles[i].weight;
+
       j = s2t[ispecies];
-      tally[icell][j] += particles[i].evib;
-      tally[icell][j+1] += 1.0;
+      tally[icell][j] += particles[i].evib * swfrac;
+      tally[icell][j+1] += swfrac;
     }
 
   } else if (modeflag >= 1) {
@@ -307,6 +311,8 @@ void ComputeTvibGrid::compute_per_grid()
       icell = particles[i].icell;
       if (!(cinfo[icell].mask & groupbit)) continue;
 
+      if (particle->weightflag) swfrac = particles[i].weight;
+
       // tally only the modes this species has
 
       nmode = particle->species[ispecies].nvibmode;
@@ -314,8 +320,8 @@ void ComputeTvibGrid::compute_per_grid()
         j = s2t_mode[ispecies][imode];
         if (nmode > 1) tally[icell][j] += vibmode[i][imode];
         else tally[icell][j] +=
-               particles[i].evib / (boltz*species[ispecies].vibtemp[0]);
-        tally[icell][j+1] += 1.0;
+               particles[i].evib * swfrac / (boltz*species[ispecies].vibtemp[0]);
+        tally[icell][j+1] += swfrac;
       }
     }
   }

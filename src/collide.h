@@ -132,6 +132,22 @@ class Collide : protected Pointers {
                          //   base class when child copy is destroyed)
   int kokkos_flag;        // 1 if collide method supports Kokkos
 
+  // stochastic weighted particle method
+  // if Ncmin > Ncmax, then particles always split
+  int stochastic_weight_flag;         // 1 if stochastic weighting option is enabled
+  int index_stochastic_weight;    // 1 custom for swpm
+  int Ncmin;            // minimum number of particles in cell to NOT split
+  int Ncmax;            // maximum number of particles in cell before reduce
+  int Ngmin;            // minimum number of particles in group to reduce
+  int Ngmax;            // maximum number of particles in group before reduce
+  double max_stochastic_weight;   // maximum particle weight in cell at time t
+  double wtf;           // weight transfer function
+  double pre_wtf;       // scale weight transfer function
+
+  int reduceflag;      // 1 if particles can reduce
+  int reduction_type;   // type of particle reduction to use
+  int group_type;       // type of grouping
+
   // inline functions
   // add particle N to Igroup and set its g2p entry in plist to K
   // delete Ith entry in Igroup and reset g2p entries as well
@@ -165,6 +181,7 @@ class Collide : protected Pointers {
   template < int,int > void collisions_group();
   template < int > void collisions_one_ambipolar();
   template < int > void collisions_group_ambipolar();
+  template < int, int > void collisions_one_stochastic_weighting();
 
   void ambi_reset(int, int, int, Particle::OnePart *, Particle::OnePart *,
                   Particle::OnePart *, int *);
@@ -172,11 +189,19 @@ class Collide : protected Pointers {
 
   void grow_percell(int);
 
+  // functions for nearest neighbor
+
   int find_nn(int, int);
   int find_nn_group(int, int *, int, int *, int *, int *, int *);
   void realloc_nn(int, int *&);
   void set_nn(int);
   void set_nn_group(int);
+
+  // functions for stochastic weighted particle method
+
+  void group();
+  void group_bt(int, int, int);
+  void group_octree(int, int, int);
 };
 
 }
