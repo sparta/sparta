@@ -35,10 +35,12 @@ compute 1 lambda/grid f_ave\[*\] f_ave\[3\] lambda knall :pre
 These commands will dump time averages for the mean free path and mean
 collision time for each grid cell to a dump file every 1000 steps:
 
-compute 1 grid all species nrho temp
+compute 1 grid all species nrho
+compute 2 grid all all temp
 fix 1 ave/grid all 10 100 1000 c_1\[*\]
-compute 2 lambda/grid f_1\[*\] f_1\[2\] lambda tau
-dump 1 grid all 1000 tmp.grid id c_2\[*\] :pre
+fix 2 ave/grid all 10 100 1000 c_2
+compute 3 lambda/grid f_1\[*\] f_2 lambda tau
+dump 1 grid all 1000 tmp.grid id c_3\[*\] :pre
 
 [Description:]
 
@@ -129,32 +131,23 @@ f_ID\[m\] = fix with ID that calculates a time-averaged temp for all particles a
 The {temp} argument can also be specified as NULL, which drops the
 (Tref/T) and (T/Tref) ratios from the two formulas above.
 
-NOTE for next paragraph: Is it correct that currently, this command
-requires that you use a compute grid nrho command which calculates
-nrho for every species in the system, not simply every species in a
-mixture that the user defines (used as an arg with the compute grid
-command) ?  And this is intentional (for accuracy), not a limitation
-of the current implementation?
-
 Note that because the MFP and MFT formulas require a number density
 nrho for all species in the system, you should use a "compute
-grid"_compute_grid.html command in this form:
+grid"_compute_grid.html command like this:
 
 compute 1 grid all species nrho :pre
 
-to reference by this command as c_ID\[*\].  Or similarly for a "fix
-ave/grid"_fix_ave_grid.html command that takes c_ID\[*\] as an
+which calculates per-species nrho values for each gird cell.  It can
+then be reference by this command as c_ID\[*\].  Or similarly for a
+"fix ave/grid"_fix_ave_grid.html command that takes c_ID\[*\] as an
 argument, which is then referenced by this command as f_ID\[*\].
-
-NOTE: check that this next paragraph is correct about the meaning of T
-in the 2 formulas.
 
 For the compute or fix referenced by the {temp} argument, this is
 meant in the two formulas to be the aggregate thermal temperature of
 all the particles in a grid cell.
 
-For systems with a zero of small streaming velocity, this can be calculated
-using this command:
+For systems with a zero of small streaming velocity, this can be
+calculated using a command like this:
 
 compute 2 grid all all temp :pre
 
