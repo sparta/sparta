@@ -84,6 +84,31 @@ def id2str(id):
     if i < len(id[1:])-1: string += "-"
   return string
 
+# convert ID list into SPARTA numeric ID
+# root is special case
+  
+def id2number(id):
+  if len(id) == 1: return 0
+  number = 0
+  for i,value in enumerate(id[1:]):
+    if i == 0:
+      number = value+1
+    elif i == 1:
+      number = ((value+1) << nbits_coarse) | number
+    else:
+      number = ((value+1) << (nbits_coarse + (i-1)*nbits_level)) | number;
+  return number
+
+# calculate # of bits needed to store values from 1 to N
+
+def id_bits(n):
+  nstore = 1
+  nbits = 1
+  while nstore < n:
+    nstore = 2*nstore + 1
+    nbits += 1
+  return nbits
+
 # distance between 2 pts
 
 def dist2d(p,q):
@@ -259,13 +284,19 @@ if dim == 3:
 # queue = list of parent cells to process, remove from front, add to end
 #   each entry: id (as list), bbox, surf-list of intersections, nny, nny, nnz
 #   compute new intersections from parent intersections
-# plist = SPARTA grid file format for saved parent cells
-# save no info for child cells, just count them
+# plist = list of parent cells
+#   each entry: id (as string), 3 refinement factors for its child cells
+# clist = list of child cell IDs
+# nlevels = largest level with child cells (<= user-specified maxlevel)
+      
+nbits_coarse = id_bits(nx*ny*nz)
+nbits_level = id_bits(mx*my*mz)
 
 bbox = (boxxlo,boxxhi,boxylo,boxyhi,boxzlo,boxzhi)
 queue = [([0],bbox,slist,nx,ny,nz)]
 plist = [(0,nx,ny,nz)]
-nchild = 0
+clist = []
+nlevels = 0
 
 while len(queue):
   parent = queue.pop(0)
@@ -303,15 +334,18 @@ while len(queue):
             for m in slistnew:
               if cellsize/sizes[m] > delta: flag = 1 
 
+        newid = id + [index]
+        nlevels = max(nlevels,len(id))
+        
         if flag:
-          newid = id + [index]
           if dim == 2:
             queue.append((newid,newbox,slistnew,mx,my,1))
             plist.append((id2str(newid),mx,my,1))
           if dim == 3:
             queue.append((newid,newbox,slistnew,mx,my,mz))
             plist.append((id2str(newid),mx,my,mz))
-        else: nchild += 1
+        else:
+          clist.append(id2number(newid))
         
         index += 1
 
@@ -320,21 +354,27 @@ while len(queue):
 print("writing grid file %s ..." % outfile)
 fp = open(outfile,"w")
 
-print("# SPARTA grid file produced by refine.py tool", file=fp)
+print("# SPARTA grid file produced by tools/grid_refine.py from surffile",
+        surffile, file=fp)
 print(file=fp)
-print("%d parents" % len(plist), file=fp)
-print(file=fp)
-print("Parents", file=fp)
+print("%d cells" % len(clist), file=fp)
+print("%d levels" % nlevels, file=fp)
+print("%d %d %d level-1" % (nx,ny,nz), file=fp)
+for i in range(nlevels-1):
+  print("%d %d %d level-%d" % (mx,my,mz,i+2), file=fp)
 print(file=fp)
 
-count = 0
-for parent in plist:
-  count += 1
-  print(count,parent[0],parent[1],parent[2],parent[3], file=fp)
+print("Cells", file=fp)
+print(file=fp)
+for i in range(len(clist)): print(clist[i], file=fp)
   
 fp.close()
 
 # final stats
 
+nbitsmax = nbits_coarse + (nlevels-1)*nbits_level
+
 print(len(plist),"parent cells")
-print(nchild,"child cells")
+print(len(clist),"child cells")
+print(nlevels,"levels")
+print(nbitsmax,"bits required for largest child cell ID")
