@@ -75,7 +75,10 @@ namespace MathExtra {
   inline void vecmat(const double *v, const double m[3][3], double *ans);
   inline void scalar_times3(const double f, double m[3][3]);
 
-  int mldivide3(const double mat[3][3], const double *vec, double *ans);
+  // this function is inline to work around a link error with some compilers
+
+  inline int mldivide3(const double mat[3][3], const double *vec, double *ans);
+
   int mldivide4(const double mat[4][4], const double *vec, double *ans);
 
   // quaternion operations

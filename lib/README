@@ -13,6 +13,9 @@ Each library directory contains a README with additional info about
 how to acquire and/or build the library.  This may require you to edit
 one of the provided Makefiles to make it suitable for your machine.
 
+To build the COUPLE package, please download LAMMPS into this folder.
+See the "fix lammps" doc page for more information.
+
 The libraries in this directory are the following:
 
 kokkos        Kokkos package for GPU and many-core acceleration
