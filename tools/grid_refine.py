@@ -3,7 +3,7 @@
 # Script:  grid_refine.py
 # Purpose: create a refined hierarchical grid around
 #          a SPARTA surf file, based on closeness to surf
-# Author:  Steve Plimpton (Sandia), sjplimp at sandia.gov
+# Author:  Steve Plimpton (Sandia), sjplimp at gmail.gov
 # Syntax:  grid_refine.py switch args ...
 #          -s surffile = SPARTA surf file (no default)
 #          -b xlo xhi ylo yhi zlo zhi = simulation box bounds
@@ -13,18 +13,18 @@
 #                        Nz set to 1 for 2d
 #          -m Mx My Mz = split cells into Mx by My x Mz (def = 2 2 2)
 #                        Mz set to 1 for 2d
-#          -x maxlevel = max # of splitting levels (def = 0)
+#          -x maxlevel = max # of splitting levels to allow (def = 0)
 #                        0 = no limit (determined by d)
-#                        1 = initial coarse grid, 2 = additional level, etc
+#                        1 = initial coarse grid, 2 = one additional level, etc
 #          -d delta = refine grid cells to this size ratio
 #                     relative to surf element size (def = 1)
 #                     d = 0, split if cell contains a surf, up to maxlevel
-#                     d = 1, grid cells will be same size
-#                            as any surf element they contain
-#                     d = 0.5, grid cells will be half the size
-#                              of any surf element they contain
-#                     d = 2, grid cells will be 2x the size
-#                            of any surf element they contain
+#                     d = 1, grid cells will be no larger than same size
+#                            of smallest surf element they contain
+#                     d = 0.5, grid cells will be no larger than half the size
+#                              of smallest surf element they contain
+#                     d = 2, grid cells will be no more than 2x the size
+#                            of smallest surf element they contain
 #          -f Fx Fy Fz = vector of flow direction (def = 0 0 0)
 #            if specified, only surfs with normal against flow are refined
 #          -o outfile = SPARTA grid file (def = gdata.tmp)
@@ -283,10 +283,10 @@ if dim == 3:
 # generate grid, one level at a time
 # queue = list of parent cells to process, remove from front, add to end
 #   each entry: id (as list), bbox, surf-list of intersections, nny, nny, nnz
-#   compute new intersections from parent intersections
-# plist = list of parent cells
-#   each entry: id (as string), 3 refinement factors for its child cells
-# clist = list of child cell IDs
+#   calculate each new child surf-list from parent surf-list
+# plist = list of parent cell IDs (as strings)
+#   only used to count parent cells at end
+# clist = list of child cell IDs (as numbers)
 # nlevels = largest level with child cells (<= user-specified maxlevel)
       
 nbits_coarse = id_bits(nx*ny*nz)
@@ -294,7 +294,7 @@ nbits_level = id_bits(mx*my*mz)
 
 bbox = (boxxlo,boxxhi,boxylo,boxyhi,boxzlo,boxzhi)
 queue = [([0],bbox,slist,nx,ny,nz)]
-plist = [(0,nx,ny,nz)]
+plist = [0]
 clist = []
 nlevels = 0
 
@@ -324,26 +324,24 @@ while len(queue):
         newbox = (xlo,xhi,ylo,yhi,zlo,zhi)
         slistnew = intersect(newbox,slist)
 
-        flag = 0
-        if slistnew:
-          if delta == 0.0:
-            if len(id) < maxlevel: flag = 1
+        adaptflag = 0
+        if slistnew and (maxlevel == 0 or len(id) < maxlevel):
+          if delta == 0.0: adaptflag = 1
           else:
             cellsize = min(xhi-xlo,yhi-ylo)
             if dim == 3: cellsize = min(cellsize,zhi-zlo)
             for m in slistnew:
-              if cellsize/sizes[m] > delta: flag = 1 
+              if cellsize/sizes[m] > delta: adaptflag = 1 
 
-        newid = id + [index]
         nlevels = max(nlevels,len(id))
-        
-        if flag:
+        newid = id + [index]
+
+        if adaptflag:
+          plist.append(id2str(newid))
           if dim == 2:
             queue.append((newid,newbox,slistnew,mx,my,1))
-            plist.append((id2str(newid),mx,my,1))
           if dim == 3:
             queue.append((newid,newbox,slistnew,mx,my,mz))
-            plist.append((id2str(newid),mx,my,mz))
         else:
           clist.append(id2number(newid))
         
