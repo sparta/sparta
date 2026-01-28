@@ -46,10 +46,12 @@ compute 1 lambda/grid f_ave[*] f_ave[3] lambda knall
 <P>These commands will dump time averages for the mean free path and mean
 collision time for each grid cell to a dump file every 1000 steps:
 </P>
-<PRE>compute 1 grid all species nrho temp
+<PRE>compute 1 grid all species nrho
+compute 2 grid all all temp
 fix 1 ave/grid all 10 100 1000 c_1[*]
-compute 2 lambda/grid f_1[*] f_1[2] lambda tau
-dump 1 grid all 1000 tmp.grid id c_2[*] 
+fix 2 ave/grid all 10 100 1000 c_2
+compute 3 lambda/grid f_1[*] f_2 lambda tau
+dump 1 grid all 1000 tmp.grid id c_3[*] 
 </PRE>
 <P><B>Description:</B>
 </P>
@@ -140,32 +142,23 @@ f_ID[m] = fix with ID that calculates a time-averaged temp for all particles as 
 <P>The <I>temp</I> argument can also be specified as NULL, which drops the
 (Tref/T) and (T/Tref) ratios from the two formulas above.
 </P>
-<P>NOTE for next paragraph: Is it correct that currently, this command
-requires that you use a compute grid nrho command which calculates
-nrho for every species in the system, not simply every species in a
-mixture that the user defines (used as an arg with the compute grid
-command) ?  And this is intentional (for accuracy), not a limitation
-of the current implementation?
-</P>
 <P>Note that because the MFP and MFT formulas require a number density
 nrho for all species in the system, you should use a <A HREF = "compute_grid.html">compute
-grid</A> command in this form:
+grid</A> command like this:
 </P>
 <PRE>compute 1 grid all species nrho 
 </PRE>
-<P>to reference by this command as c_ID[*].  Or similarly for a <A HREF = "fix_ave_grid.html">fix
-ave/grid</A> command that takes c_ID[*] as an
+<P>which calculates per-species nrho values for each gird cell.  It can
+then be reference by this command as c_ID[*].  Or similarly for a
+<A HREF = "fix_ave_grid.html">fix ave/grid</A> command that takes c_ID[*] as an
 argument, which is then referenced by this command as f_ID[*].
-</P>
-<P>NOTE: check that this next paragraph is correct about the meaning of T
-in the 2 formulas.
 </P>
 <P>For the compute or fix referenced by the <I>temp</I> argument, this is
 meant in the two formulas to be the aggregate thermal temperature of
 all the particles in a grid cell.
 </P>
-<P>For systems with a zero of small streaming velocity, this can be calculated
-using this command:
+<P>For systems with a zero of small streaming velocity, this can be
+calculated using a command like this:
 </P>
 <PRE>compute 2 grid all all temp 
 </PRE>
