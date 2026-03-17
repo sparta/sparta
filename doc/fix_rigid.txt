@@ -1,0 +1,78 @@
+"SPARTA WWW Site"_sws - "SPARTA Documentation"_sd - "SPARTA Commands"_sc :c
+
+:link(sws,https://sparta.github.io)
+:link(sd,Manual.html)
+:link(sc,Section_commands.html#comm)
+
+:line
+
+fix rigid command :h3
+
+[Syntax:]
+
+fix ID rigid group-ID masstotal xcm ycm zcm ixx iyy izz ixy ixz iyz vxcm vycm vzcm lx ly lz :pre
+
+ID is documented in "fix"_fix.html command :ulb,l
+rigid = style name of this fix command :l
+mastotal = total mass of rigid body (mass units) :l
+xcm,ycm,zcm = center-of-mass (COM) of rigid body (distance units) :l
+ixx,iyy,izz,ixy,ixz,iyz = 6 momemts of inertia of rigid body around
+COM (nass-distance^2 units) :l
+vxcm,vycm,vzcm = velocity of COM of rigid body (velocity units) :l
+lx,ly,lz = angular momentum vector for rotation of rigid body around its COM  (mass-distance^2/time units) :l
+:ule
+
+NOTE: add compute-ID for forces, torques
+NOTE: also add infile foo option to read these properties from a file
+NOTE: maybe add scale factor on mass to make it heavier
+
+[Examples:]
+
+fix 1 rigid spheroid ...
+
+[Description:]
+
+Define the initial properties of a group of surface elements which
+represent a single rigid object which can move as a rigid body within
+a flow of particles and interact with the particles each timestep, as
+explained below.
+
+Specify compute surf with same group-ID.  Will be queried every
+timestep.
+
+RB integration takes place at end of timestep.
+It will adjust the position of each tri and update XCM, VCM,
+orientation, ang mom.
+
+Point to Howto of rigid bodies.  In the howto explain
+how to define a push-off computation, or store custom surf with other
+needed info.
+
+:line
+
+[Restart, output info:]
+
+No information about this fix is written to "binary restart
+files"_restart.html.
+
+Writing out of a new rigid file with each restart so easy to restart
+
+This fix computes a global vector which can be accessed by various
+output commands at any timestep.  The vector size is 12 quantities, as follow:
+
+1,2,3 = xyz coords of the center of mass (COM) (distance units)
+4,5,6 = xyz components of the COM velocity (velocity units)
+7,8,9 = xyz components of the force acting on the COM (force units)
+10,11,12 = xyz components of the torque acting on the COM (force-distance units) :ul
+
+:line
+
+[Restrictions:] none
+
+[Related commands:]
+
+list other commands which are used with rigid bodies, e.g. compute
+surf or custom surf
+
+[Default:] none
+
