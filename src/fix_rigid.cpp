@@ -385,6 +385,8 @@ void FixRigid::end_of_step()
       //xnew[1] = x[1] = bboxlo[1] + rn * (bboxhi[1]-bboxlo[1]);
       // lower half
       xnew[1] = x[1] = bboxlo[1] + 0.5 * rn * (bboxhi[1]-bboxlo[1]);
+      // lower 10%
+      //xnew[1] = x[1] = bboxlo[1] + 0.1 * rn * (bboxhi[1]-bboxlo[1]);
       xnew[2] = x[2] = 0.0;
       
       // initial vel = +x
@@ -425,11 +427,9 @@ void FixRigid::end_of_step()
 	pforce[0] = pforce[1] = pforce[2] = 0.0;
         MathExtra::axpy3(pmass,vpre,pforce);
         MathExtra::axpy3(-pmass,vpost,pforce);
-	//fcm[0] += pforce[0];
-	//fcm[1] += pforce[1];
-	//fcm[2] += pforce[2];
-	printf("PFORCE %g %g %g VPOST %g %g %g\n",
-	       pforce[0],pforce[1],pforce[2],vpost[0],vpost[1],vpost[2]);
+	fcm[0] += pforce[0];
+	fcm[1] += pforce[1];
+	fcm[2] += pforce[2];
 	
 	MathExtra::sub3(minxc,xcm,rdelta);
         MathExtra::cross3(rdelta,pforce,tq);
@@ -588,6 +588,7 @@ void FixRigid::end_of_step()
     }
   }
 
+  /*
   printf("LINE1 pt1 %g %g pt2 %g %g NORM %g %g %g\n",
 	 lines[0].p1[0],lines[0].p1[1],
 	 lines[0].p2[0],lines[0].p2[1],
@@ -604,7 +605,8 @@ void FixRigid::end_of_step()
 	 lines[3].p1[0],lines[3].p1[1],
 	 lines[3].p2[0],lines[3].p2[1],
 	 lines[3].norm[0],lines[3].norm[1],lines[3].norm[2]);
-
+  */
+  
   printf("END %ld\n",update->ntimestep);
 }
 
