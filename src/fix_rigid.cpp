@@ -414,7 +414,6 @@ void FixRigid::end_of_step()
       }
 
       // add force/torque from collision
-      // NOTE: sign of force seems wrong !
       
       if (cflag) {
 	nhits++;
@@ -424,11 +423,11 @@ void FixRigid::end_of_step()
 	MathExtra::reflect3(vpost,lines[minsurf].norm);
 	
 	pforce[0] = pforce[1] = pforce[2] = 0.0;
-        MathExtra::axpy3(-pmass,vpre,pforce);
-        MathExtra::axpy3(pmass,vpost,pforce);
-	fcm[0] += pforce[0];
-	fcm[1] += pforce[1];
-	fcm[2] += pforce[2];
+        MathExtra::axpy3(pmass,vpre,pforce);
+        MathExtra::axpy3(-pmass,vpost,pforce);
+	//fcm[0] += pforce[0];
+	//fcm[1] += pforce[1];
+	//fcm[2] += pforce[2];
 	printf("PFORCE %g %g %g VPOST %g %g %g\n",
 	       pforce[0],pforce[1],pforce[2],vpost[0],vpost[1],vpost[2]);
 	
@@ -492,7 +491,7 @@ void FixRigid::end_of_step()
 	MathExtra::reflect3(vpost,tris[minsurf].norm);
 
 	pforce[0] = pforce[1] = pforce[2] = 0.0;
-        MathExtra::axpy3(-pmass,vpre,pforce);
+        MathExtra::axpy3(pmass,vpre,pforce);
         MathExtra::axpy3(-pmass,vpost,pforce);
 	fcm[0] += pforce[0];
 	fcm[1] += pforce[1];
