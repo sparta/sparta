@@ -32,6 +32,7 @@ fft = 2d and 3d FFTs of energy spectrum of a flow
 flowfile = particle influx defined by a file of mesh points
 free = free molecular motion in a 3d box
 python = use of Python in input script
+rigid = use of a rigid-body surface object
 sphere = 3d flow around a sphere
 spiky = 2d flow around a spiky circle
 step = 2d flow around a staircase of steps
