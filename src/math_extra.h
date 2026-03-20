@@ -80,9 +80,19 @@ namespace MathExtra {
 
   // quaternion operations
 
+  inline void qnormalize(double *q);
+  inline void vecquat(double *a, double *b, double *c);
+
   inline void axisangle_to_quat(const double *v, const double angle,
                                 double *quat);
   inline void quat_to_mat(const double *quat, double mat[3][3]);
+
+  void richardson(double *q, double *m, double *w, double *moments, double dtq);
+
+  void angmom_to_omega(double *m, double *ex, double *ey, double *ez, double *idiag, double *w);
+  void mq_to_omega(double *m, double *q, double *moments, double *w);
+  void exyz_to_q(double *ex, double *ey, double *ez, double *q);
+  void q_to_exyz(double *q, double *ex, double *ey, double *ez);
 
   // misc methods
 
@@ -478,6 +488,31 @@ void MathExtra::scalar_times3(const double f, double m[3][3])
   m[0][0] *= f; m[0][1] *= f; m[0][2] *= f;
   m[1][0] *= f; m[1][1] *= f; m[1][2] *= f;
   m[2][0] *= f; m[2][1] *= f; m[2][2] *= f;
+}
+
+/* ----------------------------------------------------------------------
+   normalize a quaternion
+------------------------------------------------------------------------- */
+
+inline void MathExtra::qnormalize(double *q)
+{
+  double norm = 1.0 / sqrt(q[0] * q[0] + q[1] * q[1] + q[2] * q[2] + q[3] * q[3]);
+  q[0] *= norm;
+  q[1] *= norm;
+  q[2] *= norm;
+  q[3] *= norm;
+}
+
+/* ----------------------------------------------------------------------
+   vector-quaternion multiply: c = a*b, where a = (0,a)
+------------------------------------------------------------------------- */
+
+inline void MathExtra::vecquat(double *a, double *b, double *c)
+{
+  c[0] = -a[0] * b[1] - a[1] * b[2] - a[2] * b[3];
+  c[1] = b[0] * a[0] + a[1] * b[3] - a[2] * b[2];
+  c[2] = b[0] * a[1] + a[2] * b[1] - a[0] * b[3];
+  c[3] = b[0] * a[2] + a[0] * b[2] - a[1] * b[1];
 }
 
 /* ----------------------------------------------------------------------

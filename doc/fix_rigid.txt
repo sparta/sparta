@@ -10,21 +10,44 @@ fix rigid command :h3
 
 [Syntax:]
 
-fix ID rigid group-ID masstotal xcm ycm zcm ixx iyy izz ixy ixz iyz vxcm vycm vzcm lx ly lz :pre
+fix ID rigid group-ID compute-ID define args keyword value ...
+
+masstotal xcm ycm zcm ixx iyy izz ixy ixz iyz vxcm vycm vzcm lx ly lz :pre
 
 ID is documented in "fix"_fix.html command :ulb,l
 rigid = style name of this fix command :l
-mastotal = total mass of rigid body (mass units) :l
-xcm,ycm,zcm = center-of-mass (COM) of rigid body (distance units) :l
-ixx,iyy,izz,ixy,ixz,iyz = 6 momemts of inertia of rigid body around
+group-ID = ID of surface group ID containing surf elements which comprise the rigid body :l
+compute-ID = ID of "compute surf"_compute_surf.html command for force/torque calculation on rigid body :l
+define = {body} or {infile}, followed by args :l
+   (infile} args = filename
+    filename - name of file containing rigid body values on a single line
+  {body} args = several keyword/values pairs, all keywords must appear, in any order
+    keyword = {com} and {mass} and {moi} and {vcom} and {angmom}
+      {com} values = xcm ycm zcm
+        xcm,ycm,zcm = center-of-mass (COM) of rigid body (distance units)
+      {mass} value = mtotal
+        mtotal = = total mass of rigid body (mass units)
+      [moi} values = ixx iyy izz ixy ixz iyz
+
+
+
+vcom vxcm,vycm,vzcm angmom lx,ly,lz
+        
+com xcm ycm zcm mass masstotal moi
+  
+ masstotal xcm ycm zcm ixx iyy izz
+= 6 momeats of inertia of rigid body around
 COM (nass-distance^2 units) :l
 vxcm,vycm,vzcm = velocity of COM of rigid body (velocity units) :l
-lx,ly,lz = angular momentum vector for rotation of rigid body around its COM  (mass-distance^2/time units) :l
+lx,ly,lz = angular momentum vector for rotation of rigid body around
+its COM  (mass-distance^2/time units) :l
+zero or more optional keyword/value pairs :l
+  keyword = {scale}
+     {scale} value = factor
+       factor = multiply all body values which depend on mass by this factor :pre
 :ule
 
-NOTE: add compute-ID for forces, torques
-NOTE: also add infile foo option to read these properties from a file
-NOTE: maybe add scale factor on mass to make it heavier
+NOTE: allow for compute ID to be tallied for some number of steps ?
 
 [Examples:]
 

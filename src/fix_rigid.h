@@ -31,12 +31,46 @@ class FixRigid : public Fix {
   virtual ~FixRigid() {}
   int setmask();
   void init();
-  void setup();
   virtual void start_of_step();
   virtual void end_of_step();
   double compute_vector(int);
 
  protected:
+  int igroup,groupbit;
+  char *csurfID;
+  int icompute;
+  class Compute *csurf;
+  char *infile;
+
+  int nsurf;
+  int *slist;
+  
+  int dim;
+  int massflag,comflag,vcomflag,moiflag,angmomflag;
+
+  int nparticleflag,pmassflag;
+  int nparticle_user;
+  double pmass_user;
+  
+  double ixx,iyy,izz,ixy,ixz,iyz;
+  
+  double massbody;
+  double xcm[3],vcm[3];
+  double inertia[3];
+  double angmom[3];
+  double quat[4];
+  double ex_space[3],ey_space[3],ez_space[3];
+  double fcm[3];
+  double torque[3];
+  double omega[3];
+
+  double xcmnew[3];
+  double quatnew[4];
+
+  double ***displace;
+  
+  void read_infile(char *);
+  void setup_body();
 };
 
 }
