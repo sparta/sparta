@@ -509,7 +509,9 @@ void FixRigid::end_of_step()
   printf("F/T %ld hits %d\n",update->ntimestep,nhits);
   printf("FCM %g %g %g\n",fcm[0],fcm[1],fcm[2]);
   printf("TQ %g %g %g\n",torque[0],torque[1],torque[2]);
-    
+
+  // END of DEBUG
+  
   // reset xcm/quat to new xcm/quat from start_of_step()
 
   xcm[0] = xcmnew[0];
