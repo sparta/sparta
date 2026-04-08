@@ -76,7 +76,7 @@ class ComputeTvibGridKokkos : public ComputeTvibGrid, public KokkosBase {
   DAT::t_int_2d d_s2g;
 
   DAT::t_int_1d d_cellcount;
-  DAT::t_int_2d d_plist;
+  DAT::t_int_2d_lr d_plist;
 
   DAT::t_float_1d d_tspecies;
   DAT::t_float_2d_lr d_tspecies_mode;

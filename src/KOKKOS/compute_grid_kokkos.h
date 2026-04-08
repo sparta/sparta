@@ -116,7 +116,7 @@ class ComputeGridKokkos : public ComputeGrid, public KokkosBase {
   DAT::t_int_2d d_s2g;
 
   DAT::t_int_1d d_cellcount;
-  DAT::t_int_2d d_plist;
+  DAT::t_int_2d_lr d_plist;
 
   DAT::tdual_int_1d k_unique;
   DAT::t_int_1d d_unique;
