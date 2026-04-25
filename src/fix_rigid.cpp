@@ -178,7 +178,7 @@ int FixRigid::setmask()
 void FixRigid::init()
 {
   // check that specified compute is valid for use with fix rigid
-  // NOTE: how to check it operates on same surf group ?
+  // NOTE: check that it operates on same surf group ?
   
   int n = modify->find_compute(csurfID);
   if (n < 0) error->all(FLERR,"Could not find fix rigid compute ID");
@@ -198,7 +198,8 @@ void FixRigid::start_of_step()
   // TODO:
   // update RB props
   // change COM within compute surf - note that COM is not constant thru step
-  // remap RB surfs to grid cells they cover during advection
+  //   maybe should set COM in compute_surf to half-step position?
+  // remap RB surfs to grid cells they ovlerlap at any point during advection
 
   // time integrate from current position to end-of-step position
   // use full-step semi-implicit Euler algorithm
@@ -254,7 +255,7 @@ void FixRigid::start_of_step()
 void FixRigid::end_of_step()
 {
   // invoke compute surf and extract per-surf force/torque info
-  // NOTE: could this access a fix ave/surf for many steps of collisions ?
+  // NOTE: this could access fix ave/surf for f/t from many steps of collisions ?
 
   /*
   if (!(csurf->invoked_flag & INVOKED_PER_SURF)) {
@@ -350,7 +351,7 @@ void FixRigid::end_of_step()
 
   // expand bbox by one percent in all dims
 
-    printf("BBOX x %g %g y %g %g z %g %g\n",
+  printf("BBOX x %g %g y %g %g z %g %g\n",
 	 bboxlo[0],bboxhi[0],
 	 bboxlo[1],bboxhi[1],
 	 bboxlo[2],bboxhi[2]);
@@ -512,7 +513,7 @@ void FixRigid::end_of_step()
 
   // END of DEBUG
   
-  // reset xcm/quat to new xcm/quat from start_of_step()
+  // reset xcm/quat to new xcm/quat calculated in start_of_step()
 
   xcm[0] = xcmnew[0];
   xcm[1] = xcmnew[1];
@@ -543,7 +544,8 @@ void FixRigid::end_of_step()
   printf("ANG %g %g %g\n",angmom[0],angmom[1],angmom[2]);
   printf("OMG %g %g %g\n",omega[0],omega[1],omega[2]);
 
-  // update body line and tri positions and orientations in Surf class
+  // update Surf class properties of lines and tris in body
+  // line and tri positions and orientations
   // set via Line/Tri end/corner points and norm
   // matvec() converts displace vector from body frame to space frame
   
@@ -713,7 +715,8 @@ void FixRigid::setup_body()
   // store displacement of each end/corner point in each line/tri in body
   // delta = vector from COM to end/corner point
   // displace = delta rotated to be in basis of principal axes
-
+  // so displace is stored as vector in body frame
+  
   double delta[3];
   int index;
   

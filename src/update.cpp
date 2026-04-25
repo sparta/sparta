@@ -358,6 +358,7 @@ void Update::run(int nsteps)
    advect particles thru grid
    DIM = 2/3 for 2d/3d, 1 for 2d axisymmetric
    SURF = 0/1 for no surfs or surfs
+   OPT = 0/1 for no optimized move or optimized (uniform grid, no surfs)
    use multiple iterations of move/comm if necessary
 ------------------------------------------------------------------------- */
 
@@ -570,7 +571,8 @@ template < int DIM, int SURF, int OPT > void Update::move()
       stuck_iterate = 0;
       ntouch_one++;
 
-      // advect one particle from cell to cell and thru surf collides til done
+      // advect one particle from cell to cell until done
+      // also detect any collisions with surfs in each cell
 
       //int iterate = 0;
 
