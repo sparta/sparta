@@ -1,0 +1,197 @@
+<HTML>
+<CENTER><A HREF = "https://sparta.github.io">SPARTA WWW Site</A> - <A HREF = "Manual.html">SPARTA Documentation</A> - <A HREF = "Section_commands.html#comm">SPARTA Commands</A> 
+</CENTER>
+
+
+
+
+
+
+<HR>
+
+<H3>fix rigid command 
+</H3>
+<P><B>Syntax:</B>
+</P>
+<UL><LI>fix ID rigid group-ID compute-ID dstyle args keyword value ...
+ID is documented in <A HREF = "fix.html">fix</A> command 
+
+<LI>rigid = style name of this fix command 
+
+<LI>group-ID = ID of surface group ID containing surf elements which comprise the rigid body 
+
+<LI>compute-ID = ID of <A HREF = "compute_surf.html">compute surf</A> command for force/torque calculation on rigid body 
+
+<LI>dstyle = <I>body</I> or <I>infile</I>, followed by args 
+
+<PRE>  <I>body</I> args = several keyword/values pairs, all keywords must appear, in any order
+    keyword = <I>com</I> and <I>mass</I> and <I>moi</I> and <I>vcom</I> and <I>angmom</I>
+      <I>mass</I> value = mtotal
+        mtotal = = total mass of rigid body (mass units)
+      <I>com</I> values = xcm ycm zcm
+        xcm,ycm,zcm = center-of-mass (COM) of rigid body (distance units)
+      <I>moi</I> values = ixx iyy izz ixy ixz iyz
+        ixx,iyy,izz = 3 diagonal values of symmetric inertia tensor in space frame
+	ixy,ixz,iyz = 3 off-diagonal values of symmetric tensor in space frame  (all 6 in mass-distance^2 units)
+      <I>vcom</I> values = vxcm vycm vzcm
+        vxcm,vycm,vzcm = COM velocity of rigid body (velocity units)
+      <I>angmom</I> values = lx ly lz
+        lx, ly, lz = angular momentum of rigid body in space frame (mass-distance^2/time units) 
+</PRE>
+<LI>   (infile</I> args = filename
+    filename - name of file containing all rigid body attributes on a single line
+zero or more optional keyword/value pairs 
+
+<PRE>  keyword = <I>scale</I> or <I>pseudo</I>
+     <I>scale</I> value = factor
+       factor = multiply all mass-dependent body values by this factor
+     <I>pseudo</I> values = Np pmass frac
+       Np = # number of pseudo particles to bounce off object each timestep
+       pmass = mass of each pseudo particle
+       frac = fraction of object bouding box to aim at (0.1 = bottom 10%, 1.0 = entire bounding box) 
+</PRE>
+
+</UL>
+<P><B>Examples:</B>
+</P>
+<PRE>compte csurf surf all all fx fy fz tx ty tz com 5 5 0
+fix 1 rigid all 1 rigid all csurf body mass 1.0 com 5 5 0 vcom 0 0 0 moi 1 1 2 -1 0 0 angmom 0 0 0
+fix 1 rigid all 1 rigid all csurf infile square.rigid pseudo 1 1000.0 0.5 
+</PRE>
+<P><B>Description:</B>
+</P>
+<P>Define the initial properties of a group of surface elements which
+represent a single rigid object which moves as a rigid body.  This
+means it can be embedded within a flow of particles and interact with
+the particles each timestep, as explained below.
+</P>
+<P>Group-ID is the ID of the group of surface elements (lines or tris)
+which comprise the rigid body object.  Explain the collection of surfs
+needs to be a closed object.  Does SPRATA check for this ?
+</P>
+<P>Compute-Id is the ID of a compute surf command which calculates the
+force and torque on individual surface elements due to collisions with
+particles.  It should produce 6 columns of per-surf values as a
+per-surf arrary.  To compute torque it also needs the center-of-mass
+(COM) of the rigid body, which should be consistent with the COM
+specified by this command.  See the above example.
+</P>
+<P>The parameters of the rigid body can be specifiied in one of two ways
+via the <I>dstyle</I> setting: <I>body</I> or <I>infile</I>.  Note that all these
+parameters are specified in the coordinate frame of the simulation
+box, also called the "space" frame.  See the discussion below of
+"space" versus "body" frame for rigid bodies.
+</P>
+<P>The <I>body</I> style allows the 5 parameters to be specified directly in
+the input script.  The 5 are specified as arguments <I>com</I>, <I>mass</I>, <I>moi</I>,
+<I>vcom</I>, <I>angmom</I>, each of which is followed by one or more values.
+The 5 arguments can be specified in any order.
+</P>
+<P>The <I>mass</I> argument provides one value, the total mass of the rigid
+body.
+</P>
+<P>The <I>com</I> argument provides 3 values for the center-of-mass (COM)
+coordinates of the rigid body.  For 2d systems, zcm must be zero.
+</P>
+<P>The <I>moi</I> argument provides six values which are the moments of
+inertia of the rigid body in its current configuration (read from a
+surface data file via the <A HREF = "read_surf.html">read_surf</A> command).  These
+are the matrix elements of a 3x3 symmetric interia tensor in the space
+frame of the rigid body (not the body frame).  For 2d systems, the ixz
+and iyz components must be zero.
+</P>
+<P>The <I>vcom</I> argument provides 3 values for the COM velocity of the
+rigid body.  For 2d systems, vzcm must be zero.
+</P>
+<P>The <I>angmom</I> argument provides 3 values for the angular moment of the
+rigid body.  For 2d systems, lx and ly must be zero.
+</P>
+<P>The <I>infile</I> style allows the same 5 parameters to be read from a
+specified <I>filename</I>.  The format of the file is as follows.  It can
+contain initial blank lines or comment lines starting with "#" which
+are ignored.  The first non-blank, non-comment line should list the
+following 16 parameters in the order listed.
+</P>
+<PRE>mtotal xcm ycm zcm ixx iyy izz ixy ixz iyz vxcm vycm vzcm lx ly lz 
+</PRE>
+<P>Note that these are the same 5 paramters, each with their respective
+values, as those specified directly in the input script by the <I>mass</I>,
+<I>com</I>, <I>moi</I>, <I>vcom</I>, and <I>angmom</I> keywords.  The meaning of the
+parameters and values is the same for both choices of <I>dstyle</I>.
+</P>
+<P>NOTE: still to add:
+</P>
+<P>Give the formulas for the 6 MOI components.
+</P>
+<P>SPARTA diagnolizes the inertia tensor to compute the 3 values and
+the prinicpal axes of the body in the body frame.
+</P>
+<P>Explain that the inertial tensor is diagonal (just 3 values) in the
+body frame.
+</P>
+<P>Internally, SPARTA will convert
+some of them to "body" frame parameters, so that they are indpendent
+of the orientiation of the body as it rotates.
+</P>
+<P>Use of restart file for continued simulations with rigid bodies.
+</P>
+<P>Other topics to cover.
+</P>
+<P>What occurs at start of step: time integration.  Calc final position
+of tri and end of this step, so can be used for collision detection.
+</P>
+<P>Explain how collision detection works, what approximations are used.
+any.  One is that force/torque from collisions are applied on the next
+step.  I.e. in this step, the motion of the surf is proscribed,
+collisions do not affect it.
+</P>
+<P>Explain semi-implit Euler alg used to time integrate rigid body
+motion.
+</P>
+<P>What occurs at end of step: summing of forces/torques to apply at
+start of next step.  Triangle vertices are updated.  Triangles are
+remapped to grid cells.  Push-off forces from too-close other tris.
+</P>
+<P>Is there a custom per-surf vector created by this command ?
+To flag moving surfs ?
+</P>
+<HR>
+
+<P><B>Restart, output info:</B>
+</P>
+<P>No information about this fix is written to <A HREF = "restart.html">binary restart
+files</A>.  Could write out the rigid body params so
+that the simulation can be restarted.
+</P>
+<P>Or could write out of a new rigid "outfile" with each restart so it
+can be read as an "infile" on the restarted run.
+</P>
+<P>This fix computes a global vector which can be accessed by various
+output commands at any timestep.  The vector size is 12 quantities, as follow:
+</P>
+<UL><LI>1,2,3 = xyz coords of the center of mass (COM) (distance units)
+<LI>4,5,6 = xyz components of the COM velocity (velocity units)
+<LI>7,8,9 = xyz components of the force acting on the COM (force units)
+<LI>10,11,12 = xyz components of the torque acting on the COM (force-distance units) 
+</UL>
+<P>NOTE: are these in the space frame for current orientation of the
+rigid body ?  What about output of the quat ?
+</P>
+<HR>
+
+<P><B>Restrictions:</B>
+</P>
+<P>There can only be a single rigid body in the simulation.  Does SPARTA
+check for this ?
+</P>
+<P>Moving surfs can only be used with explicit, non-distributed surface
+elements.  See Howto section on this.
+</P>
+<P><B>Related commands:</B>
+</P>
+<P>List other commands which are used with rigid bodies, e.g. compute
+surf or custom surf
+</P>
+<P><B>Default:</B> none
+</P>
+</HTML>

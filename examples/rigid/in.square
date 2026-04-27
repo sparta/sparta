@@ -18,11 +18,11 @@ timestep 	    0.0001
 compute      csurf surf all all fx fy fz tx ty tz com 5 5 0
 
 fix		    1 rigid all csurf body &
-		    mass 1.0 com 5 5 0 vcom 0 0 0 moi 1 1 2 -1 0 0 &
-		    angmom 0 0 0 pmass 1000.0 nparticle 1
+		    mass 1.0 com 5 5 0 vcom 0 0 0 moi 1 1 2 -1 0 0 angmom 0 0 0 &
+		    pseudo 10 100.0 0.2
 
 #fix		    1 rigid all csurf infile square.rigid &
-#		    pmass 1000.0 nparticle 1
+#		    pseudo 10 100.0 0.2
 
 dump                2 image all 10 image.*.ppm type type pdiam 0.1 &
                     surf proc 0.01 size 512 512 zoom 1.75 &

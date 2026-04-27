@@ -1859,7 +1859,7 @@ etc.
 
 6.20 Rigid body surface objects in SPARTA :link(howto_20),h4
 
-Overview of why use this reature
+Overview of why use this feature
 
 fix rigid
 compute surf

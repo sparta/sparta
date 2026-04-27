@@ -126,25 +126,21 @@ FixRigid::FixRigid(SPARTA *sparta, int narg, char **arg) :
     read_infile(infile);
     iarg += 2;
     
-  } else error->all(FLERR,"Fix rigid define not recognized");
+  } else error->all(FLERR,"Fix rigid define style not recognized");
 
   // optional args
-  
-  nparticleflag = 0;
-  pmassflag = 0;
+
+  pseudoflag = 0;
   double scale = 1.0;
   
   while (iarg < narg) {
-    if (strcmp(arg[iarg],"nparticle") == 0) {
-      if (iarg+2 > narg) error->all(FLERR,"Fix rigid body args not valid");
-      nparticleflag = 1;
+    if (strcmp(arg[iarg],"pseudo") == 0) {
+      if (iarg+4 > narg) error->all(FLERR,"Fix rigid body args not valid");
+      pseudoflag = 1;
       nparticle_user = input->inumeric(FLERR,arg[iarg+1]);
-      iarg += 2;
-    } else if (strcmp(arg[iarg],"pmass") == 0) {
-      if (iarg+2 > narg) error->all(FLERR,"Fix rigid body args not valid");
-      pmassflag = 1;
-      pmass_user = input->numeric(FLERR,arg[iarg+1]);
-      iarg += 2;
+      pmass_user = input->numeric(FLERR,arg[iarg+2]);
+      frac_user = input->numeric(FLERR,arg[iarg+3]);
+      iarg += 4;
     } else if (strcmp(arg[iarg],"scale") == 0) {
       if (iarg+2 > narg) error->all(FLERR,"Fix rigid body args not valid");
       scale = input->numeric(FLERR,arg[iarg+1]);
@@ -273,261 +269,245 @@ void FixRigid::end_of_step()
   // invoke compute surf and extract per-surf force/torque info
   // NOTE: this could access fix ave/surf for f/t from many steps of collisions ?
 
-  /*
-  if (!(csurf->invoked_flag & INVOKED_PER_SURF)) {
-    csurf->compute_per_surf();
-    csurf->invoked_flag |= INVOKED_PER_SURF;
+  if (!pseudoflag) {
+    
+    if (!(csurf->invoked_flag & INVOKED_PER_SURF)) {
+      csurf->compute_per_surf();
+      csurf->invoked_flag |= INVOKED_PER_SURF;
+    }
+
+    csurf->post_process_surf();
+    double **array = csurf->array_surf;
+
+    // sum per-surf force/torque to body fcm/torque
+    
+    fcm[0] = fcm[1] = fcm[2] = 0.0;
+    torque[0] = torque[1] = torque[2] = 0.0;
+    
+    int index;
+    
+    for (int i = 0; i < nsurf; i++) {
+      index = slist[i];
+      fcm[0] += array[index][0];
+      fcm[1] += array[index][1];
+      fcm[2] += array[index][2];
+      torque[0] += array[index][3];
+      torque[1] += array[index][4];
+      torque[2] += array[index][5];
+    }
   }
 
-  csurf->post_process_surf();
-  double **array = csurf->array_surf;
-
-  // sum per-surf force/torque to body fcm/torque
-
-  fcm[0] = fcm[1] = fcm[2] = 0.0;
-  torque[0] = torque[1] = torque[2] = 0.0;
-
-  int index;
-  
-  for (int i = 0; i < nsurf; i++) {
-    index = slist[i];
-    fcm[0] += array[index][0];
-    fcm[1] += array[index][1];
-    fcm[2] += array[index][2];
-    torque[0] += array[index][3];
-    torque[1] += array[index][4];
-    torque[2] += array[index][5];
-  }
-  */
-
-  // DEBUG: bounce N fictitious particles off object, see how it moves
+  // bounce N pseudo (fictitious) particles off object, see how it moves
   // bbox = epsilon-augmented bbox around current object
   // shoot N particles from random positions from left face to right face of bbox
   // whichever surf it hits first, compute force/torque on object
 
-  int nparticle = 10;
-  double pmass = 1.0;
-
-  if (nparticleflag) nparticle = nparticle_user;
-  if (pmassflag) pmass = pmass_user;
-
-  RanKnuth *random = new RanKnuth(update->ranmaster->uniform());
-
-  Surf::Line *lines = surf->lines;
-  Surf::Tri *tris = surf->tris;
-  Surf::Line *line;
-  Surf::Tri *tri;
-  
-  int index;
-
-  double bboxlo[3],bboxhi[3];
-
-  if (dim == 2) {
-    bboxlo[0] = bboxlo[1] = 1.e20;
-    bboxhi[0] = bboxhi[1] = -1.e20;
-
-    for (int i = 0; i < nsurf; i++) {
-      index = slist[i];
-      bboxlo[0] = MIN(bboxlo[0],lines[index].p1[0]);
-      bboxlo[0] = MIN(bboxlo[0],lines[index].p2[0]);
-      bboxhi[0] = MAX(bboxhi[0],lines[index].p1[0]);
-      bboxhi[0] = MAX(bboxhi[0],lines[index].p2[0]);
-      bboxlo[1] = MIN(bboxlo[1],lines[index].p1[1]);
-      bboxlo[1] = MIN(bboxlo[1],lines[index].p2[1]);
-      bboxhi[1] = MAX(bboxhi[1],lines[index].p1[1]);
-      bboxhi[1] = MAX(bboxhi[1],lines[index].p2[1]);
-      bboxlo[2] = bboxhi[2] = 0.0;
-    }
-  } else if (dim == 3) {
-    bboxlo[0] = bboxlo[1] = bboxlo[2] = 1.e20;
-    bboxhi[0] = bboxhi[1] = bboxhi[2] = -1.e20;
+  if (pseudoflag) {
     
-    for (int i = 0; i < nsurf; i++) {
-      index = slist[i];
-      bboxlo[0] = MIN(bboxlo[0],tris[index].p1[0]);
-      bboxlo[0] = MIN(bboxlo[0],tris[index].p2[0]);
-      bboxlo[0] = MIN(bboxlo[0],tris[index].p3[0]);
-      bboxhi[0] = MAX(bboxhi[0],tris[index].p1[0]);
-      bboxhi[0] = MAX(bboxhi[0],tris[index].p2[0]);
-      bboxhi[0] = MAX(bboxhi[0],tris[index].p3[0]);
-      bboxlo[1] = MIN(bboxlo[1],tris[index].p1[1]);
-      bboxlo[1] = MIN(bboxlo[1],tris[index].p2[1]);
-      bboxlo[1] = MIN(bboxlo[1],tris[index].p3[1]);
-      bboxhi[1] = MAX(bboxhi[1],tris[index].p1[1]);
-      bboxhi[1] = MAX(bboxhi[1],tris[index].p2[1]);
-      bboxhi[1] = MAX(bboxhi[1],tris[index].p3[1]);
-      bboxlo[2] = MIN(bboxlo[2],tris[index].p1[2]);
-      bboxlo[2] = MIN(bboxlo[2],tris[index].p2[2]);
-      bboxlo[2] = MIN(bboxlo[2],tris[index].p3[2]);
-      bboxhi[2] = MAX(bboxhi[2],tris[index].p1[2]);
-      bboxhi[2] = MAX(bboxhi[2],tris[index].p2[2]);
-      bboxhi[2] = MAX(bboxhi[2],tris[index].p3[2]);
-    }
-  }
+    RanKnuth *random = new RanKnuth(update->ranmaster->uniform());
 
-  // expand bbox by one percent in all dims
-
-  printf("BBOX x %g %g y %g %g z %g %g\n",
-	 bboxlo[0],bboxhi[0],
-	 bboxlo[1],bboxhi[1],
-	 bboxlo[2],bboxhi[2]);
-
-  bboxlo[0] -= 0.01 * (bboxhi[0]-bboxlo[0]);
-  bboxlo[1] -= 0.01 * (bboxhi[1]-bboxlo[1]);
-  bboxlo[2] -= 0.01 * (bboxhi[2]-bboxlo[2]);
-  bboxhi[0] += 0.01 * (bboxhi[0]-bboxlo[0]);
-  bboxhi[1] += 0.01 * (bboxhi[1]-bboxlo[1]);
-  bboxhi[2] += 0.01 * (bboxhi[2]-bboxlo[2]);
-
-  printf("BBOX x %g %g y %g %g z %g %g\n",
-	 bboxlo[0],bboxhi[0],
-	 bboxlo[1],bboxhi[1],
-	 bboxlo[2],bboxhi[2]);
-
-  int nhits = 0;
+    Surf::Line *lines = surf->lines;
+    Surf::Tri *tris = surf->tris;
+    Surf::Line *line;
+    Surf::Tri *tri;
   
-  if (dim == 2) {
-    for (int m = 0; m < nparticle; m++) {
-      int side,minsurf;
-      double param;
-      double x[3],xnew[3];
-      double xc[3],minxc[3];
+    int index;
+    double bboxlo[3],bboxhi[3];
 
-      // set x,xnew randomly for each of N particles
+    if (dim == 2) {
+      bboxlo[0] = bboxlo[1] = 1.e20;
+      bboxhi[0] = bboxhi[1] = -1.e20;
 
-      x[0] = bboxlo[0];
-      xnew[0] = bboxhi[0];
-      double rn = random->uniform();
-      // entire face
-      //xnew[1] = x[1] = bboxlo[1] + rn * (bboxhi[1]-bboxlo[1]);
-      // lower half
-      xnew[1] = x[1] = bboxlo[1] + 0.5 * rn * (bboxhi[1]-bboxlo[1]);
-      // lower 10%
-      //xnew[1] = x[1] = bboxlo[1] + 0.1 * rn * (bboxhi[1]-bboxlo[1]);
-      xnew[2] = x[2] = 0.0;
-      
-      // initial vel = +x
-      // final vel = reflect off surf
-
-      double vpre[3],vpost[3];
-      vpre[0] = 1.0;
-      vpre[1] = vpre[2] = 0.0;
-      
-      int cflag = 0;
-      double minparam = 2.0;
+      for (int i = 0; i < nsurf; i++) {
+	index = slist[i];
+	bboxlo[0] = MIN(bboxlo[0],lines[index].p1[0]);
+	bboxlo[0] = MIN(bboxlo[0],lines[index].p2[0]);
+	bboxhi[0] = MAX(bboxhi[0],lines[index].p1[0]);
+	bboxhi[0] = MAX(bboxhi[0],lines[index].p2[0]);
+	bboxlo[1] = MIN(bboxlo[1],lines[index].p1[1]);
+	bboxlo[1] = MIN(bboxlo[1],lines[index].p2[1]);
+	bboxhi[1] = MAX(bboxhi[1],lines[index].p1[1]);
+	bboxhi[1] = MAX(bboxhi[1],lines[index].p2[1]);
+	bboxlo[2] = bboxhi[2] = 0.0;
+      }
+    } else if (dim == 3) {
+      bboxlo[0] = bboxlo[1] = bboxlo[2] = 1.e20;
+      bboxhi[0] = bboxhi[1] = bboxhi[2] = -1.e20;
       
       for (int i = 0; i < nsurf; i++) {
 	index = slist[i];
-	line = &lines[index];
-	int hitflag = Geometry::
-	  line_line_intersect(x,xnew,line->p1,line->p2,
-			      line->norm,xc,param,side);
-	if (hitflag && param < minparam && side == OUTSIDE) {
-	  cflag = 1;
-	  minparam = param;
-	  minsurf = index;
-	  minxc[0] = xc[0];
-	  minxc[1] = xc[1];
-	  minxc[2] = 0.0;
-	}
-      }
-
-      // add force/torque from collision
-      
-      if (cflag) {
-	nhits++;
-	double pforce[3],rdelta[3],tq[3];
-
-	vpost[0] = vpre[0]; vpost[1] = vpre[1]; vpost[2] = vpre[2];
-	MathExtra::reflect3(vpost,lines[minsurf].norm);
-	
-	pforce[0] = pforce[1] = pforce[2] = 0.0;
-        MathExtra::axpy3(pmass,vpre,pforce);
-        MathExtra::axpy3(-pmass,vpost,pforce);
-	fcm[0] += pforce[0];
-	fcm[1] += pforce[1];
-	fcm[2] += pforce[2];
-	
-	MathExtra::sub3(minxc,xcm,rdelta);
-        MathExtra::cross3(rdelta,pforce,tq);
-	torque[0] += tq[0];
-	torque[1] += tq[1];
-	torque[2] += tq[2];
+	bboxlo[0] = MIN(bboxlo[0],tris[index].p1[0]);
+	bboxlo[0] = MIN(bboxlo[0],tris[index].p2[0]);
+	bboxlo[0] = MIN(bboxlo[0],tris[index].p3[0]);
+	bboxhi[0] = MAX(bboxhi[0],tris[index].p1[0]);
+	bboxhi[0] = MAX(bboxhi[0],tris[index].p2[0]);
+	bboxhi[0] = MAX(bboxhi[0],tris[index].p3[0]);
+	bboxlo[1] = MIN(bboxlo[1],tris[index].p1[1]);
+	bboxlo[1] = MIN(bboxlo[1],tris[index].p2[1]);
+	bboxlo[1] = MIN(bboxlo[1],tris[index].p3[1]);
+	bboxhi[1] = MAX(bboxhi[1],tris[index].p1[1]);
+	bboxhi[1] = MAX(bboxhi[1],tris[index].p2[1]);
+	bboxhi[1] = MAX(bboxhi[1],tris[index].p3[1]);
+	bboxlo[2] = MIN(bboxlo[2],tris[index].p1[2]);
+	bboxlo[2] = MIN(bboxlo[2],tris[index].p2[2]);
+	bboxlo[2] = MIN(bboxlo[2],tris[index].p3[2]);
+	bboxhi[2] = MAX(bboxhi[2],tris[index].p1[2]);
+	bboxhi[2] = MAX(bboxhi[2],tris[index].p2[2]);
+	bboxhi[2] = MAX(bboxhi[2],tris[index].p3[2]);
       }
     }
 
-  } else if (dim == 3) {
-    for (int m = 0; m < nparticle; m++) {
-      int side,minsurf;
-      double param;
-      double x[3],xnew[3];
-      double xc[3],minxc[3];
+    // expand bbox by one percent in all dims
 
-      // set x,xnew randomly for each of N particles
+    bboxlo[0] -= 0.01 * (bboxhi[0]-bboxlo[0]);
+    bboxlo[1] -= 0.01 * (bboxhi[1]-bboxlo[1]);
+    bboxlo[2] -= 0.01 * (bboxhi[2]-bboxlo[2]);
+    bboxhi[0] += 0.01 * (bboxhi[0]-bboxlo[0]);
+    bboxhi[1] += 0.01 * (bboxhi[1]-bboxlo[1]);
+    bboxhi[2] += 0.01 * (bboxhi[2]-bboxlo[2]);
+    
+    int nhits = 0;
+    
+    if (dim == 2) {
+      for (int m = 0; m < nparticle_user; m++) {
+	int side,minsurf;
+	double param;
+	double x[3],xnew[3];
+	double xc[3],minxc[3];
       
-      x[0] = bboxlo[0];
-      xnew[0] = bboxhi[0];
-      double rn = random->uniform();
-      xnew[1] = x[1] = bboxlo[1] + rn * (bboxhi[1]-bboxlo[1]);
-      rn = random->uniform();
-      xnew[2] = x[2] = bboxlo[2] + rn * (bboxhi[2]-bboxlo[2]);
+	// set x,xnew randomly for each of N particles	
+	// limit by fraction of bbox face in y
 
-      // initial vel = +x
-      // final vel = reflect off surf
+	x[0] = bboxlo[0];
+	xnew[0] = bboxhi[0];
+	double rn = random->uniform();
+	xnew[1] = x[1] = bboxlo[1] + frac_user * rn * (bboxhi[1]-bboxlo[1]);
+	xnew[2] = x[2] = 0.0;
       
-      double vpre[3],vpost[3];
-      vpre[0] = 1.0;
-      vpre[1] = vpre[2] = 0.0;
+	// initial vel = +x
+	// final vel = reflect off surf
+
+	double vpre[3],vpost[3];
+	vpre[0] = 1.0;
+	vpre[1] = vpre[2] = 0.0;
       
-      int cflag = 0;
-      double minparam = 2.0;
+	int cflag = 0;
+	double minparam = 2.0;
       
-      for (int i = 0; i < nsurf; i++) {
-	index = slist[i];
-	tri = &tris[index];
-	int hitflag = Geometry::
-	  line_tri_intersect(x,xnew,tri->p1,tri->p2,tri->p3,
-			     tri->norm,xc,param,side);
-	if (hitflag && param < minparam && side == OUTSIDE) {
-	  cflag = 1;
-	  minparam = param;
-	  minsurf = index;
-	  minxc[0] = xc[0];
- 	  minxc[1] = xc[1];
-	  minxc[2] = xc[2];
+	for (int i = 0; i < nsurf; i++) {
+	  index = slist[i];
+	  line = &lines[index];
+	  int hitflag = Geometry::
+	    line_line_intersect(x,xnew,line->p1,line->p2,
+				line->norm,xc,param,side);
+	  if (hitflag && param < minparam && side == OUTSIDE) {
+	    cflag = 1;
+	    minparam = param;
+	    minsurf = index;
+	    minxc[0] = xc[0];
+	    minxc[1] = xc[1];
+	    minxc[2] = 0.0;
+	  }
+	}
+
+	// add force/torque from collision
+	
+	if (cflag) {
+	  nhits++;
+	  double pforce[3],rdelta[3],tq[3];
+	  
+	  vpost[0] = vpre[0]; vpost[1] = vpre[1]; vpost[2] = vpre[2];
+	  MathExtra::reflect3(vpost,lines[minsurf].norm);
+	  
+	  pforce[0] = pforce[1] = pforce[2] = 0.0;
+	  MathExtra::axpy3(pmass_user,vpre,pforce);
+	  MathExtra::axpy3(-pmass_user,vpost,pforce);
+	  fcm[0] += pforce[0];
+	  fcm[1] += pforce[1];
+	  fcm[2] += pforce[2];
+	  
+	  MathExtra::sub3(minxc,xcm,rdelta);
+	  MathExtra::cross3(rdelta,pforce,tq);
+	  torque[0] += tq[0];
+	  torque[1] += tq[1];
+	  torque[2] += tq[2];
 	}
       }
       
-      // add force/torque from collision
+    } else if (dim == 3) {
+      for (int m = 0; m < nparticle_user; m++) {
+	int side,minsurf;
+	double param;
+	double x[3],xnew[3];
+	double xc[3],minxc[3];
+
+	// set x,xnew randomly for each of N particles
+	// limit by fraction of bbox face in z
       
-      if (cflag) {
-	nhits++;
-	double pforce[3],rdelta[3],tq[3];
-
-	vpost[0] = vpre[0]; vpost[1] = vpre[1]; vpost[2] = vpre[2];
-	MathExtra::reflect3(vpost,tris[minsurf].norm);
-
-	pforce[0] = pforce[1] = pforce[2] = 0.0;
-        MathExtra::axpy3(pmass,vpre,pforce);
-        MathExtra::axpy3(-pmass,vpost,pforce);
-	fcm[0] += pforce[0];
-	fcm[1] += pforce[1];
-	fcm[2] += pforce[2];
-
-	MathExtra::sub3(minxc,xcm,rdelta);
-        MathExtra::cross3(rdelta,pforce,tq);
-	torque[0] += tq[0];
-	torque[1] += tq[1];
-	torque[2] += tq[2];
+	x[0] = bboxlo[0];
+	xnew[0] = bboxhi[0];
+	double rn = random->uniform();
+	xnew[1] = x[1] = bboxlo[1] + rn * (bboxhi[1]-bboxlo[1]);
+	rn = random->uniform();
+	xnew[2] = x[2] = bboxlo[2] + frac_user * rn * (bboxhi[2]-bboxlo[2]);
+	
+	// initial vel = +x
+	// final vel = reflect off surf
+	
+	double vpre[3],vpost[3];
+	vpre[0] = 1.0;
+	vpre[1] = vpre[2] = 0.0;
+	
+	int cflag = 0;
+	double minparam = 2.0;
+	
+	for (int i = 0; i < nsurf; i++) {
+	  index = slist[i];
+	  tri = &tris[index];
+	  int hitflag = Geometry::
+	    line_tri_intersect(x,xnew,tri->p1,tri->p2,tri->p3,
+			       tri->norm,xc,param,side);
+	  if (hitflag && param < minparam && side == OUTSIDE) {
+	    cflag = 1;
+	    minparam = param;
+	    minsurf = index;
+	    minxc[0] = xc[0];
+	    minxc[1] = xc[1];
+	    minxc[2] = xc[2];
+	  }
+	}
+	
+	// add force/torque from collision
+	
+	if (cflag) {
+	  nhits++;
+	  double pforce[3],rdelta[3],tq[3];
+	  
+	  vpost[0] = vpre[0]; vpost[1] = vpre[1]; vpost[2] = vpre[2];
+	  MathExtra::reflect3(vpost,tris[minsurf].norm);
+	  
+	  pforce[0] = pforce[1] = pforce[2] = 0.0;
+	  MathExtra::axpy3(pmass_user,vpre,pforce);
+	  MathExtra::axpy3(-pmass_user,vpost,pforce);
+	  fcm[0] += pforce[0];
+	  fcm[1] += pforce[1];
+	  fcm[2] += pforce[2];
+	  
+	  MathExtra::sub3(minxc,xcm,rdelta);
+	  MathExtra::cross3(rdelta,pforce,tq);
+	  torque[0] += tq[0];
+	  torque[1] += tq[1];
+	  torque[2] += tq[2];
+	}
       }
     }
+
+    /*
+    printf("F/T %ld hits %d\n",update->ntimestep,nhits);
+    printf("FCM %g %g %g\n",fcm[0],fcm[1],fcm[2]);
+    printf("TQ %g %g %g\n",torque[0],torque[1],torque[2]);
+    */
   }
-
-  printf("F/T %ld hits %d\n",update->ntimestep,nhits);
-  printf("FCM %g %g %g\n",fcm[0],fcm[1],fcm[2]);
-  printf("TQ %g %g %g\n",torque[0],torque[1],torque[2]);
-
-  // END of DEBUG
   
   // reset xcm/quat to new xcm/quat calculated in start_of_step()
 
@@ -555,19 +535,22 @@ void FixRigid::end_of_step()
     // what about quat for 2d rotations ?
   }
 
+  /*
   printf("XCM %g %g %g\n",xcm[0],xcm[1],xcm[2]);
   printf("VCM %g %g %g\n",vcm[0],vcm[1],vcm[2]);
   printf("ANG %g %g %g\n",angmom[0],angmom[1],angmom[2]);
   printf("OMG %g %g %g\n",omega[0],omega[1],omega[2]);
-
+  */
+  
   // update Surf class properties of lines and tris in body
   // line and tri positions and orientations
   // set via Line/Tri end/corner points and norm
   // matvec() converts displace vector from body frame to space frame
   
-  //Surf::Line *lines = surf->lines;
-  //Surf::Tri *tris = surf->tris;
-
+  Surf::Line *lines = surf->lines;
+  Surf::Tri *tris = surf->tris;
+  int index;
+  
   if (dim == 2) {
     double z[3],delta[3];
     z[0] = 0.0; z[1] = 0.0; z[2] = 1.0;
@@ -627,7 +610,7 @@ void FixRigid::end_of_step()
 	 lines[3].norm[0],lines[3].norm[1],lines[3].norm[2]);
   */
   
-  printf("END %ld\n",update->ntimestep);
+  // printf("END %ld\n",update->ntimestep);
 }
 
 /* ----------------------------------------------------------------------

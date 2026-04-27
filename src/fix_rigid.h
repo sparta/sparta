@@ -48,9 +48,9 @@ class FixRigid : public Fix {
   int dim;
   int massflag,comflag,vcomflag,moiflag,angmomflag;
 
-  int nparticleflag,pmassflag;
+  int pseudoflag;
   int nparticle_user;
-  double pmass_user;
+  double pmass_user,frac_user;
   
   double massbody;
   double xcm[3],vcm[3];

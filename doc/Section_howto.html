@@ -33,7 +33,8 @@ SPARTA works.
 6.16 <A HREF = "#howto_16">Visualizing SPARTA output with ParaView</A><BR>
 6.17 <A HREF = "#howto_17">Custom per-particle, per-grid, per-surf attributes</A><BR>
 6.18 <A HREF = "#howto_18">Variable timestep simulations</A><BR>
-6.19 <A HREF = "#howto_19">Details of particles in SPARTA</A> <BR>
+6.19 <A HREF = "#howto_19">Details of particles in SPARTA</A><BR>
+6.20 <A HREF = "#howto_20">Rigid body surface objects in SPARTA</A> <BR>
 
 <P>The example input scripts included in the SPARTA distribution and
 highlighted in <A HREF = "Section_example.html">Section 5</A> of the manual also
@@ -1863,5 +1864,18 @@ This is the value output to a <A HREF = "dump.html">dump particle</A> file if th
 is determined by the <A HREF = "species.html">species</A> commands used in the input
 script. The first species name used is type=1, the next is type=2,
 etc.
+</P>
+<HR>
+
+<A NAME = "howto_20"></A><H4>6.20 Rigid body surface objects in SPARTA 
+</H4>
+<P>Overview of why use this feature
+</P>
+<P>fix rigid
+compute surf
+custom surf ?
+dump surf for viz - individual tris ?
+stats with 12 values for the body
+push-off forces
 </P>
 </HTML>
