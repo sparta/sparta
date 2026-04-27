@@ -418,9 +418,15 @@ void AdaptGrid::process_args(int narg, char **arg)
   }
 
   if (maxlevel_request && maxlevel < maxlevel_request && me == 0) {
-    char str[128];
-    sprintf(str,"Reduced maxlevel because it induces "
-            "cell IDs that exceed %d bits",(int) sizeof(cellint)*8);
+    char str[256];
+#ifdef SPARTA_BIGBIG
+    sprintf(str,"Reduced maxlevel for grid adaptation from %d to %d because it induces "
+            "cell IDs that exceed %d bits",maxlevel_request,maxlevel,(int) sizeof(cellint)*8);
+#else
+    sprintf(str,"Reduced maxlevel for grid adaptation from %d to %d because it induces "
+            "cell IDs that exceed %d bits, compiling with -DSPARTA_BIGBIG may allow further adaptation"
+            ,maxlevel_request,maxlevel,(int) sizeof(cellint)*8);
+#endif
     error->warning(FLERR,str);
   }
 }
