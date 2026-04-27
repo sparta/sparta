@@ -19,6 +19,7 @@
 #include "update.h"
 #include "domain.h"
 #include "surf.h"
+#include "comm.h"
 #include "modify.h"
 #include "compute.h"
 #include "input.h"
@@ -35,6 +36,7 @@ using namespace SPARTA_NS;
 static constexpr double EPSILON = 1.0e-7;
 
 #define INVOKED_PER_SURF 32
+#define MAXLINE 1024
 
 // DEBUG
 enum{OUTSIDE,INSIDE,ONSURF2OUT,ONSURF2IN};    // same as Update
@@ -89,12 +91,12 @@ FixRigid::FixRigid(SPARTA *sparta, int narg, char **arg) :
 	jarg += 4;
       } else if (strcmp(arg[jarg],"moi") == 0) {
 	moiflag = 1;
-	ixx = input->numeric(FLERR,arg[jarg+1]);
-	iyy = input->numeric(FLERR,arg[jarg+2]);
-	izz = input->numeric(FLERR,arg[jarg+3]);
-	ixy = input->numeric(FLERR,arg[jarg+4]);
-	ixz = input->numeric(FLERR,arg[jarg+5]);
-	iyz = input->numeric(FLERR,arg[jarg+6]);
+	moi[0] = input->numeric(FLERR,arg[jarg+1]);
+	moi[1] = input->numeric(FLERR,arg[jarg+2]);
+	moi[2] = input->numeric(FLERR,arg[jarg+3]);
+	moi[3] = input->numeric(FLERR,arg[jarg+4]);
+	moi[4] = input->numeric(FLERR,arg[jarg+5]);
+	moi[5] = input->numeric(FLERR,arg[jarg+6]);
 	jarg += 7;
       } else if (strcmp(arg[jarg],"vcom") == 0) {
 	vcomflag = 1;
@@ -150,14 +152,28 @@ FixRigid::FixRigid(SPARTA *sparta, int narg, char **arg) :
     } else error->all(FLERR,"Fix rigid body args not valid");
   }
 
-  // apply scaling to either body or infile
-  // NOTE: how to apply to group of surfs themselves
-  //       allow this to be done by read_surf ?  rotate is hard
+  // apply mass scaling to body params which depend on mass
+  // whether defined by fix rigid keywords or read from infile
+
+  if (scale != 1.0) {
+    massbody *= scale;
+    moi[0] *= scale;
+    moi[1] *= scale;
+    moi[2] *= scale;
+    moi[3] *= scale;
+    moi[4] *= scale;
+    moi[5] *= scale;
+    angmom[0] *= scale;
+    angmom[1] *= scale;
+    angmom[2] *= scale;
+  }
   
   // setup the rigid body
 
   setup_body();
 
+  // DEBUG
+  
   printf("EX %g %g %g\n",ex_space[0],ex_space[1],ex_space[2]);
   printf("EY %g %g %g\n",ey_space[0],ey_space[1],ey_space[2]);
   printf("EZ %g %g %g\n",ez_space[0],ez_space[1],ez_space[2]);
@@ -188,7 +204,7 @@ void FixRigid::init()
   if (csurf->per_surf_flag == 0)
     error->all(FLERR,"Fix rigid compute does not compute per-surf info");
   if (csurf->size_per_surf_cols != 6)
-    error->all(FLERR,"Fix rigid compute must calcualte per-surf array with 6 columns");
+    error->all(FLERR,"Fix rigid compute must produce per-surf array with 6 columns");
 }
 
 /* ---------------------------------------------------------------------- */
@@ -620,6 +636,59 @@ void FixRigid::end_of_step()
 
 void FixRigid::read_infile(char *filename)
 {
+  // open file and read first non-empty, non-comment line
+  // only done by proc 0
+  
+  if (comm->me == 0) {
+    char *start;
+    char line[MAXLINE];
+    FILE *fp = fopen(filename,"r");
+    if (fp == nullptr)
+      error->one(FLERR,"Cannot open fix rigid infile");
+    while (true) {
+      char *eof = fgets(line,MAXLINE,fp);
+      if (eof == nullptr) error->one(FLERR,"Unexpected end of fix rigid infile");
+      start = &line[strspn(line," \t\n\v\f\r")];
+      if (*start != '\0' && *start != '#') break;
+    }
+
+    // check that line has correct number of words
+    
+    int ncorrect = 16;
+    int nwords = input->count_words(line);
+    if (nwords != ncorrect)
+      error->all(FLERR,"Incorrect rigid body format in fix rigid infile");
+
+    // convert each word to a rigid body param
+    // totalmass, xcm, moi, vcm, angmom
+
+    massbody = atof(strtok(line," \t\n\r\f"));
+    xcm[0] = atof(strtok(NULL," \t\n\r\f"));
+    xcm[1] = atof(strtok(NULL," \t\n\r\f"));
+    xcm[2] = atof(strtok(NULL," \t\n\r\f"));
+    moi[0] = atof(strtok(NULL," \t\n\r\f"));
+    moi[1] = atof(strtok(NULL," \t\n\r\f"));
+    moi[2] = atof(strtok(NULL," \t\n\r\f"));
+    moi[3] = atof(strtok(NULL," \t\n\r\f"));
+    moi[4] = atof(strtok(NULL," \t\n\r\f"));
+    moi[5] = atof(strtok(NULL," \t\n\r\f"));
+    vcm[0] = atof(strtok(NULL," \t\n\r\f"));
+    vcm[1] = atof(strtok(NULL," \t\n\r\f"));
+    vcm[2] = atof(strtok(NULL," \t\n\r\f"));
+    angmom[0] = atof(strtok(NULL," \t\n\r\f"));
+    angmom[1] = atof(strtok(NULL," \t\n\r\f"));
+    angmom[2] = atof(strtok(NULL," \t\n\r\f"));
+
+    fclose(fp);
+  }
+
+  // broadcast result of file read to all procs
+    
+  MPI_Bcast(&massbody,1,MPI_DOUBLE,0,world);
+  MPI_Bcast(xcm,3,MPI_DOUBLE,0,world);
+  MPI_Bcast(moi,6,MPI_DOUBLE,0,world);
+  MPI_Bcast(vcm,3,MPI_DOUBLE,0,world);
+  MPI_Bcast(angmom,3,MPI_DOUBLE,0,world);
 }
 
 /* ----------------------------------------------------------------------
@@ -660,12 +729,12 @@ void FixRigid::setup_body()
 		    
   double tensor[3][3],evectors[3][3];
 
-  tensor[0][0] = ixx;
-  tensor[1][1] = iyy;
-  tensor[2][2] = izz;
-  tensor[1][2] = tensor[2][1] = iyz;
-  tensor[0][2] = tensor[2][0] = ixz;
-  tensor[0][1] = tensor[1][0] = ixy;
+  tensor[0][0] = moi[0];
+  tensor[1][1] = moi[1];
+  tensor[2][2] = moi[2];
+  tensor[1][2] = tensor[2][1] = moi[5];
+  tensor[0][2] = tensor[2][0] = moi[4];
+  tensor[0][1] = tensor[1][0] = moi[3];
 
   // diagonalize the inertia tensor to create body frame
   

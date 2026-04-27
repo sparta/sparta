@@ -52,11 +52,10 @@ class FixRigid : public Fix {
   int nparticle_user;
   double pmass_user;
   
-  double ixx,iyy,izz,ixy,ixz,iyz;
-  
   double massbody;
   double xcm[3],vcm[3];
-  double inertia[3];
+  double moi[6];      // space frame
+  double inertia[3];  // body frame
   double angmom[3];
   double quat[4];
   double ex_space[3],ey_space[3],ez_space[3];
