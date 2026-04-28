@@ -38,7 +38,9 @@ static constexpr double EPSILON = 1.0e-7;
 #define INVOKED_PER_SURF 32
 #define MAXLINE 1024
 
-// DEBUG
+enum{INT,DOUBLE};                      // several files
+
+// DEBUG for pseudo keyword
 enum{OUTSIDE,INSIDE,ONSURF2OUT,ONSURF2IN};    // same as Update
 
 /* ---------------------------------------------------------------------- */
@@ -175,6 +177,30 @@ FixRigid::FixRigid(SPARTA *sparta, int narg, char **arg) :
   printf("EX %g %g %g\n",ex_space[0],ex_space[1],ex_space[2]);
   printf("EY %g %g %g\n",ey_space[0],ey_space[1],ey_space[2]);
   printf("EZ %g %g %g\n",ez_space[0],ez_space[1],ez_space[2]);
+
+  // create rigid = custom per-surf vector
+  //   unless already exists, due to restart file
+  // rigid = index into short list of rigie surfs for mobile surfs
+  // rigid = -1 for static surfs
+  
+  int rigidindex = surf->find_custom((char *) "rigid");
+  if (rigidindex < 0) rigidindex = surf->add_custom((char *) "rigid",INT,0);
+
+  int *irigid = surf->eivec[surf->ewhich[rigidindex]];
+
+  Surf::Line *lines = surf->lines;
+  Surf::Tri *tris = surf->tris;
+  int nslocal = surf->nlocal;
+  
+  for (int i = 0; i < nslocal; i++) irigid[i] = -1;
+  for (int i = 0; i < nsurf; i++) irigid[slist[i]] = i;
+}
+
+/* ---------------------------------------------------------------------- */
+ 
+FixRigid::~FixRigid()
+{
+  surf->remove_custom(rigidindex);
 }
 
 /* ---------------------------------------------------------------------- */
@@ -214,8 +240,7 @@ void FixRigid::init()
 
 void FixRigid::start_of_step()
 {
-  // TODO:
-  // update RB props
+  // still TODO:
   // change COM within compute surf - note that COM is not constant thru step
   //   maybe should set COM in compute_surf to half-step position?
   // remap RB surfs to grid cells they ovlerlap at any point during advection
@@ -223,10 +248,8 @@ void FixRigid::start_of_step()
   // time integrate from current position to end-of-step position
   // use full-step semi-implicit Euler algorithm
   // apply forces and torques accumulated from collisions during last step
-  // vcm/angmmom/omega are updated now, b/c they are used during
-  //   this step to update xnew/quat at end of this step
-  // xcmnew/quatnew will become position/orientation at end of this step
-  // save old and new xcm/quat to use in particle collision detection
+  // update vcm/angmom/omega to start-of-step values
+  // use them to calculate xcmnew/quatnew and exyz_space for end-of-step values
   
   double dt = update->dt;
   double dtf = dt / massbody;
@@ -239,7 +262,7 @@ void FixRigid::start_of_step()
   vcm[2] += dtf * fcm[2];
 
   // update xcm by full step
-  // using new vcm turns Euler into semi-implicit Euler
+  // use of new vcm turns Euler into semi-implicit Euler
   // store as xcmnew so have start/stop position for this timestep
   
   xcmnew[0] = xcm[0] + dt * vcm[0];
@@ -267,7 +290,6 @@ void FixRigid::start_of_step()
   quatnew[2] = quat[2] + dthalf * wq[2];
   quatnew[3] = quat[3] + dthalf * wq[3];
   MathExtra::qnormalize(quatnew);
-  // NOTE: need to also keep old exyz_space for collision detection ??
   MathExtra::q_to_exyz(quatnew,ex_space,ey_space,ez_space);
 }
 
@@ -774,10 +796,9 @@ void FixRigid::setup_body()
   
   MathExtra::exyz_to_q(ex_space,ey_space,ez_space,quat);
 
-  // store displacement of each end/corner point in each line/tri in body
-  // delta = vector from COM to end/corner point
-  // displace = delta rotated to be in basis of principal axes
-  // so displace is stored as vector in body frame
+  // set displacement for each end/corner point in each line/tri
+  // delta = vector from COM to end/corner point in space frame
+  // displace = delta rotated to be in basis of principal axes, i.e. in body frame
   
   double delta[3];
   int index;

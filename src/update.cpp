@@ -30,6 +30,7 @@
 #include "surf.h"
 #include "surf_collide.h"
 #include "surf_react.h"
+#include "fix_rigid.h"
 #include "input.h"
 #include "output.h"
 #include "geometry.h"
@@ -247,13 +248,16 @@ void Update::init()
   if (moveperturb) perturbflag = 1;
   else perturbflag = 0;
 
-  // check on fix rigid
+  // setup when using fix rigid for rigid body objects comprised of surfs
 
   if (rigidflag) {
     int irigidfix = modify->find_fix(rigidID);
     if (irigidfix < 0) error->all(FLERR,"Fix ID for global rigid is not found");
-    if (strcmp(modify->fix[irigidfix]->style,"rigid") != 0)
+    fixrigid = (FixRigid *) modify->fix[irigidfix];
+    if (strcmp(fixrigid->style,"rigid") != 0)
       error->all(FLERR,"Fix for global rigid is not a fix rigid command");
+    int rigidindex = surf->find_custom((char *) "rigid");
+    irigid = surf->eivec[surf->ewhich[rigidindex]];
   }
 }
 
@@ -790,10 +794,11 @@ template < int DIM, int SURF, int OPT, int RIGID > void Update::move()
             // check for collisions with triangles or lines in cell
             // find 1st surface hit via minparam
             // skip collisions with previous surf, but not for axisymmetric
+	    // NOTE: what about collisions with previous surf if RIGID ??
             // not considered collision if 2 params are tied and one INSIDE surf
             // if collision occurs, perform collision with surface model
             // reset x,v,xnew,dtremain and continue single particle trajectory
-
+	    
             cflag = 0;
             minparam = 2.0;
             csurfs = cells[icell].csurfs;
@@ -807,17 +812,24 @@ template < int DIM, int SURF, int OPT, int RIGID > void Update::move()
               if (DIM == 3) {
                 tri = &tris[isurf];
 		if (RIGID) {
-		  // NOTE: need more info about start/stop pos/orient of tri?
-		  // like xcm and displacements of tri within rigid body?
-		  // vcm is NOT the velocity of a single specific tri
-		  // how to access info about a single tri within fix rigid?
-		  //   may need a per-surf vector with index into small surf list in fix
-		  // tri->norm,rigid->vcm,rigid->omega,
+		  if (irigid[isurf] >= 0) {
+		    
+		    // NOTE: what rigid body attributes does Ryan need added to args
+		    // can access them from FixRigid class
+		    //   e.g. omega for body or displace for isurf's info in FixRigid
+		  
+		    double *omega = fixrigid->omega;
+		    double **displace = fixrigid->displace[irigid[isurf]];
 
-		  hitflag = Geometry::
-		    line_tri_moving_intersect(x,xnew,tri->p1,tri->p2,tri->p3,
-					      tri->norm,
-					      xc,param,side);
+		    hitflag = Geometry::
+		      line_tri_moving_intersect(x,xnew,tri->p1,tri->p2,tri->p3,
+						tri->norm,xc,param,side);
+		  } else {
+		    hitflag = Geometry::
+		      line_tri_intersect(x,xnew,tri->p1,tri->p2,tri->p3,
+					 tri->norm,xc,param,side);
+		  }
+		  
                 } else {
 		  hitflag = Geometry::
 		    line_tri_intersect(x,xnew,tri->p1,tri->p2,tri->p3,
@@ -827,13 +839,24 @@ template < int DIM, int SURF, int OPT, int RIGID > void Update::move()
               if (DIM == 2) {
                 line = &lines[isurf];
 		if (RIGID) {
-		  // NOTE: need more info about start/stop pos/orient of line?
-		  // line->norm,rigid->vcm,rigid->omega,
+		  if (irigid[isurf] >= 0) {
+		    
+		    // NOTE: what rigid body attributes does Ryan need added to args
+		    // can access them from FixRigid class
+		    //   e.g. omega for body or displace for isurf's info in FixRigid
+		  
+		    double *omega = fixrigid->omega;
+		    double **displace = fixrigid->displace[irigid[isurf]];
 
-		  hitflag = Geometry::
-		    line_line_moving_intersect(x,xnew,line->p1,line->p2,
-					       line->norm,
-					       xc,param,side);
+		    hitflag = Geometry::
+		      line_line_moving_intersect(x,xnew,line->p1,line->p2,
+						 line->norm,xc,param,side);
+		  } else {
+		    hitflag = Geometry::
+		      line_line_intersect(x,xnew,line->p1,line->p2,
+					  line->norm,xc,param,side);
+		  }
+		  
 		} else {
 		  hitflag = Geometry::
 		    line_line_intersect(x,xnew,line->p1,line->p2,

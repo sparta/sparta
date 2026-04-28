@@ -51,9 +51,8 @@ class Update : protected Pointers {
   int *field_active;     // ptr to field_active flags in fix
   int fieldfreq;         // update GFIELD every this many timsteps
 
-  int rigidflag;         // 1 if a mobile rigid-body object of surfs is defined
-  char *rigidID;         // ID of associated fix rigid commaned defining the object
-  
+  int rigidflag;         // 1 if a mobile rigid-body surf object will be used
+
   int nmigrate;          // # of particles to migrate to new procs
   int *mlist;            // indices of particles to migrate
 
@@ -147,6 +146,12 @@ class Update : protected Pointers {
   class Compute **slist_compute;  // list of all gas/surf Computes
   class Compute **blist_compute;  // list of all gas/boundary Computes
   class SurfCollide **dlist_surfcollide;  // list of all dynamic SurfCollides
+
+  // enable use of mobile rigid bodies comprised of surfs
+  
+  char *rigidID;         // ID of associated fix rigid commaned defining the object
+  class FixRigid *fixrigid;   // ptr to FixRigid instance
+  int *irigid;                // custom per-surf vector defined by FixRigid
 
   // methods
 

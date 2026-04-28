@@ -27,8 +27,11 @@ namespace SPARTA_NS {
 
 class FixRigid : public Fix {
  public:
+  double omega[3];        // omega in space frame
+  double ***displace;     // displacement in body frame of line/tri points from COM
+  
   FixRigid(class SPARTA *, int, char **);
-  virtual ~FixRigid() {}
+  virtual ~FixRigid();
   int setmask();
   void init();
   virtual void start_of_step();
@@ -42,32 +45,31 @@ class FixRigid : public Fix {
   class Compute *csurf;
   char *infile;
 
-  int nsurf;
-  int *slist;
-  
   int dim;
   int massflag,comflag,vcomflag,moiflag,angmomflag;
 
   int pseudoflag;
   int nparticle_user;
   double pmass_user,frac_user;
-  
-  double massbody;
-  double xcm[3],vcm[3];
-  double moi[6];      // space frame
-  double inertia[3];  // body frame
-  double angmom[3];
-  double quat[4];
-  double ex_space[3],ey_space[3],ez_space[3];
-  double fcm[3];
-  double torque[3];
-  double omega[3];
 
-  double xcmnew[3];
-  double quatnew[4];
-
-  double ***displace;
+  int rigidindex;   // for custom per-surf vector
   
+  int nsurf;     // # of surfs which comprise surface of rigid body
+  int *slist;    // list of surf indices for rigid body surfs
+
+  double massbody;        // total mass of rigid body enclosed by surfs
+  double xcm[3],vcm[3];   // COM and velocity of COM
+  double moi[6];          // 6 MOI in space frame
+  double inertia[3];      // 3 diagonalized MOI in body frame
+  double angmom[3];       // angular momentum in space frame
+  double quat[4];         // quaternion for orientation of body
+  double ex_space[3],ey_space[3],ez_space[3];  // prinicpal axes of body
+  double fcm[3];          // force on COM in space frame
+  double torque[3];       // torque on body in space frame
+
+  double xcmnew[3];       // new COM at end of timestep
+  double quatnew[4];      // new quaternion at end of timestep
+
   void read_infile(char *);
   void setup_body();
 };
