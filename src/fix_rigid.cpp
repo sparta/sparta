@@ -53,7 +53,9 @@ FixRigid::FixRigid(SPARTA *sparta, int narg, char **arg) :
   global_freq = 1;
   nevery = 1;
   
-  if (!surf->exist) error->all(FLERR,"Fix rigid requiers surf elements exist");
+  if (!surf->exist) error->all(FLERR,"Fix rigid requires surf elements exist");
+  if (domain->axisymmetric)
+    error->all(FLERR,"Fix rigid cannot be used with axisymmetric domains");
   if (surf->implicit || surf->distributed)
     error->all(FLERR,"Fix rigid can only be used with explicit non-distributed surf elements");
   
@@ -189,6 +191,11 @@ int FixRigid::setmask()
 
 void FixRigid::init()
 {
+  // check that global rigid flag is set
+
+  if (update->rigidflag == 0)
+    error->all(FLERR,"Cannot use fix rigid unless global rigid is set");
+
   // check that specified compute is valid for use with fix rigid
   // NOTE: check that it operates on same surf group ?
   
@@ -233,7 +240,8 @@ void FixRigid::start_of_step()
 
   // update xcm by full step
   // using new vcm turns Euler into semi-implicit Euler
-
+  // store as xcmnew so have start/stop position for this timestep
+  
   xcmnew[0] = xcm[0] + dt * vcm[0];
   xcmnew[1] = xcm[1] + dt * vcm[1];
   xcmnew[2] = xcm[2] + dt * vcm[2];
@@ -250,7 +258,8 @@ void FixRigid::start_of_step()
 
   // update quaternion by full step using new omega in spatial frame
   // use dq/dt = 1/2 omega q
-
+  // store as qusatnew so have start/stop orientation for this timestep
+  
   double wq[4];
   MathExtra::vecquat(omega,quat,wq);
   quatnew[0] = quat[0] + dthalf * wq[0];
@@ -258,7 +267,7 @@ void FixRigid::start_of_step()
   quatnew[2] = quat[2] + dthalf * wq[2];
   quatnew[3] = quat[3] + dthalf * wq[3];
   MathExtra::qnormalize(quatnew);
-  // NOTE: need to also keep old exyz_space ??  for collision detection ??
+  // NOTE: need to also keep old exyz_space for collision detection ??
   MathExtra::q_to_exyz(quatnew,ex_space,ey_space,ez_space);
 }
 
@@ -521,7 +530,8 @@ void FixRigid::end_of_step()
   quat[3] = quatnew[3];
 
   // enforce2d on all body properties
-
+  // NOTE: should we also enforce this in start_of_step() for xcmnew,quatnew,omega ?
+  
   if (dim == 2) {
     xcm[2] = 0.0;
     vcm[2] = 0.0;
@@ -546,7 +556,7 @@ void FixRigid::end_of_step()
   // line and tri positions and orientations
   // set via Line/Tri end/corner points and norm
   // matvec() converts displace vector from body frame to space frame
-  
+
   Surf::Line *lines = surf->lines;
   Surf::Tri *tris = surf->tris;
   int index;

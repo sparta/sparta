@@ -33,6 +33,9 @@ namespace Geometry {
   bool line_line_intersect(double *, double *,
                            double *, double *, double *,
                            double *, double &param, int &, int=0);
+  bool line_line_moving_intersect(double *, double *,
+				  double *, double *, double *,
+				  double *, double &param, int &);
 
   bool axi_line_intersect(double, double *, double *, int, double *, double *,
                           double *, double *, double *, int,
@@ -43,6 +46,9 @@ namespace Geometry {
   bool line_tri_intersect(double *, double *,
                           double *, double *, double *, double *,
                           double *, double &param, int &);
+  bool line_tri_moving_intersect(double *, double *,
+				 double *, double *, double *, double *,
+				 double *, double &param, int &);
   bool line_tri_intersect_noeps(double *, double *,
                                 double *, double *, double *, double *,
                                 double *, double &param, int &);

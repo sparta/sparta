@@ -17,7 +17,10 @@
 </PRE>
 <UL><LI>one or more keyword/value pairs 
 
-<LI>keyword = <I>fnum</I> or <I>nrho</I> or <I>vstream</I> or <I>temp</I> or <I>field</I> or <I>surfs</I> or <I>surfgrid</I> or <I>surfmax</I> or <I>splitmax</I> or <I>surftally</I> or <I>gridcut</I> or <I>comm/sort</I> or <I>comm/style</I> or <I>weight</I> or <I>particle/reorder</I> or <I>mem/limit</I> 
+<LI>keyword = <I>fnum</I> or <I>nrho</I> or <I>vstream</I> or <I>temp</I> or <I>field</I> or
+<I>surfs</I> or <I>surfgrid</I> or <I>surfmax</I> or <I>splitmax</I> or <I>surftally</I> or
+<I>gridcut</I> or <I>comm/sort</I> or <I>comm/style</I> or <I>weight</I> or
+<I>particle/reorder</I> or <I>mem/limit</I> or <I>rigid</I> 
 
 <PRE>  <I>fnum</I> value = ratio
     ratio = Fnum ratio of physical particles to simulation particles
@@ -72,7 +75,9 @@
     grid = limit extra memory for load-balancing, particle reordering, and restart file read/write to grid cell memory
     bytes = limit extra particle memory to this amount (in MBytes)
   <I>optmove</I> value = yes or no
-    yes/no = use optimized particle move if yes, else use regular move 
+    yes/no = use optimized particle move if yes, else use regular move
+  <I>rigid</I> value= fixID
+    fixID = ID of a fix rigid command that defines a mobile rigid-body object composed of surface elements 
 </PRE>
 
 </UL>
@@ -335,9 +340,10 @@ option, the weight is the distance the cell midpoint is from the y=0
 axis of symmetry, multiplied by the length of the cell in the x
 direction.  This mode attempts to preserve a uniform number of
 particles in each cell, regardless of the cell area, for a uniform
-targeted density.  For the <I>radius/only</I> option, the weight is just the
-distance the cell midpoint is from the y=0 axis of symmetry. This mode attempts to preserve a uniform distribution of particles
-per unit area, for a uniform targeted density.  See <A HREF = "Section_howto.html#howto_2">Section
+targeted density.  For the <I>radius/only</I> option, the weight is just
+the distance the cell midpoint is from the y=0 axis of symmetry. This
+mode attempts to preserve a uniform distribution of particles per unit
+area, for a uniform targeted density.  See <A HREF = "Section_howto.html#howto_2">Section
 6.2</A> for more details on axi-symmetric
 models.
 </P>
@@ -409,6 +415,8 @@ than the number of files.
 performance will suffer due to the large number of multiple passes 
 required. 
 </P>
+<HR>
+
 <P>If the <I>optmove</I> keyword is set to <I>yes</I> then an optimized move
 algorithm will be used when possible. Normally, as particles advect
 through the mesh each intermediate grid cell crossing must be found
@@ -423,6 +431,14 @@ ghost cell region), then the normal (non-optimized) move algorithm
 will be used for that specific particle on that timestep. The <I>optmove
 yes</I> option cannot be used when surfaces are defined, the grid is not
 uniform, or when fix adapt is enabled, otherwise an error will result.
+</P>
+<P>The <I>rigid</I> keyword enables a mobile rigid-body object composed of
+surface elements (lines in 2d, triangles in 3d) to be simulated.  The
+fixID argument is the ID of a <A HREF = "fix_rigid.html">fix rigid</A> command which
+defines the set of surfaces in the rigid body.  If fixID is specified
+as NULL, then the motion of the rigid-body object is disabled.  The
+instance o the <A HREF = "fix_rigid.html">fix rigid</A> command shoud also be
+deleted via the <A HREF = "unfix.html">unfix</A> command.
 </P>
 <P><B>Restrictions:</B>
 </P>
@@ -439,6 +455,6 @@ defined, e.g. via the <A HREF = "read_surf.html">read_surf</A> command.
 0.0, temp = 273.15, field = none, surfs = explicit, surfgrid = auto,
 surfmax = 100, splitmax = 10, surftally = auto,
 gridcut = -1.0, comm/sort = no, comm/style = neigh, weight = cell
-none, particle/reorder = 0, mem/limit = 0, optmove = no.
+none, particle/reorder = 0, mem/limit = 0, optmove = no, rigid = NULL.
 </P>
 </HTML>
