@@ -112,6 +112,9 @@ Note that by default none of the SPARTA optional packages are
 installed.  To build SPARTA with optional packages, see "this
 section"_#start_3 below.
 
+IMPORTANT NOTE: The optional KOKKOS accelerator package does not
+support Makefiles and must be build using CMake instead (see below).
+
 [Step 1]
 
 If Step 0 did not work, you will need to create a low-level Makefile
@@ -1373,7 +1376,8 @@ n or numa :ul
 
 device Nd :pre
 
-This option is only relevant if you built SPARTA with KOKKOS_DEVICES=Cuda, you
+This option is only relevant if you built SPARTA with a GPU backend
+(e.g. Kokkos_ENABLE_CUDA=ON), you
 have more than one GPU per node, and if you are running with only one
 MPI task per node.  The Nd setting is the ID of the GPU on the node to
 run on.  By default Nd = 0.  If you have multiple GPUs per node, they
@@ -1383,7 +1387,8 @@ MPI task per node, and assign each job to run on a different GPU.
 
 gpus Ng Ns :pre
 
-This option is only relevant if you built SPARTA with KOKKOS_DEVICES=Cuda, you
+This option is only relevant if you built SPARTA with a GPU backend
+(e.g. Kokkos_ENABLE_CUDA=ON), you
 have more than one GPU per node, and you are running with multiple MPI
 tasks per node.  The Ng setting is how many GPUs
 you will use per node.  The Ns setting is optional.  If set, it is the ID of a
@@ -1411,7 +1416,8 @@ performing work when Kokkos is executing in OpenMP or pthreads mode.
 The default is Nt = 1, which essentially runs in MPI-only mode.  If
 there are Np MPI tasks per physical node, you generally want Np*Nt =
 the number of physical cores per node, to use your available hardware
-optimally. If SPARTA is compiled with KOKKOS_DEVICES=Cuda,
+optimally. If SPARTA is compiled with a GPU backend (e.g.
+Kokkos_ENABLE_CUDA=ON),
 this setting has no effect.
 
 -log file :pre
