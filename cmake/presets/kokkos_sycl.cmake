@@ -1,6 +1,5 @@
 # preset that enables KOKKOS and selects SYCL compilation with OpenMP
 # enabled as well. Also sets some performance related compiler flags.
-#set(BUILD_OMP ON CACHE BOOL "" FORCE)
 
 include(${CMAKE_CURRENT_LIST_DIR}/kokkos_common.cmake)
 # ################### BEGIN SPARTA OPTIONS ####################
