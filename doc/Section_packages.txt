@@ -55,7 +55,8 @@ ext = external library: you will need to download and install it on your machine
 
 Package, Description, Doc page, Example, Library
 "FFT"_#FFT, fast Fourier transforms, "compute_style compute/fft/grid"_compute_fft_grid.html, fft, int or ext
-"KOKKOS"_#KOKKOS, Kokkos-enabled styles, "Section 5.3"_Section_howto.html#acc_3, "Benchmarks"_https://sparta.github.io/bench.html, - :tb(ea=c,ca1=l)
+"KOKKOS"_#KOKKOS, Kokkos-enabled styles, "Section 5.3"_Section_howto.html#acc_3, "Benchmarks"_https://sparta.github.io/bench.html, - 
+"COUPLE"_#COUPLE, Coupling to LAMMPS, "fix_lammps"_fix_lammps.html, couple, ext :tb(ea=c,ca1=l)
 
 :line
 
@@ -213,3 +214,15 @@ the "Accelerating SPARTA"_Section_accelerate.html#acc_3 section
 "Section 2.6 -pk kokkos"_Section_start.html#start_7
 "package kokkos"_package.html
 "Benchmarks page"_https://sparta.github.io/bench.html of web site :ul
+
+:line
+
+COUPLE package :link(COUPLE),h4
+
+[Contents:]
+
+Concurrently couple the molecular dynamics solver LAMMPS. The 
+LAMMPS software must be downloaded into the lib/ folder and built 
+separately. Detailed instructions on linking it to SPARTA using 
+either CMake or make can be found in the documentation at 
+"fix lammps"_fix_lammps.html .

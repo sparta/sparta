@@ -17,6 +17,7 @@ set(SPARTA_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR})
 # ######### END   SETUP COMMANDS ##########
 
 # ######### BEGIN PROCESSING PACKAGES - RECURSE COMMANDS ##########
+add_subdirectory(${SPARTA_SRC_DIR}/COUPLE)
 add_subdirectory(${SPARTA_SRC_DIR}/KOKKOS)
 add_subdirectory(${SPARTA_SRC_DIR}/FFT)
 add_subdirectory(${SPARTA_SRC_DIR}/STUBS)
