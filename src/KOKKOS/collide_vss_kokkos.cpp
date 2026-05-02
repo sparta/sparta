@@ -46,6 +46,7 @@ enum{CONSTANT,VARIABLE};
 #define DELTACELLCOUNT 2
 
 #define MAXLINE 1024
+#define EPSZERO 1.0e-14
 #define BIG 1.0e20
 
 /* ---------------------------------------------------------------------- */
@@ -1383,6 +1384,12 @@ int CollideVSSKokkos::test_collision_kokkos(int icell, int igroup, int jgroup,
   double dv  = vi[1] - vj[1];
   double dw  = vi[2] - vj[2];
   double vr2 = du*du + dv*dv + dw*dw;
+
+  // prevent division by zero
+
+  if (vr2 < EPSZERO && d_params(ispecies,jspecies).omega >= 1.0)
+    return 0;
+
   double vro  = pow(vr2,1.0-d_params(ispecies,jspecies).omega);
 
   // although the vremax is calcualted for the group,
