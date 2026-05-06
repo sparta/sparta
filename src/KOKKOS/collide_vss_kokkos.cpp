@@ -665,14 +665,23 @@ template<int NEARCP>
 KOKKOS_INLINE_FUNCTION
 void CollideVSSKokkos::operator()(TagCountAttempts<NEARCP>, const int icell) const {
   const int np = grid_kk_copy.obj.d_cellcount[icell];
-  d_nattempt(icell) = 0;
-  if (!np) return;
+  if (!np) {
+    d_nattempt(icell) = 0;
+    return;
+  }
   const double volume = grid_kk_copy.obj.k_cinfo.view_device()[icell].volume / grid_kk_copy.obj.k_cinfo.view_device()[icell].weight;
-  rand_type rand_gen = rand_pool.get_state();
 
-  const double attempt = attempt_collision_kokkos(icell,np,volume,rand_gen);
+  double attempt;
+  if (remainflag) {
+    attempt = 0.5 * np * (np-1) *
+      d_vremax(icell,0,0) * dt * fnum / volume + d_remain(icell,0,0);
+    d_remain(icell,0,0) = attempt - static_cast<int> (attempt);
+  } else {
+    rand_type rand_gen = rand_pool.get_state();
+    attempt = attempt_collision_kokkos(icell,np,volume,rand_gen);
+    rand_pool.free_state(rand_gen);
+  }
   d_nattempt(icell) = attempt;
-  rand_pool.free_state(rand_gen);
 
   if constexpr(NEARCP) {
     if (!(attempt < 1.0))
