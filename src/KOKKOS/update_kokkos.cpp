@@ -908,7 +908,6 @@ void UpdateKokkos::operator()(TagUpdateMoveFirstPass<DIM>, const int i) const {
   x[0] = xnew[0];
   if (DIM > 1) x[1] = xnew[1];
   if (DIM > 2) x[2] = xnew[2];
-  pflag = PKEEP;
 }
 
 /*-----------------------------------------------------------------------------*/
