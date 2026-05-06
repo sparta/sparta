@@ -867,6 +867,15 @@ void UpdateKokkos::operator()(TagUpdateMoveFirstPass<DIM>, const int i) const {
   Particle::OnePart &particle_i = d_particles[i];
 
   int &pflag = particle_i.flag;
+  double xnew[DIM];
+  double * x = particle_i.x;
+  int icell = particle_i.icell;
+  const double * const v = particle_i.v;
+  xnew[0] = x[0] + dt*v[0];
+  if constexpr (DIM > 1) xnew[1] = x[1] + dt*v[1];
+  if constexpr (DIM > 2) xnew[2] = x[2] + dt*v[2];
+  int nsurf = d_cells[icell].nsurf;
+
   if (pflag != PKEEP) {
     if (pflag == PDONE)
       pflag = PKEEP;
@@ -877,15 +886,6 @@ void UpdateKokkos::operator()(TagUpdateMoveFirstPass<DIM>, const int i) const {
     }
   }
 
-  const double * const v = particle_i.v;
-  double * x = particle_i.x;
-  double xnew[3];
-  xnew[0] = x[0] + dt*v[0];
-  if (DIM > 1) xnew[1] = x[1] + dt*v[1];
-  if (DIM > 2) xnew[2] = x[2] + dt*v[2];
-
-  int icell = particle_i.icell;
-  int nsurf = d_cells[icell].nsurf;
   if (nsurf) {
     const int indx = Kokkos::atomic_fetch_add(&not_updated_cnt(0),1);
     not_updated(indx) = i;
@@ -906,8 +906,8 @@ void UpdateKokkos::operator()(TagUpdateMoveFirstPass<DIM>, const int i) const {
   }
 
   x[0] = xnew[0];
-  if (DIM > 1) x[1] = xnew[1];
-  if (DIM > 2) x[2] = xnew[2];
+  if constexpr (DIM > 1) x[1] = xnew[1];
+  if constexpr (DIM > 2) x[2] = xnew[2];
 }
 
 /*-----------------------------------------------------------------------------*/
