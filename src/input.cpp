@@ -695,13 +695,13 @@ int Input::expand_args(int narg, char **arg, int mode, char **&earg)
                            modify->fix[ifix]->size_per_particle_cols) {
                   nmax = modify->fix[ifix]->size_per_particle_cols;
                   expandflag = 1;
-                } else if (modify->fix[ifix]->per_grid_flag &&
-                           modify->fix[ifix]->size_per_grid_cols) {
-                  nmax = modify->fix[ifix]->size_per_grid_cols;
+                } else if (modify->fix[ifix]->per_grid_flag) {
+                  nmax = modify->fix[ifix]->size_per_grid_cols ?
+                    modify->fix[ifix]->size_per_grid_cols : 1;
                   expandflag = 1;
-                } else if (modify->fix[ifix]->per_surf_flag &&
-                           modify->fix[ifix]->size_per_surf_cols) {
-                  nmax = modify->fix[ifix]->size_per_surf_cols;
+                } else if (modify->fix[ifix]->per_surf_flag) {
+                  nmax = modify->fix[ifix]->size_per_surf_cols ?
+                    modify->fix[ifix]->size_per_surf_cols : 1;
                   expandflag = 1;
                 }
               }
