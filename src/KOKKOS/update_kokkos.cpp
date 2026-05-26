@@ -406,7 +406,10 @@ void UpdateKokkos::run(int nsteps)
     // all output
 
     if (ntimestep == output->next) {
-      particle_kk->sync(Host,ALL_MASK);
+      unsigned int sync_mask = ALL_MASK;
+      if (output->next_dump_any != ntimestep && output->next_restart != ntimestep)
+        sync_mask &= ~PARTICLE_MASK;
+      particle_kk->sync(Host,sync_mask);
       output->write(ntimestep);
       timer->stamp(TIME_OUTPUT);
     }
