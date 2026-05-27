@@ -162,7 +162,7 @@ collide(Particle::OnePart *&ip, double &dtremain,
   } else {
     uprime = 2.0*vwall - vorig;
     xprime = 2.0*xwall - xorig + uprime*dt;
-    if (xprime >= xwall) {
+    if (xprime >= xwall || uprime == 0.0) {
       ip = NULL;
       return NULL;
     }

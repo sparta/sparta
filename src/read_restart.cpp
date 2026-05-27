@@ -104,13 +104,13 @@ void ReadRestart::command(int narg, char **arg)
       hfile = new char[strlen(file) + 16];
       char *ptr = strchr(file,'%');
       *ptr = '\0';
-      sprintf(hfile,"%s%s%s",file,"base",ptr+1);
+      snprintf(hfile, strlen(file) + 16,"%s%s%s",file,"base",ptr+1);
       *ptr = '%';
     } else hfile = file;
     fp = fopen(hfile,"rb");
     if (fp == NULL) {
       char str[128];
-      sprintf(str,"Cannot open restart file %s",hfile);
+      snprintf(str, sizeof(str),"Cannot open restart file %s",hfile);
       error->one(FLERR,str);
     }
     if (multiproc) delete [] hfile;
@@ -423,7 +423,7 @@ void ReadRestart::file_search(char *infile, char *outfile)
 
   if ((ptr = strchr(filename,'%'))) {
     *ptr = '\0';
-    sprintf(pattern,"%s%s%s",filename,"base",ptr+1);
+    snprintf(pattern, strlen(filename) + 16,"%s%s%s",filename,"base",ptr+1);
     *ptr = '%';
   } else strcpy(pattern,filename);
 
@@ -464,7 +464,7 @@ void ReadRestart::file_search(char *infile, char *outfile)
 
   ptr = strchr(infile,'*');
   *ptr = '\0';
-  sprintf(outfile,"%s" BIGINT_FORMAT "%s",infile,maxnum,ptr+1);
+  snprintf(outfile, strlen(infile) + 32,"%s" BIGINT_FORMAT "%s",infile,maxnum,ptr+1);
   *ptr = '*';
 
   // clean up
@@ -689,7 +689,7 @@ void ReadRestart::grid_params()
   int nbits = grid->plevels[maxlevel-1].nbits + grid->plevels[maxlevel-1].newbits;
   if (nbits > sizeof(cellint)*8) {
     char str[128];
-    sprintf(str,"Hierarchical grid induces cell IDs that exceed %d bits",
+    snprintf(str, sizeof(str),"Hierarchical grid induces cell IDs that exceed %d bits",
             (int) sizeof(cellint)*8);
     error->all(FLERR,str);
   }
@@ -900,12 +900,12 @@ void ReadRestart::read_gp_multi_file_less_procs(char *file)
 
   for (int iproc = me; iproc < multiproc_file; iproc += nprocs) {
     *ptr = '\0';
-    sprintf(procfile,"%s%d%s",file,iproc,ptr+1);
+    snprintf(procfile, strlen(file) + 16,"%s%d%s",file,iproc,ptr+1);
     *ptr = '%';
     fp = fopen(procfile,"rb");
     if (fp == NULL) {
       char str[128];
-      sprintf(str,"Cannot open restart file %s",procfile);
+      snprintf(str, sizeof(str),"Cannot open restart file %s",procfile);
       error->one(FLERR,str);
     }
 
@@ -986,12 +986,12 @@ void ReadRestart::read_gp_multi_file_more_procs(char *file)
     char *procfile = new char[strlen(file) + 16];
     char *ptr = strchr(file,'%');
     *ptr = '\0';
-    sprintf(procfile,"%s%d%s",file,icluster,ptr+1);
+    snprintf(procfile, strlen(file) + 16,"%s%d%s",file,icluster,ptr+1);
     *ptr = '%';
     fp = fopen(procfile,"rb");
     if (fp == NULL) {
       char str[128];
-      sprintf(str,"Cannot open restart file %s",procfile);
+      snprintf(str, sizeof(str),"Cannot open restart file %s",procfile);
       error->one(FLERR,str);
     }
     delete [] procfile;
@@ -1088,12 +1088,12 @@ void ReadRestart::read_gp_multi_file_less_procs_memlimit(char *file)
 
   for (int iproc = me; iproc < multiproc_file; iproc += nprocs) {
     *ptr = '\0';
-    sprintf(procfile,"%s%d%s",file,iproc,ptr+1);
+    snprintf(procfile, strlen(file) + 16,"%s%d%s",file,iproc,ptr+1);
     *ptr = '%';
     fp = fopen(procfile,"rb");
     if (fp == NULL) {
       char str[128];
-      sprintf(str,"Cannot open restart file %s",procfile);
+      snprintf(str, sizeof(str),"Cannot open restart file %s",procfile);
       error->one(FLERR,str);
     }
 
@@ -1233,12 +1233,12 @@ void ReadRestart::read_gp_multi_file_more_procs_memlimit(char *file)
     char *procfile = new char[strlen(file) + 16];
     char *ptr = strchr(file,'%');
     *ptr = '\0';
-    sprintf(procfile,"%s%d%s",file,icluster,ptr+1);
+    snprintf(procfile, strlen(file) + 16,"%s%d%s",file,icluster,ptr+1);
     *ptr = '%';
     fp = fopen(procfile,"rb");
     if (fp == NULL) {
       char str[128];
-      sprintf(str,"Cannot open restart file %s",procfile);
+      snprintf(str, sizeof(str),"Cannot open restart file %s",procfile);
       error->one(FLERR,str);
     }
     delete [] procfile;
@@ -1628,12 +1628,12 @@ void ReadRestart::read_surfs_multi_file_less_procs(char *file)
 
   for (int iproc = me; iproc < multiproc_file; iproc += nprocs) {
     *ptr = '\0';
-    sprintf(procfile,"%s%d%s",file,iproc,ptr+1);
+    snprintf(procfile, strlen(file) + 16,"%s%d%s",file,iproc,ptr+1);
     *ptr = '%';
     fp = fopen(procfile,"rb");
     if (fp == NULL) {
       char str[128];
-      sprintf(str,"Cannot open restart file %s",procfile);
+      snprintf(str, sizeof(str),"Cannot open restart file %s",procfile);
       error->one(FLERR,str);
     }
 
@@ -1721,12 +1721,12 @@ void ReadRestart::read_surfs_multi_file_more_procs(char *file)
     char *procfile = new char[strlen(file) + 16];
     char *ptr = strchr(file,'%');
     *ptr = '\0';
-    sprintf(procfile,"%s%d%s",file,icluster,ptr+1);
+    snprintf(procfile, strlen(file) + 16,"%s%d%s",file,icluster,ptr+1);
     *ptr = '%';
     fp = fopen(procfile,"rb");
     if (fp == NULL) {
       char str[128];
-      sprintf(str,"Cannot open restart file %s",procfile);
+      snprintf(str, sizeof(str),"Cannot open restart file %s",procfile);
       error->one(FLERR,str);
     }
     delete [] procfile;

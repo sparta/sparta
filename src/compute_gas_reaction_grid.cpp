@@ -134,8 +134,8 @@ void ComputeGasReactionGrid::compute_per_grid()
 void ComputeGasReactionGrid::clear()
 {
   cinfo = grid->cinfo;
-  if (ncol == 0) memset(vector_grid,0,nglocal*sizeof(double));
-  else if (nglocal) memset(&array_grid[0][0],0,nglocal*ncol*sizeof(double));
+  if (ncol == 0) memset(vector_grid,0,((size_t)nglocal)*sizeof(double));
+  else if (nglocal) memset(&array_grid[0][0],0,((size_t)nglocal)*ncol*sizeof(double));
 }
 
 /* ----------------------------------------------------------------------
@@ -207,8 +207,8 @@ void ComputeGasReactionGrid::reallocate()
   // also note if load-balancing is done, tallies will be lost
   //   would need to implement (un)pack_grid_one() to avoid this
 
-  if (ncol == 0) memset(vector_grid,0,nglocal*sizeof(double));
-  else if (nglocal) memset(&array_grid[0][0],0,nglocal*ncol*sizeof(double));
+  if (ncol == 0) memset(vector_grid,0,((size_t)nglocal)*sizeof(double));
+  else if (nglocal) memset(&array_grid[0][0],0,((size_t)nglocal)*ncol*sizeof(double));
 }
 
 /* ----------------------------------------------------------------------

@@ -150,24 +150,24 @@ void Surf::allocate_custom(int index)
   if (etype[index] == INT) {
     if (esize[index] == 0) {
       int *ivector = memory->create(eivec[ewhich[index]],n,"surf:eivec");
-      if (ivector) memset(ivector,0,n*sizeof(int));
+      if (ivector) memset(ivector,0,(size_t)n*sizeof(int));
       eivec_local[ewhich[index]] = NULL;
     } else {
       int **iarray = memory->create(eiarray[ewhich[index]],
                                     n,eicol[ewhich[index]],"surf:eiarray");
-      if (iarray) memset(&iarray[0][0],0,n*eicol[ewhich[index]]*sizeof(int));
+      if (iarray) memset(&iarray[0][0],0,(size_t)n*eicol[ewhich[index]]*sizeof(int));
       eiarray_local[ewhich[index]] = NULL;
     }
 
   } else {
     if (esize[index] == 0) {
       double *dvector = memory->create(edvec[ewhich[index]],n,"surf:edvec");
-      if (dvector) memset(dvector,0,n*sizeof(double));
+      if (dvector) memset(dvector,0,(size_t)n*sizeof(double));
       edvec_local[ewhich[index]] = NULL;
     } else {
       double **darray = memory->create(edarray[ewhich[index]],
                                        n,edcol[ewhich[index]],"surf:eearray");
-      if (darray) memset(&darray[0][0],0,n*edcol[ewhich[index]]*sizeof(double));
+      if (darray) memset(&darray[0][0],0,(size_t)n*edcol[ewhich[index]]*sizeof(double));
       edarray_local[ewhich[index]] = NULL;
     }
   }
@@ -193,23 +193,23 @@ void Surf::reallocate_custom()
     if (etype[index] == INT) {
       if (esize[index] == 0) {
         int *ivector = memory->grow(eivec[ewhich[index]],nnew,"surf:eivec");
-        if (nnew > nold) memset(&ivector[nold],0,(nnew-nold)*sizeof(int));
+        if (nnew > nold) memset(&ivector[nold],0,(size_t)(nnew-nold)*sizeof(int));
       } else {
         int **iarray = memory->grow(eiarray[ewhich[index]],
                                     nnew,eicol[ewhich[index]],"surf:eiarray");
         if (nnew > nold)
-        memset(iarray[nold],0,(nnew-nold)*eicol[ewhich[index]]*sizeof(int));
+        memset(iarray[nold],0,(size_t)(nnew-nold)*eicol[ewhich[index]]*sizeof(int));
       }
 
     } else {
       if (esize[index] == 0) {
         double *dvector = memory->grow(edvec[ewhich[index]],nnew,"surf:edvec");
-        if (nnew > nold) memset(&dvector[nold],0,(nnew-nold)*sizeof(double));
+        if (nnew > nold) memset(&dvector[nold],0,(size_t)(nnew-nold)*sizeof(double));
       } else {
         double **darray = memory->grow(edarray[ewhich[index]],
                                        nnew,edcol[ewhich[index]],"surf:eearray");
         if (nnew > nold)
-          memset(darray[nold],0,(nnew-nold)*edcol[ewhich[index]]*sizeof(double));
+          memset(darray[nold],0,(size_t)(nnew-nold)*edcol[ewhich[index]]*sizeof(double));
       }
     }
   }

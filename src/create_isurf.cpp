@@ -294,7 +294,7 @@ void CreateISurf::set_corners()
     MPI_Allreduce(&ofull,&allofull,1,MPI_INT,MPI_SUM,world);
     if (allofull) {
       char str[128];
-      sprintf(str,
+      snprintf(str,128,
               "Create_isurf could not determine whether some corner \
                values are inside or outside with respect to the surface");
       error->all(FLERR,str);
@@ -385,7 +385,7 @@ void CreateISurf::set_multi()
   MPI_Allreduce(&ofull,&allofull,1,MPI_INT,MPI_SUM,world);
   if (allofull) {
     char str[128];
-    sprintf(str,
+    snprintf(str,128,
             "Create_isurf could not determine whether some corner \
              values are inside or outside with respect to the surface");
     error->all(FLERR,str);
@@ -708,7 +708,7 @@ void CreateISurf::sync(int which)
 {
   int i,j,ix,iy,iz,jx,jy,jz,ixfirst,iyfirst,izfirst,jcorner,jin;
   int icell,jcell;
-  double dtotal[nmulti], dtemp;
+  double dtotal[6], dtemp;
 
   comm_neigh_corners(which);
 
@@ -988,9 +988,9 @@ void CreateISurf::comm_neigh_corners(int which)
   else if (which == CVAL) ncomm = 1 + ncorner;
   else if (which == INVAL) ncomm = 1 + ncorner*nmulti;
 
-  if (nsend*ncomm > maxsbuf) {
+  if ((bigint)nsend*ncomm > maxsbuf) {
     memory->destroy(sbuf);
-    maxsbuf = nsend*ncomm;
+    maxsbuf = (bigint)nsend*ncomm;
     memory->create(sbuf,maxsbuf,"createisurf:sbuf");
   }
 
@@ -1551,7 +1551,10 @@ void CreateISurf::set_cvalues_voxel()
     dx = cells[icell].hi[0] - cells[icell].lo[0];
     dy = cells[icell].hi[1] - cells[icell].lo[1];
     dz = cells[icell].hi[2] - cells[icell].lo[2];
-    sfrac = (dx*dy*dz - cvol) / (dx*dy*dz);
+
+    double boxvol = dx*dy*dz;
+    if (boxvol > 0.0) sfrac = (boxvol - cvol) / boxvol;
+    else sfrac = 0.0;
 
     if (sfrac < 0.0 || sfrac > 1.0)
       error->one(FLERR,"Calculated solid fraction above one or negative");
@@ -1848,6 +1851,7 @@ double CreateISurf::param2cval(double param, double v1)
   // param = (thresh  - v0) / (v1 - v0)
 
   double v0;
+  if (param >= 1.0) param = 0.999999;
   v0 = (thresh - v1*param) / (1.0 - param);
 
   // bound by limits
@@ -1887,11 +1891,11 @@ void CreateISurf::remove_old()
   else nbytes = sizeof(Surf::Tri);
 
   if (dim == 2) {
-    llines = (Surf::Line *) memory->smalloc(nsurf*nbytes,"createisurf:lines");
-    memcpy(llines,surf->mylines,nsurf*nbytes);
+    llines = (Surf::Line *) memory->smalloc((bigint)nsurf*nbytes,"createisurf:lines");
+    memcpy(llines,surf->mylines,(size_t)nsurf*nbytes);
   } else {
-    ltris = (Surf::Tri *) memory->smalloc(nsurf*nbytes,"createisurf:ltris");
-    memcpy(ltris,surf->mytris,nsurf*nbytes);
+    ltris = (Surf::Tri *) memory->smalloc((bigint)nsurf*nbytes,"createisurf:ltris");
+    memcpy(ltris,surf->mytris,(size_t)nsurf*nbytes);
   }
 
   surf->add_surfs(1,0,llines,ltris,ncustom,index_custom,cuvalues);

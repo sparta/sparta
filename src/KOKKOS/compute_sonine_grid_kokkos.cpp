@@ -225,9 +225,6 @@ void ComputeSonineGridKokkos::operator()(TagComputeSonineGrid_compute_vcom, cons
 
 KOKKOS_INLINE_FUNCTION
 void ComputeSonineGridKokkos::operator()(TagComputeSonineGrid_normalize_vcom, const int &icell) const {
-  const int ispecies = d_particles[icell].ispecies;
-  const int igroup = d_s2g(imix,ispecies);
-
   double norm;
   for (int j=0; j<ngroup; j++) {
     norm = d_vcom(icell,j,3);

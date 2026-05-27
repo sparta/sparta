@@ -58,7 +58,7 @@ enum{NOSUBSONIC,PTBOTH,PONLY};
 
 FixEmitFaceKokkos::FixEmitFaceKokkos(SPARTA *sparta, int narg, char **arg) :
   FixEmitFace(sparta, narg, arg),
-  rand_pool(12345 + comm->me
+  rand_pool((int)(update->ranmaster->uniform() * 100000000) + comm->me
 #ifdef SPARTA_KOKKOS_EXACT
             , sparta
 #endif
@@ -486,7 +486,7 @@ void FixEmitFaceKokkos::operator()(TagFixEmitFace_perform_task, const int &i, in
         d_beta_un(cand) = beta_un;
 
         d_theta(cand) = MY_2PI * rand_gen.drand();
-        d_vr(cand) = vscale_val * sqrt(-log(rand_gen.drand()));
+        d_vr(cand) = vscale_val * sqrt(-log(1.0 - rand_gen.drand()));
         d_erot(cand) = particle_kk_copy.obj.erot(ispecies,temp_rot,rand_gen);
         d_evib(cand) = particle_kk_copy.obj.evib(ispecies,temp_vib,rand_gen);
         d_id(cand) = MAXSMALLINT*rand_gen.drand();
@@ -545,7 +545,7 @@ void FixEmitFaceKokkos::operator()(TagFixEmitFace_perform_task, const int &i, in
       d_beta_un(cand) = beta_un;
 
       d_theta(cand) = MY_2PI * rand_gen.drand();
-      d_vr(cand) = vscale_val * sqrt(-log(rand_gen.drand()));
+      d_vr(cand) = vscale_val * sqrt(-log(1.0 - rand_gen.drand()));
       d_erot(cand) = particle_kk_copy.obj.erot(ispecies,temp_rot,rand_gen);
       d_evib(cand) = particle_kk_copy.obj.evib(ispecies,temp_vib,rand_gen);
       d_id(cand) = MAXSMALLINT*rand_gen.drand();

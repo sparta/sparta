@@ -129,7 +129,7 @@ void ReadParticles::command(int narg, char **arg)
   MPI_Allreduce(&flag,&flagall,1,MPI_INT,MPI_SUM,world);
   if (flag) {
     char str[128];
-    sprintf(str,"%d read-in particles have invalid species",flag);
+    snprintf(str, sizeof(str),"%d read-in particles have invalid species",flag);
     error->all(FLERR,str);
   }
 
@@ -144,7 +144,7 @@ void ReadParticles::command(int narg, char **arg)
   MPI_Allreduce(&flag,&flagall,1,MPI_INT,MPI_SUM,world);
   if (flag) {
     char str[128];
-    sprintf(str,"%d read-in particles are inside surface",flag);
+    snprintf(str, sizeof(str),"%d read-in particles are inside surface",flag);
     error->all(FLERR,str);
   }
 

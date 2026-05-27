@@ -365,7 +365,7 @@ void DumpGrid::write_string(int n, double *mybuf)
 void DumpGrid::write_text(int n, double *mybuf)
 {
   int i,j;
-  char str[32];
+  char str[128];
 
   int m = 0;
   for (i = 0; i < n; i++) {

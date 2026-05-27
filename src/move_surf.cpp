@@ -327,7 +327,7 @@ void MoveSurf::readfile()
     fp = fopen(file,"r");
     if (fp == NULL) {
       char str[128];
-      sprintf(str,"Cannot open move surf file %s",file);
+      snprintf(str,128,"Cannot open move surf file %s",file);
       error->one(FLERR,str);
     }
   }

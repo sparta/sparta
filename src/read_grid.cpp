@@ -403,7 +403,7 @@ void ReadGrid::open(char *file)
   else {
 #ifdef SPARTA_GZIP
     char gunzip[128];
-    sprintf(gunzip,"gunzip -c %s",file);
+    snprintf(gunzip, sizeof(gunzip),"gunzip -c %s",file);
     fp = popen(gunzip,"r");
 #else
     error->one(FLERR,"Cannot open gzipped file");
@@ -412,7 +412,7 @@ void ReadGrid::open(char *file)
 
   if (fp == NULL) {
     char str[128];
-    sprintf(str,"Cannot open file %s",file);
+    snprintf(str, sizeof(str),"Cannot open file %s",file);
     error->one(FLERR,str);
   }
 }
@@ -534,7 +534,7 @@ void ReadGrid::header()
   int nbits = plevels[nlevels-1].nbits + plevels[nlevels-1].newbits;
   if (nbits > sizeof(cellint)*8) {
     char str[128];
-    sprintf(str,"Hierarchical grid induces cell IDs that exceed %d bits",
+    snprintf(str, sizeof(str),"Hierarchical grid induces cell IDs that exceed %d bits",
             (int) sizeof(cellint)*8);
     error->all(FLERR,str);
   }

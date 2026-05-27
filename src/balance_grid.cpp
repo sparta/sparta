@@ -428,7 +428,7 @@ void BalanceGrid::command(int narg, char **arg, int outflag)
   // DEBUG
 
   /*
-  sprintf(file,"tmp.aft.%d",comm->me);
+  snprintf(file, 128,"tmp.aft.%d",comm->me);
   fp = fopen(file,"w");
 
   fprintf(fp,"Cells %d %d\n",grid->nlocal,grid->nghost);

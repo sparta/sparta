@@ -63,11 +63,14 @@ void WriteISurf::command(int narg, char **arg)
   char *ptr;
   int n = strlen(arg[4]) + 16;
   char *file = new char[n];
+  char *arg4_copy = new char[strlen(arg[4]) + 1];
+  strcpy(arg4_copy, arg[4]);
 
-  if ((ptr = strchr(arg[4],'*'))) {
+  if ((ptr = strchr(arg4_copy,'*'))) {
     *ptr = '\0';
-    sprintf(file,"%s" BIGINT_FORMAT "%s",arg[4],update->ntimestep,ptr+1);
-  } else strcpy(file,arg[4]);
+    snprintf(file, n,"%s" BIGINT_FORMAT "%s",arg4_copy,update->ntimestep,ptr+1);
+  } else strcpy(file,arg4_copy);
+  delete [] arg4_copy;
 
   // ablation fix ID
 
@@ -124,7 +127,7 @@ void WriteISurf::command(int narg, char **arg)
     fp = fopen(file,"wb");
     if (!fp) {
       char str[128];
-      sprintf(str,"Cannot open grid corner point file %s",file);
+      snprintf(str,128,"Cannot open grid corner point file %s",file);
       error->one(FLERR,str);
     }
   }
@@ -137,6 +140,7 @@ void WriteISurf::command(int narg, char **arg)
 
   memory->destroy(dbuf);
   memory->destroy(dbufall);
+  delete [] file;
 
   MPI_Barrier(world);
   double time3 = MPI_Wtime();

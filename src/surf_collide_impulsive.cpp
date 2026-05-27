@@ -141,6 +141,8 @@ SurfCollideImpulsive::SurfCollideImpulsive(SPARTA *sparta, int narg, char **arg)
 
 SurfCollideImpulsive::~SurfCollideImpulsive()
 {
+  if (copy) return;
+
   delete random;
 }
 

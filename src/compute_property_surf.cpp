@@ -247,7 +247,7 @@ void ComputePropertySurf::pack_id(int n)
     Surf::Tri *tris;
     if (distributed) tris = surf->mytris;
     else tris = surf->tris;
-    for (int i = 0; i < nsown; i++) {
+    for (int i = 0; i < nchoose; i++) {
       m = cglobal[i];
       if (tris[m].mask & groupbit) buf[n] = tris[m].id;
       else buf[n] = 0.0;
@@ -434,7 +434,7 @@ void ComputePropertySurf::pack_v3y(int n)
   else tris = surf->tris;
   for (int i = 0; i < nsown; i++) {
     m = cglobal[i];
-    if (tris[m].mask & groupbit) buf[n] = tris[m].p1[1];
+    if (tris[m].mask & groupbit) buf[n] = tris[m].p3[1];
     else buf[n] = 0.0;
     n += nvalues;
   }
@@ -565,7 +565,7 @@ void ComputePropertySurf::pack_area(int n)
       m = cglobal[i];
       if (tris[m].mask & groupbit) {
 	MathExtra::sub3(tris[m].p2,tris[m].p1,p12);
-	MathExtra::sub3(tris[m].p3,tris[m].p2,p12);
+	MathExtra::sub3(tris[m].p3,tris[m].p2,p23);
 	MathExtra::cross3(p12,p23,cross);
 	buf[n] = 0.5 * MathExtra::len3(cross);
       } else buf[n] = 0.0;

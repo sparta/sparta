@@ -56,7 +56,7 @@ Custom::~Custom()
 
   for (int i = 0; i < naction; i++) {
     int action = actions[i].action;
-    if (action == FILESTYLE) {
+    if (action == FILESTYLE || action == FILECOARSE) {
       delete [] actions[i].fname;
       delete [] actions[i].cindex_file;
       delete [] actions[i].ctype_file;
@@ -595,7 +595,7 @@ bigint Custom::process_actions()
       char *filecurrent = new char[strlen(fname) + 16];
       char *ptr = strchr(fname,'*');
       *ptr = '\0';
-      sprintf(filecurrent,"%s" BIGINT_FORMAT "%s",
+      snprintf(filecurrent, strlen(fname) + 16,"%s" BIGINT_FORMAT "%s",
               fname,update->ntimestep,ptr+1);
       *ptr = '*';
 
@@ -634,7 +634,7 @@ bigint Custom::process_actions()
       char *filecurrent = new char[strlen(fname) + 16];
       char *ptr = strchr(fname,'*');
       *ptr = '\0';
-      sprintf(filecurrent,"%s" BIGINT_FORMAT "%s",
+      snprintf(filecurrent, strlen(fname) + 16,"%s" BIGINT_FORMAT "%s",
               fname,update->ntimestep,ptr+1);
       *ptr = '*';
 
@@ -1332,7 +1332,7 @@ void Custom::read_coarse_files(char *fname, int numfile, int colcount)
       filewhich = new char[strlen(fname) + 16];
       char *ptr = strchr(fname,'%');
       *ptr = '\0';
-      sprintf(filewhich,"%s%d%s",fname,iproc+1,ptr+1);
+      snprintf(filewhich, strlen(fname) + 16,"%s%d%s",fname,iproc+1,ptr+1);
       *ptr = '%';
     } else filewhich = fname;
 
@@ -1620,7 +1620,7 @@ bigint Custom::coarse_tree_neighbor_assign(int external, int colcount,
           else iarray[j][i][ccol[j]-1] /= ncount;
         } else if (ctype[j] == DOUBLE) {
           if (csize[j] == 0) dvec[j][i] /= ncount;
-          else darray[j][i][ccol[j]-1] /- ncount;
+          else darray[j][i][ccol[j]-1] /= ncount;
         }
       }
     }

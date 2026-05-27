@@ -423,7 +423,7 @@ void CreateParticlesKokkos::create_local(bigint np)
       // if using per-grid variables or per-grid custom attributes
 
       if (nfix_update_custom)
-        modify->update_custom(particle->nlocal-1,tempscale*temp_thermal,
+        modify->update_custom(inew,tempscale*temp_thermal,
                               tempscale*temp_rot,tempscale*temp_vib,
                               vstream_update_custom);
     }

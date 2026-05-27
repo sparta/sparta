@@ -30,10 +30,10 @@ class FixTempRescale : public Fix {
  public:
   FixTempRescale(class SPARTA *, int, char **);
   virtual ~FixTempRescale();
-  int setmask();
-  void init();
+  int setmask() override;
+  void init() override;
   void end_of_step() override;
-  double memory_usage();
+  double memory_usage() override;
 
  protected:
   int aveflag;

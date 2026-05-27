@@ -324,10 +324,10 @@ struct remap_plan_3d_kokkos<DeviceType>* RemapKokkos3d<DeviceType>::remap_3d_cre
   out.ksize = out.khi - out.klo + 1;
 
   inarray = (struct extent_3d *) malloc(nprocs*sizeof(struct extent_3d));
-  if (inarray == nullptr) return nullptr;
+  if (inarray == nullptr) { delete plan; return nullptr; }
 
   outarray = (struct extent_3d *) malloc(nprocs*sizeof(struct extent_3d));
-  if (outarray == nullptr) return nullptr;
+  if (outarray == nullptr) { free(inarray); delete plan; return nullptr; }
 
   // combine input & output extents across all procs
 
@@ -360,7 +360,10 @@ struct remap_plan_3d_kokkos<DeviceType>* RemapKokkos3d<DeviceType>::remap_3d_cre
         malloc(nsend*sizeof(struct pack_plan_3d));
 
       if (plan->send_offset == nullptr || plan->send_size == nullptr ||
-          plan->send_proc == nullptr || plan->packplan == nullptr) return nullptr;
+          plan->send_proc == nullptr || plan->packplan == nullptr) {
+        free(plan->send_offset); free(plan->send_size); free(plan->send_proc); free(plan->packplan);
+        free(outarray); free(inarray); delete plan; return nullptr;
+      }
     }
 
     if (nrecv) {
@@ -393,7 +396,12 @@ struct remap_plan_3d_kokkos<DeviceType>* RemapKokkos3d<DeviceType>::remap_3d_cre
 
       if (plan->recv_offset == nullptr || plan->recv_size == nullptr ||
           plan->recv_proc == nullptr || plan->recv_bufloc == nullptr ||
-          plan->request == nullptr || plan->unpackplan == nullptr) return nullptr;
+          plan->request == nullptr || plan->unpackplan == nullptr) {
+        free(plan->recv_offset); free(plan->recv_size); free(plan->recv_proc);
+        free(plan->recv_bufloc); free(plan->request); free(plan->unpackplan);
+        if (nsend) { free(plan->send_offset); free(plan->send_size); free(plan->send_proc); free(plan->packplan); }
+        free(outarray); free(inarray); delete plan; return nullptr;
+      }
     }
 
     // store send info, with self as last entry
@@ -529,14 +537,14 @@ struct remap_plan_3d_kokkos<DeviceType>* RemapKokkos3d<DeviceType>::remap_3d_cre
     // start with max length -- nprocs. Unused entries will be removed later
 
     int *local_cnts = (int*) malloc(2*nprocs*sizeof(int));
-    if (local_cnts == nullptr) return nullptr;
+    if (local_cnts == nullptr) { free(outarray); free(inarray); delete plan; return nullptr; }
     int *local_sendcnts = local_cnts;
     int *local_recvcnts = (local_cnts + nprocs);
 
     // local arrays used to store the results of the allreduce
 
     int *global_cnts = (int*) malloc(2*nprocs*sizeof(int));
-    if (global_cnts == nullptr) return nullptr;
+    if (global_cnts == nullptr) { free(local_cnts); free(outarray); free(inarray); delete plan; return nullptr; }
     int *global_sendcnts = global_cnts;
     int *global_recvcnts = (global_cnts + nprocs);
 
@@ -615,7 +623,11 @@ struct remap_plan_3d_kokkos<DeviceType>* RemapKokkos3d<DeviceType>::remap_3d_cre
 
       if (plan->send_offset == nullptr || plan->send_size == nullptr ||
           plan->sendcnts == nullptr || plan->sdispls == nullptr ||
-          plan->packplan == nullptr) return nullptr;
+          plan->packplan == nullptr) {
+        free(plan->send_offset); free(plan->send_size); free(plan->sendcnts);
+        free(plan->sdispls); free(plan->packplan);
+        free(plan->commringlist); free(outarray); free(inarray); delete plan; return nullptr;
+      }
 
       // recv space
 
@@ -653,7 +665,11 @@ struct remap_plan_3d_kokkos<DeviceType>* RemapKokkos3d<DeviceType>::remap_3d_cre
 
       if (plan->recv_offset == nullptr || plan->recv_size == nullptr ||
           plan->rcvcnts == nullptr || plan->rdispls == nullptr ||
-          plan->unpackplan == nullptr) return nullptr;
+          plan->unpackplan == nullptr) {
+        free(plan->recv_offset); free(plan->recv_size); free(plan->rcvcnts); free(plan->rdispls); free(plan->unpackplan);
+        if (nsend || nrecv) { free(plan->send_offset); free(plan->send_size); free(plan->sendcnts); free(plan->sdispls); free(plan->packplan); }
+        free(plan->commringlist); free(outarray); free(inarray); delete plan; return nullptr;
+      }
     }
 
     // store send info, with self as last entry

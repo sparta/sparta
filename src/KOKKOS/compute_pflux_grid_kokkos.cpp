@@ -354,7 +354,7 @@ KOKKOS_INLINE_FUNCTION
 void ComputePFluxGridKokkos::operator()(TagComputePFluxGrid_post_process_grid_diag, const int &icell) const {
   double summass, summv, wt;
   summass = d_etally(icell,mass);
-  if (summass == 0.0) d_vec[icell] = 0.0;
+  if (summass == 0.0 || d_cinfo[icell].volume == 0.0) d_vec[icell] = 0.0;
   else{
     wt = fnum * d_cinfo[icell].weight / d_cinfo[icell].volume;
     summv = d_etally(icell,mv);
@@ -368,7 +368,7 @@ KOKKOS_INLINE_FUNCTION
 void ComputePFluxGridKokkos::operator()(TagComputePFluxGrid_post_process_grid_offdiag, const int &icell) const {
   double summass, wt;
   summass = d_etally(icell,mass);
-  if (summass == 0.0) d_vec[icell] = 0.0;
+  if (summass == 0.0 || d_cinfo[icell].volume == 0.0) d_vec[icell] = 0.0;
   else{
     wt = fnum * d_cinfo[icell].weight / d_cinfo[icell].volume;
     d_vec[icell] = wt/nsample * (d_etally(icell,mvv) -

@@ -16,6 +16,7 @@
 #include "stdlib.h"
 #include "string.h"
 #include "fix_ablate.h"
+#include <vector>
 #include "update.h"
 #include "geometry.h"
 #include "grid.h"
@@ -89,7 +90,7 @@ void FixAblate::decrement_multid_outside()
 
     Ninterface = find_ninter();
     total = celldelta[icell];
-    perout = total/Ninterface;
+    if (Ninterface > 0) perout = total/Ninterface; else perout = 0.0;
 
     // iterate to find the number of vertices around each corner
     // also assign perout to the interface points
@@ -558,7 +559,7 @@ void FixAblate::sync_multiv()
 {
   int i,j,ix,iy,iz,jx,jy,jz,ixfirst,iyfirst,izfirst,jcorner;
   int icell,jcell;
-  double total[nmultiv];
+  std::vector<double> total(nmultiv);
 
   comm_neigh_corners(CDELTA);
 
@@ -677,7 +678,7 @@ void FixAblate::decrement_multiv_multid_outside()
 
     Ninterface = find_ninter();
     total = celldelta[icell];
-    perout = total/Ninterface;
+    if (Ninterface > 0) perout = total/Ninterface; else perout = 0.0;
 
     for (i = 0; i < ncorner; i++) {
 
@@ -857,7 +858,7 @@ void FixAblate::sync_multiv_multid_inside()
 {
   int i,j,ix,iy,iz,jx,jy,jz,ixfirst,iyfirst,izfirst,jcorner;
   int icell,jcell;
-  double total[nmultiv];
+  std::vector<double> total(nmultiv);
 
   comm_neigh_corners(CDELTA);
 

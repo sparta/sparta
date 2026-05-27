@@ -34,7 +34,7 @@ enum{NONE,DISCRETE,SMOOTH};            // several files
 
 FixVibmodeKokkos::FixVibmodeKokkos(SPARTA *sparta, int narg, char **arg) :
   FixVibmode(sparta, narg, arg),
-  rand_pool(12345 + comm->me
+  rand_pool((int)(update->ranmaster->uniform() * 100000000) + comm->me
 #ifdef SPARTA_KOKKOS_EXACT
             , sparta
 #endif

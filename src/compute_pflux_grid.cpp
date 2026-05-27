@@ -303,7 +303,7 @@ void ComputePFluxGrid::post_process_grid(int index, int nsample,
       int mvv = emap[2];
       for (int icell = lo; icell < hi; icell++) {
         summass = etally[icell][mass];
-        if (summass == 0.0) vec[k] = 0.0;
+        if (summass == 0.0 || cinfo[icell].volume == 0.0) vec[k] = 0.0;
         else {
           wt = fnum * cinfo[icell].weight / cinfo[icell].volume;
           summv = etally[icell][mv];
@@ -328,7 +328,7 @@ void ComputePFluxGrid::post_process_grid(int index, int nsample,
       int mvv = emap[3];
       for (int icell = lo; icell < hi; icell++) {
         summass = etally[icell][mass];
-        if (summass == 0.0) vec[k] = 0.0;
+        if (summass == 0.0 || cinfo[icell].volume == 0.0) vec[k] = 0.0;
         else {
           wt = fnum * cinfo[icell].weight / cinfo[icell].volume;
           vec[k] = wt/nsample * (etally[icell][mvv] -
@@ -409,8 +409,8 @@ void ComputePFluxGrid::reallocate()
 
 bigint ComputePFluxGrid::memory_usage()
 {
-  bigint bytes;
-  bytes = nglocal * sizeof(double);
-  bytes = ntotal*nglocal * sizeof(double);
+  bigint bytes = 0;
+  bytes += nglocal * sizeof(double);
+  bytes += ntotal*nglocal * sizeof(double);
   return bytes;
 }

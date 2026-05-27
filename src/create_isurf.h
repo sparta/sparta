@@ -95,7 +95,7 @@ class CreateISurf : protected Pointers {
   int maxsend;
 
   double *sbuf;
-  int maxsbuf;
+  bigint maxsbuf;
 
   union ubuf {
     double d;

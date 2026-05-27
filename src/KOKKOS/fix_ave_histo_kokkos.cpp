@@ -504,10 +504,12 @@ void FixAveHistoKokkos::bin_particles(
   int nmax = particle->maxlocal;
 
   Region *region;
-  if (regionflag) region = domain->regions[iregion];
+  if (regionflag) {
+    region = domain->regions[iregion];
 
-  if (!region->kokkos_flag)
-    error->all(FLERR,"KOKKOS package does not (yet) support chosen region style");
+    if (!region->kokkos_flag)
+      error->all(FLERR,"KOKKOS package does not (yet) support chosen region style");
+  }
 
   KokkosBase* regionKKBase = dynamic_cast<KokkosBase*>(region);
 
@@ -568,10 +570,12 @@ void FixAveHistoKokkos::bin_particles(
   d_values = mirror_view_from_raw_host_array<double,DeviceType>(values, n, stride);
 
   Region *region;
-  if (regionflag) region = domain->regions[iregion];
+  if (regionflag) {
+    region = domain->regions[iregion];
 
-  if (!region->kokkos_flag)
-    error->all(FLERR,"KOKKOS package does not (yet) support chosen region style");
+    if (!region->kokkos_flag)
+      error->all(FLERR,"KOKKOS package does not (yet) support chosen region style");
+  }
 
   KokkosBase* regionKKBase = dynamic_cast<KokkosBase*>(region);
 

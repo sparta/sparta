@@ -58,7 +58,7 @@ FixHalt::FixHalt(SPARTA *sparta, int narg, char **arg) :
   } else {
     if (!utils::strmatch(arg[iarg],"^v_")) {
       char msg[128];
-      sprintf(msg, "Invalid fix halt attribute %s", arg[iarg]);
+      snprintf(msg, sizeof(msg), "Invalid fix halt attribute %s", arg[iarg]);
       error->all(FLERR, msg);
     }
 
@@ -101,7 +101,7 @@ FixHalt::FixHalt(SPARTA *sparta, int narg, char **arg) :
       else if (strcmp(arg[iarg + 1], "continue") == 0) eflag = CONTINUE;
       else {
         char msg[128];
-        sprintf(msg, "Unknown fix halt error condition %s", arg[iarg]);
+        snprintf(msg, sizeof(msg), "Unknown fix halt error condition %s", arg[iarg]);
         error->all(FLERR, msg);
       }
       iarg += 2;
@@ -111,7 +111,7 @@ FixHalt::FixHalt(SPARTA *sparta, int narg, char **arg) :
       iarg += 2;
     } else {
       char msg[128];
-      sprintf(msg, "Unknown fix halt keyword %s", arg[iarg]);
+      snprintf(msg, sizeof(msg), "Unknown fix halt keyword %s", arg[iarg]);
       error->all(FLERR, msg);
     }
   }
@@ -154,11 +154,11 @@ void FixHalt::init()
     ivar = input->variable->find(idvar);
     char msg[128];
     if (ivar < 0) {
-      sprintf(msg, "Could not find fix halt variable %s", idvar);
+      snprintf(msg, sizeof(msg), "Could not find fix halt variable %s", idvar);
       error->all(FLERR, msg);
     }
     if (input->variable->equal_style(ivar) == 0) {
-      sprintf(msg, "Fix halt variable %s is not equal-style variable", idvar);
+      snprintf(msg, sizeof(msg), "Fix halt variable %s is not equal-style variable", idvar);
       error->all(FLERR, msg);
     }
   }
@@ -214,7 +214,7 @@ void FixHalt::end_of_step()
   // print message with ID of fix halt in case multiple instances
 
   char message[128];
-  sprintf(message, "Fix halt condition for fix-id %s met on step %ld with value %g",
+  snprintf(message, sizeof(message), "Fix halt condition for fix-id %s met on step " BIGINT_FORMAT " with value %g",
                                     id, update->ntimestep, attvalue);
   if (eflag == HARD) {
     error->all(FLERR, message);

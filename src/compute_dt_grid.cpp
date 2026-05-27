@@ -643,13 +643,15 @@ void ComputeDtGrid::compute_per_grid()
 
     // cell dt based on transit time using maximum most probable speed
     vrm_max = sqrt(2.0*update->boltz * temp[i] / min_species_mass);
-    dt_candidate = transit_fraction*dx/vrm_max;
-    cell_dt_desired = MIN(dt_candidate,cell_dt_desired);
-    dt_candidate = transit_fraction*dy/vrm_max;
-    cell_dt_desired = MIN(dt_candidate,cell_dt_desired);
-    if (domain->dimension == 3) {
-      dt_candidate = transit_fraction*dz/vrm_max;
+    if (vrm_max > 0.0) {
+      dt_candidate = transit_fraction*dx/vrm_max;
       cell_dt_desired = MIN(dt_candidate,cell_dt_desired);
+      dt_candidate = transit_fraction*dy/vrm_max;
+      cell_dt_desired = MIN(dt_candidate,cell_dt_desired);
+      if (domain->dimension == 3) {
+        dt_candidate = transit_fraction*dz/vrm_max;
+        cell_dt_desired = MIN(dt_candidate,cell_dt_desired);
+      }
     }
 
     // per grid cell timestep = final cell_dt_desired for all criteria

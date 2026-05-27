@@ -365,8 +365,10 @@ void ComputeEFluxGrid::post_process_grid(int index, int nsample,
         2.0*t[mv]*t[mv1]*t[mv1]/summass/summass;
       h2 = t[mvv2v2] - 2.0*t[mvv2]*t[mv2]/summass - t[mv]*t[mv2v2]/summass +
         2.0*t[mv]*t[mv2]*t[mv2]/summass/summass;
-      wt = 0.5 * fnum * cinfo[icell].weight / cinfo[icell].volume;
-      vec[k] = wt/nsample * (h + h1 + h2);
+      if (cinfo[icell].volume > 0.0) {
+        wt = 0.5 * fnum * cinfo[icell].weight / cinfo[icell].volume;
+        vec[k] = wt/nsample * (h + h1 + h2);
+      } else vec[k] = 0.0;
     }
     k += nstride;
   }
@@ -440,8 +442,8 @@ void ComputeEFluxGrid::reallocate()
 
 bigint ComputeEFluxGrid::memory_usage()
 {
-  bigint bytes;
-  bytes = nglocal * sizeof(double);
-  bytes = ntotal*nglocal * sizeof(double);
+  bigint bytes = 0;
+  bytes += nglocal * sizeof(double);
+  bytes += ntotal*nglocal * sizeof(double);
   return bytes;
 }

@@ -259,7 +259,7 @@ double ParticleKokkos::erot(int isp, double temp_thermal, rand_type &erandom) co
  if (d_species[isp].rotdof < 2) return 0.0;
 
  if (d_species[isp].rotdof == 2)
-   eng = -log(erandom.drand()) * boltz * temp_thermal;
+   eng = -log(1.0 - erandom.drand()) * boltz * temp_thermal;
  else {
    a = 0.5*d_species[isp].rotdof-1.0;
    while (1) {
@@ -289,12 +289,12 @@ double ParticleKokkos::evib(int isp, double temp_thermal, rand_type &erandom) co
 
   eng = 0.0;
   if (vibstyle == DISCRETE && d_species[isp].vibdof == 2) {
-    int ivib = static_cast<int> (-log(erandom.drand()) * temp_thermal /
+    int ivib = static_cast<int> (-log(1.0 - erandom.drand()) * temp_thermal /
                                  d_species[isp].vibtemp[0]);
     eng = ivib * boltz * d_species[isp].vibtemp[0];
   } else if (vibstyle == SMOOTH || d_species[isp].vibdof >= 2) {
     if (d_species[isp].vibdof == 2)
-      eng = -log(erandom.drand()) * boltz * temp_thermal;
+      eng = -log(1.0 - erandom.drand()) * boltz * temp_thermal;
     else if (d_species[isp].vibdof > 2) {
       a = 0.5*d_species[isp].vibdof-1.;
       while (1) {

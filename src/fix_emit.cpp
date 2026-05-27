@@ -188,7 +188,7 @@ int FixEmit::subsonic_temperature_check(int flag, double tempmax)
     MPI_Allreduce(&tempmax,&allmax,1,MPI_DOUBLE,MPI_MAX,world);
     if (comm->me == 0) {
       char str[128];
-      sprintf(str,"Excessive subsonic thermal temp = %g",allmax);
+      snprintf(str, sizeof(str),"Excessive subsonic thermal temp = %g",allmax);
       error->warning(FLERR,str);
     }
     return 1;

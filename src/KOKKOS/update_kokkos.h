@@ -209,12 +209,14 @@ class UpdateKokkos : public Update {
     double znew = x[2];
     x[1] = sqrt(ynew*ynew + znew*znew);
     x[2] = 0.0;
-    double rn = ynew / x[1];
-    double wn = znew / x[1];
-    double vy = v[1];
-    double vz = v[2];
-    v[1] = vy*rn + vz*wn;
-    v[2] = -vy*wn + vz*rn;
+    if (x[1] > 0.0) {
+      double rn = ynew / x[1];
+      double wn = znew / x[1];
+      double vy = v[1];
+      double vz = v[2];
+      v[1] = vy*rn + vz*wn;
+      v[2] = -vy*wn + vz*rn;
+    }
   };
 
   typedef void (UpdateKokkos::*FnPtr)();

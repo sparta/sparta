@@ -635,8 +635,8 @@ void ComputeGrid::reallocate()
 
 bigint ComputeGrid::memory_usage()
 {
-  bigint bytes;
-  bytes = nglocal * sizeof(double);
-  bytes = ntotal*nglocal * sizeof(double);
+  bigint bytes = 0;
+  bytes += nglocal * sizeof(double);
+  bytes += ntotal*nglocal * sizeof(double);
   return bytes;
 }

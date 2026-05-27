@@ -418,15 +418,9 @@ void AdaptGrid::process_args(int narg, char **arg)
   }
 
   if (maxlevel_request && maxlevel < maxlevel_request && me == 0) {
-    char str[256];
-#ifdef SPARTA_BIGBIG
-    sprintf(str,"Reduced maxlevel for grid adaptation from %d to %d because it induces "
-            "cell IDs that exceed %d bits",maxlevel_request,maxlevel,(int) sizeof(cellint)*8);
-#else
-    sprintf(str,"Reduced maxlevel for grid adaptation from %d to %d because it induces "
-            "cell IDs that exceed %d bits, compiling with -DSPARTA_BIGBIG may allow further adaptation"
-            ,maxlevel_request,maxlevel,(int) sizeof(cellint)*8);
-#endif
+    char str[128];
+    snprintf(str, sizeof(str),"Reduced maxlevel because it induces "
+            "cell IDs that exceed %d bits",(int) sizeof(cellint)*8);
     error->warning(FLERR,str);
   }
 }
@@ -1746,7 +1740,7 @@ void AdaptGrid::write_file()
     expandfile = new char[strlen(file) + 16];
     char *ptr = strchr(file,'*');
     *ptr = '\0';
-    sprintf(expandfile,"%s" BIGINT_FORMAT "%s",file,update->ntimestep,ptr+1);
+    snprintf(expandfile, strlen(file) + 16,"%s" BIGINT_FORMAT "%s",file,update->ntimestep,ptr+1);
     *ptr = '*';
     args[0] = expandfile;
   } else args[0] = file;

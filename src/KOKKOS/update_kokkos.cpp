@@ -705,7 +705,7 @@ template < int DIM, int SURF, int REACT, int OPT > void UpdateKokkos::move()
 
     if (error_flag) {
       char str[128];
-      sprintf(str,
+      snprintf(str, sizeof(str),
               "Particle being sent to self proc "
               "on step " BIGINT_FORMAT,
               update->ntimestep);
@@ -1053,22 +1053,34 @@ void UpdateKokkos::operator()(TagUpdateMove<DIM,SURF,REACT,OPT,ATOMIC_REDUCTION>
     frac = 1.0;
 
     if (xnew[0] < lo[0]) {
-      frac = (lo[0]-x[0]) / (xnew[0]-x[0]);
+      if (xnew[0] != x[0]) frac = (lo[0]-x[0]) / (xnew[0]-x[0]);
+      else frac = 0.0;
+      if (frac < 0.0) frac = 0.0;
+      else if (frac > 1.0) frac = 1.0;
       outface = XLO;
     } else if (xnew[0] >= hi[0]) {
-      frac = (hi[0]-x[0]) / (xnew[0]-x[0]);
+      if (xnew[0] != x[0]) frac = (hi[0]-x[0]) / (xnew[0]-x[0]);
+      else frac = 0.0;
+      if (frac < 0.0) frac = 0.0;
+      else if (frac > 1.0) frac = 1.0;
       outface = XHI;
     }
 
     if (DIM != 1) {
       if (xnew[1] < lo[1]) {
-        newfrac = (lo[1]-x[1]) / (xnew[1]-x[1]);
+        if (xnew[1] != x[1]) newfrac = (lo[1]-x[1]) / (xnew[1]-x[1]);
+        else newfrac = 0.0;
+        if (newfrac < 0.0) newfrac = 0.0;
+        else if (newfrac > 1.0) newfrac = 1.0;
         if (newfrac < frac) {
           frac = newfrac;
           outface = YLO;
         }
       } else if (xnew[1] >= hi[1]) {
-        newfrac = (hi[1]-x[1]) / (xnew[1]-x[1]);
+        if (xnew[1] != x[1]) newfrac = (hi[1]-x[1]) / (xnew[1]-x[1]);
+        else newfrac = 0.0;
+        if (newfrac < 0.0) newfrac = 0.0;
+        else if (newfrac > 1.0) newfrac = 1.0;
         if (newfrac < frac) {
           frac = newfrac;
           outface = YHI;
@@ -1111,13 +1123,19 @@ void UpdateKokkos::operator()(TagUpdateMove<DIM,SURF,REACT,OPT,ATOMIC_REDUCTION>
 
     if (DIM == 3) {
       if (xnew[2] < lo[2]) {
-        newfrac = (lo[2]-x[2]) / (xnew[2]-x[2]);
+        if (xnew[2] != x[2]) newfrac = (lo[2]-x[2]) / (xnew[2]-x[2]);
+        else newfrac = 0.0;
+        if (newfrac < 0.0) newfrac = 0.0;
+        else if (newfrac > 1.0) newfrac = 1.0;
         if (newfrac < frac) {
           frac = newfrac;
           outface = ZLO;
         }
       } else if (xnew[2] >= hi[2]) {
-        newfrac = (hi[2]-x[2]) / (xnew[2]-x[2]);
+        if (xnew[2] != x[2]) newfrac = (hi[2]-x[2]) / (xnew[2]-x[2]);
+        else newfrac = 0.0;
+        if (newfrac < 0.0) newfrac = 0.0;
+        else if (newfrac > 1.0) newfrac = 1.0;
         if (newfrac < frac) {
           frac = newfrac;
           outface = ZHI;
@@ -1419,7 +1437,7 @@ void UpdateKokkos::operator()(TagUpdateMove<DIM,SURF,REACT,OPT,ATOMIC_REDUCTION>
 
           // stuck_iterate = consecutive iterations particle is immobile
 
-          if (minparam == 0.0) stuck_iterate++;
+          if (minparam <= 1.0e-14) stuck_iterate++;
           else stuck_iterate = 0;
 
           // reset post-bounce xnew

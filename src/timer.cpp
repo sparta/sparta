@@ -104,8 +104,10 @@ void Timer::init_timeout()
   _s_timeout = _timeout;
   if (_timeout < 0)
     _nextcheck = -1;
-  else
+  else {
     _nextcheck = _checkfreq;
+    timeout_start = MPI_Wtime();
+  }
 }
 
 /* ---------------------------------------------------------------------- */
@@ -138,8 +140,6 @@ bool Timer::_check_timeout()
   double walltime =  MPI_Wtime() - timeout_start;
   // broadcast time to ensure all ranks act the same.
   MPI_Bcast(&walltime, 1, MPI_DOUBLE, 0, world);
-
-  printf("%g %g\n",walltime,_timeout);
 
   if (walltime < _timeout) {
     _nextcheck += _checkfreq;

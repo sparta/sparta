@@ -152,8 +152,10 @@ FixAveHisto::FixAveHisto(SPARTA *spa, int narg, char **arg) :
 
       char *ptr = strchr(suffix,'[');
       if (ptr) {
-        if (suffix[strlen(suffix)-1] != ']')
+        if (suffix[strlen(suffix)-1] != ']') {
+          delete [] suffix;
           error->all(FLERR,"Illegal fix ave/histo command");
+        }
         argindex[i] = atoi(ptr+1);
         *ptr = '\0';
       } else argindex[i] = 0;
@@ -1015,7 +1017,7 @@ void FixAveHisto::options(int iarg, int narg, char **arg)
         fp = fopen(arg[iarg+1],"w");
         if (fp == NULL) {
           char str[128];
-          sprintf(str,"Cannot open fix ave/histo file %s",arg[iarg+1]);
+          snprintf(str, sizeof(str),"Cannot open fix ave/histo file %s",arg[iarg+1]);
           error->one(FLERR,str);
         }
       }

@@ -44,7 +44,7 @@ enum{ARRHENIUS,QUANTUM};                               // other react files
 
 ReactBirdKokkos::ReactBirdKokkos(SPARTA *sparta, int narg, char **arg) :
   ReactBird(sparta, narg, arg),
-  rand_pool(12345 + comm->me
+  rand_pool(54321 + comm->me
 #ifdef SPARTA_KOKKOS_EXACT
             , sparta
 #endif
@@ -191,7 +191,7 @@ void ReactBirdKokkos::backup()
 
 #ifdef SPARTA_KOKKOS_EXACT
   if (!random_backup)
-    random_backup = new RanKnuth(12345 + comm->me);
+    random_backup = new RanKnuth((int)(update->ranmaster->uniform() * 100000000) + comm->me);
   memcpy(random_backup,random,sizeof(RanKnuth));
 #endif
 

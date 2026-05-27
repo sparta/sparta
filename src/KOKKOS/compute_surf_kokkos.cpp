@@ -210,9 +210,11 @@ int ComputeSurfKokkos::tallyinfo(surfint *&ptr)
   int istart = 0;
   int iend = nsurf-1;
 
+  if (nsurf == 0) return 0;
+
   while (1) {
-    while (h_surf2tally[istart] != -1 && istart < nsurf-2) istart++;
-    while (h_surf2tally[iend] == -1 && iend > 0) iend--;
+    while (istart < nsurf-2 && h_surf2tally[istart] != -1) istart++;
+    while (iend > 0 && h_surf2tally[iend] == -1) iend--;
     if (istart >= iend) {
       ntally = istart;
       break;

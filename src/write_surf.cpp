@@ -59,7 +59,7 @@ void WriteSurf::command(int narg, char **arg)
 
   if ((ptr = strchr(arg[0],'*'))) {
     *ptr = '\0';
-    sprintf(file,"%s" BIGINT_FORMAT "%s",arg[0],update->ntimestep,ptr+1);
+    snprintf(file, n,"%s" BIGINT_FORMAT "%s",arg[0],update->ntimestep,ptr+1);
   } else strcpy(file,arg[0]);
 
   // check for multiproc output
@@ -934,13 +934,13 @@ void WriteSurf::write_base(char *file)
   char *hfile = new char[strlen(file) + 16];
   char *ptr = strchr(file,'%');
   *ptr = '\0';
-  sprintf(hfile,"%s%s%s",file,"base",ptr+1);
+  snprintf(hfile, strlen(file) + 16,"%s%s%s",file,"base",ptr+1);
   *ptr = '%';
 
   fp = fopen(hfile,"w");
   if (fp == NULL) {
     char str[128];
-    sprintf(str,"Cannot open surface base file %s",hfile);
+    snprintf(str,128,"Cannot open surface base file %s",hfile);
     error->one(FLERR,str);
   }
 
@@ -969,14 +969,14 @@ void WriteSurf::open(char *file)
     onefile = new char[strlen(file) + 16];
     char *ptr = strchr(file,'%');
     *ptr = '\0';
-    sprintf(onefile,"%s%d%s",file,icluster,ptr+1);
+    snprintf(onefile, strlen(file) + 16,"%s%d%s",file,icluster,ptr+1);
     *ptr = '%';
   }
 
   fp = fopen(onefile,"w");
   if (fp == NULL) {
     char str[128];
-    sprintf(str,"Cannot open surface file %s",onefile);
+    snprintf(str,128,"Cannot open surface file %s",onefile);
     error->one(FLERR,str);
   }
 

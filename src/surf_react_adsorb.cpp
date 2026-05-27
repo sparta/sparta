@@ -19,6 +19,7 @@
 #include "stdlib.h"
 #include "string.h"
 #include "surf_react_adsorb.h"
+#include <vector>
 #include "input.h"
 #include "update.h"
 #include "comm.h"
@@ -651,7 +652,8 @@ int SurfReactAdsorb::react(Particle::OnePart *&ip, int isurf, double *norm,
   Particle::Species *species = particle->species;
 
   OneReaction_GS *r;
-  double prob_value[n], sum_prob = 0.0;
+  std::vector<double> prob_value(n);
+  double sum_prob = 0.0;
   double scatter_prob = 0.0, correction = 1.0;
   //int check_ads = 0, ads_index = -1;
 
@@ -804,13 +806,16 @@ int SurfReactAdsorb::react(Particle::OnePart *&ip, int isurf, double *norm,
     case ER:
       {
         double dot = MathExtra::dot3(ip->v,norm);
-        dot = 2.0;
 
-        if (r->nreactant == 1) {
-          prob_value[i] = 2.0 * r->k_react *
-            (maxstick - total_state[isurf]) * ms_inv / fabs(dot);
+        if (dot == 0.0) {
+          prob_value[i] = 0.0;
         } else {
-          prob_value[i] = 2.0 * r->k_react / fabs(dot);
+          if (r->nreactant == 1) {
+            prob_value[i] = 2.0 * r->k_react *
+              (maxstick - total_state[isurf]) * ms_inv / fabs(dot);
+          } else {
+            prob_value[i] = 2.0 * r->k_react / fabs(dot);
+          }
         }
         break;
 
@@ -824,9 +829,11 @@ int SurfReactAdsorb::react(Particle::OnePart *&ip, int isurf, double *norm,
           double dot = MathExtra::dot3(v,norm);
           double vmag_sq = MathExtra::lensq3(v);
           double E_i = 0.5 * species[ip->ispecies].mass * vmag_sq;
-          double cos_theta = abs(dot) / sqrt(vmag_sq);
-          prob_value[i] *= pow(E_i,r->energy_coeff[0]) *
-          pow(cos_theta,r->energy_coeff[1]);
+          if (vmag_sq > 0.0) {
+            double cos_theta = abs(dot) / sqrt(vmag_sq);
+            prob_value[i] *= pow(E_i,r->energy_coeff[0]) *
+            pow(cos_theta,r->energy_coeff[1]);
+          } else prob_value[i] = 0.0;
         }
         break;
       }
@@ -1609,7 +1616,7 @@ void SurfReactAdsorb::readfile_gs(char *fname)
     fp = fopen(fname,"r");
     if (fp == NULL) {
       char str[128];
-      sprintf(str,"Cannot open reaction file %s",fname);
+      snprintf(str, 128,"Cannot open reaction file %s",fname);
       error->one(FLERR,str);
     }
   }
@@ -2366,7 +2373,7 @@ void SurfReactAdsorb::readfile_ps(char *fname)
     fp = fopen(fname,"r");
     if (fp == NULL) {
       char str[128];
-      sprintf(str,"Cannot open reaction file %s",fname);
+      snprintf(str, 128,"Cannot open reaction file %s",fname);
       error->one(FLERR,str);
     }
   }
@@ -2852,9 +2859,9 @@ void SurfReactAdsorb::PS_react(int isurf, int isc, double *norm)
   int pid;
   Particle::OnePart *p;
 
-  double nu_react[nactive_ps];
+  std::vector<double> nu_react(nactive_ps);
   OneReaction_PS *r;
-  int rxn_occur[nactive_ps];
+  std::vector<int> rxn_occur(nactive_ps);
 
   for (int i = 0; i < nactive_ps; i++) {
     r = &rlist_ps[reactions_ps_list[i]];
@@ -2872,7 +2879,7 @@ void SurfReactAdsorb::PS_react(int isurf, int isc, double *norm)
 
   while (1) {
     long int sum_nu_tau = 0;
-    long int nu_tau[nactive_ps];
+    std::vector<long int> nu_tau(nactive_ps);
 
     for (int i = 0; i < nactive_ps; i++) {
       nu_react[i] = 0.0;

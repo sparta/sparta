@@ -316,8 +316,8 @@ void FixAveGridKokkos::end_of_step()
         } else {
           if (grid->etype[n] == INT) {
             auto h_ewhich = gridKK->k_ewhich.view_host();
-            auto h_edarray = gridKK->k_edarray.view_host();
-            auto d_custom_array = h_edarray[h_ewhich[n]].k_view.view_device();
+            auto h_eiarray = gridKK->k_eiarray.view_host();
+            auto d_custom_array = h_eiarray[h_ewhich[n]].k_view.view_device();
 
             Kokkos::parallel_for(nglocal, SPARTA_CLASS_LAMBDA(int i) {
               d_tally(i,k) += d_custom_array(i,jm1);

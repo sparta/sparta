@@ -241,7 +241,7 @@ void ComputeEFluxGridKokkos::operator()(TagComputeEFluxGrid_compute_per_grid, co
 
     const int ispecies = d_particles[i].ispecies;
     const int igroup = d_s2g(imix,ispecies);
-    if (igroup < 0) return;
+    if (igroup < 0) continue;
 
     const double mass = d_species[ispecies].mass;
     double *v = d_particles[i].v;
@@ -420,8 +420,12 @@ void ComputeEFluxGridKokkos::operator()(TagComputeEFluxGrid_post_process_grid, c
     h2 = d_etally(icell,mvv2v2) - 2.0*d_etally(icell,mvv2)*d_etally(icell,mv2)/summass -
       d_etally(icell,mv)*d_etally(icell,mv2v2)/summass +
       2.0*d_etally(icell,mv)*d_etally(icell,mv2)*d_etally(icell,mv2)/summass/summass;
-    wt = 0.5 * fnum * d_cinfo[icell].weight / d_cinfo[icell].volume;
-    d_vec[icell] = wt/nsample * (h + h1 + h2);
+    if (d_cinfo[icell].volume > 0.0) {
+      wt = 0.5 * fnum * d_cinfo[icell].weight / d_cinfo[icell].volume;
+      d_vec[icell] = wt/nsample * (h + h1 + h2);
+    } else {
+      d_vec[icell] = 0.0;
+    }
   }
 }
 

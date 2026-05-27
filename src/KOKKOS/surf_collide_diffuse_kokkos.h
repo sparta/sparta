@@ -228,10 +228,10 @@ class SurfCollideDiffuseKokkos : public SurfCollideDiffuse {
       int ispecies = p->ispecies;
 
       double vrm = sqrt(2.0*boltz * twall / d_species[ispecies].mass);
-      double vperp = vrm * sqrt(-log(rand_gen.drand()));
+      double vperp = vrm * sqrt(-log(1.0 - rand_gen.drand()));
 
       double theta = MathConst::MY_2PI * rand_gen.drand();
-      double vtangent = vrm * sqrt(-log(rand_gen.drand()));
+      double vtangent = vrm * sqrt(-log(1.0 - rand_gen.drand()));
       double vtan1 = vtangent * sin(theta);
       double vtan2 = vtangent * cos(theta);
 
@@ -323,11 +323,11 @@ class SurfCollideDiffuseKokkos : public SurfCollideDiffuse {
     if (d_species[isp].rotdof < 2) return 0.0;
 
     if (rotstyle == DISCRETE && d_species[isp].rotdof == 2) {
-      int irot = -log(rand_gen.drand()) * temp_thermal /
+      int irot = -log(1.0 - rand_gen.drand()) * temp_thermal /
         d_species[isp].rottemp[0];
       eng = irot * boltz * d_species[isp].rottemp[0];
     } else if (rotstyle == SMOOTH && d_species[isp].rotdof == 2) {
-      eng = -log(rand_gen.drand()) * boltz * temp_thermal;
+      eng = -log(1.0 - rand_gen.drand()) * boltz * temp_thermal;
     } else {
       a = 0.5*d_species[isp].rotdof-1.0;
       while (1) {
@@ -362,12 +362,12 @@ class SurfCollideDiffuseKokkos : public SurfCollideDiffuse {
     eng = 0.0;
 
     if (vibstyle == DISCRETE && d_species[isp].vibdof == 2) {
-      int ivib = -log(rand_gen.drand()) * temp_thermal /
+      int ivib = -log(1.0 - rand_gen.drand()) * temp_thermal /
         d_species[isp].vibtemp[0];
       eng = ivib * boltz * d_species[isp].vibtemp[0];
     } else if (vibstyle == SMOOTH || d_species[isp].vibdof >= 2) {
       if (d_species[isp].vibdof == 2)
-        eng = -log(rand_gen.drand()) * boltz * temp_thermal;
+        eng = -log(1.0 - rand_gen.drand()) * boltz * temp_thermal;
       else if (d_species[isp].vibdof > 2) {
         a = 0.5*d_species[isp].vibdof-1.;
         while (1) {
