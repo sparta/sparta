@@ -113,7 +113,7 @@ installed.  To build SPARTA with optional packages, see "this
 section"_#start_3 below.
 
 IMPORTANT NOTE: The optional KOKKOS accelerator package does not
-support Makefiles and must be build using CMake instead (see below).
+support Makefiles and must be built using CMake instead (see below).
 
 [Step 1]
 
