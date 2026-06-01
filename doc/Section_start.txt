@@ -757,7 +757,16 @@ Example: build for NVIDIA A100 GPUs (override the default Hopper arch):
 mkdir build
 cd build
 cmake -C /path/to/sparta/cmake/presets/kokkos_cuda.cmake \
-      -DKokkos_ARCH_AMPERE80=ON \
+      -DKokkos_ARCH_HOPPER90=OFF -DKokkos_ARCH_AMPERE80=ON \
+      /path/to/sparta/cmake
+make -j 4 :pre
+
+Example: build for NVIDIA V100 GPUs:
+
+mkdir build
+cd build
+cmake -C /path/to/sparta/cmake/presets/kokkos_cuda.cmake \
+      -DKokkos_ARCH_HOPPER90=OFF -DKokkos_ARCH_VOLTA70=ON \
       /path/to/sparta/cmake
 make -j 4 :pre
 
@@ -766,9 +775,21 @@ Example: build for AMD MI300X GPUs:
 mkdir build
 cd build
 cmake -C /path/to/sparta/cmake/presets/kokkos_hip.cmake \
-      -DKokkos_ARCH_AMD_GFX942=ON \
+      -DKokkos_ARCH_VEGA90A=OFF -DKokkos_ARCH_AMD_GFX942=ON \
       /path/to/sparta/cmake
 make -j 4 :pre
+
+After building, run SPARTA with the KOKKOS package using the -k, -sf,
+and -pk command-line switches. The -k on g Ng switch specifies Ng GPUs
+per node. Examples (assuming a node with 4 GPUs):
+
+For CUDA (NVIDIA) or HIP (AMD) GPUs, 4 MPI tasks using 4 GPUs:
+
+mpirun -np 4 spa_kokkos_cuda -k on g 4 -sf kk -in in.collide :pre
+
+For OpenMP on 16-core CPUs, 2 MPI tasks each using 8 threads:
+
+mpirun -np 2 spa_kokkos_omp -k on t 8 -sf kk -in in.collide :pre
 
 If you are migrating from the GNU Makefile build system, the Kokkos
 KOKKOS_DEVICES and KOKKOS_ARCH Makefile variables map to CMake options as

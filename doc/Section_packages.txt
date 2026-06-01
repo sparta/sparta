@@ -158,7 +158,16 @@ cmake -C /path/to/sparta/cmake/presets/kokkos_cuda.cmake /path/to/sparta/cmake
 make :pre
 
 The kokkos_cuda.cmake preset defaults to Hopper (H100) GPUs. To target
-a different architecture, override the arch flag. For example, for V100:
+a different architecture, override the arch flag:
+
+For A100 GPUs (Ampere):
+
+cmake -C /path/to/sparta/cmake/presets/kokkos_cuda.cmake \
+  -DKokkos_ARCH_HOPPER90=OFF -DKokkos_ARCH_AMPERE80=ON \
+  /path/to/sparta/cmake
+make :pre
+
+For V100 GPUs (Volta):
 
 cmake -C /path/to/sparta/cmake/presets/kokkos_cuda.cmake \
   -DKokkos_ARCH_HOPPER90=OFF -DKokkos_ARCH_VOLTA70=ON \
@@ -170,10 +179,21 @@ make :pre
 cmake -C /path/to/sparta/cmake/presets/kokkos_hip.cmake /path/to/sparta/cmake
 make :pre
 
+The kokkos_hip.cmake preset defaults to MI250X GPUs. To target
+MI300X/MI300A GPUs:
+
+cmake -C /path/to/sparta/cmake/presets/kokkos_hip.cmake \
+  -DKokkos_ARCH_VEGA90A=OFF -DKokkos_ARCH_AMD_GFX942=ON \
+  /path/to/sparta/cmake
+make :pre
+
 [For Intel GPUs using SYCL:]
 
 cmake -C /path/to/sparta/cmake/presets/kokkos_sycl.cmake /path/to/sparta/cmake
 make :pre
+
+The GPU architecture is detected automatically at runtime; no arch
+override is needed for Intel GPUs.
 
 To uninstall (disable) the KOKKOS package:
 

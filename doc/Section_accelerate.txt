@@ -295,18 +295,39 @@ NOTE: To build with Kokkos support for NVIDIA GPUs, NVIDIA CUDA
 software version 11.0 or later must be installed on your system.
 
 The kokkos_cuda.cmake preset defaults to NVIDIA Hopper (H100) GPUs.
-To target a different GPU, override the architecture flag.
+To target a different GPU, override the architecture flag. Common NVIDIA
+GPU models and their Kokkos arch flags are:
+
+V100 (Volta)           ->  -DKokkos_ARCH_VOLTA70=ON
+A100 (Ampere)          ->  -DKokkos_ARCH_AMPERE80=ON
+H100/H200 (Hopper)     ->  -DKokkos_ARCH_HOPPER90=ON (default in kokkos_cuda.cmake)
+L40S/RTX 4090 (Ada)    ->  -DKokkos_ARCH_ADA89=ON
+GB200 (Blackwell)      ->  -DKokkos_ARCH_BLACKWELL100=ON :ul
+
+Build for the default Hopper (H100) GPU:
 
 mkdir build
 cd build
 cmake -C /path/to/sparta/cmake/presets/kokkos_cuda.cmake /path/to/sparta/cmake
 make -j 4 :pre
 
-To target a V100 GPU instead of H100, do:
+Build for A100 GPUs (override the default Hopper arch):
 
+mkdir build
+cd build
+cmake -C /path/to/sparta/cmake/presets/kokkos_cuda.cmake \
+  -DKokkos_ARCH_HOPPER90=OFF -DKokkos_ARCH_AMPERE80=ON \
+  /path/to/sparta/cmake
+make -j 4 :pre
+
+Build for V100 GPUs:
+
+mkdir build
+cd build
 cmake -C /path/to/sparta/cmake/presets/kokkos_cuda.cmake \
   -DKokkos_ARCH_HOPPER90=OFF -DKokkos_ARCH_VOLTA70=ON \
-  /path/to/sparta/cmake :pre
+  /path/to/sparta/cmake
+make -j 4 :pre
 
 For IBM Power9 + NVIDIA V100 systems (e.g. OLCF Summit):
 
@@ -323,11 +344,27 @@ spa_summit_kokkos respectively.
 NOTE: To build with Kokkos support for AMD GPUs, ROCm software version
 5.2 or later must be installed on your system.
 
-The kokkos_hip.cmake preset targets AMD MI250X GPUs (GFX90A):
+The kokkos_hip.cmake preset targets AMD MI250X GPUs (GFX90A). Common AMD
+GPU models and their Kokkos arch flags are:
+
+MI250X/MI250/MI210      ->  -DKokkos_ARCH_VEGA90A=ON (default in kokkos_hip.cmake)
+MI300X/MI300A           ->  -DKokkos_ARCH_AMD_GFX942=ON
+RX 7900 XTX (RDNA3)    ->  -DKokkos_ARCH_AMD_GFX1100=ON :ul
+
+Build for the default MI250X GPU:
 
 mkdir build
 cd build
 cmake -C /path/to/sparta/cmake/presets/kokkos_hip.cmake /path/to/sparta/cmake
+make -j 4 :pre
+
+Build for MI300X GPUs (override the default MI250X arch):
+
+mkdir build
+cd build
+cmake -C /path/to/sparta/cmake/presets/kokkos_hip.cmake \
+  -DKokkos_ARCH_VEGA90A=OFF -DKokkos_ARCH_AMD_GFX942=ON \
+  /path/to/sparta/cmake
 make -j 4 :pre
 
 For AMD MI300A APU systems using Cray MPICH (e.g. El Capitan):
@@ -343,9 +380,12 @@ spa_elcapitan_kokkos respectively.
 [Compile for Intel GPUs using SYCL:]
 
 NOTE: To build with Kokkos support for Intel GPUs via SYCL, Intel's
-oneAPI toolkit must be installed on your system.
+oneAPI toolkit (version 2024.0 or later) must be installed on your system.
+Use the icpx compiler from the Intel oneAPI toolkit. The GPU architecture
+is detected automatically at runtime; no arch flag override is needed.
 
-The kokkos_sycl.cmake preset targets Intel Ponte Vecchio (PVC) GPUs:
+The kokkos_sycl.cmake preset targets Intel Ponte Vecchio (PVC) GPUs and
+uses Intel MKL for FFTs:
 
 mkdir build
 cd build
@@ -467,6 +507,8 @@ number of MPI tasks/node should not exceed N.
 Here are examples of how to use the KOKKOS package for GPUs, assuming
 one or more nodes, each with two GPUs.
 
+[NVIDIA GPUs (CUDA):]
+
 mpirun -np 2 spa_kokkos_cuda -k on g 2 -sf kk -in in.collide          # 1 node,   2 MPI tasks/node, 2 GPUs/node
 mpirun -np 32 -ppn 2 spa_kokkos_cuda -k on g 2 -sf kk -in in.collide  # 16 nodes, 2 MPI tasks/node, 2 GPUs/node (32 GPUs total) :pre
 
@@ -477,7 +519,22 @@ settings. For example:
 
 mpirun -np 2 spa_kokkos_cuda -k on g 2 -sf kk -pk kokkos gpu/aware off -in in.collide      # set gpu/aware MPI support off :pre
 
-NOTE: Using OpenMP threading and CUDA together is currently not
+[AMD GPUs (HIP):]
+
+mpirun -np 2 spa_kokkos_hip -k on g 2 -sf kk -in in.collide          # 1 node,   2 MPI tasks/node, 2 GPUs/node
+mpirun -np 16 -ppn 8 spa_kokkos_hip -k on g 8 -sf kk -in in.collide  # 2 nodes,  8 MPI tasks/node, 8 GPUs/node :pre
+
+For Cray MPICH systems (e.g. El Capitan), set the GTL (GPU Transfer
+Library) environment variable before running:
+
+export MPICH_GPU_SUPPORT_ENABLED=1
+mpirun -np 8 spa_elcapitan_kokkos -k on g 8 -sf kk -in in.collide :pre
+
+[Intel GPUs (SYCL):]
+
+mpirun -np 4 spa_kokkos_sycl -k on g 4 -sf kk -in in.collide          # 1 node, 4 MPI tasks/node, 4 GPUs/node :pre
+
+NOTE: Using OpenMP threading and CUDA/HIP/SYCL together is currently not
 possible with the SPARTA KOKKOS package.
 
 NOTE: For good performance of the KOKKOS package on GPUs, you must
