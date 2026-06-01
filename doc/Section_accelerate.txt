@@ -201,11 +201,14 @@ contributions of various styles by others, including Dan Ibanez
 information on developing using Kokkos abstractions see the Kokkos
 programmers' guide at /lib/kokkos/doc/Kokkos_PG.pdf.
 
-The KOKKOS package currently provides support for 3 modes of execution
-(per MPI task). These are Serial (MPI-only for CPUs and Intel Phi),
-OpenMP (threading for many-core CPUs and Intel Phi), and CUDA (for
-NVIDIA GPUs). You choose the mode at build time to produce an
-executable compatible with specific hardware.
+The KOKKOS package supports multiple execution backends (per MPI task):
+Serial (MPI-only for CPUs), OpenMP (threading for many-core CPUs and
+Intel Phi), CUDA (NVIDIA GPUs), HIP (AMD GPUs), and SYCL (Intel GPUs
+and other SYCL-capable devices). You choose the backend at build time
+to produce an executable compatible with specific hardware.
+
+NOTE: The KOKKOS package must be built using CMake. GNU Makefile builds
+are not supported for the KOKKOS package.
 
 NOTE: Kokkos support within SPARTA must be built with a C++17
 compatible compiler. For a list of compilers that have been tested with
@@ -213,28 +216,52 @@ the Kokkos library, see the Kokkos "README"_https://github.com/kokkos/kokkos/blo
 
 [Building SPARTA with the KOKKOS package with CMake:]
 
-To build with the KOKKOS package, start with the provided preset files
-in /cmake/presets/. You may need to set -D Kokkos_ARCH_{TYPE}=ON
-to match your specific hardware. For example:
+To build with the KOKKOS package, start with one of the provided preset
+files in /cmake/presets/. Preset files encode all the settings needed
+for a particular hardware target. The available KOKKOS presets are:
+
+kokkos_mpi_only.cmake - Serial backend (MPI-only, no threading) :l
+kokkos_omp.cmake      - OpenMP backend (multi-core CPUs) :l
+kokkos_phi.cmake      - OpenMP backend for Intel KNL Xeon Phi (Cray system) :l
+astra_kokkos.cmake    - OpenMP backend for ARM ThunderX2 CPUs :l
+kokkos_cuda.cmake     - CUDA backend (NVIDIA Hopper GPUs, generic OpenMPI/MPICH) :l
+summit_kokkos.cmake   - CUDA backend for IBM Power9 + NVIDIA V100 (Summit) :l
+vortex_kokkos.cmake   - CUDA backend for IBM Power9 + NVIDIA V100 (OpenMPI) :l
+kokkos_hip.cmake      - HIP backend for AMD MI250X GPUs :l
+elcapitan_kokkos.cmake - HIP backend for AMD MI300A APU (Cray MPICH) :l
+kokkos_sycl.cmake     - SYCL backend for Intel Ponte Vecchio GPUs :l,ule
+
+You may need to override -D Kokkos_ARCH_{TYPE}=ON to match your
+specific hardware. For example:
 
 for Sandy Bridge CPUs, set -D Kokkos_ARCH_SNB=ON
-for Broadwell CPUs, set -D Kokkos_ARCH_BWD=ON
+for Broadwell CPUs, set -D Kokkos_ARCH_BDW=ON
 for K80 GPUs, set -D Kokkos_ARCH_KEPLER37=ON
-for P100 GPUs and Power8 CPUs, set -D Kokkos_ARCH_PASCAL60=ON, -D Kokkos_ARCH_POWER8=ON :ul
+for V100 GPUs and Power9 CPUs, set -D Kokkos_ARCH_VOLTA70=ON -D Kokkos_ARCH_POWER9=ON
+for A100 GPUs, set -D Kokkos_ARCH_AMPERE80=ON
+for H100 GPUs, set -D Kokkos_ARCH_HOPPER90=ON :ul
 
-See the [Advanced Kokkos Options] section below for a listing of all
-Kokkos architecture options.
+See the [Advanced Kokkos Options] section below for a complete listing
+of all Kokkos architecture options.
+
+NOTE: If you are migrating from GNU Makefile builds, see the table of
+preset files above and pick the one that matches your hardware. The
+Kokkos KOKKOS_DEVICES and KOKKOS_ARCH Makefile variables map to CMake
+options as follows: KOKKOS_DEVICES=OpenMP becomes
+-DKokkos_ENABLE_OPENMP=ON, KOKKOS_DEVICES=Cuda becomes
+-DKokkos_ENABLE_CUDA=ON, KOKKOS_ARCH=Volta70 becomes
+-DKokkos_ARCH_VOLTA70=ON, etc.
 
 [Compile for CPU-only (MPI only, no threading):]
 
-Use a C++17 compatible compiler and set Kokkos architicture variable in as described above.  Then do the
-following:
+Use a C++17 compatible compiler. Then do the following:
 
-using CMake:
-
+mkdir build
 cd build
-cmake -C /path/to/sparta/cmake/presets/kokkos_mpi_only.cmake
-make :pre
+cmake -C /path/to/sparta/cmake/presets/kokkos_mpi_only.cmake /path/to/sparta/cmake
+make -j 4 :pre
+
+The resulting executable will be named spa_kokkos_mpi_only.
 
 [Compile for CPU-only (MPI plus OpenMP threading):]
 
@@ -243,30 +270,99 @@ must support the OpenMP interface. You should have one or more
 multi-core CPUs so that multiple threads can be launched by each MPI
 task running on a CPU.
 
-Use a C++17 compatible compiler and set Kokkos architecture variable in
-as described above.  Then do the
-following:
-
-using CMake:
-
+mkdir build
 cd build
-cmake -C /path/to/sparta/cmake/presets/kokkos_omp.cmake
-make :pre
+cmake -C /path/to/sparta/cmake/presets/kokkos_omp.cmake /path/to/sparta/cmake
+make -j 4 :pre
 
-[Compile for CPUs and GPUs (with OpenMPI or MPICH):]
+The resulting executable will be named spa_kokkos_omp.
+
+To select a specific CPU architecture (e.g. Haswell), add:
+
+cmake -C /path/to/sparta/cmake/presets/kokkos_omp.cmake -DKokkos_ARCH_HSW=ON /path/to/sparta/cmake :pre
+
+[Compile for Intel KNL Xeon Phi (Cray system, OpenMP):]
+
+mkdir build
+cd build
+cmake -C /path/to/sparta/cmake/presets/kokkos_phi.cmake /path/to/sparta/cmake
+make -j 4 :pre
+
+The resulting executable will be named spa_kokkos_phi.
+
+[Compile for ARM ThunderX2 CPUs (OpenMP):]
+
+mkdir build
+cd build
+cmake -C /path/to/sparta/cmake/presets/astra_kokkos.cmake /path/to/sparta/cmake
+make -j 4 :pre
+
+The resulting executable will be named spa_astra_kokkos.
+
+[Compile for NVIDIA GPUs using CUDA (with OpenMPI or MPICH):]
 
 NOTE: To build with Kokkos support for NVIDIA GPUs, NVIDIA CUDA
 software version 11.0 or later must be installed on your system.
 
-Use a C++17 compatible compiler and set Kokkos architecture variable in
-for both GPU and CPU as described
-above.  Then do the following:
+The kokkos_cuda.cmake preset defaults to NVIDIA Hopper (H100) GPUs.
+To target a different GPU, override the architecture flag.
 
-using CMake:
-
+mkdir build
 cd build
-cmake -C /path/to/sparta/cmake/presets/kokkos_cuda.cmake
-make :pre
+cmake -C /path/to/sparta/cmake/presets/kokkos_cuda.cmake /path/to/sparta/cmake
+make -j 4 :pre
+
+To target a V100 GPU instead of H100, do:
+
+cmake -C /path/to/sparta/cmake/presets/kokkos_cuda.cmake \
+  -DKokkos_ARCH_HOPPER90=OFF -DKokkos_ARCH_VOLTA70=ON \
+  /path/to/sparta/cmake :pre
+
+For IBM Power9 + NVIDIA V100 systems (e.g. OLCF Summit):
+
+mkdir build
+cd build
+cmake -C /path/to/sparta/cmake/presets/summit_kokkos.cmake /path/to/sparta/cmake
+make -j 4 :pre
+
+The resulting executable will be named spa_kokkos_cuda or
+spa_summit_kokkos respectively.
+
+[Compile for AMD GPUs using HIP:]
+
+NOTE: To build with Kokkos support for AMD GPUs, ROCm software version
+5.2 or later must be installed on your system.
+
+The kokkos_hip.cmake preset targets AMD MI250X GPUs (GFX90A):
+
+mkdir build
+cd build
+cmake -C /path/to/sparta/cmake/presets/kokkos_hip.cmake /path/to/sparta/cmake
+make -j 4 :pre
+
+For AMD MI300A APU systems using Cray MPICH (e.g. El Capitan):
+
+mkdir build
+cd build
+cmake -C /path/to/sparta/cmake/presets/elcapitan_kokkos.cmake /path/to/sparta/cmake
+make -j 4 :pre
+
+The resulting executable will be named spa_kokkos_hip or
+spa_elcapitan_kokkos respectively.
+
+[Compile for Intel GPUs using SYCL:]
+
+NOTE: To build with Kokkos support for Intel GPUs via SYCL, Intel's
+oneAPI toolkit must be installed on your system.
+
+The kokkos_sycl.cmake preset targets Intel Ponte Vecchio (PVC) GPUs:
+
+mkdir build
+cd build
+cmake -C /path/to/sparta/cmake/presets/kokkos_sycl.cmake /path/to/sparta/cmake
+make -j 4 :pre
+
+The resulting executable will be named spa_kokkos_sycl.
 
 [Running SPARTA with the KOKKOS package:]
 

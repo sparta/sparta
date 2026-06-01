@@ -1,31 +1,29 @@
-# kokkos_cuda = KOKKOS package with CUDA backend, default MPI, nvcc/mpicxx
-# compiler with OpenMPI or MPICH
+# kokkos_phi = KOKKOS package with OpenMP backend, KNL Xeon Phi support, Cray
+# System, default MPI
 
 include(${CMAKE_CURRENT_LIST_DIR}/kokkos_common.cmake)
 # ################### BEGIN SPARTA OPTIONS ####################
 set(SPARTA_MACHINE
-    kokkos_cuda
+    kokkos_phi
     CACHE STRING
           "Descriptive string to describe \"spa_\" executable configuration"
           FORCE)
 # ################### END   SPARTA OPTIONS ####################
 
 # ################### BEGIN CMAKE OPTIONS ####################
-# TODO: Should CMAKE_CXX_COMPILER be set to nvcc_wrapper
-# src/KOKKOS/CMakeLists.txt? set(CMAKE_CXX_COMPILER "mpicxx" CACHE STRING "")
+set(CMAKE_C_COMPILER
+    "cc"
+    CACHE STRING "" FORCE)
 set(CMAKE_CXX_COMPILER
-    ${CMAKE_CURRENT_LIST_DIR}/../../lib/kokkos/bin/nvcc_wrapper
+    "CC"
     CACHE STRING "" FORCE)
 # ################### END CMAKE OPTIONS ####################
 
 # ################### BEGIN KOKKOS OPTIONS ####################
-set(Kokkos_ENABLE_CUDA
+set(Kokkos_ENABLE_OPENMP
     ON
     CACHE STRING "")
-set(Kokkos_ARCH_HOPPER90
+set(Kokkos_ARCH_KNL
     ON
     CACHE STRING "")
-
-# If FFT package is also enabled, use CUFFT for FFTs
-set(FFT_KOKKOS "CUFFT" CACHE STRING "" FORCE)
 # ################### END   KOKKOS OPTIONS ####################

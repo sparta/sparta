@@ -81,7 +81,8 @@ please send an email to the
 
 If you succeed in building SPARTA on a new kind of machine, for which
 there isn't a similar Makefile in the src/MAKE directory or .cmake file
-in cmake/presets, send it to the 
+in cmake/presets (for KOKKOS builds, a .cmake file in cmake/presets),
+send it to the 
 "developers"_https://sparta.github.io/authors.html and we'll include it in future SPARTA releases.
 
 :line
