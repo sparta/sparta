@@ -17,7 +17,7 @@ kinds of machines.
 Currently the only option is to use the KOKKOS accelerator
 packages provided with SPARTA that
 contains code optimized for certain kinds of hardware, including
-multi-core CPUs, GPUs, and Intel Xeon Phi coprocessors.
+multi-core CPUs and GPUs.
 
 5.1 "Measuring performance"_#acc_1 :ulb,l
 5.2 "Accelerator packages with optimized styles"_#acc_2 :l
@@ -87,9 +87,9 @@ All of these commands are in the KOKKOS package provided with SPARTA.
 An overview of packages is give in "Section
 packages"_Section_packages.html.
 
-SPARTA currently has acceleration support for three kinds of hardware,
-via the KOKKOS package: Many-core CPUs, NVIDIA GPUs, and Intel Xeon
-Phi.
+SPARTA currently has acceleration support for different kinds of hardware
+via the KOKKOS package: many-core CPUs, NVIDIA GPUs, AMD GPUs, and
+Intel GPUs.
 
 Whether you will see speedup for your hardware may depend on the size
 problem you are running and what commands (accelerated and
@@ -159,8 +159,8 @@ hardware platforms.
 Here is a brief summary of what the KOKKOS package provides.
 
 Styles with a "kk" suffix are part of the KOKKOS package, and can be
-run using OpenMP on multicore CPUs, on an NVIDIA GPU, or on an Intel
-Xeon Phi in "native" mode.  The speed-up depends on a variety of
+run using OpenMP on multicore CPUs, on an NVIDIA GPU, on an AMD GPU,
+or on an Intel GPU.  The speed-up depends on a variety of
 factors, as discussed on the KOKKOS accelerator page. :l
 
 :ule
@@ -181,7 +181,7 @@ restrictions :ul
 Kokkos is a templated C++ library that provides abstractions to allow
 a single implementation of an application kernel (e.g. a collision
 style) to run efficiently on different kinds of hardware, such as
-GPUs, Intel Xeon Phis, or many-core CPUs. Kokkos maps the C++ kernel
+GPUs or many-core CPUs. Kokkos maps the C++ kernel
 onto different backend languages such as CUDA, OpenMP, or Pthreads.
 The Kokkos library also provides data abstractions to adjust (at
 compile time) the memory layout of data structures like 2d and 3d
@@ -202,8 +202,8 @@ information on developing using Kokkos abstractions see the Kokkos
 programmers' guide at /lib/kokkos/doc/Kokkos_PG.pdf.
 
 The KOKKOS package supports multiple execution backends (per MPI task):
-Serial (MPI-only for CPUs), OpenMP (threading for many-core CPUs and
-Intel Phi), CUDA (NVIDIA GPUs), HIP (AMD GPUs), and SYCL (Intel GPUs
+Serial (MPI-only for CPUs), OpenMP (threading for many-core CPUs),
+CUDA (NVIDIA GPUs), HIP (AMD GPUs), and SYCL (Intel GPUs
 and other SYCL-capable devices). You choose the backend at build time
 to produce an executable compatible with specific hardware.
 
@@ -222,7 +222,6 @@ for a particular hardware target. The available KOKKOS presets are:
 
 kokkos_mpi_only.cmake - Serial backend (MPI-only, no threading) :l
 kokkos_omp.cmake      - OpenMP backend (multi-core CPUs) :l
-kokkos_phi.cmake      - OpenMP backend for Intel KNL Xeon Phi (Cray system) :l
 astra_kokkos.cmake    - OpenMP backend for ARM ThunderX2 CPUs :l
 kokkos_cuda.cmake     - CUDA backend (NVIDIA Hopper GPUs, generic OpenMPI/MPICH) :l
 summit_kokkos.cmake   - CUDA backend for IBM Power9 + NVIDIA V100 (Summit) :l
@@ -280,15 +279,6 @@ The resulting executable will be named spa_kokkos_omp.
 To select a specific CPU architecture (e.g. Haswell), add:
 
 cmake -C /path/to/sparta/cmake/presets/kokkos_omp.cmake -DKokkos_ARCH_HSW=ON /path/to/sparta/cmake :pre
-
-[Compile for Intel KNL Xeon Phi (Cray system, OpenMP):]
-
-mkdir build
-cd build
-cmake -C /path/to/sparta/cmake/presets/kokkos_phi.cmake /path/to/sparta/cmake
-make -j 4 :pre
-
-The resulting executable will be named spa_kokkos_phi.
 
 [Compile for ARM ThunderX2 CPUs (OpenMP):]
 
@@ -459,50 +449,6 @@ performance with OpenMP 4.0 or better set OMP_PROC_BIND=spread and
 OMP_PLACES=threads.  For binding threads with the KOKKOS pthreads
 option, compile SPARTA the KOKKOS HWLOC=yes option as described below.
 
-[Running on Knight's Landing (KNL) Intel Xeon Phi:]
-
-Here is a quick overview of how to use the KOKKOS package for the
-Intel Knight's Landing (KNL) Xeon Phi:
-
-KNL Intel Phi chips have 68 physical cores. Typically 1 to 4 cores are
-reserved for the OS, and only 64 or 66 cores are used. Each core has 4
-hyperthreads, so there are effectively N = 256 (4*64) or N = 264
-(4*66) cores to run on. The product of MPI tasks * OpenMP threads/task
-should not exceed this limit, otherwise performance will suffer. Note
-that with the KOKKOS package you do not need to specify how many KNLs
-there are per node; each KNL is simply treated as running some number
-of MPI tasks.
-
-Examples of mpirun commands that follow these rules are shown below.
-
-Intel KNL node with 64 cores (256 threads/node via 4x hardware threading):
-mpirun -np 64 spa_kokkos_phi -k on t 4 -sf kk -in in.collide      # 1 node, 64 MPI tasks/node, 4 threads/task
-mpirun -np 66 spa_kokkos_phi -k on t 4 -sf kk -in in.collide      # 1 node, 66 MPI tasks/node, 4 threads/task
-mpirun -np 32 spa_kokkos_phi -k on t 8 -sf kk -in in.collide      # 1 node, 32 MPI tasks/node, 8 threads/task
-mpirun -np 512 -ppn 64 spa_kokkos_phi -k on t 4 -sf kk -in in.collide  # 8 nodes, 64 MPI tasks/node, 4 threads/task :pre
-
-The -np setting of the mpirun command sets the number of MPI
-tasks/node. The "-k on t Nt" command-line switch sets the number of
-threads/task as Nt. The product of these two values should be N, i.e.
-256 or 264.
-
-NOTE: The default for the "package kokkos"_package.html command is to
-use "threaded" communication. However, when running on KNL, it will
-typically be faster to use "classic" non-threaded communication.  Use
-the "-pk kokkos" "command-line switch"_Section_start.html#start_7 to
-change the default "package kokkos"_package.html options. See its doc
-page for details and default settings. Experimenting with its options
-can provide a speed-up for specific calculations. For example:
-
-mpirun -np 64 spa_kokkos_phi -k on t 4 -sf kk -pk kokkos comm classic -in in.collide      # non-threaded comm :pre
-
-NOTE: MPI tasks and threads should be bound to cores as described
-above for CPUs.
-
-NOTE: To build with Kokkos support for Intel Xeon Phi coprocessors
-such as Knight's Corner (KNC), your system must be configured to use
-them in "native" mode, not "offload" mode.
-
 [Running on GPUs:]
 
 Use the "-k" "command-line switch"_Section_commands.html#start_7 to
@@ -620,8 +566,6 @@ ICL | HOST | Intel Ice Lake Client CPUs (AVX512) |
 ICX | HOST | Intel Ice Lake Xeon Server CPUs (AVX512) |
 SKL | HOST | Intel Skylake Client CPUs |
 SKX | HOST | Intel Skylake Xeon Server CPUs (AVX512) |
-KNC | HOST | Intel Knights Corner Xeon Phi |
-KNL | HOST | Intel Knights Landing Xeon Phi |
 SPR | HOST | Intel Sapphire Rapids Xeon Server CPUs (AVX512) |
 POWER8 | HOST | IBM POWER8 CPUs |
 POWER9 | HOST | IBM POWER9 CPUs |

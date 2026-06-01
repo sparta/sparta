@@ -107,7 +107,7 @@ KOKKOS package :link(KOKKOS),h4
 
 Styles adapted to compile using the Kokkos library which can convert
 them to OpenMP, CUDA, HIP, or SYCL code so that they run efficiently on
-multicore CPUs, Intel KNL Xeon Phi, NVIDIA GPUs, AMD GPUs, or Intel
+multicore CPUs, NVIDIA GPUs, AMD GPUs, or Intel
 GPUs.  All the styles have a "kk" as a suffix in their style name.
 "Section 5.3"_Section_accelerate.html#acc_3 gives details of what
 hardware and software is required on your system, and how to build and
@@ -150,11 +150,6 @@ make :pre
 [For MPI-only (no threading):]
 
 cmake -C /path/to/sparta/cmake/presets/kokkos_mpi_only.cmake /path/to/sparta/cmake
-make :pre
-
-[For Intel KNL Xeon Phi using OpenMP (Cray system):]
-
-cmake -C /path/to/sparta/cmake/presets/kokkos_phi.cmake /path/to/sparta/cmake
 make :pre
 
 [For NVIDIA GPUs using CUDA:]
