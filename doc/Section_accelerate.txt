@@ -210,7 +210,7 @@ to produce an executable compatible with specific hardware.
 NOTE: The KOKKOS package must be built using CMake. GNU Makefile builds
 are not supported for the KOKKOS package.
 
-NOTE: Kokkos support within SPARTA must be built with a C++17
+NOTE: Kokkos support within SPARTA must be built with a C++20
 compatible compiler. For a list of compilers that have been tested with
 the Kokkos library, see the Kokkos "README"_https://github.com/kokkos/kokkos/blob/master/README.md.
 
@@ -222,10 +222,7 @@ for a particular hardware target. The available KOKKOS presets are:
 
 kokkos_mpi_only.cmake - Serial backend (MPI-only, no threading) :l
 kokkos_omp.cmake      - OpenMP backend (multi-core CPUs) :l
-astra_kokkos.cmake    - OpenMP backend for ARM ThunderX2 CPUs :l
 kokkos_cuda.cmake     - CUDA backend (NVIDIA Hopper GPUs, generic OpenMPI/MPICH) :l
-summit_kokkos.cmake   - CUDA backend for IBM Power9 + NVIDIA V100 (Summit) :l
-vortex_kokkos.cmake   - CUDA backend for IBM Power9 + NVIDIA V100 (OpenMPI) :l
 kokkos_hip.cmake      - HIP backend for AMD MI250X GPUs :l
 elcapitan_kokkos.cmake - HIP backend for AMD MI300A APU (Cray MPICH) :l
 kokkos_sycl.cmake     - SYCL backend for Intel Ponte Vecchio GPUs :l,ule
@@ -253,7 +250,7 @@ options as follows: KOKKOS_DEVICES=OpenMP becomes
 
 [Compile for CPU-only (MPI only, no threading):]
 
-Use a C++17 compatible compiler. Then do the following:
+Use a C++20 compatible compiler. Then do the following:
 
 mkdir build
 cd build
@@ -279,15 +276,6 @@ The resulting executable will be named spa_kokkos_omp.
 To select a specific CPU architecture (e.g. Haswell), add:
 
 cmake -C /path/to/sparta/cmake/presets/kokkos_omp.cmake -DKokkos_ARCH_HSW=ON /path/to/sparta/cmake :pre
-
-[Compile for ARM ThunderX2 CPUs (OpenMP):]
-
-mkdir build
-cd build
-cmake -C /path/to/sparta/cmake/presets/astra_kokkos.cmake /path/to/sparta/cmake
-make -j 4 :pre
-
-The resulting executable will be named spa_astra_kokkos.
 
 [Compile for NVIDIA GPUs using CUDA (with OpenMPI or MPICH):]
 
@@ -329,15 +317,7 @@ cmake -C /path/to/sparta/cmake/presets/kokkos_cuda.cmake \
   /path/to/sparta/cmake
 make -j 4 :pre
 
-For IBM Power9 + NVIDIA V100 systems (e.g. OLCF Summit):
-
-mkdir build
-cd build
-cmake -C /path/to/sparta/cmake/presets/summit_kokkos.cmake /path/to/sparta/cmake
-make -j 4 :pre
-
-The resulting executable will be named spa_kokkos_cuda or
-spa_summit_kokkos respectively.
+The resulting executable will be named spa_kokkos_cuda.
 
 [Compile for AMD GPUs using HIP:]
 

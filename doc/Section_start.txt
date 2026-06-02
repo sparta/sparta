@@ -72,7 +72,7 @@ job on your machine, please find a local expert to help you.
 
 SPARTA requires that the compiler supports C++11. SPARTA will throw an error
 if this is not the case. If you are building SPARTA with Kokkos, the compiler
-must support C++17.
+must support C++20.
 
 If you have a build problem that you are convinced is a SPARTA issue
 (e.g. the compiler complains about a line of SPARTA source code), then
@@ -735,10 +735,7 @@ preset that matches your hardware:
 
 kokkos_omp.cmake      - Multi-core CPUs via OpenMP threading
 kokkos_mpi_only.cmake - Multi-core CPUs, MPI only (no threading)
-astra_kokkos.cmake    - ARM ThunderX2 CPUs via OpenMP
 kokkos_cuda.cmake     - NVIDIA GPUs via CUDA (default: Hopper/H100)
-summit_kokkos.cmake   - IBM Power9 + NVIDIA V100 (Volta) via CUDA (IBM MPI)
-vortex_kokkos.cmake   - IBM Power9 + NVIDIA V100 (Volta) via CUDA (OpenMPI)
 kokkos_hip.cmake      - AMD GPUs via HIP (default: MI250X)
 elcapitan_kokkos.cmake - AMD MI300A APU via HIP (Cray MPICH)
 kokkos_sycl.cmake     - Intel Ponte Vecchio GPUs via SYCL :ul
