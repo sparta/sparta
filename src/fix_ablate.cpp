@@ -201,6 +201,7 @@ FixAblate::FixAblate(SPARTA *sparta, int narg, char **arg) :
   ndelete = 0;
 
   storeflag = multi_val_flag = 0;
+  isc_default = isr_default = 0;
   array_grid = cvalues = NULL;
   mvalues = NULL;
   tvalues = NULL;
@@ -451,6 +452,21 @@ void FixAblate::init()
 
   nglocal = grid->nlocal;
   grow_percell(0);
+
+  // determine default collision/reaction model indices from existing surfaces
+  // these values were set by surf_modify and are used during each ablation step
+  // to correctly re-assign models to newly created implicit surfaces
+
+  if (surf->nlocal > 0) {
+    if (dim == 2) {
+      isc_default = surf->lines[0].isc;
+      isr_default = surf->lines[0].isr;
+    } else {
+      isc_default = surf->tris[0].isc;
+      isr_default = surf->tris[0].isr;
+    }
+    if (isc_default < 0) isc_default = 0;
+  }
 }
 
 /* ---------------------------------------------------------------------- */
@@ -588,9 +604,9 @@ void FixAblate::create_surfs(int outflag)
   // assign surf collision/reaction models to newly created surfs
   // this assignment can be made in input script via surf_modify
   //   after implicit surfs are created
-  // for active ablation, must be re-assigned at every ablation atep
-  // for now just assume all surfs are assigned to first collide/react model
-  // NOTE: need a more flexible way to do this
+  // for active ablation, must be re-assigned at every ablation step
+  // use isc_default/isr_default which were set during init() by reading
+  //   the values surf_modify assigned to existing surfaces
 
   int nslocal = surf->nlocal;
 
@@ -598,18 +614,18 @@ void FixAblate::create_surfs(int outflag)
     Surf::Line *lines = surf->lines;
     if (surf->nsc)
       for (int i = 0; i < nslocal; i++)
-        lines[i].isc = 0;
-    if (surf->nsr)
+        lines[i].isc = isc_default;
+    if (surf->nsr && isr_default >= 0)
       for (int i = 0; i < nslocal; i++)
-        lines[i].isr = 0;
+        lines[i].isr = isr_default;
   } else {
     Surf::Tri *tris = surf->tris;
     if (surf->nsc)
       for (int i = 0; i < nslocal; i++)
-        tris[i].isc = 0;
-    if (surf->nsr)
+        tris[i].isc = isc_default;
+    if (surf->nsr && isr_default >= 0)
       for (int i = 0; i < nslocal; i++)
-        tris[i].isr = 0;
+        tris[i].isr = isr_default;
   }
 
   // watertight check can be done before surfs are mapped to grid cells
