@@ -221,6 +221,14 @@ namespace utils {
 
   bool is_double(const std::string &str);
 
+  /*! Check if string is a valid ID
+   * ID strings may contain only letters, numbers, and underscores.
+   *
+   * \param str string that should be checked
+   * \return true, if string contains valid id, false otherwise */
+
+  bool is_id(const std::string &str);
+
 }    // namespace utils
 }    // namespace SPARTA_NS
 

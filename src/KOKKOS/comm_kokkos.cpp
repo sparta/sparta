@@ -40,8 +40,8 @@ CommKokkos::CommKokkos(SPARTA *sparta) : Comm(sparta),
   iparticle = new IrregularKokkos(sparta);
 
   k_nsend = DAT::tdual_int_scalar("comm:nsend");
-  d_nsend = k_nsend.d_view;
-  h_nsend = k_nsend.h_view;
+  d_nsend = k_nsend.view_device();
+  h_nsend = k_nsend.view_host();
 }
 
 /* ---------------------------------------------------------------------- */
@@ -63,7 +63,7 @@ CommKokkos::~CommKokkos()
      so Update can iterate on particle move
 ------------------------------------------------------------------------- */
 
-int CommKokkos::migrate_particles(int nmigrate, int *plist, DAT::t_int_1d &d_plist_in)
+int CommKokkos::migrate_particles(int nmigrate, int *plist, const DAT::t_int_1d &d_plist_in)
 {
   GridKokkos* grid_kk = (GridKokkos*) grid;
   ParticleKokkos* particle_kk = ((ParticleKokkos*)particle);
@@ -140,8 +140,8 @@ int CommKokkos::migrate_particles(int nmigrate, int *plist, DAT::t_int_1d &d_pli
   particle_kk->sync(Device,PARTICLE_MASK);
   grid_kk->sync(Device,CELL_MASK);
 
-  d_cells = grid_kk->k_cells.d_view;
-  d_particles = particle_kk->k_particles.d_view;
+  d_cells = grid_kk->k_cells.view_device();
+  d_particles = particle_kk->k_particles.view_device();
 
   copymode = 1;
   if (!ncustom) {
@@ -196,7 +196,7 @@ int CommKokkos::migrate_particles(int nmigrate, int *plist, DAT::t_int_1d &d_pli
   // else receive into rbuf, unpack particles one by one via unpack_custom()
 
   particle_kk->sync(Device,PARTICLE_MASK);
-  d_particles = particle_kk->k_particles.d_view;
+  d_particles = particle_kk->k_particles.view_device();
 
   if (gpu_aware_flag && !ncustom) {
     iparticle_kk->

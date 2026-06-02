@@ -35,7 +35,9 @@ using namespace SPARTA_NS;
 #define ONEFIELD 32
 #define DELTA 1048576
 
-enum{INT,DOUBLE,BIGINT,STRING};    // many dump files
+// order of first two entries (INT,DOUBLE) must match custom
+
+enum{INT,DOUBLE,BIGINT,UINT,BIGUINT,STRING};    // many dump files
 
 enum{PERIODIC,OUTFLOW,REFLECT,SURFACE,AXISYM};  // same as Domain
 
@@ -445,13 +447,20 @@ int Dump::convert_string(int n, double *mybuf)
     }
 
     for (j = 0; j < size_one; j++) {
-      if (vtype[j] == INT)
-        offset += sprintf(&sbuf[offset],vformat[j],static_cast<int> (mybuf[m]));
-      else if (vtype[j] == DOUBLE)
+      if (vtype[j] == DOUBLE)
         offset += sprintf(&sbuf[offset],vformat[j],mybuf[m]);
+      else if (vtype[j] == INT)
+        offset += sprintf(&sbuf[offset],vformat[j],
+                          static_cast<int> (ubuf(mybuf[m]).i));
       else if (vtype[j] == BIGINT)
         offset += sprintf(&sbuf[offset],vformat[j],
-                          static_cast<bigint> (mybuf[m]));
+                          static_cast<bigint> (ubuf(mybuf[m]).i));
+      else if (vtype[j] == UINT)
+        offset += sprintf(&sbuf[offset],vformat[j],
+                          static_cast<uint32_t> (ubuf(mybuf[m]).i));
+      else if (vtype[j] == BIGUINT)
+        offset += sprintf(&sbuf[offset],vformat[j],
+                          static_cast<uint64_t> (ubuf(mybuf[m]).i));
       else if (vtype[j] == STRING) {
         // NOTE: this is a kludge
         // assumes any STRING field from dump particle/grid/surf

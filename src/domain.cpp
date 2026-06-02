@@ -438,6 +438,26 @@ void Domain::add_region(int narg, char **arg)
 
   // create the Region
 
+  if (sparta->suffix_enable) {
+    if (sparta->suffix) {
+      char estyle[256];
+      sprintf(estyle,"%s/%s",arg[1],sparta->suffix);
+
+      if (0) return;
+
+#define REGION_CLASS
+#define RegionStyle(key,Class) \
+      else if (strcmp(estyle,#key) == 0) { \
+        regions[nregion] = new Class(sparta,narg,arg); \
+        nregion++; \
+        return; \
+      }
+#include "style_region.h"
+#undef RegionStyle
+#undef REGION_CLASS
+    }
+  }
+
   if (strcmp(arg[1],"none") == 0) error->all(FLERR,"Invalid region style");
 
 #define REGION_CLASS
@@ -445,6 +465,7 @@ void Domain::add_region(int narg, char **arg)
   else if (strcmp(arg[1],#key) == 0) \
     regions[nregion] = new Class(sparta,narg,arg);
 #include "style_region.h"
+#undef RegionStyle
 #undef REGION_CLASS
 
   else error->all(FLERR,"Unrecognized region style");

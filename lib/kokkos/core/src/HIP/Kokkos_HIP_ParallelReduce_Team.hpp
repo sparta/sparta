@@ -1,18 +1,5 @@
-//@HEADER
-// ************************************************************************
-//
-//                        Kokkos v. 4.0
-//       Copyright (2022) National Technology & Engineering
-//               Solutions of Sandia, LLC (NTESS).
-//
-// Under the terms of Contract DE-NA0003525 with NTESS,
-// the U.S. Government retains certain rights in this software.
-//
-// Part of Kokkos, under the Apache License v2.0 with LLVM Exceptions.
-// See https://kokkos.org/LICENSE for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-//
-//@HEADER
+// SPDX-FileCopyrightText: Copyright Contributors to the Kokkos project
 
 #ifndef KOKKOS_HIP_PARALLEL_REDUCE_TEAM_HPP
 #define KOKKOS_HIP_PARALLEL_REDUCE_TEAM_HPP
@@ -357,7 +344,7 @@ class ParallelReduce<CombinedFunctorReducerType,
           m_scratch_pool_id,
           static_cast<std::int64_t>(m_scratch_size[1]) *
               (std::min(
-                  static_cast<std::int64_t>(HIP().concurrency() /
+                  static_cast<std::int64_t>(m_policy.space().concurrency() /
                                             (m_team_size * m_vector_size)),
                   static_cast<std::int64_t>(m_league_size))));
     }
@@ -382,7 +369,7 @@ class ParallelReduce<CombinedFunctorReducerType,
     const unsigned int shmem_size_total =
         m_team_begin + m_shmem_begin + m_shmem_size;
 
-    if (!Kokkos::Impl::is_integral_power_of_two(m_team_size) &&
+    if (!Kokkos::has_single_bit(static_cast<unsigned>(m_team_size)) &&
         !UseShflReduction) {
       Kokkos::Impl::throw_runtime_exception(
           std::string("Kokkos::Impl::ParallelReduce< HIP > bad team size"));

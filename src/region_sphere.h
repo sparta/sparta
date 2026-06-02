@@ -28,9 +28,10 @@ namespace SPARTA_NS {
 class RegSphere : public Region {
  public:
   RegSphere(class SPARTA *, int, char **);
+  RegSphere(class SPARTA *sparta) : Region(sparta) {} // needed for Kokkos
   int inside(double *);
 
- private:
+ protected:
   double xc,yc,zc;
   double radius;
 };

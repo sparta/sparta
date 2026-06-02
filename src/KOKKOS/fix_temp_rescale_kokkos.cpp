@@ -31,6 +31,29 @@ FixTempRescaleKokkos::FixTempRescaleKokkos(SPARTA *sparta, int narg, char **arg)
   datamask_modify = EMPTY_MASK;
 }
 
+/* ---------------------------------------------------------------------- */
+
+void FixTempRescaleKokkos::end_of_step()
+{
+  if (update->ntimestep % nevery) return;
+
+  // set current t_target
+
+  double delta = update->ntimestep - update->beginstep;
+  if (delta != 0.0) delta /= update->endstep - update->beginstep;
+  double t_target = tstart + delta * (tstop-tstart);
+
+  // sort particles by grid cell if needed
+
+  ParticleKokkos* particle_kk = (ParticleKokkos*) particle;
+  if (!particle_kk->sorted_kk) particle_kk->sort_kokkos();
+
+  // 2 variants of thermostatting
+
+  if (!aveflag) end_of_step_no_average(t_target);
+  else end_of_step_average(t_target);
+}
+
 /* ----------------------------------------------------------------------
    current thermal temperature is calculated on a per-cell basis
 ---------------------------------------------------------------------- */
@@ -45,8 +68,8 @@ void FixTempRescaleKokkos::end_of_step_no_average(double t_target_in)
 
   ParticleKokkos* particle_kk = (ParticleKokkos*) particle;
   particle_kk->sync(Device,PARTICLE_MASK|SPECIES_MASK);
-  d_particles = particle_kk->k_particles.d_view;
-  d_species = particle_kk->k_species.d_view;
+  d_particles = particle_kk->k_particles.view_device();
+  d_species = particle_kk->k_species.view_device();
 
   GridKokkos* grid_kk = (GridKokkos*) grid;
   d_cellcount = grid_kk->d_cellcount;
@@ -142,13 +165,13 @@ void FixTempRescaleKokkos::end_of_step_average(double t_target_in)
 
   ParticleKokkos* particle_kk = (ParticleKokkos*) particle;
   particle_kk->sync(Device,PARTICLE_MASK|SPECIES_MASK);
-  d_particles = particle_kk->k_particles.d_view;
-  d_species = particle_kk->k_species.d_view;
+  d_particles = particle_kk->k_particles.view_device();
+  d_species = particle_kk->k_species.view_device();
 
   GridKokkos* grid_kk = (GridKokkos*) grid;
   d_cellcount = grid_kk->d_cellcount;
   d_plist = grid_kk->d_plist;
-  d_cells = grid_kk->k_cells.d_view;
+  d_cells = grid_kk->k_cells.view_device();
   grid_kk->sync(Device,CELL_MASK);
 
   int nglocal = grid->nlocal;

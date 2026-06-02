@@ -1,18 +1,5 @@
-//@HEADER
-// ************************************************************************
-//
-//                        Kokkos v. 4.0
-//       Copyright (2022) National Technology & Engineering
-//               Solutions of Sandia, LLC (NTESS).
-//
-// Under the terms of Contract DE-NA0003525 with NTESS,
-// the U.S. Government retains certain rights in this software.
-//
-// Part of Kokkos, under the Apache License v2.0 with LLVM Exceptions.
-// See https://kokkos.org/LICENSE for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-//
-//@HEADER
+// SPDX-FileCopyrightText: Copyright Contributors to the Kokkos project
 
 #ifndef KOKKOS_CUDA_PARALLEL_TEAM_HPP
 #define KOKKOS_CUDA_PARALLEL_TEAM_HPP
@@ -42,8 +29,6 @@
 #include <impl/KokkosExp_IterateTileGPU.hpp>
 
 namespace Kokkos {
-
-extern bool show_warnings() noexcept;
 
 namespace Impl {
 
@@ -99,7 +84,7 @@ class TeamPolicyInternal<Kokkos::Cuda, Properties...>
         Impl::ParallelFor<FunctorType, TeamPolicy<Properties...>>;
     cudaFuncAttributes attr =
         CudaParallelLaunch<closure_type, typename traits::launch_bounds>::
-            get_cuda_func_attributes(space().cuda_device());
+            get_cuda_func_attributes(space().impl_internal_space_instance());
     int block_size =
         Kokkos::Impl::cuda_get_max_block_size<FunctorType,
                                               typename traits::launch_bounds>(
@@ -138,7 +123,7 @@ class TeamPolicyInternal<Kokkos::Cuda, Properties...>
         Impl::ParallelFor<FunctorType, TeamPolicy<Properties...>>;
     cudaFuncAttributes attr =
         CudaParallelLaunch<closure_type, typename traits::launch_bounds>::
-            get_cuda_func_attributes(space().cuda_device());
+            get_cuda_func_attributes(space().impl_internal_space_instance());
     const int block_size =
         Kokkos::Impl::cuda_get_opt_block_size<FunctorType,
                                               typename traits::launch_bounds>(
@@ -225,7 +210,7 @@ class TeamPolicyInternal<Kokkos::Cuda, Properties...>
   const typename traits::execution_space& space() const { return m_space; }
 
   TeamPolicyInternal()
-      : m_space(typename traits::execution_space()),
+      : m_space(),
         m_league_size(0),
         m_team_size(-1),
         m_vector_length(0),
@@ -236,9 +221,9 @@ class TeamPolicyInternal<Kokkos::Cuda, Properties...>
         m_tune_vector(false) {}
 
   /** \brief  Specify league size, specify team size, specify vector length */
-  TeamPolicyInternal(const execution_space space_, int league_size_,
+  TeamPolicyInternal(execution_space space, int league_size_,
                      int team_size_request, int vector_length_request = 1)
-      : m_space(space_),
+      : m_space(std::move(space)),
         m_league_size(league_size_),
         m_team_size(team_size_request),
         m_vector_length(impl_determine_vector_length(vector_length_request)),
@@ -264,23 +249,25 @@ class TeamPolicyInternal<Kokkos::Cuda, Properties...>
   }
 
   /** \brief  Specify league size, request team size, specify vector length */
-  TeamPolicyInternal(const execution_space space_, int league_size_,
+  TeamPolicyInternal(execution_space space, int league_size_,
                      const Kokkos::AUTO_t& /* team_size_request */
                      ,
                      int vector_length_request = 1)
-      : TeamPolicyInternal(space_, league_size_, -1, vector_length_request) {}
+      : TeamPolicyInternal(std::move(space), league_size_, -1,
+                           vector_length_request) {}
 
   /** \brief  Specify league size, request team size and vector length */
-  TeamPolicyInternal(const execution_space space_, int league_size_,
+  TeamPolicyInternal(execution_space space, int league_size_,
                      const Kokkos::AUTO_t& /* team_size_request */,
                      const Kokkos::AUTO_t& /* vector_length_request */
                      )
-      : TeamPolicyInternal(space_, league_size_, -1, -1) {}
+      : TeamPolicyInternal(std::move(space), league_size_, -1, -1) {}
 
   /** \brief  Specify league size, specify team size, request vector length */
-  TeamPolicyInternal(const execution_space space_, int league_size_,
+  TeamPolicyInternal(execution_space space, int league_size_,
                      int team_size_request, const Kokkos::AUTO_t&)
-      : TeamPolicyInternal(space_, league_size_, team_size_request, -1) {}
+      : TeamPolicyInternal(std::move(space), league_size_, team_size_request,
+                           -1) {}
 
   TeamPolicyInternal(int league_size_, int team_size_request,
                      int vector_length_request = 1)
@@ -305,6 +292,12 @@ class TeamPolicyInternal<Kokkos::Cuda, Properties...>
                      const Kokkos::AUTO_t& vector_length_request)
       : TeamPolicyInternal(typename traits::execution_space(), league_size_,
                            team_size_request, vector_length_request) {}
+
+  TeamPolicyInternal(const PolicyUpdate, const TeamPolicyInternal& other,
+                     typename traits::execution_space space)
+      : TeamPolicyInternal(other) {
+    this->m_space = std::move(space);
+  }
 
   inline int chunk_size() const { return m_chunk_size; }
 
@@ -356,7 +349,7 @@ class TeamPolicyInternal<Kokkos::Cuda, Properties...>
 
     cudaFuncAttributes attr =
         CudaParallelLaunch<closure_type, typename traits::launch_bounds>::
-            get_cuda_func_attributes(space().cuda_device());
+            get_cuda_func_attributes(space().impl_internal_space_instance());
     const int block_size = std::forward<BlockSizeCallable>(block_size_callable)(
         space().impl_internal_space_instance(), attr, f,
         (size_t)impl_vector_length(),
@@ -522,14 +515,13 @@ class ParallelFor<FunctorType, Kokkos::TeamPolicy<Properties...>,
   ParallelFor(const FunctorType& arg_functor, const Policy& arg_policy)
       : m_functor(arg_functor),
         m_policy(arg_policy),
-        m_league_size(arg_policy.league_size()),
-        m_team_size(arg_policy.team_size()),
-        m_vector_size(arg_policy.impl_vector_length()) {
+        m_league_size(m_policy.league_size()),
+        m_team_size(m_policy.team_size()),
+        m_vector_size(m_policy.impl_vector_length()) {
     auto internal_space_instance =
         m_policy.space().impl_internal_space_instance();
     if (m_team_size < 0) {
-      m_team_size =
-          arg_policy.team_size_recommended(arg_functor, ParallelForTag());
+      m_team_size = m_policy.team_size_recommended(m_functor, ParallelForTag());
       if (m_team_size <= 0)
         Kokkos::Impl::throw_runtime_exception(
             "Kokkos::Impl::ParallelFor<Cuda, TeamPolicy> could not find a "
@@ -556,7 +548,7 @@ class ParallelFor<FunctorType, Kokkos::TeamPolicy<Properties...>,
           m_scratch_pool_id,
           static_cast<std::int64_t>(m_scratch_size[1]) *
               (std::min(
-                  static_cast<std::int64_t>(Cuda().concurrency() /
+                  static_cast<std::int64_t>(m_policy.space().concurrency() /
                                             (m_team_size * m_vector_size)),
                   static_cast<std::int64_t>(m_league_size))));
     }
@@ -922,7 +914,7 @@ class ParallelReduce<CombinedFunctorReducerType,
           m_scratch_pool_id,
           static_cast<std::int64_t>(m_scratch_size[1]) *
               (std::min(
-                  static_cast<std::int64_t>(Cuda().concurrency() /
+                  static_cast<std::int64_t>(m_policy.space().concurrency() /
                                             (m_team_size * m_vector_size)),
                   static_cast<std::int64_t>(m_league_size))));
     }
@@ -948,8 +940,7 @@ class ParallelReduce<CombinedFunctorReducerType,
         m_policy.space().cuda_device_prop().sharedMemPerBlock;
     const int shmem_size_total = m_team_begin + m_shmem_begin + m_shmem_size;
 
-    if (!Kokkos::Impl::is_integral_power_of_two(m_team_size) &&
-        !UseShflReduction) {
+    if (!Kokkos::has_single_bit<unsigned>(m_team_size) && !UseShflReduction) {
       Kokkos::Impl::throw_runtime_exception(
           std::string("Kokkos::Impl::ParallelReduce< Cuda > bad team size"));
     }

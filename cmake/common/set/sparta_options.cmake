@@ -24,6 +24,10 @@ sparta_option(PKG_FFT "Enable or disable sparta fft package. Default: OFF." OFF
 sparta_option(
   PKG_KOKKOS "Enable or disable sparta kokkos package. Default: OFF." OFF
   SPARTA_PKG_LIST)
+
+sparta_option(
+  PKG_PYTHON "Enable or disable sparta python package. Default: OFF." OFF
+  SPARTA_PKG_LIST)
 # ######### END   SPARTA OPTIONAL DEPENDENCIES ##########
 
 # ######### BEGIN SPARTA TPL DEPENDENCIES ##########
@@ -35,6 +39,8 @@ sparta_option(
 
 sparta_option(BUILD_KOKKOS "Enable or disable KOKKOS TPL. Default: OFF." OFF
               SPARTA_BUILD_TPL_LIST)
+
+option(USE_EXTERNAL_KOKKOS "Use an external KOKKOS build. Default: OFF." OFF)
 
 sparta_option(BUILD_JPEG "Enable or disable JPEG TPL. Default: OFF." OFF
               SPARTA_BUILD_TPL_LIST)

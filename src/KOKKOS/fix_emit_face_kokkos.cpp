@@ -49,6 +49,9 @@ enum{NOSUBSONIC,PTBOTH,PONLY};
 #define DELTATASK 256
 #define TEMPLIMIT 1.0e5
 
+#define VAL_1(X) X
+#define VAL_2(X) VAL_1(X), VAL_1(X)
+
 /* ----------------------------------------------------------------------
    insert particles in grid cells with faces touching inflow boundaries
 ------------------------------------------------------------------------- */
@@ -60,12 +63,18 @@ FixEmitFaceKokkos::FixEmitFaceKokkos(SPARTA *sparta, int narg, char **arg) :
             , sparta
 #endif
             ),
-  particle_kk_copy(sparta)
+  particle_kk_copy(sparta),
+  regblock_kk_copy(sparta),
+  regcylinder_kk_copy(sparta),
+  regplane_kk_copy(sparta),
+  regsphere_kk_copy(sparta)
 {
   kokkos_flag = 1;
   execution_space = Device;
   datamask_read = EMPTY_MASK;
   datamask_modify = EMPTY_MASK;
+
+  region_flag = 0;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -75,6 +84,10 @@ FixEmitFaceKokkos::~FixEmitFaceKokkos()
   if (copymode) return;
 
   particle_kk_copy.uncopy();
+  regblock_kk_copy.uncopy();
+  regcylinder_kk_copy.uncopy();
+  regplane_kk_copy.uncopy();
+  regsphere_kk_copy.uncopy();
 
 #ifdef SPARTA_KOKKOS_EXACT
   rand_pool.destroy();
@@ -110,13 +123,13 @@ void FixEmitFaceKokkos::init()
   k_cummulative = DAT::tdual_float_1d("cummulative", nspecies);
   k_species     = DAT::tdual_int_1d("species", nspecies);
 
-  d_mix_vscale  = k_mix_vscale .d_view;
-  d_cummulative = k_cummulative.d_view;
-  d_species     = k_species    .d_view;
+  d_mix_vscale  = k_mix_vscale .view_device();
+  d_cummulative = k_cummulative.view_device();
+  d_species     = k_species    .view_device();
 
-  auto h_mix_vscale  = k_mix_vscale .h_view;
-  auto h_cummulative = k_cummulative.h_view;
-  auto h_species     = k_species    .h_view;
+  auto h_mix_vscale  = k_mix_vscale .view_host();
+  auto h_cummulative = k_cummulative.view_host();
+  auto h_species     = k_species    .view_host();
 
   for (int isp = 0; isp < nspecies; ++isp) {
     h_mix_vscale(isp) = particle->mixture[imix]->vscale[isp];
@@ -134,12 +147,17 @@ void FixEmitFaceKokkos::init()
    add them to tasks list and increment ntasks
 ------------------------------------------------------------------------- */
 
-void FixEmitFaceKokkos::create_task(int icell)
+void FixEmitFaceKokkos::create_tasks()
 {
-  FixEmitFace::create_task(icell);
+  k_tasks.sync_host();
+  if (perspecies) k_ntargetsp.sync_host();
+  if (subsonic_style == PONLY) k_vscale.sync_host();
+
+  FixEmitFace::create_tasks();
+
   k_tasks.modify_host();
-  k_ntargetsp.modify_host();
-  k_vscale.modify_host();
+  if (perspecies) k_ntargetsp.modify_host();
+  if (subsonic_style == PONLY) k_vscale.modify_host();
 }
 
 /* ---------------------------------------------------------------------- */
@@ -250,8 +268,31 @@ void FixEmitFaceKokkos::perform_task()
   particle_kk->update_class_variables();
   particle_kk_copy.copy(particle_kk);
 
-  if (region)
-    error->one(FLERR,"Cannot yet use fix emit/face/kk with regions");
+  if (region && !region->kokkos_flag)
+    error->all(FLERR,"KOKKOS package does not (yet) support chosen region style");
+
+  region_flag = 0;
+  if (region) {
+    if (strstr(region->style,"block") != NULL) {
+      RegBlockKokkos* region_kk = ((RegBlockKokkos*)region);
+      regblock_kk_copy.copy(region_kk);
+      region_flag = 1;
+    } else if (strstr(region->style,"cylinder") != NULL) {
+      RegCylinderKokkos* region_kk = ((RegCylinderKokkos*)region);
+      regcylinder_kk_copy.copy(region_kk);
+      region_flag = 2;
+    } else if (strstr(region->style,"plane") != NULL) {
+      RegPlaneKokkos* region_kk = ((RegPlaneKokkos*)region);
+      regplane_kk_copy.copy(region_kk);
+      region_flag = 3;
+    } else if (strstr(region->style,"sphere") != NULL) {
+      RegSphereKokkos* region_kk = ((RegSphereKokkos*)region);
+      regsphere_kk_copy.copy(region_kk);
+      region_flag = 4;
+    } else {
+      error->all(FLERR,"KOKKOS package does not (yet) support chosen region style");
+    }
+  }
 
   int nsingle_reduce = 0;
   copymode = 1;
@@ -266,7 +307,7 @@ void FixEmitFaceKokkos::perform_task()
   auto nlocal_before = particleKK->nlocal;
   particleKK->grow(nnew);
   particleKK->sync(SPARTA_NS::Device, PARTICLE_MASK);
-  auto ld_particles = particleKK->k_particles.d_view;
+  auto ld_particles = particleKK->k_particles.view_device();
 
   Kokkos::parallel_for(ncands, SPARTA_LAMBDA(int cand) {
     if (!ld_keep(cand)) return;
@@ -416,7 +457,16 @@ void FixEmitFaceKokkos::operator()(TagFixEmitFace_perform_task, const int &i, in
         if (dimension == 3) x[2] = lo[2] + rand_gen.drand() * (hi[2]-lo[2]);
         else x[2] = 0.0;
 
-        //if (region && !region->match(x)) continue; ////////////////////////
+        if (region_flag == 1) {
+          if (!regblock_kk_copy.obj.match_kokkos(x[0], x[1], x[2])) continue;
+        } else if (region_flag == 2) {
+          if (!regcylinder_kk_copy.obj.match_kokkos(x[0], x[1], x[2])) continue;
+        } else if (region_flag == 3) {
+          if (!regplane_kk_copy.obj.match_kokkos(x[0], x[1], x[2])) continue;
+        } else if (region_flag == 4) {
+          if (!regsphere_kk_copy.obj.match_kokkos(x[0], x[1], x[2])) continue;
+        }
+
         nactual++;
         d_keep(cand) = 1;
         d_task(cand) = i;
@@ -465,7 +515,16 @@ void FixEmitFaceKokkos::operator()(TagFixEmitFace_perform_task, const int &i, in
       if (dimension == 3) x[2] = lo[2] + rand_gen.drand() * (hi[2]-lo[2]);
       else x[2] = 0.0;
 
-      //if (region && !region->match(x)) continue; ////////////////////////
+      if (region_flag == 1) {
+        if (!regblock_kk_copy.obj.match_kokkos(x[0], x[1], x[2])) continue;
+      } else if (region_flag == 2) {
+        if (!regcylinder_kk_copy.obj.match_kokkos(x[0], x[1], x[2])) continue;
+      } else if (region_flag == 3) {
+        if (!regplane_kk_copy.obj.match_kokkos(x[0], x[1], x[2])) continue;
+      } else if (region_flag == 4) {
+        if (!regsphere_kk_copy.obj.match_kokkos(x[0], x[1], x[2])) continue;
+      }
+
       nactual++;
       d_keep(cand) = 1;
       d_task(cand) = i;
@@ -492,8 +551,10 @@ void FixEmitFaceKokkos::operator()(TagFixEmitFace_perform_task, const int &i, in
       d_id(cand) = MAXSMALLINT*rand_gen.drand();
       d_dtremain(cand) = dt * rand_gen.drand();
     }
+
     nsingle += nactual;
   }
+
   rand_pool.free_state(rand_gen);
 }
 
@@ -505,20 +566,10 @@ void FixEmitFaceKokkos::grow_task()
 {
   ntaskmax += DELTATASK;
 
-  if (tasks == NULL)
-    k_tasks = tdual_task_1d("emit/face:tasks",ntaskmax);
-  else {
-    k_tasks.sync_host();
-    k_tasks.modify_host(); // force resize on host
-    k_tasks.resize(ntaskmax);
-  }
-  d_tasks = k_tasks.d_view;
-  tasks = k_tasks.h_view.data();
-
-  // set all new task bytes to 0 so valgrind won't complain
-  // if bytes between fields are uninitialized
-
-  //memset(&tasks[oldmax],0,(ntaskmax-oldmax)*sizeof(Task));
+  k_tasks.sync_host();
+  k_tasks.modify_host(); // force resize on host
+  memoryKK->grow_kokkos(k_tasks,tasks,ntaskmax,"emit/surf:tasks");
+  d_tasks = k_tasks.view_device();
 
   // allocate vectors in each new task or set to NULL
 
@@ -526,18 +577,18 @@ void FixEmitFaceKokkos::grow_task()
     k_ntargetsp.sync_host();
     k_ntargetsp.modify_host(); // force resize on host
     k_ntargetsp.resize(ntaskmax,nspecies);
-    d_ntargetsp = k_ntargetsp.d_view;
+    d_ntargetsp = k_ntargetsp.view_device();
     for (int i = 0; i < ntaskmax; i++)
-      tasks[i].ntargetsp = k_ntargetsp.h_view.data() + i*k_ntargetsp.h_view.extent(1);
+      tasks[i].ntargetsp = &k_ntargetsp.view_host()(i,0);
   }
 
   if (subsonic_style == PONLY) {
     k_vscale.modify_host(); // force resize on host
     k_vscale.sync_host();
     k_vscale.resize(ntaskmax,nspecies);
-    d_vscale = k_vscale.d_view;
+    d_vscale = k_vscale.view_device();
     for (int i = 0; i < ntaskmax; i++)
-      tasks[i].vscale = k_vscale.h_view.data() + i*k_vscale.h_view.extent(1);
+      tasks[i].vscale = &k_vscale.view_host()(i,0);
   }
 }
 
@@ -549,14 +600,14 @@ void FixEmitFaceKokkos::realloc_nspecies()
 {
   if (perspecies) {
     k_ntargetsp = DAT::tdual_float_2d_lr("emit/face:ntargetsp",ntaskmax,nspecies);
-    d_ntargetsp = k_ntargetsp.d_view;
+    d_ntargetsp = k_ntargetsp.view_device();
     for (int i = 0; i < ntaskmax; i++)
-      tasks[i].ntargetsp = k_ntargetsp.h_view.data() + i*k_ntargetsp.h_view.extent(1);
+      tasks[i].ntargetsp = &k_ntargetsp.view_host()(i,0);
   }
   if (subsonic_style == PONLY) {
     k_vscale = DAT::tdual_float_2d_lr("emit/face:vscale",ntaskmax,nspecies);
-    d_vscale = k_vscale.d_view;
+    d_vscale = k_vscale.view_device();
     for (int i = 0; i < ntaskmax; i++)
-      tasks[i].vscale = k_vscale.h_view.data() + i*k_vscale.h_view.extent(1);
+      tasks[i].vscale = &k_vscale.view_host()(i,0);
   }
 }

@@ -35,7 +35,7 @@ enum{INT,DOUBLE};                               // several files
 
 int GridKokkos::add_custom(char *name, int type, int size)
 {
-  // modifies eivec,eiarray,edvec,edarray on either host or device, probably device since host isn't modified. May just want to use host
+  // modifies eivec,eiarray,edvec,edarray on host
   // modifies ewhich on host, sync to device here since it is never modified on the device
 
   // force resize on host
@@ -68,6 +68,7 @@ int GridKokkos::add_custom(char *name, int type, int size)
                                        "grid:ename");
     memory->grow(etype,ncustom,"grid:etype");
     memory->grow(esize,ncustom,"grid:esize");
+    memory->grow(estatus,ncustom,"grid:estatus");
     memoryKK->grow_kokkos(k_ewhich,ewhich,ncustom,"grid:ewhich");
   }
 
@@ -76,6 +77,7 @@ int GridKokkos::add_custom(char *name, int type, int size)
   strcpy(ename[index],name);
   etype[index] = type;
   esize[index] = size;
+  estatus[index] = 0;
 
   if (type == INT) {
     if (size == 0) {
@@ -83,7 +85,7 @@ int GridKokkos::add_custom(char *name, int type, int size)
       eivec = (int **)
         memory->srealloc(eivec,ncustom_ivec*sizeof(int *),"grid:eivec");
       eivec[ncustom_ivec-1] = NULL;
-      auto h_eivec = k_eivec.h_view;
+      auto h_eivec = k_eivec.view_host();
       k_eivec.resize(Kokkos::view_alloc(Kokkos::SequentialHostInit),ncustom_ivec);
       memory->grow(icustom_ivec,ncustom_ivec,"grid:icustom_ivec");
       icustom_ivec[ncustom_ivec-1] = index;
@@ -93,7 +95,7 @@ int GridKokkos::add_custom(char *name, int type, int size)
         memory->srealloc(eiarray,ncustom_iarray*sizeof(int **),
                          "grid:eiarray");
       eiarray[ncustom_iarray-1] = NULL;
-      auto h_eiarray = k_eiarray.h_view;
+      auto h_eiarray = k_eiarray.view_host();
       k_eiarray.resize(Kokkos::view_alloc(Kokkos::SequentialHostInit),ncustom_iarray);
       memory->grow(icustom_iarray,ncustom_iarray,"grid:icustom_iarray");
       icustom_iarray[ncustom_iarray-1] = index;
@@ -106,7 +108,7 @@ int GridKokkos::add_custom(char *name, int type, int size)
       edvec = (double **)
         memory->srealloc(edvec,ncustom_dvec*sizeof(double *),"grid:edvec");
       edvec[ncustom_dvec-1] = NULL;
-      auto h_edvec = k_edvec.h_view;
+      auto h_edvec = k_edvec.view_host();
       k_edvec.resize(Kokkos::view_alloc(Kokkos::SequentialHostInit),ncustom_dvec);
       memory->grow(icustom_dvec,ncustom_dvec,"grid:icustom_dvec");
       icustom_dvec[ncustom_dvec-1] = index;
@@ -116,7 +118,7 @@ int GridKokkos::add_custom(char *name, int type, int size)
         memory->srealloc(edarray,ncustom_darray*sizeof(double **),
                          "grid:edarray");
       edarray[ncustom_darray-1] = NULL;
-      auto h_edarray = k_edarray.h_view;
+      auto h_edarray = k_edarray.view_host();
       k_edarray.resize(Kokkos::view_alloc(Kokkos::SequentialHostInit),ncustom_darray);
       memory->grow(icustom_darray,ncustom_darray,"grid:icustom_darray");
       icustom_darray[ncustom_darray-1] = index;
@@ -149,46 +151,43 @@ int GridKokkos::add_custom(char *name, int type, int size)
 
 void GridKokkos::allocate_custom(int index)
 {
-  // modifies the inner part of eivec,eiarray,edvec,edarray on whatever, and the outer view on the host
+  // modifies the inner part of eivec,eiarray,edvec,edarray on host, and the outer view on device
 
-  k_eivec.sync_host();
-  k_eiarray.sync_host();
-  k_edvec.sync_host();
-  k_edarray.sync_host();
+  if (sparta->kokkos->prewrap) {
+    sync(Host,CUSTOM_MASK);
+    modify(Host,CUSTOM_MASK);
+  } else
+    sync(Device,CUSTOM_MASK);
 
   int n = maxcell;
 
   if (etype[index] == INT) {
     if (esize[index] == 0) {
       int *ivector = eivec[ewhich[index]];
-      auto k_ivector = k_eivec.h_view[ewhich[index]].k_view;
-      k_ivector.modify_host(); // force resize on host
-      memoryKK->grow_kokkos(k_ivector,ivector,n,"surf:eivec");
-      k_eivec.h_view[ewhich[index]].k_view = k_ivector;
+      auto k_ivector = k_eivec.view_host()[ewhich[index]].k_view;
+      memoryKK->grow_kokkos(k_ivector,ivector,n,"surf:ivector");
+      k_eivec.view_host()[ewhich[index]].k_view = k_ivector;
       eivec[ewhich[index]] = ivector;
     } else {
       int **iarray = eiarray[ewhich[index]];
-      auto k_iarray = k_eiarray.h_view[ewhich[index]].k_view;
-      k_iarray.modify_host(); // force resize on host
-      memoryKK->grow_kokkos(k_iarray,iarray,n,esize[index],"surf:eiarray");
-      k_eiarray.h_view[ewhich[index]].k_view = k_iarray;
+      auto k_iarray = k_eiarray.view_host()[ewhich[index]].k_view;
+      memoryKK->grow_kokkos(k_iarray,iarray,n,esize[index],"surf:iarray");
+      k_eiarray.view_host()[ewhich[index]].k_view = k_iarray;
       eiarray[ewhich[index]] = iarray;
     }
 
   } else {
     if (esize[index] == 0) {
       double *dvector = edvec[ewhich[index]];
-      auto k_dvector = k_edvec.h_view[ewhich[index]].k_view;
-      k_dvector.modify_host(); // force resize on host
-      memoryKK->grow_kokkos(k_dvector,dvector,n,"surf:edvec");
-      k_edvec.h_view[ewhich[index]].k_view = k_dvector;
+      auto k_dvector = k_edvec.view_host()[ewhich[index]].k_view;
+      memoryKK->grow_kokkos(k_dvector,dvector,n,"surf:dvector");
+      k_edvec.view_host()[ewhich[index]].k_view = k_dvector;
       edvec[ewhich[index]] = dvector;
     } else {
       double **darray = edarray[ewhich[index]];
-      auto k_darray = k_edarray.h_view[ewhich[index]].k_view;
-      k_darray.modify_host(); // force resize on host
-      memoryKK->grow_kokkos(k_darray,darray,n,esize[index],"surf:edarray");
-      k_edarray.h_view[ewhich[index]].k_view = k_darray;
+      auto k_darray = k_edarray.view_host()[ewhich[index]].k_view;
+      memoryKK->grow_kokkos(k_darray,darray,n,esize[index],"surf:darray");
+      k_edarray.view_host()[ewhich[index]].k_view = k_darray;
       edarray[ewhich[index]] = darray;
     }
   }
@@ -211,45 +210,42 @@ void GridKokkos::allocate_custom(int index)
 
 void GridKokkos::reallocate_custom(int /*nold*/, int nnew)
 {
-  // modifies the inner part of eivec,eiarray,edvec,edarray on whatever, and the outer view on the host
+  // modifies the inner part of eivec,eiarray,edvec,edarray on host, and the outer view on device
 
-  k_eivec.sync_host();
-  k_eiarray.sync_host();
-  k_edvec.sync_host();
-  k_edarray.sync_host();
+  if (sparta->kokkos->prewrap) {
+    sync(Host,CUSTOM_MASK);
+    modify(Host,CUSTOM_MASK);
+  } else
+    sync(Device,CUSTOM_MASK);
 
   for (int ic = 0; ic < ncustom; ic++) {
     if (etype[ic] == INT) {
       if (esize[ic] == 0) {
         int *ivector = eivec[ewhich[ic]];
-        auto k_ivector = k_eivec.h_view[ewhich[ic]].k_view;
-        k_ivector.modify_host(); // force resize on host
-        memoryKK->grow_kokkos(k_ivector,ivector,nnew,"surf:eivec");
-        k_eivec.h_view[ewhich[ic]].k_view = k_ivector;
+        auto k_ivector = k_eivec.view_host()[ewhich[ic]].k_view;
+        memoryKK->grow_kokkos(k_ivector,ivector,nnew,"surf:ivector");
+        k_eivec.view_host()[ewhich[ic]].k_view = k_ivector;
         eivec[ewhich[ic]] = ivector;
       } else {
         int **iarray = eiarray[ewhich[ic]];
-        auto k_iarray = k_eiarray.h_view[ewhich[ic]].k_view;
-        k_iarray.modify_host(); // force resize on host
-        memoryKK->grow_kokkos(k_iarray,iarray,nnew,esize[ic],"surf:eiarray");
-        k_eiarray.h_view[ewhich[ic]].k_view = k_iarray;
+        auto k_iarray = k_eiarray.view_host()[ewhich[ic]].k_view;
+        memoryKK->grow_kokkos(k_iarray,iarray,nnew,esize[ic],"surf:iarray");
+        k_eiarray.view_host()[ewhich[ic]].k_view = k_iarray;
         eiarray[ewhich[ic]] = iarray;
       }
 
     } else {
       if (esize[ic] == 0) {
         double *dvector = edvec[ewhich[ic]];
-        auto k_dvector = k_edvec.h_view[ewhich[ic]].k_view;
-        k_dvector.modify_host(); // force resize on host
-        memoryKK->grow_kokkos(k_dvector,dvector,nnew,"surf:edvec");
-        k_edvec.h_view[ewhich[ic]].k_view = k_dvector;
+        auto k_dvector = k_edvec.view_host()[ewhich[ic]].k_view;
+        memoryKK->grow_kokkos(k_dvector,dvector,nnew,"surf:dvector");
+        k_edvec.view_host()[ewhich[ic]].k_view = k_dvector;
         edvec[ewhich[ic]] = dvector;
       } else {
         double **darray = edarray[ewhich[ic]];
-        auto k_darray = k_edarray.h_view[ewhich[ic]].k_view;
-        k_darray.modify_host(); // force resize on host
-        memoryKK->grow_kokkos(k_darray,darray,nnew,esize[ic],"surf:edarray");
-        k_edarray.h_view[ewhich[ic]].k_view = k_darray;
+        auto k_darray = k_edarray.view_host()[ewhich[ic]].k_view;
+        memoryKK->grow_kokkos(k_darray,darray,nnew,esize[ic],"surf:darray");
+        k_edarray.view_host()[ewhich[ic]].k_view = k_darray;
         edarray[ewhich[ic]] = darray;
       }
     }
@@ -284,45 +280,45 @@ void GridKokkos::remove_custom(int index)
 
   if (etype[index] == INT) {
     if (esize[index] == 0) {
-      memoryKK->destroy_kokkos(k_eivec.h_view[ewhich[index]].k_view,eivec[ewhich[index]]);
+      memoryKK->destroy_kokkos(k_eivec.view_host()[ewhich[index]].k_view,eivec[ewhich[index]]);
       ncustom_ivec--;
       for (int i = ewhich[index]; i < ncustom_ivec; i++) {
         icustom_ivec[i] = icustom_ivec[i+1];
         ewhich[icustom_ivec[i]] = i;
         eivec[i] = eivec[i+1];
-        k_eivec.h_view[i] = k_eivec.h_view[i+1];
+        k_eivec.view_host()[i] = k_eivec.view_host()[i+1];
       }
     } else {
-      memoryKK->destroy_kokkos(k_eiarray.h_view[ewhich[index]].k_view,eiarray[ewhich[index]]);
+      memoryKK->destroy_kokkos(k_eiarray.view_host()[ewhich[index]].k_view,eiarray[ewhich[index]]);
       ncustom_iarray--;
       for (int i = ewhich[index]; i < ncustom_iarray; i++) {
         icustom_iarray[i] = icustom_iarray[i+1];
         ewhich[icustom_iarray[i]] = i;
         eiarray[i] = eiarray[i+1];
         eicol[i] = eicol[i+1];
-        k_eiarray.h_view[i] = k_eiarray.h_view[i+1];
+        k_eiarray.view_host()[i] = k_eiarray.view_host()[i+1];
       }
     }
   } else if (etype[index] == DOUBLE) {
     if (esize[index] == 0) {
-      memoryKK->destroy_kokkos(k_edvec.h_view[ewhich[index]].k_view,edvec[ewhich[index]]);
+      memoryKK->destroy_kokkos(k_edvec.view_host()[ewhich[index]].k_view,edvec[ewhich[index]]);
       ncustom_dvec--;
       for (int i = ewhich[index]; i < ncustom_dvec; i++) {
         icustom_dvec[i] = icustom_dvec[i+1];
         ewhich[icustom_dvec[i]] = i;
         edvec[i] = edvec[i+1];
-        k_edvec.h_view[i] = k_edvec.h_view[i+1];
+        k_edvec.view_host()[i] = k_edvec.view_host()[i+1];
       }
       k_edvec.modify_host();
     } else {
-      memoryKK->destroy_kokkos(k_edarray.h_view[ewhich[index]].k_view,edarray[ewhich[index]]);
+      memoryKK->destroy_kokkos(k_edarray.view_host()[ewhich[index]].k_view,edarray[ewhich[index]]);
       ncustom_darray--;
       for (int i = ewhich[index]; i < ncustom_darray; i++) {
         icustom_darray[i] = icustom_darray[i+1];
         ewhich[icustom_darray[i]] = i;
         edarray[i] = edarray[i+1];
         edcol[i] = edcol[i+1];
-        k_edarray.h_view[i] = k_edarray.h_view[i+1];
+        k_edarray.view_host()[i] = k_edarray.view_host()[i+1];
       }
       k_edarray.modify_host();
     }
@@ -349,9 +345,9 @@ void GridKokkos::remove_custom(int index)
 
 void GridKokkos::copy_custom(int icell, int jcell)
 {
-  this->sync(Host,CUSTOM_MASK);
+  sync(Host,CUSTOM_MASK);
   Grid::copy_custom(icell,jcell);
-  this->modify(Host,CUSTOM_MASK);
+  modify(Host,CUSTOM_MASK);
 }
 
 /* ----------------------------------------------------------------------
@@ -362,7 +358,7 @@ void GridKokkos::copy_custom(int icell, int jcell)
 
 int GridKokkos::pack_custom(int icell, char *buf, int memflag)
 {
-  this->sync(Host,CUSTOM_MASK);
+  sync(Host,CUSTOM_MASK);
   return Grid::pack_custom(icell,buf,memflag);
 }
 
@@ -373,7 +369,8 @@ int GridKokkos::pack_custom(int icell, char *buf, int memflag)
 
 int GridKokkos::unpack_custom(char *buf, int icell)
 {
+  sync(Host,CUSTOM_MASK);
   int n = Grid::unpack_custom(buf,icell);
-  this->modify(Host,CUSTOM_MASK);
+  modify(Host,CUSTOM_MASK);
   return n;
 }

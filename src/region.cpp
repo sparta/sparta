@@ -32,12 +32,18 @@ Region::Region(SPARTA *sparta, int, char **arg) : Pointers(sparta)
   n = strlen(arg[1]) + 1;
   style = new char[n];
   strcpy(style,arg[1]);
+
+  kokkos_flag = 0;
+  copy = copymode = 0;
+  uncopy = 1;
 }
 
 /* ---------------------------------------------------------------------- */
 
 Region::~Region()
 {
+  if (copy || copymode) return;
+
   delete [] id;
   delete [] style;
 }

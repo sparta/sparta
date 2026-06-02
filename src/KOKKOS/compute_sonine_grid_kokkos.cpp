@@ -47,9 +47,9 @@ ComputeSonineGridKokkos::ComputeSonineGridKokkos(SPARTA *sparta, int narg, char 
   k_moment = DAT::tdual_int_1d("compute/sonine/grid:moment",nvalue);
   k_order = DAT::tdual_int_1d("compute/sonine/grid:order",nvalue);
   for (int n = 0; n < nvalue; n++){
-    k_which.h_view(n) = which[n];
-    k_moment.h_view(n) = moment[n];
-    k_order.h_view(n) = order[n];
+    k_which.view_host()(n) = which[n];
+    k_moment.view_host()(n) = moment[n];
+    k_order.view_host()(n) = order[n];
   }
   k_which.modify_host();
   k_moment.modify_host();
@@ -59,9 +59,9 @@ ComputeSonineGridKokkos::ComputeSonineGridKokkos(SPARTA *sparta, int narg, char 
   k_moment.sync_device();
   k_order.sync_device();
 
-  d_which = k_which.d_view;
-  d_moment = k_moment.d_view;
-  d_order = k_order.d_view;
+  d_which = k_which.view_device();
+  d_moment = k_moment.view_device();
+  d_order = k_order.view_device();
 }
 
 /* ---------------------------------------------------------------------- */
@@ -96,15 +96,15 @@ void ComputeSonineGridKokkos::compute_per_grid_kokkos()
 
   ParticleKokkos* particle_kk = (ParticleKokkos*) particle;
   particle_kk->sync(Device,PARTICLE_MASK|SPECIES_MASK);
-  d_particles = particle_kk->k_particles.d_view;
-  d_species = particle_kk->k_species.d_view;
+  d_particles = particle_kk->k_particles.view_device();
+  d_species = particle_kk->k_species.view_device();
 
   GridKokkos* grid_kk = (GridKokkos*) grid;
   d_cellcount = grid_kk->d_cellcount;
   d_plist = grid_kk->d_plist;
   grid_kk->sync(Device,CINFO_MASK);
-  d_cinfo = grid_kk->k_cinfo.d_view;
-  d_s2g = particle_kk->k_species2group.d_view;
+  d_cinfo = grid_kk->k_cinfo.view_device();
+  d_s2g = particle_kk->k_species2group.view_device();
   int nlocal = particle->nlocal;
 
   // zero all accumulators
@@ -416,8 +416,8 @@ void ComputeSonineGridKokkos::reallocate()
 
   nglocal = grid->nlocal;
   memoryKK->create_kokkos(k_vector_grid,vector_grid,nglocal,"sonine/grid:vector_grid");
-  d_vector_grid = k_vector_grid.d_view;
+  d_vector_grid = k_vector_grid.view_device();
   memoryKK->create_kokkos(k_tally,tally,nglocal,ntotal,"sonine/grid:tally");
-  d_tally = k_tally.d_view;
+  d_tally = k_tally.view_device();
   d_vcom = DAT::t_float_3d ("d_vcom",nglocal,ngroup,4);
 }

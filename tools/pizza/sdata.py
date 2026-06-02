@@ -218,7 +218,7 @@ class sdata:
             self.dim = 3
 
           line = f.readline()
-          for i in xrange(npoints):
+          for i in range(npoints):
             list = f.readline().split()
             pt = [float(value) for value in list[1:]]
             if len(pt) == 2: pt.append(0.0)      # treat pts as 3-vecs
@@ -232,7 +232,7 @@ class sdata:
           # may be different number for SPARTA vs LAMMPS format
 
           line = f.readline()
-          for i in xrange(nlines):
+          for i in range(nlines):
             words = f.readline().split()
             nflags = len(words) - 3
             lineflags.append([value for value in words[1:1+nflags]])
@@ -503,7 +503,7 @@ class sdata:
     surf.select = 1
     surf.points = plist
     surf.triangles = tlist
-    surf.triflags = [[] for i in xrange(len(triangles))]
+    surf.triflags = [[] for i in range(len(triangles))]
     surf.center = [0.0,0.0,0.0]
     self.ids[id] = len(self.surfs)
     self.surfs.append(surf)
@@ -726,7 +726,7 @@ class sdata:
         newflags = []
         active = ntri*[1]
 
-        for i in xrange(ntri):
+        for i in range(ntri):
           if not active[i]: continue
 
           tri = tris[i]

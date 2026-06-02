@@ -88,9 +88,9 @@ keyword = {bcolor} or {bdiam} or {backcolor} or {bitrate} or {boxcolor} or {cmap
     proc = proc ID or range of IDs (see below)
     color = name of color for surf one option
   {slinecolor} arg = color
-    color = name of color for surface element outlines :pre
+    color = name of color for surface element outlines
   {surfgroup} arg = group-ID
-    group-ID = name of a user-defined surf group, see the "group"_group.html command
+    group-ID = name of a user-defined surf group, see the "group"_group.html command :pre
 :ule
 
 [Examples:]
@@ -196,7 +196,8 @@ completes.
 :line
 
 The {format} keyword can be used to change the default numeric format
-output by the text-based dump styles: {particle}, {grid}, {surf}.
+output by the text-based dump styles: {particle}, {grid}, {surf},
+{tally}.
 
 All the specified format strings are C-style formats, e.g. as used by
 the C/C++ printf() command.  The {line} keyword takes a single

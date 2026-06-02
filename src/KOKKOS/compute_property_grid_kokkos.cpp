@@ -106,8 +106,8 @@ void ComputePropertyGridKokkos::compute_per_grid()
 void ComputePropertyGridKokkos::compute_per_grid_kokkos()
 {
   GridKokkos* grid_kk = ((GridKokkos*)grid);
-  d_cells = grid_kk->k_cells.d_view;
-  d_cinfo = grid_kk->k_cinfo.d_view;
+  d_cells = grid_kk->k_cells.view_device();
+  d_cinfo = grid_kk->k_cinfo.view_device();
   grid_kk->sync(Device,CELL_MASK|CINFO_MASK);
 
   copymode = 1;
@@ -250,10 +250,10 @@ void ComputePropertyGridKokkos::reallocate()
   if (nvalues == 1) {
     memoryKK->destroy_kokkos(k_vector_grid,vector_grid);
     memoryKK->create_kokkos(k_vector_grid,vector_grid,nglocal,"property/grid:vector_grid");
-    d_vector_grid = k_vector_grid.d_view;
+    d_vector_grid = k_vector_grid.view_device();
   } else {
     memoryKK->destroy_kokkos(k_array_grid,array_grid);
     memoryKK->create_kokkos(k_array_grid,array_grid,nglocal,nvalues,"property/grid:array_grid");
-    d_array_grid = k_array_grid.d_view;
+    d_array_grid = k_array_grid.view_device();
   }
 }

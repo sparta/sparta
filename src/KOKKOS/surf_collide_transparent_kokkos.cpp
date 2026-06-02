@@ -25,8 +25,8 @@ SurfCollideTransparentKokkos::SurfCollideTransparentKokkos(SPARTA *sparta, int n
   kokkosable = 1;
 
   k_nsingle = DAT::tdual_int_scalar("SurfCollide:nsingle");
-  d_nsingle = k_nsingle.d_view;
-  h_nsingle = k_nsingle.h_view;
+  d_nsingle = k_nsingle.view_device();
+  h_nsingle = k_nsingle.view_host();
 
   allowreact = 0;
 }

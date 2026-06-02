@@ -1,24 +1,16 @@
-//@HEADER
-// ************************************************************************
-//
-//                        Kokkos v. 4.0
-//       Copyright (2022) National Technology & Engineering
-//               Solutions of Sandia, LLC (NTESS).
-//
-// Under the terms of Contract DE-NA0003525 with NTESS,
-// the U.S. Government retains certain rights in this software.
-//
-// Part of Kokkos, under the Apache License v2.0 with LLVM Exceptions.
-// See https://kokkos.org/LICENSE for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-//
-//@HEADER
+// SPDX-FileCopyrightText: Copyright Contributors to the Kokkos project
 
 #ifndef KOKKOS_IMPL_PUBLIC_INCLUDE
 #define KOKKOS_IMPL_PUBLIC_INCLUDE
 #endif
 
+#include <Kokkos_Macros.hpp>
+#ifdef KOKKOS_ENABLE_EXPERIMENTAL_CXX20_MODULES
+import kokkos.core;
+#else
 #include <Kokkos_Core.hpp>
+#endif
 #include <HIP/Kokkos_HIP.hpp>
 #include <HIP/Kokkos_HIP_Instance.hpp>
 #include <HIP/Kokkos_HIP_IsXnack.hpp>
@@ -38,10 +30,6 @@ int HIP::concurrency() {
 int HIP::concurrency() const {
 #endif
   return Impl::HIPInternal::concurrency();
-}
-
-int HIP::impl_is_initialized() {
-  return Impl::HIPInternal::singleton().is_initialized();
 }
 
 void HIP::impl_initialize(InitializationSettings const& settings) {
@@ -120,17 +108,18 @@ void HIP::impl_finalize() {
 
   desul::Impl::finalize_lock_arrays();  // FIXME
 
-  for (const auto hip_device : Impl::HIPInternal::hip_devices) {
-    KOKKOS_IMPL_HIP_SAFE_CALL(hipSetDevice(hip_device));
-    KOKKOS_IMPL_HIP_SAFE_CALL(
-        hipEventDestroy(Impl::HIPInternal::constantMemReusable[hip_device]));
-    KOKKOS_IMPL_HIP_SAFE_CALL(
-        hipHostFree(Impl::HIPInternal::constantMemHostStaging[hip_device]));
+  // TODO C++20 Use std::views::values.
+  for (const auto [_, ptr] : Impl::HIPInternal::constantMemHostStaging) {
+    KOKKOS_IMPL_HIP_SAFE_CALL(hipHostFree(ptr));
+  }
+
+  // TODO C++20 Use std::views::values.
+  for (auto& [_, lock] : Impl::HIPInternal::constantMemReusable) {
+    lock.finalize();
   }
 
   Impl::HIPInternal::singleton().finalize();
-  KOKKOS_IMPL_HIP_SAFE_CALL(
-      hipSetDevice(Impl::HIPInternal::singleton().m_hipDev));
+
   KOKKOS_IMPL_HIP_SAFE_CALL(
       hipStreamDestroy(Impl::HIPInternal::singleton().m_stream));
 }

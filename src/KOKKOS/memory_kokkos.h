@@ -39,7 +39,7 @@ TYPE create_kokkos(TYPE &data, typename TYPE::value_type *&array,
                    int n1, const char *name)
 {
   data = TYPE(name,n1);
-  array = data.h_view.data();
+  array = data.view_host().data();
   return data;
 }
 
@@ -47,9 +47,9 @@ template <typename TYPE>
 TYPE wrap_kokkos(TYPE &data, const typename TYPE::value_type *array,
                    int n, const char *name)
 {
-  data = TYPE(name,n);
+  data = TYPE(Kokkos::NoInit(std::string(name)),n);
   for (int i=0; i<n; i++) {
-    data.h_view(i) = array[i];
+    data.view_host()(i) = array[i];
   }
   return data;
 }
@@ -59,7 +59,7 @@ TYPE unwrap_kokkos(const TYPE &data, typename TYPE::value_type *&array,
                    int n)
 {
   for (int i=0; i<n; i++)
-    array[i] = data.h_view(i);
+    array[i] = data.view_host()(i);
   return data;
 }
 
@@ -85,8 +85,7 @@ template <typename TYPE, typename HTYPE>
 }
 
 /* ----------------------------------------------------------------------
-   grow or shrink 1st dim of a 1d array
-   last dim must stay the same
+   grow or shrink a 1d array
 ------------------------------------------------------------------------- */
 
 template <typename TYPE>
@@ -96,16 +95,20 @@ TYPE grow_kokkos(TYPE &data, typename TYPE::value_type *&array,
   if (array == NULL) return create_kokkos(data,array,n1,name);
 
   data.resize(n1);
-  array = data.h_view.data();
+  array = data.view_host().data();
   return data;
 }
+
+/* ----------------------------------------------------------------------
+   destroy a 1d array
+------------------------------------------------------------------------- */
 
 template <typename TYPE>
 void destroy_kokkos(TYPE data, typename TYPE::value_type* &array)
 {
   if (array == NULL) return;
 
-  if (!data.d_view.data()) {
+  if (!data.view_device().data()) {
     destroy(array);
     return;
   }
@@ -202,10 +205,10 @@ TYPE create_kokkos(TYPE &data, typename TYPE::value_type **&array,
 
   bigint n = 0;
   for (int i = 0; i < n1; i++) {
-    if(n2==0)
+    if (n2 == 0)
       array[i] = NULL;
     else
-      array[i] = &data.h_view(i,0);
+      array[i] = &data.view_host()(i,0);
     n += n2;
   }
   return data;
@@ -221,13 +224,11 @@ template <typename TYPE, typename HTYPE>
   bigint nbytes = ((bigint) sizeof(typename TYPE::value_type *)) * n1;
   array = (typename TYPE::value_type **) smalloc(nbytes,name);
 
-  bigint n = 0;
   for (int i = 0; i < n1; i++) {
-    if(n2==0)
+    if (n2 == 0)
       array[i] = NULL;
     else
       array[i] = &h_data(i,0);
-    n += n2;
   }
   return data;
 }
@@ -247,10 +248,10 @@ TYPE grow_kokkos(TYPE &data, typename TYPE::value_type **&array,
   array = (typename TYPE::value_type**) srealloc(array,nbytes,name);
 
   for (int i = 0; i < n1; i++)
-    if(n2==0)
+    if (n2 == 0)
       array[i] = NULL;
     else
-      array[i] = &data.h_view(i,0);
+      array[i] = &data.view_host()(i,0);
 
   return data;
 }
@@ -264,10 +265,10 @@ TYPE create_kokkos(TYPE &data, typename TYPE::value_type **&array,
   array = (typename TYPE::value_type **) smalloc(nbytes,name);
 
   for (int i = 0; i < n1; i++)
-    if(data.h_view.extent(1)==0)
+    if (data.view_host().extent(1) == 0)
       array[i] = NULL;
     else
-      array[i] = &data.h_view(i,0);
+      array[i] = &data.view_host()(i,0);
 
   return data;
 }
@@ -284,10 +285,10 @@ TYPE grow_kokkos(TYPE &data, typename TYPE::value_type **&array,
   array = (typename TYPE::value_type **) srealloc(array,nbytes,name);
 
   for (int i = 0; i < n1; i++)
-    if(data.h_view.extent(1)==0)
+    if (data.view_host().extent(1) == 0)
       array[i] = NULL;
     else
-      array[i] = &data.h_view(i,0);
+      array[i] = &data.view_host()(i,0);
 
   return data;
 }
@@ -301,7 +302,7 @@ void destroy_kokkos(TYPE data, typename TYPE::value_type** &array)
 {
   if (array == NULL) return;
 
-  if (!data.d_view.data()) {
+  if (!data.view_device().data()) {
     destroy(array);
     return;
   }
@@ -344,4 +345,3 @@ static double memory_usage(TYPE &data)
 }
 
 #endif
-
