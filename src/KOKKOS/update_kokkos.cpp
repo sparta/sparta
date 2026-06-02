@@ -637,7 +637,8 @@ template < int DIM, int SURF, int REACT, int OPT > void UpdateKokkos::move()
       Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagUpdateMoveFirstPass<DIM> >(pstart,pstop),*this);
       Kokkos::deep_copy(h_not_updated_cnt,d_not_updated_cnt);
       int team_size = 128;
-      int num_teams = (std::min<int>(DeviceType::concurrency(),h_not_updated_cnt())-1)/team_size+1;
+      DeviceType exec;
+      int num_teams = (std::min<int>(exec.concurrency(),h_not_updated_cnt())-1)/team_size+1;
       auto policy = Kokkos::TeamPolicy<DeviceType, TagUpdateMoveIndirect<DIM,SURF,REACT,OPT,-1> >(num_teams,team_size);
       Kokkos::parallel_reduce(policy,*this,reduce);
     } else
