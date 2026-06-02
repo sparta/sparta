@@ -674,7 +674,7 @@ void CollideVSSKokkos::operator()(TagCountAttempts<NEARCP>, const int icell) con
   const int np = grid_kk_copy.obj.d_cellcount[icell];
   d_nattempt(icell) = 0;
   if (!np) return;
-  const double volume = grid_kk_copy.obj.k_cinfo.d_view[icell].volume / grid_kk_copy.obj.k_cinfo.d_view[icell].weight;
+  const double volume = grid_kk_copy.obj.k_cinfo.view_device()[icell].volume / grid_kk_copy.obj.k_cinfo.view_device()[icell].weight;
   rand_type rand_gen = rand_pool.get_state();
 
   const double attempt = attempt_collision_kokkos(icell,np,volume,rand_gen);
