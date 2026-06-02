@@ -605,8 +605,10 @@ int DumpSurf::parse_fields(int narg, char **arg)
         error->all(FLERR,"Dump surf fix does not compute per-surf info");
       if (argindex[i]== 0 && modify->fix[n]->size_per_surf_cols != 0)
         error->all(FLERR,"Dump surf fix does not compute per-surf vector");
-      if (argindex[i] > 0 && modify->fix[n]->size_per_surf_cols == 0)
-        error->all(FLERR,"Dump surf fix does not compute per-surf array");
+      if (argindex[i] > 0 && modify->fix[n]->size_per_surf_cols == 0) {
+        if (argindex[i] == 1) argindex[i] = 0;
+        else error->all(FLERR,"Dump surf fix does not compute per-surf array");
+      }
       if (argindex[i] > 0 && argindex[i] > modify->fix[n]->size_per_surf_cols)
         error->all(FLERR,"Dump surf fix array is accessed out-of-range");
 

@@ -549,8 +549,10 @@ int DumpGrid::parse_fields(int narg, char **arg)
         error->all(FLERR,"Dump grid fix does not compute per-grid info");
       if (argindex[i] == 0 && modify->fix[n]->size_per_grid_cols != 0)
         error->all(FLERR,"Dump grid fix does not calculate a per-grid vector");
-      if (argindex[i] > 0 && modify->fix[n]->size_per_grid_cols == 0)
-        error->all(FLERR,"Dump grid fix does not calculate per-grid array");
+      if (argindex[i] > 0 && modify->fix[n]->size_per_grid_cols == 0) {
+        if (argindex[i] == 1) argindex[i] = 0;
+        else error->all(FLERR,"Dump grid fix does not calculate per-grid array");
+      }
       if (argindex[i] > 0 && argindex[i] > modify->fix[n]->size_per_grid_cols)
         error->all(FLERR,"Dump grid fix array is accessed out-of-range");
 
