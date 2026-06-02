@@ -72,7 +72,7 @@ job on your machine, please find a local expert to help you.
 
 SPARTA requires that the compiler supports C++11. SPARTA will throw an error
 if this is not the case. If you are building SPARTA with Kokkos, the compiler
-must support C++17.
+must support C++20.
 
 If you have a build problem that you are convinced is a SPARTA issue
 (e.g. the compiler complains about a line of SPARTA source code), then
@@ -81,7 +81,8 @@ please send an email to the
 
 If you succeed in building SPARTA on a new kind of machine, for which
 there isn't a similar Makefile in the src/MAKE directory or .cmake file
-in cmake/presets, send it to the 
+in cmake/presets (for KOKKOS builds, a .cmake file in cmake/presets),
+send it to the 
 "developers"_https://sparta.github.io/authors.html and we'll include it in future SPARTA releases.
 
 :line
@@ -471,8 +472,8 @@ If your cmake command line is getting too long, consider placing it in a bash
 script and escaping newlines. For example:
 
 cmake \
--C  /path/to/sparta/cmake/presets/NAME.cmake \
--D  -D<OPTION_NAME>=<VALUE> \
+-C /path/to/sparta/cmake/presets/NAME.cmake \
+-D<OPTION_NAME>=<VALUE> \
 /path/to/sparta/cmake :pre
 
 [Step 4]
@@ -724,6 +725,83 @@ depending on how many cores your compilation machine has. N is the number of
 cores the build runs on.
 
 You should get build/src/spa_tutorial and build/src/libsparta.a.
+
+[Building with the KOKKOS package:]
+
+The KOKKOS package must be built with CMake (GNU Makefile builds are not
+supported for KOKKOS). The presets in cmake/presets/ set up all required
+Kokkos options for each supported backend and target platform. Choose the
+preset that matches your hardware:
+
+kokkos_omp.cmake      - Multi-core CPUs via OpenMP threading
+kokkos_mpi_only.cmake - Multi-core CPUs, MPI only (no threading)
+kokkos_cuda.cmake     - NVIDIA GPUs via CUDA (default: Hopper/H100)
+kokkos_hip.cmake      - AMD GPUs via HIP (default: MI250X)
+elcapitan_kokkos.cmake - AMD MI300A APU via HIP (Cray MPICH)
+kokkos_sycl.cmake     - Intel Ponte Vecchio GPUs via SYCL :ul
+
+Example: build for multi-core CPUs with OpenMP threading:
+
+mkdir build
+cd build
+cmake -C /path/to/sparta/cmake/presets/kokkos_omp.cmake /path/to/sparta/cmake
+make -j 4 :pre
+
+The executable will be named spa_kokkos_omp (the suffix comes from the preset).
+
+Example: build for NVIDIA A100 GPUs (override the default Hopper arch):
+
+mkdir build
+cd build
+cmake -C /path/to/sparta/cmake/presets/kokkos_cuda.cmake \
+      -DKokkos_ARCH_HOPPER90=OFF -DKokkos_ARCH_AMPERE80=ON \
+      /path/to/sparta/cmake
+make -j 4 :pre
+
+Example: build for NVIDIA V100 GPUs:
+
+mkdir build
+cd build
+cmake -C /path/to/sparta/cmake/presets/kokkos_cuda.cmake \
+      -DKokkos_ARCH_HOPPER90=OFF -DKokkos_ARCH_VOLTA70=ON \
+      /path/to/sparta/cmake
+make -j 4 :pre
+
+Example: build for AMD MI300X GPUs:
+
+mkdir build
+cd build
+cmake -C /path/to/sparta/cmake/presets/kokkos_hip.cmake \
+      -DKokkos_ARCH_VEGA90A=OFF -DKokkos_ARCH_AMD_GFX942=ON \
+      /path/to/sparta/cmake
+make -j 4 :pre
+
+After building, run SPARTA with the KOKKOS package using the -k, -sf,
+and -pk command-line switches. The -k on g Ng switch specifies Ng GPUs
+per node. Examples (assuming a node with 4 GPUs):
+
+For CUDA (NVIDIA) or HIP (AMD) GPUs, 4 MPI tasks using 4 GPUs:
+
+mpirun -np 4 spa_kokkos_cuda -k on g 4 -sf kk -in in.collide :pre
+
+For OpenMP on 16-core CPUs, 2 MPI tasks each using 8 threads:
+
+mpirun -np 2 spa_kokkos_omp -k on t 8 -sf kk -in in.collide :pre
+
+If you are migrating from the GNU Makefile build system, the Kokkos
+KOKKOS_DEVICES and KOKKOS_ARCH Makefile variables map to CMake options as
+follows:
+
+KOKKOS_DEVICES=OpenMP  ->  -DKokkos_ENABLE_OPENMP=ON
+KOKKOS_DEVICES=Cuda    ->  -DKokkos_ENABLE_CUDA=ON
+KOKKOS_ARCH=Volta70    ->  -DKokkos_ARCH_VOLTA70=ON
+KOKKOS_ARCH=Ampere80   ->  -DKokkos_ARCH_AMPERE80=ON
+KOKKOS_ARCH=Hopper90   ->  -DKokkos_ARCH_HOPPER90=ON
+KOKKOS_ARCH=Power9     ->  -DKokkos_ARCH_POWER9=ON
+KOKKOS_ARCH=ARMv8-TX2  ->  -DKokkos_ARCH_ARMV8_THUNDERX2=ON :ul
+
+See "Section 5.3"_Section_accelerate.html#acc_3 for the full list of
+architecture options and detailed instructions for each KOKKOS backend.
 
 :line
 

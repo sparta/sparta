@@ -19,11 +19,13 @@ set(CMAKE_CXX_COMPILER
 # ################### END CMAKE OPTIONS ####################
 
 # ################### BEGIN KOKKOS OPTIONS ####################
-set(Kokkos_ENABLE_SERIAL ON CACHE BOOL "" FORCE)
-set(Kokkos_ENABLE_OPENMP OFF CACHE BOOL "" FORCE)
-set(Kokkos_ENABLE_CUDA   ON CACHE BOOL "" FORCE)
-set(Kokkos_ARCH_HOPPER   ON CACHE BOOL "" FORCE)
+set(Kokkos_ENABLE_CUDA
+    ON
+    CACHE STRING "")
+set(Kokkos_ARCH_HOPPER90
+    ON
+    CACHE STRING "")
 
-# If KSPACE is also enabled, use CUFFT for FFTs
+# If FFT package is also enabled, use CUFFT for FFTs
 set(FFT_KOKKOS "CUFFT" CACHE STRING "" FORCE)
 # ################### END   KOKKOS OPTIONS ####################
