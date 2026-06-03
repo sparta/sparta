@@ -411,8 +411,10 @@ void UpdateKokkos::run(int nsteps)
       timer->stamp(TIME_OUTPUT);
     }
   }
-  sparta->kokkos->auto_sync = 1;
 
+  modify->post_run();
+
+  sparta->kokkos->auto_sync = 1;
   particle_kk->sync(Host,ALL_MASK);
 }
 
