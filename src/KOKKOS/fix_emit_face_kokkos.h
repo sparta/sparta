@@ -23,10 +23,18 @@ FixStyle(emit/face/kk,FixEmitFaceKokkos)
 
 #include "fix_emit_face.h"
 #include "rand_pool_wrap.h"
+#include "kokkos_base.h"
 #include "kokkos_copy.h"
 #include "particle_kokkos.h"
+#include "region_block_kokkos.h"
+#include "region_cylinder_kokkos.h"
+#include "region_plane_kokkos.h"
+#include "region_sphere_kokkos.h"
 
 namespace SPARTA_NS {
+
+#define KOKKOS_MAX_REGION_PER_TYPE 2
+#define KOKKOS_MAX_TOT_REGION 10
 
 struct TagFixEmitFace_ninsert{};
 struct TagFixEmitFace_perform_task{};
@@ -59,9 +67,13 @@ class FixEmitFaceKokkos : public FixEmitFace {
 #endif
 
  private:
-  int prefactor;
+  int prefactor, region_flag;
 
   KKCopy<ParticleKokkos> particle_kk_copy;
+  KKCopy<RegBlockKokkos> regblock_kk_copy;
+  KKCopy<RegCylinderKokkos> regcylinder_kk_copy;
+  KKCopy<RegPlaneKokkos> regplane_kk_copy;
+  KKCopy<RegSphereKokkos> regsphere_kk_copy;
 
   typedef Kokkos::DualView<Task*, DeviceType::array_layout, DeviceType> tdual_task_1d;
   typedef tdual_task_1d::t_dev t_task_1d;
@@ -97,7 +109,7 @@ class FixEmitFaceKokkos : public FixEmitFace {
   DAT::t_float_1d d_cummulative;
   DAT::t_int_1d d_species;
 
-  void create_task(int) override;
+  void create_tasks() override;
   void grow_task() override;
   void realloc_nspecies() override;
 };

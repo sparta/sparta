@@ -141,6 +141,8 @@ class UpdateKokkos : public Update {
   KKCopy<ComputeSurfKokkos> slist_active_copy[KOKKOS_MAX_SLIST];
   KKCopy<ComputeBoundaryKokkos> blist_active_copy[KOKKOS_MAX_BLIST];
 
+  ComputeBoundaryKokkos tmp_compute_boundary_kk;
+  ComputeSurfKokkos tmp_compute_surf_kk;
 
   typedef Kokkos::DualView<int[14], DeviceType::array_layout, DeviceType> tdual_int_14;
   typedef tdual_int_14::t_dev t_int_14;

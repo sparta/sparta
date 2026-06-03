@@ -47,7 +47,7 @@ template <typename TYPE>
 TYPE wrap_kokkos(TYPE &data, const typename TYPE::value_type *array,
                    int n, const char *name)
 {
-  data = TYPE(name,n);
+  data = TYPE(Kokkos::NoInit(std::string(name)),n);
   for (int i=0; i<n; i++) {
     data.view_host()(i) = array[i];
   }

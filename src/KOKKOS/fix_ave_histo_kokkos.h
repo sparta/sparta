@@ -45,23 +45,21 @@ struct TagFixAveHisto_BinParticlesV3 {};
 struct TagFixAveHisto_BinParticlesV4 {};
 
 namespace FixKokkosDetails {
-
-template<class ValueType, class OutputDeviceType>
-inline
-Kokkos::View<ValueType*, OutputDeviceType>
-mirror_view_from_raw_host_array(ValueType* x, const int size, const int stride)
-{
-  typedef typename OutputDeviceType::memory_space out_mem_space;
-  typedef Kokkos::View<ValueType*, OutputDeviceType> out_view_type;
-  typedef Kokkos::View<ValueType*, typename out_view_type::array_layout,
-                       Kokkos::HostSpace> host_view_type;
-  host_view_type h_x("h_x", size);
-  for (int i=0, j=0; i<size; i++, j+=stride) h_x(i) = x[j];
-  out_view_type d_x = Kokkos::create_mirror_view(out_mem_space(), h_x);
-  Kokkos::deep_copy(d_x, h_x);
-  return d_x;
-}
-
+  template<class ValueType, class OutputDeviceType>
+  inline
+  Kokkos::View<ValueType*, OutputDeviceType>
+  mirror_view_from_raw_host_array(ValueType* x, const int size, const int stride)
+  {
+    typedef typename OutputDeviceType::memory_space out_mem_space;
+    typedef Kokkos::View<ValueType*, OutputDeviceType> out_view_type;
+    typedef Kokkos::View<ValueType*, typename out_view_type::array_layout,
+                         Kokkos::HostSpace> host_view_type;
+    host_view_type h_x("h_x", size);
+    for (int i=0, j=0; i<size; i++, j+=stride) h_x(i) = x[j];
+    out_view_type d_x = Kokkos::create_mirror_view(out_mem_space(), h_x);
+    Kokkos::deep_copy(d_x, h_x);
+    return d_x;
+  }
 }
 
 class FixAveHistoKokkos : public FixAveHisto
@@ -136,6 +134,9 @@ protected:
   DAT::t_int_2d d_s2g;
 
   DAT::tdual_float_1d k_vector;
+
+  DAT::tdual_int_1d k_match;
+  DAT::t_int_1d d_match;
 
   int index;
   int stride;

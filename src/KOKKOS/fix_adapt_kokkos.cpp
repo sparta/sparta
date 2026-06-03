@@ -54,12 +54,12 @@ void FixAdaptKokkos::end_of_step()
   ParticleKokkos* particle_kk = (ParticleKokkos*) particle;
 
   grid_kk->sync(Host,ALL_MASK);
-  particle_kk->sync(Host,PARTICLE_MASK);
+  particle_kk->sync(Host,PARTICLE_MASK|CUSTOM_MASK);
 
   FixAdapt::end_of_step();
 
   grid_kk->modify(Host,ALL_MASK);
-  particle_kk->modify(Host,PARTICLE_MASK);
+  particle_kk->modify(Host,PARTICLE_MASK|CUSTOM_MASK);
   particle_kk->sorted_kk = 0;
 
   grid_kk->wrap_kokkos_graphs();
