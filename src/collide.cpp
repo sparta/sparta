@@ -1800,6 +1800,17 @@ void Collide::modify_params(int narg, char **arg)
       if (Ngmin < 0) error->all(FLERR,"Illegal collide_modify command");
       Ngmax = atoi(arg[iarg+5]);
       if (Ngmax < 0) error->all(FLERR,"Illegal collide_modify command");
+      // reduced groups always contain more than Ngmin particles.
+      // stress emits up to 6 survivors, so each group must have more than 6
+      // (Ngmin >= 6); energy/heat emit 2 survivors, so each group must have
+      // more than 2, i.e. at least 3 particles (Ngmin >= 2).
+      if (reduction_type == STRESS) {
+        if (Ngmin < 6)
+          error->all(FLERR,"collide_modify reduce stress requires Ngmin >= 6 "
+                           "(more than 6 particles per group)");
+      } else if (Ngmin < 2)
+        error->all(FLERR,"collide_modify reduce energy/heat requires Ngmin >= 2 "
+                         "(at least 3 particles per group)");
       reduceflag = 1;
       iarg += 6;
     } else if (strcmp(arg[iarg],"nearcp") == 0) {

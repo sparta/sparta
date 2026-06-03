@@ -218,9 +218,13 @@ reduced separately.  Each group is then recursively divided using the
 <I>binary</I> grouping.
 </P>
 <P><I>Ngmin</I> and <I>Ngmax</I> are the minimum and maximum number of particles in a
-group eligible for reduction.  <I>Ngmax</I> must be greater than 2 if <I>energy</I>
-or <I>heat</I> reduction is used, and greater than 6 if <I>stress</I> reduction is
-used.
+group eligible for reduction.  A group is only reduced if it contains more
+than <I>Ngmin</I> particles.  Because <I>energy</I> and <I>heat</I> reduction emit two
+particles per group, <I>Ngmin</I> must be >= 2 for those schemes (so each
+reduced group has at least 3 particles).  <I>stress</I> reduction emits up to
+six particles per group, so <I>Ngmin</I> must be >= 6 (so each reduced group
+has more than 6 particles).  An error is flagged by the collide_modify
+command if these limits are violated.
 </P>
 <HR>
 

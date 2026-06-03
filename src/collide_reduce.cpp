@@ -207,6 +207,11 @@ void Collide::reduce_stress(int istart, int iend,
     }
   }
 
+  // stress reduction can emit up to 2*nK = 6 survivor particles.  groups are
+  // guaranteed to have more than 6 particles by the collide_modify reduce
+  // command (which requires Ngmin >= 6 for stress), so 2*nK never exceeds the
+  // group size below.
+
   // iterate through nK pairs
 
   Particle::OnePart *particles = particle->particles;

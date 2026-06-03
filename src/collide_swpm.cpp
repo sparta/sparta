@@ -138,6 +138,7 @@ void Collide::collisions_one_stochastic_weighting()
         plist[np++] = particle->nlocal-2;
         plist[np++] = particle->nlocal-1;
         particles = particle->particles;
+        stochastic_weights = particle->edvec[particle->ewhich[index_stochastic_weight]];
       } else if (kpart != NULL || lpart != NULL) {
         if (np+1 >= npmax) {
           npmax += DELTAPART;
@@ -145,6 +146,7 @@ void Collide::collisions_one_stochastic_weighting()
         }
         plist[np++] = particle->nlocal-1;
         particles = particle->particles;
+        stochastic_weights = particle->edvec[particle->ewhich[index_stochastic_weight]];
       }
 
       // since ipart and jpart have same weight, do not need
@@ -277,6 +279,9 @@ void Collide::split(Particle::OnePart *&ip, Particle::OnePart *&jp,
       jp = particle->particles + (jp - particles);
     }
     kp = &particle->particles[particle->nlocal-1];
+    // add_particle may have grown (reallocated) the custom arrays, so
+    // re-acquire the stochastic weight array before writing into it
+    stochastic_weights = particle->edvec[particle->ewhich[index_stochastic_weight]];
     stochastic_weights[particle->nlocal-1] = ksw;
   }
 
@@ -297,6 +302,8 @@ void Collide::split(Particle::OnePart *&ip, Particle::OnePart *&jp,
       kp = particle->particles + (kp - particles);
     }
     lp = &particle->particles[particle->nlocal-1];
+    // re-acquire after possible reallocation in add_particle (see above)
+    stochastic_weights = particle->edvec[particle->ewhich[index_stochastic_weight]];
     stochastic_weights[particle->nlocal-1] = lsw;
   }
 
