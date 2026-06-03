@@ -67,10 +67,13 @@ collide            vss air air.vss
 collide_modify     remain no
 
 # swpm
-collide_modify     swpm yes -1.0 1.0
-collide_modify     reduce energy 32.0 binary 4.0
-#collide_modify     reduce heat 32.0 weight 4.0
-#collide_modify     reduce stress 96.0 binary 12.0
+# fix stochastic_weight is required before collide_modify stochastic_weight yes
+fix                fweight stochastic_weight
+collide_modify     stochastic_weight yes
+collide_modify     split 8 1.0
+collide_modify     reduce energy binary 32 4 16
+#collide_modify     reduce heat weight 32 4 16
+#collide_modify     reduce stress binary 96 8 24
 
 variable N         equal ${nx}*${ny}*${nz}*${ppc}
 variable Fnum      equal ${nden}/(${N}/(${Lx}*${Ly}*${Lz}))

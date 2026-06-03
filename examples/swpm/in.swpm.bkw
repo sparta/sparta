@@ -8,8 +8,9 @@
 # conserved across split/merge) and the Sonine moments decay to zero.
 #
 # Standalone workflow (run from this directory):
-#   python bkw_init.py 100000 1.0e-6 1.0e-6 1.0e-6 bkw.particles 0.65 273.15 6.63e-26
+#   python bkw_init.py 20000 1.0e-6 1.0e-6 1.0e-6 bkw.particles 0.65 273.15 6.63e-26
 #   spa_<machine> -in in.swpm.bkw
+# (single processor; increase the particle count for smoother statistics)
 #
 # N (below) must match the particle count passed to bkw_init.py.
 #
@@ -30,7 +31,7 @@ variable T         equal 273.15
 variable mass      equal 6.63e-26
 variable beta0     equal 0.65
 
-variable N         equal 100000        # must match bkw_init.py particle count
+variable N         equal 20000         # must match bkw_init.py particle count
 variable L         equal 1.0e-6        # cubic box edge (m), matches bkw_init.py
 variable nrho      equal 1.0e23        # number density (1/m^3)
 
@@ -71,8 +72,12 @@ collide            vss air air.vss
 collide_modify     remain no
 
 # stochastic weighted particle method: split/reduce keep particle count bounded
-collide_modify     swpm yes -1.0 1.0
-collide_modify     reduce energy 32.0 binary 4.0
+# fix stochastic_weight registers the per-particle weight attribute and is
+# required before "collide_modify stochastic_weight yes"
+fix                fweight stochastic_weight
+collide_modify     stochastic_weight yes
+collide_modify     split 8 1.0
+collide_modify     reduce energy binary 4000 16 64
 
 #####################
 # Diagnostics       #
@@ -92,4 +97,4 @@ stats              50
 stats_style        step np nattempt ncoll c_1r c_2r c_3r[1] c_3r[2]
 
 timestep           1.0e-9
-run                2000
+run                1000

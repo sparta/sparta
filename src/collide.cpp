@@ -1787,19 +1787,20 @@ void Collide::modify_params(int narg, char **arg)
       iarg += 3;
     } else if (strcmp(arg[iarg],"reduce") == 0) {
       if (iarg+6 > narg) error->all(FLERR,"Illegal collide_modify command");
-      Ncmax = atoi(arg[iarg+1]);
+      if (strcmp(arg[iarg+1],"energy") == 0) reduction_type = ENERGY;
+      else if (strcmp(arg[iarg+1],"heat") == 0) reduction_type = HEAT;
+      else if (strcmp(arg[iarg+1],"stress") == 0) reduction_type = STRESS;
+      else error->all(FLERR,"Illegal collide_modify command");
+      if (strcmp(arg[iarg+2],"binary") == 0) group_type = BINARY;
+      else if (strcmp(arg[iarg+2],"weight") == 0) group_type = WEIGHT;
+      else error->all(FLERR,"Illegal collide_modify command");
+      Ncmax = atoi(arg[iarg+3]);
       if (Ncmax < 0) error->all(FLERR,"Illegal collide_modify command");
-      Ngmin = atoi(arg[iarg+2]);
+      Ngmin = atoi(arg[iarg+4]);
       if (Ngmin < 0) error->all(FLERR,"Illegal collide_modify command");
-      Ngmax = atoi(arg[iarg+3]);
+      Ngmax = atoi(arg[iarg+5]);
       if (Ngmax < 0) error->all(FLERR,"Illegal collide_modify command");
-      if (strcmp(arg[iarg+4],"binary") == 0) group_type = BINARY;
-      else if (strcmp(arg[iarg+4],"weight") == 0) group_type = WEIGHT;
-      else error->all(FLERR,"Illegal collide_modify command");
-      if (strcmp(arg[iarg+5],"energy") == 0) reduction_type = ENERGY;
-      else if (strcmp(arg[iarg+5],"heat") == 0) reduction_type = HEAT;
-      else if (strcmp(arg[iarg+5],"stress") == 0) reduction_type = STRESS;
-      else error->all(FLERR,"Illegal collide_modify command");
+      reduceflag = 1;
       iarg += 6;
     } else if (strcmp(arg[iarg],"nearcp") == 0) {
       if (iarg+3 > narg) error->all(FLERR,"Illegal collide_modify command");

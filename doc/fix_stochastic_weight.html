@@ -1,0 +1,67 @@
+<HTML>
+<CENTER><A HREF = "https://sparta.github.io">SPARTA WWW Site</A> - <A HREF = "Manual.html">SPARTA Documentation</A> - <A HREF = "Section_commands.html#comm">SPARTA Commands</A>
+</CENTER>
+
+
+
+
+
+
+<HR>
+
+<H3>fix stochastic_weight command
+</H3>
+<P><B>Syntax:</B>
+</P>
+<PRE>fix ID stochastic_weight
+</PRE>
+<UL><LI>ID is documented in <A HREF = "fix.html">fix</A> command
+<LI>stochastic_weight = style name of this fix command
+</UL>
+<P><B>Examples:</B>
+</P>
+<PRE>fix fweight stochastic_weight
+collide_modify stochastic_weight yes
+</PRE>
+<P><B>Description:</B>
+</P>
+<P>Enable per-particle stochastic weights for use with the stochastic
+weighted particle method (SWPM).  This fix must be defined before SWPM
+is turned on with the <A HREF = "collide_modify.html">collide_modify stochastic_weight yes</A>
+command; SWPM will flag an error if the fix is not present.
+</P>
+<P>Internally the fix defines a single custom per-particle attribute named
+"stochastic_wt" (a floating-point value per particle) which stores each
+particle's weight <I>relative to</I> the global <A HREF = "global.html">fnum</A>.  A weight
+of 1.0 therefore represents fnum real molecules.  Newly created particles
+(from <A HREF = "create_particles.html">create_particles</A>,
+<A HREF = "read_particles.html">read_particles</A>, or particle emission) are assigned
+a weight of 1.0, and particles that already exist when the fix is defined
+are likewise initialized to 1.0.  Weights restored from a
+<A HREF = "read_restart.html">restart</A> file are preserved.
+</P>
+<P>During SWPM collisions the splitting and reduction stages update the
+stochastic weights of individual particles; see the
+<A HREF = "collide_modify.html">collide_modify</A> command for details of the method.
+Computes that average per-particle quantities (for example
+<A HREF = "compute_thermal_grid.html">compute thermal/grid</A>,
+<A HREF = "compute_grid.html">compute grid</A>, <A HREF = "compute_temp.html">compute temp</A>, and
+the surface/boundary flux computes) automatically account for these
+weights when the fix is defined.
+</P>
+<P>Stochastic weighting and grid-based particle weighting (the
+<A HREF = "global.html">global weight</A> command) are mutually exclusive; enabling
+both is an error.
+</P>
+<P><B>Restrictions:</B>
+</P>
+<P>This fix can only be used for SWPM simulations, which are currently
+limited to monatomic, single-species gases.
+</P>
+<P><B>Related commands:</B>
+</P>
+<P><A HREF = "collide_modify.html">collide_modify</A>
+</P>
+<P><B>Default:</B> none
+</P>
+</HTML>
