@@ -281,6 +281,7 @@ void ComputeTvibGrid::compute_per_grid()
   // mode = 0: tally vib eng and count for each species
   // mode >= 1: tally vib level and count for each species and each vib mode
 
+  double *sweights = particle->stochastic_weights();
   double swfrac = 1.0;
 
   if (modeflag == 0) {
@@ -292,7 +293,8 @@ void ComputeTvibGrid::compute_per_grid()
       icell = particles[i].icell;
       if (!(cinfo[icell].mask & groupbit)) continue;
 
-      if (particle->weightflag) swfrac = particles[i].weight;
+      if (sweights) swfrac = sweights[i];
+      else if (particle->weightflag) swfrac = particles[i].weight;
 
       j = s2t[ispecies];
       tally[icell][j] += particles[i].evib * swfrac;
@@ -311,7 +313,8 @@ void ComputeTvibGrid::compute_per_grid()
       icell = particles[i].icell;
       if (!(cinfo[icell].mask & groupbit)) continue;
 
-      if (particle->weightflag) swfrac = particles[i].weight;
+      if (sweights) swfrac = sweights[i];
+      else if (particle->weightflag) swfrac = particles[i].weight;
 
       // tally only the modes this species has
 

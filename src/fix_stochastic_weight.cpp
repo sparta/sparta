@@ -35,13 +35,19 @@ FixStochasticWeight::FixStochasticWeight(SPARTA *sparta, int narg, char **arg) :
 
   flag_update_custom = 1;
 
-  // check if custom attribute already exists, due to restart file
-  // else create per-particle vector
+  // reuse the custom attribute if it already exists (e.g. restored from a
+  // restart file, where the stored weights must be preserved); otherwise
+  // create it and initialize any pre-existing particles to a weight of 1.0
+  // (relative to fnum).  newly created particles are set by update_custom().
 
   stochastic_wt_index = particle->find_custom((char *) "stochastic_wt");
 
-  if (stochastic_wt_index < 0)
+  if (stochastic_wt_index < 0) {
     stochastic_wt_index = particle->add_custom((char *) "stochastic_wt",DOUBLE,0);
+    double *stochastic_weights = particle->edvec[particle->ewhich[stochastic_wt_index]];
+    for (int i = 0; i < particle->nlocal; i++)
+      stochastic_weights[i] = 1.0;
+  }
 }
 
 /* ---------------------------------------------------------------------- */
@@ -65,28 +71,26 @@ int FixStochasticWeight::setmask()
 
 void FixStochasticWeight::init()
 {
-  // initialize custom weight attribute to 1
-  // subsequent updates will store weight/fnum
-
-  if (stochastic_wt_index >= 0) {
-    double *stochastic_weights = particle->edvec[particle->ewhich[stochastic_wt_index]];
-    for (int i = 0; i < particle->nlocal; i++)
-      stochastic_weights[i] = 1.0;
-  }
+  // intentionally empty: stochastic weights persist across runs and restarts.
+  // they are initialized once at fix creation and for each new particle in
+  // update_custom(); resetting them here would discard accumulated weights.
 }
 
 /* ----------------------------------------------------------------------
-   called when a particle with index is created
-   or when temperature dependent properties need to be updated
-   initialize custom weight attribute with particle weight
+   called when a particle with index is created (emit, create_particles)
+   set its stochastic weight to 1.0 (relative to fnum)
 ------------------------------------------------------------------------- */
 
 void FixStochasticWeight::update_custom(int index, double temp_thermal,
                             double, double,
                             double *vstream)
 {
+  // a standard particle represents fnum real molecules, so its weight
+  // relative to fnum is 1.0 (grid-based particle->weight is mutually
+  // exclusive with stochastic weighting and is not used here)
+
   double *stochastic_weights = particle->edvec[particle->ewhich[stochastic_wt_index]];
-  stochastic_weights[index] = particle->particles[index].weight / update->fnum;
+  stochastic_weights[index] = 1.0;
 }
 
 

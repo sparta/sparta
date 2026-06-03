@@ -175,6 +175,7 @@ class Particle : protected Pointers {
   void unpack_restart(char *, int &, int, int);
 
   int find_custom(char *);
+  double *stochastic_weights();
   void error_custom();
   virtual int add_custom(char *, int, int);
   virtual void grow_custom(int, int, int);

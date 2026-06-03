@@ -101,7 +101,7 @@ Collide::Collide(SPARTA *sparta, int, char **arg) : Pointers(sparta)
 
   // stochastic weighted particle method
   stochastic_weight_flag = 0;
-  max_stochastic_weight = update->fnum;
+  max_stochastic_weight = 1.0;   // weights are stored relative to fnum
   reduceflag = 0;
   Ncmin = Ncmax = Ngmin = Ngmax = 0;
 

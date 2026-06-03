@@ -137,6 +137,7 @@ void ComputeThermalGrid::compute_per_grid()
 
   // loop over all particles, skip species not in mixture group
 
+  double *sweights = particle->stochastic_weights();
   double swfrac = 1.0;
   for (i = 0; i < nlocal; i++) {
     ispecies = particles[i].ispecies;
@@ -146,7 +147,8 @@ void ComputeThermalGrid::compute_per_grid()
     if (!(cinfo[icell].mask & groupbit)) continue;
 
     mass = species[ispecies].mass;
-    if(particle->weightflag) swfrac = particles[i].weight;
+    if (sweights) swfrac = sweights[i];
+    else if (particle->weightflag) swfrac = particles[i].weight;
     mass *= swfrac;
     v = particles[i].v;
 

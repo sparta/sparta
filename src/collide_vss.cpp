@@ -213,9 +213,9 @@ int CollideVSS::test_collision(int icell, int igroup, int jgroup,
     double *stochastic_weights = particle->edvec[particle->ewhich[index_stochastic_weight]];
     int i_index = ip - particle->particles;
     int j_index = jp - particle->particles;
-    double isw = stochastic_weights[i_index]*update->fnum;
-    double jsw = stochastic_weights[j_index]*update->fnum;
-    ijsw = MAX(isw ,jsw)/max_stochastic_weight;
+    double isw = stochastic_weights[i_index];
+    double jsw = stochastic_weights[j_index];
+    ijsw = MAX(isw,jsw)/max_stochastic_weight;
   }
 
   // although the vremax is calculated for the group,

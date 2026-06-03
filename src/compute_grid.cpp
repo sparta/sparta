@@ -237,6 +237,7 @@ void ComputeGrid::compute_per_grid()
   // perform all tallies needed for each particle
   // depends on its species group and the user-requested values
 
+  double *sweights = particle->stochastic_weights();
   double swfrac = 1.0;
   for (i = 0; i < nlocal; i++) {
     ispecies = particles[i].ispecies;
@@ -247,7 +248,8 @@ void ComputeGrid::compute_per_grid()
 
     mass = species[ispecies].mass;
     v = particles[i].v;
-    if (particle->weightflag) swfrac = particles[i].weight;
+    if (sweights) swfrac = sweights[i];
+    else if (particle->weightflag) swfrac = particles[i].weight;
 
     mass *= swfrac;
 

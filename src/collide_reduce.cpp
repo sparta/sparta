@@ -38,16 +38,30 @@ using namespace SPARTA_NS;
 #define SMALL 1.0e-16
 
 /* ----------------------------------------------------------------------
+   flag plist entry idx for deletion: mark its stochastic weight and queue it
+------------------------------------------------------------------------- */
+void Collide::reduce_delete(int idx, double *stochastic_weights)
+{
+  if (ndelete == maxdelete) {
+    maxdelete += DELTADELETE;
+    memory->grow(dellist,maxdelete,"collide:dellist");
+  }
+  stochastic_weights[idx] = -1.0;
+  dellist[ndelete++] = idx;
+}
+
+/* ----------------------------------------------------------------------
    Merge particles using energy scheme
 ------------------------------------------------------------------------- */
-void Collide::reduce(int istart, int iend, 
-                     double rho, double *V, double T, double Erot)
+void Collide::reduce_energy(int istart, int iend,
+                            double rho, double *V, double T, double Erot)
 {
 
   // reduced particles chosen as first two in group
 
   Particle::OnePart *particles = particle->particles;
   Particle::OnePart *ipart, *jpart;
+  double *stochastic_weights = particle->edvec[particle->ewhich[index_stochastic_weight]];
 
   int np = iend-istart;
   int ip, jp;
@@ -80,22 +94,16 @@ void Collide::reduce(int istart, int iend,
   ipart->erot = Erot/(rho*0.5)*0.5;
   jpart->erot = Erot/(rho*0.5)*0.5;
 
-  // set reduced particle weights
+  // set reduced particle stochastic weights (relative to fnum)
 
-  ipart->weight = rho*0.5;
-  jpart->weight = rho*0.5;
+  stochastic_weights[plist[ip]] = rho*0.5;
+  stochastic_weights[plist[jp]] = rho*0.5;
 
   // delete other particles
 
   for (int i = istart; i < iend; i++) {
     if (i == ip || i == jp) continue;
-    if (ndelete == maxdelete) {
-      maxdelete += DELTADELETE;
-      memory->grow(dellist,maxdelete,"collide:dellist");
-    }
-    ipart = &particles[plist[i]];
-    ipart->weight = -1.0;
-    dellist[ndelete++] = plist[i];
+    reduce_delete(plist[i],stochastic_weights);
   }
 
   return;
@@ -104,14 +112,16 @@ void Collide::reduce(int istart, int iend,
 /* ----------------------------------------------------------------------
    Merge particles using heat flux scheme
 ------------------------------------------------------------------------- */
-void Collide::reduce(int istart, int iend,
-                     double rho, double *V, double T, double Erot, double *q)
+void Collide::reduce_heat(int istart, int iend,
+                          double rho, double *V, double T, double Erot,
+                          double *q)
 {
 
   // reduced particles chosen as first two in group
 
   Particle::OnePart *particles = particle->particles;
   Particle::OnePart *ipart, *jpart;
+  double *stochastic_weights = particle->edvec[particle->ewhich[index_stochastic_weight]];
 
   int np = iend-istart;
   int ip, jp;
@@ -161,19 +171,13 @@ void Collide::reduce(int istart, int iend,
   ipart->erot = Erot/isw*0.5;
   jpart->erot = Erot/jsw*0.5;
 
-  ipart->weight = isw;
-  jpart->weight = jsw;
+  stochastic_weights[plist[ip]] = isw;
+  stochastic_weights[plist[jp]] = jsw;
 
   // delete other particles
   for (int i = istart; i < iend; i++) {
     if (i == ip || i == jp) continue;
-    if (ndelete == maxdelete) {
-      maxdelete += DELTADELETE;
-      memory->grow(dellist,maxdelete,"collide:dellist");
-    }
-    ipart = &particles[plist[i]];
-    ipart->weight = -1.0;
-    dellist[ndelete++] = plist[i];
+    reduce_delete(plist[i],stochastic_weights);
   }
 
   return;
@@ -182,9 +186,9 @@ void Collide::reduce(int istart, int iend,
 /* ----------------------------------------------------------------------
    Merge particles using stress scheme
 ------------------------------------------------------------------------- */
-void Collide::reduce(int istart, int iend,
-                     double rho, double *V, double T, double Erot,
-                     double *q, double pij[3][3])
+void Collide::reduce_stress(int istart, int iend,
+                            double rho, double *V, double T, double Erot,
+                            double *q, double pij[3][3])
 {
 
   // find eigenpairs of stress tensor
@@ -207,6 +211,7 @@ void Collide::reduce(int istart, int iend,
 
   Particle::OnePart *particles = particle->particles;
   Particle::OnePart *ipart, *jpart;
+  double *stochastic_weights = particle->edvec[particle->ewhich[index_stochastic_weight]];
 
   double qli, itheta;
   double isw, jsw;
@@ -244,22 +249,15 @@ void Collide::reduce(int istart, int iend,
     ipart->erot = Erot/isw*0.5/nK;
     jpart->erot = Erot/jsw*0.5/nK;
 
-    ipart->weight = isw;
-    jpart->weight = jsw;
+    stochastic_weights[plist[2*iK+istart]] = isw;
+    stochastic_weights[plist[2*iK+1+istart]] = jsw;
 
   } // end nK
-  
+
   // delete other particles
-  for (int i = istart; i < iend; i++) {
-    if (i < 2*nK) continue;
-    if (ndelete == maxdelete) {
-      maxdelete += DELTADELETE;
-      memory->grow(dellist,maxdelete,"collide:dellist");
-    }
-    ipart = &particles[plist[i]];
-    ipart->weight = -1.0;
-    dellist[ndelete++] = plist[i];
-  }
+  // the 2*nK reduced survivors occupy plist[istart .. istart+2*nK-1]
+  for (int i = istart + 2*nK; i < iend; i++)
+    reduce_delete(plist[i],stochastic_weights);
 
   return;
 }

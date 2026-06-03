@@ -90,7 +90,7 @@ void Collide::collisions_one_stochastic_weighting()
       plist[n++] = ip;
 
       ipart = &particles[ip];
-      isw = stochastic_weights[ip] * ipart->weight;
+      isw = stochastic_weights[ip];
       max_stochastic_weight = MAX(max_stochastic_weight,isw);
 
       if (isw != isw) error->all(FLERR,"Particle has NaN weight");
@@ -151,11 +151,11 @@ void Collide::collisions_one_stochastic_weighting()
       // ... to account for weight during collision itself
       // also the splits are all handled beforehand
 
-      // check that particles have the same weight (weight * stochastic_weights)
+      // check that particles have the same stochastic weight
       int i_index = ipart - particle->particles;
       int j_index = jpart - particle->particles;
-      double isw = stochastic_weights[i_index] * ipart->weight;
-      double jsw = stochastic_weights[j_index] * jpart->weight;
+      double isw = stochastic_weights[i_index];
+      double jsw = stochastic_weights[j_index];
       if (isw != jsw)
         error->one(FLERR,"Particles must have same stochastic weight before collision in stochastic weighting");
 
@@ -197,8 +197,8 @@ void Collide::split(Particle::OnePart *&ip, Particle::OnePart *&jp,
   double *stochastic_weights = particle->edvec[particle->ewhich[index_stochastic_weight]];
   int i_index = ip - particle->particles;
   int j_index = jp - particle->particles;
-  double isw = stochastic_weights[i_index] * ip->weight;
-  double jsw = stochastic_weights[j_index] * jp->weight;
+  double isw = stochastic_weights[i_index];
+  double jsw = stochastic_weights[j_index];
   double Gwtf, ksw, lsw;
 
   if (isw <= 0.0 || jsw <= 0.0)
@@ -247,13 +247,15 @@ void Collide::split(Particle::OnePart *&ip, Particle::OnePart *&jp,
     erotl = ip->erot;
   }
 
-  // update weights in custom array only
+  // update stochastic weights in custom array (relative to fnum)
+  // ip and jp both keep the transferred weight Gwtf so the equal-weight
+  // collision performed on them afterward is valid
   // recalculate indices after potential reallocation in add_particle
 
   i_index = ip - particle->particles;
   j_index = jp - particle->particles;
-  stochastic_weights[i_index] = Gwtf / ip->weight;
-  stochastic_weights[j_index] = Gwtf / jp->weight;
+  stochastic_weights[i_index] = Gwtf;
+  stochastic_weights[j_index] = Gwtf;
 
   // Gwtf should never be negative or zero
 
@@ -275,15 +277,11 @@ void Collide::split(Particle::OnePart *&ip, Particle::OnePart *&jp,
       jp = particle->particles + (jp - particles);
     }
     kp = &particle->particles[particle->nlocal-1];
-    stochastic_weights[particle->nlocal-1] = ksw / update->fnum;
+    stochastic_weights[particle->nlocal-1] = ksw;
   }
 
-  if (kp) {
-    if (kp->weight <= 0.0) {
-      printf("ksw: %2.3e; kp->weight: %2.3e\n", ksw,kp->weight);
-      error->one(FLERR,"New particle [k] has bad weight");
-    }
-  }
+  if (kp && ksw <= 0.0)
+    error->one(FLERR,"New particle [k] has bad weight");
 
   // there should never be case where you add particle "l" if
   // ... you did not add particle "k"
@@ -299,15 +297,11 @@ void Collide::split(Particle::OnePart *&ip, Particle::OnePart *&jp,
       kp = particle->particles + (kp - particles);
     }
     lp = &particle->particles[particle->nlocal-1];
-    stochastic_weights[particle->nlocal-1] = lsw / update->fnum;
+    stochastic_weights[particle->nlocal-1] = lsw;
   }
 
-  if (lp) {
-    if (lp->weight <= 0.0) {
-      printf("lsw: %2.3e; lp->weight: %2.3e\n", lsw,lp->weight);
-      error->one(FLERR,"New particle [l] has bad weight");
-    }
-  }
+  if (lp && lsw <= 0.0)
+    error->one(FLERR,"New particle [l] has bad weight");
 }
 
 /* ----------------------------------------------------------------------
@@ -344,7 +338,7 @@ void Collide::group()
     n = 0;
     while (ip >= 0) {
       ipart = &particles[ip];
-      isw = stochastic_weights[ip] * ipart->weight;
+      isw = stochastic_weights[ip];
       if(isw > 0) plist[n++] = ip;
       ip = next[ip];
     }
@@ -368,7 +362,7 @@ void Collide::group()
         swmean = swvar = 0.0;
         for (int i = 0; i < np; i++) {
           ipart = &particles[plist[i]];
-          isw = stochastic_weights[plist[i]] * ipart->weight;
+          isw = stochastic_weights[plist[i]];
 
           // Incremental variance
 
@@ -394,7 +388,7 @@ void Collide::group()
         ip = cinfo[icell].first;
         for (int i = 0; i < np; i++) {
           ipart = &particles[plist[i]];
-          isw = stochastic_weights[plist[i]] * ipart->weight;
+          isw = stochastic_weights[plist[i]];
           if(isw > 0 && isw < lLim) {
             std::swap(plist[ip],plist[np_small]);
             np_small++;
@@ -408,7 +402,7 @@ void Collide::group()
         np_med = np_small;
         for (int i = np_small; i < np; i++) {
           ipart = &particles[plist[i]];
-          isw = stochastic_weights[plist[i]] * particles[plist[i]].weight;
+          isw = stochastic_weights[plist[i]];
           if (isw >= lLim && isw < uLim) {
             std::swap(plist[np_med],plist[i]);
             np_med++;
@@ -430,7 +424,7 @@ void Collide::group()
       n = 0;
       while (ip >= 0) {
         ipart = &particles[ip];
-        isw = stochastic_weights[ip] * particles[ip].weight;
+        isw = stochastic_weights[ip];
         if(isw > 0) plist[n++] = ip;
         ip = next[ip];
       }
@@ -464,6 +458,7 @@ void Collide::group_bt(int istart, int iend, int group_size_buffer)
   Particle::OnePart *ipart;
   Particle::OnePart *particles = particle->particles;
   Particle::Species *species = particle->species;
+  double *stochastic_weights = particle->edvec[particle->ewhich[index_stochastic_weight]];
 
   // ignore groups which have too few particles
 
@@ -471,93 +466,75 @@ void Collide::group_bt(int istart, int iend, int group_size_buffer)
   int np = iend-istart;
   if (np <= Ngmin) return;
 
-  // zero out all values
-  double gsum, msum;
+  // accumulate group totals: weight, mass, momentum, rotational energy
+  // first pass forms the mean velocity used to build central moments below
+
+  double gsum, msum, Erot;
   double mV[3];
-  double pij[3][3];
-  gsum = msum = 0.0;
+  gsum = msum = Erot = 0.0;
+  for (int i = 0; i < 3; i++) mV[i] = 0.0;
+
+  int ispecies;
+  double mass, psw, pmsw;
+  for (int p = istart; p < iend; p++) {
+    ipart = &particles[plist[p]];
+    ispecies = ipart->ispecies;
+    mass = species[ispecies].mass;
+
+    psw = stochastic_weights[plist[p]];
+    pmsw = psw * mass;
+    gsum += psw;
+    msum += pmsw;
+    Erot += psw*ipart->erot;
+    for (int i = 0; i < 3; i++) mV[i] += pmsw*ipart->v[i];
+  }
+
+  // mean (mass-weighted) velocity
+
+  double V[3];
+  for (int i = 0; i < 3; i++) V[i] = mV[i]/msum;
+
+  // second pass: accumulate the stress tensor and heat flux directly from
+  // velocity deviations (v - V).  computing these central moments with
+  // nested loops avoids the catastrophic cancellation of the raw-moment
+  // form (e.g. mVV - mV*mV/msum), which could yield negative temperatures.
+
+  double pij[3][3], q[3];
   for (int i = 0; i < 3; i++) {
-    mV[i] = 0.0;
+    q[i] = 0.0;
     for (int j = 0; j < 3; j++) pij[i][j] = 0.0;
   }
 
-  // find total weight, mass, momentum, and rotational energy
-
-  int ispecies;
-	double mass, psw, pmsw, vp[3];
-  double Erot;
   for (int p = istart; p < iend; p++) {
     ipart = &particles[plist[p]];
     ispecies = ipart->ispecies;
     mass = species[ispecies].mass;
 
-    psw = ipart->weight;
+    psw = stochastic_weights[plist[p]];
     pmsw = psw * mass;
-    memcpy(vp, ipart->v, 3*sizeof(double));
-   	gsum += psw;
-    msum += pmsw;
-    Erot += psw*ipart->erot;
-    for (int i = 0; i < 3; i++) mV[i] += (pmsw*vp[i]);
+
+    double dv[3];
+    for (int i = 0; i < 3; i++) dv[i] = ipart->v[i] - V[i];
+    double dvsq = dv[0]*dv[0] + dv[1]*dv[1] + dv[2]*dv[2];
+
+    for (int i = 0; i < 3; i++) {
+      // heat flux: q_i = 1/2 sum w*m*(v_i - V_i)*|v - V|^2
+      q[i] += 0.5*pmsw*dv[i]*dvsq;
+      // stress tensor: P_ij = sum w*m*(v_i - V_i)*(v_j - V_j)
+      for (int j = 0; j < 3; j++) pij[i][j] += pmsw*dv[i]*dv[j];
+    }
   }
-
-  // mean velocity
-	double V[3];
-  for (int i = 0; i < 3; i++) V[i] = mV[i]/msum;
-
-  // stress tensor
-
-  for (int p = istart; p < iend; p++) {
-    ipart = &particles[plist[p]];
-    ispecies = ipart->ispecies;
-    mass = species[ispecies].mass;
-
-    psw = ipart->weight;
-    pmsw = psw * mass;
-    memcpy(vp, ipart->v, 3*sizeof(double));
-   	gsum += psw;
-    msum += pmsw;
-    Erot += psw*ipart->erot;
-    for (int i = 0; i < 3; i++)
-      for (int j = 0; j < 3; j++)
-        pij[i][j] += (pmsw*(vp[i]-V[i])*(vp[j]-V[j]));
-  }
-
-  for (int i = 0; i < 3; i++)
-    for (int j = 0; j < 3; j++)
-      pij[i][j] /= msum;
 
   // if group is small enough, merge the particles
 
   if (np <= Ngmax+group_size_buffer) {
 
-    // temperature
+    // temperature (becomes the velocity variance after the scaling below)
     double T = (pij[0][0] + pij[1][1] + pij[2][2])/
       (3.0 * gsum * update->boltz);
 
-    // heat flux
-    double Vsq = V[0]*V[0] + V[1]*V[1] + V[2]*V[2];
-    double h,h1,h2,q[3];
-    int i1,i2;
-    for (int i = 0; i < 3; i++) {
-      if (i == 0) {
-        i1 = 1;
-        i2 = 2;
-      } else if (i == 1) {
-        i1 = 2;
-        i2 = 0;
-      } else {
-        i1 = 0;
-        i2 = 1;
-      }
-
-      h  = mVVV[i][i] - 3.0*mV[i]*mVV[i][i]/msum +
-           2.0*mV[i]*mV[i]*mV[i]/msum/msum;
-      h1 = mVVV[i][i1] - 2.0*mVV[i][i1]*mV[i1]/msum -
-           mV[i]*mVV[i1][i1]/msum + 2.0*mV[i]*mV[i1]*mV[i1]/msum/msum;
-      h2 = mVVV[i][i2] - 2.0*mVV[i][i2]*mV[i2]/msum -
-           mV[i]*mVV[i2][i2]/msum + 2.0*mV[i]*mV[i2]*mV[i2]/msum/msum;
-      q[i] = (h + h1 + h2) * 0.5;
-    }
+    // q (heat flux) and pij (stress tensor) were accumulated as central
+    // moments in the second pass above
 
     // scale values to be consistent with definitions in
     // .. stochastic numerics book
@@ -570,11 +547,11 @@ void Collide::group_bt(int istart, int iend, int group_size_buffer)
 
     // reduce based on type
     if (reduction_type == ENERGY) {
-      reduce(istart, iend, gsum, V, T, Erot);
+      reduce_energy(istart, iend, gsum, V, T, Erot);
     } else if (reduction_type == HEAT) {
-      reduce(istart, iend, gsum, V, T, Erot, q);
+      reduce_heat(istart, iend, gsum, V, T, Erot, q);
     } else if (reduction_type == STRESS) {
-      reduce(istart, iend, gsum, V, T, Erot, q, pij);
+      reduce_stress(istart, iend, gsum, V, T, Erot, q, pij);
     }
 
   // group still too large so divide further

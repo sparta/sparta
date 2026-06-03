@@ -145,6 +145,7 @@ void ComputeVmomGrid::compute_per_grid()
   Particle::OnePart *particles = particle->particles;
   int *s2g = particle->mixture[imix]->species2group;
   int nlocal = particle->nlocal;
+  double *sweights = particle->stochastic_weights();
 
   int i,j,k,m,ispecies,igroup,icell;
   double mass, vsq;
@@ -169,7 +170,8 @@ void ComputeVmomGrid::compute_per_grid()
 
     mass = species[ispecies].mass;
     v = particles[i].v;
-    if(particle->weightflag) mass *= particles[i].weight;
+    if (sweights) mass *= sweights[i];
+    else if (particle->weightflag) mass *= particles[i].weight;
 
     vec = tally[icell];
 

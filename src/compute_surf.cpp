@@ -327,23 +327,28 @@ void ComputeSurf::surf_tally(double /*dtremain*/, int isurf, int icell, int reac
 
   // assume non-reacting and no splitting at boundary
 
+  double *sweights = particle->stochastic_weights();
   double oswfrac, iswfrac, jswfrac;
   iswfrac = jswfrac = oswfrac = 1.0;
 
-  if (particle->weightflag) {
+  // particle weighting: stochastic (SWPM) or grid-based cell weighting.
+  // for SWPM there is no splitting at the boundary (single species), so the
+  // outgoing particle(s) carry the incident particle's stochastic weight.
+
+  if (sweights || particle->weightflag) {
     int nout = 0;
     oswfrac = 0.0;
-    if(ip) {
-      iswfrac = ip->weight;
+    if (ip) {
+      iswfrac = sweights ? sweights[ip - particle->particles] : ip->weight;
       oswfrac += iswfrac;
       nout++;
     }
-    if(jp) {
-      jswfrac = jp->weight;
+    if (jp) {
+      jswfrac = sweights ? sweights[jp - particle->particles] : jp->weight;
       oswfrac += jswfrac;
       nout++;
     }
-    if(nout > 0) oswfrac /= nout;
+    if (nout > 0) oswfrac /= nout;
   }
 
   // tally all values associated with group into array
