@@ -137,7 +137,11 @@ double CollideVSS::vremax_init(int igroup, int jgroup)
 double CollideVSS::attempt_collision(int icell, int np, double volume)
 {
   double fnum;
-  if (stochastic_weight_flag) fnum = max_stochastic_weight*(1.0+pre_wtf*wtf);
+  // stochastic weights are stored relative to update->fnum, so the absolute
+  // molecule count of the heaviest particle is max_stochastic_weight*fnum.
+  // the (1+pre_wtf*wtf) factor accounts for SWPM particle splitting.
+  if (stochastic_weight_flag)
+    fnum = max_stochastic_weight*update->fnum*(1.0+pre_wtf*wtf);
   else fnum = update->fnum;
 
   double dt = update->dt;
