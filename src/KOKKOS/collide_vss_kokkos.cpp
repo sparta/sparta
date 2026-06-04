@@ -8,6 +8,7 @@
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
    certain rights in this software.  This software is distributed under
    the GNU General Public License.
+   Copyright (c) 2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
    See the README file in the top-level SPARTA directory.
 ------------------------------------------------------------------------- */
