@@ -128,4 +128,12 @@ stats_style         step cpu spcpu np nattempt ncoll maxlevel
 
 stats               100
 
-run                 10000000
+# Stop after 5.5 minutes
+fix             2 halt 10 tlimit > 330.0 message no error continue
+run             10000000
+
+unfix           2
+
+# Stop after 5.5 minutes
+fix             3 halt 10 tlimit > 330.0 message no
+run             10000000
