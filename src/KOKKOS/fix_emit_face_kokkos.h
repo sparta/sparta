@@ -58,7 +58,7 @@ class FixEmitFaceKokkos : public FixEmitFace {
   void operator()(TagFixEmitFace_perform_task, const int&, int&) const;
 
   KOKKOS_INLINE_FUNCTION
-  void operator()(TagFixEmitFace_subsonic_inflow, const int&, int&) const;
+  void operator()(TagFixEmitFace_subsonic_inflow, const int&) const;
 
   KOKKOS_INLINE_FUNCTION
   void operator()(TagFixEmitFace_subsonic_grid, const int&) const;

@@ -593,21 +593,16 @@ void FixEmitFaceKokkos::subsonic_inflow()
 
   boltz = update->boltz;
 
-  int errflag = 0;
   copymode = 1;
-  Kokkos::parallel_reduce(Kokkos::RangePolicy<DeviceType, TagFixEmitFace_subsonic_inflow>(0,ntask),*this,errflag);
+  Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagFixEmitFace_subsonic_inflow>(0,ntask),*this);
   copymode = 0;
 
   k_tasks.modify_device();
   if (perspecies) k_ntargetsp.modify_device();
-
-  if (errflag)
-    error->one(FLERR,
-               "Fix emit/face subsonic insertion count exceeds 32-bit int");
 }
 
 KOKKOS_INLINE_FUNCTION
-void FixEmitFaceKokkos::operator()(TagFixEmitFace_subsonic_inflow, const int &i, int &errflag) const
+void FixEmitFaceKokkos::operator()(TagFixEmitFace_subsonic_inflow, const int &i) const
 {
   double *vstream = d_tasks(i).vstream;
   double *normal = d_tasks(i).normal;
@@ -630,7 +625,8 @@ void FixEmitFaceKokkos::operator()(TagFixEmitFace_subsonic_inflow, const int &i,
     if (perspecies) d_ntargetsp(i,isp) = ntargetsp;
   }
   d_tasks(i).ntarget = ntarget;
-  if (ntarget >= MAXSMALLINT) errflag++;
+  if (ntarget >= MAXSMALLINT)
+    Kokkos::abort("Fix emit/face subsonic insertion count exceeds 32-bit int");
 }
 
 /* ----------------------------------------------------------------------
