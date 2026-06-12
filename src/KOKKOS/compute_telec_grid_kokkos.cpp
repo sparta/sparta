@@ -53,12 +53,12 @@ ComputeTelecGridKokkos::ComputeTelecGridKokkos(SPARTA *sparta, int narg, char **
   d_tspecies = DAT::t_float_1d("d_tspecies",nspecies);
 
   for (int n = 0; n < nspecies; n++)
-    k_s2t.h_view(n) = s2t[n];
+    k_s2t.view_host()(n) = s2t[n];
 
   k_s2t.modify_host();
   k_s2t.sync_device();
 
-  d_s2t = k_s2t.d_view;
+  d_s2t = k_s2t.view_device();
 
   boltz = update->boltz;
 }
@@ -96,15 +96,15 @@ void ComputeTelecGridKokkos::compute_per_grid_kokkos()
 
   ParticleKokkos* particle_kk = (ParticleKokkos*) particle;
   particle_kk->sync(Device,PARTICLE_MASK|SPECIES_MASK|CUSTOM_MASK);
-  d_particles = particle_kk->k_particles.d_view;
-  d_ewhich = particle_kk->k_ewhich.d_view;
+  d_particles = particle_kk->k_particles.view_device();
+  d_ewhich = particle_kk->k_ewhich.view_device();
   k_edvec = particle_kk->k_edvec;
 
   GridKokkos* grid_kk = (GridKokkos*) grid;
   d_cellcount = grid_kk->d_cellcount;
   d_plist = grid_kk->d_plist;
   grid_kk->sync(Device,CINFO_MASK);
-  d_cinfo = grid_kk->k_cinfo.d_view;
+  d_cinfo = grid_kk->k_cinfo.view_device();
 
   d_s2g = particle_kk->k_species2group.view<DeviceType>();
   int nlocal = particle->nlocal;
@@ -162,7 +162,7 @@ void ComputeTelecGridKokkos::operator()(TagComputeTelecGrid_compute_per_grid_ato
   if (!(d_cinfo[icell].mask & groupbit)) return;
 
   const int j = d_s2t[ispecies];
-  auto &d_eelecs = k_edvec.d_view[d_ewhich[index_eelec]].k_view.d_view;
+  auto &d_eelecs = k_edvec.view_device()[d_ewhich[index_eelec]].k_view.view_device();
   a_tally(icell,j) += d_eelecs[i];
   a_tally(icell,j+1) += 1.0;
 }
@@ -180,7 +180,7 @@ void ComputeTelecGridKokkos::operator()(TagComputeTelecGrid_compute_per_grid, co
     if (igroup < 0) continue;
 
     const int j = d_s2t[ispecies];
-    auto &d_eelecs = k_edvec.d_view[d_ewhich[index_eelec]].k_view.d_view;
+    auto &d_eelecs = k_edvec.view_device()[d_ewhich[index_eelec]].k_view.view_device();
     d_tally(icell,j) += d_eelecs[i];
     d_tally(icell,j+1) += 1.0;
   }
@@ -271,7 +271,7 @@ post_process_grid_kokkos(int index, int /*nsample*/,
 
   ParticleKokkos* particle_kk = (ParticleKokkos*) particle;
   particle_kk->sync(Device,SPECIES_MASK|CUSTOM_MASK);
-  d_species = particle_kk->k_species.d_view;
+  d_species = particle_kk->k_species.view_device();
   d_nelecstates = particle_kk->d_nelecstates;
   d_elecstates = particle_kk->d_elecstates;
 
@@ -294,7 +294,7 @@ void ComputeTelecGridKokkos::operator()(TagComputeTelecGrid_post_process_grid, c
   int eelc = eelec;
   int cnt = eelec+1;
 
-  auto &d_eelecs = k_edvec.d_view[d_ewhich[index_eelec]].k_view.d_view;
+  auto &d_eelecs = k_edvec.view_device()[d_ewhich[index_eelec]].k_view.view_device();
 
   for (int isp = 0; isp < nsp; isp++) {
     const int ispecies = d_groupspecies(index,isp);
@@ -387,7 +387,7 @@ void ComputeTelecGridKokkos::reallocate()
   memoryKK->destroy_kokkos(k_tally,tally);
   nglocal = grid->nlocal;
   memoryKK->create_kokkos(k_vector_grid,vector_grid,nglocal,"telec/grid:vector_grid");
-  d_vector_grid = k_vector_grid.d_view;
+  d_vector_grid = k_vector_grid.view_device();
   memoryKK->create_kokkos(k_tally,tally,nglocal,ntally,"telec/grid:tally");
-  d_tally = k_tally.d_view;
+  d_tally = k_tally.view_device();
 }
