@@ -120,20 +120,20 @@ void FixEmitFaceKokkos::init()
   rand_pool.init(random);
 #endif
 
-  k_mix_vscale  = DAT::tdual_float_1d("mix_vscale", nspecies);
+  k_mix_vscale = DAT::tdual_float_1d("mix_vscale", nspecies);
   k_cummulative = DAT::tdual_float_1d("cummulative", nspecies);
-  k_mspecies    = DAT::tdual_int_1d("mspecies", nspecies);
-  k_fraction    = DAT::tdual_float_1d("fraction", nspecies);
+  k_mspecies = DAT::tdual_int_1d("mspecies", nspecies);
+  k_fraction = DAT::tdual_float_1d("fraction", nspecies);
 
-  d_mix_vscale  = k_mix_vscale .view_device();
+  d_mix_vscale = k_mix_vscale.view_device();
   d_cummulative = k_cummulative.view_device();
-  d_mspecies    = k_mspecies   .view_device();
-  d_fraction    = k_fraction   .view_device();
+  d_mspecies = k_mspecies.view_device();
+  d_fraction = k_fraction.view_device();
 
-  auto h_mix_vscale  = k_mix_vscale .view_host();
+  auto h_mix_vscale = k_mix_vscale.view_host();
   auto h_cummulative = k_cummulative.view_host();
-  auto h_mspecies    = k_mspecies   .view_host();
-  auto h_fraction    = k_fraction   .view_host();
+  auto h_mspecies = k_mspecies.view_host();
+  auto h_fraction = k_fraction.view_host();
 
   for (int isp = 0; isp < nspecies; ++isp) {
     h_mix_vscale(isp) = particle->mixture[imix]->vscale[isp];
@@ -142,10 +142,10 @@ void FixEmitFaceKokkos::init()
     h_fraction(isp) = particle->mixture[imix]->fraction[isp];
   }
 
-  k_mix_vscale .modify_host();
+  k_mix_vscale.modify_host();
   k_cummulative.modify_host();
-  k_mspecies   .modify_host();
-  k_fraction   .modify_host();
+  k_mspecies.modify_host();
+  k_fraction.modify_host();
 }
 
 /* ----------------------------------------------------------------------
@@ -261,12 +261,12 @@ void FixEmitFaceKokkos::perform_task()
 
   // copy needed mixture data to device
 
-  k_mix_vscale .sync_device();
-  k_mspecies   .sync_device();
+  k_mix_vscale.sync_device();
+  k_mspecies.sync_device();
   k_cummulative.sync_device();
 
   auto ld_mix_vscale = d_mix_vscale;
-  auto ld_mspecies   = d_mspecies  ;
+  auto ld_mspecies = d_mspecies;
 
   ParticleKokkos* particle_kk = ((ParticleKokkos*)particle);
   particle_kk->update_class_variables();
