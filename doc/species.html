@@ -177,15 +177,16 @@ character. All other lines must have one of the following formats:
 <P>species-ID N temp1 relax1 degen1 spin1 temp2 relax2 degen2 spin2 ... tempN relaxN degenN spinN:pre
 </P>
 <P>The species-ID is a string that will be matched against the requested species-ID.
-N is the number of electronic states. For each of the N states, 4 values are
+N is the number of electronic states. For each of the N states, 5 values are
 listed:
 </P>
 <UL><LI>tempI = electronic temperature of state I (temperature units)
 <LI>relaxI = inverse electronic relaxation number of state I (unitless)
 <LI>degenI = degenercy of state I (integer, unitless) 
-<LI>spinI = spin degeneracy of the state (e.g. singlet = 1, triplet = 3, etc.)
-<LI>eff. dof = Effective dof for use in the TCE chemistry model
 </UL>
+<P>spinI = spin degeneracy of the state (e.g. singlet = 1, triplet = 3, etc.)
+eff. dof = Effective dof for use in the TCE chemistry model
+</P>
 <P>The other accepted format is:
 </P>
 <P>species-ID1 species-ID2 conserve_spin relax1 ... relaxN
