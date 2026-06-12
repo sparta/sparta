@@ -15,11 +15,11 @@
 </P>
 <PRE>run N keyword values ... 
 </PRE>
-<UL><LI>value = # of integer timesteps N or ending time (see <I>time</I> keyword below)  
+<UL><LI>value = # of integer timesteps N 
 
 <LI>zero or more keyword/value pairs may be appended 
 
-<LI>keyword = <I>upto</I> or <I>start</I> or <I>stop</I> or <I>pre</I> or <I>post</I> or <I>every</I> or <I>time</I> 
+<LI>keyword = <I>upto</I> or <I>start</I> or <I>stop</I> or <I>pre</I> or <I>post</I> or <I>every</I> 
 
 <PRE>  <I>upto</I> value = none
   <I>start</I> value = N1
@@ -31,8 +31,7 @@
   <I>every</I> values = M c1 c2 ...
     M = break the run into M-timestep segments and invoke one or more commands between each segment
     c1,c2,...,cN = one or more SPARTA commands, each enclosed in quotes
-    c1 = NULL means no command will be invoked
-  <I>time</I> value = none 
+    c1 = NULL means no command will be invoked 
 </PRE>
 
 </UL>
@@ -43,15 +42,11 @@ run 1000000 upto
 run 100 start 0 stop 1000
 run 1000 pre no post yes
 run 100000 start 0 stop 1000000 every 1000 "print 'Temp = $t'"
-run 100000 every 1000 NULL
-run 5.7 time
-run 5.7 time every 100 NULL 
+run 100000 every 1000 NULL 
 </PRE>
 <P><B>Description:</B>
 </P>
-<P>Run or continue a simulation for a specified number of timesteps.  If
-the <I>time</I> keyword is used, run for a specified amount of physical
-time.
+<P>Run or continue a simulation for a specified number of timesteps.
 </P>
 <P>A value of N = 0 is acceptable; only the statistics of the system are
 computed and printed without taking a timestep.
@@ -64,9 +59,7 @@ machine that allocates chunks of time and terminate your job when time
 is exceeded.  If you need to restart your script multiple times
 (reading in the last restart file), you can keep restarting your
 script with the same run command until the simulation finally
-completes.  If the <I>time</I> keyword is used, the <I>upto</I> keyword is not
-needed since the time option runs the simulation "up to" the specified
-time.
+completes.
 </P>
 <P>The <I>start</I> or <I>stop</I> keywords can be used if multiple runs are being
 performed and you want a <A HREF = "variable.html">variable</A> or <A HREF = "fix.html">fix</A>
@@ -177,22 +170,8 @@ command:
 run will print the full timing summary, but these operations will be
 skipped for intermediate runs.
 </P>
-<P>If the <I>time</I> keyword is used in conjunction with the <I>every</I> keyword,
-the shorter runs of M steps each are performed until the specified end
-time is reached, possibly reducing the number of steps in the last run.
-</P>
-<P>IMPORTANT NOTE: You might hope to specify a command that exits the run
-by jumping out of the loop, e.g.
-</P>
-<PRE>compute t temp
-variable T equal c_t
-run 10000 every 100 "if '$T < 300.0' then 'jump SELF afterrun'" 
-</PRE>
-<P>Unfortunately this will not currently work.  The run command simply
-executes each command one at a time each time it pauses, then
-continues the run.  You can replace the jump command with a simple
-<A HREF = "quit.html">quit</A> command and cause SPARTA to exit during the
-middle of a run when the condition is met.
+<P>If you want SPARTA to exit early during the middle of a run when a
+condition is met, use <A HREF = "fix_halt.html">fix halt</A>.
 </P>
 <P><B>Restrictions:</B>
 </P>
@@ -201,7 +180,9 @@ integer, so you are limited to slightly more than 2 billion steps
 (2^31) in a single run.  However, you can perform successive runs to
 run a simulation for any number of steps (ok, up to 2^63 steps).
 </P>
-<P><B>Related commands:</B> none
+<P><B>Related commands:</B>
+</P>
+<P><A HREF = "fix_halt.html">fix halt</A>
 </P>
 <P><B>Default:</B>
 </P>

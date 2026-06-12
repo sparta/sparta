@@ -1,22 +1,18 @@
-//@HEADER
-// ************************************************************************
-//
-//                        Kokkos v. 4.0
-//       Copyright (2022) National Technology & Engineering
-//               Solutions of Sandia, LLC (NTESS).
-//
-// Under the terms of Contract DE-NA0003525 with NTESS,
-// the U.S. Government retains certain rights in this software.
-//
-// Part of Kokkos, under the Apache License v2.0 with LLVM Exceptions.
-// See https://kokkos.org/LICENSE for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-//
-//@HEADER
+// SPDX-FileCopyrightText: Copyright Contributors to the Kokkos project
 
 #ifndef KOKKOS_IMPL_KOKKOS_PROFILING_HPP
 #define KOKKOS_IMPL_KOKKOS_PROFILING_HPP
 
+#ifndef KOKKOS_IMPL_PUBLIC_INCLUDE
+#define KOKKOS_IMPL_PUBLIC_INCLUDE
+#define KOKKOS_IMPL_PUBLIC_INCLUDE_NOTDEFINED_PROFILING
+#endif
+
+#include <Kokkos_Core_fwd.hpp>
+#include <Kokkos_ExecPolicy.hpp>
+#include <Kokkos_Macros.hpp>
+#include <Kokkos_Tuners.hpp>
 #include <impl/Kokkos_Profiling_Interface.hpp>
 #include <memory>
 #include <iosfwd>
@@ -64,6 +60,11 @@ void parse_command_line_arguments(int& narg, char* arg[],
 Kokkos::Tools::Impl::InitializationStatus parse_environment_variables(
     InitArguments& arguments);
 
+template <typename PolicyType, typename Functor>
+struct ToolResponse {
+  PolicyType policy;
+};
+
 }  // namespace Impl
 
 bool profileLibraryLoaded();
@@ -88,17 +89,17 @@ void destroyProfileSection(const uint32_t secID);
 
 void markEvent(const std::string& evName);
 
-void allocateData(const SpaceHandle space, const std::string label,
+void allocateData(const SpaceHandle space, const std::string& label,
                   const void* ptr, const uint64_t size);
-void deallocateData(const SpaceHandle space, const std::string label,
+void deallocateData(const SpaceHandle space, const std::string& label,
                     const void* ptr, const uint64_t size);
 
-void beginDeepCopy(const SpaceHandle dst_space, const std::string dst_label,
+void beginDeepCopy(const SpaceHandle dst_space, const std::string& dst_label,
                    const void* dst_ptr, const SpaceHandle src_space,
-                   const std::string src_label, const void* src_ptr,
+                   const std::string& src_label, const void* src_ptr,
                    const uint64_t size);
 void endDeepCopy();
-void beginFence(const std::string name, const uint32_t deviceId,
+void beginFence(const std::string& name, const uint32_t deviceId,
                 uint64_t* handle);
 void endFence(const uint64_t handle);
 
@@ -187,15 +188,6 @@ void profile_fence_event(const std::string& name, DirectFenceIDHandle devIDTag,
   Kokkos::Tools::endFence(handle);
 }
 
-inline uint32_t int_for_synchronization_reason(
-    Kokkos::Tools::Experimental::SpecialSynchronizationCases reason) {
-  switch (reason) {
-    case GlobalDeviceSynchronization: return 0;
-    case DeepCopyResourceSynchronization: return 0x00ffffff;
-  }
-  return 0;
-}
-
 template <typename Space, typename FencingFunctor>
 void profile_fence_event(
     const std::string& name,
@@ -259,6 +251,8 @@ namespace Experimental {
 size_t get_new_context_id();
 size_t get_current_context_id();
 }  // namespace Experimental
+
+namespace Impl {}  // namespace Impl
 
 }  // namespace Tools
 namespace Profiling {
@@ -374,5 +368,10 @@ size_t get_new_variable_id();
 }  // namespace Tools
 
 }  // namespace Kokkos
+
+#ifdef KOKKOS_IMPL_PUBLIC_INCLUDE_NOTDEFINED_PROFILING
+#undef KOKKOS_IMPL_PUBLIC_INCLUDE
+#undef KOKKOS_IMPL_PUBLIC_INCLUDE_NOTDEFINED_PROFILING
+#endif
 
 #endif

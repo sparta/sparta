@@ -1,18 +1,5 @@
-//@HEADER
-// ************************************************************************
-//
-//                        Kokkos v. 4.0
-//       Copyright (2022) National Technology & Engineering
-//               Solutions of Sandia, LLC (NTESS).
-//
-// Under the terms of Contract DE-NA0003525 with NTESS,
-// the U.S. Government retains certain rights in this software.
-//
-// Part of Kokkos, under the Apache License v2.0 with LLVM Exceptions.
-// See https://kokkos.org/LICENSE for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-//
-//@HEADER
+// SPDX-FileCopyrightText: Copyright Contributors to the Kokkos project
 
 #ifndef KOKKOS_IMPL_PUBLIC_INCLUDE
 #include <Kokkos_Macros.hpp>
@@ -30,7 +17,6 @@ static_assert(false,
 #include <Kokkos_HostSpace.hpp>
 #include <Kokkos_ScratchSpace.hpp>
 #include <Kokkos_Parallel.hpp>
-#include <Kokkos_TaskScheduler.hpp>
 #include <Kokkos_Layout.hpp>
 #include <impl/Kokkos_HostSharedPtr.hpp>
 #include <impl/Kokkos_Profiling_Interface.hpp>
@@ -93,11 +79,16 @@ class OpenMP {
   void fence(std::string const& name =
                  "Kokkos::OpenMP::fence: Unnamed Instance Fence") const;
 
+#ifdef KOKKOS_ENABLE_DEPRECATED_CODE_4
   /// \brief Does the given instance return immediately after launching
   /// a parallel algorithm
   ///
   /// This always returns false on OpenMP
-  inline static bool is_asynchronous(OpenMP const& = OpenMP()) noexcept;
+  KOKKOS_DEPRECATED inline static bool is_asynchronous(
+      OpenMP const& = OpenMP()) noexcept {
+    return false;
+  }
+#endif
 
 #ifdef KOKKOS_ENABLE_DEPRECATED_CODE_4
   static int concurrency(OpenMP const& = OpenMP());
@@ -106,10 +97,6 @@ class OpenMP {
 #endif
 
   static void impl_initialize(InitializationSettings const&);
-
-  /// \brief is the default execution space initialized for current 'master'
-  /// thread
-  static bool impl_is_initialized() noexcept;
 
   /// \brief Free any resources being consumed by the default execution space
   static void impl_finalize();
@@ -152,10 +139,6 @@ inline int OpenMP::impl_thread_pool_rank() noexcept {
   KOKKOS_IF_ON_HOST((return omp_get_thread_num();))
 
   KOKKOS_IF_ON_DEVICE((return -1;))
-}
-
-inline bool OpenMP::is_asynchronous(OpenMP const& /*instance*/) noexcept {
-  return false;
 }
 
 inline int OpenMP::impl_thread_pool_size(int depth) const {
@@ -202,7 +185,6 @@ struct MemorySpaceAccess<Kokkos::OpenMP::memory_space,
 
 #include <OpenMP/Kokkos_OpenMP_Instance.hpp>
 #include <OpenMP/Kokkos_OpenMP_Team.hpp>
-#include <OpenMP/Kokkos_OpenMP_Task.hpp>
 
 #include <KokkosExp_MDRangePolicy.hpp>
 /*--------------------------------------------------------------------------*/

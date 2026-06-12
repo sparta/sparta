@@ -37,6 +37,12 @@ class KokkosBase {
   DAT::t_float_2d_lr d_array_particle;   // Kokkos version of per-particle array
 
   DAT::tdual_float_2d_lr k_array;    // Kokkos DualView of global array
+
+  // Region
+  virtual void match_all_kokkos(DAT::tdual_int_1d) {}
+
+  KOKKOS_INLINE_FUNCTION
+  int match_kokkos(double x, double y, double z) const {return 0;}
 };
 
 }

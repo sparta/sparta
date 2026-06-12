@@ -14,11 +14,13 @@ dump command :h3
 dump ID style select-ID N file args :pre
 
 ID = user-assigned name for the dump :ulb,l
-style = {particle} or {grid} or {surf} or {image} :l
+style = {particle} or {grid} or {surf} or {tally} or {image} :l
 select-ID = which particles, grid cells, surface elements to dump :l
   for dump style = particle or image, use a mixture ID
   for style = grid, use a grid group ID
-  for style = surf, use a surface group ID :pre
+  for style = surf, use a surface group ID
+  for style = tally, select-ID is ignored
+  for style = image, see the "dump image"_dump_image.html doc page :pre
 N = dump every this many timesteps :l
 file = name of file to write dump info to :l
 args = list of arguments for a particular style :l
@@ -80,6 +82,12 @@ args = list of arguments for a particular style :l
       s_name = custom per-surf vector with name
       s_name\[N\] = Nth column of custom per-surf array with name, N can include wildcard (see below) :pre
 
+  {tally} args = list of tally computes
+    possible attributes = c_ID, c_ID\[N\] :pre
+
+      c_ID = per-tally vector calculated by a compute with ID
+      c_ID\[N\] = Nth column of per-tally array calculated by a compute with ID, I can include wildcard (see below) :pre
+
   {image} args = discussed on "dump image"_dump_image.html doc page :pre
 :ule
 
@@ -88,6 +96,7 @@ args = list of arguments for a particular style :l
 dump 1 particle all 100 dump.myforce.* id type x y vx fx
 dump 2 particle inflow 100 dump.%.myforce id type c_myF\[3\] v_ke
 dump 3 grid all 1000 tmp.grid id proc xlo ylo zlo xhi yhi zhi :pre
+dump 4 tally all 10 tmp.tally c_surfTally\[*\] :pre
 
 [Description:]
 
@@ -105,10 +114,10 @@ with the "undump"_undump.html command, after which its ID can be
 re-used.
 
 The {style} setting determines what quantities are written to the file
-and in what format.  The {particle}, {grid}, {surf} options are for
-particles, grid cells, or surface elements.  Settings made via the
-"dump_modify"_dump_modify.html command can also alter what info is
-included in the file and the format of individual values.
+and in what format.  The {particle}, {grid}, {surf}, {tally} options
+are for particles, grid cells, surface elements, or tallies.  Settings
+made via the "dump_modify"_dump_modify.html command can also alter
+what info is included in the file and the format of individual values.
 
 The {select-ID} setting determines which particles, grid cells, or
 surface elements are output.  For {style} = {particle}, the
@@ -118,7 +127,10 @@ output.  For {style} = {grid}, the {select-ID} is for a grid group, as
 defined by the "group grid"_group.html command.  Only grid cells in
 the group are output.  For {style} = {surf}, the {select-ID} is for a
 surface eleemnt group, as defined by the "group surf"_group.html
-command.  Only surface elements in the group are output.
+command.  Only surface elements in the group are output.  For {style}
+= {tally}, the {select-ID} setting is ignored, so a placeholder word
+like "all" can be used.  All tallies stored by the specified
+compute(s) will be output.
 
 As described below, the filename determines the kind of output (text
 or binary or gzipped, one big file or one per timestep, one big file
@@ -130,10 +142,11 @@ its options.
 
 :line
 
-The {particle} and {grid} and {surf} styles create files in a simple
-text format that is self-explanatory when viewing a dump file.  Many
-of the SPARTA "post-processing tools"_Section_tools.html, including
-"Pizza.py"_https://lammps.github.io/pizza, work with this format.
+The {particle} and {grid} and {surf} and {tally} styles create files
+in a simple text format that is self-explanatory when viewing a dump
+file.  Many of the SPARTA "post-processing tools"_Section_tools.html,
+including "Pizza.py"_https://lammps.github.io/pizza, work with this
+format.
 
 For post-processing purposes the text files are self-describing in the
 following sense.
@@ -154,15 +167,16 @@ the 6 characters is either o = outflow, p = periodic, or s = specular.
 See the "boundary"_doc/boundary.html command for details.
 
 The "ITEM: NUMBER OF ATOMS" or "ITEM: NUMBER OF CELLS" or "ITEM:
-NUMBER OF SURFS" entry in each snapshot gives the number of particles,
-grid cells, surfaces to follow.
+NUMBER OF SURFS" or "ITEM: NUMBER OF TALLIES" entry in each snapshot
+gives the number of particles, grid cells, surfaces to follow.
 
-The "ITEM: ATOMS" or "ITEM: CELLS" or "ITEM: SURFS" entry in each
-snapshot lists column descriptors for the per-particle or per-grid or
-per-surf lines that follow.  The descriptors are the attributes
-specied in the dump command for the style.  Possible attributes are
-listed above and will appear in the order specified.  An explanation
-of the possible attributes is given below.
+The "ITEM: ATOMS" or "ITEM: CELLS" or "ITEM: SURFS" or "ITEM: TALLIES"
+entry in each snapshot lists column descriptors for the per-particle
+or per-grid or per-surf or per-tally lines that follow.  The
+descriptors are the attributes specied in the dump command for the
+style.  Possible attributes are listed above and will appear in the
+order specified.  An explanation of the possible attributes is given
+below.
 
 :line
 
@@ -240,11 +254,11 @@ dump 2 grid all 100 tmp.dump id c_myGrid\[1\] c_myGrid\[2\] c_myGrid\[3\] :pre
 This section explains the particle attributes that can be specified as
 part of the {particle} style.
 
-{Id} is the particle ID.  {Type} is an integer index representing the
-particle species.  It is a value from 1 to Nspecies. The value
-corresponds to the order in which species were defined via the
-"species"_species.html command.  {Proc} is the ID of the processor
-which currently owns the particle.
+{Id} is the particle ID.  {Type} is an integer index for the particle
+species.  It is a value from 1 to Nspecies.  The value corresponds to
+the order in which species were defined via the "species"_species.html
+command.  {Proc} is the ID of the processor which currently owns the
+particle.
 
 The {x}, {y}, {z} attributes write particle coordinates "unscaled", in
 the appropriate distance "units"_units.html.  Use {xs}, {ys}, {zs} to
@@ -451,12 +465,12 @@ attribute should be replaced by the actual ID of the compute that has
 been defined previously in the input script.  See the
 "compute"_compute.html command for details.
 
-If {c_ID} is used as a attribute, and the compute calculates a per-srf
-vector, then the per-surf vector is output.  If {c_ID\[N\]} is used,
-then N must be in the range from 1-M, which will output the Nth column
-of the M-column per-surf array calculated by the compute.  See the
-discussion above for how N can be specified with a wildcard asterisk
-to effectively specify multiple values.
+If {c_ID} is used as a attribute, and the compute calculates a
+per-surf vector, then the per-surf vector is output.  If {c_ID\[N\]}
+is used, then N must be in the range from 1-M, which will output the
+Nth column of the M-column per-surf array calculated by the compute.
+See the discussion above for how N can be specified with a wildcard
+asterisk to effectively specify multiple values.
 
 The {f_ID} and {f_ID\[N\]} attributes allow per-surf vectors or arrays
 calculated by a "fix"_fix.html to be output.  The ID in the attribute
@@ -499,6 +513,24 @@ effectively specify multiple values.
 See "Section 10"_Section_modify.html of the manual for information on
 how to add new compute and fix styles to SPARTA to calculate per-surf
 quantities which could then be output into dump files.
+
+:line
+
+This section explains the tally attributes that can be specified as
+part of the {tally} style.
+
+The {c_ID} and {c_ID\[I\]} attributes allow per-tally vectors or
+arrays calculated by a "compute"_compute.html to be output.  The ID in
+the attribute should be replaced by the actual ID of the compute that
+has been defined previously in the input script.  See the
+"compute"_compute.html command for details.
+
+If {c_ID} is used as a attribute, and the compute calculates a
+per-tally vector, then the per-tally vector is output.  If {c_ID\[I\]}
+is used, then I must be in the range from 1-M, which will output the
+Ith column of the M-column per-tally array calculated by the compute.
+See the discussion above for how I can be specified with a wildcard
+asterisk to effectively specify multiple values.
 
 :line
 

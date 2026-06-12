@@ -1,18 +1,5 @@
-//@HEADER
-// ************************************************************************
-//
-//                        Kokkos v. 4.0
-//       Copyright (2022) National Technology & Engineering
-//               Solutions of Sandia, LLC (NTESS).
-//
-// Under the terms of Contract DE-NA0003525 with NTESS,
-// the U.S. Government retains certain rights in this software.
-//
-// Part of Kokkos, under the Apache License v2.0 with LLVM Exceptions.
-// See https://kokkos.org/LICENSE for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-//
-//@HEADER
+// SPDX-FileCopyrightText: Copyright Contributors to the Kokkos project
 
 #include <Test_InterOp_Streams.hpp>
 
@@ -181,4 +168,17 @@ void test_scratch(TEST_EXECSPACE exec0, TEST_EXECSPACE exec1) {
   ASSERT_EQ(error0, 0);
   ASSERT_EQ(error1, 0);
 }
+
+#if defined(KOKKOS_ENABLE_CUDA) || defined(KOKKOS_ENABLE_HIP)
+template <int N>
+__global__ void accumulate_kernel(int *value) {
+  for (int i = 0; i < N; ++i) {
+    Kokkos::atomic_inc(value);
+  }
+}
+
+__global__ void copy_kernel(int *check, const int *value) {
+  check[0] = value[0];
+}
+#endif
 }  // namespace

@@ -15,7 +15,7 @@
 </H3>
 <P><B>Syntax:</B>
 </P>
-<PRE>compute ID dt/grid group-ID tfraction cfraction lambda temperature usq vsq wsq 
+<PRE>compute ID dt/grid group-ID tfraction cfraction tau temperature usq vsq wsq 
 </PRE>
 <UL><LI>ID is documented in <A HREF = "compute.html">compute</A> command 
 
@@ -27,7 +27,7 @@
 
 <LI>cfraction = fraction of grid cell mean collision time used to calculate timestep 
 
-<LI>lambda = compute or fix column for mean free path, prefaced by "c_" or "f_" 
+<LI>tau = compute or fix column for mean collision time, prefaced by "c_" or "f_" 
 
 <LI>temperature = compute or fix column for temperature, prefaced by "c_" or "f_" 
 
@@ -43,8 +43,8 @@
 </P>
 <PRE>compute 1 grid all mymixture nrho temp usq vsq wsq
 fix 1 ave/grid all 10 50 500 c_1[*]
-compute lambda lambda/grid f_1[1] f_1[2] Ar
-compute tstep dt/grid all 0.25 0.1 c_lambda f_1[2] f_1[3] f_1[4] f_1[5] 
+compute mct lambda/grid f_1[1] f_1[2] tau
+compute tstep dt/grid all 0.25 0.1 c_mct f_1[2] f_1[3] f_1[4] f_1[5] 
 </PRE>
 <P><B>Description:</B>
 </P>
@@ -52,9 +52,9 @@ compute tstep dt/grid all 0.25 0.1 c_lambda f_1[2] f_1[3] f_1[4] f_1[5]
 based on the properties of particles currently in the cell and the
 grid cell size.  The per-grid cell timesteps can be output in a
 per-grid dump file for post analyses.  Or they can be used as input to
-the <A HREF = "fit_dt_reset.html">fix dt/reset</A> command to adjust the global
+the <A HREF = "fix_dt_reset.html">fix dt/reset</A> command to adjust the global
 timestep for a variable timestep simulation.  See this
-<A HREF = "Section_howto.html#howto_17">section</A> of the manual for more
+<A HREF = "Section_howto.html#howto_18">section</A> of the manual for more
 information on variable timestep simulations.
 </P>
 <P>Only grid cells in the grid group specified by <I>group-ID</I> are included
@@ -81,14 +81,14 @@ fractions.
 <P>The remaining 5 arguments specify either computes which calculate various per
 grid cell quantities or fixes which time average those
 per grid cell quantities.  The 5 quantities are per grid cell mean
-free path (lambda), temperature, and the xyz components of the
-velocity squared for particles in the grid cell.  The <A HREF = "compute_lambda.html">compute
-lambda</A> calculates a mean free path.  The <A HREF = "compute_grid.html">compute
-grid</A> command can calculate the other 4 quantities.
+collision time (tau), temperature, and the xyz components of the
+velocity squared for particles in the grid cell. A mean collision time can be
+calculated with the <A HREF = "compute_lambda_grid.html">compute lambda/grid</A> command using the
+tau option. The <A HREF = "compute_grid.html">compute grid</A> command can calculate the other 4 quantities.
 The <A HREF = "compute_thermal_grid.html">compute thermal/grid</A> command can also
 compute a per grid cell temperature.
 </P>
-<P>This is done by specifying the lambda, temperature, usq, vsq, wsq
+<P>This is done by specifying the tau, temperature, usq, vsq, wsq
 arguments like this:
 </P>
 <UL><LI>c_ID = compute with ID that calculates a per grid cell quantity as a vector output
@@ -123,9 +123,8 @@ This is because their sub-cells actually contain the particles that are
 geometrically inside the split cell.  Additionally, any cell that is able
 to store particles but does not have any particles when this compute is
 invoked produces a zero result.  Finally, a zero result is produced if any
-cell data to be used in the timestep calculation is sufficiently close to
-zero (including the maximum most probable speed, the velocity magnitude, and
-the mean free path).
+cell data to be used in the timestep calculation is
+zero (including temperature, speed, and mean collision time).
 </P>
 <P>The vector can be accessed by any command that uses per-grid values
 from a compute as input.  See <A HREF = "Section_howto.html#howto_4">Section 4.4</A>
@@ -146,7 +145,7 @@ enabled if SPARTA was built with that package.  See the <A HREF = "Section_start
 SPARTA</A> section for more info.
 </P>
 <P>You can specify the accelerated styles explicitly in your input script
-by including their suffix, or you can use the <A HREF = "Section_start.html#start_6">-suffix command-line
+by including their suffix, or you can use the <A HREF = "Section_start.html#start_7">-suffix command-line
 switch</A> when you invoke SPARTA, or you can
 use the <A HREF = "suffix.html">suffix</A> command in your input script.
 </P>
@@ -167,8 +166,8 @@ output.
 <P><B>Related commands:</B>
 </P>
 <P><A HREF = "fix_dt_reset.html">fix dt/reset</A>, <A HREF = "compute_grid.html">compute grid</A>,
-<A HREF = "compute_thermal/grid.html">compute thermal/grid</A>, <A HREF = "fix_ave_grid.html">fix
-ave/grid</A>
+<A HREF = "compute_thermal_grid.html">compute thermal/grid</A>, <A HREF = "compute_lambda_grid.html">compute lambda/grid</A>,
+<A HREF = "fix_ave_grid.html">fix ave/grid</A>
 </P>
 <P><B>Default:</B> none
 </P>

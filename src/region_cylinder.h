@@ -28,9 +28,10 @@ namespace SPARTA_NS {
 class RegCylinder : public Region {
  public:
   RegCylinder(class SPARTA *, int, char **);
+  RegCylinder(class SPARTA *sparta) : Region(sparta) {} // needed for Kokkos
   int inside(double *);
 
- private:
+ protected:
   char axis;
   double c1,c2;
   double radius;

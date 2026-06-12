@@ -136,9 +136,13 @@ class UpdateKokkos : public Update {
   KKCopy<SurfCollideVanishKokkos> sc_kk_vanish_copy[KOKKOS_MAX_SURF_COLL_PER_TYPE];
   KKCopy<SurfCollidePistonKokkos> sc_kk_piston_copy[KOKKOS_MAX_SURF_COLL_PER_TYPE];
   KKCopy<SurfCollideTransparentKokkos> sc_kk_transparent_copy[KOKKOS_MAX_SURF_COLL_PER_TYPE];
-  KKCopy<ComputeBoundaryKokkos> blist_active_copy[KOKKOS_MAX_BLIST];
-  KKCopy<ComputeSurfKokkos> slist_active_copy[KOKKOS_MAX_SLIST];
 
+  //KKCopy<ComputeSurfKokkos> blist_active_copy[KOKKOS_MAX_GLIST];
+  KKCopy<ComputeSurfKokkos> slist_active_copy[KOKKOS_MAX_SLIST];
+  KKCopy<ComputeBoundaryKokkos> blist_active_copy[KOKKOS_MAX_BLIST];
+
+  ComputeBoundaryKokkos tmp_compute_boundary_kk;
+  ComputeSurfKokkos tmp_compute_surf_kk;
 
   typedef Kokkos::DualView<int[14], DeviceType::array_layout, DeviceType> tdual_int_14;
   typedef tdual_int_14::t_dev t_int_14;
@@ -192,7 +196,7 @@ class UpdateKokkos : public Update {
   void restore();
   t_particle_1d d_particles_backup;
 
-  void bounce_set(bigint);
+  void tally_set(bigint);
 
   // remap x and v components into axisymmetric plane
   // input x at end of linear move (x = xold + dt*v)

@@ -18,10 +18,11 @@ Tools in their own directory, have README files in that directory.
 
 Stand-alone tools:
 
-stl2surf.py       convert an ASCII STL file to a SPARTA surface file
 implicit_grid.py  create randomized corner point files for read_isurf command
 jagged2d.py       create jagged 2d surface to test distributed explicit surfs
 jagged3d.py       create jagged 3d surface to test distributed explicit surfs
+stl2surf.py       convert an ASCII STL file to a SPARTA surface file
+surf2stl.py       convert a SPARTA surface file to an ASCII STL file
 
 Tools that use the ParaView visualization package:
 

@@ -20,11 +20,13 @@
 
 namespace SPARTA_NS {
 
-class FFT2D : protected Pointers {
+class FFT2d : protected Pointers {
  public:
-  FFT2D(class SPARTA *, MPI_Comm,
-        int,int,int,int,int,int,int,int,int,int,int,int,int *,int);
-  ~FFT2D();
+  enum { FORWARD = 1, BACKWARD = -1 };
+
+  FFT2d(class SPARTA *, MPI_Comm, int, int, int, int, int, int, int, int,
+        int, int, int, int, int *, int);
+  ~FFT2d() override;
   void compute(FFT_SCALAR *, FFT_SCALAR *, int);
   void timing1d(FFT_SCALAR *, int, int);
 
@@ -32,7 +34,7 @@ class FFT2D : protected Pointers {
   struct fft_plan_2d *plan;
 };
 
-}
+}    // namespace SPARTA_NS
 
 #endif
 

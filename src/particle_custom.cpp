@@ -185,6 +185,8 @@ void Particle::grow_custom(int index, int nold, int nnew)
 
 void Particle::remove_custom(int index)
 {
+  if (!ename || !ename[index]) return;
+
   delete [] ename[index];
   ename[index] = NULL;
 

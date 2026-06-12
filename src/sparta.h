@@ -22,7 +22,7 @@ namespace SPARTA_NS {
 class SPARTA {
  public:
 
-  // fundamental SPARTA classes
+  // ptrs to fundamental SPARTA classes
 
   class Memory *memory;          // memory allocation functions
   class Error *error;            // error handling
@@ -41,6 +41,10 @@ class SPARTA {
   class Output *output;          // stats/dump/restart
   class Timer *timer;            // CPU timing info
 
+  class KokkosSPARTA *kokkos;    // KOKKOS accelerator class
+  class MemoryKokkos *memoryKK;  // KOKKOS version of Memory class
+  class Python *python;          // Python interface
+
   MPI_Comm world;                // MPI communicator
   FILE *infile;                  // infile
   FILE *screen;                  // screen output
@@ -50,9 +54,6 @@ class SPARTA {
   int suffix_enable;             // 1 if suffixes are enabled, 0 if disabled
   char ***packargs;              // arguments for cmdline package commands
   int num_package;               // number of cmdline package commands
-
-  class KokkosSPARTA *kokkos;    // KOKKOS accelerator class
-  class MemoryKokkos *memoryKK;  // KOKKOS version of Memory class
 
   // other top-level SPARTA classes and variables
 

@@ -19,7 +19,7 @@ group-ID = group ID for which grid cells to perform calculation on :l
 Nevery = use input values every this many timesteps :l
 Nrepeat = # of times to use input values for calculating averages :l
 Nfreq = calculate averages every this many timesteps
-zero or more input values can be listed :l
+one or more input values can be listed :l
 value = c_ID, c_ID\[N\], f_ID, f_ID\[N\], v_name, g_name, g_name\[N\] :l
   c_ID = per-grid vector calculated by a compute with ID
   c_ID\[N\] = Nth column of per-grid array calculated by a compute with ID, N can include wildcard (see below)
@@ -244,7 +244,7 @@ SPARTA"_Section_start.html#start_3 section for more info.
 
 You can specify the accelerated styles explicitly in your input script
 by including their suffix, or you can use the "-suffix command-line
-switch"_Section_start.html#start_6 when you invoke SPARTA, or you can
+switch"_Section_start.html#start_7 when you invoke SPARTA, or you can
 use the "suffix"_suffix.html command in your input script.
 
 See the "Accelerating SPARTA"_Section_accelerate.html section of the
