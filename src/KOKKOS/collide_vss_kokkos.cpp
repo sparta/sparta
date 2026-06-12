@@ -1459,7 +1459,7 @@ void CollideVSSKokkos::setup_collision_kokkos(Particle::OnePart *ip, Particle::O
   precoln.evib = ip->evib + jp->evib;
   precoln.eelec = 0.0;
   if (elecstyle == DISCRETE) {
-    auto &d_eelecs = k_edvec.d_view[d_ewhich[index_eelec]].k_view.d_view;
+    auto &d_eelecs = k_edvec.view_device()[d_ewhich[index_eelec]].k_view.view_device();
     if (d_nelecstates[isp] > 0)
       precoln.eelec += d_eelecs[ip - d_particles.data()];
     if (d_nelecstates[jsp] > 0)
@@ -1586,7 +1586,7 @@ int CollideVSSKokkos::perform_collision_kokkos(int icell,
 
     double partial_energy =  postcoln.etotal + p3->erot + p3->evib;
     if (elecstyle == DISCRETE) {
-      auto &d_eelecs = k_edvec.d_view[d_ewhich[index_eelec]].k_view.d_view;
+      auto &d_eelecs = k_edvec.view_device()[d_ewhich[index_eelec]].k_view.view_device();
       if (d_nelecstates[p3->ispecies] > 0)
         partial_energy += d_eelecs[p3 - d_particles.data()];
     }
@@ -1812,7 +1812,7 @@ void CollideVSSKokkos::EEXCHANGE_NonReactingEDisposal(int icell,
       } // end of vibdof if
 
       if (elecstyle == DISCRETE && d_nelecstates[sp] > 0) {
-        auto &d_estates = k_eivec.d_view[d_ewhich[index_elecstate]].k_view.d_view;
+        auto &d_estates = k_eivec.view_device()[d_ewhich[index_elecstate]].k_view.view_device();
         double elec_phi = get_elec_phi(p->ispecies, p2->ispecies, d_estates[p - d_particles.data()], E_Dispose);
         if (elec_phi >= rand_gen.drand()) {
           relax_electronic_mode(icell, p, p2, E_Dispose, rand_gen, false);
@@ -1827,7 +1827,7 @@ void CollideVSSKokkos::EEXCHANGE_NonReactingEDisposal(int icell,
   postcoln.evib = ip->evib + jp->evib;
   postcoln.eelec = 0.0;
   if (elecstyle == DISCRETE) {
-    auto &d_eelecs = k_edvec.d_view[d_ewhich[index_eelec]].k_view.d_view;
+    auto &d_eelecs = k_edvec.view_device()[d_ewhich[index_eelec]].k_view.view_device();
     if (d_nelecstates[ip->ispecies] > 0)
       postcoln.eelec += d_eelecs[ip - d_particles.data()];
     if (d_nelecstates[jp->ispecies] > 0)
@@ -1850,7 +1850,7 @@ void CollideVSSKokkos::relax_electronic_mode(int icell,
                                              rand_type &rand_gen,
                                              bool reacting) const
 {
-  auto &d_eelecs = k_edvec.d_view[d_ewhich[index_eelec]].k_view.d_view;
+  auto &d_eelecs = k_edvec.view_device()[d_ewhich[index_eelec]].k_view.view_device();
   E_Dispose += d_eelecs[p - d_particles.data()];
 
   int ielec = select_elec_state(
@@ -1862,7 +1862,7 @@ void CollideVSSKokkos::relax_electronic_mode(int icell,
 
   d_eelecs[p - d_particles.data()] = eelec;
 
-  auto &d_estates = k_eivec.d_view[d_ewhich[index_elecstate]].k_view.d_view;
+  auto &d_estates = k_eivec.view_device()[d_ewhich[index_elecstate]].k_view.view_device();
   d_estates[p - d_particles.data()] = ielec;
   E_Dispose -= d_eelecs[p - d_particles.data()];
 }
@@ -1892,7 +1892,7 @@ int CollideVSSKokkos::select_elec_state(int icell,Particle::OnePart *p,
 {
   double State_prob;
   int max_level;
-  auto &d_estates = k_eivec.d_view[d_ewhich[index_elecstate]].k_view.d_view;
+  auto &d_estates = k_eivec.view_device()[d_ewhich[index_elecstate]].k_view.view_device();
   // Find the maximum electronic level it can be in, given the current E_dispose
   max_level = 0;
   while (max_level < d_nelecstates[p->ispecies] && E_Dispose > d_elecstates(p->ispecies,max_level).temp*boltz) {
@@ -1976,7 +1976,7 @@ void CollideVSSKokkos::SCATTER_ThreeBodyScattering(Particle::OnePart *ip,
   postcoln.eint = ip->erot + jp->erot + kp->erot
                 + ip->evib + jp->evib + kp->evib;
   if (elecstyle == DISCRETE) {
-    auto &d_eelecs = k_edvec.d_view[d_ewhich[index_eelec]].k_view.d_view;
+    auto &d_eelecs = k_edvec.view_device()[d_ewhich[index_eelec]].k_view.view_device();
     if (d_nelecstates[ip->ispecies] > 0)
       postcoln.eint += d_eelecs[ip - d_particles.data()];
     if (d_nelecstates[jp->ispecies] > 0)
@@ -2050,7 +2050,7 @@ void CollideVSSKokkos::EEXCHANGE_ReactingEDisposal(int icell,
     ip->evib = 0.0;
     jp->evib = 0.0;
     if (elecstyle == DISCRETE) {
-      auto &d_eelecs = k_edvec.d_view[d_ewhich[index_eelec]].k_view.d_view;
+      auto &d_eelecs = k_edvec.view_device()[d_ewhich[index_eelec]].k_view.view_device();
       if (d_nelecstates[ip->ispecies] > 0)
         d_eelecs[ip - d_particles.data()] = 0.0;
       if (d_nelecstates[jp->ispecies] > 0)
@@ -2066,7 +2066,7 @@ void CollideVSSKokkos::EEXCHANGE_ReactingEDisposal(int icell,
     jp->evib = 0.0;
     kp->evib = 0.0;
     if (elecstyle == DISCRETE) {
-      auto &d_eelecs = k_edvec.d_view[d_ewhich[index_eelec]].k_view.d_view;
+      auto &d_eelecs = k_edvec.view_device()[d_ewhich[index_eelec]].k_view.view_device();
       if (d_nelecstates[ip->ispecies] > 0)
         d_eelecs[ip - d_particles.data()] = 0.0;
       if (d_nelecstates[jp->ispecies] > 0)

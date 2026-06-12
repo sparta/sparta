@@ -85,14 +85,14 @@ void FixElecmodeKokkos::pre_update_custom_kokkos()
 
   ParticleKokkos* particle_kk = (ParticleKokkos*) particle;
   particle_kk->sync(Device,PARTICLE_MASK|SPECIES_MASK|CUSTOM_MASK);
-  d_particles = particle_kk->k_particles.d_view;
-  d_species = particle_kk->k_species.d_view;
+  d_particles = particle_kk->k_particles.view_device();
+  d_species = particle_kk->k_species.view_device();
   d_nelecstates = particle_kk->d_nelecstates;
-  auto h_ewhich = particle_kk->k_ewhich.h_view;
+  auto h_ewhich = particle_kk->k_ewhich.view_host();
   auto k_edvec = particle_kk->k_edvec;
   auto k_eivec = particle_kk->k_eivec;
-  d_eelec = k_edvec.h_view[h_ewhich[index_eelec]].k_view.d_view;
-  d_elecstate = k_eivec.h_view[h_ewhich[index_elecstate]].k_view.d_view;
+  d_eelec = k_edvec.view_host()[h_ewhich[index_eelec]].k_view.view_device();
+  d_elecstate = k_eivec.view_host()[h_ewhich[index_elecstate]].k_view.view_device();
   if (particle->maxlocal > (int)d_cumulative_probabilities.extent(0))
     MemKK::realloc_kokkos(d_cumulative_probabilities,"cumulative_probabilities",particle->maxlocal,particle->maxelecstate);
 
