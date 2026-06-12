@@ -27,7 +27,7 @@ ComputeStyle(dt/grid/kk,ComputeDtGridKokkos)
 
 namespace SPARTA_NS {
 
-  struct TagComputeDtGrid_LoadLambdaVecFromArray{};
+  struct TagComputeDtGrid_LoadTauVecFromArray{};
   struct TagComputeDtGrid_LoadTempVecFromArray{};
   struct TagComputeDtGrid_LoadUsqVecFromArray{};
   struct TagComputeDtGrid_LoadVsqVecFromArray{};
@@ -44,7 +44,7 @@ namespace SPARTA_NS {
     void reallocate();
 
     KOKKOS_INLINE_FUNCTION void
-    operator()(TagComputeDtGrid_LoadLambdaVecFromArray, const int&) const;
+    operator()(TagComputeDtGrid_LoadTauVecFromArray, const int&) const;
 
     KOKKOS_INLINE_FUNCTION void
     operator()(TagComputeDtGrid_LoadTempVecFromArray, const int&) const;
@@ -66,8 +66,9 @@ namespace SPARTA_NS {
   private:
     t_cell_1d d_cells;
     t_cinfo_1d d_cinfo;
+    DAT::t_int_1d d_cellcount;
 
-    DAT::t_float_1d d_lambda_vector;
+    DAT::t_float_1d d_tau_vector;
     DAT::t_float_1d d_temp_vector;
     DAT::t_float_1d d_usq_vector;
     DAT::t_float_1d d_vsq_vector;

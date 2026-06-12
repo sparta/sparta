@@ -58,24 +58,24 @@ ComputeTvibGridKokkos::ComputeTvibGridKokkos(SPARTA *sparta, int narg, char **ar
     d_tspecies = DAT::t_float_1d("d_tspecies",nspecies);
 
     for (int n = 0; n < nspecies; n++)
-      k_s2t.h_view(n) = s2t[n];
+      k_s2t.view_host()(n) = s2t[n];
 
     k_s2t.modify_host();
     k_s2t.sync_device();
 
-    d_s2t = k_s2t.d_view;
+    d_s2t = k_s2t.view_device();
   } else {
     k_s2t_mode = DAT::tdual_int_2d("compute/tvib/grids2t_mode",nspecies,maxmode);
     d_tspecies_mode = DAT::t_float_2d_lr("d_tspecies_mode",nspecies,maxmode);
 
     for (int n = 0; n < nspecies; n++)
       for (int m = 0; m < maxmode; m++)
-        k_s2t_mode.h_view(n,m) = s2t_mode[n][m];
+        k_s2t_mode.view_host()(n,m) = s2t_mode[n][m];
 
     k_s2t_mode.modify_host();
     k_s2t_mode.sync_device();
 
-    d_s2t_mode = k_s2t_mode.d_view;
+    d_s2t_mode = k_s2t_mode.view_device();
   }
 
   boltz = update->boltz;
@@ -114,16 +114,16 @@ void ComputeTvibGridKokkos::compute_per_grid_kokkos()
 
   ParticleKokkos* particle_kk = (ParticleKokkos*) particle;
   particle_kk->sync(Device,PARTICLE_MASK|SPECIES_MASK|CUSTOM_MASK);
-  d_particles = particle_kk->k_particles.d_view;
-  d_species = particle_kk->k_species.d_view;
-  d_ewhich = particle_kk->k_ewhich.d_view;
+  d_particles = particle_kk->k_particles.view_device();
+  d_species = particle_kk->k_species.view_device();
+  d_ewhich = particle_kk->k_ewhich.view_device();
   k_eiarray = particle_kk->k_eiarray;
 
   GridKokkos* grid_kk = (GridKokkos*) grid;
   d_cellcount = grid_kk->d_cellcount;
   d_plist = grid_kk->d_plist;
   grid_kk->sync(Device,CINFO_MASK);
-  d_cinfo = grid_kk->k_cinfo.d_view;
+  d_cinfo = grid_kk->k_cinfo.view_device();
 
   d_s2g = particle_kk->k_species2group.view<DeviceType>();
   int nlocal = particle->nlocal;
@@ -158,7 +158,7 @@ void ComputeTvibGridKokkos::compute_per_grid_kokkos()
 
   if (need_dup) {
     Kokkos::Experimental::contribute(d_tally, dup_tally);
-    dup_tally = decltype(dup_tally)(); // free duplicated memory
+    dup_tally = {}; // free duplicated memory
   }
 
   d_particles = t_particle_1d(); // destroy reference to reduce memory use
@@ -187,7 +187,7 @@ void ComputeTvibGridKokkos::operator()(TagComputeTvibGrid_compute_per_grid_atomi
     a_tally(icell,j) += d_particles[i].evib;
     a_tally(icell,j+1) += 1.0;
   } else if (modeflag >= 1) {
-    auto &d_vibmode = k_eiarray.d_view[d_ewhich[index_vibmode]].k_view.d_view;
+    const auto &d_vibmode = k_eiarray.view_device()[d_ewhich[index_vibmode]].k_view.view_device();
 
     // tally only the modes this species has
 
@@ -220,7 +220,7 @@ void ComputeTvibGridKokkos::operator()(TagComputeTvibGrid_compute_per_grid, cons
       d_tally(icell,j) += d_particles[i].evib;
       d_tally(icell,j+1) += 1.0;
     } else if (modeflag >= 1) {
-      auto &d_vibmode = k_eiarray.d_view[d_ewhich[index_vibmode]].k_view.d_view;
+      const auto &d_vibmode = k_eiarray.view_device()[d_ewhich[index_vibmode]].k_view.view_device();
 
       // tally only the modes this species has
 
@@ -294,7 +294,7 @@ post_process_grid_kokkos(int index, int /*nsample*/,
 
   ParticleKokkos* particle_kk = (ParticleKokkos*) particle;
   particle_kk->sync(Device,SPECIES_MASK|CUSTOM_MASK);
-  d_species = particle_kk->k_species.d_view;
+  d_species = particle_kk->k_species.view_device();
 
   if (modeflag == 0) {
     nsp = nmap[index] / 2;
@@ -372,7 +372,7 @@ void ComputeTvibGridKokkos::operator()(TagComputeTvibGrid_post_process_grid, con
   // inputs: 2*nsp*maxmode tallies
 
   } else if (modeflag == 1) {
-    auto &d_vibmode = k_eiarray.d_view[d_ewhich[index_vibmode]].k_view.d_view;
+    const auto &d_vibmode = k_eiarray.view_device()[d_ewhich[index_vibmode]].k_view.view_device();
 
     for (int isp = 0; isp < nsp; isp++) {
       const int ispecies = d_groupspecies(index,isp);
@@ -422,7 +422,7 @@ void ComputeTvibGridKokkos::operator()(TagComputeTvibGrid_post_process_grid, con
   // inputs: 2*nsp tallies strided by maxmode
 
   } else if (modeflag == 2) {
-    auto &d_vibmode = k_eiarray.d_view[d_ewhich[index_vibmode]].k_view.d_view;
+    const auto &d_vibmode = k_eiarray.view_device()[d_ewhich[index_vibmode]].k_view.view_device();
 
     for (int isp = 0; isp < nsp; isp++) {
       const int ispecies = d_groupspecies(index,isp);
@@ -478,7 +478,7 @@ void ComputeTvibGridKokkos::reallocate()
   memoryKK->destroy_kokkos(k_tally,tally);
   nglocal = grid->nlocal;
   memoryKK->create_kokkos(k_vector_grid,vector_grid,nglocal,"tvib/grid:vector_grid");
-  d_vector_grid = k_vector_grid.d_view;
+  d_vector_grid = k_vector_grid.view_device();
   memoryKK->create_kokkos(k_tally,tally,nglocal,ntally,"tvib/grid:tally");
-  d_tally = k_tally.d_view;
+  d_tally = k_tally.view_device();
 }

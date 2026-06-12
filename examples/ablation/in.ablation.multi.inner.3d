@@ -1,0 +1,61 @@
+################################################################################
+# 2D Cone behind shock
+#
+# Note:
+#  - The "comm/sort” option to the “global” command is used to match MPI runs.
+# The "comm/sort" option should not be used for production runs.
+################################################################################
+
+seed    		9763
+dimension		2
+
+global                  gridcut 0.04
+global                  comm/sort yes
+
+##########
+# Domain #
+##########
+
+variable xl equal 0.0
+variable yl equal 0.0
+variable zl equal -0.5
+
+variable xh equal 22.0
+variable yh equal 10.0
+variable zh equal 0.5
+
+variable Nx equal 44
+variable Ny equal 20
+variable Nz equal 1
+
+boundary		p p p
+
+create_box		${xl} ${xh} ${yl} ${yh} ${zl} ${zh}
+create_grid		${Nx} ${Ny} ${Nz}
+balance_grid  rcb cell
+
+global      nrho 1.0 fnum 0.001
+global      surfs explicit/distributed
+
+species			air.species O2
+mixture			air O2 vstream 0.0 0 0 
+
+read_surf               data.etch2d
+surf_collide            1 diffuse 300.0 0.0
+surf_modify             all collide 1
+
+fix			                fablate ablate all 1 1 uniform 1 multiple yes
+create_isurf            all fablate 100.5 multi
+
+timestep		0.001
+
+compute 1 property/grid all vol
+compute 1r reduce sum c_1[*]
+
+#variable vout equal c_1r
+#fix massr print 5 "${vout}" append vol_inner_multi.dat screen no
+
+stats			1
+stats_style		step cpu c_1r
+
+run 100

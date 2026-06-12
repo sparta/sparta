@@ -1,29 +1,22 @@
-//@HEADER
-// ************************************************************************
-//
-//                        Kokkos v. 4.0
-//       Copyright (2022) National Technology & Engineering
-//               Solutions of Sandia, LLC (NTESS).
-//
-// Under the terms of Contract DE-NA0003525 with NTESS,
-// the U.S. Government retains certain rights in this software.
-//
-// Part of Kokkos, under the Apache License v2.0 with LLVM Exceptions.
-// See https://kokkos.org/LICENSE for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-//
-//@HEADER
+// SPDX-FileCopyrightText: Copyright Contributors to the Kokkos project
 
 #ifndef KOKKOS_TEST_SIMD_CONDITION_HPP
 #define KOKKOS_TEST_SIMD_CONDITION_HPP
 
+#include <Kokkos_Macros.hpp>
+#ifdef KOKKOS_ENABLE_EXPERIMENTAL_CXX20_MODULES
+import kokkos.simd;
+import kokkos.simd_impl;
+#else
 #include <Kokkos_SIMD.hpp>
+#endif
 #include <SIMDTesting_Utilities.hpp>
 
 template <typename Abi, typename DataType>
 inline void host_check_condition() {
-  if constexpr (is_type_v<Kokkos::Experimental::simd<DataType, Abi>>) {
-    using simd_type = typename Kokkos::Experimental::simd<DataType, Abi>;
+  if constexpr (is_simd_avail_v<DataType, Abi>) {
+    using simd_type = typename Kokkos::Experimental::basic_simd<DataType, Abi>;
     using mask_type = typename simd_type::mask_type;
 
     auto condition_op = [](mask_type const& mask, simd_type const& a,
@@ -56,8 +49,8 @@ inline void host_check_condition_all_abis(
 
 template <typename Abi, typename DataType>
 KOKKOS_INLINE_FUNCTION void device_check_condition() {
-  if constexpr (is_type_v<Kokkos::Experimental::simd<DataType, Abi>>) {
-    using simd_type = typename Kokkos::Experimental::simd<DataType, Abi>;
+  if constexpr (is_type_v<Kokkos::Experimental::basic_simd<DataType, Abi>>) {
+    using simd_type = typename Kokkos::Experimental::basic_simd<DataType, Abi>;
     using mask_type = typename simd_type::mask_type;
     kokkos_checker checker;
 

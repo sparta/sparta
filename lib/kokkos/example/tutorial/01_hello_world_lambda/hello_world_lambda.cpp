@@ -1,18 +1,5 @@
-//@HEADER
-// ************************************************************************
-//
-//                        Kokkos v. 4.0
-//       Copyright (2022) National Technology & Engineering
-//               Solutions of Sandia, LLC (NTESS).
-//
-// Under the terms of Contract DE-NA0003525 with NTESS,
-// the U.S. Government retains certain rights in this software.
-//
-// Part of Kokkos, under the Apache License v2.0 with LLVM Exceptions.
-// See https://kokkos.org/LICENSE for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-//
-//@HEADER
+// SPDX-FileCopyrightText: Copyright Contributors to the Kokkos project
 
 #include <Kokkos_Core.hpp>
 #include <cstdio>
@@ -67,16 +54,13 @@ int main(int argc, char* argv[]) {
   //
   // You may notice that the printed numbers do not print out in
   // order.  Parallel for loops may execute in any order.
-  // We also need to protect the usage of a lambda against compiling
-  // with a backend which doesn't support it (i.e. Cuda 6.5/7.0).
-#if defined(KOKKOS_ENABLE_CXX11_DISPATCH_LAMBDA)
   Kokkos::parallel_for(
       15, KOKKOS_LAMBDA(const int i) {
         // Kokko::printf works for all backends in a parallel kernel;
         // std::ostream does not.
         Kokkos::printf("Hello from i = %i\n", i);
       });
-#endif
+
   // You must call finalize() after you are done using Kokkos.
   Kokkos::finalize();
 }

@@ -69,6 +69,7 @@ class DumpImage : public DumpParticle {
   char *idgrid;                    // ID of compute, fix, variable
   int gridindex;                   // index of compute, fix, variable
   int gridcol;                     // column of compute/fix array, 0 for vector
+  int grid_groupbit;               // bit mask for dump_modify gridgroup
 
   double *gcolorproc;              // grid color for me
 
@@ -102,6 +103,7 @@ class DumpImage : public DumpParticle {
   char *idsurf;                    // ID of compute, fix, variable
   int surfindex;                   // index of compute, fix, variable
   int surfcol;                     // column of compute/fix array, 0 vor vector
+  int surf_groupbit;               // bit mask for dump_modify surfgroup
 
   double *scolorproc;              // surf color for me
 

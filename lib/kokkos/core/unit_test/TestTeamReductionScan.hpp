@@ -1,18 +1,5 @@
-//@HEADER
-// ************************************************************************
-//
-//                        Kokkos v. 4.0
-//       Copyright (2022) National Technology & Engineering
-//               Solutions of Sandia, LLC (NTESS).
-//
-// Under the terms of Contract DE-NA0003525 with NTESS,
-// the U.S. Government retains certain rights in this software.
-//
-// Part of Kokkos, under the Apache License v2.0 with LLVM Exceptions.
-// See https://kokkos.org/LICENSE for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-//
-//@HEADER
+// SPDX-FileCopyrightText: Copyright Contributors to the Kokkos project
 
 #ifndef KOKKOS_TEST_TEAM_REDUCTION_SCAN_HPP
 #define KOKKOS_TEST_TEAM_REDUCTION_SCAN_HPP
@@ -35,14 +22,18 @@ TEST(TEST_CATEGORY, team_long_reduce) {
                               Kokkos::Experimental::OpenMPTarget>::value)
 #endif
   {
-    TestReduceTeam<long, TEST_EXECSPACE, Kokkos::Schedule<Kokkos::Static> >(0);
-    TestReduceTeam<long, TEST_EXECSPACE, Kokkos::Schedule<Kokkos::Dynamic> >(0);
-    TestReduceTeam<long, TEST_EXECSPACE, Kokkos::Schedule<Kokkos::Static> >(3);
-    TestReduceTeam<long, TEST_EXECSPACE, Kokkos::Schedule<Kokkos::Dynamic> >(3);
-    TestReduceTeam<long, TEST_EXECSPACE, Kokkos::Schedule<Kokkos::Static> >(
-        100000);
-    TestReduceTeam<long, TEST_EXECSPACE, Kokkos::Schedule<Kokkos::Dynamic> >(
-        100000);
+    TestReduceTeam<long, TEST_EXECSPACE, Kokkos::Schedule<Kokkos::Static> >{}
+        .run_test(0);
+    TestReduceTeam<long, TEST_EXECSPACE, Kokkos::Schedule<Kokkos::Dynamic> >{}
+        .run_test(0);
+    TestReduceTeam<long, TEST_EXECSPACE, Kokkos::Schedule<Kokkos::Static> >{}
+        .run_test(3);
+    TestReduceTeam<long, TEST_EXECSPACE, Kokkos::Schedule<Kokkos::Dynamic> >{}
+        .run_test(3);
+    TestReduceTeam<long, TEST_EXECSPACE, Kokkos::Schedule<Kokkos::Static> >{}
+        .run_test(100000);
+    TestReduceTeam<long, TEST_EXECSPACE, Kokkos::Schedule<Kokkos::Dynamic> >{}
+        .run_test(100000);
   }
 }
 
@@ -52,18 +43,70 @@ TEST(TEST_CATEGORY, team_double_reduce) {
                               Kokkos::Experimental::OpenMPTarget>::value)
 #endif
   {
-    TestReduceTeam<double, TEST_EXECSPACE, Kokkos::Schedule<Kokkos::Static> >(
-        0);
-    TestReduceTeam<double, TEST_EXECSPACE, Kokkos::Schedule<Kokkos::Dynamic> >(
-        0);
-    TestReduceTeam<double, TEST_EXECSPACE, Kokkos::Schedule<Kokkos::Static> >(
-        3);
-    TestReduceTeam<double, TEST_EXECSPACE, Kokkos::Schedule<Kokkos::Dynamic> >(
-        3);
-    TestReduceTeam<double, TEST_EXECSPACE, Kokkos::Schedule<Kokkos::Static> >(
-        100000);
-    TestReduceTeam<double, TEST_EXECSPACE, Kokkos::Schedule<Kokkos::Dynamic> >(
-        100000);
+    TestReduceTeam<double, TEST_EXECSPACE, Kokkos::Schedule<Kokkos::Static> >{}
+        .run_test(0);
+    TestReduceTeam<double, TEST_EXECSPACE, Kokkos::Schedule<Kokkos::Dynamic> >{}
+        .run_test(0);
+    TestReduceTeam<double, TEST_EXECSPACE, Kokkos::Schedule<Kokkos::Static> >{}
+        .run_test(3);
+    TestReduceTeam<double, TEST_EXECSPACE, Kokkos::Schedule<Kokkos::Dynamic> >{}
+        .run_test(3);
+    TestReduceTeam<double, TEST_EXECSPACE, Kokkos::Schedule<Kokkos::Static> >{}
+        .run_test(100000);
+    TestReduceTeam<double, TEST_EXECSPACE, Kokkos::Schedule<Kokkos::Dynamic> >{}
+        .run_test(100000);
+  }
+}
+
+TEST(TEST_CATEGORY, team_long_array_reduce) {
+// FIXME_WINDOWS FIXME_32BIT Test is known to fail
+#if defined(_WIN32) || defined(KOKKOS_IMPL_32BIT)
+  GTEST_SKIP() << "Test known to fail on Windows or in 32-bit builds";
+#endif
+
+#ifdef KOKKOS_ENABLE_OPENMPTARGET  // FIXME_OPENMPTARGET: Not implemented
+  if constexpr (!std::is_same<TEST_EXECSPACE,
+                              Kokkos::Experimental::OpenMPTarget>::value)
+#endif
+  {
+    TestReduceTeam<long, TEST_EXECSPACE, Kokkos::Schedule<Kokkos::Static> >{}
+        .run_array_test(0);
+    TestReduceTeam<long, TEST_EXECSPACE, Kokkos::Schedule<Kokkos::Dynamic> >{}
+        .run_array_test(0);
+    TestReduceTeam<long, TEST_EXECSPACE, Kokkos::Schedule<Kokkos::Static> >{}
+        .run_array_test(3);
+    TestReduceTeam<long, TEST_EXECSPACE, Kokkos::Schedule<Kokkos::Dynamic> >{}
+        .run_array_test(3);
+    TestReduceTeam<long, TEST_EXECSPACE, Kokkos::Schedule<Kokkos::Static> >{}
+        .run_array_test(100000);
+    TestReduceTeam<long, TEST_EXECSPACE, Kokkos::Schedule<Kokkos::Dynamic> >{}
+        .run_array_test(100000);
+  }
+}
+
+TEST(TEST_CATEGORY, team_double_array_reduce) {
+// FIXME_MSVC FIXME_32BIT Test is known to fail
+#if defined(KOKKOS_COMPILER_MSVC) || defined(KOKKOS_IMPL_32BIT)
+  GTEST_SKIP() << "Test known to fail on Windows or in 32-bit builds";
+#endif
+
+#ifdef KOKKOS_ENABLE_OPENMPTARGET  // FIXME_OPENMPTARGET: Not implemented
+  if constexpr (!std::is_same<TEST_EXECSPACE,
+                              Kokkos::Experimental::OpenMPTarget>::value)
+#endif
+  {
+    TestReduceTeam<double, TEST_EXECSPACE, Kokkos::Schedule<Kokkos::Static> >{}
+        .run_array_test(0);
+    TestReduceTeam<double, TEST_EXECSPACE, Kokkos::Schedule<Kokkos::Dynamic> >{}
+        .run_array_test(0);
+    TestReduceTeam<double, TEST_EXECSPACE, Kokkos::Schedule<Kokkos::Static> >{}
+        .run_array_test(3);
+    TestReduceTeam<double, TEST_EXECSPACE, Kokkos::Schedule<Kokkos::Dynamic> >{}
+        .run_array_test(3);
+    TestReduceTeam<double, TEST_EXECSPACE, Kokkos::Schedule<Kokkos::Static> >{}
+        .run_array_test(100000);
+    TestReduceTeam<double, TEST_EXECSPACE, Kokkos::Schedule<Kokkos::Dynamic> >{}
+        .run_array_test(100000);
   }
 }
 
@@ -118,6 +161,19 @@ TEST(TEST_CATEGORY, repeated_team_reduce) {
 #endif
 
   TestRepeatedTeamReduce<TEST_EXECSPACE>();
+}
+
+TEST(TEST_CATEGORY, nested_team_reduce_functor_as_reducer) {
+#ifdef KOKKOS_ENABLE_OPENMPTARGET  // FIXME_OPENMPTARGET: Not implemented
+  if (std::is_same<TEST_EXECSPACE, Kokkos::Experimental::OpenMPTarget>::value)
+    GTEST_SKIP() << "skipping since team_reduce for OpenMPTarget is not "
+                    "properly implemented";
+#endif
+  {
+    TestTeamNestedReducerFunctor<TEST_EXECSPACE>().run_test_team_thread();
+    TestTeamNestedReducerFunctor<TEST_EXECSPACE>().run_test_thread_vector();
+    TestTeamNestedReducerFunctor<TEST_EXECSPACE>().run_test_team_vector();
+  }
 }
 
 }  // namespace Test

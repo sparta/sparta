@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.12.0)
+cmake_minimum_required(VERSION 3.16.0)
 
 project(SPARTA)
 
@@ -6,21 +6,23 @@ set(SPARTA_BUILD_VER "1.0.0")
 set(SPARTA_API_VER "1")
 
 # ######### BEGIN CMAKE POLICY SETTINGS ##########
-if(${CMAKE_VERSION} VERSION_GREATER_EQUAL "3.12.0")
-  message(STATUS "Setting policy CMP0074 to use <TPL>_ROOT variables")
-  cmake_policy(SET CMP0074 NEW)
+message(STATUS "Setting policy CMP0074 to use <TPL>_ROOT variables")
+cmake_policy(SET CMP0074 NEW)
+
+if(POLICY CMP0144)
+  cmake_policy(SET CMP0144 NEW)
 endif()
 # ######### END CMAKE POLICY SETTINGS ##########
 
-# we require C++11 without extensions. Kokkos requires at least C++17 (currently)
+# we require C++11 without extensions. Kokkos requires at least C++20 (currently)
 if(NOT CMAKE_CXX_STANDARD)
   set(CMAKE_CXX_STANDARD 11)
 endif()
 if(CMAKE_CXX_STANDARD LESS 11)
   message(FATAL_ERROR "C++ standard must be set to at least 11")
 endif()
-if(PKG_KOKKOS AND (CMAKE_CXX_STANDARD LESS 17))
-  set(CMAKE_CXX_STANDARD 17)
+if(PKG_KOKKOS AND (CMAKE_CXX_STANDARD LESS 20))
+  set(CMAKE_CXX_STANDARD 20)
 endif()
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF CACHE BOOL "Use compiler extensions")

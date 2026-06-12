@@ -5,6 +5,8 @@ compared to the corresponding dated log files.
 # test the various input scripts which work with custom attributes
 # assumes spa_mpi executable is in this dir
 
+# cube examples
+
 spa_mpi < in.custom.cube.clip
 mv log.sparta log.mpi_1.custom.cube.clip
 mpirun -np 4 spa_mpi < in.custom.cube.clip
@@ -30,10 +32,14 @@ mv log.sparta log.mpi_4.custom.cube.set
 mpirun -np 4 spa_mpi < in.custom.cube.set.restart
 mv log.sparta log.mpi_4.custom.cube.set.restart
 
+# spiky examples
+
 spa_mpi < in.custom.spiky.set
 mv log.sparta log.mpi_1.custom.spiky.set
 mpirun -np 4 spa_mpi < in.custom.spiky.set
 mv log.sparta log.mpi_4.custom.spiky.set
+
+# step examples
 
 spa_mpi < in.custom.step.clip
 mv log.sparta log.mpi_1.custom.step.clip
@@ -75,3 +81,44 @@ mv log.sparta log.mpi_1.custom.step.temp.variable
 mpirun -np 4 spa_mpi < in.custom.step.temp.variable
 mv log.sparta log.mpi_4.custom.step.temp.variable
 
+# circle examples
+
+spa_mpi < in.custom.circle.file
+mv log.sparta log.mpi_1.custom.circle.file
+mpirun -np 4 spa_mpi < in.custom.circle.file
+mv log.sparta log.mpi_4.custom.circle.file
+
+spa_mpi < in.custom.circle.set
+mv log.sparta log.mpi_1.custom.circle.set
+mpirun -np 4 spa_mpi < in.custom.circle.set
+mv log.sparta log.mpi_4.custom.circle.set
+
+spa_mpi < in.custom.circle.file.fix
+mv log.sparta log.mpi_1.custom.circle.file.fix
+mpirun -np 4 spa_mpi < in.custom.circle.file.fix
+mv log.sparta log.mpi_4.custom.circle.file.fix
+
+spa_mpi < in.custom.circle.set.fix
+mv log.sparta log.mpi_1.custom.circle.set.fix
+mpirun -np 4 spa_mpi < in.custom.circle.set.fix
+mv log.sparta log.mpi_4.custom.circle.set.fix
+
+spa_mpi < in.custom.circle.file.distributed
+mv log.sparta log.mpi_1.custom.circle.file.distributed
+mpirun -np 4 spa_mpi < in.custom.circle.file.distributed
+mv log.sparta log.mpi_4.custom.circle.file.distributed
+
+spa_mpi < in.custom.circle.set.distributed
+mv log.sparta log.mpi_1.custom.circle.set.distributed
+mpirun -np 4 spa_mpi < in.custom.circle.set.distributed
+mv log.sparta log.mpi_4.custom.circle.set.distributed
+
+spa_mpi < in.custom.circle.file.fix.distributed
+mv log.sparta log.mpi_1.custom.circle.file.fix.distributed
+mpirun -np 4 spa_mpi < in.custom.circle.file.fix.distributed
+mv log.sparta log.mpi_4.custom.circle.file.fix.distributed
+
+spa_mpi < in.custom.circle.set.fix.distributed
+mv log.sparta log.mpi_1.custom.circle.set.fix.distributed
+mpirun -np 4 spa_mpi < in.custom.circle.set.fix.distributed
+mv log.sparta log.mpi_4.custom.circle.set.fix.distributed

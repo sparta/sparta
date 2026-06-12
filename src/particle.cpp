@@ -102,14 +102,15 @@ Particle::Particle(SPARTA *sparta) : Pointers(sparta)
 
   wrandom = NULL;
 
-  copy = uncopy = copymode = 0;
+  copy = copymode = 0;
+  uncopy = 1;
 }
 
 /* ---------------------------------------------------------------------- */
 
 Particle::~Particle()
 {
-  if (!uncopy && (copy || copymode)) return;
+  if (copy || copymode) return;
 
   for (int i = 0; i < nspecies; i++) {
     if (species && species[i].elecdat != NULL) {

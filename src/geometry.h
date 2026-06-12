@@ -60,6 +60,7 @@ namespace Geometry {
 
   double line_fraction(double *, double *, double *);
   double tri_fraction(double *, double *, double *, double *);
+  double poly_area(int, double *, double *);
 }
 
 #endif

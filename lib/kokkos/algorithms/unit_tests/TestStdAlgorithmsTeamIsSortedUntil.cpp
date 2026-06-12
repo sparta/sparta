@@ -1,20 +1,8 @@
-//@HEADER
-// ************************************************************************
-//
-//                        Kokkos v. 4.0
-//       Copyright (2022) National Technology & Engineering
-//               Solutions of Sandia, LLC (NTESS).
-//
-// Under the terms of Contract DE-NA0003525 with NTESS,
-// the U.S. Government retains certain rights in this software.
-//
-// Part of Kokkos, under the Apache License v2.0 with LLVM Exceptions.
-// See https://kokkos.org/LICENSE for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-//
-//@HEADER
+// SPDX-FileCopyrightText: Copyright Contributors to the Kokkos project
 
 #include <TestStdAlgorithmsCommon.hpp>
+#include <Kokkos_Assert.hpp>
 
 namespace Test {
 namespace stdalgos {
@@ -61,7 +49,7 @@ struct TestFunctorA {
 
     if (m_apiPick == 0) {
       auto it    = KE::is_sorted_until(member, KE::cbegin(myRowView),
-                                    KE::cend(myRowView));
+                                       KE::cend(myRowView));
       resultDist = KE::distance(KE::cbegin(myRowView), it);
       Kokkos::single(Kokkos::PerTeam(member), [=, *this]() {
         m_distancesView(myRowIndex) = resultDist;
@@ -77,8 +65,8 @@ struct TestFunctorA {
     else if (m_apiPick == 2) {
       using value_type = typename ViewType::value_type;
       auto it          = KE::is_sorted_until(member, KE::cbegin(myRowView),
-                                    KE::cend(myRowView),
-                                    CustomLessThanComparator<value_type>{});
+                                             KE::cend(myRowView),
+                                             CustomLessThanComparator<value_type>{});
       resultDist       = KE::distance(KE::cbegin(myRowView), it);
       Kokkos::single(Kokkos::PerTeam(member), [=, *this]() {
         m_distancesView(myRowIndex) = resultDist;
@@ -88,7 +76,7 @@ struct TestFunctorA {
     else if (m_apiPick == 3) {
       using value_type = typename ViewType::value_type;
       auto it          = KE::is_sorted_until(member, myRowView,
-                                    CustomLessThanComparator<value_type>{});
+                                             CustomLessThanComparator<value_type>{});
       resultDist       = KE::distance(KE::begin(myRowView), it);
       Kokkos::single(Kokkos::PerTeam(member), [=, *this]() {
         m_distancesView(myRowIndex) = resultDist;
@@ -158,7 +146,7 @@ void test_A(std::size_t numTeams, std::size_t numCols, int apiId,
        this allows us to exercise that the algorithm returns
        the larest sorted interval starting from 0
     */
-    assert(numCols > 10);
+    KOKKOS_ASSERT(numCols > 10);
     const std::size_t midPoint = numCols / 2;
 
     UnifDist<int> randPoolA(0, midPoint, 3432779);
@@ -210,7 +198,7 @@ void test_A(std::size_t numTeams, std::size_t numCols, int apiId,
       stdDistance = KE::distance(KE::cbegin(myRow), it);
     } else {
       auto it     = std::is_sorted_until(KE::cbegin(myRow), KE::cend(myRow),
-                                     CustomLessThanComparator<ValueType>{});
+                                         CustomLessThanComparator<ValueType>{});
       stdDistance = KE::distance(KE::cbegin(myRow), it);
     }
     ASSERT_EQ(stdDistance, distancesView_h(i));
@@ -255,6 +243,10 @@ TEST(std_algorithms_is_sorted_until_team_test, test_trivialB) {
 }
 
 TEST(std_algorithms_is_sorted_until_team_test, test_nontrivialA) {
+#ifdef KOKKOS_ENABLE_OPENMPTARGET  // FIXME_OPENMPTARGET Failing with clang 17
+  GTEST_SKIP() << "Known to fail with OpenMPTarget and clang 17";
+#endif
+
   const std::string name      = "nontrivialUntilLast";
   const std::vector<int> cols = {13, 101, 1444, 5153};
   run_all_scenarios<DynamicTag, double>(name, cols);
@@ -263,6 +255,10 @@ TEST(std_algorithms_is_sorted_until_team_test, test_nontrivialA) {
 }
 
 TEST(std_algorithms_is_sorted_until_team_test, test_nontrivialB) {
+#ifdef KOKKOS_ENABLE_OPENMPTARGET  // FIXME_OPENMPTARGET Failing with clang 17
+  GTEST_SKIP() << "Known to fail with OpenMPTarget and clang 17";
+#endif
+
   const std::string name      = "nontrivialRandom";
   const std::vector<int> cols = {13, 101, 1444, 5153};
   run_all_scenarios<DynamicTag, double>(name, cols);

@@ -1,18 +1,5 @@
-//@HEADER
-// ************************************************************************
-//
-//                        Kokkos v. 4.0
-//       Copyright (2022) National Technology & Engineering
-//               Solutions of Sandia, LLC (NTESS).
-//
-// Under the terms of Contract DE-NA0003525 with NTESS,
-// the U.S. Government retains certain rights in this software.
-//
-// Part of Kokkos, under the Apache License v2.0 with LLVM Exceptions.
-// See https://kokkos.org/LICENSE for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-//
-//@HEADER
+// SPDX-FileCopyrightText: Copyright Contributors to the Kokkos project
 
 #ifndef KOKKOS_OPENMP_PARALLEL_FOR_HPP
 #define KOKKOS_OPENMP_PARALLEL_FOR_HPP
@@ -59,23 +46,17 @@ class ParallelFor<FunctorType, Kokkos::RangePolicy<Traits...>, Kokkos::OpenMP> {
     }
   }
 
-  template <class Enable = WorkTag>
-  inline static std::enable_if_t<std::is_void<WorkTag>::value &&
-                                 std::is_same<Enable, WorkTag>::value>
-  exec_work(const FunctorType& functor, const Member iwork) {
-    functor(iwork);
-  }
-
-  template <class Enable = WorkTag>
-  inline static std::enable_if_t<!std::is_void<WorkTag>::value &&
-                                 std::is_same<Enable, WorkTag>::value>
-  exec_work(const FunctorType& functor, const Member iwork) {
-    functor(WorkTag{}, iwork);
+  inline static void exec_work(const FunctorType& functor, const Member iwork) {
+    if constexpr (std::is_void_v<WorkTag>) {
+      functor(iwork);
+    } else {
+      functor(WorkTag{}, iwork);
+    }
   }
 
   template <class Policy>
-  std::enable_if_t<std::is_same<typename Policy::schedule_type::type,
-                                Kokkos::Dynamic>::value>
+  std::enable_if_t<
+      std::is_same_v<typename Policy::schedule_type::type, Kokkos::Dynamic>>
   execute_parallel() const {
     // prevent bug in NVHPC 21.9/CUDA 11.4 (entering zero iterations loop)
     if (m_policy.begin() >= m_policy.end()) return;
@@ -88,8 +69,8 @@ class ParallelFor<FunctorType, Kokkos::RangePolicy<Traits...>, Kokkos::OpenMP> {
   }
 
   template <class Policy>
-  std::enable_if_t<!std::is_same<typename Policy::schedule_type::type,
-                                 Kokkos::Dynamic>::value>
+  std::enable_if_t<
+      !std::is_same_v<typename Policy::schedule_type::type, Kokkos::Dynamic>>
   execute_parallel() const {
 // Specifying an chunksize with GCC compiler leads to performance regression
 // with static schedule.
@@ -148,8 +129,10 @@ class ParallelFor<FunctorType, Kokkos::RangePolicy<Traits...>, Kokkos::OpenMP> {
   }
 
   inline ParallelFor(const FunctorType& arg_functor, Policy arg_policy)
-      : m_instance(nullptr), m_functor(arg_functor), m_policy(arg_policy) {
-    m_instance = arg_policy.space().impl_internal_space_instance();
+      : m_instance(nullptr),
+        m_functor(arg_functor),
+        m_policy(std::move(arg_policy)) {
+    m_instance = m_policy.space().impl_internal_space_instance();
   }
 };
 
@@ -179,8 +162,8 @@ class ParallelFor<FunctorType, Kokkos::MDRangePolicy<Traits...>,
   }
 
   template <class Policy>
-  typename std::enable_if_t<std::is_same<typename Policy::schedule_type::type,
-                                         Kokkos::Dynamic>::value>
+  typename std::enable_if_t<
+      std::is_same_v<typename Policy::schedule_type::type, Kokkos::Dynamic>>
   execute_parallel() const {
 #pragma omp parallel for schedule(dynamic, 1) \
     num_threads(m_instance->thread_pool_size())
@@ -191,8 +174,8 @@ class ParallelFor<FunctorType, Kokkos::MDRangePolicy<Traits...>,
   }
 
   template <class Policy>
-  typename std::enable_if<!std::is_same<typename Policy::schedule_type::type,
-                                        Kokkos::Dynamic>::value>::type
+  std::enable_if_t<
+      !std::is_same_v<typename Policy::schedule_type::type, Kokkos::Dynamic>>
   execute_parallel() const {
 #pragma omp parallel for schedule(static, 1) \
     num_threads(m_instance->thread_pool_size())
@@ -207,12 +190,10 @@ class ParallelFor<FunctorType, Kokkos::MDRangePolicy<Traits...>,
     // Serialize kernels on the same execution space instance
     std::lock_guard<std::mutex> lock(m_instance->m_instance_mutex);
 
-#ifndef KOKKOS_COMPILER_INTEL
     if (execute_in_serial(m_iter.m_rp.space())) {
       exec_range(0, m_iter.m_rp.m_num_tiles);
       return;
     }
-#endif
 
 #ifndef KOKKOS_INTERNAL_DISABLE_NATIVE_OPENMP
     execute_parallel<Policy>();
@@ -292,7 +273,7 @@ class ParallelFor<FunctorType, Kokkos::TeamPolicy<Properties...>,
   const size_t m_shmem_size;
 
   template <class TagType>
-  inline static std::enable_if_t<(std::is_void<TagType>::value)> exec_team(
+  inline static std::enable_if_t<(std::is_void_v<TagType>)> exec_team(
       const FunctorType& functor, HostThreadTeamData& data,
       const int league_rank_begin, const int league_rank_end,
       const int league_size) {
@@ -310,7 +291,7 @@ class ParallelFor<FunctorType, Kokkos::TeamPolicy<Properties...>,
   }
 
   template <class TagType>
-  inline static std::enable_if_t<(!std::is_void<TagType>::value)> exec_team(
+  inline static std::enable_if_t<(!std::is_void_v<TagType>)> exec_team(
       const FunctorType& functor, HostThreadTeamData& data,
       const int league_rank_begin, const int league_rank_end,
       const int league_size) {
@@ -331,7 +312,7 @@ class ParallelFor<FunctorType, Kokkos::TeamPolicy<Properties...>,
 
  public:
   inline void execute() const {
-    enum { is_dynamic = std::is_same<SchedTag, Kokkos::Dynamic>::value };
+    enum { is_dynamic = std::is_same_v<SchedTag, Kokkos::Dynamic> };
 
     const size_t pool_reduce_size  = 0;  // Never shrinks
     const size_t team_reduce_size  = TEAM_REDUCE_SIZE * m_policy.team_size();
@@ -393,10 +374,10 @@ class ParallelFor<FunctorType, Kokkos::TeamPolicy<Properties...>,
       : m_instance(nullptr),
         m_functor(arg_functor),
         m_policy(arg_policy),
-        m_shmem_size(arg_policy.scratch_size(0) + arg_policy.scratch_size(1) +
+        m_shmem_size(m_policy.scratch_size(0) + m_policy.scratch_size(1) +
                      FunctorTeamShmemSize<FunctorType>::value(
-                         arg_functor, arg_policy.team_size())) {
-    m_instance = arg_policy.space().impl_internal_space_instance();
+                         m_functor, m_policy.team_size())) {
+    m_instance = m_policy.space().impl_internal_space_instance();
   }
 };
 
