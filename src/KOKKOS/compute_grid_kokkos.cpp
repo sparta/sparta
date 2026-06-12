@@ -113,7 +113,7 @@ void ComputeGridKokkos::compute_per_grid_kokkos()
 
   index_eelec = particle->find_custom((char *) "eelec");
   if (index_eelec >= 0) {
-    d_ewhich = particle_kk->k_ewhich.d_view;
+    d_ewhich = particle_kk->k_ewhich.view_device();
     k_edvec = particle_kk->k_edvec;
 
     particle_kk->sync(Device,CUSTOM_MASK);
@@ -223,7 +223,7 @@ void ComputeGridKokkos::operator()(TagComputeGrid_compute_per_grid_atomic<NEED_A
       break;
     case ENGELEC:
       if (index_eelec >= 0) {
-        auto &d_eelecs = k_edvec.d_view[d_ewhich[index_eelec]].k_view.d_view;
+        auto &d_eelecs = k_edvec.view_device()[d_ewhich[index_eelec]].k_view.view_device();
         a_tally(icell,k++) += d_eelecs[i];
       }
       break;
@@ -299,7 +299,7 @@ void ComputeGridKokkos::operator()(TagComputeGrid_compute_per_grid, const int &i
         break;
       case ENGELEC:
         if (index_eelec >= 0) {
-          auto &d_eelecs = k_edvec.d_view[d_ewhich[index_eelec]].k_view.d_view;
+          auto &d_eelecs = k_edvec.view_device()[d_ewhich[index_eelec]].k_view.view_device();
           d_tally(icell,k++) += d_eelecs[i];
         }
         break;
