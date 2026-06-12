@@ -220,6 +220,73 @@ double ComputeTelecGridKokkos::elec_energy(int icell, int isp, double temp_elec)
 }
 
 /* ----------------------------------------------------------------------
+   bisect electronic temperature for species isp in cell icell
+   eelec = total electronic energy, count = particle count for the species
+   mirror of Particle::bisectTelec(), handles negative temperatures
+------------------------------------------------------------------------- */
+
+KOKKOS_INLINE_FUNCTION
+double ComputeTelecGridKokkos::bisectTelec(int icell, int isp, double eelec, double count) const
+{
+  // short circuit the function for the most common case
+
+  if (eelec == 0.0) return 0.0;
+
+  double target_energy_per_part = eelec/count;
+
+  double t_elec = d_elecstates(isp,1).temp;
+
+  // find initial bounds based on our first guess
+
+  bool positive_t = true;
+
+  // corner case where the energy is so high that even an infinite positive
+  // temp doesn't provide enough energy per particle
+
+  if (target_energy_per_part > elec_energy(icell, isp, 100*t_elec)) {
+    positive_t = false;
+    t_elec *= -1;
+  }
+
+  double low_mult, high_mult;
+  if (positive_t) {
+    low_mult = 0.9;
+    high_mult = 1.1;
+  } else {
+    low_mult = 1.1;
+    high_mult = 0.9;
+  }
+
+  double T_low = low_mult*t_elec;
+  while (elec_energy(icell, isp, T_low) > target_energy_per_part) {
+    T_low *= low_mult;
+  }
+
+  double T_high = high_mult*t_elec;
+  while (elec_energy(icell, isp, T_high) < target_energy_per_part && !isinf(T_high)) {
+    T_high *= high_mult;
+  }
+
+  // bisect
+
+  if (isinf(T_high)) Kokkos::abort("bisectTelec: electronic temperature did not converge\n");
+
+  double T_mid = t_elec;
+  double e_mid = elec_energy(icell, isp, T_mid);
+  while ((T_high - T_low) > 0.01) {
+    if (e_mid > target_energy_per_part) {
+      T_high = T_mid;
+    } else {
+      T_low = T_mid;
+    }
+    T_mid = (T_high - T_low)/2.0 + T_low;
+    e_mid = elec_energy(icell, isp, T_mid);
+  }
+
+  return T_mid;
+}
+
+/* ----------------------------------------------------------------------
    query info about internal tally array for this compute
    index = which column of output (0 for vec, 1 to N for array)
    return # of tally quantities for this index
@@ -294,70 +361,18 @@ void ComputeTelecGridKokkos::operator()(TagComputeTelecGrid_post_process_grid, c
   int eelc = eelec;
   int cnt = eelec+1;
 
-  auto &d_eelecs = k_edvec.view_device()[d_ewhich[index_eelec]].k_view.view_device();
-
   for (int isp = 0; isp < nsp; isp++) {
     const int ispecies = d_groupspecies(index,isp);
-    if (d_nelecstates[isp] == 0 ||
+    if (d_nelecstates[ispecies] == 0 ||
         d_etally(icell,eelc) == 0.0) {
       d_tspecies[isp] = 0.0;
       eelc += 2;
       cnt = eelc+1;
-      return; //////
+      continue;
     }
 
-    // We calculate a first guess at the temp assuming
-    //   all the electronic energy is stored in the first
-    //   excited state
-
-    const double first_elec_eng = d_species[ispecies].elecdat->states[1].temp*boltz;
-    const double degen0 = d_elecstates(ispecies,0).degen;
-    const double degen1 = d_elecstates(ispecies,1).degen;
-    double t_elec = first_elec_eng / (boltz*(
-        - log(d_etally(icell,eelc)*degen0 /
-            (d_etally(icell,cnt)*first_elec_eng*degen1)
-           ))
-      );
-
-    // If the electronic excitation is very high, the above calculation will
-    //   give negative numbers, including -inf. Negative temperatures are physically
-    //   meaningful if over 50% of particles are in excited states. However, in the
-    //   case of a truly broken value (-inf) we initialize the guess at something
-    //   more sane
-
-    if (isinf(t_elec)) t_elec = -d_elecstates(ispecies,1).temp;
-
-    // Bisection method to find T accurate to 1%
-
-    double target_energy_per_part = d_etally(icell,eelc)/d_etally(icell,cnt);
-
-    // Find initial bounds based on our first guess
-
-    double T_low = 0.9*t_elec;
-    while (elec_energy(icell, isp, T_low) > target_energy_per_part) {
-      T_low /= 2.0;
-    }
-
-    double T_high = t_elec*1.1;
-    while (elec_energy(icell, isp, T_high) < target_energy_per_part) {
-      T_high *= 2.0;
-    }
-
-    // Bisect
-
-    double T_mid = t_elec;
-    double e_mid = elec_energy(icell, isp, T_mid);
-    while ((T_high - T_low) > 0.01) {
-      if (e_mid > target_energy_per_part) {
-        T_high = T_mid;
-      } else {
-        T_low = T_mid;
-      }
-      T_mid = (T_high - T_low)/2.0 + T_low;
-      e_mid = elec_energy(icell, isp, T_mid);
-    }
-
-    d_tspecies[isp] = T_mid;
+    d_tspecies[isp] = bisectTelec(icell, ispecies,
+                                  d_etally(icell,eelc), d_etally(icell,cnt));
     eelc += 2;
     cnt = eelc+1;
   }

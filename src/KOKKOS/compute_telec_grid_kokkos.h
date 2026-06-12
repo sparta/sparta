@@ -92,6 +92,9 @@ class ComputeTelecGridKokkos : public ComputeTelecGrid, public KokkosBase {
   KOKKOS_INLINE_FUNCTION
   double elec_energy(int, int, double) const;
 
+  KOKKOS_INLINE_FUNCTION
+  double bisectTelec(int, int, double, double) const;
+
   DAT::t_int_1d d_nelecstates;
   t_elecstate_2d d_elecstates;
   DAT::t_float_2d d_cumulative_probabilities;
