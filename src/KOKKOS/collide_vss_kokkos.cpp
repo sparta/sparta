@@ -1507,11 +1507,23 @@ int CollideVSSKokkos::perform_collision_kokkos(int icell,
   // reaction = 1 to N for which reaction occurs
   // reaction is returned to caller
 
+  // effective electronic DoF for the TCE reaction model
+  // read from per-state input (dof), 0.0 if species has no electronic states
+
+  double idof = 0.0, jdof = 0.0;
+  if (react_defined && elecstyle == DISCRETE) {
+    auto& d_estate = k_eivec.view_device()[d_ewhich[index_elecstate]].k_view.view_device();
+    if (d_nelecstates[ip->ispecies] > 0)
+      idof = d_elecstates(ip->ispecies,d_estate[ip - d_particles.data()]).dof;
+    if (d_nelecstates[jp->ispecies] > 0)
+      jdof = d_elecstates(jp->ispecies,d_estate[jp - d_particles.data()]).dof;
+  }
+
   if (react_defined)
     reaction = react_kk_copy.obj.attempt_kk(ip,jp,
                                              precoln.etrans,precoln.erot,
                                              precoln.evib,precoln.eelec,postcoln.etotal,kspecies,
-                                             recomb_species,recomb_density,d_species);
+                                             recomb_species,recomb_density,d_species,idof,jdof);
   else reaction = 0;
 
   // just collision, no reaction
