@@ -1,18 +1,5 @@
-//@HEADER
-// ************************************************************************
-//
-//                        Kokkos v. 4.0
-//       Copyright (2022) National Technology & Engineering
-//               Solutions of Sandia, LLC (NTESS).
-//
-// Under the terms of Contract DE-NA0003525 with NTESS,
-// the U.S. Government retains certain rights in this software.
-//
-// Part of Kokkos, under the Apache License v2.0 with LLVM Exceptions.
-// See https://kokkos.org/LICENSE for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-//
-//@HEADER
+// SPDX-FileCopyrightText: Copyright Contributors to the Kokkos project
 
 #ifndef KOKKOS_KOKKOS_INDEXTYPETRAIT_HPP
 #define KOKKOS_KOKKOS_INDEXTYPETRAIT_HPP
@@ -83,7 +70,7 @@ struct IndexTypePolicyMixin : AnalyzeNextTrait {
                 "Kokkos Error: More than one index type given. Search "
                 "compiler output for 'show_extra_index_type' to see the "
                 "type of the errant tag.");
-  static_assert(std::is_integral<IntegralIndexType>::value);
+  static_assert(std::is_integral_v<IntegralIndexType>);
   static constexpr bool index_type_is_defaulted = false;
   using index_type = Kokkos::IndexType<IntegralIndexType>;
 };
@@ -101,8 +88,8 @@ struct PolicyTraitMatcher<IndexTypeTrait, IndexType<IntegralIndexType>>
 template <class IntegralIndexType>
 struct PolicyTraitMatcher<
     IndexTypeTrait, IntegralIndexType,
-    std::enable_if_t<std::is_integral<IntegralIndexType>::value>>
-    : std::true_type {};
+    std::enable_if_t<std::is_integral_v<IntegralIndexType>>> : std::true_type {
+};
 
 // </editor-fold> end PolicyTraitMatcher specialization"> }}}1
 //==============================================================================

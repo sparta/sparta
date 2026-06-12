@@ -1,18 +1,5 @@
-//@HEADER
-// ************************************************************************
-//
-//                        Kokkos v. 4.0
-//       Copyright (2022) National Technology & Engineering
-//               Solutions of Sandia, LLC (NTESS).
-//
-// Under the terms of Contract DE-NA0003525 with NTESS,
-// the U.S. Government retains certain rights in this software.
-//
-// Part of Kokkos, under the Apache License v2.0 with LLVM Exceptions.
-// See https://kokkos.org/LICENSE for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-//
-//@HEADER
+// SPDX-FileCopyrightText: Copyright Contributors to the Kokkos project
 
 #ifndef KOKKOS_IMPL_PUBLIC_INCLUDE
 #include <Kokkos_Macros.hpp>
@@ -26,7 +13,7 @@ static_assert(false,
 #include <type_traits>
 #include <Kokkos_Macros.hpp>
 #ifdef KOKKOS_ENABLE_IMPL_MDSPAN
-#include <mdspan/mdspan.hpp>
+#include <View/MDSpan/Kokkos_MDSpan_Header.hpp>
 #else
 #include <limits>
 #endif
@@ -134,7 +121,7 @@ struct ApplyExtent<ValueType[N], Ext> {
 
 template <class ValueType, size_t Ext>
 struct ApplyExtent<ValueType*, Ext> {
-  using type = ValueType * [Ext];
+  using type = ValueType* [Ext];
 };
 
 template <class ValueType>

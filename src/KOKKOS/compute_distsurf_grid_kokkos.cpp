@@ -69,18 +69,18 @@ void ComputeDistSurfGridKokkos::compute_per_grid_kokkos()
 {
   SurfKokkos* surf_kk = (SurfKokkos*) surf;
   surf_kk->sync(Device,ALL_MASK);
-  d_lines = surf_kk->k_lines.d_view;
-  d_tris = surf_kk->k_tris.d_view;
+  d_lines = surf_kk->k_lines.view_device();
+  d_tris = surf_kk->k_tris.view_device();
   Surf::Line *lines = surf->lines;
   Surf::Tri *tris = surf->tris;
   int ntotal = surf_kk->nlocal;
 
   k_eflag = DAT::tdual_int_1d("compute/distsurf/grid:eflag",ntotal);
   k_slist = DAT::tdual_int_1d("compute/distsurf/grid:slist",ntotal);
-  h_eflag = k_eflag.h_view;
-  h_slist = k_slist.h_view;
-  d_slist = k_slist.d_view;
-  d_eflag = k_eflag.d_view;
+  h_eflag = k_eflag.view_host();
+  h_slist = k_slist.view_host();
+  d_slist = k_slist.view_device();
+  d_eflag = k_eflag.view_device();
 
   invoked_per_grid = update->ntimestep;
   dim = domain->dimension;
@@ -126,8 +126,8 @@ void ComputeDistSurfGridKokkos::compute_per_grid_kokkos()
   //   dist = minimum distance to any eligible surf
   // if assign dist to split cell, also assign dist to all its sub cells
   GridKokkos* grid_kk = ((GridKokkos*)grid);
-  d_cells = grid_kk->k_cells.d_view;
-  d_cinfo = grid_kk->k_cinfo.d_view;
+  d_cells = grid_kk->k_cells.view_device();
+  d_cinfo = grid_kk->k_cinfo.view_device();
   d_csurfs = grid_kk->d_csurfs;
   d_csubs = grid_kk->d_csubs;
 
@@ -247,5 +247,5 @@ void ComputeDistSurfGridKokkos::reallocate()
   memory->destroy(vector_grid);
   nglocal = grid->nlocal;
   memoryKK->create_kokkos(k_vector_grid,vector_grid,nglocal,"distsurf/grid:vector_grid");
-  d_vector_grid = k_vector_grid.d_view;
+  d_vector_grid = k_vector_grid.view_device();
 }

@@ -216,6 +216,26 @@ void ModifyKokkos::grid_changed()
 }
 
 /* ----------------------------------------------------------------------
+   custom_surf_changed call, only for relevant fixes
+   invoked after per-surf custom values have changed
+------------------------------------------------------------------------- */
+
+void ModifyKokkos::custom_surf_changed()
+{
+  for (int i = 0; i < n_custom_surf_changed; i++) {
+    int j = list_custom_surf_changed[i];
+    particle_kk->sync(fix[j]->execution_space,fix[j]->datamask_read);
+    int prev_auto_sync = sparta->kokkos->auto_sync;
+    if (!fix[j]->kokkos_flag) sparta->kokkos->auto_sync = 1;
+
+    fix[j]->custom_surf_changed();
+
+    sparta->kokkos->auto_sync = prev_auto_sync;
+    particle_kk->modify(fix[j]->execution_space,fix[j]->datamask_modify);
+  }
+}
+
+/* ----------------------------------------------------------------------
    invoke update_custom() method, only for relevant fixes
 ------------------------------------------------------------------------- */
 

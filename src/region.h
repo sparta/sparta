@@ -28,7 +28,12 @@ class Region : protected Pointers {
   double extent_zlo,extent_zhi;
   int bboxflag;                     // 1 if bounding box is computable
 
+  int kokkos_flag;              // 0/1 if Kokkos region
+  int copy,uncopy,copymode;     // used by Kokkos, prevent deallocation of
+                                //  base class when child copy is destroyed
+
   Region(class SPARTA *, int, char **);
+  Region(class SPARTA *sparta) : Pointers(sparta) {} // needed for Kokkos
   virtual ~Region();
 
   // called by other classes to check point versus region

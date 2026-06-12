@@ -13,7 +13,7 @@ variable command :h3
 variable name style args ... :pre
 
 name = name of variable to define :ulb,l
-style = {delete} or {index} or {loop} or {world} or {universe} or {uloop} or {string} or {format} or {getenv} or {file} or {internal} or {equal} or {particle} or {grid} or {surf} :l
+style = {delete} or {index} or {loop} or {world} or {universe} or {uloop} or {string} or {format} or {getenv} or {file} or {python} or {internal} or {equal} or {particle} or {grid} or {surf} :l
   {delete} = no args
   {index} args = one or more strings
   {loop} args = N
@@ -39,6 +39,7 @@ style = {delete} or {index} or {loop} or {world} or {universe} or {uloop} or {st
     fstr = C-style format string
   {getenv} arg = one string
   {file} arg = filename
+  {python} arg = function
   {internal} arg = numeric value
   {equal} or {particle} or {grid} or {surf} args = one formula
   containing numbers, stats keywords, math operations, particle vectors, compute/fix and custom attribute and surface collision/reaction and variable references
@@ -51,7 +52,8 @@ style = {delete} or {index} or {loop} or {world} or {universe} or {uloop} or {st
                      sin(x), cos(x), tan(x), asin(x), acos(x), atan(x), atan2(y,x), erf(x),
                      random(x,y), normal(x,y), ceil(x), floor(x), round(x)
                      ramp(x,y), stagger(x,y), logfreq(x,y,z), stride(x,y,z), vdisplace(x,y), swiggle(x,y,z), cwiggle(x,y,z)
-    special functions = sum(x), min(x), max(x), ave(x), trap(x), slope(x), next(x), grid2part(x)
+    special functions = sum(x), min(x), max(x), ave(x), trap(x), slope(x), next(x), grid2part(x), is_file(x)
+    python function wrapper = py_varname(x,y,z,...)
     particle vectors = id, type, mass, q, mu, x, y, z, vx, vy, vz
     grid vectors = cxlo, cxhi, cylo, cyhi, czlo, czhi
     compute references = c_ID, c_ID\[I\], c_ID\[I\]\[J\]
@@ -71,6 +73,7 @@ variable beta equal "vol / ngrid"
 variable b equal c_myTemp
 variable b particle x*y/vol
 variable foo string myfile
+variable myPy python increase
 variable foo internal 3.5
 variable f file values.txt
 variable temp world 300.0 310.0 320.0 $\{Tfinal\}
@@ -101,6 +104,11 @@ be output to the appropriate styles of dump file (see the
 "dump"_dump.html command).  Variables of style {internal} are used by
 a few commands which set their value directly.
 
+Variables of style *python* can be hooked to Python functions using
+Python code you provide, so that the variable gets its value from the
+evaluation of the Python code.  Variables of style *internal* are used
+by a few commands which set their value directly.
+
 In the discussion that follows, the "name" of the variable is the
 arbitrary string that is the 1st argument in the variable command.
 This name can only contain alphanumeric characters and underscores.
@@ -113,23 +121,27 @@ different values when it is evaluated at different times during a
 simulation.
 
 IMPORTANT NOTE: When an input script line is encountered that defines
-a variable of style {equal} or {particle} or {grid} of {surf} that
-contains a formula, the formula is NOT immediately evaluated and the
-result stored.  See the discussion below about "Immediate Evaluation
-of Variables" if you want to do this.  This is also true of the
-{format} style variable since it evaluates another variable when it is
-invoked.
+a variable of style {equal} or {particle} or {grid} or {surf} that
+contains a formula or links to Python code,, the formula or Python
+code is NOT immediately evaluated and the result stored.  See the
+discussion below about "Immediate Evaluation of Variables" if you want
+to do this.  This is also true of the {format} style variable since it
+evaluates another variable when it is invoked.
 
 Variables of style {equal} and {particle} and {grid} and {surf} can be
 used as inputs to various other commands which evaluate their formulas
-as needed, e.g. at different timesteps during a "run"_run.html.
+as needed, e.g. at different timesteps during a "run"_run.html.  In
+this context, variables of style {internal} or {python} can be used in
+place of an equal-style variable, with the following two caveats.
 
-Variables of style {internal} can be used in place of an equal-style
-variable, except by commands that set the value stored by the
-internal-style variable.  Thus any command that states it can use an
-equal-style variable as an argument, can also use an internal-style
-variable.  This means that when the command evaluates the variable, it
-will use the value set (internally) by another command.
+First, internal-style variables of reuqire their values be set by code
+elsewhere in SPARTA.  When a SPARTA input script or command evaluates
+an internal-style variable, it must have a current value set
+(internally) via that mechanism.  Second, python-style variables can
+be used so long as the associated Python function, as defined by the
+:doc:`python <python>` command, returns a numeric value.  When the
+SPARTA command evaluates the python-style variable, the Python
+function will be executed.
 
 IMPORTANT NOTE: When a variable command is encountered in the input
 script and the variable name has already been specified, the command
@@ -137,7 +149,7 @@ is ignored.  This means variables can NOT be re-defined in an input
 script (with 2 exceptions, read further).  This is to allow an input
 script to be processed multiple times without resetting the variables;
 see the "jump"_jump.html or "include"_include.html commands.  It also
-means that using the "command-line switch"_Section_start.html#start_6
+means that using the "command-line switch"_Section_start.html#start_7
 -var will override a corresponding index variable setting in the input
 script.
 
@@ -154,6 +166,8 @@ its list of strings via the "next"_next.html command, it is removed
 from the list of active variables, and is thus available to be
 re-defined in a subsequent variable command.  The {delete} style does
 the same thing.
+
+Variables are **not** deleted by the :doc:`clear <clear>` command.
 
 :line
 
@@ -205,7 +219,7 @@ variable.
 
 {Index} style variables with a single string value can also be set by
 using the command-line switch -var; see "Section
-2.6"_Section_start.html#start_6 of the manual for details.
+2.6"_Section_start.html#start_7 of the manual for details.
 
 The {loop} style is identical to the {index} style except that the
 strings are the integers from 1 to N inclusive, if only one argument N
@@ -221,7 +235,7 @@ N1 <= N2 and N2 >= 0 is required.
 
 For the {world} style, one or more strings are specified.  There must
 be one string for each processor partition or "world".  See "Section
-2.6"_Section_start.html#start_6 of the manual for information on
+2.6"_Section_start.html#start_7 of the manual for information on
 running SPARTA with multiple partitions via the "-partition"
 command-line switch.  This variable command assigns one string to each
 world.  All processors in the world are assigned the same string.  The
@@ -231,7 +245,7 @@ you wish to run different simulations on different partitions.
 
 For the {universe} style, one or more strings are specified.  There
 must be at least as many strings as there are processor partitions or
-"worlds".  See "this page"_Section_start.html#start_6 for information
+"worlds".  See "this page"_Section_start.html#start_7 for information
 on running SPARTA with multiple partitions via the "-partition"
 command-line switch.  This variable command initially assigns one
 string to each world.  When a "next"_next.html command is encountered
@@ -294,12 +308,51 @@ to the variable.
 
 For the {internal} style a numeric value is provided.  This value will
 be assigned to the variable until a SPARTA command sets it to a new
-value.  There is currently only one command that requirew {internal}
-variables as inputs, because it resets them:
-"create_particles"_create_particles.html.  As mentioned above, an
-internal-style variable can be used in place of an equal-style
-variable anywhere else in an input script, e.g. as an argument to
-another command that allows for equal-style variables.
+value.
+
+Note however, that commands which use internal-style variables do not
+require them to be defined in the input script.  They create one or
+more internal-style variables if they do not already exist.  Examples
+are these commands:
+
+* :doc:`create_particles <create_particles>`
+* :doc:`python <python>` command in conjunction with Python function wrappers used in equal-, particle-, grid-, and surf-style variable formulas
+
+----------
+
+For the {python} style a Python function name is provided.  This needs
+to match a function name specified in a "python"_python.html command
+which returns a value to this variable as defined by its {return}
+keyword.  For example these two commands would be self-consistent:
+
+variable foo python myMultiply
+python myMultiply return v_foo format f file funcs.py :pre
+
+The two commands can appear in either order so long as both are
+specified before the Python function is invoked for the first time.
+
+Each time the variable is evaluated, the associated Python function is
+invoked, and the value it returns is also returned by the variable.
+Since the Python function can use other SPARTA variables as input, or
+query interal SPARTA quantities to perform its computation, this means
+the variable can return a different value each time it is evaluated.
+
+The type of value stored in the variable is determined by the {format}
+keyword of the "python"_python.html command.  It can be an integer
+(i), floating point (f), or string (s) value.  As mentioned above, if
+it is a numeric value (integer or floating point), then the
+python-style variable can be used in place of an equal-style variable
+anywhere in an input script, e.g. as an argument to another command
+that allows for equal-style variables.
+
+A python-style variable can also be used within the formula for an
+equal-style or atom-style formula in a Python function wrapper, as
+explained below for variable formulas.  In this context, the usage
+syntax is py_varname(arg1,arg2,...), where varname is the name of the
+python-style variable.  When a Python wrapper function is used in an
+atom-style formula, it can be invoked once per atom using arguments
+specific to each atom.  The resulting values in the atom-style
+variable can thus be calculated by Python code.
 
 :line
 
@@ -345,9 +398,9 @@ example, this is a valid (though strange) variable formula:
 variable x equal "np + c_MyTemp / vol^(1/3)" :pre
 
 Specifically, a formula can contain numbers, stats keywords, math
-operators, math functions, particle vectors, grid vectors, compute
-references, fix references, custom attribute references, and other
-variables.
+operators, math functions, Python function wrappers, particle vectors,
+grid vectors, compute references, fix references, custom attribute
+references, and references to other variables.
 
 Number: 0.2, 100, 1.0e20, -15.4, etc
 Constant: PI
@@ -357,12 +410,13 @@ Math functions: sqrt(x), exp(x), ln(x), log(x), abs(x), sin(x), cos(x), tan(x), 
      asin(x), acos(x), atan(x), atan2(y,x), erf(x), random(x,y,z), normal(x,y,z), \
      ceil(x), floor(x), round(x), ramp(x,y), stagger(x,y), logfreq(x,y,z), \
      stride(x,y,z), vdisplace(x,y), swiggle(x,y,z), cwiggle(x,y,z)
-Special functions: sum(x), min(x), max(x), ave(x), trap(x), slope(x), next(x), grid2part(x)
+Special functions: sum(x), min(x), max(x), ave(x), trap(x), slope(x), next(x), grid2part(x), is_file(x)
+Python function wrapper: py_varname(x,y,z,...)
 Particle vectors: id, type, mass, q, mu, x, y, z, vx, vy, vz
-Grid vectors = cxlo, cxhi, cylo, cyhi, czlo, czhi
+Grid vectors: cxlo, cxhi, cylo, cyhi, czlo, czhi
 Compute references: c_ID, c_ID\[I\], c_ID\[I\]\[J\]
 Fix references: f_ID, f_ID\[I\], f_ID\[I\]\[J\]
-Custom attribute references = name_ID, name_ID\[I\], name_ID, name_ID\[I\], name_ID, name_ID\[I\]
+Custom attribute references: name_ID, name_ID\[I\], name_ID, name_ID\[I\], name_ID, name_ID\[I\]
 Surface collision model references: sc_ID\[I\]
 Surface reaction model references: sr_ID\[I\]
 Other variables: v_name :tb(s=:)
@@ -643,6 +697,86 @@ array.  If it produces a per-grid vector, then the notation without
 "\[N\]" should be used.  If it produces a per-grid array, then the
 notation with "\[N\]" should be used, when N is an integer, to specify
 which column of the per-grid array is being referenced.
+
+The is_file(x) function is a test whether "x" is a (readable) file and
+returns 1 in this case, otherwise it returns 0. For this test, "x" is taken
+as a literal string and must not have any blanks in it.
+
+:line
+
+Python function wrapper
+
+A Python function wrapper enables the formula for an equal-style,
+particle-style, grid-style, or surf-style variable to invoke functions
+coded in Python.  In the case of an equal-style variable, the
+Python-coded function will be invoked once.  In the case of the other
+styles, it can be invoked once per particle, once per grid cell, or
+once per surface element.  This is the case if one or more of its
+arguments include a per-particle, per-grid, or per-surf quantity
+respectively, e.g. the position of a particle.  As illustrated below,
+the reason to use a Python function wrapper is to make it easy to pass
+SPARTA-related arguments to the Python-coded function associated with
+a python-style variable.
+
+The syntax for defining a Python function wrapper is
+
+py_varname(arg1,arg2,...argN) :pre
+
+where {varname} is the name of a python-style variable which couples
+to a Python-coded function.  The function will be passed the zero or
+more arguments listed in parentheses: *arg1*, *arg2*, ... *argN*.  As
+with Math Functions, each argument can itself be an arbitrarily
+complex formula.
+
+A Python function wrapper can be used in the following manner by an
+input script:
+
+variable        foo python truncate
+python          truncate return v_foo input 1 iv_arg format fi here """
+def truncate(x):
+ return int(x)
+"""
+variable        xtrunc particle py_foo(x)
+variable        ytrunc particle py_foo(y)
+variable        ztrunc particle py_foo(z)
+dump            1 particle all 100 tmp.dump id x y z v_xtrunc v_ytrunc v_ztrunc
+
+The first two commands define a python-style variable {foo} and couple
+it to the Python-coded function {truncate()} which takes a single
+floating point argument, and returns its truncated integer value.  In
+this case, the Python code for truncate() is included in the {python}
+command; it could also be contained in a file.  See the
+"python"_python.html command doc page for details.
+
+The next three commands define particle-style variables {xtrunc},
+{ytrunc}, and {ztrunc}.  Each of them include the same Python function
+wrapper in their formula, with a different argument.  The
+particle-style variable {xtrunc} will invoke the python-style variable
+{foo}, which will in turn invoke the Python-coded {truncate()} method.
+Because {xtrunc} is a particle-style variable, and the argument {x} in
+the Python function wrapper is a per-particle quantity (the x-coord of
+each particle), each processor will invoke the {truncate()} method
+once per particle, for the particles it owns.
+
+When invoked for the Ith particle, the value of the {arg}
+internal-style variable, defined by the {python} command, is set to
+the x-coord of the Ith particle.  The call via python-style variable
+{foo} to the Python {truncate()} function passes the value of the
+{arg} variable as the function's first (and only) argument.  Likewise,
+the return value of the Python function is stored by the python-style
+variable {foo} and used in the {xtrunc} particle-style variable
+formula for the Ith particle.
+
+The resulting per-particle vector for {xtrunc} will thus contain the
+truncated x-coord of every particle in the system.  The dump command
+includes the truncated xyz coords for each particle in its output.
+
+See the "python"_python.html command for more details on options the
+{python} command can specify as well as examples of more complex
+Python functions which can be wrapped in this manner.  In particular,
+the Python function can take a variety of arguments, some generated by
+the {python} command, and others by the arguments of the Python
+function wrapper.
 
 :line
 

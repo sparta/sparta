@@ -903,7 +903,7 @@ void FixAveHisto::bin_particles(int attribute, int index)
       int *s2g = particle->mixture[imix]->species2group;
       for (int i = 0; i < nlocal; i++) {
         if (region->match(particles[i].x) &&
-            s2g[particles[i].ispecies] < 0) bin_one(particles[i].v[index]);
+            s2g[particles[i].ispecies] >= 0) bin_one(particles[i].v[index]);
       }
     } else if (regionflag) {
       for (int i = 0; i < nlocal; i++) {
@@ -950,7 +950,7 @@ void FixAveHisto::bin_particles(double *values, int stride)
   } else if (mixflag) {
     int *s2g = particle->mixture[imix]->species2group;
     for (int i = 0; i < nlocal; i++) {
-      if (s2g[particles[i].ispecies] < 0) bin_one(values[m]);
+      if (s2g[particles[i].ispecies] >= 0) bin_one(values[m]);
       m += stride;
     }
   } else {

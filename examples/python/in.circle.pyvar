@@ -1,0 +1,68 @@
+################################################################################
+# 2d flow around a circle
+#
+# Note:
+#  - The "comm/sort” option to the “global” command is used to match MPI runs.
+#  - The “twopass” option is used to match Kokkos runs.
+# The "comm/sort" and "twopass" options should not be used for production runs.
+################################################################################
+
+seed	    	    12345
+dimension   	    2
+global              gridcut 0.0 comm/sort yes
+
+boundary	    o r p
+
+create_box  	    0 10 0 10 -0.5 0.5
+create_grid 	    20 20 1 
+balance_grid        rcb cell
+
+global		    nrho 1.0 fnum 0.1
+
+species		    air.species N O
+mixture		    air N O vstream 100.0 0 0 
+
+read_surf           data.circle
+surf_collide	    1 diffuse 300.0 0.0
+surf_modify         all collide 1
+
+collide             vss air air.vss
+
+fix		    in emit/face air xlo twopass # subsonic 0.1 NULL
+
+timestep 	    0.0001
+
+#dump                2 image all 500 image.*.ppm type type pdiam 0.1 &
+#                    surf proc 0.01 size 512 512 zoom 1.75 &
+#                    gline yes 0.005 
+#dump_modify	    2 pad 4
+
+variable        foo python truncate
+
+# either form of python command works the same
+
+python          truncate return v_foo input 1 iv_arg format fi here """
+def truncate(x):
+  return int(x)
+"""
+
+#python          truncate return v_foo input 1 iv_arg format fi file truncate.py
+
+variable        scalar equal py_foo(vol+2.5)
+
+print           "TRUNCATED volume ${scalar}"
+
+compute         1 property/grid all xc yc
+variable        xnew grid py_foo(c_1[1])
+variable        ynew grid py_foo(c_1[2])
+
+dump            1 grid all 1000 dump.grid.pyvar id xc yc v_xnew v_ynew
+
+variable        xx particle py_foo(x)
+variable        yy particle py_foo(y)
+
+dump            2 particle all 1000 dump.particle.pyvar id x y v_xx v_yy
+
+stats		    100
+stats_style	    step cpu np nattempt ncoll nscoll nscheck
+run 		    1000

@@ -1,18 +1,5 @@
-//@HEADER
-// ************************************************************************
-//
-//                        Kokkos v. 4.0
-//       Copyright (2022) National Technology & Engineering
-//               Solutions of Sandia, LLC (NTESS).
-//
-// Under the terms of Contract DE-NA0003525 with NTESS,
-// the U.S. Government retains certain rights in this software.
-//
-// Part of Kokkos, under the Apache License v2.0 with LLVM Exceptions.
-// See https://kokkos.org/LICENSE for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-//
-//@HEADER
+// SPDX-FileCopyrightText: Copyright Contributors to the Kokkos project
 
 #ifndef KOKKOS_OPENMPTARGET_PARALLEL_FOR_TEAM_HPP
 #define KOKKOS_OPENMPTARGET_PARALLEL_FOR_TEAM_HPP
@@ -22,6 +9,7 @@
 #include <OpenMPTarget/Kokkos_OpenMPTarget_Macros.hpp>
 #include <Kokkos_Parallel.hpp>
 #include <OpenMPTarget/Kokkos_OpenMPTarget_Parallel.hpp>
+#include <OpenMPTarget/Kokkos_OpenMPTarget_FunctorAdapter.hpp>
 
 namespace Kokkos {
 
@@ -76,28 +64,23 @@ class ParallelFor<FunctorType, Kokkos::TeamPolicy<Properties...>,
   using Policy =
       Kokkos::Impl::TeamPolicyInternal<Kokkos::Experimental::OpenMPTarget,
                                        Properties...>;
-  using WorkTag = typename Policy::work_tag;
-  using Member  = typename Policy::member_type;
+  using Member = typename Policy::member_type;
 
-  const FunctorType m_functor;
+  Kokkos::Experimental::Impl::FunctorAdapter<FunctorType, Policy> m_functor;
+
   const Policy m_policy;
   const size_t m_shmem_size;
 
  public:
   void execute() const {
-    OpenMPTargetExec::verify_is_process(
+    Experimental::Impl::OpenMPTargetInternal::verify_is_process(
         "Kokkos::Experimental::OpenMPTarget parallel_for");
-    OpenMPTargetExec::verify_initialized(
-        "Kokkos::Experimental::OpenMPTarget parallel_for");
-    execute_impl<WorkTag>();
+    execute_impl();
   }
 
  private:
-  template <class TagType>
   void execute_impl() const {
-    OpenMPTargetExec::verify_is_process(
-        "Kokkos::Experimental::OpenMPTarget parallel_for");
-    OpenMPTargetExec::verify_initialized(
+    Experimental::Impl::OpenMPTargetInternal::verify_is_process(
         "Kokkos::Experimental::OpenMPTarget parallel_for");
     const auto league_size   = m_policy.league_size();
     const auto team_size     = m_policy.team_size();
@@ -105,25 +88,19 @@ class ParallelFor<FunctorType, Kokkos::TeamPolicy<Properties...>,
 
     const size_t shmem_size_L0 = m_policy.scratch_size(0, team_size);
     const size_t shmem_size_L1 = m_policy.scratch_size(1, team_size);
-    OpenMPTargetExec::resize_scratch(team_size, shmem_size_L0, shmem_size_L1,
-                                     league_size);
+    m_policy.space().impl_internal_space_instance()->resize_scratch(
+        team_size, shmem_size_L0, shmem_size_L1, league_size);
 
-    void* scratch_ptr = OpenMPTargetExec::get_scratch_ptr();
-    FunctorType a_functor(m_functor);
+    void* scratch_ptr =
+        m_policy.space().impl_internal_space_instance()->get_scratch_ptr();
+    auto const a_functor(m_functor);
 
     // FIXME_OPENMPTARGET - If the team_size is not a multiple of 32, the
     // scratch implementation does not work in the Release or RelWithDebugInfo
     // mode but works in the Debug mode.
 
     // Maximum active teams possible.
-    // FIXME_OPENMPTARGET: Cray compiler did not yet implement
-    // omp_get_max_teams.
-#if !defined(KOKKOS_COMPILER_CRAY_LLVM)
     int max_active_teams = omp_get_max_teams();
-#else
-    int max_active_teams =
-        std::min(OpenMPTargetExec::MAX_ACTIVE_THREADS / team_size, league_size);
-#endif
 
     // FIXME_OPENMPTARGET: Although the maximum number of teams is set using the
     // omp_set_num_teams in the resize_scratch routine, the call is not
@@ -135,12 +112,12 @@ class ParallelFor<FunctorType, Kokkos::TeamPolicy<Properties...>,
     // If the league size is <=0, do not launch the kernel.
     if (max_active_teams <= 0) return;
 
-// Performing our own scheduling of teams to avoid separation of code between
-// teams-distribute and parallel. Gave a 2x performance boost in test cases with
-// the clang compiler. atomic_compare_exchange can be avoided since the standard
-// guarantees that the number of teams specified in the `num_teams` clause is
-// always less than or equal to the maximum concurrently running teams.
-#if !defined(KOKKOS_IMPL_OPENMPTARGET_HIERARCHICAL_INTEL_GPU)
+    // Performing our own scheduling of teams to avoid separation of code
+    // between teams-distribute and parallel. Gave a 2x performance boost in
+    // test cases with the clang compiler. atomic_compare_exchange can be
+    // avoided since the standard guarantees that the number of teams specified
+    // in the `num_teams` clause is always less than or equal to the maximum
+    // concurrently running teams.
     KOKKOS_IMPL_OMPTARGET_PRAGMA(
         teams thread_limit(team_size) firstprivate(a_functor)
             num_teams(max_active_teams) is_device_ptr(scratch_ptr)
@@ -161,41 +138,18 @@ class ParallelFor<FunctorType, Kokkos::TeamPolicy<Properties...>,
         typename Policy::member_type team(league_id, league_size, team_size,
                                           vector_length, scratch_ptr, blockIdx,
                                           shmem_size_L0, shmem_size_L1);
-        if constexpr (std::is_void_v<TagType>)
-          m_functor(team);
-        else
-          m_functor(TagType(), team);
+        a_functor(team);
       }
     }
-#else
-#pragma omp target teams distribute firstprivate(a_functor) \
-    is_device_ptr(scratch_ptr) num_teams(max_active_teams)  \
-        thread_limit(team_size)
-    for (int i = 0; i < league_size; i++) {
-#pragma omp parallel
-      {
-        if (omp_get_num_teams() > max_active_teams)
-          Kokkos::abort("`omp_set_num_teams` call was not respected.\n");
-
-        typename Policy::member_type team(i, league_size, team_size,
-                                          vector_length, scratch_ptr, i,
-                                          shmem_size_L0, shmem_size_L1);
-        if constexpr (std::is_void_v<TagType>)
-          m_functor(team);
-        else
-          m_functor(TagType(), team);
-      }
-    }
-#endif
   }
 
  public:
   ParallelFor(const FunctorType& arg_functor, const Policy& arg_policy)
       : m_functor(arg_functor),
         m_policy(arg_policy),
-        m_shmem_size(arg_policy.scratch_size(0) + arg_policy.scratch_size(1) +
+        m_shmem_size(m_policy.scratch_size(0) + m_policy.scratch_size(1) +
                      FunctorTeamShmemSize<FunctorType>::value(
-                         arg_functor, arg_policy.team_size())) {}
+                         arg_functor, m_policy.team_size())) {}
 };
 
 }  // namespace Impl

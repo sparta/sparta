@@ -13,6 +13,7 @@
 ------------------------------------------------------------------------- */
 
 #include "math.h"
+#include "math_extra.h"
 #include "string.h"
 #include "marching_cubes.h"
 #include "grid.h"
@@ -69,9 +70,9 @@ MarchingCubes::MarchingCubes(SPARTA *sparta, int ggroup_caller,
      based on ave value at cell center
 ------------------------------------------------------------------------- */
 
-void MarchingCubes::invoke(double **cvalues, int *svalues, int **mcflags)
+void MarchingCubes::invoke(double **cvalues, double ***mvalues, int *svalues, int **mcflags)
 {
-  int i,ipt,isurf,nsurf,icase,which;
+  int i,j,ipt,isurf,nsurf,icase,which;
   surfint surfID;
   surfint *ptr;
 
@@ -98,20 +99,85 @@ void MarchingCubes::invoke(double **cvalues, int *svalues, int **mcflags)
     // hi[3] = upper right corner pt of grid cell
     // pt = list of 3*nsurf points that are the corner pts of each tri
 
-    // cvalues are ordered
+    // cvalues in SPARTA are ordered
     // bottom-lower-left, bottom-lower-right,
     // bottom-upper-left, bottom-upper-right
     // top-lower-left, top-lower-right, top-upper-left, top-upper-right
     // Vzyx encodes this as 0/1 in each dim
 
-    v000 = cvalues[icell][0];
-    v001 = cvalues[icell][1];
-    v010 = cvalues[icell][2];
-    v011 = cvalues[icell][3];
-    v100 = cvalues[icell][4];
-    v101 = cvalues[icell][5];
-    v110 = cvalues[icell][6];
-    v111 = cvalues[icell][7];
+    if (cvalues) {
+      v000 = cvalues[icell][0];
+      v001 = cvalues[icell][1];
+      v010 = cvalues[icell][2];
+      v011 = cvalues[icell][3];
+      v100 = cvalues[icell][4];
+      v101 = cvalues[icell][5];
+      v110 = cvalues[icell][6];
+      v111 = cvalues[icell][7];
+
+      i0  = interpolate(v000,v001,lo[0],hi[0]);
+      i1  = interpolate(v001,v011,lo[1],hi[1]);
+      i2  = interpolate(v010,v011,lo[0],hi[0]);
+      i3  = interpolate(v000,v010,lo[1],hi[1]);
+
+      i4  = interpolate(v100,v101,lo[0],hi[0]);
+      i5  = interpolate(v101,v111,lo[1],hi[1]);
+      i6  = interpolate(v110,v111,lo[0],hi[0]);
+      i7  = interpolate(v100,v110,lo[1],hi[1]);
+
+      i8  = interpolate(v000,v100,lo[2],hi[2]);
+      i9  = interpolate(v001,v101,lo[2],hi[2]);
+      i10 = interpolate(v011,v111,lo[2],hi[2]);
+      i11 = interpolate(v010,v110,lo[2],hi[2]);
+    } else {
+      for (i = 0; i < 8; i++)
+        for (j = 0; j < 6; j++)
+          inval[i][j] = mvalues[icell][i][j];
+
+      // use averages for now
+
+      v000 = v001 = v010 = v011 = 0.0;
+      v100 = v101 = v110 = v111 = 0.0;
+
+      // ordering in cvalues different from loop up table
+      // manually change for consistency
+
+      for (j = 0; j < 6; j++) {
+        v000 += inval[0][j];
+        v001 += inval[1][j];
+        v010 += inval[2][j];
+        v011 += inval[3][j];
+        v100 += inval[4][j];
+        v101 += inval[5][j];
+        v110 += inval[6][j];
+        v111 += inval[7][j];
+      }
+
+      v000 /= 6.0;
+      v001 /= 6.0;
+      v010 /= 6.0;
+      v011 /= 6.0;
+      v100 /= 6.0;
+      v101 /= 6.0;
+      v110 /= 6.0;
+      v111 /= 6.0;
+
+      i0  = interpolate(inval[0][1],inval[1][0],lo[0],hi[0]);
+      i1  = interpolate(inval[1][3],inval[3][2],lo[1],hi[1]);
+      i2  = interpolate(inval[2][1],inval[3][0],lo[0],hi[0]);
+      i3  = interpolate(inval[0][3],inval[2][2],lo[1],hi[1]);
+
+      i4  = interpolate(inval[4][1],inval[5][0],lo[0],hi[0]);
+      i5  = interpolate(inval[5][3],inval[7][2],lo[1],hi[1]);
+      i6  = interpolate(inval[6][1],inval[7][0],lo[0],hi[0]);
+      i7  = interpolate(inval[4][3],inval[6][2],lo[1],hi[1]);
+
+      i8  = interpolate(inval[0][5],inval[4][4],lo[2],hi[2]);
+      i9  = interpolate(inval[1][5],inval[5][4],lo[2],hi[2]);
+      i10 = interpolate(inval[3][5],inval[7][4],lo[2],hi[2]);
+      i11 = interpolate(inval[2][5],inval[6][4],lo[2],hi[2]);
+
+    }
 
     v000iso = v000 - thresh;
     v001iso = v001 - thresh;
@@ -454,8 +520,9 @@ void MarchingCubes::invoke(double **cvalues, int *svalues, int **mcflags)
 double MarchingCubes::interpolate(double v0, double v1, double lo, double hi)
 {
   double value = lo + (hi-lo)*(thresh-v0)/(v1-v0);
-  value = MAX(value,lo);
-  value = MIN(value,hi);
+  double ibuffer = (hi-lo)*mindist;
+  value = MAX(value,lo+ibuffer);
+  value = MIN(value,hi-ibuffer);
   return value;
 }
 
@@ -745,7 +812,7 @@ void MarchingCubes::cleanup()
   int nrecv = irregular->create_data_uniform(nsend,proclist,1);
 
   SendDatum *bufrecv = (SendDatum *)
-    memory->smalloc(nrecv*sizeof(SendDatum),"readisurf:bufrecv");
+    memory->smalloc((bigint)nrecv*sizeof(SendDatum),"readisurf:bufrecv");
 
   irregular->exchange_uniform((char *) bufsend,sizeof(SendDatum),
                               (char *) bufrecv);
@@ -937,139 +1004,139 @@ int MarchingCubes::add_triangle(int *trig, int n)
   for(int t = 0; t < 3*n; t++) {
     switch (trig[t]) {
     case 0:
-      pt[t][0] = interpolate(v000,v001,lo[0],hi[0]);
+      pt[t][0] = i0;
       pt[t][1] = lo[1];
       pt[t][2] = lo[2];
       break;
     case 1:
       pt[t][0] = hi[0];
-      pt[t][1] = interpolate(v001,v011,lo[1],hi[1]);
+      pt[t][1] = i1;
       pt[t][2] = lo[2];
       break;
     case 2:
-      pt[t][0] = interpolate(v010,v011,lo[0],hi[0]);
+      pt[t][0] = i2;
       pt[t][1] = hi[1];
       pt[t][2] = lo[2];
       break;
     case 3:
       pt[t][0] = lo[0];
-      pt[t][1] = interpolate(v000,v010,lo[1],hi[1]);
+      pt[t][1] = i3;
       pt[t][2] = lo[2];
       break;
     case 4:
-      pt[t][0] = interpolate(v100,v101,lo[0],hi[0]);
+      pt[t][0] = i4;
       pt[t][1] = lo[1];
       pt[t][2] = hi[2];
       break;
     case 5:
       pt[t][0] = hi[0];
-      pt[t][1] = interpolate(v101,v111,lo[1],hi[1]);
+      pt[t][1] = i5;
       pt[t][2] = hi[2];
       break;
     case 6:
-      pt[t][0] = interpolate(v110,v111,lo[0],hi[0]);
+      pt[t][0] = i6;
       pt[t][1] = hi[1];
       pt[t][2] = hi[2];
       break;
     case 7:
       pt[t][0] = lo[0];
-      pt[t][1] = interpolate(v100,v110,lo[1],hi[1]);
+      pt[t][1] = i7;
       pt[t][2] = hi[2];
       break;
     case 8:
       pt[t][0] = lo[0];
       pt[t][1] = lo[1];
-      pt[t][2] = interpolate(v000,v100,lo[2],hi[2]);
+      pt[t][2] = i8;
       break;
     case 9:
       pt[t][0] = hi[0];
       pt[t][1] = lo[1];
-      pt[t][2] = interpolate(v001,v101,lo[2],hi[2]);
+      pt[t][2] = i9;
       break;
     case 10:
       pt[t][0] = hi[0];
       pt[t][1] = hi[1];
-      pt[t][2] = interpolate(v011,v111,lo[2],hi[2]);
+      pt[t][2] = i10;
       break;
     case 11:
       pt[t][0] = lo[0];
       pt[t][1] = hi[1];
-      pt[t][2] = interpolate(v010,v110,lo[2],hi[2]);
+      pt[t][2] = i11;
       break;
     case 12: {
       int u = 0;
       pt[t][0] = pt[t][1] = pt[t][2] = 0.0;
       if (bit0 ^ bit1) {
         ++u;
-        pt[t][0] += interpolate(v000,v001,lo[0],hi[0]);
+        pt[t][0] += i0;
         pt[t][1] += lo[1];
         pt[t][2] += lo[2];
       }
       if (bit1 ^ bit2) {
         ++u;
         pt[t][0] += hi[0];
-        pt[t][1] += interpolate(v001,v011,lo[1],hi[1]);
+        pt[t][1] += i1;
         pt[t][2] += lo[2];
       }
       if (bit2 ^ bit3) {
         ++u;
-        pt[t][0] += interpolate(v010,v011,lo[0],hi[0]);
+        pt[t][0] += i2;
         pt[t][1] += hi[1];
         pt[t][2] += lo[2];
       }
       if (bit3 ^ bit0) {
         ++u;
         pt[t][0] += lo[0];
-        pt[t][1] += interpolate(v000,v010,lo[1],hi[1]);
+        pt[t][1] += i3;
         pt[t][2] += lo[2];
       }
       if (bit4 ^ bit5) {
         ++u;
-        pt[t][0] += interpolate(v100,v101,lo[0],hi[0]);
+        pt[t][0] += i4;
         pt[t][1] += lo[1];
         pt[t][2] += hi[2];
       }
       if (bit5 ^ bit6) {
         ++u;
         pt[t][0] += hi[0];
-        pt[t][1] += interpolate(v101,v111,lo[1],hi[1]);
+        pt[t][1] += i5;
         pt[t][2] += hi[2];
       }
       if (bit6 ^ bit7) {
         ++u;
-        pt[t][0] += interpolate(v110,v111,lo[0],hi[0]);
+        pt[t][0] += i6;
         pt[t][1] += hi[1];
         pt[t][2] += hi[2];
       }
       if (bit7 ^ bit4) {
         ++u;
         pt[t][0] += lo[0];
-        pt[t][1] += interpolate(v100,v110,lo[1],hi[1]);
+        pt[t][1] += i7;
         pt[t][2] += hi[2];
       }
       if (bit0 ^ bit4) {
         ++u;
         pt[t][0] += lo[0];
         pt[t][1] += lo[1];
-        pt[t][2] += interpolate(v000,v100,lo[2],hi[2]);
+        pt[t][2] += i8;
       }
       if (bit1 ^ bit5) {
         ++u;
         pt[t][0] += hi[0];
         pt[t][1] += lo[1];
-        pt[t][2] += interpolate(v001,v101,lo[2],hi[2]);
+        pt[t][2] += i9;
       }
       if (bit2 ^ bit6) {
         ++u;
         pt[t][0] += hi[0];
         pt[t][1] += hi[1];
-        pt[t][2] += interpolate(v011,v111,lo[2],hi[2]);
+        pt[t][2] += i10;
       }
       if (bit3 ^ bit7) {
         ++u;
         pt[t][0] += lo[0];
         pt[t][1] += hi[1];
-        pt[t][2] += interpolate(v010,v110,lo[2],hi[2]);
+        pt[t][2] += i11;
       }
 
       pt[t][0] /= static_cast<double> (u);

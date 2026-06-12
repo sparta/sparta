@@ -76,8 +76,8 @@ Comm::~Comm()
   memory->destroy(pproc);
   memory->destroy(gproc);
   memory->destroy(gsize);
-  memory->destroy(sbuf);
-  memory->destroy(rbuf);
+  memory->sfree(sbuf);
+  memory->sfree(rbuf);
 
   memory->destroy(neighlist);
 }
@@ -139,10 +139,13 @@ int Comm::migrate_particles(int nmigrate, int *plist)
     memory->destroy(pproc);
     memory->create(pproc,maxpproc,"comm:pproc");
   }
-  if (nmigrate*nbytes > maxsendbuf) {
-    maxsendbuf = nmigrate*nbytes;
-    memory->destroy(sbuf);
-    memory->create(sbuf,maxsendbuf,"comm:sbuf");
+
+  // must use smalloc since sbuf can be larger than 2 GB
+
+  if ((bigint)nmigrate*nbytes > maxsendbuf) {
+    maxsendbuf = (bigint)nmigrate*nbytes;
+    memory->sfree(sbuf);
+    sbuf = (char *) memory->smalloc(maxsendbuf,"comm:sbuf");
   }
 
   // fill proclist with procs to send to
@@ -154,7 +157,7 @@ int Comm::migrate_particles(int nmigrate, int *plist)
   // else pack_custom() performs packing into sbuf
 
   int nsend = 0;
-  int offset = 0;
+  bigint offset = 0;
 
   if (!ncustom) {
     for (i = 0; i < nmigrate; i++) {
@@ -207,6 +210,7 @@ int Comm::migrate_particles(int nmigrate, int *plist)
   // perform irregular communication
   // if no custom attributes, append recv particles directly to particle list
   // else receive into rbuf, unpack particles one by one via unpack_custom()
+  // must use smalloc since rbuf can be larger than 2 GB
 
   if (!ncustom)
     iparticle->
@@ -214,10 +218,10 @@ int Comm::migrate_particles(int nmigrate, int *plist)
                        (char *) &particle->particles[particle->nlocal]);
 
   else {
-    if (nrecv*nbytes > maxrecvbuf) {
-      maxrecvbuf = nrecv*nbytes;
-      memory->destroy(rbuf);
-      memory->create(rbuf,maxrecvbuf,"comm:rbuf");
+    if ((bigint)nrecv*nbytes > maxrecvbuf) {
+      maxrecvbuf = (bigint)nrecv*nbytes;
+      memory->sfree(rbuf);
+      rbuf = (char *) memory->smalloc(maxrecvbuf,"comm:rbuf");
     }
 
     iparticle->exchange_uniform(sbuf,nbytes,rbuf);
@@ -267,26 +271,23 @@ void Comm::migrate_cells(int nmigrate)
   // compute byte count needed to pack cells
 
   int nsend = 0;
-  bigint boffset = 0;
+  bigint offset = 0;
   for (int icell = 0; icell < nglocal; icell++) {
     if (cells[icell].nsplit <= 0) continue;
     if (cells[icell].proc == me) continue;
     gproc[nsend] = cells[icell].proc;
     n = grid->pack_one(icell,NULL,1,1,1,0);
     gsize[nsend++] = n;
-    boffset += n;
+    offset += n;
   }
 
-  if (boffset > MAXSMALLINT)
-    error->one(FLERR,"Migrate cells send buffer exceeds 2 GB");
-  int offset = boffset;
-
   // reallocate sbuf as needed
+  // must use smalloc since sbuf can be larger than 2 GB
 
   if (offset > maxsendbuf) {
-    memory->destroy(sbuf);
+    memory->sfree(sbuf);
     maxsendbuf = offset;
-    memory->create(sbuf,maxsendbuf,"comm:sbuf");
+    sbuf = (char *) memory->smalloc(maxsendbuf,"comm:sbuf");
     memset(sbuf,0,maxsendbuf);
   }
 
@@ -321,16 +322,17 @@ void Comm::migrate_cells(int nmigrate)
   //        are received in repeatable order, thus grid cells stay in order
 
   if (!igrid) igrid = new Irregular(sparta);
-  int recvsize;
+  bigint recvsize;
   int nrecv = igrid->create_data_variable(nmigrate,gproc,gsize,
                                           recvsize,commsortflag);
 
   // reallocate rbuf as needed
+  // must use smalloc since rbuf can be larger than 2 GB
 
   if (recvsize > maxrecvbuf) {
-    memory->destroy(rbuf);
+    memory->sfree(rbuf);
     maxrecvbuf = recvsize;
-    memory->create(rbuf,maxrecvbuf,"comm:rbuf");
+    rbuf = (char *) memory->smalloc(maxrecvbuf,"comm:rbuf");
     memset(rbuf,0,maxrecvbuf);
   }
 
@@ -377,31 +379,28 @@ void Comm::migrate_cells_less_memory(int nmigrate)
     Grid::ChildCell *cells = grid->cells;
 
     int nsend = 0;
-    bigint boffset = 0;
+    bigint offset = 0;
     for (int icell = icell_start; icell < nglocal; icell++) {
       icell_end = icell+1;
       if (cells[icell].nsplit <= 0) continue;
       if (cells[icell].proc == me) continue;
       gproc[nsend] = cells[icell].proc;
       n = grid->pack_one(icell,NULL,1,1,1,0);
-      if (n > 0 && boffset > 0 && boffset+n > update->global_mem_limit) {
+      if (n > 0 && offset > 0 && offset+n > update->global_mem_limit) {
         icell_end -= 1;
         break;
       }
       gsize[nsend++] = n;
-      boffset += n;
+      offset += n;
     }
 
-    if (boffset > MAXSMALLINT)
-      error->one(FLERR,"Migrate cells send buffer exceeds 2 GB");
-    int offset = boffset;
-
     // reallocate sbuf as needed
+    // must use smalloc since sbuf can be larger than 2 GB
 
     if (offset > maxsendbuf) {
-      memory->destroy(sbuf);
+      memory->sfree(sbuf);
       maxsendbuf = offset;
-      memory->create(sbuf,maxsendbuf,"comm:sbuf");
+      sbuf = (char *) memory->smalloc(maxsendbuf,"comm:sbuf");
       memset(sbuf,0,maxsendbuf);
     }
 
@@ -426,16 +425,17 @@ void Comm::migrate_cells_less_memory(int nmigrate)
     //        are received in repeatable order, thus grid cells stay in order
 
     if (!igrid) igrid = new Irregular(sparta);
-    int recvsize;
+    bigint recvsize;
     int nrecv = igrid->create_data_variable(nsend,gproc,gsize,
                                             recvsize,commsortflag);
 
     // reallocate rbuf as needed
+    // must use smalloc since rbuf can be larger than 2 GB
 
     if (recvsize > maxrecvbuf) {
-      memory->destroy(rbuf);
+      memory->sfree(rbuf);
       maxrecvbuf = recvsize;
-      memory->create(rbuf,maxrecvbuf,"comm:rbuf");
+      rbuf = (char *) memory->smalloc(maxrecvbuf,"comm:rbuf");
       memset(rbuf,0,maxrecvbuf);
     }
 
@@ -453,11 +453,11 @@ void Comm::migrate_cells_less_memory(int nmigrate)
     // deallocate large buffers to reduce memory footprint
     // also deallocate igrid for same reason
 
-    if (sbuf) memory->destroy(sbuf);
+    if (sbuf) memory->sfree(sbuf);
     sbuf = NULL;
     maxsendbuf = 0;
 
-    if (rbuf) memory->destroy(rbuf);
+    if (rbuf) memory->sfree(rbuf);
     rbuf = NULL;
     maxrecvbuf = 0;
 
@@ -504,23 +504,20 @@ int Comm::send_cells_adapt(int nsend, int *procsend, char *inbuf, char **outbuf)
 
   // compute byte count needed to pack cells
 
-  bigint boffset = 0;
+  bigint offset = 0;
   for (i = 0; i < nsend; i++) {
     n = grid->pack_one_adapt((char *) &sadapt[i],NULL,0);
     gsize[i] = n;
-    boffset += n;
+    offset += n;
   }
 
-  if (boffset > MAXSMALLINT)
-    error->one(FLERR,"Adapt grid send buffer exceeds 2 GB");
-  int offset = boffset;
-
   // reallocate sbuf as needed
+  // must use smalloc since sbuf can be larger than 2 GB
 
   if (offset > maxsendbuf) {
-    memory->destroy(sbuf);
+    memory->sfree(sbuf);
     maxsendbuf = offset;
-    memory->create(sbuf,maxsendbuf,"comm:sbuf");
+    sbuf = (char *) memory->smalloc(maxsendbuf,"comm:sbuf");
     memset(sbuf,0,maxsendbuf);
   }
 
@@ -538,15 +535,17 @@ int Comm::send_cells_adapt(int nsend, int *procsend, char *inbuf, char **outbuf)
   //        are received in repeatable order, thus grid cells stay in order
 
   if (!igrid) igrid = new Irregular(sparta);
-  int recvsize;
+  bigint recvsize;
   int nrecv =
     igrid->create_data_variable(nsend,procsend,gsize,recvsize,commsortflag);
 
   // reallocate rbuf as needed
+  // must use smalloc since rbuf can be larger than 2 GB
 
   if (recvsize > maxrecvbuf) {
-    memory->destroy(rbuf);
+    memory->sfree(rbuf);
     maxrecvbuf = recvsize;
+    rbuf = (char *) memory->smalloc(maxrecvbuf,"comm:rbuf");
     memory->create(rbuf,maxrecvbuf,"comm:rbuf");
     memset(rbuf,0,maxrecvbuf);
   }
@@ -586,11 +585,12 @@ int Comm::irregular_uniform_neighs(int nsend, int *procsend,
     nrecv = iuniform->create_data_uniform(nsend,procsend,commsortflag);
 
   // reallocate rbuf as needed
+  // must use smalloc since rbuf can be larger than 2 GB
 
-  if (nrecv*nsize > maxrecvbuf) {
-    memory->destroy(rbuf);
-    maxrecvbuf = nrecv*nsize;
-    memory->create(rbuf,maxrecvbuf,"comm:rbuf");
+  if ((bigint)nrecv*nsize > maxrecvbuf) {
+    memory->sfree(rbuf);
+    maxrecvbuf = (bigint)nrecv*nsize;
+    rbuf = (char *) memory->smalloc(maxrecvbuf,"comm:rbuf");
     memset(rbuf,0,maxrecvbuf);
   }
 
@@ -624,11 +624,12 @@ int Comm::irregular_uniform(int nsend, int *procsend,
   int nrecv = iuniform->create_data_uniform(nsend,procsend,commsortflag);
 
   // reallocate rbuf as needed
+  // must use smalloc since rbuf can be larger than 2 GB
 
-  if (nrecv*nsize > maxrecvbuf) {
-    memory->destroy(rbuf);
-    maxrecvbuf = nrecv*nsize;
-    memory->create(rbuf,maxrecvbuf,"comm:rbuf");
+  if ((bigint)nrecv*nsize > maxrecvbuf) {
+    memory->sfree(rbuf);
+    maxrecvbuf = (bigint)nrecv*nsize;
+    rbuf = (char *) memory->smalloc(maxrecvbuf,"comm:rbuf");
     memset(rbuf,0,maxrecvbuf);
   }
 

@@ -69,6 +69,9 @@ class FixEmitFace : public FixEmit {
   double psubsonic,tsubsonic,nsubsonic;
   double tprefactor,soundspeed_mixture;
 
+  int imodvar;
+  char *modvar;
+
   // copies of data from other classes
 
   int dimension,nspecies;
@@ -86,7 +89,7 @@ class FixEmitFace : public FixEmit {
 
   // protected methods
 
-  virtual void create_task(int);
+  void create_task(int);
   virtual void perform_task();
   void perform_task_onepass();
   virtual void perform_task_twopass();

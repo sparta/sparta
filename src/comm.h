@@ -49,7 +49,7 @@ class Comm : protected Pointers {
  protected:
   class Irregular *iparticle,*igrid,*iuniform;
   char *sbuf,*rbuf;
-  int maxsendbuf,maxrecvbuf;
+  bigint maxsendbuf,maxrecvbuf;
   int *pproc,*gproc,*gsize;
   int maxpproc,maxgproc;
   bigint rvous_bytes;

@@ -1,0 +1,107 @@
+"SPARTA WWW Site"_sws - "SPARTA Documentation"_sd - "SPARTA Commands"_sc :c
+
+:link(sws,http://sparta.sandia.gov)
+:link(sd,Manual.html)
+:link(sc,Section_commands.html#comm)
+
+:line
+
+compute gas/reaction/grid command :h3
+
+[Syntax:]
+
+compute ID gas/reaction/grid group-ID mix-ID mode value1 value2 ... :pre
+
+ID is documented in "compute"_compute.html command :ulb,l
+gas/collision/grid = style name of this compute command :l
+group-ID = group ID for which grid cells to perform calculation on :l
+mix-ID = mixture ID to perform calculation on :l
+mode = {all} or {every} or {select} :l
+  {all} = single count of all reactions in each grid cell
+    {values} = none
+  {every} = count of each defined reaction in each grid cell
+    {values} = none
+  {select} = count of selected reactions in each grid cell
+    {values} = one or more numeric indices from 1 to M where M = # of defined reactions :pre
+:ule
+
+[Examples:]
+
+compute 1 gas/reaction/grid all all all
+compute 2 gas/reaction/grid subset mymixture all
+compute 4 gas/reaction/grid all all every
+compute 4 gas/reaction/grid all all select 5 7 14 :pre
+
+[Description:]
+
+Count the number of gas-phase reactions bewteen pairs of particles
+which occur in each grid cell during the current timestep.  Only gas
+collisions which result in chemical reactions are counted by this
+command, as defined by the "react"_react.html command and the list of
+reactions it reads from a file.  See the related "compute
+gas/collision/grid"_compute_gas_reaction_grid.html command to count
+collisions which do not induce reactions.
+
+Only reactions within grid cells in the grid group specified by
+{group-ID} and pairs of reactant particles with both species in the
+mixture specified by {mix-ID} are included.  See the "group
+grid"_group.html command for info on how grid cells can be assigned to
+grid groups.
+
+The results of this compute can be used by different commands in
+different ways.  The values for a single timestep can be output by the
+"dump grid"_dump.html command or used as inputs to the "compute
+reduce"_compute_reduce.html command.  The values can also be time
+averaged by the "fix ave/grid"_fix_ave_grid.html command.
+
+:line
+
+The {mode} argument determines how the reactions in each grid cell are
+counted.
+
+If {mode} is specified as {all} then a single count of all reactions
+is produced for each grid cell.  The compute calculates this count as
+a per-grid vector.
+
+If {mode} is specified as {every} then an individual count for each
+reaction is produced for each grid cell.  The number of possible
+reactions M are those listed in the file read by the
+"react"_react.html commmand.  The compute calculates these counts as a
+per-grid array, even if M = 1.
+
+If {mode} is specified as {select} then a count for each reaction in
+the specified list of numeric indices is produced for each grid cell.
+Each index must be a number from 1 to M, where M is the number of
+reactions listed in the file read by the "react"_react.html commmand.
+The compute calculates these counts as a per-grid array, even if only
+a single index is specified.
+
+:line
+
+[Output info:]
+
+If no numeric keywords are used, then this compute calculates a
+per-grid vector with the count of all reactions for each grid cell.
+
+If one or more numeric keywords are used, then this compute calculates
+a per-grid array.  The first column wlll be the count of all reactions.
+The remaining columns (one per numeric keyword) will be the counts of only
+the specific reactions listed.
+
+The vector or array can be accessed by any command that uses per-grid
+values from a compute as input.  See "Section
+6.4"_Section_howto.html#howto_4 for an overview of SPARTA output
+options.
+
+:line
+
+[Restrictions:] none
+
+[Related commands:]
+
+"compute gas/collision/grid"_compute_gas_collision_grid.html, "compute
+gas/reaction/tally"_compute_gas_reaction_tally.html, "dump
+grid"_dump.html
+
+[Default:] none
+

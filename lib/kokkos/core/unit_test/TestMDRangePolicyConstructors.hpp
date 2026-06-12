@@ -1,22 +1,15 @@
-//@HEADER
-// ************************************************************************
-//
-//                        Kokkos v. 4.0
-//       Copyright (2022) National Technology & Engineering
-//               Solutions of Sandia, LLC (NTESS).
-//
-// Under the terms of Contract DE-NA0003525 with NTESS,
-// the U.S. Government retains certain rights in this software.
-//
-// Part of Kokkos, under the Apache License v2.0 with LLVM Exceptions.
-// See https://kokkos.org/LICENSE for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-//
-//@HEADER
+// SPDX-FileCopyrightText: Copyright Contributors to the Kokkos project
 
 #include <gtest/gtest.h>
 
+#include <Kokkos_Macros.hpp>
+#ifdef KOKKOS_ENABLE_EXPERIMENTAL_CXX20_MODULES
+import kokkos.core;
+import kokkos.core_impl;
+#else
 #include <Kokkos_Core.hpp>
+#endif
 
 #include <regex>
 
@@ -121,6 +114,7 @@ TEST(TEST_CATEGORY_DEATH, policy_invalid_bounds) {
   // escape the parentheses in the regex to match the error message
   msg1 = std::regex_replace(msg1, std::regex("\\(|\\)"), "\\$&");
   (void)msg2;
+  ::testing::FLAGS_gtest_death_test_style = "threadsafe";
   ASSERT_DEATH({ (void)Policy({100, 100}, {90, 90}); }, msg1);
 #else
   if (!Kokkos::show_warnings()) {
@@ -140,5 +134,88 @@ TEST(TEST_CATEGORY_DEATH, policy_invalid_bounds) {
 #endif
 }
 #endif
+
+TEST(TEST_CATEGORY, policy_get_tile_size) {
+  constexpr int rank = 3;
+  using Policy    = Kokkos::MDRangePolicy<TEST_EXECSPACE, Kokkos::Rank<rank>>;
+  using tile_type = typename Policy::tile_type;
+
+  std::size_t last_rank =
+      (Policy::inner_direction == Kokkos::Iterate::Right) ? rank - 1 : 0;
+
+  auto default_size_properties =
+      Kokkos::Impl::get_tile_size_properties(TEST_EXECSPACE());
+
+  {
+    int dim_length = 100;
+    Policy policy_default({0, 0, 0}, {dim_length, dim_length, dim_length});
+
+    auto rec_tile_sizes      = policy_default.tile_size_recommended();
+    auto internal_tile_sizes = policy_default.m_tile;
+
+    for (std::size_t i = 0; i < rank; ++i) {
+      EXPECT_EQ(rec_tile_sizes[i], internal_tile_sizes[i])
+          << " incorrect recommended tile size returned for rank " << i;
+    }
+  }
+  {
+    int dim_length = 100;
+    Policy policy({0, 0, 0}, {dim_length, dim_length, dim_length},
+                  tile_type{{2, 4, 16}});
+
+    auto rec_tile_sizes = policy.tile_size_recommended();
+
+    EXPECT_EQ(default_size_properties.max_total_tile_size,
+              policy.max_total_tile_size());
+
+    int prod_rec_tile_size = 1;
+    for (std::size_t i = 0; i < rank; ++i) {
+      EXPECT_GT(rec_tile_sizes[i], 0)
+          << " invalid default tile size for rank " << i;
+
+      if (default_size_properties.default_largest_tile_size == 0) {
+        auto expected_rec_tile_size =
+            (i == last_rank) ? dim_length
+                             : default_size_properties.default_tile_size;
+        EXPECT_EQ(expected_rec_tile_size, rec_tile_sizes[i])
+            << " incorrect recommended tile size returned for rank " << i;
+      } else {
+        auto expected_rec_tile_size =
+            (i == last_rank) ? default_size_properties.default_largest_tile_size
+                             : default_size_properties.default_tile_size;
+        EXPECT_EQ(expected_rec_tile_size, rec_tile_sizes[i])
+            << " incorrect recommended tile size returned for rank " << i;
+      }
+
+      prod_rec_tile_size *= rec_tile_sizes[i];
+    }
+    EXPECT_LT(prod_rec_tile_size, policy.max_total_tile_size());
+  }
+}
+
+// The execution space is defaulted if not given to the constructor.
+TEST(TEST_CATEGORY, md_range_policy_default_space) {
+  using policy_t = Kokkos::MDRangePolicy<TEST_EXECSPACE, Kokkos::Rank<2>>;
+
+  policy_t defaulted({42, 47}, {666, 999});
+
+  ASSERT_EQ(defaulted.space(), TEST_EXECSPACE{});
+}
+
+// The execution space instance can be updated.
+TEST(TEST_CATEGORY, md_range_policy_impl_set_space) {
+  using policy_t = Kokkos::MDRangePolicy<TEST_EXECSPACE, Kokkos::Rank<2>>;
+
+  const auto [exec_old, exec_new] =
+      Kokkos::Experimental::partition_space(TEST_EXECSPACE{}, 1, 1);
+
+  const policy_t policy_old(exec_old, {42, 47}, {666, 999});
+  ASSERT_EQ(policy_old.space(), exec_old);
+
+  const policy_t policy_new(Kokkos::Impl::PolicyUpdate{}, policy_old, exec_new);
+  ASSERT_EQ(policy_new.space(), exec_new);
+  ASSERT_EQ(policy_new.m_lower, (typename policy_t::point_type{42, 47}));
+  ASSERT_EQ(policy_new.m_upper, (typename policy_t::point_type{666, 999}));
+}
 
 }  // namespace

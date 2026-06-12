@@ -1,18 +1,5 @@
-//@HEADER
-// ************************************************************************
-//
-//                        Kokkos v. 4.0
-//       Copyright (2022) National Technology & Engineering
-//               Solutions of Sandia, LLC (NTESS).
-//
-// Under the terms of Contract DE-NA0003525 with NTESS,
-// the U.S. Government retains certain rights in this software.
-//
-// Part of Kokkos, under the Apache License v2.0 with LLVM Exceptions.
-// See https://kokkos.org/LICENSE for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-//
-//@HEADER
+// SPDX-FileCopyrightText: Copyright Contributors to the Kokkos project
 
 #include <TestStdAlgorithmsCommon.hpp>
 
@@ -243,16 +230,15 @@ void run_and_check_transform_reduce_overloadA(ViewType1 first_view,
                                               ViewType2 second_view,
                                               ValueType init_value,
                                               ValueType result_value,
-                                              Args&&... args) {
+                                              Args const&... args) {
   // trivial cases
   const auto r1 = KE::transform_reduce(
       ExecutionSpace(), KE::cbegin(first_view), KE::cbegin(first_view),
-      KE::cbegin(second_view), init_value, std::forward<Args>(args)...);
+      KE::cbegin(second_view), init_value, args...);
 
-  const auto r2 =
-      KE::transform_reduce("MYLABEL", ExecutionSpace(), KE::cbegin(first_view),
-                           KE::cbegin(first_view), KE::cbegin(second_view),
-                           init_value, std::forward<Args>(args)...);
+  const auto r2 = KE::transform_reduce(
+      "MYLABEL", ExecutionSpace(), KE::cbegin(first_view),
+      KE::cbegin(first_view), KE::cbegin(second_view), init_value, args...);
 
   ASSERT_EQ(r1, init_value);
   ASSERT_EQ(r2, init_value);
@@ -260,18 +246,16 @@ void run_and_check_transform_reduce_overloadA(ViewType1 first_view,
   // non trivial cases
   const auto r3 = KE::transform_reduce(
       ExecutionSpace(), KE::cbegin(first_view), KE::cend(first_view),
-      KE::cbegin(second_view), init_value, std::forward<Args>(args)...);
+      KE::cbegin(second_view), init_value, args...);
 
   const auto r4 = KE::transform_reduce(
       "MYLABEL", ExecutionSpace(), KE::cbegin(first_view), KE::cend(first_view),
-      KE::cbegin(second_view), init_value, std::forward<Args>(args)...);
+      KE::cbegin(second_view), init_value, args...);
 
-  const auto r5 =
-      KE::transform_reduce(ExecutionSpace(), first_view, second_view,
-                           init_value, std::forward<Args>(args)...);
-  const auto r6 =
-      KE::transform_reduce("MYLABEL", ExecutionSpace(), first_view, second_view,
-                           init_value, std::forward<Args>(args)...);
+  const auto r5 = KE::transform_reduce(ExecutionSpace(), first_view,
+                                       second_view, init_value, args...);
+  const auto r6 = KE::transform_reduce("MYLABEL", ExecutionSpace(), first_view,
+                                       second_view, init_value, args...);
 
   ASSERT_EQ(r3, result_value);
   ASSERT_EQ(r4, result_value);
@@ -363,32 +347,30 @@ template <class ExecutionSpace, class ViewType, class ValueType, class... Args>
 void run_and_check_transform_reduce_overloadB(ViewType view,
                                               ValueType init_value,
                                               ValueType result_value,
-                                              Args&&... args) {
+                                              Args const&... args) {
   // trivial
-  const auto r1 =
-      KE::transform_reduce(ExecutionSpace(), KE::cbegin(view), KE::cbegin(view),
-                           init_value, std::forward<Args>(args)...);
+  const auto r1 = KE::transform_reduce(ExecutionSpace(), KE::cbegin(view),
+                                       KE::cbegin(view), init_value, args...);
 
-  const auto r2 = KE::transform_reduce("MYLABEL", ExecutionSpace(),
-                                       KE::cbegin(view), KE::cbegin(view),
-                                       init_value, std::forward<Args>(args)...);
+  const auto r2 =
+      KE::transform_reduce("MYLABEL", ExecutionSpace(), KE::cbegin(view),
+                           KE::cbegin(view), init_value, args...);
 
   ASSERT_EQ(r1, init_value);
   ASSERT_EQ(r2, init_value);
 
   // non trivial
-  const auto r3 =
-      KE::transform_reduce(ExecutionSpace(), KE::cbegin(view), KE::cend(view),
-                           init_value, std::forward<Args>(args)...);
+  const auto r3 = KE::transform_reduce(ExecutionSpace(), KE::cbegin(view),
+                                       KE::cend(view), init_value, args...);
 
-  const auto r4 = KE::transform_reduce("MYLABEL", ExecutionSpace(),
-                                       KE::cbegin(view), KE::cend(view),
-                                       init_value, std::forward<Args>(args)...);
-  const auto r5 = KE::transform_reduce(ExecutionSpace(), view, init_value,
-                                       std::forward<Args>(args)...);
+  const auto r4 =
+      KE::transform_reduce("MYLABEL", ExecutionSpace(), KE::cbegin(view),
+                           KE::cend(view), init_value, args...);
+  const auto r5 =
+      KE::transform_reduce(ExecutionSpace(), view, init_value, args...);
 
   const auto r6 = KE::transform_reduce("MYLABEL", ExecutionSpace(), view,
-                                       init_value, std::forward<Args>(args)...);
+                                       init_value, args...);
 
   ASSERT_EQ(r3, result_value);
   ASSERT_EQ(r4, result_value);

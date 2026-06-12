@@ -54,10 +54,10 @@ typedef struct s_COLLIDE_REDUCE COLLIDE_REDUCE;
 struct TagCollideResetVremax{};
 struct TagCollideZeroNN{};
 
-template < int NEARCP, int ATOMIC_REDUCTION >
+template < int NEARCP, int GASTALLY, int ATOMIC_REDUCTION >
 struct TagCollideCollisionsOne{};
 
-template < int ATOMIC_REDUCTION >
+template < int GASTALLY, int ATOMIC_REDUCTION >
 struct TagCollideCollisionsOneAmbipolar{};
 
 class CollideVSSKokkos : public CollideVSS {
@@ -67,7 +67,6 @@ class CollideVSSKokkos : public CollideVSS {
   CollideVSSKokkos(class SPARTA *, int, char **);
   ~CollideVSSKokkos();
   void init();
-  void reset_vremax();
   void collisions();
   void sync(ExecutionSpace, unsigned int);
   void modified(ExecutionSpace, unsigned int);
@@ -101,27 +100,34 @@ class CollideVSSKokkos : public CollideVSS {
   KOKKOS_INLINE_FUNCTION
   void operator()(TagCollideZeroNN, const int&) const;
 
-  template < int NEARCP, int ATOMIC_REDUCTION >
+  template < int NEARCP, int GASTALLY, int ATOMIC_REDUCTION >
   KOKKOS_INLINE_FUNCTION
-  void operator()(TagCollideCollisionsOne< NEARCP, ATOMIC_REDUCTION >, const int&) const;
+  void operator()(TagCollideCollisionsOne< NEARCP, GASTALLY, ATOMIC_REDUCTION >, const int&) const;
 
-  template < int NEARCP, int ATOMIC_REDUCTION >
+  template < int NEARCP, int GASTALLY, int ATOMIC_REDUCTION >
   KOKKOS_INLINE_FUNCTION
-  void operator()(TagCollideCollisionsOne< NEARCP, ATOMIC_REDUCTION >, const int&, COLLIDE_REDUCE&) const;
+  void operator()(TagCollideCollisionsOne< NEARCP, GASTALLY, ATOMIC_REDUCTION >, const int&, COLLIDE_REDUCE&) const;
 
-  template < int ATOMIC_REDUCTION >
+  template < int GASTALLY, int ATOMIC_REDUCTION >
   KOKKOS_INLINE_FUNCTION
-  void operator()(TagCollideCollisionsOneAmbipolar< ATOMIC_REDUCTION >, const int&) const;
+  void operator()(TagCollideCollisionsOneAmbipolar< GASTALLY, ATOMIC_REDUCTION >, const int&) const;
 
-  template < int ATOMIC_REDUCTION >
+  template < int GASTALLY, int ATOMIC_REDUCTION >
   KOKKOS_INLINE_FUNCTION
-  void operator()(TagCollideCollisionsOneAmbipolar< ATOMIC_REDUCTION >, const int&, COLLIDE_REDUCE&) const;
+  void operator()(TagCollideCollisionsOneAmbipolar< GASTALLY, ATOMIC_REDUCTION >, const int&, COLLIDE_REDUCE&) const;
+
+  typedef Kokkos::
+    DualView<Params**, Kokkos::LayoutRight, DeviceType> tdual_params_2d;
+  typedef tdual_params_2d::t_dev t_params_2d;
+  typedef tdual_params_2d::t_dev_const t_params_2d_const;
+  t_params_2d_const d_params_const;
 
  private:
   KOKKOS_INLINE_FUNCTION
   void ambi_reset_kokkos(int, int, int, int,
                          Particle::OnePart *, Particle::OnePart *,
                          Particle::OnePart *, const DAT::t_int_1d &) const;
+  void reset_vremax();
   int pack_grid_one(int, char *, int);
   int unpack_grid_one(int, char *);
   void copy_grid_one(int, int);
@@ -206,17 +212,14 @@ class CollideVSSKokkos : public CollideVSS {
 
   DAT::t_int_2d d_nn_last_partner;
 
-  template < int NEARCP > void collisions_one(COLLIDE_REDUCE&);
-  void collisions_one_ambipolar(COLLIDE_REDUCE&);
+  template < int NEARCP, int GASTALLY > void collisions_one(COLLIDE_REDUCE&);
+  template < int GASTALLY > void collisions_one_ambipolar(COLLIDE_REDUCE&);
 
   // VSS specific
 
   DAT::tdual_float_2d k_prefactor;
   DAT::t_float_2d d_prefactor;
 
-  typedef Kokkos::
-    DualView<Params**, Kokkos::LayoutRight, DeviceType> tdual_params_2d;
-  typedef tdual_params_2d::t_dev t_params_2d;
   tdual_params_2d k_params;
   t_params_2d d_params;
 

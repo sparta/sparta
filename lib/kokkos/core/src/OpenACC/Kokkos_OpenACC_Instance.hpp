@@ -1,18 +1,5 @@
-//@HEADER
-// ************************************************************************
-//
-//                        Kokkos v. 4.0
-//       Copyright (2022) National Technology & Engineering
-//               Solutions of Sandia, LLC (NTESS).
-//
-// Under the terms of Contract DE-NA0003525 with NTESS,
-// the U.S. Government retains certain rights in this software.
-//
-// Part of Kokkos, under the Apache License v2.0 with LLVM Exceptions.
-// See https://kokkos.org/LICENSE for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-//
-//@HEADER
+// SPDX-FileCopyrightText: Copyright Contributors to the Kokkos project
 
 #ifndef KOKKOS_OPENACC_INSTANCE_HPP
 #define KOKKOS_OPENACC_INSTANCE_HPP
@@ -30,11 +17,13 @@ namespace Kokkos::Experimental::Impl {
 class OpenACCInternal {
   bool m_is_initialized = false;
 
-  OpenACCInternal(const OpenACCInternal&) = default;
+  OpenACCInternal(const OpenACCInternal&)            = default;
   OpenACCInternal& operator=(const OpenACCInternal&) = default;
 
  public:
   static int m_acc_device_num;
+  static int m_concurrency;
+  static int m_next_async;
   int m_async_arg = acc_async_noval;
 
   OpenACCInternal() = default;
@@ -53,6 +42,24 @@ class OpenACCInternal {
 
   uint32_t instance_id() const noexcept;
 };
+
+// For each space in partition, assign a new async ID, ignoring weights
+template <class T>
+std::vector<OpenACC> impl_partition_space(const OpenACC& base_instance,
+                                          const std::vector<T>& weights) {
+  constexpr int KOKKOS_IMPL_ACC_ASYNC_RANGE_BEGIN  = 64;
+  constexpr int KOKKOS_IMPL_ACC_ASYNC_RANGE_LENGTH = 128;
+  std::vector<OpenACC> instances;
+  auto const n = weights.size();
+  instances.reserve(n);
+  std::generate_n(std::back_inserter(instances), n, [] {
+    OpenACCInternal::m_next_async = (OpenACCInternal::m_next_async + 1) %
+                                    KOKKOS_IMPL_ACC_ASYNC_RANGE_LENGTH;
+    return OpenACC(OpenACCInternal::m_next_async +
+                   KOKKOS_IMPL_ACC_ASYNC_RANGE_BEGIN);
+  });
+  return instances;
+}
 
 }  // namespace Kokkos::Experimental::Impl
 
