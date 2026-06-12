@@ -455,18 +455,52 @@ void FixAblate::init()
 
   // determine default collision/reaction model indices from existing surfaces
   // these values were set by surf_modify and are used during each ablation step
-  // to correctly re-assign models to newly created implicit surfaces
+  //   to correctly re-assign models to newly created implicit surfaces
+  // implicit surfs are distributed, so allreduce the values to procs
+  //   which own no surfs now, since ablation may create surfs in their cells
+  // error if surfs are not all assigned to the same models, e.g. by
+  //   surf_modify with multiple surf groups, since create_surfs() can only
+  //   re-assign one collision/reaction model to all new surfs
 
-  if (surf->nlocal > 0) {
+  int isc_local = -1;
+  int isr_local = -1;
+  int flag = 0;
+
+  int nslocal = surf->nlocal;
+
+  if (nslocal > 0) {
     if (dim == 2) {
-      isc_default = surf->lines[0].isc;
-      isr_default = surf->lines[0].isr;
+      Surf::Line *lines = surf->lines;
+      isc_local = lines[0].isc;
+      isr_local = lines[0].isr;
+      for (int i = 1; i < nslocal; i++)
+        if (lines[i].isc != isc_local || lines[i].isr != isr_local) flag = 1;
     } else {
-      isc_default = surf->tris[0].isc;
-      isr_default = surf->tris[0].isr;
+      Surf::Tri *tris = surf->tris;
+      isc_local = tris[0].isc;
+      isr_local = tris[0].isr;
+      for (int i = 1; i < nslocal; i++)
+        if (tris[i].isc != isc_local || tris[i].isr != isr_local) flag = 1;
     }
-    if (isc_default < 0) isc_default = 0;
   }
+
+  int local_vals[2],global_vals[2];
+  local_vals[0] = isc_local;
+  local_vals[1] = isr_local;
+  MPI_Allreduce(local_vals,global_vals,2,MPI_INT,MPI_MAX,world);
+  isc_default = global_vals[0];
+  isr_default = global_vals[1];
+
+  if (nslocal > 0 && (isc_local != isc_default || isr_local != isr_default))
+    flag = 1;
+
+  int allflag;
+  MPI_Allreduce(&flag,&allflag,1,MPI_INT,MPI_MAX,world);
+  if (allflag)
+    error->all(FLERR,"Fix ablate requires all surfs be assigned "
+               "to the same surface collision and reaction models");
+
+  if (isc_default < 0) isc_default = 0;
 }
 
 /* ---------------------------------------------------------------------- */
