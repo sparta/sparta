@@ -32,6 +32,7 @@
 #include "error.h"
 #include "kokkos_type.h"
 #include "particle_kokkos.h"
+#include "grid_kokkos.h"
 #include "sparta_masks.h"
 #include "variable.h"
 #include "Kokkos_Random.hpp"
@@ -121,25 +122,30 @@ void FixEmitFaceKokkos::init()
 
   k_mix_vscale  = DAT::tdual_float_1d("mix_vscale", nspecies);
   k_cummulative = DAT::tdual_float_1d("cummulative", nspecies);
-  k_species     = DAT::tdual_int_1d("species", nspecies);
+  k_mspecies    = DAT::tdual_int_1d("mspecies", nspecies);
+  k_fraction    = DAT::tdual_float_1d("fraction", nspecies);
 
   d_mix_vscale  = k_mix_vscale .view_device();
   d_cummulative = k_cummulative.view_device();
-  d_species     = k_species    .view_device();
+  d_mspecies    = k_mspecies   .view_device();
+  d_fraction    = k_fraction   .view_device();
 
   auto h_mix_vscale  = k_mix_vscale .view_host();
   auto h_cummulative = k_cummulative.view_host();
-  auto h_species     = k_species    .view_host();
+  auto h_mspecies    = k_mspecies   .view_host();
+  auto h_fraction    = k_fraction   .view_host();
 
   for (int isp = 0; isp < nspecies; ++isp) {
     h_mix_vscale(isp) = particle->mixture[imix]->vscale[isp];
     h_cummulative(isp) = particle->mixture[imix]->cummulative[isp];
-    h_species(isp) = particle->mixture[imix]->species[isp];
+    h_mspecies(isp) = particle->mixture[imix]->species[isp];
+    h_fraction(isp) = particle->mixture[imix]->fraction[isp];
   }
 
   k_mix_vscale .modify_host();
   k_cummulative.modify_host();
-  k_species    .modify_host();
+  k_mspecies   .modify_host();
+  k_fraction   .modify_host();
 }
 
 /* ----------------------------------------------------------------------
@@ -171,9 +177,7 @@ void FixEmitFaceKokkos::perform_task()
   // if subsonic, re-compute particle inflow counts for each task
   // also computes current per-task temp_thermal and vstream
 
-  if (subsonic)
-    error->one(FLERR,"Cannot yet use fix emit/face/kk with subsonic emission");
-  //if (subsonic) subsonic_inflow(); ////////////////////////
+  if (subsonic) subsonic_inflow();
 
   // if modulate variable set, evaluate it as prefactor for this timestep
 
@@ -258,11 +262,11 @@ void FixEmitFaceKokkos::perform_task()
   // copy needed mixture data to device
 
   k_mix_vscale .sync_device();
-  k_species    .sync_device();
+  k_mspecies   .sync_device();
   k_cummulative.sync_device();
 
   auto ld_mix_vscale = d_mix_vscale;
-  auto ld_species    = d_species   ;
+  auto ld_mspecies   = d_mspecies  ;
 
   ParticleKokkos* particle_kk = ((ParticleKokkos*)particle);
   particle_kk->update_class_variables();
@@ -329,7 +333,7 @@ void FixEmitFaceKokkos::perform_task()
     auto vscale_val = (l_subsonic_style == PONLY) ?
       ld_vscale(i, isp) : ld_mix_vscale(isp);
 
-    auto ispecies = ld_species(isp);
+    auto ispecies = ld_mspecies(isp);
 
     double x[3];
     for (int d = 0; d < l_dimension; ++d) x[d] = ld_x(cand, d);
@@ -443,7 +447,7 @@ void FixEmitFaceKokkos::operator()(TagFixEmitFace_perform_task, const int &i, in
       auto vscale_val = (subsonic_style == PONLY) ?
         d_vscale(i, isp) : d_mix_vscale(isp);
 
-      auto ispecies = d_species[isp];
+      auto ispecies = d_mspecies[isp];
       auto ninsert = d_ninsert(i * nspecies + isp);
       auto start = d_task2cand(i * nspecies + isp);
       auto scosine = indot / vscale_val;
@@ -506,7 +510,7 @@ void FixEmitFaceKokkos::operator()(TagFixEmitFace_perform_task, const int &i, in
       while (d_cummulative[isp] < rn) isp++;
       auto vscale_val = (subsonic_style == PONLY) ?
         d_vscale(i, isp) : d_mix_vscale(isp);
-      auto ispecies = d_species[isp];
+      auto ispecies = d_mspecies[isp];
       auto scosine = indot / vscale_val;
 
       double x[3];
@@ -556,6 +560,254 @@ void FixEmitFaceKokkos::operator()(TagFixEmitFace_perform_task, const int &i, in
   }
 
   rand_pool.free_state(rand_gen);
+}
+
+/* ----------------------------------------------------------------------
+   recalculate task properties based on subsonic BC
+------------------------------------------------------------------------- */
+
+void FixEmitFaceKokkos::subsonic_inflow()
+{
+  // for grid cells that are part of tasks:
+  // calculate local nrho, vstream, and thermal temperature
+  // if needed sort particles for grid cells with tasks
+
+  subsonic_sort();
+  subsonic_grid();
+
+  // recalculate particle insertion counts for each task
+  // recompute mixture vscale, since depends on temp_thermal
+
+  ParticleKokkos* particle_kk = (ParticleKokkos*) particle;
+  particle_kk->sync(Device,SPECIES_MASK);
+  d_species = particle_kk->k_species.view_device();
+
+  GridKokkos* grid_kk = (GridKokkos*) grid;
+  grid_kk->sync(Device,CINFO_MASK);
+  d_cinfo = grid_kk->k_cinfo.view_device();
+
+  k_tasks.sync_device();
+  if (perspecies) k_ntargetsp.sync_device();
+  k_mspecies.sync_device();
+  k_fraction.sync_device();
+
+  boltz = update->boltz;
+
+  int errflag = 0;
+  copymode = 1;
+  Kokkos::parallel_reduce(Kokkos::RangePolicy<DeviceType, TagFixEmitFace_subsonic_inflow>(0,ntask),*this,errflag);
+  copymode = 0;
+
+  k_tasks.modify_device();
+  if (perspecies) k_ntargetsp.modify_device();
+
+  if (errflag)
+    error->one(FLERR,
+               "Fix emit/face subsonic insertion count exceeds 32-bit int");
+}
+
+KOKKOS_INLINE_FUNCTION
+void FixEmitFaceKokkos::operator()(TagFixEmitFace_subsonic_inflow, const int &i, int &errflag) const
+{
+  double *vstream = d_tasks(i).vstream;
+  double *normal = d_tasks(i).normal;
+  const double indot = vstream[0]*normal[0] + vstream[1]*normal[1] +
+    vstream[2]*normal[2];
+
+  const double area = d_tasks(i).area;
+  const double nrho = d_tasks(i).nrho;
+  const double temp_thermal = d_tasks(i).temp_thermal;
+  const int icell = d_tasks(i).icell;
+
+  double ntarget = 0.0;
+  for (int isp = 0; isp < nspecies; isp++) {
+    const double mass = d_species[d_mspecies[isp]].mass;
+    const double vscale = sqrt(2.0 * boltz * temp_thermal / mass);
+    double ntargetsp = mol_inflow_kokkos(indot,vscale,d_fraction[isp]);
+    ntargetsp *= nrho*area*dt / fnum;
+    ntargetsp /= d_cinfo[icell].weight;
+    ntarget += ntargetsp;
+    if (perspecies) d_ntargetsp(i,isp) = ntargetsp;
+  }
+  d_tasks(i).ntarget = ntarget;
+  if (ntarget >= MAXSMALLINT) errflag++;
+}
+
+/* ----------------------------------------------------------------------
+   sort particles into grid cells on device
+   same compressed per-cell particle lists as built for collisions,
+   used in lieu of the linked lists built by FixEmitFace::subsonic_sort()
+------------------------------------------------------------------------- */
+
+void FixEmitFaceKokkos::subsonic_sort()
+{
+  ParticleKokkos* particle_kk = (ParticleKokkos*) particle;
+  if (!particle_kk->sorted_kk) particle_kk->sort_kokkos();
+}
+
+/* ----------------------------------------------------------------------
+   compute number density, thermal temperature, stream velocity
+   only for grid cells associated with a task
+   first compute for grid cells, then adjust due to boundary conditions
+------------------------------------------------------------------------- */
+
+void FixEmitFaceKokkos::subsonic_grid()
+{
+  ParticleKokkos* particle_kk = (ParticleKokkos*) particle;
+  particle_kk->sync(Device,PARTICLE_MASK|SPECIES_MASK);
+  d_particles = particle_kk->k_particles.view_device();
+  d_species = particle_kk->k_species.view_device();
+
+  // refresh particle_kk_copy since particle data structures may
+  //   have changed since the last copy, e.g. by sort or grow
+
+  particle_kk->update_class_variables();
+  particle_kk_copy.copy(particle_kk);
+
+  GridKokkos* grid_kk = (GridKokkos*) grid;
+  grid_kk->sync(Device,CINFO_MASK);
+  d_cinfo = grid_kk->k_cinfo.view_device();
+  d_plist = grid_kk->d_plist;
+  d_cellcount = grid_kk->d_cellcount;
+
+  k_tasks.sync_device();
+  if (subsonic_style == PONLY) {
+    k_vscale.sync_device();
+    k_mspecies.sync_device();
+  }
+
+  boltz = update->boltz;
+  temp_thermal_mix = particle->mixture[imix]->temp_thermal;
+
+  if (d_tempmax.data() == nullptr)
+    d_tempmax = DAT::t_float_scalar("emit/face:tempmax");
+  Kokkos::deep_copy(d_tempmax,0.0);
+
+  copymode = 1;
+  Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagFixEmitFace_subsonic_grid>(0,ntask),*this);
+  copymode = 0;
+
+  k_tasks.modify_device();
+  if (subsonic_style == PONLY) k_vscale.modify_device();
+
+  d_particles = t_particle_1d(); // destroy reference to reduce memory use
+  d_plist = {};
+
+  // test if any task has invalid thermal temperature for first time
+
+  double tempmax = 0.0;
+  Kokkos::deep_copy(tempmax,d_tempmax);
+  int temp_exceed_flag = 0;
+  if (tempmax > TEMPLIMIT) temp_exceed_flag = 1;
+
+  if (!subsonic_warning)
+    subsonic_warning = subsonic_temperature_check(temp_exceed_flag,tempmax);
+}
+
+KOKKOS_INLINE_FUNCTION
+void FixEmitFaceKokkos::operator()(TagFixEmitFace_subsonic_grid, const int &i) const
+{
+  const int icell = d_tasks(i).pcell;
+  const int np = d_cellcount(icell);
+
+  // accumulate needed per-particle quantities
+  // mv = mass*velocity terms, masstot = total mass
+  // gamma = rotational/tranlational DOFs
+
+  double mv[4];
+  mv[0] = mv[1] = mv[2] = mv[3] = 0.0;
+  double masstot = 0.0;
+  double gamma = 0.0;
+
+  for (int n = 0; n < np; n++) {
+    const int ip = d_plist(icell,n);
+    const int ispecies = d_particles[ip].ispecies;
+    const double mass = d_species[ispecies].mass;
+    const double *v = d_particles[ip].v;
+    mv[0] += mass*v[0];
+    mv[1] += mass*v[1];
+    mv[2] += mass*v[2];
+    mv[3] += mass * (v[0]*v[0]+v[1]*v[1]+v[2]*v[2]);
+    masstot += mass;
+    gamma += 1.0 + 2.0 / (3.0 + d_species[ispecies].rotdof);
+  }
+
+  // compute/store nrho, 3 temps, vstream for task
+  // also vscale for PONLY
+  // if sound speed = 0.0 due to <= 1 particle in cell or
+  //   all particles having COM velocity, set via mixture properties
+
+  double *vstream = d_tasks(i).vstream;
+  if (np) {
+    vstream[0] = mv[0] / masstot;
+    vstream[1] = mv[1] / masstot;
+    vstream[2] = mv[2] / masstot;
+  } else vstream[0] = vstream[1] = vstream[2] = 0.0;
+
+  double temp_thermal_cell;
+
+  if (subsonic_style == PTBOTH) {
+    d_tasks(i).nrho = nsubsonic;
+    temp_thermal_cell = tsubsonic;
+
+  } else {
+    const double nrho_cell = np * fnum / d_cinfo[icell].volume;
+    const double massrho_cell = masstot * fnum / d_cinfo[icell].volume;
+    if (np > 1) {
+      const double ke = mv[3]/np -
+        (mv[0]*mv[0] + mv[1]*mv[1] + mv[2]*mv[2])/np/masstot;
+      temp_thermal_cell = tprefactor * ke;
+    } else temp_thermal_cell = temp_thermal_mix;
+
+    const double press_cell = nrho_cell * boltz * temp_thermal_cell;
+    double soundspeed_cell;
+    if (np) {
+      const double mass_cell = masstot / np;
+      const double gamma_cell = gamma / np;
+      soundspeed_cell = sqrt(gamma_cell*boltz*temp_thermal_cell / mass_cell);
+    } else soundspeed_cell = soundspeed_mixture;
+
+    d_tasks(i).nrho = nrho_cell +
+      (psubsonic - press_cell) / (soundspeed_cell*soundspeed_cell);
+    temp_thermal_cell = psubsonic / (boltz * d_tasks(i).nrho);
+    if (temp_thermal_cell > TEMPLIMIT)
+      Kokkos::atomic_max(&d_tempmax(),temp_thermal_cell);
+
+    if (np) {
+      const int ndim = d_tasks(i).ndim;
+      const double sign = d_tasks(i).normal[ndim];
+      vstream[ndim] += sign *
+        (psubsonic - press_cell) / (massrho_cell*soundspeed_cell);
+    }
+
+    for (int m = 0; m < nspecies; m++) {
+      const int ispecies = d_mspecies[m];
+      d_vscale(i,m) = sqrt(2.0 * boltz * temp_thermal_cell /
+                           d_species[ispecies].mass);
+    }
+  }
+
+  d_tasks(i).temp_thermal = temp_thermal_cell;
+  d_tasks(i).temp_rot = d_tasks(i).temp_vib = temp_thermal_cell;
+}
+
+/* ----------------------------------------------------------------------
+   device version of FixEmit::mol_inflow()
+   calculate flux of particles of a species with vscale/fraction
+     entering a grid cell
+   see comments for FixEmit::mol_inflow()
+------------------------------------------------------------------------- */
+
+KOKKOS_INLINE_FUNCTION
+double FixEmitFaceKokkos::mol_inflow_kokkos(double indot, double vscale,
+                                            double fraction) const
+{
+  const double scosine = indot / vscale;
+  if (scosine < -3.0) return 0.0;
+  const double inward_number_flux = vscale*fraction *
+    (exp(-scosine*scosine) + MY_PIS*scosine*(1.0 + erf(scosine))) /
+    (2*MY_PIS);
+  return inward_number_flux;
 }
 
 /* ----------------------------------------------------------------------
