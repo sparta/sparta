@@ -2949,7 +2949,7 @@ void SurfReactAdsorb::PS_react(int isurf, int isc, double *norm)
         tally_single[ireaction]++;
         if (ncompute_tally)
           for (m = 0; m < ncompute_tally; m++)
-            clist_active[m]->surf_tally(0.0,isurf,-1,ireaction,NULL,NULL,NULL);
+            clist_active[m]->surf_tally(0.0,isurf,-1,ireaction+1,NULL,NULL,NULL);
 
         // update tau
 
