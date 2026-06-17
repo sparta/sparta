@@ -103,6 +103,8 @@ set(TARGET_SPARTA spa_${SPARTA_MACHINE})
 
 set(TARGET_SPARTA_LIB sparta_${SPARTA_MACHINE})
 if(BUILD_SHARED_LIBS)
+  # Force PIC so intermediate static package libs link into the shared libsparta
+  set(CMAKE_POSITION_INDEPENDENT_CODE ON)
   set(TARGET_SPARTA_LIB_LINK "libsparta${CMAKE_SHARED_LIBRARY_SUFFIX}")
   set(TARGET_SPARTA_LIB_NAME
       "libsparta_${SPARTA_MACHINE}${CMAKE_SHARED_LIBRARY_SUFFIX}")
