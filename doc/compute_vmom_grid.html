@@ -1,0 +1,135 @@
+<HTML>
+<CENTER><A HREF = "https://sparta.github.io">SPARTA WWW Site</A> - <A HREF = "Manual.html">SPARTA Documentation</A> - <A HREF = "Section_commands.html#comm">SPARTA Commands</A> 
+</CENTER>
+
+
+
+
+
+
+<HR>
+
+<H3>compute vmom/grid command 
+</H3>
+<P><B>Syntax:</B>
+</P>
+<PRE>compute ID vmom/grid group-ID mix-ID value1 value2 ... 
+</PRE>
+<UL><LI>ID is documented in <A HREF = "compute.html">compute</A> command 
+
+<LI>vmom/grid = style name of this compute command 
+
+<LI>group-ID = group ID for which grid cells to perform calculation on 
+
+<LI>mix-ID = mixture ID to perform calculation on 
+
+<LI>one or more values can be appended 
+
+<LI>value = <I>v2</I> or <I>vx3</I> or <I>vy3</I> or <I>vz3</I> or <I>v4</I> 
+
+<PRE>  <I>v2</I> = second velocity moment
+  <I>vx3</I> or <I>vy3</I> or <I>vz3</I> = third velocity moment in the x,y,z direction
+  <I>v4</I> = fourth velocity moment 
+</PRE>
+
+</UL>
+<P><B>Examples:</B>
+</P>
+<PRE>compute 1 vmom/grid all air v2
+compute 1 thermal/grid subset species vx3 v4 
+</PRE>
+<P>These commands will dump time averaged velocity moments for
+each species and each grid cell to a dump file every 1000 steps:
+</P>
+<PRE>compute 1 vmom/grid species v4
+fix 1 ave/grid 10 100 1000 c_1[*]
+dump 1 grid all 1000 tmp.vmom id f_1[*] 
+</PRE>
+<P><B>Description:</B>
+</P>
+<P>Define a computation that calculates one or more values for each grid
+cell in a grid cell group, which are based on the particle velocities.
+The values are tallied separately for each group of species in the
+specified mixture, as described in
+the Output section below.  See the mixture command for how a set of
+species can be partitioned into groups.
+</P>
+<P>Only grid cells in the grid group specified by <I>group-ID</I> are included
+in the calculation.  See the <A HREF = "group.html">group grid</A> command for info
+on how grid cells can be assigned to grid groups.
+</P>
+<P>The results of this compute can be used by different commands in
+different ways.  The values for a single timestep can be output by the
+<A HREF = "dump.html">dump grid</A> command.
+</P>
+<P>The values over many sampling timesteps can be averaged by the <A HREF = "fix_ave_grid.html">fix
+ave/grid</A> command.  It does its averaging as if the
+particles in the cell at each sampling timestep were combined together
+into one large set of particles to compute the formulas below.  
+</P>
+<P>Note that this is a different form of averaging than taking the values
+produced by the formulas below for a single timestep, summing those
+values over the sampling timesteps, and then dividing by the number of
+sampling steps.
+</P>
+<HR>
+
+<P>Calculation of the velocity moment is an ensemble average of the velocities
+of all particles in the cell. Formulas for each moment is shown below:
+</P>
+<PRE>Vsq_i = Vx_i*Vx_i + Vy_i*Vy_i + Vz_i*Vz_i
+<v^2> = Sum_i (mass_i Vsq_i) / Sum_i (mass_i)
+<v^3>_x = Sum_i (mass_i * Vx_i * Vsq_i) / Sum_i (mass_i)
+<v^3>_y = Sum_i (mass_i * Vy_i * Vsq_i) / Sum_i (mass_i)
+<v^3>_z = Sum_i (mass_i * Vz_i * Vsq_i) / Sum_i (mass_i)
+<v^4> = Sum_i (mass_i * Vx_i * Vx_i * Vx_i * Vx_i) / Sum_i (mass_i) 
+</PRE>
+<P>The velocity of particle "i" is (Vx_i,Vy_i,Vz_i), and the mass of particle "i"
+is mass_i. Notice that <v^4> is measured only from x-velocity components.
+</P>
+<HR>
+
+<P><B>Output info:</B>
+</P>
+<P>This compute calculates a per-grid array, with the number of columns
+equal to the number of values times the number of groups.  The
+ordering of columns is first by values, then by groups.  I.e. if the
+<I>temp</I> and <I>press</I> values were specified as keywords, then the first
+two columns would be <I>temp</I> and <I>press</I> for the first group, the 3rd
+and 4th columns would be <I>temp</I> and <I>press</I> for the second group, etc.
+</P>
+<P>This compute performs calculations for all flavors of child grid cells
+in the simulation, which includes unsplit, cut, split, and sub cells.
+See <A HREF = "Section_howto.html#howto_8">Section 6.8</A> of the manual gives
+details of how SPARTA defines child, unsplit, split, and sub cells.
+Note that cells inside closed surfaces contain no particles.  These
+could be unsplit or cut cells (if they have zero flow volume).  Both
+of these kinds of cells will compute a zero result for all their
+values.  Likewise, split cells store no particles and will produce a
+zero result.  This is because their sub-cells actually contain the
+particles that are geometrically inside the split cell.
+</P>
+<P>Grid cells not in the specified <I>group-ID</I> will output zeroes for all
+their values.
+</P>
+<P>The array can be accessed by any command that uses per-grid values
+from a compute as input.  See <A HREF = "Section_howto.html#howto_4">Section 6.4</A>
+for an overview of SPARTA output options.
+</P>
+<P>The per-grid array values will be in the <A HREF = "units.html">units</A>
+appropriate to the individual values as described above.  <I>v2</I> is in
+velocity^2 units.  <I>v3x</I>, <I>vy3</I>, and <I>vz3</I> is in velocity^3 units.
+<I>v4</I> is in velocity^4 units.
+</P>
+<HR>
+
+<P><B>Restrictions:</B> none
+</P>
+<P><B>Related commands:</B>
+</P>
+<P><A HREF = "compute_grid.txt">compute grid</A>, <A HREF = "fix_ave_grid.html">fix ave/grid</A>,
+<A HREF = "dump.html">dump grid</A>
+</P>
+<P><B>Default:</B> none
+</P>
+</HTML>

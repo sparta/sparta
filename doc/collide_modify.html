@@ -17,7 +17,7 @@
 </PRE>
 <UL><LI>one or more keyword/value pairs may be listed 
 
-<LI>keywords = <I>vremax</I> or <I>remain</I> or <I>ambipolar</I> or <I>nearcp</I> or <I>rotate</I> or <I>vibrate</I> 
+<LI>keywords = <I>vremax</I> or <I>remain</I> or <I>ambipolar</I> or <I>nearcp</I> or <I>rotate</I> or <I>vibrate</I> or <I>stochastic_weight</I> or <I>split</I> or <I>reduce</I>
 
 <PRE>  <I>vremax</I> values = Nevery startflag
     Nevery = zero vremax every this many timesteps
@@ -28,7 +28,17 @@
     Nlimit = max # of attempts made to find a collision partner
   <I>ambipolar</I> value = <I>no</I> or <I>yes</I>
   <I>rotate</I> value = <I>no</I> or <I>smooth</I>
-  <I>vibrate</I> value = <I>no</I> or <I>smooth</I> or <I>discrete</I> 
+  <I>vibrate</I> value = <I>no</I> or <I>smooth</I> or <I>discrete</I>
+  <I>stochastic_weight</I> value = <I>yes</I> or <I>no</I> to use variable particle weights
+  <I>split</I> values = Ncmin wtf
+    Ncmin = minimum number of particles in a cell below which splitting occurs
+    wtf = weight transfer function (value >= 0)
+  <I>reduce</I> values = reduction_choice group_choice Ncmax Ngmin Ngmax
+    reduction_choice = <I>energy</I> or <I>heat</I> or <I>stress</I> = how to reduce particles
+    group_choice = <I>binary</I> or <I>weight</I> = how to group particles
+    Ncmax = maximum number of particles in a cell before reduction occurs
+    Ngmin = minimum number of particles in a group to reduce
+    Ngmax = maximum number of particles in a group before reduction occurs
 </PRE>
 
 </UL>
@@ -36,7 +46,10 @@
 </P>
 <PRE>collide_modify vremax 1000 yes
 collide_modify vremax 0 no remain no
-collide_modify ambipolar yes 
+collide_modify ambipolar yes
+collide_modify stochastic_weight yes
+collide_modify split 8 1.0
+collide_modify reduce energy binary 32 4 16
 </PRE>
 <P><B>Description:</B>
 </P>
@@ -143,7 +156,84 @@ the per-particle mode values.
 </P>
 <HR>
 
-<P><B>Restrictions:</B> none
+<P>The <I>stochastic_weight</I> keyword enables or disables variable particle
+weights.  The variable particle weight model is the stochastic weighted
+particle method (SWPM) <A HREF = "#Rjasanow05">(Rjasanow05)</A>. If <I>no</I> is specified,
+the DSMC model, which is the default, is used.
+</P>
+<P>If <I>yes</I> is specified, then SWPM is used.  The per-particle stochastic
+weights are stored in a custom particle attribute that is registered by
+the <A HREF = "fix_stochastic_weight.html">fix stochastic_weight</A> command, so that
+fix must be defined before <I>stochastic_weight yes</I> is specified.  Each
+weight is relative to the global <I>fnum</I>.  Stochastic weighting and
+grid-based particle weighting (the <A HREF = "global.html">global weight</A> command)
+are mutually exclusive and cannot both be enabled.
+</P>
+<P>SWPM is composed of two stages: particle splitting and particle
+reduction.  The <I>split</I> keyword controls splitting.  Particle splitting
+occurs when a cell has fewer than <I>Ncmin</I> particles.  Every colliding
+pair creates two child particles so that the total number of particles
+after each collision is four.  Only the child particles collide; the
+velocities of the parent particles remain unchanged.
+</P>
+<P>The weight of the child particles is defined by the weight transfer
+function <I>G</I>, where the weight of each child particle is set to <I>G</I>.  In
+SPARTA it is assumed <I>G</I> = max(<I>g_i</I>,<I>g_j</I>)/(1 + <I>wtf</I>) where <I>g_i</I> and
+<I>g_j</I> are the weights of the parent particles and <I>wtf</I> >= 0 is the
+weight transfer factor.
+</P>
+<P>The <I>reduce</I> keyword enables and configures particle reduction.  Particle
+reduction replaces the particles in a cell with a smaller number of
+particles while conserving certain physical quantities of interest.  If
+the <I>reduce</I> keyword is not specified, particle reduction is not used.
+The particles are first divided into groups and then each group is
+reduced.  Reduction can only be used after <I>stochastic_weight yes</I> has
+been specified.
+</P>
+<P>The <I>reduction_choice</I> (the first <I>reduce</I> value) is either <I>energy</I>,
+<I>heat</I>, or <I>stress</I>.  In all choices, the mass and momentum of each group
+are conserved.  If <I>energy</I> is chosen, the energy of each group is
+conserved.  If <I>heat</I> is chosen, the energy and heat flux of each group
+are conserved.  If <I>stress</I> is chosen, the energy, heat flux, and stress
+tensor of each group are conserved.  For the first two choices, all
+particles in a group are replaced by two particles.  For the last choice,
+all particles in a group are replaced by at most six particles.
+</P>
+<P><I>Ncmax</I> is the maximum number of particles a cell may have before
+particle reduction is triggered.  If a cell has more than <I>Ncmax</I>
+particles, particle reduction is called; otherwise it is skipped.
+</P>
+<P>The <I>group_choice</I> is either <I>binary</I> or <I>weight</I>.  Particles are grouped
+using a binary tree strategy.  The root node contains all particles and
+is split into two leaves; particles are sorted into each leaf according
+to their velocity.  The leaf nodes recursively divide until the number of
+particles in a node is less than <I>Ngmax</I>.  If <I>binary</I> grouping is used,
+the particles are divided by comparing their velocities with respect to a
+plane whose normal is the eigenvector corresponding to the largest
+eigenvalue of the covariance matrix of the particle velocities.  The
+<I>weight</I> grouping first divides the particles in the root node by weight
+into three groups: small, medium, and large weights.  Particles with
+large weights are not eligible to reduce; medium and small particles are
+reduced separately.  Each group is then recursively divided using the
+<I>binary</I> grouping.
+</P>
+<P><I>Ngmin</I> and <I>Ngmax</I> are the minimum and maximum number of particles in a
+group eligible for reduction.  A group is only reduced if it contains more
+than <I>Ngmin</I> particles.  Because <I>energy</I> and <I>heat</I> reduction emit two
+particles per group, <I>Ngmin</I> must be >= 2 for those schemes (so each
+reduced group has at least 3 particles).  <I>stress</I> reduction emits up to
+six particles per group, so <I>Ngmin</I> must be >= 6 (so each reduced group
+has more than 6 particles).  An error is flagged by the collide_modify
+command if these limits are violated.
+</P>
+<HR>
+
+<P><B>Restrictions:</B>
+</P>
+<P>The SWPM capabilities are currently limited to monoatomic, single-species gases.
+</P>
+<P>SWPM can be used with adaptive grids but will cause a significant increase
+in the number of particles.
 </P>
 <P><B>Related commands:</B>
 </P>
@@ -152,7 +242,7 @@ the per-particle mode values.
 <P><B>Default:</B>
 </P>
 <P>The option defaults are vremax = (0,yes), remain = yes, ambipolar no,
-nearcp no, rotate smooth, and vibrate = no.
+nearcp no, rotate smooth, vibrate = no, <I>stochastic_weight</I> = no, and <I>reduce</I> = no.
 </P>
 <HR>
 
@@ -163,5 +253,10 @@ Collision-Partner Selection Schemes on the Accuracy and Efficiency of
 the Direct Simulation Monte Carlo Method," International Journal for
 Numerical Methods in Fluids, 67(8):1057-1072. DOI:10.1002/fld.2409
 (2011).
+</P>
+<A NAME = "Rjasanow05"></A>
+
+<P><B>(Rjasanow05)</B> S. Rjasanow, W. Wagner, "Stochastic Numerics for the Boltzmann
+Equation," Springer. (2005).
 </P>
 </HTML>
