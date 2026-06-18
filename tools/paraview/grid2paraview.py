@@ -1547,10 +1547,12 @@ if __name__ == "__main__":
                                      time_steps_dict, args.paraview_output_file)
       else:
         # Use multiprocessing on other platforms
-        try:
-          mp.set_start_method('spawn', force=True)
-        except RuntimeError:
-          pass
+        # macOS requires 'spawn' start method; Linux uses the default 'fork'
+        if platform.system() == 'Darwin':
+          try:
+            mp.set_start_method('spawn', force=True)
+          except RuntimeError:
+            pass
         
         pool = mp.Pool()
         for idx, chunk in enumerate(chunking):
