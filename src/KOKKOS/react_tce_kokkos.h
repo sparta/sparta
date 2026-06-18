@@ -34,7 +34,7 @@ class ReactTCEKokkos : public ReactBirdKokkos {
   ReactTCEKokkos(class SPARTA* sparta) : ReactBirdKokkos(sparta) {copy = 1;}
   void init();
   int attempt(Particle::OnePart *, Particle::OnePart *,
-              double, double, double, double &, int &) {return 0;}
+              double, double, double, double, double &, int &) { return 0; }
 
 /* ---------------------------------------------------------------------- */
 
@@ -130,9 +130,10 @@ enum{DISSOCIATION,EXCHANGE,IONIZATION,RECOMBINATION};   // other files
 
 KOKKOS_INLINE_FUNCTION
 int attempt_kk(Particle::OnePart *ip, Particle::OnePart *jp,
-         double pre_etrans, double pre_erot, double pre_evib,
+         double pre_etrans, double pre_erot, double pre_evib, double pre_eelec,
          double &post_etotal, int &kspecies,
-         int &recomb_species, double &recomb_density, const t_species_1d_const &d_species) const
+         int &recomb_species, double &recomb_density, const t_species_1d_const &d_species,
+         const double idof, const double jdof) const
 {
   OneReactionKokkos *r;
 
@@ -167,7 +168,7 @@ int attempt_kk(Particle::OnePart *ip, Particle::OnePart *jp,
 
     // ignore energetically impossible reactions
 
-    const double pre_etotal = pre_etrans + pre_erot + pre_evib;
+    const double pre_etotal = pre_etrans + pre_erot + pre_evib + pre_eelec;
 
     // two options for total energy in TCE model
     // 0: partialEnergy = true: rDOF model
@@ -229,6 +230,10 @@ int attempt_kk(Particle::OnePart *ip, Particle::OnePart *jp,
             if (isnan(zi) || isnan(zj) || zi < 0 || zj < 0) Kokkos::abort("Root-Finding Error\n");
             z += 0.5 * (zi+zj);
        }
+
+       // electronic DoF read from per-state input (idof/jdof precomputed by caller)
+
+       if (elecstyle == DISCRETE) z += 0.5*(idof + jdof);
     }
 
     // compute probability of reaction
@@ -335,6 +340,7 @@ int attempt_kk(Particle::OnePart *ip, Particle::OnePart *jp,
 
  protected:
   int vibstyle;
+  int elecstyle;
   double boltz;
 
   DAT::tdual_int_scalar k_error_flag;

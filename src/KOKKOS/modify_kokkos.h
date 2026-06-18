@@ -34,7 +34,7 @@ class ModifyKokkos : public Modify {
   void grid_changed();
   void custom_surf_changed();
 
-  void update_custom(int, double, double, double, double *);
+  void update_custom(int, double, double, double, double, double *);
   void gas_react(int);
   void surf_react(Particle::OnePart *, int &, int &);
 

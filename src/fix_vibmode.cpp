@@ -62,9 +62,9 @@ FixVibmode::FixVibmode(SPARTA *sparta, int narg, char **arg) :
   // check if custom attribute already exists, due to restart file
   // else create per-particle attribute
 
-  vibmodeindex = particle->find_custom((char *) "vibmode");
-  if (vibmodeindex < 0)
-    vibmodeindex = particle->add_custom((char *) "vibmode",INT,maxmode);
+  index_vibmode = particle->find_custom((char *) "vibmode");
+  if (index_vibmode < 0)
+    index_vibmode = particle->add_custom((char *) "vibmode",INT,maxmode);
 }
 
 /* ---------------------------------------------------------------------- */
@@ -74,7 +74,7 @@ FixVibmode::~FixVibmode()
   if (copy) return;
 
   delete random;
-  particle->remove_custom(vibmodeindex);
+  particle->remove_custom(index_vibmode);
 }
 
 /* ---------------------------------------------------------------------- */
@@ -105,9 +105,9 @@ void FixVibmode::init()
 
 void FixVibmode::update_custom(int index, double temp_thermal,
                                double temp_rot, double temp_vib,
-                               double *vstream)
+                               double, double *vstream)
 {
-  int **vibmode = particle->eiarray[particle->ewhich[vibmodeindex]];
+  int **vibmode = particle->eiarray[particle->ewhich[index_vibmode]];
 
   int isp = particle->particles[index].ispecies;
   int nmode = particle->species[isp].nvibmode;

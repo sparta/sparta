@@ -64,6 +64,8 @@ action compute_temp_kokkos.cpp
 action compute_temp_kokkos.h
 action compute_thermal_grid_kokkos.cpp
 action compute_thermal_grid_kokkos.h
+action compute_telec_grid_kokkos.cpp
+action compute_telec_grid_kokkos.h
 action compute_tvib_grid_kokkos.cpp
 action compute_tvib_grid_kokkos.h
 action comm_kokkos.cpp
@@ -84,6 +86,8 @@ action fix_ave_histo_weight_kokkos.cpp
 action fix_ave_histo_weight_kokkos.h
 action fix_dt_reset_kokkos.cpp
 action fix_dt_reset_kokkos.h
+action fix_elecmode_kokkos.cpp
+action fix_elecmode_kokkos.h
 action fix_surf_temp_kokkos.cpp
 action fix_surf_temp_kokkos.h
 action fix_move_surf_kokkos.cpp

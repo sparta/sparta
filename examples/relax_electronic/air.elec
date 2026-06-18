@@ -1,0 +1,8 @@
+# This is not a complete set of states and the collision numbers are arbitrary
+# However it is made to show the various functionality.
+# Without electrons in the mixture, Only the ground and a1Sigma states would be populated
+# In electron impact processes, transitions can occur from singlet to triplet states, which
+# then allows the triplet states to be populated as well
+#        X1Sigma             A3Sigma                 B3Pi                     a1Sigma
+N2 4     0.0 0.2 9 1 0.0     72231.4 0.2 27 3 0.0    85782.7 0.3 54 3 0.0     98057.1133 0.1 18 1 0.0
+N2 e F   0.45                0.45                    0.45                     0.45

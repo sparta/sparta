@@ -36,7 +36,7 @@ class FixAmbipolarKokkos : public FixAmbipolar {
   FixAmbipolarKokkos(class SPARTA *);
   ~FixAmbipolarKokkos();
   void pre_update_custom_kokkos();
-  void update_custom(int, double, double, double, double *);
+  void update_custom(int, double, double, double, double, double *);
 
  private:
 
@@ -71,7 +71,7 @@ class FixAmbipolarKokkos : public FixAmbipolar {
 
   KOKKOS_INLINE_FUNCTION
   void update_custom_kokkos(int index, double temp_thermal,
-                            double, double,
+                            double, double, double,
                             const double *vstream) const
   {
     // if species is not ambipolar ion, set ionambi off and return
@@ -140,7 +140,7 @@ class FixAmbipolarKokkos : public FixAmbipolar {
       if (d_ions[d_particles[i].ispecies] == 0) return;
       if (d_particles[j].ispecies != especies) return;
       update_custom_kokkos(i,temp_thermal,temp_thermal,
-                           temp_thermal,vstream);
+                           temp_thermal,temp_thermal,vstream);
       j = -1;
     }
   }

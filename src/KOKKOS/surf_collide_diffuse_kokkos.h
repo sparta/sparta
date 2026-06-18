@@ -29,6 +29,7 @@ SurfCollideStyle(diffuse/kk,SurfCollideDiffuseKokkos)
 #include "kokkos_copy.h"
 #include "fix_ambipolar_kokkos.h"
 #include "fix_vibmode_kokkos.h"
+#include "fix_elecmode_kokkos.h"
 #include "surf_react_global_kokkos.h"
 #include "surf_react_prob_kokkos.h"
 
@@ -83,11 +84,13 @@ class SurfCollideDiffuseKokkos : public SurfCollideDiffuse {
   t_particle_1d d_particles;
   t_species_1d d_species;
 
-  int ambi_flag,vibmode_flag;
+  int ambi_flag,vibmode_flag,elecmode_flag;
   FixAmbipolarKokkos* afix_kk;
   FixVibmodeKokkos* vfix_kk;
+  FixElecmodeKokkos* efix_kk;
   KKCopy<FixAmbipolarKokkos> fix_ambi_kk_copy;
   KKCopy<FixVibmodeKokkos> fix_vibmode_kk_copy;
+  KKCopy<FixElecmodeKokkos> fix_elecmode_kk_copy;
 
   int sr_type_list[KOKKOS_MAX_TOT_SURF_REACT];
   int sr_map[KOKKOS_MAX_TOT_SURF_REACT];
@@ -129,7 +132,8 @@ class SurfCollideDiffuseKokkos : public SurfCollideDiffuse {
     int velreset = 0;
 
     if (REACT) {
-      if (ambi_flag || vibmode_flag) memcpy(&iorig,ip,sizeof(Particle::OnePart));
+      if (ambi_flag || vibmode_flag || elecmode_flag)
+        memcpy(&iorig,ip,sizeof(Particle::OnePart));
 
       int sr_type = sr_type_list[isr];
       int m = sr_map[isr];
@@ -168,17 +172,21 @@ class SurfCollideDiffuseKokkos : public SurfCollideDiffuse {
       if (!velreset) diffuse(ip,norm,tsurf_local);
       int i = ip - d_particles.data();
       if (ambi_flag)
-        fix_ambi_kk_copy.obj.update_custom_kokkos(i,tsurf_local,tsurf_local,tsurf_local,vstream);
+        fix_ambi_kk_copy.obj.update_custom_kokkos(i,tsurf_local,tsurf_local,tsurf_local,tsurf_local,vstream);
       if (vibmode_flag)
-        fix_vibmode_kk_copy.obj.update_custom_kokkos(i,tsurf_local,tsurf_local,tsurf_local,vstream);
+        fix_vibmode_kk_copy.obj.update_custom_kokkos(i,tsurf_local,tsurf_local,tsurf_local,tsurf_local,vstream);
+      if (elecmode_flag)
+        fix_elecmode_kk_copy.obj.update_custom_kokkos(i,tsurf_local,tsurf_local,tsurf_local,tsurf_local,vstream);
     }
     if (REACT && jp) {
       if (!velreset) diffuse(jp,norm,tsurf_local);
       int j = jp - d_particles.data();
       if (ambi_flag)
-        fix_ambi_kk_copy.obj.update_custom_kokkos(j,tsurf_local,tsurf_local,tsurf_local,vstream);
+        fix_ambi_kk_copy.obj.update_custom_kokkos(j,tsurf_local,tsurf_local,tsurf_local,tsurf_local,vstream);
       if (vibmode_flag)
-        fix_vibmode_kk_copy.obj.update_custom_kokkos(j,tsurf_local,tsurf_local,tsurf_local,vstream);
+        fix_vibmode_kk_copy.obj.update_custom_kokkos(j,tsurf_local,tsurf_local,tsurf_local,tsurf_local,vstream);
+      if (elecmode_flag)
+        fix_elecmode_kk_copy.obj.update_custom_kokkos(j,tsurf_local,tsurf_local,tsurf_local,tsurf_local,vstream);
     }
 
     // call any fixes with a surf_react() method

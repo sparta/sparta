@@ -440,8 +440,8 @@ void CreateParticles::command(int narg, char **arg)
   if (!region && !nrho_var_flag && nglobal-nprevious != np) {
     char str[128];
     sprintf(str,"Created unexpected # of particles: "
-	    BIGINT_FORMAT " versus " BIGINT_FORMAT,
-	    nglobal-nprevious,np);
+            BIGINT_FORMAT " versus " BIGINT_FORMAT,
+            nglobal-nprevious,np);
     if (comm->me == 0) error->warning(FLERR,str);
   }
   bigint ncreated = nglobal-nprevious;
@@ -478,6 +478,7 @@ void CreateParticles::create_single()
   double temp_thermal = particle->mixture[imix]->temp_thermal;
   double temp_rot = particle->mixture[imix]->temp_rot;
   double temp_vib = particle->mixture[imix]->temp_vib;
+  double temp_elec = particle->mixture[imix]->temp_elec;
   vstream[0] = vstream[1] = vstream[2] = 0.0;
 
   if (domain->dimension == 2 && x[2] != 0.0)
@@ -524,7 +525,7 @@ void CreateParticles::create_single()
     particle->add_particle(id,mspecies,iwhich,x,v,erot,evib);
     if (nfix_update_custom)
       modify->update_custom(particle->nlocal-1,temp_thermal,
-                           temp_rot,temp_vib,vstream);
+                           temp_rot,temp_vib,temp_elec,vstream);
   }
 
   delete random;
@@ -643,6 +644,7 @@ void CreateParticles::create_local()
   double temp_thermal = particle->mixture[imix]->temp_thermal;
   double temp_rot = particle->mixture[imix]->temp_rot;
   double temp_vib = particle->mixture[imix]->temp_vib;
+  double temp_elec = particle->mixture[imix]->temp_elec;
 
   int npercell,ncreate,isp,ispecies,id,pflag,subcell;
   double x[3],v[3],xcell[3],vstream_var[3];
@@ -803,7 +805,7 @@ void CreateParticles::create_local()
       if (nfix_update_custom)
         modify->update_custom(particle->nlocal-1,tempscale*temp_thermal,
                               tempscale*temp_rot,tempscale*temp_vib,
-                              vstream_update_custom);
+                              tempscale*temp_elec,vstream_update_custom);
     }
 
     // increment count without effect of density variation
@@ -931,6 +933,7 @@ void CreateParticles::create_local_twopass()
   double temp_thermal = particle->mixture[imix]->temp_thermal;
   double temp_rot = particle->mixture[imix]->temp_rot;
   double temp_vib = particle->mixture[imix]->temp_vib;
+  double temp_elec = particle->mixture[imix]->temp_elec;
 
   int npercell,ncreate,isp,ispecies,id,pflag,subcell;
   double x[3],v[3],xcell[3],vstream_var[3];
@@ -1122,7 +1125,7 @@ void CreateParticles::create_local_twopass()
       if (nfix_update_custom)
         modify->update_custom(particle->nlocal-1,tempscale*temp_thermal,
                               tempscale*temp_rot,tempscale*temp_vib,
-                              vstream_update_custom);
+                              tempscale*temp_elec,vstream_update_custom);
     }
   }
 

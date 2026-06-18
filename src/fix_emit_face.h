@@ -47,6 +47,7 @@ class FixEmitFace : public FixEmit {
     double temp_thermal;        // from mixture or adjacent subsonic cell
     double temp_rot;            // from mixture or subsonic temp_thermal
     double temp_vib;            // from mixture or subsonic temp_thermal
+    double temp_elec;           // from mixture or subsonic temp_thermal
     double vstream[3];          // from mixture or adjacent subsonic cell
     double *ntargetsp;          // # of mols to insert for each species,
                                 //   only defined for PERSPECIES
