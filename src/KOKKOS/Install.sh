@@ -121,6 +121,8 @@ action surf_collide_adiabatic_kokkos.cpp
 action surf_collide_adiabatic_kokkos.h
 action surf_collide_diffuse_kokkos.cpp
 action surf_collide_diffuse_kokkos.h
+action surf_collide_impulsive_kokkos.cpp
+action surf_collide_impulsive_kokkos.h
 action surf_collide_piston_kokkos.cpp
 action surf_collide_piston_kokkos.h
 action surf_collide_specular_kokkos.cpp

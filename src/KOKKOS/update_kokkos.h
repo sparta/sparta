@@ -27,6 +27,7 @@
 #include "surf_collide_piston_kokkos.h"
 #include "surf_collide_transparent_kokkos.h"
 #include "surf_collide_adiabatic_kokkos.h"
+#include "surf_collide_impulsive_kokkos.h"
 #include "compute_boundary_kokkos.h"
 #include "compute_surf_kokkos.h"
 
@@ -138,6 +139,7 @@ class UpdateKokkos : public Update {
   KKCopy<SurfCollidePistonKokkos> sc_kk_piston_copy[KOKKOS_MAX_SURF_COLL_PER_TYPE];
   KKCopy<SurfCollideTransparentKokkos> sc_kk_transparent_copy[KOKKOS_MAX_SURF_COLL_PER_TYPE];
   KKCopy<SurfCollideAdiabaticKokkos> sc_kk_adiabatic_copy[KOKKOS_MAX_SURF_COLL_PER_TYPE];
+  KKCopy<SurfCollideImpulsiveKokkos> sc_kk_impulsive_copy[KOKKOS_MAX_SURF_COLL_PER_TYPE];
 
   //KKCopy<ComputeSurfKokkos> blist_active_copy[KOKKOS_MAX_GLIST];
   KKCopy<ComputeSurfKokkos> slist_active_copy[KOKKOS_MAX_SLIST];
