@@ -82,6 +82,7 @@ UpdateKokkos::UpdateKokkos(SPARTA *sparta) : Update(sparta),
   sc_kk_transparent_copy{VAL_2(KKCopy<SurfCollideTransparentKokkos>(sparta))},
   sc_kk_adiabatic_copy{VAL_2(KKCopy<SurfCollideAdiabaticKokkos>(sparta))},
   sc_kk_impulsive_copy{VAL_2(KKCopy<SurfCollideImpulsiveKokkos>(sparta))},
+  sc_kk_td_copy{VAL_2(KKCopy<SurfCollideTDKokkos>(sparta))},
   blist_active_copy{VAL_2(KKCopy<ComputeBoundaryKokkos>(sparta))},
   slist_active_copy{VAL_2(KKCopy<ComputeSurfKokkos>(sparta))},
   tmp_compute_boundary_kk(sparta),
@@ -149,6 +150,7 @@ UpdateKokkos::~UpdateKokkos()
     sc_kk_transparent_copy[i].uncopy();
     sc_kk_adiabatic_copy[i].uncopy();
     sc_kk_impulsive_copy[i].uncopy();
+    sc_kk_td_copy[i].uncopy();
   }
 
   for (int i=0; i<KOKKOS_MAX_BLIST; i++) {
@@ -535,8 +537,8 @@ template < int DIM, int SURF, int REACT, int OPT > void UpdateKokkos::move()
       error->all(FLERR,"Kokkos currently supports two instances of each surface collide method");
 
     if (surf->nsc > 0) {
-      int nspec,ndiff,nvan,npist,ntrans,nadia,nimpul;
-      nspec = ndiff = nvan = npist = ntrans = nadia = nimpul = 0;
+      int nspec,ndiff,nvan,npist,ntrans,nadia,nimpul,ntd;
+      nspec = ndiff = nvan = npist = ntrans = nadia = nimpul = ntd = 0;
       for (int n = 0; n < surf->nsc; n++) {
         if (!surf->sc[n]->kokkosable)
           error->all(FLERR,"Must use Kokkos-enabled surface collide method with Kokkos");
@@ -582,6 +584,12 @@ template < int DIM, int SURF, int REACT, int OPT > void UpdateKokkos::move()
           sc_type_list[n] = 6;
           sc_map[n] = nimpul;
           nimpul++;
+        } else if (strcmp(surf->sc[n]->style,"td") == 0) {
+          sc_kk_td_copy[ntd].copy((SurfCollideTDKokkos*)(surf->sc[n]));
+          sc_kk_td_copy[ntd].obj.pre_collide();
+          sc_type_list[n] = 7;
+          sc_map[n] = ntd;
+          ntd++;
         } else {
           error->all(FLERR,"Unknown Kokkos surface collide method");
         }
@@ -589,7 +597,7 @@ template < int DIM, int SURF, int REACT, int OPT > void UpdateKokkos::move()
       if (nspec > KOKKOS_MAX_SURF_COLL_PER_TYPE || ndiff > KOKKOS_MAX_SURF_COLL_PER_TYPE ||
           nvan > KOKKOS_MAX_SURF_COLL_PER_TYPE || npist > KOKKOS_MAX_SURF_COLL_PER_TYPE ||
           ntrans > KOKKOS_MAX_SURF_COLL_PER_TYPE || nadia > KOKKOS_MAX_SURF_COLL_PER_TYPE ||
-          nimpul > KOKKOS_MAX_SURF_COLL_PER_TYPE)
+          nimpul > KOKKOS_MAX_SURF_COLL_PER_TYPE || ntd > KOKKOS_MAX_SURF_COLL_PER_TYPE)
         error->all(FLERR,"Kokkos currently supports two instances of each surface collide method");
     }
 
@@ -730,8 +738,8 @@ template < int DIM, int SURF, int REACT, int OPT > void UpdateKokkos::move()
     }
 
     if (surf->nsc > 0) {
-      int nspec,ndiff,nvan,npist,ntrans,nadia,nimpul;
-      nspec = ndiff = nvan = npist = ntrans = nadia = nimpul = 0;
+      int nspec,ndiff,nvan,npist,ntrans,nadia,nimpul,ntd;
+      nspec = ndiff = nvan = npist = ntrans = nadia = nimpul = ntd = 0;
       for (int n = 0; n < surf->nsc; n++) {
         if (strcmp(surf->sc[n]->style,"specular") == 0) {
           sc_kk_specular_copy[nspec].obj.post_collide();
@@ -754,6 +762,9 @@ template < int DIM, int SURF, int REACT, int OPT > void UpdateKokkos::move()
         } else if (strcmp(surf->sc[n]->style,"impulsive") == 0) {
           sc_kk_impulsive_copy[nimpul].obj.post_collide();
           nimpul++;
+        } else if (strcmp(surf->sc[n]->style,"td") == 0) {
+          sc_kk_td_copy[ntd].obj.post_collide();
+          ntd++;
         }
       }
     }
@@ -1411,6 +1422,9 @@ void UpdateKokkos::operator()(TagUpdateMove<DIM,SURF,REACT,OPT,ATOMIC_REDUCTION>
             } else if (sc_type == 6) {
               jpart = sc_kk_impulsive_copy[m].obj.
                 collide_kokkos<REACT,ATOMIC_REDUCTION>(ipart,dtremain,minsurf,tri->norm,tri->isr,reaction,d_retry,d_nlocal);
+            } else if (sc_type == 7) {
+              jpart = sc_kk_td_copy[m].obj.
+                collide_kokkos<REACT,ATOMIC_REDUCTION>(ipart,dtremain,minsurf,tri->norm,tri->isr,reaction,d_retry,d_nlocal);
             }
           }
 
@@ -1435,6 +1449,9 @@ void UpdateKokkos::operator()(TagUpdateMove<DIM,SURF,REACT,OPT,ATOMIC_REDUCTION>
                 collide_kokkos<REACT,ATOMIC_REDUCTION>(ipart,dtremain,minsurf,line->norm,line->isr,reaction,d_retry,d_nlocal);
             } else if (sc_type == 6) {
               jpart = sc_kk_impulsive_copy[m].obj.
+                collide_kokkos<REACT,ATOMIC_REDUCTION>(ipart,dtremain,minsurf,line->norm,line->isr,reaction,d_retry,d_nlocal);
+            } else if (sc_type == 7) {
+              jpart = sc_kk_td_copy[m].obj.
                 collide_kokkos<REACT,ATOMIC_REDUCTION>(ipart,dtremain,minsurf,line->norm,line->isr,reaction,d_retry,d_nlocal);
             }
           }
@@ -1688,6 +1705,9 @@ void UpdateKokkos::operator()(TagUpdateMove<DIM,SURF,REACT,OPT,ATOMIC_REDUCTION>
             collide_kokkos<REACT,ATOMIC_REDUCTION>(ipart,dtremain,-(outface+1),domain_kk_copy.obj.norm[outface],domain_kk_copy.obj.surf_react[outface],reaction,d_retry,d_nlocal);
         else if (sc_type == 6)
           jpart = sc_kk_impulsive_copy[m].obj.
+            collide_kokkos<REACT,ATOMIC_REDUCTION>(ipart,dtremain,-(outface+1),domain_kk_copy.obj.norm[outface],domain_kk_copy.obj.surf_react[outface],reaction,d_retry,d_nlocal);
+        else if (sc_type == 7)
+          jpart = sc_kk_td_copy[m].obj.
             collide_kokkos<REACT,ATOMIC_REDUCTION>(ipart,dtremain,-(outface+1),domain_kk_copy.obj.norm[outface],domain_kk_copy.obj.surf_react[outface],reaction,d_retry,d_nlocal);
 
         if (ipart) {
@@ -2046,8 +2066,8 @@ void UpdateKokkos::backup()
   Kokkos::deep_copy(d_particles_backup,d_particles);
 
   if (surf->nsc > 0) {
-    int nspec,ndiff,npist,nadia,nimpul;
-    nspec = ndiff = npist = nadia = nimpul = 0;
+    int nspec,ndiff,npist,nadia,nimpul,ntd;
+    nspec = ndiff = npist = nadia = nimpul = ntd = 0;
     for (int n = 0; n < surf->nsc; n++) {
       if (strcmp(surf->sc[n]->style,"specular") == 0) {
         sc_kk_specular_copy[nspec].obj.backup();
@@ -2064,6 +2084,9 @@ void UpdateKokkos::backup()
       } else if (strcmp(surf->sc[n]->style,"impulsive") == 0) {
         sc_kk_impulsive_copy[nimpul].obj.backup();
         nimpul++;
+      } else if (strcmp(surf->sc[n]->style,"td") == 0) {
+        sc_kk_td_copy[ntd].obj.backup();
+        ntd++;
       }
     }
   }
@@ -2078,8 +2101,8 @@ void UpdateKokkos::restore()
   d_particles = particle_kk->k_particles.view_device();
 
   if (surf->nsc > 0) {
-    int nspec,ndiff,npist,nadia,nimpul;
-    nspec = ndiff = npist = nadia = nimpul = 0;
+    int nspec,ndiff,npist,nadia,nimpul,ntd;
+    nspec = ndiff = npist = nadia = nimpul = ntd = 0;
     for (int n = 0; n < surf->nsc; n++) {
       if (strcmp(surf->sc[n]->style,"specular") == 0) {
         sc_kk_specular_copy[nspec].obj.restore();
@@ -2096,6 +2119,9 @@ void UpdateKokkos::restore()
       } else if (strcmp(surf->sc[n]->style,"impulsive") == 0) {
         sc_kk_impulsive_copy[nimpul].obj.restore();
         nimpul++;
+      } else if (strcmp(surf->sc[n]->style,"td") == 0) {
+        sc_kk_td_copy[ntd].obj.restore();
+        ntd++;
       }
     }
   }
