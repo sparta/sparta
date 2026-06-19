@@ -1,19 +1,18 @@
-/* ----------------------------------------------------------------------
-   SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
-   http://sparta.github.io
-   Steve Plimpton, sjplimp@gmail.com, Michael Gallis, magalli@sandia.gov
-   Sandia National Laboratories
+/* -*- c++ -*- ----------------------------------------------------------
+   LAMMPS - Large-scale Atomic/Molecular Massively Parallel Simulator
+   https://www.lammps.org/, Sandia National Laboratories
+   LAMMPS development team: developers@lammps.org
 
-   Copyright (2014) Sandia Corporation.  Under the terms of Contract
+   Copyright (2003) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
    certain rights in this software.  This software is distributed under
    the GNU General Public License.
 
-   See the README file in the top-level SPARTA directory.
+   See the README file in the top-level LAMMPS directory.
 ------------------------------------------------------------------------- */
 
-#ifndef SPARTA_MATH_EIGEN_H
-#define SPARTA_MATH_EIGEN_H
+#ifndef SPA_MATH_EIGEN_H
+#define SPA_MATH_EIGEN_H
 
 namespace MathEigen {
 
@@ -23,14 +22,15 @@ namespace MathEigen {
  * \param  mat   the 3x3 matrix you wish to diagonalize
  * \param  eval  store the eigenvalues here
  * \param  evec  store the eigenvectors here...
+ * \param  sort  order eigenvalues and -vectors (-1 decreasing (default), 1 increasing, 0 unsorted)
  * \return       0 if eigenvalue calculation converged, 1 if it failed */
 
-int jacobi3(double const *const *mat, double *eval, double **evec);
+int jacobi3(double const *const *mat, double *eval, double **evec, int sort = -1);
 
 /** \overload */
 
-int jacobi3(double const mat[3][3], double *eval, double evec[3][3]);
+int jacobi3(double const mat[3][3], double *eval, double evec[3][3], int sort = -1);
 
 }    // namespace MathEigen
 
-#endif    //#ifndef SPARTA_MATH_EIGEN_H
+#endif    //#ifndef LMP_MATH_EIGEN_H

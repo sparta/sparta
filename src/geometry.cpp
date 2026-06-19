@@ -695,6 +695,25 @@ bool line_line_intersect(double *start, double *stop,
 }
 
 /* ----------------------------------------------------------------------
+   detect intersection between a directed line segment A and moving line segment B
+   intersection is defined as any A pt (including end pts)
+     in common with any B pt (interior,vertex)
+   return TRUE if there is an intersection, else FALSE
+   if TRUE also return:
+     point = pt of intersection
+     param = intersection pt is this fraction along line A (0-1 inclusive)
+     side = side of B that was hit = OUTSIDE,INSIDE,ONSURF2OUT,ONSURF2IN
+------------------------------------------------------------------------- */
+
+bool line_line_moving_intersect(double *start, double *stop,
+				double *v0, double *v1, double *norm,
+				double *point, double &param, int &side)
+{
+  bool hit = line_line_intersect(start,stop,v0,v1,norm,point,param,side);
+  return hit;
+}
+
+/* ----------------------------------------------------------------------
    check for axisymmetric move crossing line segment in (x,r) space
    line segment from v1 to v2 in axisymmetry plane
    3d move starting at x with v for tdelta
@@ -1065,6 +1084,31 @@ bool line_tri_intersect(double *start, double *stop,
   else side = ONSURF2IN;
 
   return true;
+}
+
+/* ----------------------------------------------------------------------
+   detect intersection between a directed line segment and a triangle
+   intersection is defined as any line segment pt (including end pts)
+     in common with any triangle pt (interior, edge, vertex)
+   one exception is if both line end pts are in plane of triangle,
+     then is NOT an intersection
+   start,stop = end points of directed line segment, can have zero length
+   v0,v1,v2 = 3 vertices of triangle
+   norm = unit vector normal to triangle plane
+     pointing OUTSIDE via right-hand rule
+   return TRUE if there is an intersection, else FALSE
+   if TRUE also return:
+     point = pt of intersection
+     param = intersection pt is this fraction along line (0-1 inclusive)
+     side = side of B that was hit = OUTSIDE,INSIDE,ONSURF2OUT,ONSURF2IN
+------------------------------------------------------------------------- */
+
+bool line_tri_moving_intersect(double *start, double *stop,
+			       double *v0, double *v1, double *v2, double *norm,
+			       double *point, double &param, int &side)
+{
+  bool hit = line_tri_intersect(start,stop,v0,v1,v2,norm,point,param,side);
+  return hit;
 }
 
 /* ----------------------------------------------------------------------

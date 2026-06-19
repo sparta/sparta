@@ -51,10 +51,11 @@ class Update : protected Pointers {
   int *field_active;     // ptr to field_active flags in fix
   int fieldfreq;         // update GFIELD every this many timsteps
 
+  int rigidflag;         // 1 if a mobile rigid-body surf object will be used
+
   int nmigrate;          // # of particles to migrate to new procs
   int *mlist;            // indices of particles to migrate
 
-                         // current step counters
   int niterate;          // iterations of move/comm
   int ntouch_one;        // particle-cell touches
   int ncomm_one;         // particles migrating to new procs
@@ -146,6 +147,12 @@ class Update : protected Pointers {
   class Compute **blist_compute;  // list of all gas/boundary Computes
   class SurfCollide **dlist_surfcollide;  // list of all dynamic SurfCollides
 
+  // enable use of mobile rigid bodies comprised of surfs
+  
+  char *rigidID;         // ID of associated fix rigid commaned defining the object
+  class FixRigid *fixrigid;   // ptr to FixRigid instance
+  int *irigid;                // custom per-surf vector defined by FixRigid
+
   // methods
 
   int collide_react_setup();
@@ -180,7 +187,7 @@ class Update : protected Pointers {
 
   typedef void (Update::*FnPtr)();
   FnPtr moveptr;             // ptr to move method
-  template < int, int, int > void move();
+  template < int, int, int, int > void move();
 
   int perturbflag;
   typedef void (Update::*FnPtr2)(int, int, double, double *, double *);

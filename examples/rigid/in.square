@@ -1,0 +1,35 @@
+seed	    	    12345
+dimension   	    2
+
+create_box  	    0 10 0 10 -0.5 0.5
+create_grid 	    10 10 1 
+
+global		    nrho 1.0 fnum 0.001
+
+species		    air.species N O
+mixture		    air N O vstream 100.0 0 0 
+
+read_surf           data.square
+surf_collide	    1 diffuse 300.0 0.0
+surf_modify         all collide 1
+
+timestep 	    0.0001
+
+compute      csurf surf all all fx fy fz tx ty tz com 5 5 0
+
+fix		    1 rigid all csurf body &
+		    mass 1.0 com 5 5 0 vcom 0 0 0 moi 1 1 2 -1 0 0 angmom 0 0 0 &
+		    pseudo 10 100.0 0.2
+
+#fix		    1 rigid all csurf infile square.rigid &
+#		    pseudo 10 100.0 0.2
+
+dump                2 image all 10 image.*.ppm type type pdiam 0.1 &
+                    surf proc 0.01 size 512 512 zoom 1.75 &
+                    gline yes 0.005 
+dump_modify	    2 pad 4
+
+stats		    10
+stats_style   step cpu f_1[*]
+run 		    100
+

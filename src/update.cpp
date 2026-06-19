@@ -30,6 +30,7 @@
 #include "surf.h"
 #include "surf_collide.h"
 #include "surf_react.h"
+#include "fix_rigid.h"
 #include "input.h"
 #include "output.h"
 #include "geometry.h"
@@ -104,6 +105,9 @@ Update::Update(SPARTA *sparta) : Pointers(sparta)
   global_mem_limit = 0;
   mem_limit_grid_flag = 0;
 
+  rigidflag = 0;
+  rigidID = NULL;
+  
   copymode = 0;
 }
 
@@ -115,6 +119,7 @@ Update::~Update()
 
   delete [] unit_style;
   delete [] fieldID;
+  delete [] rigidID;
   memory->destroy(mlist);
 
   delete [] glist_compute;
@@ -181,25 +186,27 @@ void Update::init()
   // choose the appropriate move method
 
   if (domain->dimension == 3) {
-    if (surf->exist)
-      moveptr = &Update::move<3,1,0>;
-    else {
-      if (optmove_flag) moveptr = &Update::move<3,0,1>;
-      else moveptr = &Update::move<3,0,0>;
+    if (surf->exist) {
+      if (!rigidflag) moveptr = &Update::move<3,1,0,0>;
+      else moveptr = &Update::move<3,1,0,1>;
+    } else {
+      if (optmove_flag) moveptr = &Update::move<3,0,1,0>;
+      else moveptr = &Update::move<3,0,0,0>;
     }
   } else if (domain->axisymmetric) {
     if (surf->exist)
-      moveptr = &Update::move<1,1,0>;
+      moveptr = &Update::move<1,1,0,0>;
     else {
-      if (optmove_flag) moveptr = &Update::move<1,0,1>;
-      else moveptr = &Update::move<1,0,0>;
+      if (optmove_flag) moveptr = &Update::move<1,0,1,0>;
+      else moveptr = &Update::move<1,0,0,0>;
     }
   } else if (domain->dimension == 2) {
-    if (surf->exist)
-      moveptr = &Update::move<2,1,0>;
-    else {
-      if (optmove_flag) moveptr = &Update::move<2,0,1>;
-      else moveptr = &Update::move<2,0,0>;
+    if (surf->exist) {
+      if (!rigidflag) moveptr = &Update::move<2,1,0,0>;
+      else moveptr = &Update::move<2,1,0,1>;
+    } else {
+      if (optmove_flag) moveptr = &Update::move<2,0,1,0>;
+      else moveptr = &Update::move<2,0,0,0>;
     }
   }
 
@@ -240,6 +247,18 @@ void Update::init()
 
   if (moveperturb) perturbflag = 1;
   else perturbflag = 0;
+
+  // setup when using fix rigid for rigid body objects comprised of surfs
+
+  if (rigidflag) {
+    int irigidfix = modify->find_fix(rigidID);
+    if (irigidfix < 0) error->all(FLERR,"Fix ID for global rigid is not found");
+    fixrigid = (FixRigid *) modify->fix[irigidfix];
+    if (strcmp(fixrigid->style,"rigid") != 0)
+      error->all(FLERR,"Fix for global rigid is not a fix rigid command");
+    int rigidindex = surf->find_custom((char *) "rigid");
+    irigid = surf->eivec[surf->ewhich[rigidindex]];
+  }
 }
 
 /* ---------------------------------------------------------------------- */
@@ -358,10 +377,12 @@ void Update::run(int nsteps)
    advect particles thru grid
    DIM = 2/3 for 2d/3d, 1 for 2d axisymmetric
    SURF = 0/1 for no surfs or surfs
+   OPT = 0/1 for no optimized move or optimized (uniform grid, no surfs)
+   RIGID = 0/1 for no/yes use of fix rigid for mobile rigid-body surf objects
    use multiple iterations of move/comm if necessary
 ------------------------------------------------------------------------- */
 
-template < int DIM, int SURF, int OPT > void Update::move()
+template < int DIM, int SURF, int OPT, int RIGID > void Update::move()
 {
   bool hitflag;
   int m,icell,icell_original,nmask,outface,bflag,nflag,pflag,itmp;
@@ -570,7 +591,8 @@ template < int DIM, int SURF, int OPT > void Update::move()
       stuck_iterate = 0;
       ntouch_one++;
 
-      // advect one particle from cell to cell and thru surf collides til done
+      // advect one particle from cell to cell until done
+      // also detect any collisions with surfs in each cell
 
       //int iterate = 0;
 
@@ -772,10 +794,11 @@ template < int DIM, int SURF, int OPT > void Update::move()
             // check for collisions with triangles or lines in cell
             // find 1st surface hit via minparam
             // skip collisions with previous surf, but not for axisymmetric
+	    // NOTE: what about collisions with previous surf if RIGID ??
             // not considered collision if 2 params are tied and one INSIDE surf
             // if collision occurs, perform collision with surface model
             // reset x,v,xnew,dtremain and continue single particle trajectory
-
+	    
             cflag = 0;
             minparam = 2.0;
             csurfs = cells[icell].csurfs;
@@ -788,15 +811,57 @@ template < int DIM, int SURF, int OPT > void Update::move()
               }
               if (DIM == 3) {
                 tri = &tris[isurf];
-                hitflag = Geometry::
-                  line_tri_intersect(x,xnew,tri->p1,tri->p2,tri->p3,
-                                     tri->norm,xc,param,side);
+		if (RIGID) {
+		  if (irigid[isurf] >= 0) {
+		    
+		    // NOTE: what rigid body attributes does Ryan need added to args
+		    // can access them from FixRigid class
+		    //   e.g. omega for body or displace for isurf's info in FixRigid
+		  
+		    double *omega = fixrigid->omega;
+		    double **displace = fixrigid->displace[irigid[isurf]];
+
+		    hitflag = Geometry::
+		      line_tri_moving_intersect(x,xnew,tri->p1,tri->p2,tri->p3,
+						tri->norm,xc,param,side);
+		  } else {
+		    hitflag = Geometry::
+		      line_tri_intersect(x,xnew,tri->p1,tri->p2,tri->p3,
+					 tri->norm,xc,param,side);
+		  }
+		  
+                } else {
+		  hitflag = Geometry::
+		    line_tri_intersect(x,xnew,tri->p1,tri->p2,tri->p3,
+				       tri->norm,xc,param,side);
+		}
               }
               if (DIM == 2) {
                 line = &lines[isurf];
-                hitflag = Geometry::
-                  line_line_intersect(x,xnew,line->p1,line->p2,
-                                      line->norm,xc,param,side);
+		if (RIGID) {
+		  if (irigid[isurf] >= 0) {
+		    
+		    // NOTE: what rigid body attributes does Ryan need added to args
+		    // can access them from FixRigid class
+		    //   e.g. omega for body or displace for isurf's info in FixRigid
+		  
+		    double *omega = fixrigid->omega;
+		    double **displace = fixrigid->displace[irigid[isurf]];
+
+		    hitflag = Geometry::
+		      line_line_moving_intersect(x,xnew,line->p1,line->p2,
+						 line->norm,xc,param,side);
+		  } else {
+		    hitflag = Geometry::
+		      line_line_intersect(x,xnew,line->p1,line->p2,
+					  line->norm,xc,param,side);
+		  }
+		  
+		} else {
+		  hitflag = Geometry::
+		    line_line_intersect(x,xnew,line->p1,line->p2,
+					line->norm,xc,param,side);
+		}
               }
               if (DIM == 1) {
                 line = &lines[isurf];
@@ -915,6 +980,8 @@ template < int DIM, int SURF, int OPT > void Update::move()
               if (nsurf_tally)
                 memcpy(&iorig,&particles[i],sizeof(Particle::OnePart));
 
+	      // NOTE: for moving RIGID body, should norm be partially updated ?
+	      
               if (DIM == 3)
                 jpart = surf->sc[tri->isc]->
                   collide(ipart,dtremain,minsurf,tri->norm,tri->isr,reaction);
@@ -931,6 +998,8 @@ template < int DIM, int SURF, int OPT > void Update::move()
                 jpart->weight = particles[i].weight;
                 pstop++;
               }
+
+	      // NOTE: for moving RIGID body, is surf tally in compute correct ?
 
               if (nsurf_tally)
                 for (m = 0; m < nsurf_tally; m++)
@@ -1752,6 +1821,7 @@ void Update::global(int narg, char **arg)
       // reallocate paged data structs for variable-length cell info
       grid->allocate_surf_arrays();
       iarg += 2;
+      
     } else if (strcmp(arg[iarg],"gridcut") == 0) {
       if (iarg+2 > narg) error->all(FLERR,"Illegal global command");
       grid->cutoff = input->numeric(FLERR,arg[iarg+1]);
@@ -1767,6 +1837,7 @@ void Update::global(int narg, char **arg)
       if (strcmp(arg[iarg+1],"cell") == 0) grid->weight(1,&arg[iarg+2]);
       else error->all(FLERR,"Illegal weight command");
       iarg += 3;
+      
     } else if (strcmp(arg[iarg],"comm/sort") == 0) {
       if (iarg+2 > narg) error->all(FLERR,"Illegal global command");
       if (strcmp(arg[iarg+1],"yes") == 0) comm->commsortflag = 1;
@@ -1802,6 +1873,18 @@ void Update::global(int narg, char **arg)
         global_mem_limit = global_mem_limit_big;
       }
       iarg += 2;
+
+    } else if (strcmp(arg[iarg],"rigid") == 0) {
+      if (iarg+2 > narg) error->all(FLERR,"Illegal global command");
+      delete [] rigidID;
+      if (strcmp(arg[iarg+1],"NULL") != 0) {
+	rigidflag = 1;
+	int n = strlen(arg[iarg+1]) + 1;
+	rigidID = new char[n];
+	strcpy(rigidID,arg[iarg+1]);
+      } else rigidflag = 0;
+      iarg += 2;
+      
     } else error->all(FLERR,"Illegal global command");
   }
 }

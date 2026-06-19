@@ -2826,28 +2826,8 @@ void Surf::group(int narg, char **arg)
 
   // print final count for group
 
-  nme = 0;
-  if (dim == 2) {
-    if (!distributed || implicit) {
-      for (i = 0; i < nlocal; i++)
-        if (lines[i].mask & bit) nme++;
-    } else {
-      for (i = 0; i < nown; i++)
-        if (mylines[i].mask & bit) nme++;
-    }
-  } else {
-    if (!distributed || implicit) {
-      for (i = 0; i < nlocal; i++)
-        if (tris[i].mask & bit) nme++;
-    } else {
-      for (i = 0; i < nown; i++)
-        if (mytris[i].mask & bit) nme++;
-    }
-  }
-
-  if (distributed) MPI_Allreduce(&nme,&nall,1,MPI_SPARTA_BIGINT,MPI_SUM,world);
-  else nall = nme;
-
+  nall = count_group(igroup);
+  
   if (comm->me == 0) {
     if (screen)
       fprintf(screen,BIGINT_FORMAT " = final surface count in group %s\n",
@@ -2892,6 +2872,42 @@ int Surf::find_group(const char *id)
     if (strcmp(id,gnames[igroup]) == 0) break;
   if (igroup == ngroup) return -1;
   return igroup;
+}
+
+/* ----------------------------------------------------------------------
+   count surfs in a group
+   return count
+------------------------------------------------------------------------- */
+
+bigint Surf::count_group(int igroup)
+{
+  int dim = domain->dimension;
+  int bit = bitmask[igroup];
+  
+  bigint nme = 0;
+  if (dim == 2) {
+    if (!distributed || implicit) {
+      for (int i = 0; i < nlocal; i++)
+        if (lines[i].mask & bit) nme++;
+    } else {
+      for (int i = 0; i < nown; i++)
+        if (mylines[i].mask & bit) nme++;
+    }
+  } else {
+    if (!distributed || implicit) {
+      for (int i = 0; i < nlocal; i++)
+        if (tris[i].mask & bit) nme++;
+    } else {
+      for (int i = 0; i < nown; i++)
+        if (mytris[i].mask & bit) nme++;
+    }
+  }
+
+  bigint nall;
+  if (distributed) MPI_Allreduce(&nme,&nall,1,MPI_SPARTA_BIGINT,MPI_SUM,world);
+  else nall = nme;
+
+  return nall;
 }
 
 // ----------------------------------------------------------------------
