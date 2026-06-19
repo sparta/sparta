@@ -117,6 +117,8 @@ action react_bird_kokkos.cpp
 action react_bird_kokkos.h
 action react_tce_kokkos.cpp
 action react_tce_kokkos.h
+action surf_collide_adiabatic_kokkos.cpp
+action surf_collide_adiabatic_kokkos.h
 action surf_collide_diffuse_kokkos.cpp
 action surf_collide_diffuse_kokkos.h
 action surf_collide_piston_kokkos.cpp
