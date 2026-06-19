@@ -119,6 +119,8 @@ action react_tce_kokkos.cpp
 action react_tce_kokkos.h
 action surf_collide_adiabatic_kokkos.cpp
 action surf_collide_adiabatic_kokkos.h
+action surf_collide_cll_kokkos.cpp
+action surf_collide_cll_kokkos.h
 action surf_collide_diffuse_kokkos.cpp
 action surf_collide_diffuse_kokkos.h
 action surf_collide_impulsive_kokkos.cpp
