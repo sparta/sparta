@@ -36,6 +36,8 @@ class SurfCollideTD : public SurfCollide {
   void wrapper(Particle::OnePart *, double *, int *, double*);
   void flags_and_coeffs(int *, double *);
 
+  class RanKnuth *kokkos_random() { return random; }
+
  protected:
   double barrier_val;
   double initen_trans, initen_rot, initen_vib;

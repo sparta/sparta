@@ -17,6 +17,9 @@
 #include "surf_react_adsorb_kokkos.h"
 #include "input.h"
 #include "update.h"
+#include "collide.h"
+#include "surf_collide.h"
+#include "random_knuth.h"
 #include "comm.h"
 #include "domain.h"
 #include "particle.h"
@@ -25,6 +28,25 @@
 #include "sparta_masks.h"
 
 using namespace SPARTA_NS;
+
+// cmodel coeff/flag counts (must match SurfReactAdsorb::readfile_gs)
+
+static void cmodel_sizes(int model, int &nc, int &nf)
+{
+  nc = nf = 0;
+  switch (model) {
+  case SRA_KK::SPECULAR:  nf = 1; break;
+  case SRA_KK::DIFFUSE:   nc = 2; break;
+  case SRA_KK::CLL:       nc = 5; nf = 1; break;
+  case SRA_KK::TD:        nc = 8; nf = 3; break;
+  case SRA_KK::IMPULSIVE: nc = 11; nf = 4; break;
+  }
+}
+
+static bool cmodel_unsupported(int m)
+{
+  return (m == SRA_KK::ADIABATIC || m == SRA_KK::IMPULSIVE);
+}
 
 /* ---------------------------------------------------------------------- */
 
@@ -47,6 +69,8 @@ SurfReactAdsorbKokkos::SurfReactAdsorbKokkos(SPARTA *sparta, int narg, char **ar
   h_tally_single = Kokkos::subview(h_scalars,std::make_pair(1,nlist_gs+1));
 
   random_backup = NULL;
+
+  for (int i = 0; i < SRA_KK_MAXMODELS; i++) cmodel_pool[i] = NULL;
 }
 
 SurfReactAdsorbKokkos::SurfReactAdsorbKokkos(SPARTA *sparta) :
@@ -69,6 +93,8 @@ SurfReactAdsorbKokkos::~SurfReactAdsorbKokkos()
 #ifdef SPARTA_KOKKOS_EXACT
   rand_pool.destroy();
   if (random_backup) delete random_backup;
+  for (int i = 0; i < SRA_KK_MAXMODELS; i++)
+    if (cmodel_pool[i]) { cmodel_pool[i]->destroy(); delete cmodel_pool[i]; }
 #endif
 }
 
@@ -91,21 +117,68 @@ void SurfReactAdsorbKokkos::init()
   for (int i = 0; i < nlist_gs; i++) {
     OneReaction_GS *r = &rlist_gs[i];
     if (!r->active) continue;
-    // post-reaction collision model (cmodel) scatter on device currently
-    //   supports NOMODEL and SPECULAR (no RNG); RNG-based cmodels deferred
+    // post-reaction collision model (cmodel) scatter on device supports
+    //   NOMODEL/SPECULAR/DIFFUSE/CLL/TD; adiabatic/impulsive deferred
 
-    if ((r->cmodel_ip != SRA_KK::NOMODEL && r->cmodel_ip != SRA_KK::SPECULAR) ||
-        (r->cmodel_jp != SRA_KK::NOMODEL && r->cmodel_jp != SRA_KK::SPECULAR))
+    if (cmodel_unsupported(r->cmodel_ip) || cmodel_unsupported(r->cmodel_jp))
       error->all(FLERR,"Kokkos surf_react adsorb does not yet support reactions with "
-                 "a diffuse/cll/td/adiabatic/impulsive post-reaction collision model");
+                 "an adiabatic or impulsive post-reaction collision model");
   }
 
   Kokkos::deep_copy(d_scalars,0);
 
   init_reactions_gs_kokkos();
+  init_cmodels_kokkos();
 
 #ifdef SPARTA_KOKKOS_EXACT
   rand_pool.init(random);
+#endif
+}
+
+/* ----------------------------------------------------------------------
+   flatten per-reaction cmodel coeffs/flags and build one RNG pool per
+   cmodel type, each wrapping that cmodel's RanKnuth so the device scatter
+   matches the host SurfCollide::wrapper bit-for-bit (EXACT serial)
+------------------------------------------------------------------------- */
+
+void SurfReactAdsorbKokkos::init_cmodels_kokkos()
+{
+  int nr = MAX(nlist_gs,1);
+  d_cmip_coeffs = DAT::t_float_2d("sra:cmip_coeffs",nr,SRA_KK_MAXCMCOEFF);
+  d_cmjp_coeffs = DAT::t_float_2d("sra:cmjp_coeffs",nr,SRA_KK_MAXCMCOEFF);
+  d_cmip_flags = DAT::t_int_2d("sra:cmip_flags",nr,SRA_KK_MAXCMFLAG);
+  d_cmjp_flags = DAT::t_int_2d("sra:cmjp_flags",nr,SRA_KK_MAXCMFLAG);
+
+  auto h_cmip_coeffs = Kokkos::create_mirror_view(d_cmip_coeffs);
+  auto h_cmjp_coeffs = Kokkos::create_mirror_view(d_cmjp_coeffs);
+  auto h_cmip_flags = Kokkos::create_mirror_view(d_cmip_flags);
+  auto h_cmjp_flags = Kokkos::create_mirror_view(d_cmjp_flags);
+
+  for (int i = 0; i < nlist_gs; i++) {
+    OneReaction_GS *r = &rlist_gs[i];
+    int nc,nf;
+    cmodel_sizes(r->cmodel_ip,nc,nf);
+    for (int k = 0; k < nc; k++) h_cmip_coeffs(i,k) = r->cmodel_ip_coeffs[k];
+    for (int k = 0; k < nf; k++) h_cmip_flags(i,k) = r->cmodel_ip_flags[k];
+    cmodel_sizes(r->cmodel_jp,nc,nf);
+    for (int k = 0; k < nc; k++) h_cmjp_coeffs(i,k) = r->cmodel_jp_coeffs[k];
+    for (int k = 0; k < nf; k++) h_cmjp_flags(i,k) = r->cmodel_jp_flags[k];
+  }
+
+  Kokkos::deep_copy(d_cmip_coeffs,h_cmip_coeffs);
+  Kokkos::deep_copy(d_cmjp_coeffs,h_cmjp_coeffs);
+  Kokkos::deep_copy(d_cmip_flags,h_cmip_flags);
+  Kokkos::deep_copy(d_cmjp_flags,h_cmjp_flags);
+
+#ifdef SPARTA_KOKKOS_EXACT
+  for (int idx = 0; idx < SRA_KK_MAXMODELS; idx++) {
+    if (cmodel_pool[idx]) continue;
+    if (!cmodels[idx]) continue;
+    RanKnuth *cmrand = cmodels[idx]->kokkos_random();
+    if (!cmrand) continue;     // e.g. specular has no RNG
+    cmodel_pool[idx] = new RandPoolWrap(12345,sparta);
+    cmodel_pool[idx]->init(cmrand);
+  }
 #endif
 }
 
@@ -268,6 +341,19 @@ void SurfReactAdsorbKokkos::pre_react()
   d_species = particle_kk->k_species.view_device();
 
   fnum_ = update->fnum;
+
+  // cmodel scatter state: boltz, collide rot/vib styles, per-cmodel RNG
+
+  boltz_ = update->boltz;
+  rotstyle_ = SRA_KK::NONE;
+  if (Pointers::collide) rotstyle_ = Pointers::collide->rotstyle;
+  vibstyle_ = SRA_KK::NONE;
+  if (Pointers::collide) vibstyle_ = Pointers::collide->vibstyle;
+
+#ifdef SPARTA_KOKKOS_EXACT
+  for (int idx = 0; idx < SRA_KK_MAXMODELS; idx++)
+    if (cmodel_pool[idx]) d_cmodel_rand[idx] = cmodel_pool[idx]->get_state();
+#endif
 
   // copy current per-face state (changes only at sync) host->device
 

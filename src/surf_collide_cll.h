@@ -37,6 +37,8 @@ class SurfCollideCLL : public SurfCollide {
   void wrapper(Particle::OnePart *, double *, int *, double*);
   void flags_and_coeffs(int *, double *);
 
+  class RanKnuth *kokkos_random() { return random; }
+
  protected:
   double acc_n,acc_t,acc_rot,acc_vib;   // surface accomodation coeffs
   double vx,vy,vz;                      // translational velocity of surface

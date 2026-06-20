@@ -36,6 +36,8 @@ class SurfCollideImpulsive : public SurfCollide {
   void wrapper(Particle::OnePart *, double *, int *, double*);
   void flags_and_coeffs(int *, double *);
 
+  class RanKnuth *kokkos_random() { return random; }
+
  protected:
   double eng_ratio,eff_mass;      // energy ratio and effective mass
                                   // of the surface for soft-sphere model
