@@ -91,13 +91,13 @@ void SurfReactAdsorbKokkos::init()
   for (int i = 0; i < nlist_gs; i++) {
     OneReaction_GS *r = &rlist_gs[i];
     if (!r->active) continue;
-    if (r->cmodel_ip != SRA_KK::NOMODEL || r->cmodel_jp != SRA_KK::NOMODEL)
-      error->all(FLERR,"Kokkos surf_react adsorb does not yet support reactions "
-                 "with a post-reaction surface collision model");
-    if (r->type == SRA_KK::DA || r->type == SRA_KK::LH1 ||
-        r->type == SRA_KK::ER || r->type == SRA_KK::CI)
-      error->all(FLERR,"Kokkos surf_react adsorb does not yet support DA/LH1/ER/CI "
-                 "reaction types (they require a post-reaction collision model)");
+    // post-reaction collision model (cmodel) scatter on device currently
+    //   supports NOMODEL and SPECULAR (no RNG); RNG-based cmodels deferred
+
+    if ((r->cmodel_ip != SRA_KK::NOMODEL && r->cmodel_ip != SRA_KK::SPECULAR) ||
+        (r->cmodel_jp != SRA_KK::NOMODEL && r->cmodel_jp != SRA_KK::SPECULAR))
+      error->all(FLERR,"Kokkos surf_react adsorb does not yet support reactions with "
+                 "a diffuse/cll/td/adiabatic/impulsive post-reaction collision model");
   }
 
   Kokkos::deep_copy(d_scalars,0);

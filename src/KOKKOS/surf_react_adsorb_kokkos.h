@@ -23,6 +23,7 @@ SurfReactStyle(adsorb/kk,SurfReactAdsorbKokkos)
 
 #include "surf_react_adsorb.h"
 #include "kokkos_type.h"
+#include "math_extra_kokkos.h"
 #include "rand_pool_wrap.h"
 #include "Kokkos_Random.hpp"
 #include "particle_kokkos.h"
@@ -254,8 +255,9 @@ class SurfReactAdsorbKokkos : public SurfReactAdsorb {
         if (d_ppart(j,k) == 1 && d_pstate(j,k) == 's')
           Kokkos::atomic_add(&a_species_delta(iface,d_pad(j,k)),d_pstoich(j,k));
 
-      // post-reaction particle handling
-      // only types validated at init (no cmodel post-scatter) are reachable
+      // post-reaction particle handling, mirrors SurfReactAdsorb::react()
+      // cmodel post-reaction scatter currently supports NOMODEL and SPECULAR
+      //   (validated at init); RNG-based cmodels (diffuse/cll/td/...) deferred
 
       switch (d_type(j)) {
 
@@ -298,11 +300,108 @@ class SurfReactAdsorbKokkos : public SurfReactAdsorb {
         ip = NULL;
         rand_pool.free_state(rand_gen);
         return (j + 1);
+
+      case SRA_KK::DA:
+        {
+          if (d_nprod_g(j) == 0) ip = NULL;
+          else {
+            int nn = 1;
+            for (int pj = 1; pj < d_nproduct(j); pj++) {
+              if (d_pstate(j,pj) == 'g') {
+                if (nn == 1) {
+                  nn++;
+                  ip->ispecies = d_products(j,pj);
+                  apply_cmodel(ip,norm,d_cmodel_ip(j));
+                  if (d_pstoich(j,pj) == 2) {
+                    jp = create_particle(ip,d_products(j,pj),rand_gen,d_nlocal,d_retry);
+                    if (!jp) { rand_pool.free_state(rand_gen); return 0; }
+                    apply_cmodel(jp,norm,d_cmodel_ip(j));
+                  }
+                } else {
+                  jp = create_particle(ip,d_products(j,pj),rand_gen,d_nlocal,d_retry);
+                  if (!jp) { rand_pool.free_state(rand_gen); return 0; }
+                  apply_cmodel(jp,norm,d_cmodel_jp(j));
+                }
+              }
+            }
+          }
+          if (d_cmodel_ip(j) != SRA_KK::NOMODEL) velreset = 1;
+          rand_pool.free_state(rand_gen);
+          return (j + 1);
+        }
+
+      case SRA_KK::LH1:
+      case SRA_KK::ER:
+        ip->ispecies = d_products(j,0);
+        apply_cmodel(ip,norm,d_cmodel_ip(j));
+        if (d_cmodel_ip(j) != SRA_KK::NOMODEL) velreset = 1;
+        rand_pool.free_state(rand_gen);
+        return (j + 1);
+
+      case SRA_KK::CI:
+        {
+          ip->ispecies = d_products(j,0);
+          apply_cmodel(ip,norm,d_cmodel_ip(j));
+          if (d_nprod_g_tot(j) == 2) {
+            if (d_pstoich(j,0) == 2) {
+              jp = create_particle(ip,d_products(j,0),rand_gen,d_nlocal,d_retry);
+              if (!jp) { rand_pool.free_state(rand_gen); return 0; }
+              apply_cmodel(jp,norm,d_cmodel_ip(j));
+            } else {
+              jp = create_particle(ip,d_products(j,1),rand_gen,d_nlocal,d_retry);
+              if (!jp) { rand_pool.free_state(rand_gen); return 0; }
+              apply_cmodel(jp,norm,d_cmodel_jp(j));
+            }
+          }
+          if (d_cmodel_ip(j) != SRA_KK::NOMODEL) velreset = 1;
+          rand_pool.free_state(rand_gen);
+          return (j + 1);
+        }
       }
     }
 
     rand_pool.free_state(rand_gen);
     return 0;
+  }
+
+  /* ----------------------------------------------------------------------
+     apply a post-reaction collision model (cmodel) scatter to particle p
+     SPECULAR mirrors SurfCollideSpecular::wrapper() (reflect, no RNG)
+     NOMODEL is a no-op; RNG-based cmodels are rejected at init
+  ------------------------------------------------------------------------- */
+
+  KOKKOS_INLINE_FUNCTION
+  void apply_cmodel(Particle::OnePart *p, const double *norm, int cmodel) const
+  {
+    if (cmodel == SRA_KK::SPECULAR)
+      MathExtraKokkos::reflect3(p->v,norm);
+  }
+
+  /* ----------------------------------------------------------------------
+     create a new particle (copy of ip's x,v) of species sp, mirrors the
+     add_particle path in SurfReactAdsorb::react(); returns ptr or NULL on
+     realloc (caller retries the whole move)
+  ------------------------------------------------------------------------- */
+
+  KOKKOS_INLINE_FUNCTION
+  Particle::OnePart *create_particle(Particle::OnePart *ip, int sp,
+                                     rand_type &rand_gen,
+                                     const DAT::t_int_scalar &d_nlocal,
+                                     const DAT::t_int_scalar &d_retry) const
+  {
+    double x[3],v[3];
+    memcpy(x,ip->x,3*sizeof(double));
+    memcpy(v,ip->v,3*sizeof(double));
+    int id = MAXSMALLINT*rand_gen.drand();
+
+    int index = Kokkos::atomic_fetch_add(&d_nlocal(),1);
+    int reallocflag = ParticleKokkos::add_particle_kokkos(d_particles,index,
+                        id,sp,ip->icell,x,v,0.0,0.0);
+    if (reallocflag) {
+      d_retry() = 1;
+      return NULL;
+    }
+    return &d_particles[index];
   }
 
   KOKKOS_INLINE_FUNCTION
