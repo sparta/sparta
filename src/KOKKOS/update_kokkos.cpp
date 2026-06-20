@@ -86,9 +86,13 @@ UpdateKokkos::UpdateKokkos(SPARTA *sparta) : Update(sparta),
   sc_kk_cll_copy{VAL_2(KKCopy<SurfCollideCLLKokkos>(sparta))},
   blist_active_copy{VAL_2(KKCopy<ComputeBoundaryKokkos>(sparta))},
   slist_active_copy{VAL_2(KKCopy<ComputeSurfKokkos>(sparta))},
+  slist_active_isurf_copy{VAL_2(KKCopy<ComputeISurfGridKokkos>(sparta))},
   tmp_compute_boundary_kk(sparta),
-  tmp_compute_surf_kk(sparta)
+  tmp_compute_surf_kk(sparta),
+  tmp_compute_isurf_grid_kk(sparta)
 {
+  nslist_surf = nslist_isurf = 0;
+
 
   // use 1D view for scalars to reduce GPU memory operations
 
@@ -142,6 +146,7 @@ UpdateKokkos::~UpdateKokkos()
 
   tmp_compute_boundary_kk.uncopy = 1;
   tmp_compute_surf_kk.uncopy = 1;
+  tmp_compute_isurf_grid_kk.uncopy = 1;
 
   for (int i=0; i<KOKKOS_MAX_SURF_COLL_PER_TYPE; i++) {
     sc_kk_specular_copy[i].uncopy();
@@ -161,6 +166,7 @@ UpdateKokkos::~UpdateKokkos()
 
   for (int i=0; i<KOKKOS_MAX_SLIST; i++) {
     slist_active_copy[i].uncopy();
+    slist_active_isurf_copy[i].uncopy();
   }
 }
 
@@ -843,8 +849,14 @@ template < int DIM, int SURF, int REACT, int OPT > void UpdateKokkos::move()
 
   if (nsurf_tally) {
     for (int m = 0; m < nsurf_tally; m++) {
-      ComputeSurfKokkos* compute_surf_kk = (ComputeSurfKokkos*)(slist_active[m]);
-      compute_surf_kk->post_surf_tally();
+      if (strcmp(slist_active[m]->style,"isurf/grid") == 0) {
+        ComputeISurfGridKokkos* compute_isurf_kk =
+          (ComputeISurfGridKokkos*)(slist_active[m]);
+        compute_isurf_kk->post_surf_tally();
+      } else {
+        ComputeSurfKokkos* compute_surf_kk = (ComputeSurfKokkos*)(slist_active[m]);
+        compute_surf_kk->post_surf_tally();
+      }
     }
   }
 
@@ -1482,10 +1494,14 @@ void UpdateKokkos::operator()(TagUpdateMove<DIM,SURF,REACT,OPT,ATOMIC_REDUCTION>
             jpart->weight = particle_i.weight;
           }
 
-          if (nsurf_tally)
-            for (m = 0; m < nsurf_tally; m++)
+          if (nsurf_tally) {
+            for (m = 0; m < nslist_surf; m++)
               slist_active_copy[m].obj.
                     surf_tally_kk<ATOMIC_REDUCTION>(dtremain,minsurf,icell,reaction,&iorig,ipart,jpart);
+            for (m = 0; m < nslist_isurf; m++)
+              slist_active_isurf_copy[m].obj.
+                    surf_tally_kk<ATOMIC_REDUCTION>(dtremain,minsurf,icell,reaction,&iorig,ipart,jpart);
+          }
 
           // stuck_iterate = consecutive iterations particle is immobile
 
@@ -2049,28 +2065,45 @@ void UpdateKokkos::tally_set(bigint ntimestep)
     }
   }
 
-  if (nsurf_tally > KOKKOS_MAX_SLIST)
-    error->all(FLERR,"Kokkos currently only supports two instances of compute surface");
+  // partition surf tally computes into "compute surf" (slist_active_copy) and
+  //   "compute isurf/grid" (slist_active_isurf_copy); both tally on-device via
+  //   surf_tally_kk(), invoked from the move kernel's surface collision loop
+
+  nslist_surf = nslist_isurf = 0;
 
   if (nsurf_tally) {
     for (i = 0; i < nsurf_tally; i++) {
-      if (strcmp(slist_active[i]->style,"isurf/grid") == 0)
-        error->all(FLERR,"Kokkos doesn't yet support compute isurf/grid");
-      ComputeSurfKokkos* compute_surf_kk = dynamic_cast<ComputeSurfKokkos*>(slist_active[i]);
-      if (!compute_surf_kk)
-        error->all(FLERR,"Kokkos does not (yet) support compute surf/collision/tally or compute surf/reaction/tally");
-      compute_surf_kk->pre_surf_tally();
-      slist_active_copy[i].copy(compute_surf_kk);
-    }
-  } else {
-    for (int i = 0; i < KOKKOS_MAX_SLIST; i++) {
-
-      // use temporary to avoid the copy getting stale leading to an issue
-      //  with view reference counting
-
-      slist_active_copy[i].copy(&tmp_compute_surf_kk);
+      if (strcmp(slist_active[i]->style,"isurf/grid") == 0) {
+        ComputeISurfGridKokkos* compute_isurf_kk =
+          dynamic_cast<ComputeISurfGridKokkos*>(slist_active[i]);
+        if (!compute_isurf_kk)
+          error->all(FLERR,"Must use Kokkos-enabled compute isurf/grid with Kokkos");
+        if (nslist_isurf >= KOKKOS_MAX_SLIST)
+          error->all(FLERR,"Kokkos currently only supports two instances of compute isurf/grid");
+        compute_isurf_kk->pre_surf_tally();
+        slist_active_isurf_copy[nslist_isurf].copy(compute_isurf_kk);
+        nslist_isurf++;
+      } else {
+        ComputeSurfKokkos* compute_surf_kk =
+          dynamic_cast<ComputeSurfKokkos*>(slist_active[i]);
+        if (!compute_surf_kk)
+          error->all(FLERR,"Kokkos does not (yet) support compute surf/collision/tally or compute surf/reaction/tally");
+        if (nslist_surf >= KOKKOS_MAX_SLIST)
+          error->all(FLERR,"Kokkos currently only supports two instances of compute surface");
+        compute_surf_kk->pre_surf_tally();
+        slist_active_copy[nslist_surf].copy(compute_surf_kk);
+        nslist_surf++;
+      }
     }
   }
+
+  // fill unused slots of each typed copy list with the temporary
+  //   to avoid the copy getting stale leading to an issue with view ref counting
+
+  for (i = nslist_surf; i < KOKKOS_MAX_SLIST; i++)
+    slist_active_copy[i].copy(&tmp_compute_surf_kk);
+  for (i = nslist_isurf; i < KOKKOS_MAX_SLIST; i++)
+    slist_active_isurf_copy[i].copy(&tmp_compute_isurf_grid_kk);
 
   if (ngas_tally)
     error->all(FLERR,"Kokkos does not (yet) support tallying gas/gas collisions or reactions");

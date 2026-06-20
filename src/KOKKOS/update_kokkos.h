@@ -32,6 +32,7 @@
 #include "surf_collide_cll_kokkos.h"
 #include "compute_boundary_kokkos.h"
 #include "compute_surf_kokkos.h"
+#include "compute_isurf_grid_kokkos.h"
 
 namespace SPARTA_NS {
 
@@ -147,10 +148,19 @@ class UpdateKokkos : public Update {
 
   //KKCopy<ComputeSurfKokkos> blist_active_copy[KOKKOS_MAX_GLIST];
   KKCopy<ComputeSurfKokkos> slist_active_copy[KOKKOS_MAX_SLIST];
+  KKCopy<ComputeISurfGridKokkos> slist_active_isurf_copy[KOKKOS_MAX_SLIST];
   KKCopy<ComputeBoundaryKokkos> blist_active_copy[KOKKOS_MAX_BLIST];
+
+  // partition of slist_active (set in tally_set):
+  //   nslist_surf  = # of compute surf style tallies (slist_active_copy)
+  //   nslist_isurf = # of compute isurf/grid tallies (slist_active_isurf_copy)
+  // nslist_surf + nslist_isurf == nsurf_tally
+
+  int nslist_surf,nslist_isurf;
 
   ComputeBoundaryKokkos tmp_compute_boundary_kk;
   ComputeSurfKokkos tmp_compute_surf_kk;
+  ComputeISurfGridKokkos tmp_compute_isurf_grid_kk;
 
   typedef Kokkos::DualView<int[14], DeviceType::array_layout, DeviceType> tdual_int_14;
   typedef tdual_int_14::t_dev t_int_14;
