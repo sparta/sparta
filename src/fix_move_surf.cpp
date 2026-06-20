@@ -84,12 +84,12 @@ FixMoveSurf::FixMoveSurf(SPARTA *sparta, int narg, char **arg) :
 
   if (dim == 2) {
     origlines = (Surf::Line *)
-      memory->smalloc(nsurf*sizeof(Surf::Line),"fix/move/surf:origlines");
-    memcpy(origlines,surf->lines,nsurf*sizeof(Surf::Line));
+      memory->smalloc((bigint)nsurf*sizeof(Surf::Line),"fix/move/surf:origlines");
+    memcpy(origlines,surf->lines,(size_t)nsurf*sizeof(Surf::Line));
   } else if (dim == 3) {
     origtris = (Surf::Tri *)
-      memory->smalloc(nsurf*sizeof(Surf::Tri),"fix/move/surf:origtris");
-    memcpy(origtris,surf->tris,nsurf*sizeof(Surf::Tri));
+      memory->smalloc((bigint)nsurf*sizeof(Surf::Tri),"fix/move/surf:origtris");
+    memcpy(origtris,surf->tris,(size_t)nsurf*sizeof(Surf::Tri));
   }
 
   // initial output

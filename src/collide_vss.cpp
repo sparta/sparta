@@ -139,15 +139,17 @@ double CollideVSS::attempt_collision(int icell, int np, double volume)
   double fnum = update->fnum;
   double dt = update->dt;
 
-  double nattempt;
+  double nattempt = 0.0;
 
-  if (remainflag) {
-    nattempt = 0.5 * np * (np-1) *
-      vremax[icell][0][0] * dt * fnum / volume + remain[icell][0][0];
-    remain[icell][0][0] = nattempt - static_cast<int> (nattempt);
-  } else {
-    nattempt = 0.5 * np * (np-1) *
-      vremax[icell][0][0] * dt * fnum / volume + random->uniform();
+  if (volume > 0.0) {
+    if (remainflag) {
+      nattempt = 0.5 * np * (np-1) *
+        vremax[icell][0][0] * dt * fnum / volume + remain[icell][0][0];
+      remain[icell][0][0] = nattempt - static_cast<int> (nattempt);
+    } else {
+      nattempt = 0.5 * np * (np-1) *
+        vremax[icell][0][0] * dt * fnum / volume + random->uniform();
+    }
   }
 
   return nattempt;
@@ -170,7 +172,8 @@ double CollideVSS::attempt_collision(int icell, int igroup, int jgroup,
  else npairs = ngroup[igroup] * (ngroup[jgroup]);
  //else npairs = 0.5 * ngroup[igroup] * (ngroup[jgroup]);
 
- nattempt = npairs * vremax[icell][igroup][jgroup] * dt * fnum / volume;
+ nattempt = 0.0;
+ if (volume > 0.0) nattempt = npairs * vremax[icell][igroup][jgroup] * dt * fnum / volume;
 
  if (remainflag) {
    nattempt += remain[icell][igroup][jgroup];
@@ -833,7 +836,7 @@ void CollideVSS::read_param_file(char *fname)
   FILE *fp = fopen(fname,"r");
   if (fp == NULL) {
     char str[128];
-    sprintf(str,"Cannot open VSS parameter file %s",fname);
+    snprintf(str, 128,"Cannot open VSS parameter file %s",fname);
     error->one(FLERR,str);
   }
 
@@ -919,7 +922,7 @@ void CollideVSS::read_param_file(char *fname)
 
     if (params[i][i].diam < 0.0) {
       char str[128];
-      sprintf(str,"Species %s did not appear in VSS parameter file",
+      snprintf(str, 128,"Species %s did not appear in VSS parameter file",
               particle->species[i].id);
       error->one(FLERR,str);
     }

@@ -441,7 +441,7 @@ void Domain::add_region(int narg, char **arg)
   if (sparta->suffix_enable) {
     if (sparta->suffix) {
       char estyle[256];
-      sprintf(estyle,"%s/%s",arg[1],sparta->suffix);
+      snprintf(estyle, 256, "%s/%s",arg[1],sparta->suffix);
 
       if (0) return;
 

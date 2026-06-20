@@ -46,7 +46,7 @@ double bird_Evib(const int& nmode, const double& Tvib,
   // Comutes f for Newton's search method outlined in newtonTvib()
 
   double f = -Evib;
-  const double kb = 1.38064852e-23;
+  const double kb = boltz;
 
   for (int i = 0; i < nmode; i++) {
     const double vti = vibtemp[i];
@@ -64,7 +64,7 @@ double bird_dEvib(const int& nmode, const double& Tvib, const double vibtemp[]) 
   // Comutes df for Newton's search method
 
   double df = 0.0;
-  const double kb = 1.38064852e-23;
+  const double kb = boltz;
 
   for (int i = 0; i < nmode; i++) {
     const double vti = vibtemp[i];
@@ -192,7 +192,7 @@ int attempt_kk(Particle::OnePart *ip, Particle::OnePart *jp,
 
     if (r->d_coeff[1]>((-1)*r->d_coeff[4])) e_excess = ecc - r->d_coeff[1];
     else e_excess = ecc + r->d_coeff[4];
-    if (e_excess <= 0.0) continue;
+    if (e_excess <= 0.0 || ecc <= 0.0) continue;
 
     if (!partialEnergy) {
 

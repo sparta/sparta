@@ -303,7 +303,7 @@ void SurfReactProb::readfile(char *fname)
     fp = fopen(fname,"r");
     if (fp == NULL) {
       char str[128];
-      sprintf(str,"Cannot open reaction file %s",fname);
+      snprintf(str, 128,"Cannot open reaction file %s",fname);
       error->one(FLERR,str);
     }
   }

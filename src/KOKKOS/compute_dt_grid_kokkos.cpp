@@ -357,13 +357,15 @@ void ComputeDtGridKokkos::operator()(TagComputeDtGrid_ComputePerGrid, const int 
 
   // cell dt based on transit time using maximum most probable speed
   double vrm_max = sqrt(2.0*boltz * d_temp_vector(i) / min_species_mass);
-  dt_candidate = transit_fraction*dx/vrm_max;
-  cell_dt_desired = MIN(dt_candidate,cell_dt_desired);
-  dt_candidate = transit_fraction*dy/vrm_max;
-  cell_dt_desired = MIN(dt_candidate,cell_dt_desired);
-  if (dimension == 3) {
-    dt_candidate = transit_fraction*dz/vrm_max;
+  if (vrm_max > 0.0) {
+    dt_candidate = transit_fraction*dx/vrm_max;
     cell_dt_desired = MIN(dt_candidate,cell_dt_desired);
+    dt_candidate = transit_fraction*dy/vrm_max;
+    cell_dt_desired = MIN(dt_candidate,cell_dt_desired);
+    if (dimension == 3) {
+      dt_candidate = transit_fraction*dz/vrm_max;
+      cell_dt_desired = MIN(dt_candidate,cell_dt_desired);
+    }
   }
 
   d_vector_grid(i) = cell_dt_desired;

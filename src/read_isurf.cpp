@@ -554,6 +554,12 @@ void ReadISurf::read_corners_parallel(char *gridfile)
   else if (precision == DOUBLE) memory->create(dbuf,nvalues,"readisurf:dbuf");
 
   fp = fopen(gridfile,"rb");
+  if (fp == NULL) {
+    char str[128];
+    snprintf(str,128,"Cannot open read_isurf grid corner point file %s",
+             gridfile);
+    error->one(FLERR,str);
+  }
   if (precision == INT) {
     fseek(fp,offset*sizeof(uint8_t)+dim*sizeof(int),SEEK_SET);
     tmp = fread(ibuf,sizeof(uint8_t),nvalues,fp);

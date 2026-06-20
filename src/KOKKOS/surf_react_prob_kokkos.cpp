@@ -32,7 +32,7 @@ using namespace SPARTA_NS;
 
 SurfReactProbKokkos::SurfReactProbKokkos(SPARTA *sparta, int narg, char **arg) :
   SurfReactProb(sparta,narg,arg),
-  rand_pool(12345 + comm->me
+  rand_pool((int)(update->ranmaster->uniform() * 100000000) + comm->me
 #ifdef SPARTA_KOKKOS_EXACT
             , sparta
 #endif
@@ -183,7 +183,7 @@ void SurfReactProbKokkos::backup()
 
 #ifdef SPARTA_KOKKOS_EXACT
   if (!random_backup)
-    random_backup = new RanKnuth(12345 + comm->me);
+    random_backup = new RanKnuth((int)(update->ranmaster->uniform() * 100000000) + comm->me);
   memcpy(random_backup,random,sizeof(RanKnuth));
 #endif
 }

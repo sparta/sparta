@@ -123,7 +123,7 @@ void utils::missing_cmd_args(const std::string &file, int line, const std::strin
                              Error *error)
 {
   char msg[128];
-  sprintf(msg,"Illegal %s command: missing argument(s)",cmd.c_str());
+  snprintf(msg,sizeof(msg),"Illegal %s command: missing argument(s)",cmd.c_str());
   if (error) error->all(file.c_str(), line, msg);
 }
 
@@ -217,7 +217,7 @@ double utils::numeric(const char *file, int line, const std::string &str, bool d
 
   double rv = 0;
   char msg[128];
-  sprintf(msg,"Floating point number %s in input script or data file is invalid", buf.c_str());
+  snprintf(msg,sizeof(msg),"Floating point number %s in input script or data file is invalid", buf.c_str());
   try {
     std::size_t endpos;
     rv = std::stod(buf, &endpos);
@@ -233,7 +233,7 @@ double utils::numeric(const char *file, int line, const std::string &str, bool d
     else
       sparta->error->all(file, line, msg);
   } catch (std::out_of_range const &) {
-    sprintf(msg,"Floating point number %s in input script or data file is out of range", buf.c_str());
+    snprintf(msg,sizeof(msg),"Floating point number %s in input script or data file is out of range", buf.c_str());
     if (do_abort)
       sparta->error->one(file, line, msg);
     else
@@ -285,7 +285,7 @@ int utils::inumeric(const char *file, int line, const std::string &str, bool do_
 
   int rv = 0;
   char msg[128];
-  sprintf(msg,"Integer %s in input script or data file is invalid", buf.c_str());
+  snprintf(msg,sizeof(msg),"Integer %s in input script or data file is invalid", buf.c_str());
   try {
     std::size_t endpos;
     rv = std::stoi(buf, &endpos);
@@ -302,7 +302,7 @@ int utils::inumeric(const char *file, int line, const std::string &str, bool do_
       sparta->error->all(file, line, msg);
   } catch (std::out_of_range const &) {
     char msg[128];
-    sprintf(msg,"Integer %s in input script or data file is out of range", buf.c_str());
+    snprintf(msg,sizeof(msg),"Integer %s in input script or data file is out of range", buf.c_str());
     if (do_abort)
       sparta->error->one(file, line, msg);
     else
@@ -355,7 +355,7 @@ bigint utils::bnumeric(const char *file, int line, const std::string &str, bool 
 
   long long rv = 0;
   char msg[128];
-  sprintf(msg,"Integer %s in input script or data file is invalid", buf.c_str());
+  snprintf(msg,sizeof(msg),"Integer %s in input script or data file is invalid", buf.c_str());
   try {
     std::size_t endpos;
     rv = std::stoll(buf, &endpos);
@@ -373,7 +373,7 @@ bigint utils::bnumeric(const char *file, int line, const std::string &str, bool 
       sparta->error->all(file, line, msg);
   } catch (std::out_of_range const &) {
     char msg[128];
-    sprintf(msg,"Integer %s in input script or data file is out of range", buf.c_str());
+    snprintf(msg,sizeof(msg),"Integer %s in input script or data file is out of range", buf.c_str());
     if (do_abort)
       sparta->error->one(file, line, msg);
     else

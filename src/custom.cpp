@@ -595,7 +595,7 @@ bigint Custom::process_actions()
       char *filecurrent = new char[strlen(fname) + 16];
       char *ptr = strchr(fname,'*');
       *ptr = '\0';
-      sprintf(filecurrent,"%s" BIGINT_FORMAT "%s",
+      snprintf(filecurrent, strlen(fname) + 16,"%s" BIGINT_FORMAT "%s",
               fname,update->ntimestep,ptr+1);
       *ptr = '*';
 
@@ -634,7 +634,7 @@ bigint Custom::process_actions()
       char *filecurrent = new char[strlen(fname) + 16];
       char *ptr = strchr(fname,'*');
       *ptr = '\0';
-      sprintf(filecurrent,"%s" BIGINT_FORMAT "%s",
+      snprintf(filecurrent, strlen(fname) + 16,"%s" BIGINT_FORMAT "%s",
               fname,update->ntimestep,ptr+1);
       *ptr = '*';
 
@@ -1338,7 +1338,7 @@ void Custom::read_coarse_files(char *fname, int numfile, int colcount)
       filewhich = new char[strlen(fname) + 16];
       char *ptr = strchr(fname,'%');
       *ptr = '\0';
-      sprintf(filewhich,"%s%d%s",fname,iproc+1,ptr+1);
+      snprintf(filewhich, strlen(fname) + 16,"%s%d%s",fname,iproc+1,ptr+1);
       *ptr = '%';
     } else filewhich = fname;
 

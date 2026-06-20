@@ -315,23 +315,43 @@ void ComputeLambdaGridKokkos::compute_per_grid_kokkos()
           sizeall += sizez;
           sizeall /= 3.0;
         }
-        if (l_noutputs == 1) l_vector_grid[i] = lambda / sizeall;
-        else l_array_grid(i,l_output_order[KNALL]) = lambda / sizeall;
+        if (sizeall > 0.0) {
+          if (l_noutputs == 1) l_vector_grid[i] = lambda / sizeall;
+          else l_array_grid(i,l_output_order[KNALL]) = lambda / sizeall;
+        } else {
+          if (l_noutputs == 1) l_vector_grid[i] = 0.0;
+          else l_array_grid(i,l_output_order[KNALL]) = 0.0;
+        }
       }
 
       if (l_knxflag) {
-        if (l_noutputs == 1) l_vector_grid[i] = lambda / sizex;
-        else l_array_grid(i,l_output_order[KNX]) = lambda / sizex;
+        if (sizex > 0.0) {
+          if (l_noutputs == 1) l_vector_grid[i] = lambda / sizex;
+          else l_array_grid(i,l_output_order[KNX]) = lambda / sizex;
+        } else {
+          if (l_noutputs == 1) l_vector_grid[i] = 0.0;
+          else l_array_grid(i,l_output_order[KNX]) = 0.0;
+        }
       }
 
       if (l_knyflag) {
-        if (l_noutputs == 1) l_vector_grid[i] = lambda / sizey;
-        l_array_grid(i,l_output_order[KNY]) = lambda / sizey;
+        if (sizey > 0.0) {
+          if (l_noutputs == 1) l_vector_grid[i] = lambda / sizey;
+          else l_array_grid(i,l_output_order[KNY]) = lambda / sizey;
+        } else {
+          if (l_noutputs == 1) l_vector_grid[i] = 0.0;
+          else l_array_grid(i,l_output_order[KNY]) = 0.0;
+        }
       }
 
       if (l_knzflag) {
-        if (l_noutputs == 1) l_vector_grid[i] = lambda / sizez;
-        l_array_grid(i,l_output_order[KNZ]) = lambda / sizez;
+        if (sizez > 0.0) {
+          if (l_noutputs == 1) l_vector_grid[i] = lambda / sizez;
+          else l_array_grid(i,l_output_order[KNZ]) = lambda / sizez;
+        } else {
+          if (l_noutputs == 1) l_vector_grid[i] = 0.0;
+          else l_array_grid(i,l_output_order[KNZ]) = 0.0;
+        }
       }
     });
   }

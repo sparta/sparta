@@ -541,7 +541,8 @@ void Grid::id_num2str(cellint id, char *str)
     newbits = plevels[level].newbits;
     mask = (1L << newbits) - 1;
     ichild = id & mask;
-    sprintf(&str[offset],CELLINT_FORMAT,ichild);
+    if (offset >= 110) break; // prevent buffer overflow
+    snprintf(&str[offset], 128 - offset, CELLINT_FORMAT, ichild);
     offset = strlen(str);
     id = id >> newbits;
     if (!id) return;

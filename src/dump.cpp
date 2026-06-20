@@ -112,7 +112,7 @@ Dump::Dump(SPARTA *sparta, int, char **arg) : Pointers(sparta)
     MPI_Comm_split(world,me,0,&clustercomm);
     multiname = new char[strlen(filename) + 16];
     *ptr = '\0';
-    sprintf(multiname,"%s%d%s",filename,me,ptr+1);
+    snprintf(multiname, strlen(filename) + 16,"%s%d%s",filename,me,ptr+1);
     *ptr = '%';
   }
 
@@ -385,13 +385,13 @@ void Dump::openfile()
     char *ptr = strchr(filestar,'*');
     *ptr = '\0';
     if (padflag == 0)
-      sprintf(filecurrent,"%s" BIGINT_FORMAT "%s",
+      snprintf(filecurrent, strlen(filestar) + 16,"%s" BIGINT_FORMAT "%s",
               filestar,update->ntimestep,ptr+1);
     else {
       char bif[8],pad[16];
       strcpy(bif,BIGINT_FORMAT);
-      sprintf(pad,"%%s%%0%d%s%%s",padflag,&bif[1]);
-      sprintf(filecurrent,pad,filestar,update->ntimestep,ptr+1);
+      snprintf(pad, sizeof(pad),"%%s%%0%d%s%%s",padflag,&bif[1]);
+      snprintf(filecurrent, strlen(filestar) + 16,pad,filestar,update->ntimestep,ptr+1);
     }
     *ptr = '*';
   }
@@ -402,7 +402,7 @@ void Dump::openfile()
     if (compressed) {
 #ifdef SPARTA_GZIP
       char gzip[128];
-      sprintf(gzip,"gzip -6 > %s",filecurrent);
+      snprintf(gzip, sizeof(gzip),"gzip -6 > %s",filecurrent);
 #ifdef _WIN32
       fp = _popen(gzip,"wb");
 #else
@@ -435,7 +435,7 @@ void Dump::openfile()
 int Dump::convert_string(int n, double *mybuf)
 {
   int i,j;
-  char str[32];
+  char str[128];
 
   int offset = 0;
   int m = 0;
@@ -448,18 +448,18 @@ int Dump::convert_string(int n, double *mybuf)
 
     for (j = 0; j < size_one; j++) {
       if (vtype[j] == DOUBLE)
-        offset += sprintf(&sbuf[offset],vformat[j],mybuf[m]);
+        offset += snprintf(&sbuf[offset], maxbuf - offset,vformat[j],mybuf[m]);
       else if (vtype[j] == INT)
-        offset += sprintf(&sbuf[offset],vformat[j],
+        offset += snprintf(&sbuf[offset], maxbuf - offset,vformat[j],
                           static_cast<int> (ubuf(mybuf[m]).i));
       else if (vtype[j] == BIGINT)
-        offset += sprintf(&sbuf[offset],vformat[j],
+        offset += snprintf(&sbuf[offset], maxbuf - offset,vformat[j],
                           static_cast<bigint> (ubuf(mybuf[m]).i));
       else if (vtype[j] == UINT)
-        offset += sprintf(&sbuf[offset],vformat[j],
+        offset += snprintf(&sbuf[offset], maxbuf - offset,vformat[j],
                           static_cast<uint32_t> (ubuf(mybuf[m]).i));
       else if (vtype[j] == BIGUINT)
-        offset += sprintf(&sbuf[offset],vformat[j],
+        offset += snprintf(&sbuf[offset], maxbuf - offset,vformat[j],
                           static_cast<uint64_t> (ubuf(mybuf[m]).i));
       else if (vtype[j] == STRING) {
         // NOTE: this is a kludge
@@ -468,11 +468,11 @@ int Dump::convert_string(int n, double *mybuf)
         // if not, might have to move this method into child classes
         // and tailor it for each dump style
         grid->id_num2str(static_cast<int> (mybuf[m]),str);
-        offset += sprintf(&sbuf[offset],vformat[j],str);
+        offset += snprintf(&sbuf[offset], maxbuf - offset,vformat[j],str);
       }
       m++;
     }
-    offset += sprintf(&sbuf[offset],"\n");
+    offset += snprintf(&sbuf[offset], maxbuf - offset,"\n");
   }
 
   return offset;
@@ -548,7 +548,7 @@ void Dump::modify_params(int narg, char **arg)
       multiname = new char[strlen(filename) + 16];
       char *ptr = strchr(filename,'%');
       *ptr = '\0';
-      sprintf(multiname,"%s%d%s",filename,icluster,ptr+1);
+      snprintf(multiname, strlen(filename) + 16,"%s%d%s",filename,icluster,ptr+1);
       *ptr = '%';
       iarg += 2;
 
@@ -605,9 +605,9 @@ void Dump::modify_params(int narg, char **arg)
           error->all(FLERR,
                      "Dump_modify int format does not contain d character");
         char str[8];
-        sprintf(str,"%s",BIGINT_FORMAT);
+        snprintf(str, sizeof(str),"%s",BIGINT_FORMAT);
         *ptr = '\0';
-        sprintf(format_bigint_user,"%s%s%s",format_int_user,&str[1],ptr+1);
+        snprintf(format_bigint_user, n,"%s%s%s",format_int_user,&str[1],ptr+1);
         *ptr = 'd';
 
       } else if (strcmp(arg[iarg+1],"float") == 0) {
@@ -656,7 +656,7 @@ void Dump::modify_params(int narg, char **arg)
       multiname = new char[strlen(filename) + 16];
       char *ptr = strchr(filename,'%');
       *ptr = '\0';
-      sprintf(multiname,"%s%d%s",filename,icluster,ptr+1);
+      snprintf(multiname, strlen(filename) + 16,"%s%d%s",filename,icluster,ptr+1);
       *ptr = '%';
       iarg += 2;
 

@@ -242,7 +242,7 @@ void CreateGrid::command(int narg, char **arg)
   int nbits = plevels[nlevels-1].nbits + plevels[nlevels-1].newbits;
   if (nbits > sizeof(cellint)*8) {
     char str[128];
-    sprintf(str,"Hierarchical grid induces cell IDs that exceed %d bits",
+    snprintf(str,128,"Hierarchical grid induces cell IDs that exceed %d bits",
             (int) sizeof(cellint)*8);
     error->all(FLERR,str);
   }

@@ -71,6 +71,8 @@ ReactBird::ReactBird(SPARTA *sparta) : React(sparta)
   reactions = NULL;
   list_ij = NULL;
   sp2recomb_ij = NULL;
+  tally_reactions = NULL;
+  tally_reactions_all = NULL;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -278,7 +280,8 @@ void ReactBird::init()
         ncount++;
       } else aomega = 0.0;
 
-      r->coeff[6] = (momega+aomega) / ncount;
+      if (ncount > 0) r->coeff[6] = (momega+aomega) / ncount;
+      else r->coeff[6] = 0.0;
 
     } else {
       int mspec = r->products[0];
@@ -548,7 +551,7 @@ void ReactBird::readfile(char *fname)
     fp = fopen(fname,"r");
     if (fp == NULL) {
       char str[128];
-      sprintf(str,"Cannot open reaction file %s",fname);
+      snprintf(str,128,"Cannot open reaction file %s",fname);
       error->one(FLERR,str);
     }
   }

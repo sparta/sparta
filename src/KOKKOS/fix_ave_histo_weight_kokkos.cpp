@@ -256,7 +256,7 @@ void FixAveHistoWeightKokkos::calculate_weights()
       if (grid->maxlocal > maxvectorwt) {
         memoryKK->destroy_kokkos(k_vectorwt,vectorwt);
         maxvectorwt = grid->maxlocal;
-        memory->create(vectorwt,maxvectorwt,"ave/histo/weight:vectorwt");
+        memoryKK->create_kokkos(k_vectorwt,vectorwt,maxvectorwt,"ave/histo/weight:vectorwt");
       }
       input->variable->compute_grid(m,vectorwt,1,0);
       k_vectorwt.modify_host();
@@ -268,7 +268,6 @@ void FixAveHistoWeightKokkos::calculate_weights()
   // explicit per-particle attributes
   // NOTE: need to allocate local storage
   } else {
-    printf("%d, %d\n", which[i] == VARIABLE, kind == PERGRID);
     error->all(FLERR,"Fix ave/histo/weight/kokkos option not yet supported");
   }
 }
@@ -305,10 +304,12 @@ void FixAveHistoWeightKokkos::bin_particles(
   int nmax = particle->maxlocal;
 
   Region *region;
-  if (regionflag) region = domain->regions[iregion];
+  if (regionflag) {
+    region = domain->regions[iregion];
 
-  if (!region->kokkos_flag)
-    error->all(FLERR,"KOKKOS package does not (yet) support chosen region style");
+    if (!region->kokkos_flag)
+      error->all(FLERR,"KOKKOS package does not (yet) support chosen region style");
+  }
 
   KokkosBase* regionKKBase = dynamic_cast<KokkosBase*>(region);
 
@@ -369,14 +370,16 @@ void FixAveHistoWeightKokkos::bin_particles(
   d_values = mirror_view_from_raw_host_array<double,DeviceType>(values, n, stride);
 
   Region *region;
-  if (regionflag) region = domain->regions[iregion];
+  if (regionflag) {
+    region = domain->regions[iregion];
 
-  if (!region->kokkos_flag)
-    error->all(FLERR,"KOKKOS package does not (yet) support chosen region style");
+    if (!region->kokkos_flag)
+      error->all(FLERR,"KOKKOS package does not (yet) support chosen region style");
+  }
 
   KokkosBase* regionKKBase = dynamic_cast<KokkosBase*>(region);
 
-  if (k_match.extent(0) > nmax)
+  if (k_match.extent(0) < nmax)
     MemKK::realloc_kokkos(k_match,"fix_ave_histo_weight:match",nmax);
 
   regionKKBase->match_all_kokkos(k_match);

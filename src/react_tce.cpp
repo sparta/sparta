@@ -103,7 +103,7 @@ int ReactTCE::attempt(Particle::OnePart *ip, Particle::OnePart *jp,
 
     if (r->coeff[1]>((-1)*r->coeff[4])) e_excess = ecc - r->coeff[1];
     else e_excess = ecc + r->coeff[4];
-    if (e_excess <= 0.0) continue;
+    if (e_excess <= 0.0 || ecc <= 0.0) continue;
 
 
     if (!partialEnergy) {
@@ -152,9 +152,11 @@ int ReactTCE::attempt(Particle::OnePart *ip, Particle::OnePart *jp,
     case IONIZATION:
     case EXCHANGE:
       {
-        react_prob += r->coeff[2] * tgamma(z+2.5-r->coeff[5]) / MAX(1.0e-6,tgamma(z+r->coeff[3]+1.5)) *
-          pow(ecc-r->coeff[1],r->coeff[3]-1+r->coeff[5]) *
-          pow(1.0-r->coeff[1]/ecc,z+1.5-r->coeff[5]);
+        if (ecc > 0.0 && ecc > r->coeff[1]) {
+          react_prob += r->coeff[2] * tgamma(z+2.5-r->coeff[5]) / MAX(1.0e-6,tgamma(z+r->coeff[3]+1.5)) *
+            pow(ecc-r->coeff[1],r->coeff[3]-1+r->coeff[5]) *
+            pow(1.0-r->coeff[1]/ecc,z+1.5-r->coeff[5]);
+        }
         break;
       }
 
@@ -172,20 +174,22 @@ int ReactTCE::attempt(Particle::OnePart *ip, Particle::OnePart *jp,
         int *sp2recomb = reactions[isp][jsp].sp2recomb;
         if (sp2recomb[recomb_species] != list[i]) continue;
 
-        react_prob += recomb_boost * recomb_density * r->coeff[2] *
-          tgamma(z+2.5-r->coeff[5]) / MAX(1.0e-6,tgamma(z+r->coeff[3]+1.5)) *
-          pow(ecc-r->coeff[1],r->coeff[3]-1+r->coeff[5]) *  // extended to general recombination case with non-zero activation energy
-          pow(1.0-r->coeff[1]/ecc,z+1.5-r->coeff[5]);
+        if (ecc > 0.0 && ecc > r->coeff[1]) {
+          react_prob += recomb_boost * recomb_density * r->coeff[2] *
+            tgamma(z+2.5-r->coeff[5]) / MAX(1.0e-6,tgamma(z+r->coeff[3]+1.5)) *
+            pow(ecc-r->coeff[1],r->coeff[3]-1+r->coeff[5]) *  // extended to general recombination case with non-zero activation energy
+            pow(1.0-r->coeff[1]/ecc,z+1.5-r->coeff[5]);
+        }
         break;
       }
-
-    if (react_prob < 0) error->warning(FLERR,"Negative reaction probability");
-    else if (react_prob > 1) error->warning(FLERR,"Reaction probability greater than 1");
 
     default:
       error->one(FLERR,"Unknown outcome in reaction");
       break;
     }
+
+    if (react_prob < 0) error->warning(FLERR,"Negative reaction probability");
+    else if (react_prob > 1) error->warning(FLERR,"Reaction probability greater than 1");
 
     // test against random number to see if this reaction occurs
     // if it does, reset species of I,J and optional K to product species
@@ -236,6 +240,8 @@ int ReactTCE::attempt(Particle::OnePart *ip, Particle::OnePart *jp,
 
         return list[i] + 1;
       }
+
+      break;
     }
   }
 
@@ -253,7 +259,7 @@ double ReactTCE::bird_Evib(int nmode, double Tvib,
   // Comutes f for Newton's search method outlined in newtonTvib()
 
   double f = -Evib;
-  double kb = 1.38064852e-23;
+  double kb = update->boltz;
 
   for (int i = 0; i < nmode; i++) {
     const double vti = vibtemp[i];
@@ -270,7 +276,7 @@ double ReactTCE::bird_dEvib(int nmode, double Tvib, double vibtemp[])
   // Comutes df for Newton's search method
 
   double df = 0.0;
-  double kb = 1.38064852e-23;
+  double kb = update->boltz;
 
   for (int i = 0; i < nmode; i++) {
     const double vti = vibtemp[i];

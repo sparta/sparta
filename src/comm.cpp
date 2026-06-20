@@ -546,7 +546,6 @@ int Comm::send_cells_adapt(int nsend, int *procsend, char *inbuf, char **outbuf)
     memory->sfree(rbuf);
     maxrecvbuf = recvsize;
     rbuf = (char *) memory->smalloc(maxrecvbuf,"comm:rbuf");
-    memory->create(rbuf,maxrecvbuf,"comm:rbuf");
     memset(rbuf,0,maxrecvbuf);
   }
 

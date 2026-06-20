@@ -68,8 +68,8 @@ ComputeGasReactionTally::ComputeGasReactionTally(SPARTA *sparta, int narg, char 
     else if (strcmp(arg[iarg],"vy1/pre") == 0) which[nvalue++] = VY1PRE;
     else if (strcmp(arg[iarg],"vz1/pre") == 0) which[nvalue++] = VZ1PRE;
     else if (strcmp(arg[iarg],"vx2/pre") == 0) which[nvalue++] = VX2PRE;
-    else if (strcmp(arg[iarg],"vy2/pre") == 0) which[nvalue++] = VX2PRE;
-    else if (strcmp(arg[iarg],"vz2/pre") == 0) which[nvalue++] = VY2PRE;
+    else if (strcmp(arg[iarg],"vy2/pre") == 0) which[nvalue++] = VY2PRE;
+    else if (strcmp(arg[iarg],"vz2/pre") == 0) which[nvalue++] = VZ2PRE;
     else if (strcmp(arg[iarg],"vx1/post") == 0) which[nvalue++] = VX1POST;
     else if (strcmp(arg[iarg],"vy1/post") == 0) which[nvalue++] = VY1POST;
     else if (strcmp(arg[iarg],"vz1/post") == 0) which[nvalue++] = VZ1POST;

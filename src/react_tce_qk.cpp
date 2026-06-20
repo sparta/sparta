@@ -141,9 +141,11 @@ int ReactTCEQK::attempt_tce(Particle::OnePart *ip, Particle::OnePart *jp,
   case DISSOCIATION:
   case EXCHANGE:
     {
-      react_prob += r->coeff[2] *
-        pow(ecc-r->coeff[1],r->coeff[3]) *
-        pow(1.0-r->coeff[1]/ecc,r->coeff[5]);
+      if (ecc > 0.0) {
+        react_prob += r->coeff[2] *
+          pow(ecc-r->coeff[1],r->coeff[3]) *
+          pow(1.0-r->coeff[1]/ecc,r->coeff[5]);
+      }
       break;
     }
 
@@ -229,8 +231,9 @@ int ReactTCEQK::attempt_qk(Particle::OnePart *ip, Particle::OnePart *jp,
           do {
             iv =  static_cast<int> (random->uniform()*(maxlev+0.99999999));
             evib = static_cast<double> (iv / inverse_kT);
-            if (evib < ecc) react_prob = pow(1.0-evib/ecc,1.5-omega);
-          } while (random->uniform() < react_prob);
+            if (evib < ecc && ecc > 0.0) prob = pow(1.0-evib/ecc,1.5-omega);
+            else prob = 0.0;
+          } while (random->uniform() < prob);
 
           ilevel = static_cast<int> (fabs(r->coeff[4]) * inverse_kT);
           if (iv >= ilevel) react_prob = 1.0;
@@ -259,7 +262,8 @@ int ReactTCEQK::attempt_qk(Particle::OnePart *ip, Particle::OnePart *jp,
           iv = random->uniform()*(maxlev+0.99999999);
           evib = static_cast<double>
             (iv * update->boltz*species[mspec].vibtemp[0]);
-          if (evib < ecc) prob = pow(1.0-evib/ecc,1.5 - r->coeff[6]);
+          if (evib < ecc && ecc > 0.0) prob = pow(1.0-evib/ecc,1.5 - r->coeff[6]);
+          else prob = 0.0;
         } while (random->uniform() < prob);
 
         ilevel = static_cast<int>

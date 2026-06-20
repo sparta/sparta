@@ -83,7 +83,7 @@ void ComputeGasCollisionGrid::compute_per_grid()
 void ComputeGasCollisionGrid::clear()
 {
   cinfo = grid->cinfo;
-  memset(vector_grid,0,nglocal*sizeof(double));
+  memset(vector_grid,0,((size_t)nglocal)*sizeof(double));
 }
 
 /* ----------------------------------------------------------------------
@@ -143,7 +143,7 @@ void ComputeGasCollisionGrid::reallocate()
   // also note if load-balancing is done, tallies will be lost
   //   would need to implement (un)pack_grid_one() to avoid this
 
-  memset(vector_grid,0,nglocal*sizeof(double));
+  memset(vector_grid,0,((size_t)nglocal)*sizeof(double));
 }
 
 /* ----------------------------------------------------------------------

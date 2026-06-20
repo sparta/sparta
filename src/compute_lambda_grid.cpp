@@ -194,8 +194,10 @@ ComputeLambdaGrid::ComputeLambdaGrid(SPARTA *sparta, int narg, char **arg) :
 
     char *ptr = strchr(suffix,'[');
     if (ptr) {
-      if (suffix[strlen(suffix)-1] != ']')
+      if (suffix[strlen(suffix)-1] != ']') {
+        delete [] suffix;
         error->all(FLERR,"Invalid nrho in compute lambda/grid command");
+      }
       nrhoindex[i] = atoi(ptr+1);
       *ptr = '\0';
     } else nrhoindex[i] = 0;
@@ -664,23 +666,43 @@ void ComputeLambdaGrid::compute_per_grid()
         sizeall += sizez;
         sizeall /= 3.0;
       }
-      if (noutputs == 1) vector_grid[i] = lambda / sizeall;
-      else array_grid[i][output_order[KNALL]] = lambda / sizeall;
+      if (sizeall > 0.0) {
+        if (noutputs == 1) vector_grid[i] = lambda / sizeall;
+        else array_grid[i][output_order[KNALL]] = lambda / sizeall;
+      } else {
+        if (noutputs == 1) vector_grid[i] = 0.0;
+        else array_grid[i][output_order[KNALL]] = 0.0;
+      }
     }
 
     if (knxflag) {
-      if (noutputs == 1) vector_grid[i] = lambda / sizex;
-      else array_grid[i][output_order[KNX]] = lambda / sizex;
+      if (sizex > 0.0) {
+        if (noutputs == 1) vector_grid[i] = lambda / sizex;
+        else array_grid[i][output_order[KNX]] = lambda / sizex;
+      } else {
+        if (noutputs == 1) vector_grid[i] = 0.0;
+        else array_grid[i][output_order[KNX]] = 0.0;
+      }
     }
 
     if (knyflag) {
-      if (noutputs == 1) vector_grid[i] = lambda / sizey;
-      array_grid[i][output_order[KNY]] = lambda / sizey;
+      if (sizey > 0.0) {
+        if (noutputs == 1) vector_grid[i] = lambda / sizey;
+        else array_grid[i][output_order[KNY]] = lambda / sizey;
+      } else {
+        if (noutputs == 1) vector_grid[i] = 0.0;
+        else array_grid[i][output_order[KNY]] = 0.0;
+      }
     }
 
     if (knzflag) {
-      if (noutputs == 1) vector_grid[i] = lambda / sizez;
-      array_grid[i][output_order[KNZ]] = lambda / sizez;
+      if (sizez > 0.0) {
+        if (noutputs == 1) vector_grid[i] = lambda / sizez;
+        else array_grid[i][output_order[KNZ]] = lambda / sizez;
+      } else {
+        if (noutputs == 1) vector_grid[i] = 0.0;
+        else array_grid[i][output_order[KNZ]] = 0.0;
+      }
     }
   }
 }
@@ -736,10 +758,10 @@ void ComputeLambdaGrid::reallocate()
 
 bigint ComputeLambdaGrid::memory_usage()
 {
-  bigint bytes;
-  bytes = nglocal * sizeof(double);                            // vector_grid
+  bigint bytes = 0;
+  bytes += nglocal * sizeof(double);                            // vector_grid
   if (nrho_values > 1)
-    bytes = nglocal * nrho_values * sizeof(double);            // array_grid1
+    bytes += nglocal * nrho_values * sizeof(double);            // array_grid1
   bytes += nglocal * noutputs * sizeof(double);                // array_grid
   bytes += nglocal * sizeof(double);                           // lambda_grid
   bytes += 2 * nglocal * ntotal * sizeof(double);              // lambdainv + tauinv

@@ -571,7 +571,7 @@ void Surf::spread_own2local_reduce(int n, int type, void *in, void *out)
       error->all(FLERR,"Overflow in spread_own2local_reduce");
     bigint bbytes = (bigint) nlocal * n * sizeof(int);
 
-    memory->create(myvec,nlocal*n,"surf/spread:myvec");
+    memory->create(myvec,(bigint)nlocal*n,"surf/spread:myvec");
     memset(myvec,0,bbytes);
 
     if (n == 1) {
@@ -602,7 +602,7 @@ void Surf::spread_own2local_reduce(int n, int type, void *in, void *out)
       error->all(FLERR,"Overflow in spread_own2local_reduce");
     bigint bbytes = (bigint) nlocal * n * sizeof(double);
 
-    memory->create(myvec,nlocal*n,"surf/spread:myvec");
+    memory->create(myvec,(bigint)nlocal*n,"surf/spread:myvec");
     memset(myvec,0,bbytes);
 
     if (n == 1) {
@@ -992,10 +992,10 @@ void Surf::spread_local2own(int n, int type, void *in, void *out)
   dbuf = NULL;
   if (type == INT) {
     iinput = (int *) in;
-    memory->create(ibuf,(n+1)*nunique,"spread/local2own:ibuf");
+    memory->create(ibuf,(bigint)(n+1)*nunique,"spread/local2own:ibuf");
   } else if (type == DOUBLE) {
     dinput = (double *) in;
-    memory->create(dbuf,(n+1)*nunique,"spread/local2own:dbuf");
+    memory->create(dbuf,(bigint)(n+1)*nunique,"spread/local2own:dbuf");
   }
 
   int isurf,index;

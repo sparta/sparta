@@ -942,7 +942,7 @@ void ComputeFFTGrid::print_FFT_info()
 {
   if (comm->me == 0) {
     char str[64];
-    sprintf(str,"Using " SPARTA_FFT_PREC " precision " SPARTA_FFT_LIB " for FFTs\n");
+    snprintf(str, sizeof(str),"Using " SPARTA_FFT_PREC " precision " SPARTA_FFT_LIB " for FFTs\n");
     if (screen) fprintf(screen,"%s",str);
     if (logfile) fprintf(logfile,"%s",str);
   }
@@ -958,11 +958,11 @@ void ComputeFFTGrid::debug(const char *str, int n,
   int i,j;
   char buf[1024],one[32];
 
-  sprintf(buf,"%s: %d %d:",str,me,n);
+  snprintf(buf, sizeof(buf),"%s: %d %d:",str,me,n);
   if (dx) {
     j = 0;
     for (i = 0; i < n; i++) {
-      sprintf(one," %g",dx[j]);
+      snprintf(one, 128," %g",dx[j]);
       strcat(buf,one);
       j += stride;
     }
@@ -970,7 +970,7 @@ void ComputeFFTGrid::debug(const char *str, int n,
   if (ix) {
     j = 0;
     for (i = 0; i < n; i++) {
-      sprintf(one," %d",ix[j]);
+      snprintf(one, 128," %d",ix[j]);
       strcat(buf,one);
       j += stride;
     }
@@ -978,12 +978,12 @@ void ComputeFFTGrid::debug(const char *str, int n,
   if (cx) {
     j = 0;
     for (i = 0; i < n; i++) {
-      sprintf(one," %d",cx[j]);
+      snprintf(one, 128," %d",cx[j]);
       strcat(buf,one);
       j += stride;
     }
   }
-  sprintf(one,"\n");
+  snprintf(one, 128,"\n");
   strcat(buf,one);
   printf("%s",buf);
 }

@@ -93,8 +93,8 @@ class FixAmbipolarKokkos : public FixAmbipolar {
 
     rand_type rand_gen = rand_pool.get_state();
 
-    const double vn = vscale * sqrt(-log(rand_gen.drand()));
-    const double vr = vscale * sqrt(-log(rand_gen.drand()));
+    const double vn = vscale * sqrt(-log(1.0 - rand_gen.drand()));
+    const double vr = vscale * sqrt(-log(1.0 - rand_gen.drand()));
     const double theta1 = MathConst::MY_2PI * rand_gen.drand();
     const double theta2 = MathConst::MY_2PI * rand_gen.drand();
 

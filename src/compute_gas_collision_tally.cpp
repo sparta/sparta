@@ -55,7 +55,7 @@ ComputeGasCollisionTally::ComputeGasCollisionTally(SPARTA *sparta, int narg, cha
     else if (strcmp(arg[iarg],"id1") == 0) which[nvalue++] = ID1;
     else if (strcmp(arg[iarg],"id2") == 0) which[nvalue++] = ID2;
     else if (strcmp(arg[iarg],"type1") == 0) which[nvalue++] = TYPE1;
-    else if (strcmp(arg[iarg],"type2") == 0) which[nvalue++] = TYPE1;
+    else if (strcmp(arg[iarg],"type2") == 0) which[nvalue++] = TYPE2;
     else if (strcmp(arg[iarg],"vx1/pre") == 0) which[nvalue++] = VX1PRE;
     else if (strcmp(arg[iarg],"vy1/pre") == 0) which[nvalue++] = VY1PRE;
     else if (strcmp(arg[iarg],"vz1/pre") == 0) which[nvalue++] = VZ1PRE;

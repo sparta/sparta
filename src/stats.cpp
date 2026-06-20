@@ -99,7 +99,7 @@ Stats::Stats(SPARTA *sparta) : Pointers(sparta)
 
   format_float_def = (char *) "%12.8g";
   format_int_def = (char *) "%8d";
-  sprintf(format_bigint_def,"%%8%s",&bigint_format[1]);
+  snprintf(format_bigint_def, 32,"%%8%s",&bigint_format[1]);
 
   format_line_user = NULL;
   format_float_user = NULL;
@@ -163,7 +163,7 @@ void Stats::init()
     }
 
     n = strlen(format[i]);
-    sprintf(&format[i][n],"%s ",ptr);
+    snprintf(&format[i][n], 32 - n,"%s ",ptr);
   }
   strcat(format[nfield-1],"\n");
 
@@ -218,8 +218,8 @@ void Stats::header()
 {
   int loc = 0;
   for (int i = 0; i < nfield; i++)
-    loc += sprintf(&line[loc],"%s ",keyword[i]);
-  sprintf(&line[loc],"\n");
+    loc += snprintf(&line[loc], MAXLINE - loc,"%s ",keyword[i]);
+  snprintf(&line[loc], MAXLINE - loc,"\n");
 
   if (me == 0) {
     if (screen) fprintf(screen,"%s",line);
@@ -261,11 +261,11 @@ void Stats::compute(int flag)
   for (ifield = 0; ifield < nfield; ifield++) {
     (this->*vfunc[ifield])();
     if (vtype[ifield] == FLOAT)
-      loc += sprintf(&line[loc],format[ifield],dvalue);
+      loc += snprintf(&line[loc], MAXLINE - loc,format[ifield],dvalue);
     else if (vtype[ifield] == INT)
-      loc += sprintf(&line[loc],format[ifield],ivalue);
+      loc += snprintf(&line[loc], MAXLINE - loc,format[ifield],ivalue);
     else if (vtype[ifield] == BIGINT) {
-      loc += sprintf(&line[loc],format[ifield],bivalue);
+      loc += snprintf(&line[loc], MAXLINE - loc,format[ifield],bivalue);
     }
   }
 
@@ -350,9 +350,9 @@ void Stats::modify_params(int narg, char **arg)
           error->all(FLERR,
                      "Stats_modify int format does not contain d character");
         char str[8];
-        sprintf(str,"%s",BIGINT_FORMAT);
+        snprintf(str, sizeof(str),"%s",BIGINT_FORMAT);
         *ptr = '\0';
-        sprintf(format_bigint_user,"%s%s%s",format_int_user,&str[1],ptr+1);
+        snprintf(format_bigint_user, n,"%s%s%s",format_int_user,&str[1],ptr+1);
         *ptr = 'd';
       } else if (strcmp(arg[iarg+1],"float") == 0) {
         if (format_float_user) delete [] format_float_user;

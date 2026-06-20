@@ -80,7 +80,7 @@ void WriteGrid::command(int narg, char **arg)
     fp = fopen(arg[0],"w");
     if (!fp) {
       char str[128];
-      sprintf(str,"Cannot open file %s",arg[0]);
+      snprintf(str,128,"Cannot open file %s",arg[0]);
       error->one(FLERR,str);
     }
   }

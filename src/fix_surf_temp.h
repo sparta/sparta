@@ -45,7 +45,6 @@ class FixSurfTemp : public Fix {
   class Fix *fqw;
 
   double prefactor,threshold;
-  double *tvector_me;
 };
 
 }

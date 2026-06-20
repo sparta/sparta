@@ -35,7 +35,7 @@ enum{INT,DOUBLE};                      // several files
 
 FixAmbipolarKokkos::FixAmbipolarKokkos(SPARTA *sparta, int narg, char **arg) :
   FixAmbipolar(sparta, narg, arg),
-  rand_pool(12345 + comm->me
+  rand_pool((int)(update->ranmaster->uniform() * 100000000) + comm->me
 #ifdef SPARTA_KOKKOS_EXACT
             , sparta
 #endif

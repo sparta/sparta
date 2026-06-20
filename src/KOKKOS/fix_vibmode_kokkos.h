@@ -96,7 +96,7 @@ void FixVibmodeKokkos::update_custom_kokkos(int index, double temp_thermal,
   rand_type rand_gen = rand_pool.get_state();
 
   for (int imode = 0; imode < nmode; imode++) {
-    const int ivib = static_cast<int> (-log(rand_gen.drand()) * temp_vib /
+    const int ivib = static_cast<int> (-log(1.0 - rand_gen.drand()) * temp_vib /
                                        d_species[isp].vibtemp[imode]);
     d_vibmode(index,imode) = ivib;
     evib += ivib * boltz * d_species[isp].vibtemp[imode];

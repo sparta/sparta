@@ -31,10 +31,10 @@ class FixEmitSurf : public FixEmit {
  public:
   FixEmitSurf(class SPARTA *, int, char **);
   ~FixEmitSurf();
-  void init();
+  void init() override;
 
   void grid_changed() override;
-  void custom_surf_changed();
+  void custom_surf_changed() override;
 
   struct Task {
     double area;                // area of overlap of surf with cell
@@ -108,8 +108,8 @@ class FixEmitSurf : public FixEmit {
 
   // protected methods
 
-  virtual void create_task(int);
-  virtual void perform_task();
+  void create_task(int) override;
+  void perform_task() override;
   void perform_task_onepass();
   virtual void perform_task_twopass();
   virtual void grow_task();
@@ -119,7 +119,7 @@ class FixEmitSurf : public FixEmit {
   void subsonic_grid();
 
   virtual void realloc_nspecies();
-  int option(int, char **);
+  int option(int, char **) override;
 };
 
 }

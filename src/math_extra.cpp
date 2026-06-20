@@ -195,12 +195,12 @@ int bounds(char *str, int nmax, int &nlo, int &nhi)
 
 char *num2str(bigint n, char *outstr)
 {
-  if (n < 100000) sprintf(outstr,"(%1.3gK)",1.0e-3*n);
-  else if (n < 1000000000) sprintf(outstr,"(%1.3gM)",1.0e-6*n);
-  else if (n < 1000000000000) sprintf(outstr,"(%1.3gB)",1.0e-9*n);
-  else if (n < 1000000000000000) sprintf(outstr,"(%1.3gT)",1.0e-12*n);
-  else if (n < 1000000000000000000) sprintf(outstr,"(%1.3gP)",1.0e-15*n);
-  else sprintf(outstr,"(%1.3gE)",1.0e-18*n);
+  if (n < 100000) snprintf(outstr, 32,"(%1.3gK)",1.0e-3*n);
+  else if (n < 1000000000) snprintf(outstr, 32,"(%1.3gM)",1.0e-6*n);
+  else if (n < 1000000000000) snprintf(outstr, 32,"(%1.3gB)",1.0e-9*n);
+  else if (n < 1000000000000000) snprintf(outstr, 32,"(%1.3gT)",1.0e-12*n);
+  else if (n < 1000000000000000000) snprintf(outstr, 32,"(%1.3gP)",1.0e-15*n);
+  else snprintf(outstr, 32,"(%1.3gE)",1.0e-18*n);
   return outstr;
 }
 

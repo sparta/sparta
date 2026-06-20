@@ -499,7 +499,7 @@ void ComputeTvibGrid::post_process_grid(int index, int /*nsample*/,
       evib = emap[2*imode];
       count = evib+1;
       for (isp = 0; isp < nsp; isp++) {
-        ispecies = groupspecies[index][isp];
+        ispecies = groupspecies[index / maxmode][isp];
         theta = species[ispecies].vibtemp[imode];
         if (theta == 0.0 || etally[icell][count] == 0.0) {
           tspecies_mode[isp][imode] = 0.0;
@@ -561,8 +561,8 @@ void ComputeTvibGrid::reallocate()
 
 bigint ComputeTvibGrid::memory_usage()
 {
-  bigint bytes;
-  bytes = nglocal * sizeof(double);
-  bytes = ntally*nglocal * sizeof(double);
+  bigint bytes = 0;
+  bytes += nglocal * sizeof(double);
+  bytes += ntally*nglocal * sizeof(double);
   return bytes;
 }

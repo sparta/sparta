@@ -338,9 +338,9 @@ void ComputeSonineGrid::reallocate()
 
 bigint ComputeSonineGrid::memory_usage()
 {
-  bigint bytes;
-  bytes = nglocal * sizeof(double);              // vector_grid
-  bytes = ntotal*nglocal * sizeof(double);       // tally array
+  bigint bytes = 0;
+  bytes += nglocal * sizeof(double);              // vector_grid
+  bytes += ntotal*nglocal * sizeof(double);       // tally array
   bytes += nglocal*ngroup*4 * sizeof(double);    // vcom
   return bytes;
 }

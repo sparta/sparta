@@ -160,7 +160,8 @@ void SurfCollideSpecular::wrapper(Particle::OnePart *p, double *norm,
   if (flags)
     noslip_flag = flags[0];
 
-  MathExtra::reflect3(p->v,norm);
+  if (noslip_flag) MathExtra::negate3(p->v);
+  else MathExtra::reflect3(p->v,norm);
 }
 
 /* ----------------------------------------------------------------------

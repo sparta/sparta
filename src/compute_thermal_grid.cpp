@@ -247,7 +247,11 @@ post_process_grid(int index, int nsample,
       vec[k] = mvsq - (mvx*mvx + mvy*mvy + mvz*mvz)/mass;
       vec[k] *= prefactor;
       if (tflag) vec[k] /= ncount;
-      else vec[k] *= cinfo[icell].weight / cinfo[icell].volume / nsample;
+      else {
+        if (cinfo[icell].volume > 0.0)
+          vec[k] *= cinfo[icell].weight / cinfo[icell].volume / nsample;
+        else vec[k] = 0.0;
+      }
     }
     k += nstride;
   }
@@ -276,7 +280,7 @@ void ComputeThermalGrid::reallocate()
 bigint ComputeThermalGrid::memory_usage()
 {
   bigint bytes = 0;
-  bytes = nglocal * sizeof(double);
-  bytes = ntotal*nglocal * sizeof(double);
+  bytes += nglocal * sizeof(double);
+  bytes += ntotal*nglocal * sizeof(double);
   return bytes;
 }

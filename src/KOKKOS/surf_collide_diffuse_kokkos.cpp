@@ -50,7 +50,7 @@ SurfCollideDiffuseKokkos::SurfCollideDiffuseKokkos(SPARTA *sparta, int narg, cha
   fix_vibmode_kk_copy(sparta),
   sr_kk_global_copy{VAL_2(KKCopy<SurfReactGlobalKokkos>(sparta))},
   sr_kk_prob_copy{VAL_2(KKCopy<SurfReactProbKokkos>(sparta))},
-  rand_pool(12345 + comm->me
+  rand_pool((int)(update->ranmaster->uniform() * 100000000) + comm->me
 #ifdef SPARTA_KOKKOS_EXACT
             , sparta
 #endif
@@ -326,7 +326,7 @@ void SurfCollideDiffuseKokkos::backup()
 
 #ifdef SPARTA_KOKKOS_EXACT
   if (!random_backup)
-    random_backup = new RanKnuth(12345 + comm->me);
+    random_backup = new RanKnuth((int)(update->ranmaster->uniform() * 100000000) + comm->me);
   memcpy(random_backup,random,sizeof(RanKnuth));
 #endif
 }

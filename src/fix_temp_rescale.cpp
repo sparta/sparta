@@ -290,6 +290,8 @@ void FixTempRescale::end_of_step_average(double t_target)
   bigint n_current;
   MPI_Allreduce(&n_current_mine,&n_current,1,MPI_SPARTA_BIGINT,MPI_SUM,world);
 
+  if (n_current == 0 || t_current == 0.0) return;
+
   // t_current = cellwise averaged thermal T
   // scale all particles in all cells by vscale
 

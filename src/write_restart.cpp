@@ -77,7 +77,7 @@ void WriteRestart::command(int narg, char **arg)
 
   if ((ptr = strchr(arg[0],'*'))) {
     *ptr = '\0';
-    sprintf(file,"%s" BIGINT_FORMAT "%s",arg[0],update->ntimestep,ptr+1);
+    snprintf(file, n,"%s" BIGINT_FORMAT "%s",arg[0],update->ntimestep,ptr+1);
   } else strcpy(file,arg[0]);
 
   // check for multiproc output
@@ -196,13 +196,13 @@ void WriteRestart::write(char *file)
       hfile = new char[strlen(file) + 16];
       char *ptr = strchr(file,'%');
       *ptr = '\0';
-      sprintf(hfile,"%s%s%s",file,"base",ptr+1);
+      snprintf(hfile, strlen(file) + 16,"%s%s%s",file,"base",ptr+1);
       *ptr = '%';
     } else hfile = file;
     fp = fopen(hfile,"wb");
     if (fp == NULL) {
       char str[128];
-      sprintf(str,"Cannot open restart file %s",hfile);
+      snprintf(str,128,"Cannot open restart file %s",hfile);
       error->one(FLERR,str);
     }
     if (multiproc) delete [] hfile;
@@ -248,14 +248,14 @@ void WriteRestart::write(char *file)
     char *multiname = new char[strlen(file) + 16];
     char *ptr = strchr(file,'%');
     *ptr = '\0';
-    sprintf(multiname,"%s%d%s",file,icluster,ptr+1);
+    snprintf(multiname, strlen(file) + 16,"%s%d%s",file,icluster,ptr+1);
     *ptr = '%';
 
     if (filewriter) {
       fp = fopen(multiname,"wb");
       if (fp == NULL) {
         char str[128];
-        sprintf(str,"Cannot open restart file %s",multiname);
+        snprintf(str,128,"Cannot open restart file %s",multiname);
         error->one(FLERR,str);
       }
       write_int(PROCSPERFILE,nclusterprocs);
@@ -381,13 +381,13 @@ void WriteRestart::write_less_memory(char *file)
       hfile = new char[strlen(file) + 16];
       char *ptr = strchr(file,'%');
       *ptr = '\0';
-      sprintf(hfile,"%s%s%s",file,"base",ptr+1);
+      snprintf(hfile, strlen(file) + 16,"%s%s%s",file,"base",ptr+1);
       *ptr = '%';
     } else hfile = file;
     fp = fopen(hfile,"wb");
     if (fp == NULL) {
       char str[128];
-      sprintf(str,"Cannot open restart file %s",hfile);
+      snprintf(str,128,"Cannot open restart file %s",hfile);
       error->one(FLERR,str);
     }
     if (multiproc) delete [] hfile;
@@ -433,14 +433,14 @@ void WriteRestart::write_less_memory(char *file)
     char *multiname = new char[strlen(file) + 16];
     char *ptr = strchr(file,'%');
     *ptr = '\0';
-    sprintf(multiname,"%s%d%s",file,icluster,ptr+1);
+    snprintf(multiname, strlen(file) + 16,"%s%d%s",file,icluster,ptr+1);
     *ptr = '%';
 
     if (filewriter) {
       fp = fopen(multiname,"wb");
       if (fp == NULL) {
         char str[128];
-        sprintf(str,"Cannot open restart file %s",multiname);
+        snprintf(str,128,"Cannot open restart file %s",multiname);
         error->one(FLERR,str);
       }
       write_int(PROCSPERFILE,nclusterprocs);

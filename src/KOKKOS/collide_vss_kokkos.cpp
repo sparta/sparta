@@ -53,7 +53,7 @@ enum{CONSTANT,VARIABLE};
 
 CollideVSSKokkos::CollideVSSKokkos(SPARTA *sparta, int narg, char **arg) :
   CollideVSS(sparta, narg, arg),
-  rand_pool(12345 + comm->me
+  rand_pool((int)(update->ranmaster->uniform() * 100000000) + comm->me
 #ifdef SPARTA_KOKKOS_EXACT
             , sparta
 #endif
@@ -160,7 +160,7 @@ void CollideVSSKokkos::init()
     }
     if (flag) {
       char str[128];
-      sprintf(str,"%d species do not define correct vibrational "
+      snprintf(str, sizeof(str),"%d species do not define correct vibrational "
               "modes for discrete model",flag);
       error->all(FLERR,str);
     }
@@ -760,7 +760,6 @@ void CollideVSSKokkos::operator()(TagCollideCollisionsOne< NEARCP, GASTALLY, ATO
       else
         reduce.nreact_one++;
     } else {
-      rand_pool.free_state(rand_gen);
       continue;
     }
 
@@ -1170,7 +1169,6 @@ void CollideVSSKokkos::operator()(TagCollideCollisionsOneAmbipolar< GASTALLY, AT
       else
         reduce.nreact_one++;
     } else {
-      rand_pool.free_state(rand_gen);
       continue;
     }
 
@@ -1592,7 +1590,7 @@ void CollideVSSKokkos::SCATTER_TwoBodyScattering(Particle::OnePart *ip,
     vb = vr*sinX*cos(eps);
     wc = vr*sinX*sin(eps);
   } else {
-    double scale = sqrt((2.0 * postcoln.etrans) / (d_params(isp,jsp).mr * precoln.vr2));
+    double scale = (precoln.vr2 > 0.0) ? sqrt((2.0 * postcoln.etrans) / (d_params(isp,jsp).mr * precoln.vr2)) : 0.0;
     double cosX = 2.0*pow(rand_gen.drand(),alpha_r) - 1.0;
     double sinX = sqrt(1.0 - cosX*cosX);
     vrc[0] = vi[0]-vj[0];
@@ -1799,7 +1797,7 @@ void CollideVSSKokkos::SCATTER_ThreeBodyScattering(Particle::OnePart *ip,
     vb = vr*sinX*cos(eps);
     wc = vr*sinX*sin(eps);
   } else {
-    double scale = sqrt((2.0*postcoln.etrans) / (mr*precoln.vr2));
+    double scale = (precoln.vr2 > 0.0) ? sqrt((2.0*postcoln.etrans) / (mr*precoln.vr2)) : 0.0;
     vrc[0] = vi[0]-vj[0];
     vrc[1] = vi[1]-vj[1];
     vrc[2] = vi[2]-vj[2];
@@ -2471,7 +2469,7 @@ void CollideVSSKokkos::backup()
 
 #ifdef SPARTA_KOKKOS_EXACT
   if (!random_backup)
-    random_backup = new RanKnuth(12345 + comm->me);
+    random_backup = new RanKnuth((int)(update->ranmaster->uniform() * 100000000) + comm->me);
   memcpy(random_backup,random,sizeof(RanKnuth));
 #endif
 

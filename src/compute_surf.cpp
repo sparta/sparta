@@ -614,8 +614,9 @@ void ComputeSurf::surf_tally(double /*dtremain*/, int isurf, int icell, int reac
       if (reaction && !transparent) {
         sr = surf->sr[isr];
         r_coeff = sr->reaction_coeff(reaction-1);
-        vec[k++] += weight * r_coeff * fluxscale;
+        vec[k] += weight * r_coeff * fluxscale;
       }
+      k++;
       break;
     case ETOT:
       if (iorig) vsqpre = origmass * MathExtra::lensq3(vorig);

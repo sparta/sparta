@@ -962,7 +962,7 @@ void FixEmitFace::subsonic_sort()
       maxactive = grid->nlocal;
       memory->create(activecell,maxactive,"emit/face:active");
     }
-    memset(activecell,0,maxactive*sizeof(int));
+    memset(activecell,0,((size_t)maxactive)*sizeof(int));
     for (i = 0; i < ntask; i++) activecell[tasks[i].pcell] = 1;
     active_current = 1;
   }
@@ -1050,8 +1050,8 @@ void FixEmitFace::subsonic_grid()
       temp_thermal_cell = tsubsonic;
 
     } else {
-      nrho_cell = np * fnum / cinfo[icell].volume;
-      massrho_cell = masstot * fnum / cinfo[icell].volume;
+      if (cinfo[icell].volume > 0.0) nrho_cell = np * fnum / cinfo[icell].volume; else nrho_cell = 0.0;
+      if (cinfo[icell].volume > 0.0) massrho_cell = masstot * fnum / cinfo[icell].volume; else massrho_cell = 0.0;
       if (np > 1) {
         ke = mv[3]/np - (mv[0]*mv[0] + mv[1]*mv[1] + mv[2]*mv[2])/np/masstot;
         temp_thermal_cell = tprefactor * ke;
@@ -1066,13 +1066,14 @@ void FixEmitFace::subsonic_grid()
 
       tasks[i].nrho = nrho_cell +
         (psubsonic - press_cell) / (soundspeed_cell*soundspeed_cell);
-      temp_thermal_cell = psubsonic / (boltz * tasks[i].nrho);
+      if (tasks[i].nrho > 0.0) temp_thermal_cell = psubsonic / (boltz * tasks[i].nrho);
+      else temp_thermal_cell = 0.0;
       if (temp_thermal_cell > TEMPLIMIT) {
         temp_exceed_flag = 1;
         tempmax = MAX(tempmax,temp_thermal_cell);
       }
 
-      if (np)  {
+      if (np && massrho_cell * soundspeed_cell > 0.0)  {
         ndim = tasks[i].ndim;
         sign = tasks[i].normal[ndim];
         vstream[ndim] += sign *
@@ -1105,13 +1106,13 @@ void FixEmitFace::grow_task()
 {
   int oldmax = ntaskmax;
   ntaskmax += DELTATASK;
-  tasks = (Task *) memory->srealloc(tasks,ntaskmax*sizeof(Task),
+  tasks = (Task *) memory->srealloc(tasks,(bigint)ntaskmax*sizeof(Task),
                                     "emit/face:tasks");
 
   // set all new task bytes to 0 so valgrind won't complain
   // if bytes between fields are uninitialized
 
-  memset(&tasks[oldmax],0,(ntaskmax-oldmax)*sizeof(Task));
+  memset(&tasks[oldmax],0,((size_t)ntaskmax-oldmax)*sizeof(Task));
 
   // allocate vectors in each new task or set to NULL
 
