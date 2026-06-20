@@ -28,8 +28,9 @@ namespace SPARTA_NS {
 class SurfReactAdsorb : public SurfReact {
  public:
   SurfReactAdsorb(class SPARTA *, int, char **);
+  SurfReactAdsorb(class SPARTA *sparta) : SurfReact(sparta) {} // needed for Kokkos
   ~SurfReactAdsorb();
-  void init();
+  virtual void init();
   int react(Particle::OnePart *&, int, double *, Particle::OnePart *&, int &);
 
   char *reactionID(int);
@@ -37,10 +38,10 @@ class SurfReactAdsorb : public SurfReact {
   int match_reactant(char *, int);
   int match_product(char *, int);
 
-  void tally_update();
+  virtual void tally_update();
   void grid_changed();
 
- private:
+ protected:
   int me,nprocs;
   int distributed;
 

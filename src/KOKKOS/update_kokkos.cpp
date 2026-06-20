@@ -195,12 +195,16 @@ void UpdateKokkos::init()
 
   // choose the appropriate move method
 
+  // REACT=1 is also needed without explicit surfs when box-face/boundary
+  //   reactions are defined (e.g. surf_react adsorb in face mode)
+
   if (domain->dimension == 3) {
     if (surf->exist) {
       if (surf->nsr) moveptr = &UpdateKokkos::move<3,1,1,0>;
       else moveptr = &UpdateKokkos::move<3,1,0,0>;
     } else {
-      if (optmove_flag) moveptr = &UpdateKokkos::move<3,0,0,1>;
+      if (surf->nsr) moveptr = &UpdateKokkos::move<3,0,1,0>;
+      else if (optmove_flag) moveptr = &UpdateKokkos::move<3,0,0,1>;
       else moveptr = &UpdateKokkos::move<3,0,0,0>;
     }
   } else if (domain->axisymmetric) {
@@ -208,7 +212,8 @@ void UpdateKokkos::init()
       if (surf->nsr) moveptr = &UpdateKokkos::move<1,1,1,0>;
       else moveptr = &UpdateKokkos::move<1,1,0,0>;
     } else {
-      if (optmove_flag) moveptr = &UpdateKokkos::move<1,0,0,1>;
+      if (surf->nsr) moveptr = &UpdateKokkos::move<1,0,1,0>;
+      else if (optmove_flag) moveptr = &UpdateKokkos::move<1,0,0,1>;
       else moveptr = &UpdateKokkos::move<1,0,0,0>;
     }
   } else if (domain->dimension == 2) {
@@ -216,7 +221,8 @@ void UpdateKokkos::init()
       if (surf->nsr) moveptr = &UpdateKokkos::move<2,1,1,0>;
       else moveptr = &UpdateKokkos::move<2,1,0,0>;
     } else {
-      if (optmove_flag) moveptr = &UpdateKokkos::move<2,0,0,1>;
+      if (surf->nsr) moveptr = &UpdateKokkos::move<2,0,1,0>;
+      else if (optmove_flag) moveptr = &UpdateKokkos::move<2,0,0,1>;
       else moveptr = &UpdateKokkos::move<2,0,0,0>;
     }
   }

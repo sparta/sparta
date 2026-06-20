@@ -212,6 +212,8 @@ SurfReactAdsorb::SurfReactAdsorb(SPARTA *sparta, int narg, char **arg) :
 
 SurfReactAdsorb::~SurfReactAdsorb()
 {
+  if (copy) return;
+
   delete random;
 
   // surface species
