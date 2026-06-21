@@ -108,10 +108,6 @@ void SurfReactAdsorbKokkos::init()
   // Kokkos GS adsorb currently supports a restricted feature set;
   //   error clearly at init rather than silently producing wrong results
 
-  if (!gsflag)
-    error->all(FLERR,"Kokkos surf_react adsorb requires gas-surface (gs) chemistry");
-  if (psflag)
-    error->all(FLERR,"Kokkos surf_react adsorb does not yet support on-surface (ps) chemistry");
 
   for (int i = 0; i < nlist_gs; i++) {
     OneReaction_GS *r = &rlist_gs[i];
@@ -193,7 +189,7 @@ void SurfReactAdsorbKokkos::init_reactions_gs_kokkos()
   d_reactions_n = DAT::t_int_1d("surf_react_adsorb:reactions_n",nspecies);
   auto h_reactions_n = Kokkos::create_mirror_view(d_reactions_n);
   for (int i = 0; i < nspecies; i++) {
-    int n = reactions_gs[i].n;
+    int n = gsflag ? reactions_gs[i].n : 0;   // PS-only: no GS reactions
     h_reactions_n(i) = n;
     nmax = MAX(nmax,n);
   }
@@ -202,7 +198,8 @@ void SurfReactAdsorbKokkos::init_reactions_gs_kokkos()
 
   d_list = DAT::t_int_2d("surf_react_adsorb:list",nspecies,MAX(nmax,1));
   auto h_list = Kokkos::create_mirror_view(d_list);
-  for (int i = 0; i < nspecies; i++)
+  if (gsflag)
+   for (int i = 0; i < nspecies; i++)
     for (int j = 0; j < reactions_gs[i].n; j++)
       h_list(i,j) = reactions_gs[i].list[j];
 
@@ -405,6 +402,14 @@ void SurfReactAdsorbKokkos::tally_reset()
 
 void SurfReactAdsorbKokkos::tally_update()
 {
+  // PS (on-surface) chemistry desorbs/inserts particles on the host inside the
+  //   base tally_update(); make the host particle list current first so
+  //   add_particle() appends to up-to-date data, and mark host-modified after
+  //   so the device picks up the new particles on the next sync
+
+  ParticleKokkos* particle_kk = (ParticleKokkos*) particle;
+  if (psflag) particle_kk->sync(Host,PARTICLE_MASK);
+
   // device -> host: reaction counts
 
   Kokkos::deep_copy(h_scalars,d_scalars);
@@ -432,6 +437,10 @@ void SurfReactAdsorbKokkos::tally_update()
   //   (and update_state_surf clears mark)
 
   SurfReactAdsorb::tally_update();
+
+  // PS chemistry may have appended particles on the host
+
+  if (psflag) particle_kk->modify(Host,PARTICLE_MASK);
 
   // mirror re-zeroed host deltas (+ mark) back to device (only on a sync step)
 
