@@ -152,12 +152,16 @@ SurfReactAdsorb::SurfReactAdsorb(SPARTA *sparta, int narg, char **arg) :
   rlist_gs = NULL;
   reactions_gs = NULL;
   indices_gs = NULL;
+  prob_value = NULL;
 
   nlist_ps = maxlist_ps = 0;
   rlist_ps = NULL;
   reactions_ps_list = NULL;
   nactive_ps = 0;
   n_PS_react = 0;
+  nu_react = NULL;
+  nu_tau = NULL;
+  rxn_occur = NULL;
 
   // initialize PS added particle data structs
 
@@ -254,6 +258,7 @@ SurfReactAdsorb::~SurfReactAdsorb()
     memory->destroy(rlist_gs);
     memory->destroy(reactions_gs);
     memory->destroy(indices_gs);
+    memory->destroy(prob_value);
   }
 
   // PS chemistry
@@ -289,6 +294,9 @@ SurfReactAdsorb::~SurfReactAdsorb()
     }
     memory->destroy(rlist_ps);
     memory->destroy(reactions_ps_list);
+    memory->destroy(nu_react);
+    memory->destroy(nu_tau);
+    memory->destroy(rxn_occur);
 
     // added PS particles
 
@@ -653,7 +661,7 @@ int SurfReactAdsorb::react(Particle::OnePart *&ip, int isurf, double *norm,
   Particle::Species *species = particle->species;
 
   OneReaction_GS *r;
-  double prob_value[n], sum_prob = 0.0;
+  double sum_prob = 0.0;
   double scatter_prob = 0.0, correction = 1.0;
   //int check_ads = 0, ads_index = -1;
 
@@ -1583,6 +1591,15 @@ void SurfReactAdsorb::init_reactions_gs()
     reactions_gs[i].list[reactions_gs[i].n++] = m;
   }
 
+  // allocate reusable scratch buffer for per-reaction probabilities in react()
+  // size = max # of possible reactions for any single species
+
+  int maxn = 0;
+  for (int i = 0; i < nspecies; i++) maxn = MAX(maxn,reactions_gs[i].n);
+  memory->destroy(prob_value);
+  prob_value = NULL;
+  if (maxn) memory->create(prob_value,maxn,"surf_adsorb:prob_value");
+
   // check that summed reaction probabilities for each species <= 1.0
 
 //  double sum;
@@ -2342,6 +2359,21 @@ void SurfReactAdsorb::init_reactions_ps()
 
   memory->destroy(reactions_ps_list);
   memory->create(reactions_ps_list,nactive_ps,"surf_adsorb:reactions_ps_list");
+
+  // allocate reusable scratch buffers used in PS_react()
+
+  memory->destroy(nu_react);
+  memory->destroy(nu_tau);
+  memory->destroy(rxn_occur);
+  nu_react = NULL;
+  nu_tau = NULL;
+  rxn_occur = NULL;
+  if (nactive_ps) {
+    memory->create(nu_react,nactive_ps,"surf_adsorb:nu_react");
+    memory->create(nu_tau,nactive_ps,"surf_adsorb:nu_tau");
+    memory->create(rxn_occur,nactive_ps,"surf_adsorb:rxn_occur");
+  }
+
   int n = 0;
 
   for (int m = 0; m < nlist_ps; m++) {
@@ -2854,9 +2886,7 @@ void SurfReactAdsorb::PS_react(int isurf, int isc, double *norm)
   int pid;
   Particle::OnePart *p;
 
-  double nu_react[nactive_ps];
   OneReaction_PS *r;
-  int rxn_occur[nactive_ps];
 
   for (int i = 0; i < nactive_ps; i++) {
     r = &rlist_ps[reactions_ps_list[i]];
@@ -2874,7 +2904,6 @@ void SurfReactAdsorb::PS_react(int isurf, int isc, double *norm)
 
   while (1) {
     long int sum_nu_tau = 0;
-    long int nu_tau[nactive_ps];
 
     for (int i = 0; i < nactive_ps; i++) {
       nu_react[i] = 0.0;

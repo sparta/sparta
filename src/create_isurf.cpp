@@ -708,7 +708,7 @@ void CreateISurf::sync(int which)
 {
   int i,j,ix,iy,iz,jx,jy,jz,ixfirst,iyfirst,izfirst,jcorner,jin;
   int icell,jcell;
-  double dtotal[nmulti], dtemp;
+  double dtotal[6], dtemp;   // dtotal indexed by nmulti = 4 (2D) or 6 (3D)
 
   comm_neigh_corners(which);
 
