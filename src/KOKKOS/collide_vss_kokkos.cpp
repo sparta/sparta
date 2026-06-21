@@ -59,9 +59,12 @@ CollideVSSKokkos::CollideVSSKokkos(SPARTA *sparta, int narg, char **arg) :
 #endif
             ),
   grid_kk_copy(sparta),
-  react_kk_copy(sparta)
+  react_kk_copy(sparta),
+  react_qk_kk_copy(sparta),
+  react_tceqk_kk_copy(sparta)
 {
   kokkos_flag = 1;
+  react_style = 0;
 
   // use 1D view for scalars to reduce GPU memory operations
 
@@ -106,6 +109,8 @@ CollideVSSKokkos::~CollideVSSKokkos()
 
   grid_kk_copy.uncopy();
   react_kk_copy.uncopy();
+  react_qk_kk_copy.uncopy();
+  react_tceqk_kk_copy.uncopy();
 
   memoryKK->destroy_kokkos(k_dellist,dellist);
 
@@ -552,8 +557,18 @@ template < int NEARCP, int GASTALLY > void CollideVSSKokkos::collisions_one(COLL
 
     grid_kk_copy.copy(grid_kk);
     if (react) {
-      ReactTCEKokkos* react_kk = (ReactTCEKokkos*) react;
-      react_kk_copy.copy(react_kk);
+      ReactQKKokkos* react_qk = dynamic_cast<ReactQKKokkos*>(react);
+      ReactTCEQKKokkos* react_tceqk = dynamic_cast<ReactTCEQKKokkos*>(react);
+      if (react_tceqk) {
+        react_style = 2;
+        react_tceqk_kk_copy.copy(react_tceqk);
+      } else if (react_qk) {
+        react_style = 1;
+        react_qk_kk_copy.copy(react_qk);
+      } else {
+        react_style = 0;
+        react_kk_copy.copy((ReactTCEKokkos*) react);
+      }
     }
 
     if (sparta->kokkos->atomic_reduction) {
@@ -911,8 +926,18 @@ void CollideVSSKokkos::collisions_one_ambipolar(COLLIDE_REDUCE &reduce)
 
     grid_kk_copy.copy(grid_kk);
     if (react) {
-      ReactTCEKokkos* react_kk = (ReactTCEKokkos*) react;
-      react_kk_copy.copy(react_kk);
+      ReactQKKokkos* react_qk = dynamic_cast<ReactQKKokkos*>(react);
+      ReactTCEQKKokkos* react_tceqk = dynamic_cast<ReactTCEQKKokkos*>(react);
+      if (react_tceqk) {
+        react_style = 2;
+        react_tceqk_kk_copy.copy(react_tceqk);
+      } else if (react_qk) {
+        react_style = 1;
+        react_qk_kk_copy.copy(react_qk);
+      } else {
+        react_style = 0;
+        react_kk_copy.copy((ReactTCEKokkos*) react);
+      }
     }
 
     if (sparta->kokkos->atomic_reduction) {
@@ -1463,12 +1488,23 @@ int CollideVSSKokkos::perform_collision_kokkos(Particle::OnePart *&ip,
   // reaction = 1 to N for which reaction occurs
   // reaction is returned to caller
 
-  if (react_defined)
-    reaction = react_kk_copy.obj.attempt_kk(ip,jp,
+  if (react_defined) {
+    if (react_style == 1)
+      reaction = react_qk_kk_copy.obj.attempt_kk(ip,jp,
                                              precoln.etrans,precoln.erot,
                                              precoln.evib,postcoln.etotal,kspecies,
                                              recomb_species,recomb_density,d_species);
-  else reaction = 0;
+    else if (react_style == 2)
+      reaction = react_tceqk_kk_copy.obj.attempt_kk(ip,jp,
+                                             precoln.etrans,precoln.erot,
+                                             precoln.evib,postcoln.etotal,kspecies,
+                                             recomb_species,recomb_density,d_species);
+    else
+      reaction = react_kk_copy.obj.attempt_kk(ip,jp,
+                                             precoln.etrans,precoln.erot,
+                                             precoln.evib,postcoln.etotal,kspecies,
+                                             recomb_species,recomb_density,d_species);
+  } else reaction = 0;
 
   // just collision, no reaction
 

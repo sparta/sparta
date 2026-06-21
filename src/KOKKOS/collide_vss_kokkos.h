@@ -26,6 +26,8 @@ CollideStyle(vss/kk,CollideVSSKokkos)
 #include "particle_kokkos.h"
 #include "grid_kokkos.h"
 #include "react_tce_kokkos.h"
+#include "react_qk_kokkos.h"
+#include "react_tce_qk_kokkos.h"
 #include "kokkos_type.h"
 #include "Kokkos_Random.hpp"
 #include "rand_pool_wrap.h"
@@ -138,6 +140,9 @@ class CollideVSSKokkos : public CollideVSS {
 
   KKCopy<GridKokkos> grid_kk_copy;
   KKCopy<ReactTCEKokkos> react_kk_copy;
+  KKCopy<ReactQKKokkos> react_qk_kk_copy;
+  KKCopy<ReactTCEQKKokkos> react_tceqk_kk_copy;
+  int react_style;   // 0=TCE, 1=QK, 2=TCEQK (set in setup)
 
   t_particle_1d d_particles;
   t_species_1d_const d_species;
