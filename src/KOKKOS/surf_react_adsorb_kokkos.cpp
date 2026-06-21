@@ -18,6 +18,7 @@
 #include "input.h"
 #include "update.h"
 #include "collide.h"
+#include "surf.h"
 #include "surf_collide.h"
 #include "random_knuth.h"
 #include "comm.h"
@@ -111,8 +112,6 @@ void SurfReactAdsorbKokkos::init()
     error->all(FLERR,"Kokkos surf_react adsorb requires gas-surface (gs) chemistry");
   if (psflag)
     error->all(FLERR,"Kokkos surf_react adsorb does not yet support on-surface (ps) chemistry");
-  if (mode != SRA_KK::FACE)
-    error->all(FLERR,"Kokkos surf_react adsorb only supports the box-face (face) option");
 
   for (int i = 0; i < nlist_gs; i++) {
     OneReaction_GS *r = &rlist_gs[i];
@@ -316,16 +315,23 @@ void SurfReactAdsorbKokkos::init_reactions_gs_kokkos()
   Kokkos::deep_copy(d_pad,h_pad);
   Kokkos::deep_copy(d_products,h_products);
 
-  // per-face state device storage (SRA_KK::FACE mode)
+  // per-state-slot device storage: FACE => 6 box faces, SURF => nlocal+nghost
 
-  d_total_state = DAT::t_int_1d("sra:total_state",nface);
-  d_area = DAT::t_float_1d("sra:area",nface);
-  d_weight = DAT::t_float_1d("sra:weight",nface);
-  d_species_state = DAT::t_int_2d("sra:species_state",nface,nspecies_surf);
+  nstate_ = (mode == SRA_KK::FACE) ? nface : (surf->nlocal + surf->nghost);
+  int ns = MAX(nstate_,1);
 
-  k_species_delta = DAT::tdual_int_2d("sra:species_delta",nface,nspecies_surf);
+  d_total_state = DAT::t_int_1d("sra:total_state",ns);
+  d_area = DAT::t_float_1d("sra:area",ns);
+  d_weight = DAT::t_float_1d("sra:weight",ns);
+  d_species_state = DAT::t_int_2d("sra:species_state",ns,nspecies_surf);
+
+  k_species_delta = DAT::tdual_int_2d("sra:species_delta",ns,nspecies_surf);
   d_species_delta = k_species_delta.view_device();
   Kokkos::deep_copy(d_species_delta,0);
+
+  k_mark = DAT::tdual_int_1d("sra:mark",ns);
+  d_mark = k_mark.view_device();
+  Kokkos::deep_copy(d_mark,0);
 }
 
 /* ----------------------------------------------------------------------
@@ -355,13 +361,23 @@ void SurfReactAdsorbKokkos::pre_react()
     if (cmodel_pool[idx]) d_cmodel_rand[idx] = cmodel_pool[idx]->get_state();
 #endif
 
-  // copy current per-face state (changes only at sync) host->device
+  // SURF mode: refresh host state pointers to the current local custom arrays
+  //   (they may have been reallocated/spread since last step)
+
+  if (mode == SRA_KK::SURF) {
+    total_state = surf->eivec_local[surf->ewhich[total_state_index]];
+    species_state = surf->eiarray_local[surf->ewhich[species_state_index]];
+    area = surf->edvec_local[surf->ewhich[area_index]];
+    weight = surf->edvec_local[surf->ewhich[weight_index]];
+  }
+
+  // copy current per-slot state (changes only at sync) host->device
 
   auto h_total = Kokkos::create_mirror_view(d_total_state);
   auto h_area = Kokkos::create_mirror_view(d_area);
   auto h_weight = Kokkos::create_mirror_view(d_weight);
   auto h_sstate = Kokkos::create_mirror_view(d_species_state);
-  for (int i = 0; i < nface; i++) {
+  for (int i = 0; i < nstate_; i++) {
     h_total(i) = total_state[i];
     h_area(i) = area[i];
     h_weight(i) = weight[i];
@@ -395,28 +411,42 @@ void SurfReactAdsorbKokkos::tally_update()
   nsingle = h_nsingle();
   for (int i = 0; i < nlist_gs; i++) tally_single[i] = h_tally_single[i];
 
-  // device -> host: per-face perspecies deltas accumulated since last sync
+  // device -> host: perspecies deltas (+ mark for SURF) accumulated since sync
 
   k_species_delta.modify_device();
   k_species_delta.sync_host();
   auto h_delta = k_species_delta.view_host();
-  for (int i = 0; i < nface; i++)
+  for (int i = 0; i < nstate_; i++)
     for (int j = 0; j < nspecies_surf; j++)
       species_delta[i][j] = h_delta(i,j);
 
-  // host logic: accumulate tallies and (every nsync) MPI-sync per-face state;
-  //   update_state_face() also re-zeros host species_delta
+  if (mode == SRA_KK::SURF) {
+    k_mark.modify_device();
+    k_mark.sync_host();
+    auto h_m = k_mark.view_host();
+    for (int i = 0; i < nstate_; i++) mark[i] = h_m(i);
+  }
+
+  // host logic: accumulate tallies and (every nsync) sync per-slot state;
+  //   update_state_face()/update_state_surf() re-zero host species_delta
+  //   (and update_state_surf clears mark)
 
   SurfReactAdsorb::tally_update();
 
-  // mirror re-zeroed host deltas back to device (only changed on a sync step)
+  // mirror re-zeroed host deltas (+ mark) back to device (only on a sync step)
 
   if (update->ntimestep % nsync == 0) {
-    for (int i = 0; i < nface; i++)
+    for (int i = 0; i < nstate_; i++)
       for (int j = 0; j < nspecies_surf; j++)
         h_delta(i,j) = species_delta[i][j];
     k_species_delta.modify_host();
     k_species_delta.sync_device();
+    if (mode == SRA_KK::SURF) {
+      auto h_m = k_mark.view_host();
+      for (int i = 0; i < nstate_; i++) h_m(i) = mark[i];
+      k_mark.modify_host();
+      k_mark.sync_device();
+    }
     Kokkos::deep_copy(d_scalars,0);
   }
 }

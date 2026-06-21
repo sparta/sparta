@@ -84,14 +84,18 @@ class SurfReactAdsorbKokkos : public SurfReactAdsorb {
   DAT::t_int_2d d_pstate,d_ppart,d_pstoich,d_pad;   // product slots [j][MAXPRODUCT]
   DAT::t_int_2d d_products;                         // product species indices
 
-  // per-face state (FACE mode); small (nface <= 6)
+  // per-state-slot data: FACE mode => 6 box faces; SURF mode => nlocal+nghost surfs
 
-  DAT::t_int_1d d_total_state;             // [nface]
-  DAT::t_float_1d d_area,d_weight;         // [nface]
-  DAT::t_int_2d d_species_state;           // [nface][nspecies_surf]
-  DAT::t_int_2d d_species_delta;           // [nface][nspecies_surf] (atomic)
+  int nstate_;                             // # of state slots (nface or nall)
+  DAT::t_int_1d d_total_state;             // [nstate]
+  DAT::t_float_1d d_area,d_weight;         // [nstate]
+  DAT::t_int_2d d_species_state;           // [nstate][nspecies_surf]
+  DAT::t_int_2d d_species_delta;           // [nstate][nspecies_surf] (atomic)
 
   DAT::tdual_int_2d k_species_delta;
+
+  DAT::tdual_int_1d k_mark;                // [nstate] reacted-surf mark (SURF)
+  DAT::t_int_1d d_mark;
 
   double fnum_;        // update->fnum, set in pre_react
 
@@ -151,16 +155,18 @@ class SurfReactAdsorbKokkos : public SurfReactAdsorb {
                    const DAT::t_int_scalar &d_retry,
                    const DAT::t_int_scalar &d_nlocal) const
   {
-    // convert face index from negative value to 0..5 inclusive
+    // FACE: convert negative face code to 0..5; SURF: use local surf index
 
-    int iface = -(isurf+1);
+    int idx;
+    if (mode == SRA_KK::FACE) idx = -(isurf+1);
+    else idx = isurf;
 
     int n = d_reactions_n[ip->ispecies];
     if (n == 0) return 0;
 
     double fnum = fnum_;
-    long int maxstick = ceil(max_cover*d_area[iface] / (fnum*d_weight[iface]));
-    double factor = fnum * d_weight[iface] / d_area[iface];
+    long int maxstick = ceil(max_cover*d_area[idx] / (fnum*d_weight[idx]));
+    double factor = fnum * d_weight[idx] / d_area[idx];
     double ms_inv = factor / max_cover;
 
     double prob_value[SRA_KK_MAXPERSPECIES];
@@ -189,7 +195,7 @@ class SurfReactAdsorbKokkos : public SurfReactAdsorb {
       case SRA_KK::LH1:
       case SRA_KK::LH3:
       case SRA_KK::CD:
-        surf_cover = d_total_state[iface] * ms_inv;
+        surf_cover = d_total_state[idx] * ms_inv;
         S_theta = 0.0;
         if (d_kisliuk_flag(j)) {
           K_ads = d_kisliuk(j,0) * pow(twall,d_kisliuk(j,1)) *
@@ -208,7 +214,7 @@ class SurfReactAdsorbKokkos : public SurfReactAdsorb {
           double dot = 2.0;
           if (d_nreactant(j) == 1)
             prob_value[i] = 2.0 * d_kreact(j) *
-              (maxstick - d_total_state[iface]) * ms_inv / fabs(dot);
+              (maxstick - d_total_state[idx]) * ms_inv / fabs(dot);
           else
             prob_value[i] = 2.0 * d_kreact(j) / fabs(dot);
           break;
@@ -230,10 +236,10 @@ class SurfReactAdsorbKokkos : public SurfReactAdsorb {
       for (int k = 1; k < d_nreactant(j); k++) {
         if (d_rstate(j,k) == 's') {
           if (d_rpart(j,k) == 0)
-            prob_value[i] *= stoich_pow_kk(d_total_state[iface],d_rstoich(j,k)) *
+            prob_value[i] *= stoich_pow_kk(d_total_state[idx],d_rstoich(j,k)) *
               pow(ms_inv,d_rstoich(j,k));
           else
-            prob_value[i] *= stoich_pow_kk(d_species_state(iface,d_rad(j,k)),
+            prob_value[i] *= stoich_pow_kk(d_species_state(idx,d_rad(j,k)),
                                            d_rstoich(j,k)) *
               pow(ms_inv,d_rstoich(j,k));
         }
@@ -268,15 +274,19 @@ class SurfReactAdsorbKokkos : public SurfReactAdsorb {
         Kokkos::atomic_inc(&d_tally_single(j));
       }
 
-      // update per-face perspecies deltas for participating surf reactants/products
+      // SURF mode: mark this surf element for the periodic state collate
+
+      if (mode == SRA_KK::SURF) d_mark(idx) = 1;
+
+      // update perspecies deltas for participating surf reactants/products
 
       auto a_species_delta = d_species_delta;
       for (int k = 0; k < d_nreactant(j); k++)
         if (d_rpart(j,k) == 1 && d_rstate(j,k) == 's')
-          Kokkos::atomic_add(&a_species_delta(iface,d_rad(j,k)),-d_rstoich(j,k));
+          Kokkos::atomic_add(&a_species_delta(idx,d_rad(j,k)),-d_rstoich(j,k));
       for (int k = 0; k < d_nproduct(j); k++)
         if (d_ppart(j,k) == 1 && d_pstate(j,k) == 's')
-          Kokkos::atomic_add(&a_species_delta(iface,d_pad(j,k)),d_pstoich(j,k));
+          Kokkos::atomic_add(&a_species_delta(idx,d_pad(j,k)),d_pstoich(j,k));
 
       // post-reaction particle handling, mirrors SurfReactAdsorb::react()
       // cmodel post-reaction scatter currently supports NOMODEL and SPECULAR
