@@ -18,7 +18,7 @@
 ------------------------------------------------------------------------- */
 
 #ifdef FIX_CLASS
-FixStyle(controller,FixController);
+FixStyle(controller,FixController)
 #else
 
 #ifndef SPARTA_FIX_CONTROLLER_H
@@ -35,7 +35,6 @@ class FixController : public Fix {
   int setmask() override;
   void init() override;
   void end_of_step() override;
-  void reset_dt() override;
   double compute_vector(int) override;
 
  private:

@@ -18,20 +18,23 @@
    Original Author: Axel Kohlmeyer (Temple U)
 ------------------------------------------------------------------------- */
 
+#include "stdlib.h"
+#include "string.h"
 #include "fix_controller.h"
-
 #include "compute.h"
+#include "fix.h"
 #include "error.h"
 #include "input.h"
 #include "modify.h"
 #include "update.h"
-#include "utils.h"
 #include "variable.h"
 
 using namespace SPARTA_NS;
-using namespace FixConst;
 
 enum { COMPUTE, FIX, VARIABLE };
+
+#define INVOKED_SCALAR 1
+#define INVOKED_VECTOR 2
 
 /* ---------------------------------------------------------------------- */
 
@@ -39,98 +42,97 @@ FixController::FixController(SPARTA *sparta, int narg, char **arg) :
   Fix(sparta, narg, arg),
   pvID(nullptr), cvID(nullptr)
 {
-  if (narg != 11) error->all(FLERR,"Illegal fix controller command");
+  if (narg != 10) error->all(FLERR,"Illegal fix controller command");
 
   vector_flag = 1;
   size_vector = 3;
   global_freq = 1;
-  extvector = 0;
 
-  nevery = utils::inumeric(FLERR,arg[3],false,sparta);
-  if (nevery <= 0) {
-    char msg[128];
-    sprintf(msg, "Illegal fix controller nevery value %i", nevery);
-    error->all(FLERR, msg);
-  }
+  nevery = atoi(arg[2]);
+  if (nevery <= 0) error->all(FLERR,"Illegal fix controller command");
 
-  alpha = utils::numeric(FLERR,arg[4],false,sparta);
-  kp = utils::numeric(FLERR,arg[5],false,sparta);
-  ki = utils::numeric(FLERR,arg[6],false,sparta);
-  kd = utils::numeric(FLERR,arg[7],false,sparta);
+  alpha = atof(arg[3]);
+  kp = atof(arg[4]);
+  ki = atof(arg[5]);
+  kd = atof(arg[6]);
 
-  // process variable arg
+  // process variable arg = arg[7] : c_ID, c_ID[N], f_ID, f_ID[N], or v_ID
 
-  char* str = arg[iarg];
-  int n = strlen(&str[2]) + 1;
+  if (strncmp(arg[7],"c_",2) == 0) pvwhich = COMPUTE;
+  else if (strncmp(arg[7],"f_",2) == 0) pvwhich = FIX;
+  else if (strncmp(arg[7],"v_",2) == 0) pvwhich = VARIABLE;
+  else error->all(FLERR,"Illegal fix controller command");
+
+  int n = strlen(arg[7]);
+  char *suffix = new char[n];
+  strcpy(suffix,&arg[7][2]);
+
+  char *ptr = strchr(suffix,'[');
+  if (ptr) {
+    if (suffix[strlen(suffix)-1] != ']')
+      error->all(FLERR,"Illegal fix controller command");
+    pvindex = atoi(ptr+1);
+    *ptr = '\0';
+  } else pvindex = 0;
+
+  n = strlen(suffix) + 1;
   pvID = new char[n];
-  strcpy(idvar,&str[2]);
-
-  if (!utils::strmatch(arg[8],"^c_")) {
-    pvwhich = COMPUTE;
-    pvindex = input->compute->find(pvID);
-  } else if (!utils::strmatch(arg[8],"^f_")) {
-    pvwhich = FIX;
-    pvindex = input->fix->find(pvID);
-  } else if (!utils::strmatch(arg[8],"^v_")) {
-    pvwhich = VARIABLE;
-    pvindex = input->variable->find(pvID);
-  } else {
-    char msg[128];
-    sprintf(msg, "Illegal fix controller argument %i", arg[8]);
-    error->all(FLERR, msg);
-  }
+  strcpy(pvID,suffix);
+  delete [] suffix;
 
   // setpoint arg
 
-  setpoint = utils::numeric(FLERR,arg[9],false,sparta);
+  setpoint = atof(arg[8]);
 
   // control variable arg
 
-  cvID = utils::strdup(arg[10]);
+  n = strlen(arg[9]) + 1;
+  cvID = new char[n];
+  strcpy(cvID,arg[9]);
 
-  // error check
+  // error checks
 
   if (pvwhich == COMPUTE) {
-    Compute *c = modify->get_compute_by_id(pvID);
-    if (!c) {
-      char msg[128];
-      sprintf(msg, "Compute ID %s for fix controller does not exist", pvID);
-      error->all(FLERR, msg);
-    }
+    int icompute = modify->find_compute(pvID);
+    if (icompute < 0)
+      error->all(FLERR,"Compute ID for fix controller does not exist");
+    Compute *c = modify->compute[icompute];
     int flag = 0;
     if (c->scalar_flag && pvindex == 0) flag = 1;
     else if (c->vector_flag && pvindex > 0) flag = 1;
     if (!flag)
-      error->all(FLERR, 8, "Fix controller compute {} does not calculate a global scalar or "
-                 "vector", pvID);
+      error->all(FLERR,"Fix controller compute does not calculate a "
+                 "global scalar or vector");
     if (pvindex && pvindex > c->size_vector)
-      error->all(FLERR, 8, "Fix controller compute {} vector is accessed out-of-range{}",
-                 pvID, utils::errorurl(20));
+      error->all(FLERR,"Fix controller compute vector is accessed out-of-range");
+
   } else if (pvwhich == FIX) {
-    Fix *f = modify->get_fix_by_id(pvID);
-    if (!f) error->all(FLERR, 8, "Fix ID {} for fix controller does not exist", pvID);
+    int ifix = modify->find_fix(pvID);
+    if (ifix < 0)
+      error->all(FLERR,"Fix ID for fix controller does not exist");
+    Fix *f = modify->fix[ifix];
     int flag = 0;
     if (f->scalar_flag && pvindex == 0) flag = 1;
     else if (f->vector_flag && pvindex > 0) flag = 1;
     if (!flag)
-      error->all(FLERR, 8, "Fix controller fix {} does not calculate a global scalar or vector",
-                 pvID);
+      error->all(FLERR,"Fix controller fix does not calculate a "
+                 "global scalar or vector");
     if (pvindex && pvindex > f->size_vector)
-      error->all(FLERR, 8, "Fix controller fix {} vector is accessed out-of-range{}", pvID,
-                 utils::errorurl(20));
+      error->all(FLERR,"Fix controller fix vector is accessed out-of-range");
+
   } else if (pvwhich == VARIABLE) {
     int ivariable = input->variable->find(pvID);
     if (ivariable < 0)
-      error->all(FLERR, 8, "Variable name {} for fix controller does not exist", pvID);
-    if (input->variable->equalstyle(ivariable) == 0)
-      error->all(FLERR, 8, "Fix controller variable {} is not equal-style variable", pvID);
+      error->all(FLERR,"Variable name for fix controller does not exist");
+    if (input->variable->equal_style(ivariable) == 0)
+      error->all(FLERR,"Fix controller variable is not equal-style variable");
   }
 
   int ivariable = input->variable->find(cvID);
   if (ivariable < 0)
-    error->all(FLERR, 10, "Variable name {} for fix controller does not exist", cvID);
-  if (input->variable->internalstyle(ivariable) == 0)
-    error->all(FLERR, 10, "Fix controller variable {} is not internal-style variable", cvID);
+    error->all(FLERR,"Variable name for fix controller does not exist");
+  if (input->variable->internal_style(ivariable) == 0)
+    error->all(FLERR,"Fix controller variable is not internal-style variable");
   control = input->variable->compute_equal(ivariable);
 
   firsttime = 1;
@@ -158,27 +160,26 @@ int FixController::setmask()
 void FixController::init()
 {
   if (pvwhich == COMPUTE) {
-    pcompute = modify->get_compute_by_id(pvID);
-    if (!pcompute)
-      error->all(FLERR, Error::NOLASTLINE,
-                 "Compute ID {} for fix controller does not exist", pvID);
+    int icompute = modify->find_compute(pvID);
+    if (icompute < 0)
+      error->all(FLERR,"Compute ID for fix controller does not exist");
+    pcompute = modify->compute[icompute];
 
   } else if (pvwhich == FIX) {
-    pfix = modify->get_fix_by_id(pvID);
-    if (!pfix)
-      error->all(FLERR, Error::NOLASTLINE, "Fix ID {} for fix controller does not exist", pvID);
+    int ifix = modify->find_fix(pvID);
+    if (ifix < 0)
+      error->all(FLERR,"Fix ID for fix controller does not exist");
+    pfix = modify->fix[ifix];
 
   } else if (pvwhich == VARIABLE) {
     pvar = input->variable->find(pvID);
     if (pvar < 0)
-      error->all(FLERR, Error::NOLASTLINE, "Variable name {} for fix controller does not exist",
-                 pvID);
+      error->all(FLERR,"Variable name for fix controller does not exist");
   }
 
   cvar = input->variable->find(cvID);
   if (cvar < 0)
-    error->all(FLERR, Error::NOLASTLINE, "Variable name {} for fix controller does not exist",
-               cvID);
+    error->all(FLERR,"Variable name for fix controller does not exist");
 
   // set sampling time
 
@@ -194,21 +195,22 @@ void FixController::end_of_step()
 
   modify->clearstep_compute();
 
-  // invoke compute if not previously invoked
-
   double current = 0.0;
 
   if (pvwhich == COMPUTE) {
+
+    // invoke compute if not previously invoked
+
     if (pvindex == 0) {
-      if (!(pcompute->invoked_flag & Compute::INVOKED_SCALAR)) {
+      if (!(pcompute->invoked_flag & INVOKED_SCALAR)) {
         pcompute->compute_scalar();
-        pcompute->invoked_flag |= Compute::INVOKED_SCALAR;
+        pcompute->invoked_flag |= INVOKED_SCALAR;
       }
       current = pcompute->scalar;
     } else {
-      if (!(pcompute->invoked_flag & Compute::INVOKED_VECTOR)) {
+      if (!(pcompute->invoked_flag & INVOKED_VECTOR)) {
         pcompute->compute_vector();
-        pcompute->invoked_flag |= Compute::INVOKED_VECTOR;
+        pcompute->invoked_flag |= INVOKED_VECTOR;
       }
       current = pcompute->vector[pvindex-1];
     }
@@ -253,13 +255,6 @@ void FixController::end_of_step()
   // reset control variable
 
   input->variable->internal_set(cvar,control);
-}
-
-/* ---------------------------------------------------------------------- */
-
-void FixController::reset_dt()
-{
-  tau = nevery * update->dt;
 }
 
 /* ----------------------------------------------------------------------
