@@ -14,7 +14,6 @@ set(Kokkos_ENABLE_OPENMP OFF CACHE BOOL "" FORCE)
 set(Kokkos_ENABLE_CUDA   OFF CACHE BOOL "" FORCE)
 set(Kokkos_ENABLE_HIP    ON CACHE BOOL "" FORCE)
 set(Kokkos_ARCH_AMD_GFX942_APU on CACHE BOOL "" FORCE)
-set(BUILD_OMP OFF CACHE BOOL "" FORCE)
 
 set(CMAKE_CXX_COMPILER "hipcc" CACHE STRING "" FORCE)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fdenormal-fp-math=ieee -fgpu-flush-denormals-to-zero" CACHE STRING "" FORCE)

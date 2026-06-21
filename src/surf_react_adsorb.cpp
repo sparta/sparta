@@ -543,9 +543,10 @@ void SurfReactAdsorb::init()
       int m = 0;
       for (int isurf = me; isurf < nslocal; isurf += nprocs) {
 	isr = lines[isurf].isr;
-	if (surf->sr[isr] != this) continue;
-	area[m] = surf->line_size(&lines[isurf]);
-	weight[m] = 1.0;
+	if (surf->sr[isr] == this) {
+	  area[m] = surf->line_size(&lines[isurf]);
+	  weight[m] = 1.0;
+	}
 	m++;
       }
     } else {
@@ -553,9 +554,10 @@ void SurfReactAdsorb::init()
       int m = 0;
       for (int isurf = me; isurf < nslocal; isurf += nprocs) {
 	isr = tris[isurf].isr;
-	if (surf->sr[isr] != this) continue;
-	area[m] = surf->tri_size(&tris[isurf],tmp);
-	weight[m] = 1.0;
+	if (surf->sr[isr] == this) {
+	  area[m] = surf->tri_size(&tris[isurf],tmp);
+	  weight[m] = 1.0;
+	}
 	m++;
       }
     }
@@ -2947,7 +2949,7 @@ void SurfReactAdsorb::PS_react(int isurf, int isc, double *norm)
         tally_single[ireaction]++;
         if (ncompute_tally)
           for (m = 0; m < ncompute_tally; m++)
-            clist_active[m]->surf_tally(0.0,isurf,-1,ireaction,NULL,NULL,NULL);
+            clist_active[m]->surf_tally(0.0,isurf,-1,ireaction+1,NULL,NULL,NULL);
 
         // update tau
 

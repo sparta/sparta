@@ -121,15 +121,7 @@ any accelerated variants available for that style.
 <P>To use an accelerator package in SPARTA, and one or more of the styles
 it provides, follow these general steps:
 </P>
-<P>using make:
-</P>
-<DIV ALIGN=center><TABLE  BORDER=1 >
-<TR><TD >install the accelerator package </TD><TD >  make yes-fft, make yes-kokkos, etc </TD></TR>
-<TR><TD >add compile/link flags to Makefile.machine in src/MAKE </TD><TD >  KOKKOS_ARCH=PASCAL60 </TD></TR>
-<TR><TD >re-build SPARTA </TD><TD >  make kokkos_cuda
-</TD></TR></TABLE></DIV>
-
-<P>or, using CMake from a build directory:
+<P>using CMake from a build directory:
 </P>
 <DIV ALIGN=center><TABLE  BORDER=1 >
 <TR><TD >install the accelerator package </TD><TD >  cmake -DPKG_FFT=ON -DPKG_KOKKOS=ON, etc </TD></TR>
@@ -220,17 +212,6 @@ executable compatible with specific hardware.
 compatible compiler. For a list of compilers that have been tested with
 the Kokkos library, see the Kokkos <A HREF = "https://github.com/kokkos/kokkos/blob/master/README.md">README</A>.
 </P>
-<P><B>Building SPARTA with the KOKKOS package with Makefiles:</B>
-</P>
-<P>To build with the KOKKOS package, start with the provided Kokkos
-Makefiles in /src/MAKE/. You may need to modify the KOKKOS_ARCH
-variable in the Makefile to match your specific hardware. For example:
-</P>
-<UL><LI>for Sandy Bridge CPUs, set KOKKOS_ARCH=SNB
-<LI>for Broadwell CPUs, set KOKKOS_ARCH=BWD
-<LI>for K80 GPUs, set KOKKOS_ARCH=KEPLER37
-<LI>for P100 GPUs and Power8 CPUs, set KOKKOS_ARCH=PASCAL60,POWER8 
-</UL>
 <P><B>Building SPARTA with the KOKKOS package with CMake:</B>
 </P>
 <P>To build with the KOKKOS package, start with the provided preset files
@@ -250,12 +231,6 @@ Kokkos architecture options.
 <P>Use a C++17 compatible compiler and set Kokkos architicture variable in as described above.  Then do the
 following:
 </P>
-<P>using Makefiles:
-</P>
-<PRE>cd sparta/src
-make yes-kokkos
-make kokkos_mpi_only 
-</PRE>
 <P>using CMake:
 </P>
 <PRE>cd build
@@ -273,32 +248,10 @@ task running on a CPU.
 as described above.  Then do the
 following:
 </P>
-<P>using Makefiles:
-</P>
-<PRE>cd sparta/src
-make yes-kokkos
-make kokkos_omp 
-</PRE>
 <P>using CMake:
 </P>
 <PRE>cd build
 cmake -C /path/to/sparta/cmake/presets/kokkos_omp.cmake
-make 
-</PRE>
-<P><B>Compile for Intel KNL Xeon Phi (Intel Compiler, OpenMPI):</B>
-</P>
-<P>Use a C++17 compatible compiler and do the following:
-</P>
-<P>using Makefiles:
-</P>
-<PRE>cd sparta/src
-make yes-kokkos
-make kokkos_phi 
-</PRE>
-<P>using CMake:
-</P>
-<PRE>cd build
-cmake -C /path/to/sparta/cmake/presets/kokkos_phi.cmake
 make 
 </PRE>
 <P><B>Compile for CPUs and GPUs (with OpenMPI or MPICH):</B>
@@ -310,12 +263,6 @@ software version 11.0 or later must be installed on your system.
 for both GPU and CPU as described
 above.  Then do the following:
 </P>
-<P>using Makefiles:
-</P>
-<PRE>cd sparta/src
-make yes-kokkos
-make kokkos_cuda 
-</PRE>
 <P>using CMake:
 </P>
 <PRE>cd build
@@ -371,9 +318,8 @@ this manner no modification to the input script is
 needed. Alternatively, one can run with the KOKKOS package by editing
 the input script as described below.
 </P>
-<P>NOTE: When using a single OpenMP thread, the Kokkos Serial backend (i.e. 
-Makefile.kokkos_mpi_only) will give better performance than the OpenMP 
-backend (i.e. Makefile.kokkos_omp) because some of the overhead to make 
+<P>NOTE: When using a single OpenMP thread, the Kokkos Serial backend will give better performance than the OpenMP 
+backend because some of the overhead to make 
 the code thread-safe is removed.
 </P>
 <P>NOTE: The default for the <A HREF = "package.html">package kokkos</A> command is to
@@ -546,21 +492,20 @@ hardware.
 <P><B>Advanced Kokkos options:</B>
 </P>
 <P>There are other allowed options when building with the KOKKOS package.
-A few options are listed here; for a full list of all options,
-please refer to the Kokkos documentation.
-As above, these options can be set as variables on the command line,
-in a Makefile, or in a CMake presets file. For default CMake values,
-see cmake -LH | grep -i kokkos.
+A few options are listed here; for a full list of all options, please
+refer to the Kokkos documentation.  As above, these options can be set
+as variables on the command line or in a CMake presets file. For
+default CMake values, see cmake -LH | grep -i kokkos.
 </P>
-<P>The CMake option Kokkos_ENABLE_<I>OPTION</I> or the makefile setting KOKKOS_DEVICE=<I>OPTION</I> sets the 
+<P>The CMake option Kokkos_ENABLE_<I>OPTION</I> sets the 
 parallelization method used for Kokkos code (within SPARTA). 
-For example, the CMake option Kokkos_ENABLE_SERIAL=ON or the makefile setting KOKKOS_DEVICES=SERIAL
-means that no threading will be used.  The CMake option Kokkos_ENABLE_OPENMP=ON or the 
-makefile setting KOKKOS_DEVICES=OPENMP means that OpenMP threading will be
-used. The CMake option Kokkos_ENABLE_CUDA=ON or the makefile setting
-KOKKOS_DEVICES=CUDA means an NVIDIA GPU running CUDA will be used.
+For example, the CMake option Kokkos_ENABLE_SERIAL=ON 
+means that no threading will be used.  The CMake option Kokkos_ENABLE_OPENMP=ON
+means that OpenMP threading will be
+used. The CMake option Kokkos_ENABLE_CUDA=ON
+means an NVIDIA GPU running CUDA will be used.
 </P>
-<P>As described above, the CMake option Kokkos_ARCH_<I>TYPE</I>=ON or the makefile setting KOKKOS_ARCH=<I>TYPE</I> enables compiler switches needed when compiling for a specific hardware:
+<P>As described above, the CMake option Kokkos_ARCH_<I>TYPE</I>=ON enables compiler switches needed when compiling for a specific hardware:
 </P>
 <DIV ALIGN=center><TABLE  BORDER=1 >
 <TR><TD ><B>Arch-ID</B>	</TD><TD > <B>HOST or GPU</B> </TD><TD >	<B>Description</B> </TD></TR>
@@ -633,10 +578,15 @@ KOKKOS_DEVICES=CUDA means an NVIDIA GPU running CUDA will be used.
 <TR><TD >
 </TD></TR></TABLE></DIV>
 
-<P>The CMake option Kokkos_ENABLE_CUDA_<I>OPTION</I> or the makefile setting KOKKOS_CUDA_OPTIONS=<I>OPTION</I> are 
-additional options for CUDA. For example, the CMake option Kokkos_ENABLE_CUDA_UVM=ON or the makefile setting KOKKOS_CUDA_OPTIONS="enable_lambda,force_uvm" enables the use of CUDA "Unified Virtual Memory" (UVM) in Kokkos. UVM allows to one to use the host CPU memory to supplement the memory used on the GPU (with some performance penalty) and thus enables running larger problems that would otherwise not fit into the RAM on the GPU. Please note, that the SPARTA KOKKOS package must always be compiled with the CMake option Kokkos_ENABLE_CUDA_LAMBDA=ON or the makefile setting KOKKOS_CUDA_OPTIONS=enable_lambda when using GPUs. The CMake configuration will thus always enable it.
+<P>The CMake option Kokkos_ENABLE_CUDA_<I>OPTION</I> enables additional
+options for CUDA. For example, the CMake option
+Kokkos_ENABLE_CUDA_UVM=ON enables the use of CUDA
+"Unified Virtual Memory" (UVM) in Kokkos. UVM allows to one to use the
+host CPU memory to supplement the memory used on the GPU (with some
+performance penalty) and thus enables running larger problems that
+would otherwise not fit into the RAM on the GPU. 
 </P>
-<P>The CMake option Kokkos_ENABLE_DEBUG=ON or the makefile setting KOKKOS_DEBUG=yes is useful
+<P>The CMake option Kokkos_ENABLE_DEBUG=ON is useful
 when developing a Kokkos-enabled style within SPARTA. This option enables printing of run-time debugging
 information that can be useful and also enables runtime bounds
 checking on Kokkos data structures, but may slow down performance.
