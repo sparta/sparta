@@ -87,11 +87,13 @@ UpdateKokkos::UpdateKokkos(SPARTA *sparta) : Update(sparta),
   blist_active_copy{VAL_2(KKCopy<ComputeBoundaryKokkos>(sparta))},
   slist_active_copy{VAL_2(KKCopy<ComputeSurfKokkos>(sparta))},
   slist_active_isurf_copy{VAL_2(KKCopy<ComputeISurfGridKokkos>(sparta))},
+  slist_active_react_isurf_copy{VAL_2(KKCopy<ComputeReactISurfGridKokkos>(sparta))},
   tmp_compute_boundary_kk(sparta),
   tmp_compute_surf_kk(sparta),
-  tmp_compute_isurf_grid_kk(sparta)
+  tmp_compute_isurf_grid_kk(sparta),
+  tmp_compute_react_isurf_grid_kk(sparta)
 {
-  nslist_surf = nslist_isurf = 0;
+  nslist_surf = nslist_isurf = nslist_react_isurf = 0;
 
 
   // use 1D view for scalars to reduce GPU memory operations
@@ -147,6 +149,7 @@ UpdateKokkos::~UpdateKokkos()
   tmp_compute_boundary_kk.uncopy = 1;
   tmp_compute_surf_kk.uncopy = 1;
   tmp_compute_isurf_grid_kk.uncopy = 1;
+  tmp_compute_react_isurf_grid_kk.uncopy = 1;
 
   for (int i=0; i<KOKKOS_MAX_SURF_COLL_PER_TYPE; i++) {
     sc_kk_specular_copy[i].uncopy();
@@ -167,6 +170,7 @@ UpdateKokkos::~UpdateKokkos()
   for (int i=0; i<KOKKOS_MAX_SLIST; i++) {
     slist_active_copy[i].uncopy();
     slist_active_isurf_copy[i].uncopy();
+    slist_active_react_isurf_copy[i].uncopy();
   }
 }
 
@@ -859,6 +863,10 @@ template < int DIM, int SURF, int REACT, int OPT > void UpdateKokkos::move()
         ComputeISurfGridKokkos* compute_isurf_kk =
           (ComputeISurfGridKokkos*)(slist_active[m]);
         compute_isurf_kk->post_surf_tally();
+      } else if (strcmp(slist_active[m]->style,"react/isurf/grid") == 0) {
+        ComputeReactISurfGridKokkos* compute_react_isurf_kk =
+          (ComputeReactISurfGridKokkos*)(slist_active[m]);
+        compute_react_isurf_kk->post_surf_tally();
       } else {
         ComputeSurfKokkos* compute_surf_kk = (ComputeSurfKokkos*)(slist_active[m]);
         compute_surf_kk->post_surf_tally();
@@ -1507,6 +1515,9 @@ void UpdateKokkos::operator()(TagUpdateMove<DIM,SURF,REACT,OPT,ATOMIC_REDUCTION>
             for (m = 0; m < nslist_isurf; m++)
               slist_active_isurf_copy[m].obj.
                     surf_tally_kk<ATOMIC_REDUCTION>(dtremain,minsurf,icell,reaction,&iorig,ipart,jpart);
+            for (m = 0; m < nslist_react_isurf; m++)
+              slist_active_react_isurf_copy[m].obj.
+                    surf_tally_kk<ATOMIC_REDUCTION>(dtremain,minsurf,icell,reaction,&iorig,ipart,jpart);
           }
 
           // stuck_iterate = consecutive iterations particle is immobile
@@ -2075,7 +2086,7 @@ void UpdateKokkos::tally_set(bigint ntimestep)
   //   "compute isurf/grid" (slist_active_isurf_copy); both tally on-device via
   //   surf_tally_kk(), invoked from the move kernel's surface collision loop
 
-  nslist_surf = nslist_isurf = 0;
+  nslist_surf = nslist_isurf = nslist_react_isurf = 0;
 
   if (nsurf_tally) {
     for (i = 0; i < nsurf_tally; i++) {
@@ -2089,6 +2100,16 @@ void UpdateKokkos::tally_set(bigint ntimestep)
         compute_isurf_kk->pre_surf_tally();
         slist_active_isurf_copy[nslist_isurf].copy(compute_isurf_kk);
         nslist_isurf++;
+      } else if (strcmp(slist_active[i]->style,"react/isurf/grid") == 0) {
+        ComputeReactISurfGridKokkos* compute_react_isurf_kk =
+          dynamic_cast<ComputeReactISurfGridKokkos*>(slist_active[i]);
+        if (!compute_react_isurf_kk)
+          error->all(FLERR,"Must use Kokkos-enabled compute react/isurf/grid with Kokkos");
+        if (nslist_react_isurf >= KOKKOS_MAX_SLIST)
+          error->all(FLERR,"Kokkos currently only supports two instances of compute react/isurf/grid");
+        compute_react_isurf_kk->pre_surf_tally();
+        slist_active_react_isurf_copy[nslist_react_isurf].copy(compute_react_isurf_kk);
+        nslist_react_isurf++;
       } else {
         ComputeSurfKokkos* compute_surf_kk =
           dynamic_cast<ComputeSurfKokkos*>(slist_active[i]);
@@ -2110,6 +2131,8 @@ void UpdateKokkos::tally_set(bigint ntimestep)
     slist_active_copy[i].copy(&tmp_compute_surf_kk);
   for (i = nslist_isurf; i < KOKKOS_MAX_SLIST; i++)
     slist_active_isurf_copy[i].copy(&tmp_compute_isurf_grid_kk);
+  for (i = nslist_react_isurf; i < KOKKOS_MAX_SLIST; i++)
+    slist_active_react_isurf_copy[i].copy(&tmp_compute_react_isurf_grid_kk);
 
   if (ngas_tally)
     error->all(FLERR,"Kokkos does not (yet) support tallying gas/gas collisions or reactions");
