@@ -34,6 +34,7 @@
 #include "compute_surf_kokkos.h"
 #include "compute_isurf_grid_kokkos.h"
 #include "compute_react_isurf_grid_kokkos.h"
+#include "compute_react_surf_kokkos.h"
 
 namespace SPARTA_NS {
 
@@ -151,6 +152,7 @@ class UpdateKokkos : public Update {
   KKCopy<ComputeSurfKokkos> slist_active_copy[KOKKOS_MAX_SLIST];
   KKCopy<ComputeISurfGridKokkos> slist_active_isurf_copy[KOKKOS_MAX_SLIST];
   KKCopy<ComputeReactISurfGridKokkos> slist_active_react_isurf_copy[KOKKOS_MAX_SLIST];
+  KKCopy<ComputeReactSurfKokkos> slist_active_react_surf_copy[KOKKOS_MAX_SLIST];
   KKCopy<ComputeBoundaryKokkos> blist_active_copy[KOKKOS_MAX_BLIST];
 
   // partition of slist_active (set in tally_set):
@@ -159,12 +161,13 @@ class UpdateKokkos : public Update {
   //   nslist_react_isurf = # of compute react/isurf/grid tallies
   // nslist_surf + nslist_isurf + nslist_react_isurf == nsurf_tally
 
-  int nslist_surf,nslist_isurf,nslist_react_isurf;
+  int nslist_surf,nslist_isurf,nslist_react_isurf,nslist_react_surf;
 
   ComputeBoundaryKokkos tmp_compute_boundary_kk;
   ComputeSurfKokkos tmp_compute_surf_kk;
   ComputeISurfGridKokkos tmp_compute_isurf_grid_kk;
   ComputeReactISurfGridKokkos tmp_compute_react_isurf_grid_kk;
+  ComputeReactSurfKokkos tmp_compute_react_surf_kk;
 
   typedef Kokkos::DualView<int[14], DeviceType::array_layout, DeviceType> tdual_int_14;
   typedef tdual_int_14::t_dev t_int_14;
