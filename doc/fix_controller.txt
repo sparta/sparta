@@ -124,7 +124,7 @@ performs its first update after {Nevery} timesteps.  On that first
 update the derivative term is set to zero, because the previous error is
 not yet defined.
 
-[Output info:]
+[Restart, output info:]
 
 No information about this fix is written to "binary restart
 files"_restart.html.
