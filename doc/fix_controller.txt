@@ -21,9 +21,9 @@ Ki = integral gain coefficient (see below) :l
 Kd = derivative gain coefficient (see below) :l
 pv = process variable of the feedback loop, can be a compute, fix, or variable :l
   c_ID = global scalar calculated by a compute with ID
-  c_ID[I] = Ith component of global vector calculated by a compute with ID
+  c_ID\[I\] = Ith component of global vector calculated by a compute with ID
   f_ID = global scalar calculated by a fix with ID
-  f_ID[I] = Ith component of global vector calculated by a fix with ID
+  f_ID\[I\] = Ith component of global vector calculated by a fix with ID
   v_name = value calculated by an equal-style variable with name :pre
 setpoint = desired value of the process variable (target of the controller) :l
 cv = name of the control variable, an internal-style "variable"_variable.html :l
@@ -91,9 +91,10 @@ invocation (a finite-difference approximation to the time derivative).
 The {Kp}, {Ki}, and {Kd} coefficients are the dimensionless gains of
 the proportional, integral, and derivative terms, respectively.  The
 {alpha} coefficient is an overall coupling constant that carries the
-units of the equation: [control-variable units] / [process-variable
-units] / [time units].  The advantage of this convention is that the
-values of {Kp}, {Ki}, {Kd} are invariant under a change of the timestep
+units of the equation, namely the control-variable units divided by the
+process-variable units divided by time units.  The advantage of this
+convention is that the values of {Kp}, {Ki}, {Kd} are invariant under a
+change of the timestep
 size or of {Nevery}; and if the "units"_units.html style is changed,
 only {alpha} needs to be adjusted, leaving the three gains unaltered.
 Setting one or more of {Kp}, {Ki}, {Kd} to zero disables the
@@ -124,6 +125,8 @@ performs its first update after {Nevery} timesteps.  On that first
 update the derivative term is set to zero, because the previous error is
 not yet defined.
 
+:line
+
 [Restart, output info:]
 
 No information about this fix is written to "binary restart
@@ -143,6 +146,8 @@ These values can be useful for monitoring and tuning the relative
 contributions of the three terms.  The units of the vector values are
 whatever units the control variable is in.  The vector values calculated
 by this fix are "extensive".
+
+:line
 
 [Restrictions:] none
 
