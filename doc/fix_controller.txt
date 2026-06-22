@@ -1,0 +1,133 @@
+"SPARTA WWW Site"_sws - "SPARTA Documentation"_sd - "SPARTA Commands"_sc :c
+
+:link(sws,https://sparta.github.io)
+:link(sd,Manual.html)
+:link(sc,Section_commands.html#comm)
+
+:line
+
+fix controller command :h3
+
+[Syntax:]
+
+fix ID controller Nevery alpha Kp Ki Kd pv setpoint cv :pre
+
+ID is documented in "fix"_fix.html command :ulb,l
+controller = style name of this fix command :l
+Nevery = invoke this fix every this many timesteps :l
+alpha = coupling constant for converting the control variable to a change (see below) :l
+Kp = proportional gain coefficient (see below) :l
+Ki = integral gain coefficient (see below) :l
+Kd = derivative gain coefficient (see below) :l
+pv = process variable of the feedback loop, can be a compute, fix, or variable :l
+  c_ID = global scalar calculated by a compute with ID
+  c_ID[I] = Ith component of global vector calculated by a compute with ID
+  f_ID = global scalar calculated by a fix with ID
+  f_ID[I] = Ith component of global vector calculated by a fix with ID
+  v_name = value calculated by an equal-style variable with name :pre
+setpoint = desired value of the process variable (target of the controller) :l
+cv = name of the control variable, an internal-style "variable"_variable.html :l
+:ule
+
+[Examples:]
+
+compute myTemp all temp
+variable drive internal 0.0
+fix pid controller 100 0.1 1.0 0.0 0.0 c_myTemp 300.0 drive :pre
+
+[Description:]
+
+Apply a "proportional-integral-derivative" (PID) feedback controller to
+a simulation.  Every {Nevery} timesteps the fix samples a {process
+variable} {pv}, compares it to a desired {setpoint}, and updates a
+{control variable} {cv} so as to drive the process variable toward the
+setpoint.  The control variable is an "internal-style
+variable"_variable.html whose value can be referenced by any other
+command in the input script that evaluates a variable, so the feedback
+loop can be used to steer essentially any property of a running
+simulation.
+
+A typical use is to maintain a target temperature, pressure, or flux by
+adjusting an input such as a wall temperature, an inflow velocity, or an
+applied field that is itself expressed through the control variable.
+The process variable to be controlled is computed by another command and
+passed to this fix as {pv}; the value that this fix adjusts is the
+internal-style variable named {cv}.
+
+The {process variable} {pv} can be the output of a "compute"_compute.html,
+a "fix"_fix.html, or an equal-style "variable"_variable.html:
+
+if {pv} begins with "c_", it is the global scalar (no bracket) or the
+Ith component of the global vector (with bracket) computed by the named
+compute :ulb,l
+if {pv} begins with "f_", it is the global scalar or Ith vector
+component computed by the named fix :l
+if {pv} begins with "v_", it is the value of the named equal-style
+variable :l
+:ule
+
+The {control variable} {cv} must be the name of an "internal-style
+variable"_variable.html.  This fix overwrites the value of that variable
+each time it is invoked.  Some other command in the input script should
+reference this variable (e.g. as {v_name}) so that the new value
+produced by the controller takes effect.
+
+The controller works as follows.  Each time the fix is invoked, the
+current value of the process variable {pv} is compared to the
+{setpoint}, and the difference is the current error:
+
+err = pv - setpoint :pre
+
+The control variable is then updated from its previous value using the
+three PID terms:
+
+cv = cv - Kp*alpha*tau*err - Ki*alpha*tau*tau*sumerr - Kd*alpha*deltaerr :pre
+
+where {tau} = {Nevery} * dt is the elapsed time between invocations (dt
+is the timestep size), {sumerr} is the running sum (time integral) of
+the error, and {deltaerr} is the change in the error since the previous
+invocation (a finite-difference approximation to the time derivative).
+
+The {Kp}, {Ki}, and {Kd} coefficients are the gains of the
+proportional, integral, and derivative terms, respectively.  The {alpha}
+coefficient is an overall coupling constant that converts the
+(error-based) PID output into a change of the control variable; it
+allows the gains to be expressed in convenient units.  Setting one or
+more of {Kp}, {Ki}, {Kd} to zero disables the corresponding term, e.g.
+{Ki} = {Kd} = 0.0 yields a purely proportional controller.
+
+NOTE: The sign convention in the update formula above (the PID terms are
+subtracted) is appropriate when an increase of the control variable
+{decreases} the process variable.  If increasing the control variable
+{increases} the process variable, use negative gain coefficients (or a
+negative {alpha}) so that the feedback remains stabilizing.
+
+Choosing good values for the gain coefficients depends on the system and
+typically requires some experimentation.  A common starting point is to
+use only the proportional term, increase {Kp} until the process variable
+responds without oscillating excessively, and then add small integral
+and derivative terms to remove steady-state offset and damp
+oscillations.
+
+[Output info:]
+
+This fix computes a global vector of length 3 which can be accessed by
+various output commands.  The 3 quantities are the values of the three
+PID terms at the most recent invocation of the controller:
+
+1 = proportional term = -Kp*alpha*tau*err
+2 = integral term = -Ki*alpha*tau*tau*sumerr
+3 = derivative term = -Kd*alpha*deltaerr :ul
+
+These values can be useful for monitoring and tuning the relative
+contributions of the three terms.  The vector values calculated by this
+fix are "intensive".
+
+[Restrictions:] none
+
+[Related commands:]
+
+"compute"_compute.html, "variable"_variable.html, "fix
+adapt"_fix_adapt.html
+
+[Default:] none
