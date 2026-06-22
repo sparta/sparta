@@ -32,9 +32,9 @@
 <LI>pv = process variable of the feedback loop, can be a compute, fix, or variable 
 
 <PRE>  c_ID = global scalar calculated by a compute with ID
-  c_ID<B>I</B> = Ith component of global vector calculated by a compute with ID
+  c_ID[I] = Ith component of global vector calculated by a compute with ID
   f_ID = global scalar calculated by a fix with ID
-  f_ID<B>I</B> = Ith component of global vector calculated by a fix with ID
+  f_ID[I] = Ith component of global vector calculated by a fix with ID
   v_name = value calculated by an equal-style variable with name 
 </PRE>
 <LI>setpoint = desired value of the process variable (target of the controller) 
@@ -108,9 +108,10 @@ invocation (a finite-difference approximation to the time derivative).
 <P>The <I>Kp</I>, <I>Ki</I>, and <I>Kd</I> coefficients are the dimensionless gains of
 the proportional, integral, and derivative terms, respectively.  The
 <I>alpha</I> coefficient is an overall coupling constant that carries the
-units of the equation: <B>control-variable units</B> / <B>process-variable
-units</B> / <B>time units</B>.  The advantage of this convention is that the
-values of <I>Kp</I>, <I>Ki</I>, <I>Kd</I> are invariant under a change of the timestep
+units of the equation, namely the control-variable units divided by the
+process-variable units divided by time units.  The advantage of this
+convention is that the values of <I>Kp</I>, <I>Ki</I>, <I>Kd</I> are invariant under a
+change of the timestep
 size or of <I>Nevery</I>; and if the <A HREF = "units.html">units</A> style is changed,
 only <I>alpha</I> needs to be adjusted, leaving the three gains unaltered.
 Setting one or more of <I>Kp</I>, <I>Ki</I>, <I>Kd</I> to zero disables the
@@ -141,6 +142,8 @@ performs its first update after <I>Nevery</I> timesteps.  On that first
 update the derivative term is set to zero, because the previous error is
 not yet defined.
 </P>
+<HR>
+
 <P><B>Restart, output info:</B>
 </P>
 <P>No information about this fix is written to <A HREF = "restart.html">binary restart
@@ -161,6 +164,8 @@ contributions of the three terms.  The units of the vector values are
 whatever units the control variable is in.  The vector values calculated
 by this fix are "extensive".
 </P>
+<HR>
+
 <P><B>Restrictions:</B> none
 </P>
 <P><B>Related commands:</B>
