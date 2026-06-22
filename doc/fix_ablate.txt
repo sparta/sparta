@@ -308,6 +308,15 @@ The scalar and vector values are unitless.
 
 This fix can only be used in simulations that define implicit surfaces.
 
+All surface elements must be assigned to the same surface collision
+model and (optionally) the same surface reaction model via the
+"surf_modify"_surf_modify.html command.  This is because each ablation
+operation discards and re-creates all the implicit surface elements,
+and this fix re-assigns the same pair of models to all the new
+elements.  Assigning different models to different groups of surface
+elements is not yet supported with ablation; an error is generated if
+that is the case.
+
 [Related commands:]
 
 "read isurf"_read_isurf.html
