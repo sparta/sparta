@@ -37,6 +37,10 @@
 using namespace SPARTA_NS;
 using namespace MathConst;
 
+#define VAL_1(X) X
+#define VAL_2(X) VAL_1(X), VAL_1(X)
+#define VAL_4(X) VAL_2(X), VAL_2(X)
+
 enum{NONE,DISCRETE,SMOOTH};            // several files
 enum{CONSTANT,VARIABLE};
 
@@ -62,10 +66,15 @@ CollideVSSKokkos::CollideVSSKokkos(SPARTA *sparta, int narg, char **arg) :
   grid_kk_copy(sparta),
   react_kk_copy(sparta),
   react_qk_kk_copy(sparta),
-  react_tceqk_kk_copy(sparta)
+  react_tceqk_kk_copy(sparta),
+  glist_collision_copy{VAL_4(KKCopy<ComputeGasCollisionGridKokkos>(sparta))},
+  glist_reaction_copy{VAL_4(KKCopy<ComputeGasReactionGridKokkos>(sparta))},
+  tmp_compute_gas_collision_kk(sparta),
+  tmp_compute_gas_reaction_kk(sparta)
 {
   kokkos_flag = 1;
   react_style = 0;
+  nglist_collision = nglist_reaction = 0;
 
   // use 1D view for scalars to reduce GPU memory operations
 
@@ -112,6 +121,11 @@ CollideVSSKokkos::~CollideVSSKokkos()
   react_kk_copy.uncopy();
   react_qk_kk_copy.uncopy();
   react_tceqk_kk_copy.uncopy();
+
+  for (int i = 0; i < KOKKOS_MAX_GLIST; i++) {
+    glist_collision_copy[i].uncopy();
+    glist_reaction_copy[i].uncopy();
+  }
 
   memoryKK->destroy_kokkos(k_dellist,dellist);
 
@@ -408,8 +422,11 @@ void CollideVSSKokkos::collisions()
   // variant for ngas_tally active or not
   // variant for single group or multiple groups
 
-  if (ngas_tally)
-    error->all(FLERR,"Kokkos does not (yet) support tallying gas/gas collisions or reactions");
+  // partition active gas/gas tally computes by type into typed KKCopy lists
+  // each must be a supported Kokkos per-grid compute; call pre_gas_tally()
+  // the per-event gas/collision/tally and gas/reaction/tally are not supported
+
+  if (ngas_tally) setup_gas_tally();
 
   COLLIDE_REDUCE reduce;
 
@@ -431,7 +448,7 @@ void CollideVSSKokkos::collisions()
     } else if (ambiflag) {
       if (!ngas_tally) {
         collisions_one_ambipolar<0>(reduce);
-      } else if (!ngas_tally) {
+      } else if (ngas_tally) {
         collisions_one_ambipolar<1>(reduce);
       }
     }
@@ -447,8 +464,16 @@ void CollideVSSKokkos::collisions()
       error->all(FLERR,"Kokkos does not (yet) support multigroup ambipolar collisions");
     if (nearcp)
       error->all(FLERR,"Kokkos does not (yet) support near-neighbor group collisions");
-    collisions_group<0,0>(reduce);
+    if (!ngas_tally) {
+      collisions_group<0,0>(reduce);
+    } else if (ngas_tally) {
+      collisions_group<0,1>(reduce);
+    }
   }
+
+  // finalize active gas/gas tally computes: contribute and sync to host
+
+  if (ngas_tally) finish_gas_tally();
 
   // remove any particles deleted in chemistry reactions
   // if particles deleted/created by chemistry, particles are no longer sorted
@@ -484,6 +509,69 @@ void CollideVSSKokkos::collisions()
   nattempt_running += nattempt_one;
   ncollide_running += ncollide_one;
   nreact_running += nreact_one;
+}
+
+/* ----------------------------------------------------------------------
+   partition the active gas/gas tally computes (update->glist_active) into
+     typed KKCopy lists and call pre_gas_tally() on each
+   only the per-grid Kokkos computes are supported; the per-event
+     gas/collision/tally and gas/reaction/tally computes are not
+------------------------------------------------------------------------- */
+
+void CollideVSSKokkos::setup_gas_tally()
+{
+  nglist_collision = nglist_reaction = 0;
+
+  for (int i = 0; i < ngas_tally; i++) {
+    Compute *c = update->glist_active[i];
+    if (strcmp(c->style,"gas/collision/grid") == 0) {
+      ComputeGasCollisionGridKokkos *ckk =
+        dynamic_cast<ComputeGasCollisionGridKokkos*>(c);
+      if (!ckk)
+        error->all(FLERR,"Must use Kokkos-enabled compute gas/collision/grid with Kokkos");
+      if (nglist_collision >= KOKKOS_MAX_GLIST)
+        error->all(FLERR,"Kokkos currently only supports two instances of compute gas/collision/grid");
+      ckk->pre_gas_tally();
+      glist_collision_copy[nglist_collision].copy(ckk);
+      nglist_collision++;
+    } else if (strcmp(c->style,"gas/reaction/grid") == 0) {
+      ComputeGasReactionGridKokkos *ckk =
+        dynamic_cast<ComputeGasReactionGridKokkos*>(c);
+      if (!ckk)
+        error->all(FLERR,"Must use Kokkos-enabled compute gas/reaction/grid with Kokkos");
+      if (nglist_reaction >= KOKKOS_MAX_GLIST)
+        error->all(FLERR,"Kokkos currently only supports two instances of compute gas/reaction/grid");
+      ckk->pre_gas_tally();
+      glist_reaction_copy[nglist_reaction].copy(ckk);
+      nglist_reaction++;
+    } else {
+      error->all(FLERR,"Kokkos does not (yet) support compute gas/collision/tally or compute gas/reaction/tally");
+    }
+  }
+
+  // fill unused slots of each typed copy list with the temporary
+  //   to avoid the copy getting stale leading to an issue with view ref counting
+
+  for (int i = nglist_collision; i < KOKKOS_MAX_GLIST; i++)
+    glist_collision_copy[i].copy(&tmp_compute_gas_collision_kk);
+  for (int i = nglist_reaction; i < KOKKOS_MAX_GLIST; i++)
+    glist_reaction_copy[i].copy(&tmp_compute_gas_reaction_kk);
+}
+
+/* ----------------------------------------------------------------------
+   finalize the active gas/gas tally computes
+   call post_gas_tally() on the real compute objects (not the copies)
+------------------------------------------------------------------------- */
+
+void CollideVSSKokkos::finish_gas_tally()
+{
+  for (int i = 0; i < ngas_tally; i++) {
+    Compute *c = update->glist_active[i];
+    if (strcmp(c->style,"gas/collision/grid") == 0)
+      ((ComputeGasCollisionGridKokkos*)c)->post_gas_tally();
+    else if (strcmp(c->style,"gas/reaction/grid") == 0)
+      ((ComputeGasReactionGridKokkos*)c)->post_gas_tally();
+  }
 }
 
 /* ----------------------------------------------------------------------
@@ -786,10 +874,12 @@ void CollideVSSKokkos::operator()(TagCollideCollisionsOne< NEARCP, GASTALLY, ATO
     else
       reduce.ncollide_one++;
 
-    //if (GASTALLY)
-    //  for (int m = 0; m < ngas_tally; m++)
-    //    glist_active[m]->gas_tally(icell,reactflag,
-    //                               &iorig,&jorig,ipart,jpart,kpart); //////
+    if (GASTALLY) {
+      for (int m = 0; m < nglist_collision; m++)
+        glist_collision_copy[m].obj.template gas_tally_kk<ATOMIC_REDUCTION>(icell,reactflag,&iorig,&jorig,ipart,jpart,kpart);
+      for (int m = 0; m < nglist_reaction; m++)
+        glist_reaction_copy[m].obj.template gas_tally_kk<ATOMIC_REDUCTION>(icell,reactflag,&iorig,&jorig,ipart,jpart,kpart);
+    }
 
     if (reactflag) {
       if (ATOMIC_REDUCTION == 1)
@@ -1029,7 +1119,7 @@ void CollideVSSKokkos::operator()(TagCollideCollisionsGroup< NEARCP, GASTALLY, A
         int index_kpart = 0;
 
         setup_collision_kokkos(ipart,jpart,precoln,postcoln);
-        perform_collision_kokkos(ipart,jpart,kpart,precoln,postcoln,rand_gen,
+        const int reactflag = perform_collision_kokkos(ipart,jpart,kpart,precoln,postcoln,rand_gen,
                                  recomb_part3,recomb_species,recomb_density,index_kpart);
 
         if (ATOMIC_REDUCTION == 1)
@@ -1039,10 +1129,12 @@ void CollideVSSKokkos::operator()(TagCollideCollisionsGroup< NEARCP, GASTALLY, A
         else
           reduce.ncollide_one++;
 
-        //if (GASTALLY)
-        //  for (int m = 0; m < ngas_tally; m++)
-        //    glist_active[m]->gas_tally(icell,reactflag,
-        //                               &iorig,&jorig,ipart,jpart,kpart);
+        if (GASTALLY) {
+          for (int m = 0; m < nglist_collision; m++)
+            glist_collision_copy[m].obj.template gas_tally_kk<ATOMIC_REDUCTION>(icell,reactflag,&iorig,&jorig,ipart,jpart,kpart);
+          for (int m = 0; m < nglist_reaction; m++)
+            glist_reaction_copy[m].obj.template gas_tally_kk<ATOMIC_REDUCTION>(icell,reactflag,&iorig,&jorig,ipart,jpart,kpart);
+        }
       }
     }
 
@@ -1411,10 +1503,12 @@ void CollideVSSKokkos::operator()(TagCollideCollisionsOneAmbipolar< GASTALLY, AT
     else
       reduce.ncollide_one++;
 
-    //if (GASTALLY)
-    //  for (int m = 0; m < ngas_tally; m++)
-    //    glist_active[m]->gas_tally(icell,reactflag,
-    //                               &iorig,&jorig,ipart,jpart,kpart); //////
+    if (GASTALLY) {
+      for (int m = 0; m < nglist_collision; m++)
+        glist_collision_copy[m].obj.template gas_tally_kk<ATOMIC_REDUCTION>(icell,reactflag,&iorig,&jorig,ipart,jpart,kpart);
+      for (int m = 0; m < nglist_reaction; m++)
+        glist_reaction_copy[m].obj.template gas_tally_kk<ATOMIC_REDUCTION>(icell,reactflag,&iorig,&jorig,ipart,jpart,kpart);
+    }
 
     if (reactflag) {
       if (ATOMIC_REDUCTION == 1)

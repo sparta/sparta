@@ -2157,8 +2157,8 @@ void UpdateKokkos::tally_set(bigint ntimestep)
   for (i = nslist_react_surf; i < KOKKOS_MAX_SLIST; i++)
     slist_active_react_surf_copy[i].copy(&tmp_compute_react_surf_kk);
 
-  if (ngas_tally)
-    error->all(FLERR,"Kokkos does not (yet) support tallying gas/gas collisions or reactions");
+  // gas/gas tally computes are validated and set up by CollideVSSKokkos,
+  //   which invokes their on-device gas_tally_kk() from the collision kernel
 }
 
 /* ---------------------------------------------------------------------- */

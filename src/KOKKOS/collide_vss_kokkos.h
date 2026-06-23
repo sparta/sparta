@@ -32,6 +32,10 @@ CollideStyle(vss/kk,CollideVSSKokkos)
 #include "Kokkos_Random.hpp"
 #include "rand_pool_wrap.h"
 #include "kokkos_copy.h"
+#include "compute_gas_collision_grid_kokkos.h"
+#include "compute_gas_reaction_grid_kokkos.h"
+
+#define KOKKOS_MAX_GLIST 4
 
 namespace SPARTA_NS {
 
@@ -156,6 +160,15 @@ class CollideVSSKokkos : public CollideVSS {
   KKCopy<ReactQKKokkos> react_qk_kk_copy;
   KKCopy<ReactTCEQKKokkos> react_tceqk_kk_copy;
   int react_style;   // 0=TCE, 1=QK, 2=TCEQK (set in setup)
+
+  // active gas/gas per-grid tally computes, partitioned by type
+  KKCopy<ComputeGasCollisionGridKokkos> glist_collision_copy[KOKKOS_MAX_GLIST];
+  KKCopy<ComputeGasReactionGridKokkos> glist_reaction_copy[KOKKOS_MAX_GLIST];
+  int nglist_collision,nglist_reaction;
+  ComputeGasCollisionGridKokkos tmp_compute_gas_collision_kk;
+  ComputeGasReactionGridKokkos tmp_compute_gas_reaction_kk;
+  void setup_gas_tally();
+  void finish_gas_tally();
 
   t_particle_1d d_particles;
   t_species_1d_const d_species;
