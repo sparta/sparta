@@ -62,6 +62,9 @@ struct TagCollideCollisionsOne{};
 template < int GASTALLY, int ATOMIC_REDUCTION >
 struct TagCollideCollisionsOneAmbipolar{};
 
+template < int NEARCP, int GASTALLY, int ATOMIC_REDUCTION >
+struct TagCollideCollisionsGroup{};
+
 class CollideVSSKokkos : public CollideVSS {
  public:
   typedef COLLIDE_REDUCE value_type;
@@ -86,6 +89,8 @@ class CollideVSSKokkos : public CollideVSS {
 
   KOKKOS_INLINE_FUNCTION
   double attempt_collision_kokkos(int, int, double, rand_type &) const;
+  KOKKOS_INLINE_FUNCTION
+  double attempt_collision_kokkos(int, int, int, int, int, double, rand_type &) const;
   KOKKOS_INLINE_FUNCTION
   int test_collision_kokkos(int, int, int, Particle::OnePart *, Particle::OnePart *, struct State &, rand_type &) const;
   KOKKOS_INLINE_FUNCTION
@@ -118,6 +123,14 @@ class CollideVSSKokkos : public CollideVSS {
   KOKKOS_INLINE_FUNCTION
   void operator()(TagCollideCollisionsOneAmbipolar< GASTALLY, ATOMIC_REDUCTION >, const int&, COLLIDE_REDUCE&) const;
 
+  template < int NEARCP, int GASTALLY, int ATOMIC_REDUCTION >
+  KOKKOS_INLINE_FUNCTION
+  void operator()(TagCollideCollisionsGroup< NEARCP, GASTALLY, ATOMIC_REDUCTION >, const int&) const;
+
+  template < int NEARCP, int GASTALLY, int ATOMIC_REDUCTION >
+  KOKKOS_INLINE_FUNCTION
+  void operator()(TagCollideCollisionsGroup< NEARCP, GASTALLY, ATOMIC_REDUCTION >, const int&, COLLIDE_REDUCE&) const;
+
   typedef Kokkos::
     DualView<Params**, Kokkos::LayoutRight, DeviceType> tdual_params_2d;
   typedef tdual_params_2d::t_dev t_params_2d;
@@ -147,6 +160,11 @@ class CollideVSSKokkos : public CollideVSS {
   t_particle_1d d_particles;
   t_species_1d_const d_species;
   DAT::t_int_2d d_plist;
+
+  // group collision scratch (ngroups > 1)
+  DAT::t_int_1d d_species2group;
+  DAT::t_int_2d d_glist;
+  Kokkos::View<int***,DeviceType> d_nattempt_pair;
 
   DAT::t_int_1d d_ewhich;
   tdual_struct_tdual_int_1d_1d k_eivec;
@@ -211,6 +229,7 @@ class CollideVSSKokkos : public CollideVSS {
 
   template < int NEARCP, int GASTALLY > void collisions_one(COLLIDE_REDUCE&);
   template < int GASTALLY > void collisions_one_ambipolar(COLLIDE_REDUCE&);
+  template < int NEARCP, int GASTALLY > void collisions_group(COLLIDE_REDUCE&);
 
   // VSS specific
 

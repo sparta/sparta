@@ -1,0 +1,47 @@
+################################################################################
+# thermal gas in a 3d box with collisions, multiple collision groups
+# particles reflect off global box boundaries
+#
+# Demonstrates/verifies non-reacting multigroup (ngroup > 1) collisions.
+# The species are split into two collision groups: "heavy" and "light".
+#
+# Note:
+#  - The "comm/sort" option to the "global" command is used to match MPI runs.
+#  - The "twopass" option is used to match Kokkos runs.
+# The "comm/sort" and "twopass" options should not be used for production runs.
+################################################################################
+
+seed	    	    12345
+dimension   	    3
+global              gridcut 1.0e-5 comm/sort yes
+
+boundary	    rr rr rr
+
+create_box  	    0 0.0001 0 0.0001 0 0.0001
+create_grid 	    10 10 10
+
+balance_grid        rcb part
+
+species		    6SpeciesAir.species N2 O2 NO N O Ar
+
+mixture		    air O2 N2 O N vstream 0.0 0.0 0.0 temp 273.1
+mixture		    air O2 frac 0.21 group heavy
+mixture		    air N2 frac 0.78 group heavy
+mixture		    air NO group heavy
+mixture		    air Ar frac 0.009 group heavy
+mixture		    air O group light
+mixture		    air N group light
+
+global              nrho 7.07043E22
+global              fnum 7.07043E6
+
+collide		    vss air 6SpeciesAirII.vss
+
+create_particles    air n 10000 twopass
+
+stats		    100
+compute             temp temp
+stats_style	    step cpu np nattempt ncoll c_temp
+
+timestep 	    7.00E-9
+run 		    1000
