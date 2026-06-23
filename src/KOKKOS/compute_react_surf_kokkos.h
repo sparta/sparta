@@ -38,6 +38,9 @@ class ComputeReactSurfKokkos : public ComputeReactSurf {
   void pre_surf_tally();
   void post_surf_tally();
 
+  // expose the per-local-surf device tally array for fix ave/surf/kk
+  void query_tally_surf_kokkos(DAT::t_float_2d_lr &d_array) { d_array = d_array_surf_tally; }
+
 /* ----------------------------------------------------------------------
    tally a surface reaction for particle colliding with surf element isurf
    mirrors ComputeReactSurf::surf_tally(); per-surf tally compressed to host

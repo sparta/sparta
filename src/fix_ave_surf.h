@@ -36,7 +36,7 @@ class FixAveSurf : public Fix {
   void end_of_step();
   double memory_usage();
 
- private:
+ protected:
   int groupbit;
   int nvalues,maxvalues;
   int nrepeat,irepeat,nsample,ave;
