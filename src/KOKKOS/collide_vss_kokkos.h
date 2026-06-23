@@ -69,6 +69,9 @@ struct TagCollideCollisionsOneAmbipolar{};
 template < int NEARCP, int GASTALLY, int ATOMIC_REDUCTION >
 struct TagCollideCollisionsGroup{};
 
+template < int GASTALLY, int ATOMIC_REDUCTION >
+struct TagCollideCollisionsGroupAmbipolar{};
+
 class CollideVSSKokkos : public CollideVSS {
  public:
   typedef COLLIDE_REDUCE value_type;
@@ -134,6 +137,14 @@ class CollideVSSKokkos : public CollideVSS {
   template < int NEARCP, int GASTALLY, int ATOMIC_REDUCTION >
   KOKKOS_INLINE_FUNCTION
   void operator()(TagCollideCollisionsGroup< NEARCP, GASTALLY, ATOMIC_REDUCTION >, const int&, COLLIDE_REDUCE&) const;
+
+  template < int GASTALLY, int ATOMIC_REDUCTION >
+  KOKKOS_INLINE_FUNCTION
+  void operator()(TagCollideCollisionsGroupAmbipolar< GASTALLY, ATOMIC_REDUCTION >, const int&) const;
+
+  template < int GASTALLY, int ATOMIC_REDUCTION >
+  KOKKOS_INLINE_FUNCTION
+  void operator()(TagCollideCollisionsGroupAmbipolar< GASTALLY, ATOMIC_REDUCTION >, const int&, COLLIDE_REDUCE&) const;
 
   typedef Kokkos::
     DualView<Params**, Kokkos::LayoutRight, DeviceType> tdual_params_2d;
@@ -243,6 +254,8 @@ class CollideVSSKokkos : public CollideVSS {
   template < int NEARCP, int GASTALLY > void collisions_one(COLLIDE_REDUCE&);
   template < int GASTALLY > void collisions_one_ambipolar(COLLIDE_REDUCE&);
   template < int NEARCP, int GASTALLY > void collisions_group(COLLIDE_REDUCE&);
+  template < int GASTALLY > void collisions_group_ambipolar(COLLIDE_REDUCE&);
+  int egroup;        // mixture group containing the ambipolar electron species
 
   // VSS specific
 
