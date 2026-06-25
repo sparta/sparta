@@ -74,7 +74,7 @@ class sparta:
     return ptr[0]
 
   def extract_compute(self,id,style,type):
-    style = style.encode('utf-8')
+    id = id.encode('utf-8')
     if type == 0:
       self.lib.sparta_extract_compute.restype = POINTER(c_double)
       ptr = self.lib.sparta_extract_compute(self.spa,id,style,type)
