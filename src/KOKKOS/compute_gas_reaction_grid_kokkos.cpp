@@ -37,6 +37,10 @@ ComputeGasReactionGridKokkos::ComputeGasReactionGridKokkos(SPARTA *sparta) :
 {
   copy = 1;
   uncopy = 0;
+  vector_grid = NULL;
+  array_grid = NULL;
+  ncol = 0;
+  nglocal = 0;
 }
 
 /* ---------------------------------------------------------------------- */

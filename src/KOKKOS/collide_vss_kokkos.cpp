@@ -41,6 +41,10 @@ using namespace MathConst;
 #define VAL_2(X) VAL_1(X), VAL_1(X)
 #define VAL_4(X) VAL_2(X), VAL_2(X)
 
+// the glist KKCopy arrays below are brace-initialized with VAL_4 (4 elements)
+static_assert(KOKKOS_MAX_GLIST == 4,
+              "VAL_4 initializer lists assume KOKKOS_MAX_GLIST == 4");
+
 enum{NONE,DISCRETE,SMOOTH};            // several files
 enum{CONSTANT,VARIABLE};
 
@@ -75,6 +79,7 @@ CollideVSSKokkos::CollideVSSKokkos(SPARTA *sparta, int narg, char **arg) :
   kokkos_flag = 1;
   react_style = 0;
   nglist_collision = nglist_reaction = 0;
+  egroup = -1;
 
   // use 1D view for scalars to reduce GPU memory operations
 
@@ -536,7 +541,7 @@ void CollideVSSKokkos::setup_gas_tally()
       if (!ckk)
         error->all(FLERR,"Must use Kokkos-enabled compute gas/collision/grid with Kokkos");
       if (nglist_collision >= KOKKOS_MAX_GLIST)
-        error->all(FLERR,"Kokkos currently only supports two instances of compute gas/collision/grid");
+        error->all(FLERR,"Kokkos supports at most KOKKOS_MAX_GLIST instances of compute gas/collision/grid");
       ckk->pre_gas_tally();
       glist_collision_copy[nglist_collision].copy(ckk);
       nglist_collision++;
@@ -546,7 +551,7 @@ void CollideVSSKokkos::setup_gas_tally()
       if (!ckk)
         error->all(FLERR,"Must use Kokkos-enabled compute gas/reaction/grid with Kokkos");
       if (nglist_reaction >= KOKKOS_MAX_GLIST)
-        error->all(FLERR,"Kokkos currently only supports two instances of compute gas/reaction/grid");
+        error->all(FLERR,"Kokkos supports at most KOKKOS_MAX_GLIST instances of compute gas/reaction/grid");
       ckk->pre_gas_tally();
       glist_reaction_copy[nglist_reaction].copy(ckk);
       nglist_reaction++;
@@ -976,7 +981,8 @@ void CollideVSSKokkos::collisions_group(COLLIDE_REDUCE &reduce)
   if (int(d_glist.extent(0)) < nglocal ||
       int(d_glist.extent(1)) < int(d_plist.extent(1)))
     MemKK::realloc_kokkos(d_glist,"collide:glist",nglocal,d_plist.extent(1));
-  if (int(d_nattempt_pair.extent(0)) < nglocal)
+  if (int(d_nattempt_pair.extent(0)) < nglocal ||
+      int(d_nattempt_pair.extent(1)) < ngroups)
     MemKK::realloc_kokkos(d_nattempt_pair,"collide:nattempt_pair",nglocal,ngroups,ngroups);
 
   copymode = 1;
@@ -1185,7 +1191,8 @@ void CollideVSSKokkos::collisions_group_ambipolar(COLLIDE_REDUCE &reduce)
   if (int(d_glist.extent(0)) < nglocal ||
       int(d_glist.extent(1)) < int(d_plist.extent(1)))
     MemKK::realloc_kokkos(d_glist,"collide:glist",nglocal,d_plist.extent(1));
-  if (int(d_nattempt_pair.extent(0)) < nglocal)
+  if (int(d_nattempt_pair.extent(0)) < nglocal ||
+      int(d_nattempt_pair.extent(1)) < ngroups)
     MemKK::realloc_kokkos(d_nattempt_pair,"collide:nattempt_pair",nglocal,ngroups,ngroups);
 
   // per-cell electron list; non-reacting so nelectron <= cell particle count

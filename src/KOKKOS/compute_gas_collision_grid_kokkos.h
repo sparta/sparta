@@ -22,16 +22,18 @@ ComputeStyle(gas/collision/grid/kk,ComputeGasCollisionGridKokkos)
 #define SPARTA_COMPUTE_GAS_COLLISION_GRID_KOKKOS_H
 
 #include "compute_gas_collision_grid.h"
+#include "kokkos_base.h"
 #include "kokkos_type.h"
 #include "particle.h"
 
 namespace SPARTA_NS {
 
-class ComputeGasCollisionGridKokkos : public ComputeGasCollisionGrid {
+class ComputeGasCollisionGridKokkos : public ComputeGasCollisionGrid, public KokkosBase {
  public:
   ComputeGasCollisionGridKokkos(class SPARTA *, int, char **);
   ComputeGasCollisionGridKokkos(class SPARTA *);
   ~ComputeGasCollisionGridKokkos();
+  void compute_per_grid_kokkos() {}   // tallying happens in Collide, not here
   void clear();
   void pre_gas_tally();
   void post_gas_tally();
@@ -72,7 +74,7 @@ class ComputeGasCollisionGridKokkos : public ComputeGasCollisionGrid {
 
  private:
   DAT::tdual_float_1d k_vector_grid;
-  DAT::t_float_1d d_vector_grid;
+  // d_vector_grid is inherited from KokkosBase (read by fix ave/grid/kk)
 
   t_cinfo_1d d_cinfo;
   DAT::t_int_2d d_s2g;

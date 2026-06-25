@@ -22,12 +22,13 @@ ComputeStyle(gas/reaction/grid/kk,ComputeGasReactionGridKokkos)
 #define SPARTA_COMPUTE_GAS_REACTION_GRID_KOKKOS_H
 
 #include "compute_gas_reaction_grid.h"
+#include "kokkos_base.h"
 #include "kokkos_type.h"
 #include "particle.h"
 
 namespace SPARTA_NS {
 
-class ComputeGasReactionGridKokkos : public ComputeGasReactionGrid {
+class ComputeGasReactionGridKokkos : public ComputeGasReactionGrid, public KokkosBase {
  public:
   enum{ALL,EVERY,SELECT};        // must match compute_gas_reaction_grid.cpp
 
@@ -35,6 +36,7 @@ class ComputeGasReactionGridKokkos : public ComputeGasReactionGrid {
   ComputeGasReactionGridKokkos(class SPARTA *);
   ~ComputeGasReactionGridKokkos();
   void init();
+  void compute_per_grid_kokkos() {}   // tallying happens in Collide, not here
   void clear();
   void pre_gas_tally();
   void post_gas_tally();
@@ -84,9 +86,9 @@ class ComputeGasReactionGridKokkos : public ComputeGasReactionGrid {
 
  private:
   DAT::tdual_float_1d k_vector_grid;
-  DAT::t_float_1d d_vector_grid;
   DAT::tdual_float_2d_lr k_array_grid;
-  DAT::t_float_2d_lr d_array_grid;
+  // d_vector_grid and d_array_grid are inherited from KokkosBase
+  //   (read by fix ave/grid/kk)
 
   DAT::t_int_1d d_reaction2col;   // reaction -> column map for SELECT mode
 
