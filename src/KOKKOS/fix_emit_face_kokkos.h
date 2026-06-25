@@ -124,7 +124,7 @@ class FixEmitFaceKokkos : public FixEmitFace {
   // data structs for subsonic emission
 
   t_particle_1d d_particles;
-  t_species_1d d_species;
+  t_species_1d d_species_all;            // all particle species (mass, rotdof)
   t_cinfo_1d d_cinfo;
   DAT::t_int_2d d_plist;
   DAT::t_int_1d d_cellcount;
@@ -137,9 +137,6 @@ class FixEmitFaceKokkos : public FixEmitFace {
   void subsonic_inflow() override;
   void subsonic_sort() override;
   void subsonic_grid() override;
-
-  KOKKOS_INLINE_FUNCTION
-  double mol_inflow_kokkos(double, double, double) const;
 };
 
 }
