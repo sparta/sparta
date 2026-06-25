@@ -726,7 +726,16 @@ void FixEmitFaceKokkos::operator()(TagFixEmitFace_subsonic_grid, const int &i) c
   double masstot = 0.0;
   double gamma = 0.0;
 
+  // d_plist orders particles by increasing index; the non-Kokkos
+  // subsonic_sort linked list is traversed in decreasing index order.
+  // For SPARTA_KOKKOS_EXACT match that order so the per-cell moment sums
+  // are bit-identical to the non-Kokkos path (serial, single thread, host).
+
+#ifdef SPARTA_KOKKOS_EXACT
+  for (int n = np-1; n >= 0; n--) {
+#else
   for (int n = 0; n < np; n++) {
+#endif
     const int ip = d_plist(icell,n);
     const int ispecies = d_particles[ip].ispecies;
     const double mass = d_species_all[ispecies].mass;
