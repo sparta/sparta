@@ -1,8 +1,8 @@
 # 2D flow around a circle = infinite cylinder
 # No flow velocity
 
-variable            nprocs index 1
-variable            L equal 1.0*sqrt(${nprocs})
+variable            nscale index 1
+variable            L equal 1.0*sqrt(${nscale})
 
 ###################################
 # Constants
@@ -34,7 +34,7 @@ variable            beta equal 0.0
 ###################################
 # Simulation initialization standards
 ###################################
-variable            ppc equal 47
+variable            ppc index 47
 variable            cpmfp equal 4
 
 ###################################
@@ -75,6 +75,8 @@ print               " y-cells = ${yncells}"
 print               " Simulation Ratio = ${Fnum}"
 print               " Timestep = ${tstep}"
 print               " Surface scale factor = ${L}"
+print               " Weak scaling factor (nscale) = ${nscale}"
+print               " Particles per cell (ppc) = ${ppc}"
 
 ###################################
 # Simulation parameters
