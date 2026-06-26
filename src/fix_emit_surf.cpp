@@ -1569,8 +1569,9 @@ int FixEmitSurf::option(int narg, char **arg)
       npstr = new char[n];
       strcpy(npstr,&arg[1][2]);
     } else {
-      np = atoi(arg[1]);
-      if (np == 0) npmode = FLOW;
+      np = atof(arg[1]);
+      if (np < 0.0) error->all(FLERR,"Illegal fix emit/surf command");
+      if (np == 0.0) npmode = FLOW;
       else npmode = CONSTANT;
     }
     return 2;

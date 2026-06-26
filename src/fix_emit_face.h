@@ -62,9 +62,11 @@ class FixEmitFace : public FixEmit {
   };
 
  protected:
-  int imix,np,subsonic,subsonic_style,subsonic_warning;
+  int imix,subsonic,subsonic_style,subsonic_warning;
   int faces[6];
   int npertask,nthresh,twopass;
+  double np;             // # of particles to insert per step (n option, may be non-integer)
+  double npremain_pertask;  // fractional remainder of np spread stochastically per task
   double psubsonic,tsubsonic,nsubsonic;
   double tprefactor,soundspeed_mixture;
 
