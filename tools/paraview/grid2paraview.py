@@ -1174,7 +1174,7 @@ def write_pvd_file(time_steps_dict, file_name, num_chunks):
           read_array_names(afh, array_names)
           afh.close()
         except IOError:
-          print("Unable to open SPARTA result file: ", f)
+          print("Unable to open SPARTA result file: ", file_list[0])
           return
       write_pvtu_file(array_names, file_name, num_chunks, time)
   fh.write('   </Collection>    \n')
@@ -1200,8 +1200,12 @@ def write_pvtu_file(array_names, output_file, num_chunks, time):
   fh.write('</PPoints>\n')
 
   for chunk_id in range(num_chunks):
-    fh.write('<Piece Source="' + output_file + '_' + str(chunk_id) + '_' + \
-      str(time) + '.vtu"/>\n')
+    piece_name = output_file + '_' + str(chunk_id) + '_' + str(time) + '.vtu'
+    # Only reference pieces that were actually written. An empty chunk
+    # produces no .vtu file, and referencing a missing piece causes ParaView
+    # to fail reading the dataset.
+    if os.path.isfile(os.path.join(output_file, piece_name)):
+      fh.write('<Piece Source="' + piece_name + '"/>\n')
 
   fh.write('</PUnstructuredGrid>\n')
   fh.write('</VTKFile>\n')
@@ -1223,7 +1227,7 @@ def write_slice_pvd_file(time_steps_dict, output_file):
         try:
           afh = open(file_list[0], "r")
         except IOError:
-          print("Unable to open SPARTA result file: ", f)
+          print("Unable to open SPARTA result file: ", file_list[0])
           return
       else:
           return
@@ -1555,12 +1559,18 @@ if __name__ == "__main__":
             pass
         
         pool = mp.Pool()
+        async_results = []
         for idx, chunk in enumerate(chunking):
-          pool.apply_async(create_and_write_grid_chunk, \
+          async_results.append(pool.apply_async(create_and_write_grid_chunk, \
                            args=(idx, chunk, len(chunking), grid_desc, \
-                                 time_steps_dict, args.paraview_output_file, ))
+                                 time_steps_dict, args.paraview_output_file, )))
         pool.close()
         pool.join()
+        # Surface any exception raised in a worker process. Without this,
+        # apply_async results are discarded and a failed chunk is silently
+        # skipped, leaving a missing/partial .vtu that ParaView cannot read.
+        for res in async_results:
+          res.get()
     else:
       pd = {}
       if local_proc_id == 0:
