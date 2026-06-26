@@ -1,0 +1,148 @@
+SPARTA (24 Sep 2025)
+Running on 1 MPI task(s)
+################################################################################
+# single-species mass-flow inlet: realized rate converges to the target Mdot
+#
+# Note:
+#  - The "comm/sort” option to the “global” command is used to match MPI runs.
+#  - The “twopass” option is used to match Kokkos runs.
+# The "comm/sort" and "twopass" options should not be used for production runs.
+#
+# This is the self-verifying companion to in.emit.surf.mflow. A single species
+# is used so the mean inserted-particle mass is exactly the species mass, and
+# the realized mass flow rate can be read straight from the fix tally:
+#   realized = ntotal * fnum * mass / (step * dt)        [v_mrate below]
+# v_mrate converges to the requested rate v_mtarget within statistical noise.
+#
+# The realized rate is independent of grid resolution: the inlet area used to
+# set the inflow density is the true clipped surface/cell overlap area summed
+# over all emitting cells (and all procs), not a user input. Re-running with a
+# finer or coarser create_grid leaves v_mrate unchanged (to within noise).
+################################################################################
+
+seed	    	    12345
+dimension   	    2
+global              gridcut 0.0 comm/sort yes
+
+boundary	    o r p
+
+create_box  	    0 10 0 10 -0.5 0.5
+Created orthogonal box = (0 0 -0.5) to (10 10 0.5)
+create_grid 	    10 10 1
+Created 100 child grid cells
+  CPU time = 0.00102305 secs
+  create/ghost percent = 97.0636 2.93638
+balance_grid        rcb cell
+Balance grid migrated 0 cells
+  CPU time = 3.29018e-05 secs
+  reassign/sort/migrate/ghost percent = 30.4348 2.89855 33.3333 33.3333
+
+global		    nrho 1.0 fnum 0.001
+
+species		    air.species N
+mixture		    air N vstream 10.0 0 0 temp 10.0
+
+read_surf           data.circle
+  50 lines
+  2 8 xlo xhi
+  2.00592 7.99408 ylo yhi
+  0 0 zlo zhi
+  0.376743 min line length
+  24 0 = cells overlapping surfs, overlap cells with unmarked corner pts
+  60 16 24 = cells outside/inside/overlapping surfs
+  24 = surf cells with 1,2,etc splits
+  71.8 71.8 = cell-wise and global flow volume
+  CPU time = 0.000448942 secs
+  read/check/sort/surf2grid/ghost/inout/particle percent = 11.7897 25.1726 0.690388 57.8864 4.46097 4.24854 0
+  surf2grid time = 0.000259876 secs
+  map/comm1/comm2/comm3/comm4/split percent = 45.4128 9.63303 6.14679 3.85321 22.7523 7.61468
+surf_collide	    1 diffuse 300.0 0.0
+surf_modify         all collide 1
+
+collide             vss air air.vss
+
+variable            mtarget equal 5.0e-26
+fix		    in emit/surf air all mflow ${mtarget} 10.0 window 100 perspecies no twopass
+fix		    in emit/surf air all mflow 5e-26 10.0 window 100 perspecies no twopass
+
+# realized mass flow from the fix tally (single species => exact mass)
+variable            mrate equal "f_in[2]*0.001*2.325e-26/(step*0.0001+1.0e-30)"
+
+fix                 1 balance 10 1.0 rcb part
+
+stats		    2000
+stats_style	    step cpu np f_in[1] f_in[2] v_mrate
+
+timestep 	    0.0001
+run 		    20000
+Memory usage per proc in Mbytes:
+  particles (ave,min,max) = 0 0 0
+  grid      (ave,min,max) = 1.51379 1.51379 1.51379
+  surf      (ave,min,max) = 0.00514984 0.00514984 0.00514984
+  total     (ave,min,max) = 1.51894 1.51894 1.51894
+Step CPU Np f_in[1] f_in[2] v_mrate 
+       0            0        0            0            0            0 
+    2000  0.017948151      100            0          441 5.126625e-26 
+    4000  0.035017967       99            0          859 4.9929375e-26 
+    6000  0.052724123      140            0         1335 5.173125e-26 
+    8000  0.070759058      130            0         1797 5.2225312e-26 
+   10000   0.08780098      102            0         2208   5.1336e-26 
+   12000   0.10489106      114            0         2630 5.095625e-26 
+   14000   0.12195802      105            0         3049 5.0635179e-26 
+   16000   0.13903999      122            0         3497 5.0815781e-26 
+   18000   0.15596604      107            0         3889 5.0232917e-26 
+   20000   0.17318106      116            0         4330 5.033625e-26 
+Loop time of 0.173198 on 1 procs for 20000 steps with 116 particles
+Performance: 115474.785 timesteps/s, 13.395 Mparticle-step/s
+
+MPI task timing breakdown:
+Section |  min time  |  avg time  |  max time  |%varavg| %total
+---------------------------------------------------------------
+Move    | 0.038811   | 0.038811   | 0.038811   |   0.0 | 22.41
+Coll    | 0.011584   | 0.011584   | 0.011584   |   0.0 |  6.69
+Sort    | 0.0056775  | 0.0056775  | 0.0056775  |   0.0 |  3.28
+Comm    | 0.0013094  | 0.0013094  | 0.0013094  |   0.0 |  0.76
+Modify  | 0.11427    | 0.11427    | 0.11427    |   0.0 | 65.98
+Output  | 0.00020862 | 0.00020862 | 0.00020862 |   0.0 |  0.12
+Other   |            | 0.001337   |            |       |  0.77
+
+Particle moves    = 2158201 (2.16M)
+Cells touched     = 2184841 (2.18M)
+Particle comms    = 0 (0K)
+Boundary collides = 2301 (2.3K)
+Boundary exits    = 4214 (4.21K)
+SurfColl checks   = 1173472 (1.17M)
+SurfColl occurs   = 809 (0.809K)
+Surf reactions    = 0 (0K)
+Collide attempts  = 0 (0K)
+Collide occurs    = 0 (0K)
+Reactions         = 0 (0K)
+Particles stuck   = 0
+Axisymm bad moves = 0
+
+Particle-moves/CPUsec/proc: 1.24609e+07
+Particle-moves/step: 107.91
+Cell-touches/particle/step: 1.01234
+Particle comm iterations/step: 1
+Particle fraction communicated: 0
+Particle fraction colliding with boundary: 0.00106617
+Particle fraction exiting boundary: 0.00195255
+Surface-checks/particle/step: 0.543727
+Surface-collisions/particle/step: 0.000374849
+Surf-reactions/particle/step: 0
+Collision-attempts/particle/step: 0
+Collisions/particle/step: 0
+Reactions/particle/step: 0
+
+Particles: 116 ave 116 max 116 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+Cells:      100 ave 100 max 100 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+GhostCell: 0 ave 0 max 0 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+EmptyCell: 0 ave 0 max 0 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+Surfs:    50 ave 50 max 50 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+GhostSurf: 0 ave 0 max 0 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
