@@ -916,16 +916,30 @@ void Particle::add_species(int narg, char **arg)
       }
 
       int nmode = filevib[j].nmode;
-      if (species[ii].nvibmode != nmode)
+
+      // expand each listed mode into vibdegen independent oscillators
+      // a mode of degeneracy g is physically g oscillators of equal frequency
+      // total # of oscillators must equal nvibmode = vibdof/2 from species file
+      // this preserves the invariant nvibmode == vibdof/2 for downstream code
+      //   (collide_vss, fix_vibmode, and their Kokkos variants), so degenerate
+      //   modes can be listed compactly with degen > 1 instead of duplicated
+
+      int nosc = 0;
+      for (k = 0; k < nmode; k++) nosc += filevib[j].vibdegen[k];
+      if (species[ii].nvibmode != nosc)
         error->all(FLERR,"Mismatch between species vibdof "
                    "and vibration file entry");
 
-      species[ii].nvibmode = nmode;
+      int m = 0;
       for (k = 0; k < nmode; k++) {
-        species[ii].vibtemp[k] = filevib[j].vibtemp[k];
-        species[ii].vibrel[k] = filevib[j].vibrel[k];
-        species[ii].vibdegen[k] = filevib[j].vibdegen[k];
+        for (int d = 0; d < filevib[j].vibdegen[k]; d++) {
+          species[ii].vibtemp[m] = filevib[j].vibtemp[k];
+          species[ii].vibrel[m] = filevib[j].vibrel[k];
+          species[ii].vibdegen[m] = 1;
+          m++;
+        }
       }
+      species[ii].nvibmode = m;
 
       maxvibmode = MAX(maxvibmode,species[ii].nvibmode);
       species[ii].vibdiscrete_read = 1;
@@ -1275,7 +1289,7 @@ void Particle::read_vibration_file()
     strcpy(vsp->id,words[0]);
 
     vsp->nmode = atoi(words[1]);
-    if (vsp->nmode < 2 || vsp->nmode > MAXVIBMODE)
+    if (vsp->nmode < 1 || vsp->nmode > MAXVIBMODE)
       error->one(FLERR,"Invalid N count in vibration file");
     if (nwords != 2 + 3*vsp->nmode)
       error->one(FLERR,"Incorrect line format in vibration file");
@@ -1285,6 +1299,8 @@ void Particle::read_vibration_file()
       vsp->vibtemp[i] = atof(words[j++]);
       vsp->vibrel[i] = atof(words[j++]);
       vsp->vibdegen[i] = atoi(words[j++]);
+      if (vsp->vibdegen[i] < 1)
+        error->one(FLERR,"Invalid degeneracy in vibration file");
     }
     nfile++;
   }
