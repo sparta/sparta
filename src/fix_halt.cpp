@@ -28,6 +28,7 @@
 #include "update.h"
 #include "utils.h"
 #include "variable.h"
+#include "sparta_masks.h"
 
 #include <cmath>
 #include <cstring>
@@ -125,6 +126,9 @@ FixHalt::FixHalt(SPARTA *sparta, int narg, char **arg) :
     const bigint nfirst = (update->ntimestep / nevery) * nevery + nevery;
     modify->addstep_compute_all(nfirst);
   }
+
+  datamask_read = EMPTY_MASK;
+  datamask_modify = EMPTY_MASK;
 }
 
 /* ---------------------------------------------------------------------- */
