@@ -17,7 +17,7 @@ emit/surf = style name of this fix command :l
 mix-ID = ID of mixture to use when creating particles :l
 group-ID = ID of surface group that emits particles :l
 zero or more keyword/value pairs may be appended :l
-keyword = {n} or {normal} or {nevery} or {perspecies} or {region} or {subsonic} or {custom} :l
+keyword = {n} or {normal} or {nevery} or {perspecies} or {region} or {subsonic} or {mflow} or {custom} :l
   {n} value = Np = number of particles to create
                    Np can be a variable (see below)
   {normal} value = yes or no = emit normal to surface elements or with streaming velocity
@@ -27,6 +27,11 @@ keyword = {n} or {normal} or {nevery} or {perspecies} or {region} or {subsonic} 
   {subsonic} values = Psub Tsub
     Psub = pressure setting at inflow boundary (pressure units)
     Tsub = temperature setting at inflow boundary, can be NULL (temperature units)
+  {mflow} values = Mdot Tin keyword/value
+    Mdot = target mass flow rate through the surface group (mass/time units)
+    Tin = thermal temperature of inflow particles (temperature units)
+    zero or one additional keyword/value pair may be appended:
+      {window} value = Nwin = moving-average window for the cell streaming velocity
   {custom} values = attribute s_name
     attribute = {density} or {temperature} or {vstream} or {speed} or {fractions}
     s_name = custom per-surf vector or array with name :pre
@@ -38,6 +43,9 @@ fix in emit/surf air all
 fix in emit/face mymix myPatch region circle normal yes
 fix in emit/surf air all subsonic 0.1 300
 fix in emit/surf air all subsonic 0.05 NULL :pre
+
+fix in emit/surf air inlet mflow 1.0e-6 300
+fix in emit/surf air inlet normal no mflow 1.0e-6 300 window 1000 :pre
 
 read_surf sdata.circle custom myrho float 0 custom mystream float 3
 fix in emit/surf air all custom nrho s_myrho custom vstream s_mystream :pre
@@ -243,6 +251,46 @@ command are trying to achieve.
 
 :line
 
+The {mflow} keyword imposes a target mass flow rate {Mdot} (in
+mass/time units) through the entire emitting surface group, rather than
+a prescribed pressure.  This is useful for internal-flow problems where
+the inflow rate, not the inlet pressure, is the known quantity.
+
+On each timestep the code computes a single number density that makes
+the {expected} total inserted mass rate, summed over all emitting grid
+cell/surface element pairs (and over all processors), equal to {Mdot}.
+It does this from the actual molecular inflow flux (equation 4.22 of
+"(Bird94)"_#Bird94, the same flux used for insertion) evaluated over
+the true overlap area of each surface element with its grid cell.  The
+inlet area is therefore computed internally from the surface geometry;
+it is not a user input, so the imposed mass flow rate is independent of
+the surface mesh resolution and is correct for arbitrary geometries.
+
+The inflow particles are given the thermal temperature {Tin}, which
+must be > 0.0.  By default the streaming direction in each cell is taken
+from the center-of-mass velocity of the particles currently in that
+cell (or, with {normal} set to {yes}, along the inward surface normal).
+Because that velocity is a noisy instantaneous quantity, the optional
+{window} keyword applies a moving average to it,
+vstream = a*vnew + (1-a)*vold with a = 1/(Nwin+1), to reduce
+statistical fluctuations; larger {Nwin} gives heavier smoothing.
+
+IMPORTANT NOTE: The imposed mass flow rate is achieved in an {expected}
+(statistical) sense.  The number of particles inserted on any single
+timestep fluctuates, so the realized rate should be measured as a
+time-average over many steps.  A clean way to verify it is from the
+fix's cumulative insertion count (see output below): realized mass rate
+= (ntotal * fnum * average-species-mass) / (Nsteps * dt).
+
+IMPORTANT NOTE: As with {subsonic}, you should use an appropriate
+"surf_collide"_surf_collide.html or "surf_react"_surf_react.html model
+on the emitting surfaces so particles hitting them disappear as if
+exiting the domain.  The {mflow} keyword cannot be combined with the
+{n} or {custom} keywords, and is currently a CPU-only feature (no
+KOKKOS variant).
+
+:line
+
 The {custom} keyword can be used to tailor the emission of particles
 from individual surface elements.  This is done by using custom
 per-surf vectors or arrays defined by other commands.
@@ -363,7 +411,9 @@ emit/face"_fix_emit_face.html
 [Default:]
 
 The keyword defaults are n = 0, normal = no, nevery = 1, perspecies =
-yes, region = none, no subsonic settings.
+yes, region = none, no subsonic settings, no mflow settings.  For the
+{mflow} keyword, the moving-average window defaults to 0 (no
+smoothing).
 
 :line
 

@@ -1,0 +1,50 @@
+################################################################################
+# particles emitted from a circle at a prescribed mass flow rate
+#
+# Note:
+#  - The "comm/sort” option to the “global” command is used to match MPI runs.
+#  - The “twopass” option is used to match Kokkos runs.
+# The "comm/sort" and "twopass" options should not be used for production runs.
+#
+# The mflow keyword imposes a target mass flow rate (Mdot) through the emitting
+# surface group.  The realized rate is enforced in an expected (statistical)
+# sense; it is measured here from the fix's cumulative insertion count as
+#   realized = ntotal * fnum * avg_mass / (step * dt)
+# and should converge to the requested Mdot (v_mtarget below).
+################################################################################
+
+seed	    	    12345
+dimension   	    2
+global              gridcut 0.0 comm/sort yes
+
+boundary	    o r p
+
+create_box  	    0 10 0 10 -0.5 0.5
+create_grid 	    10 10 1
+balance_grid        rcb cell
+
+global		    nrho 1.0 fnum 0.001
+
+species		    air.species N O
+mixture		    air N O vstream 10.0 0 0 temp 10.0
+
+read_surf           data.circle
+surf_collide	    1 diffuse 300.0 0.0
+surf_modify         all collide 1
+
+collide             vss air air.vss
+
+variable            mtarget equal 5.0e-26
+fix		    in emit/surf air all mflow ${mtarget} 10.0 window 100 perspecies no twopass
+
+# realized mass flow from the fix tally (avg_mass for equal N/O fractions)
+variable            avgmass equal "0.5*(2.325e-26+2.65e-26)"
+variable            mrate   equal "f_in[2]*0.001*v_avgmass/(step*0.0001+1.0e-30)"
+
+fix                 1 balance 10 1.0 rcb part
+
+stats		    100
+stats_style	    step cpu np f_in[1] f_in[2] v_mrate
+
+timestep 	    0.0001
+run 		    1000
