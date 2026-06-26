@@ -40,7 +40,21 @@
 <LI>temp = temperature of the surface
 n_sites = # of available adsorption sites per unit area (3D) or length (2D) 
 
-<LI>adsp1,adsp2,... = list of species that can adsorb on surface 
+<LI>adsp1,adsp2,... = list of species that can adsorb on surface
+
+
+</UL>
+<P>The reaction file(s) read by this command can also include the optional
+per-reaction keywords <I>kisliuk</I> and <I>energy</I>, which modify how the
+reaction rate constant is computed.  See the discussion of the reaction
+file format below for details.
+</P>
+<UL><LI><I>kisliuk</I> = scale the adsorption rate constant by the Kisliuk
+  precursor-mediated sticking factor (only for adsorption reactions: AA,
+  DA, LH1, LH3, CD)
+
+<LI><I>energy</I> = scale the rate constant by an incident-energy and
+  angle-dependent factor (only for CI)
 
 
 </UL>
