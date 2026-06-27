@@ -272,7 +272,7 @@ int CollideVSS::perform_collision(Particle::OnePart *&ip,
                                   Particle::OnePart *&kp)
 {
   Particle::Species *species = particle->species;
-  int m,reaction,kspecies;
+  int reaction,kspecies;
   double x[3],v[3];
   Particle::OnePart *p3;
 

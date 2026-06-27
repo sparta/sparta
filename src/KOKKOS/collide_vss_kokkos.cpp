@@ -2187,20 +2187,20 @@ void CollideVSSKokkos::EEXCHANGE_ReactingEDisposal(int icell,
   postcoln.evib = ip->evib + jp->evib;
   postcoln.eelec = 0.0;
   if (elecstyle == DISCRETE) {
-    double *eelecs = particle->edvec[particle->ewhich[index_eelec]];
+    auto &d_eelecs = k_edvec.view_device()[d_ewhich[index_eelec]].k_view.view_device();
     if (d_nelecstates[ip->ispecies] > 0)
-      postcoln.eelec += eelecs[ip - d_particles.data()];
+      postcoln.eelec += d_eelecs[ip - d_particles.data()];
     if (d_nelecstates[jp->ispecies] > 0)
-      postcoln.eelec += eelecs[jp - d_particles.data()];
+      postcoln.eelec += d_eelecs[jp - d_particles.data()];
   }
 
   if (kp) {
     postcoln.erot += kp->erot;
     postcoln.evib += kp->evib;
     if (elecstyle == DISCRETE) {
-      double *eelecs = particle->edvec[particle->ewhich[index_eelec]];
+      auto &d_eelecs = k_edvec.view_device()[d_ewhich[index_eelec]].k_view.view_device();
       if (d_nelecstates[kp->ispecies] > 0)
-        postcoln.eelec += eelecs[kp - d_particles.data()];
+        postcoln.eelec += d_eelecs[kp - d_particles.data()];
     }
   }
 

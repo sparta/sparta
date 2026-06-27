@@ -128,6 +128,10 @@ double newtonTvib(const int &nmode, const double& Evib, const double vibTemp[],
 enum{NONE,DISCRETE,SMOOTH};
 enum{DISSOCIATION,EXCHANGE,IONIZATION,RECOMBINATION};   // other files
 
+// idof/jdof: per-particle effective electronic DoF of ip/jp (used only when
+//   elecstyle == DISCRETE). The caller must precompute these from the
+//   particle's electronic state, passing 0.0 for species with no electronic
+//   states (d_nelecstates == 0); see CollideVSSKokkos::perform_collision_kokkos.
 KOKKOS_INLINE_FUNCTION
 int attempt_kk(Particle::OnePart *ip, Particle::OnePart *jp,
          double pre_etrans, double pre_erot, double pre_evib, double pre_eelec,
