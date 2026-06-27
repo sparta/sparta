@@ -746,9 +746,10 @@ void Mixture::read_restart(FILE *fp)
     if (me == 0) tmp = fread(&temp_vib_user,sizeof(double),1,fp);
     MPI_Bcast(&temp_vib_user,1,MPI_DOUBLE,0,world);
   }
+  if (me == 0) tmp = fread(&temp_elec_flag,sizeof(int),1,fp);
   MPI_Bcast(&temp_elec_flag,1,MPI_INT,0,world);
   if (temp_elec_flag) {
-    if (me == 0) fread(&temp_elec_user,sizeof(double),1,fp);
+    if (me == 0) tmp = fread(&temp_elec_user,sizeof(double),1,fp);
     MPI_Bcast(&temp_elec_user,1,MPI_DOUBLE,0,world);
   }
 

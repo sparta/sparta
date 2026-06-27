@@ -663,6 +663,10 @@ int CollideVSS::select_elec_state(Particle::OnePart *p, Particle::OnePart *jp, d
   }
   --max_level;
 
+  // not enough energy to reach even the ground state: stay in ground state
+  // (guards against max_level == -1 indexing state_probability[-1])
+  if (max_level < 0) return 0;
+
   double* state_probability = particle->cumulative_probabilities;
 
   // Calculate number of total states, including degeneracies
@@ -692,7 +696,9 @@ int CollideVSS::select_elec_state(Particle::OnePart *p, Particle::OnePart *jp, d
   do {
     double rand_state = random->uniform()*state_probability[max_level];
     ielec = 0;
-    while (rand_state >= 0) {
+    // bound by max_level: roundoff can leave rand_state >= 0 after the last
+    // included state, which would index states[] past max_level/nelecstate
+    while (rand_state >= 0 && ielec <= max_level) {
       if (!enforce_spin_conservation ||
              species[p->ispecies].elecdat->states[ielec].spin == species[p->ispecies].elecdat->states[estates[p - particle->particles]].spin) {
         if (reacting) {

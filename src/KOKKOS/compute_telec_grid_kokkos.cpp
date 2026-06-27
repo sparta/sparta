@@ -345,7 +345,8 @@ post_process_grid_kokkos(int index, int /*nsample*/,
   d_nelecstates = particle_kk->d_nelecstates;
   d_elecstates = particle_kk->d_elecstates;
 
-  if (grid->maxlocal > (int)d_cumulative_probabilities.extent(0)) {
+  if (grid->maxlocal > (int)d_cumulative_probabilities.extent(0) ||
+      particle->maxelecstate > (int)d_cumulative_probabilities.extent(1)) {
     MemKK::realloc_kokkos(d_cumulative_probabilities,"collide:cumulative_probabilities",grid->maxlocal,particle->maxelecstate);
     // per-cell scratch for species temperatures (avoids cross-cell race)
     MemKK::realloc_kokkos(d_tspecies,"telec/grid:tspecies",grid->maxlocal,nspecies);

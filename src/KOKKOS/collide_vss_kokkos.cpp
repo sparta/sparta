@@ -376,7 +376,9 @@ void CollideVSSKokkos::collisions()
     vre_next += vre_every;
   }
 
-  if (elecstyle == DISCRETE && grid->maxlocal > (int)d_cumulative_probabilities.extent(0))
+  if (elecstyle == DISCRETE &&
+      (grid->maxlocal > (int)d_cumulative_probabilities.extent(0) ||
+       particle->maxelecstate > (int)d_cumulative_probabilities.extent(1)))
     MemKK::realloc_kokkos(d_cumulative_probabilities,"collide:cumulative_probabilities",grid->maxlocal,particle->maxelecstate);
 
   // copy Update count of gas/gas collision computes active on this timestep
@@ -553,7 +555,9 @@ template < int NEARCP, int GASTALLY > void CollideVSSKokkos::collisions_one(COLL
     if (d_particles.extent(0) < nlocal_extra) {
       particle->grow(nlocal_extra - particle->nlocal);
       d_particles = particle_kk->k_particles.view_device();
+      k_eivec = particle_kk->k_eivec;
       k_eiarray = particle_kk->k_eiarray;
+      k_edvec = particle_kk->k_edvec;
     }
   }
 
@@ -616,7 +620,9 @@ template < int NEARCP, int GASTALLY > void CollideVSSKokkos::collisions_one(COLL
       if (d_particles.extent(0) < nlocal_new) {
         particle->grow(nlocal_new - particle->nlocal);
         d_particles = particle_kk->k_particles.view_device();
+        k_eivec = particle_kk->k_eivec;
         k_eiarray = particle_kk->k_eiarray;
+        k_edvec = particle_kk->k_edvec;
       }
     }
   }
@@ -632,7 +638,8 @@ template < int NEARCP, int GASTALLY > void CollideVSSKokkos::collisions_one(COLL
 
   this->modified(Device,ALL_MASK);
   particle_kk->modify(Device,PARTICLE_MASK);
-  if (vibstyle == DISCRETE) particle_kk->modify(Device,CUSTOM_MASK);
+  if (vibstyle == DISCRETE || elecstyle == DISCRETE)
+    particle_kk->modify(Device,CUSTOM_MASK);
 
   d_particles = t_particle_1d(); // destroy reference to reduce memory use
   d_nn_last_partner = {};
