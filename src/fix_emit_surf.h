@@ -73,6 +73,8 @@ class FixEmitSurf : public FixEmit {
   int mflow_window;         // EMA window for vstream smoothing (0 = none)
   double mflow,tmflow;      // target mass flow rate and inlet temperature
 
+  int subsonic_window;      // EMA window for subsonic vstream smoothing (0 = none)
+
   int npmode,np;    // npmode = FLOW,CONSTANT,VARIABLE
   int npvar;
   char *npstr;

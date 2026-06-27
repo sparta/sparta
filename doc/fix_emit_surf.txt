@@ -24,9 +24,11 @@ keyword = {n} or {normal} or {nevery} or {perspecies} or {region} or {subsonic} 
   {nevery} value = Nstep = add particles every this many timesteps
   {perspecies} value = {yes} or {no}
   {region} value = region-ID
-  {subsonic} values = Psub Tsub
+  {subsonic} values = Psub Tsub keyword/value
     Psub = pressure setting at inflow boundary (pressure units)
     Tsub = temperature setting at inflow boundary, can be NULL (temperature units)
+    zero or one additional keyword/value pair may be appended:
+      {window} value = Nwin = moving-average window for the cell streaming velocity
   {mflow} values = Mdot Tin keyword/value
     Mdot = target mass flow rate through the surface group (mass/time units)
     Tin = thermal temperature of inflow particles (temperature units)
@@ -232,6 +234,15 @@ of particles in the cells containing the surface elements are computed
 and used to determine the properties of inserted particles on each
 timestep.
 
+The optional {window} keyword applies a moving average to the cell
+streaming velocity used by the subsonic boundary condition, to reduce
+the statistical fluctuations inherent in the instantaneous cell values
+(see "(Sun05)"_#Sun05).  On each timestep the velocity used is
+vstream = a*vnew + (1-a)*vold with a = 1/(Nwin+1), where vnew is the
+current center-of-mass velocity of the cell and vold is the value from
+the previous step; larger {Nwin} gives heavier smoothing.  The default
+Nwin = 0 disables smoothing and reproduces the instantaneous behavior.
+
 IMPORTANT NOTE: Caution must be exercised when using the subsonic
 boundary condition without specifying an inlet temperature. In this
 case the code tries to estimate the temperature of the flow from the
@@ -412,8 +423,8 @@ emit/face"_fix_emit_face.html
 
 The keyword defaults are n = 0, normal = no, nevery = 1, perspecies =
 yes, region = none, no subsonic settings, no mflow settings.  For the
-{mflow} keyword, the moving-average window defaults to 0 (no
-smoothing).
+{subsonic} and {mflow} keywords, the moving-average window defaults to
+0 (no smoothing).
 
 :line
 
@@ -424,3 +435,8 @@ Simulation of Gas Flows, Clarendon Press, Oxford (1994).
 :link(Fang02)
 [(Fang02)] Y. Fang and W. W. Liou, Microfluid Flow Computations
 Using a Parallel DSMC Code, AIAA 2002-1057. (2002).
+
+:link(Sun05)
+[(Sun05)] Q. Sun and I. D. Boyd, Evaluation of Macroscopic Properties
+in the Direct Simulation Monte Carlo Method, Journal of Thermophysics
+and Heat Transfer, 19(3), 329-335 (2005).

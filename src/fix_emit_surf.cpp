@@ -72,6 +72,7 @@ FixEmitSurf::FixEmitSurf(SPARTA *sparta, int narg, char **arg) :
   subsonic_warning = 0;
   mflowflag = 0;
   mflow_window = 0;
+  subsonic_window = 0;
   twopass = 0;
   max_npoint = 0;
 
@@ -1418,9 +1419,18 @@ void FixEmitSurf::subsonic_grid()
 
     vstream = tasks[i].vstream;
     if (np) {
-      vstream[0] = mv[0] / masstot;
-      vstream[1] = mv[1] / masstot;
-      vstream[2] = mv[2] / masstot;
+      if (subsonic_window > 0) {
+        // exponential moving average to damp statistical fluctuations
+        // a = 1/(window+1); vstream holds the previous step's value
+        double a = 1.0 / (subsonic_window + 1.0);
+        vstream[0] = a*(mv[0]/masstot) + (1.0-a)*vstream[0];
+        vstream[1] = a*(mv[1]/masstot) + (1.0-a)*vstream[1];
+        vstream[2] = a*(mv[2]/masstot) + (1.0-a)*vstream[2];
+      } else {
+        vstream[0] = mv[0] / masstot;
+        vstream[1] = mv[1] / masstot;
+        vstream[2] = mv[2] / masstot;
+      }
     } else vstream[0] = vstream[1] = vstream[2] = 0.0;
 
     if (subsonic_style == PTBOTH) {
@@ -1703,7 +1713,17 @@ int FixEmitSurf::option(int narg, char **arg)
         error->all(FLERR,"Subsonic temperature cannot be <= 0.0");
       nsubsonic = psubsonic / (update->boltz * tsubsonic);
     }
-    return 3;
+
+    // optional EMA smoothing of the cell stream velocity: window N
+
+    int n = 3;
+    if (narg > 3 && strcmp(arg[3],"window") == 0) {
+      if (5 > narg) error->all(FLERR,"Illegal fix emit/surf command");
+      subsonic_window = atoi(arg[4]);
+      if (subsonic_window < 0) error->all(FLERR,"Illegal fix emit/surf command");
+      n = 5;
+    }
+    return n;
   }
 
   if (strcmp(arg[0],"mflow") == 0) {
