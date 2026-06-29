@@ -45,9 +45,6 @@ class ComputeSurfKokkos : public ComputeSurf {
   void pre_surf_tally();
   void post_surf_tally();
 
-  // expose the per-local-surf device tally array for fix ave/surf/kk
-  void query_tally_surf_kokkos(DAT::t_float_2d_lr &d_array) { d_array = d_array_surf_tally; }
-
 enum{NUM,NUMWT,NFLUX,NFLUXIN,MFLUX,MFLUXIN,FX,FY,FZ,TX,TY,TZ,
   PRESS,XPRESS,YPRESS,ZPRESS,XSHEAR,YSHEAR,ZSHEAR,KE,EROT,EVIB,ECHEM,ETOT};
 

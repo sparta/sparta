@@ -400,7 +400,7 @@ This is indicated by additional letters in parenthesis: k = KOKKOS.
 "ave/grid (k)"_fix_ave_grid.html,
 "ave/histo (k)"_fix_ave_histo.html,
 "ave/histo/weight (k)"_fix_ave_histo.html,
-"ave/surf (k)"_fix_ave_surf.html,
+"ave/surf"_fix_ave_surf.html,
 "ave/time"_fix_ave_time.html,
 "balance (k)"_fix_balance.html,
 "controller"_fix_controller.html,

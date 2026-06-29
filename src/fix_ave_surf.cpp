@@ -291,8 +291,6 @@ FixAveSurf::FixAveSurf(SPARTA *sparta, int narg, char **arg) :
 
 FixAveSurf::~FixAveSurf()
 {
-  if (copymode) return;
-
   delete [] which;
   delete [] argindex;
   delete [] value2index;
