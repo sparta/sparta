@@ -166,7 +166,7 @@ void ComputeTvibGridKokkos::compute_per_grid_kokkos()
   }
 
   d_particles = t_particle_1d(); // destroy reference to reduce memory use
-  d_plist = DAT::t_int_2d(); // destroy reference to reduce memory use
+  d_plist = DAT::t_int_2d_lr(); // destroy reference to reduce memory use
 }
 
 /* ---------------------------------------------------------------------- */
