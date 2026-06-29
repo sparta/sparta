@@ -1,0 +1,54 @@
+################################################################################
+# single-species mass-flow inlet: realized rate converges to the target Mdot
+#
+# Note:
+#  - The "comm/sort” option to the “global” command is used to match MPI runs.
+#  - The “twopass” option is used to match Kokkos runs.
+# The "comm/sort" and "twopass" options should not be used for production runs.
+#
+# This is the self-verifying companion to in.emit.surf.mflow. A single species
+# is used so the mean inserted-particle mass is exactly the species mass, and
+# the realized mass flow rate can be read straight from the fix tally:
+#   realized = ntotal * fnum * mass / (step * dt)        [v_mrate below]
+# v_mrate converges to the requested rate v_mtarget within statistical noise.
+#
+# The realized rate is independent of grid resolution: the inlet area used to
+# set the inflow density is the true clipped surface/cell overlap area summed
+# over all emitting cells (and all procs), not a user input. Re-running with a
+# finer or coarser create_grid leaves v_mrate unchanged (to within noise).
+################################################################################
+
+seed	    	    12345
+dimension   	    2
+global              gridcut 0.0 comm/sort yes
+
+boundary	    o r p
+
+create_box  	    0 10 0 10 -0.5 0.5
+create_grid 	    10 10 1
+balance_grid        rcb cell
+
+global		    nrho 1.0 fnum 0.001
+
+species		    air.species N
+mixture		    air N vstream 10.0 0 0 temp 10.0
+
+read_surf           data.circle
+surf_collide	    1 diffuse 300.0 0.0
+surf_modify         all collide 1
+
+collide             vss air air.vss
+
+variable            mtarget equal 5.0e-26
+fix		    in emit/surf air all mflow ${mtarget} 10.0 window 100 perspecies no twopass
+
+# realized mass flow from the fix tally (single species => exact mass)
+variable            mrate equal "f_in[2]*0.001*2.325e-26/(step*0.0001+1.0e-30)"
+
+fix                 1 balance 10 1.0 rcb part
+
+stats		    2000
+stats_style	    step cpu np f_in[1] f_in[2] v_mrate
+
+timestep 	    0.0001
+run 		    20000

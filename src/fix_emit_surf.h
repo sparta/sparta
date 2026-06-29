@@ -67,6 +67,14 @@ class FixEmitSurf : public FixEmit {
   double psubsonic,tsubsonic,nsubsonic;
   double tprefactor,soundspeed_mixture;
 
+  // mass-flow inlet (mflow keyword)
+
+  int mflowflag;            // 1 if mflow keyword used
+  int mflow_window;         // EMA window for vstream smoothing (0 = none)
+  double mflow,tmflow;      // target mass flow rate and inlet temperature
+
+  int subsonic_window;      // EMA window for subsonic vstream smoothing (0 = none)
+
   int npmode,np;    // npmode = FLOW,CONSTANT,VARIABLE
   int npvar;
   char *npstr;
@@ -117,6 +125,7 @@ class FixEmitSurf : public FixEmit {
   void subsonic_inflow();
   void subsonic_sort();
   void subsonic_grid();
+  void mflow_grid();
 
   virtual void realloc_nspecies();
   int option(int, char **);

@@ -1,0 +1,149 @@
+SPARTA (24 Sep 2025)
+Running on 4 MPI task(s)
+################################################################################
+# single-species mass-flow inlet: realized rate converges to the target Mdot
+#
+# Note:
+#  - The "comm/sort” option to the “global” command is used to match MPI runs.
+#  - The “twopass” option is used to match Kokkos runs.
+# The "comm/sort" and "twopass" options should not be used for production runs.
+#
+# This is the self-verifying companion to in.emit.surf.mflow. A single species
+# is used so the mean inserted-particle mass is exactly the species mass, and
+# the realized mass flow rate can be read straight from the fix tally:
+#   realized = ntotal * fnum * mass / (step * dt)        [v_mrate below]
+# v_mrate converges to the requested rate v_mtarget within statistical noise.
+#
+# The realized rate is independent of grid resolution: the inlet area used to
+# set the inflow density is the true clipped surface/cell overlap area summed
+# over all emitting cells (and all procs), not a user input. Re-running with a
+# finer or coarser create_grid leaves v_mrate unchanged (to within noise).
+################################################################################
+
+seed	    	    12345
+dimension   	    2
+global              gridcut 0.0 comm/sort yes
+
+boundary	    o r p
+
+create_box  	    0 10 0 10 -0.5 0.5
+Created orthogonal box = (0 0 -0.5) to (10 10 0.5)
+create_grid 	    10 10 1
+WARNING: Could not acquire nearby ghost cells b/c grid partition is not clumped (../grid.cpp:473)
+Created 100 child grid cells
+  CPU time = 0.00125226 secs
+  create/ghost percent = 91.6165 8.38348
+balance_grid        rcb cell
+Balance grid migrated 74 cells
+  CPU time = 0.038012 secs
+  reassign/sort/migrate/ghost percent = 99.4253 0.00714249 0.265645 0.301923
+
+global		    nrho 1.0 fnum 0.001
+
+species		    air.species N
+mixture		    air N vstream 10.0 0 0 temp 10.0
+
+read_surf           data.circle
+  50 lines
+  2 8 xlo xhi
+  2.00592 7.99408 ylo yhi
+  0 0 zlo zhi
+  0.376743 min line length
+  24 0 = cells overlapping surfs, overlap cells with unmarked corner pts
+  60 16 24 = cells outside/inside/overlapping surfs
+  24 = surf cells with 1,2,etc splits
+  71.8 71.8 = cell-wise and global flow volume
+  CPU time = 0.00103172 secs
+  read/check/sort/surf2grid/ghost/inout/particle percent = 14.5363 24.6819 0.463499 51.6734 8.64501 6.8984 7.54054
+  surf2grid time = 0.000533123 secs
+  map/comm1/comm2/comm3/comm4/split percent = 29.3525 9.46104 4.42374 4.19659 29.6076 8.28983
+surf_collide	    1 diffuse 300.0 0.0
+surf_modify         all collide 1
+
+collide             vss air air.vss
+
+variable            mtarget equal 5.0e-26
+fix		    in emit/surf air all mflow ${mtarget} 10.0 window 100 perspecies no twopass
+fix		    in emit/surf air all mflow 5e-26 10.0 window 100 perspecies no twopass
+
+# realized mass flow from the fix tally (single species => exact mass)
+variable            mrate equal "f_in[2]*0.001*2.325e-26/(step*0.0001+1.0e-30)"
+
+fix                 1 balance 10 1.0 rcb part
+
+stats		    2000
+stats_style	    step cpu np f_in[1] f_in[2] v_mrate
+
+timestep 	    0.0001
+run 		    20000
+Memory usage per proc in Mbytes:
+  particles (ave,min,max) = 0 0 0
+  grid      (ave,min,max) = 1.51379 1.51379 1.51379
+  surf      (ave,min,max) = 0.00514984 0.00514984 0.00514984
+  total     (ave,min,max) = 1.51894 1.51894 1.51894
+Step CPU Np f_in[1] f_in[2] v_mrate 
+       0            0        0            0            0            0 
+    2000  0.058228918      105            0          392    4.557e-26 
+    4000   0.11309831      124            1          791 4.5976875e-26 
+    6000   0.16865437      146            0         1259 4.878625e-26 
+    8000   0.22508339      130            0         1670 4.8534375e-26 
+   10000   0.27848402      139            0         2114  4.91505e-26 
+   12000   0.33230022      152            0         2545 4.9309375e-26 
+   14000   0.38734713      141            0         2969 4.9306607e-26 
+   16000   0.44439436      128            0         3379 4.9101094e-26 
+   18000   0.49861056      147            1         3830 4.9470833e-26 
+   20000   0.55390388      152            1         4281 4.9766625e-26 
+Loop time of 0.554012 on 4 procs for 20000 steps with 152 particles
+Performance: 36100.318 timesteps/s, 5.487 Mparticle-step/s
+
+MPI task timing breakdown:
+Section |  min time  |  avg time  |  max time  |%varavg| %total
+---------------------------------------------------------------
+Move    | 0.015301   | 0.016267   | 0.017252   |   0.6 |  2.94
+Coll    | 0.0049536  | 0.0051427  | 0.0055783  |   0.4 |  0.93
+Sort    | 0.0024507  | 0.0026373  | 0.0027405  |   0.2 |  0.48
+Comm    | 0.097833   | 0.10318    | 0.10698    |   1.2 | 18.63
+Modify  | 0.37562    | 0.38199    | 0.38667    |   0.7 | 68.95
+Output  | 0.00027897 | 0.00048111 | 0.0010811  |   0.0 |  0.09
+Other   |            | 0.0443     |            |       |  8.00
+
+Particle moves    = 2670188 (2.67M)
+Cells touched     = 2700533 (2.7M)
+Particle comms    = 2496 (2.5K)
+Boundary collides = 2855 (2.85K)
+Boundary exits    = 4129 (4.13K)
+SurfColl checks   = 1425232 (1.43M)
+SurfColl occurs   = 1099 (1.1K)
+Surf reactions    = 0 (0K)
+Collide attempts  = 0 (0K)
+Collide occurs    = 0 (0K)
+Reactions         = 0 (0K)
+Particles stuck   = 0
+Axisymm bad moves = 0
+
+Particle-moves/CPUsec/proc: 1.20493e+06
+Particle-moves/step: 133.509
+Cell-touches/particle/step: 1.01136
+Particle comm iterations/step: 1.06905
+Particle fraction communicated: 0.000934766
+Particle fraction colliding with boundary: 0.00106921
+Particle fraction exiting boundary: 0.00154633
+Surface-checks/particle/step: 0.533757
+Surface-collisions/particle/step: 0.000411582
+Surf-reactions/particle/step: 0
+Collision-attempts/particle/step: 0
+Collisions/particle/step: 0
+Reactions/particle/step: 0
+
+Particles: 38 ave 39 max 36 min
+Histogram: 1 0 0 0 0 0 1 0 0 2
+Cells:      25 ave 30 max 22 min
+Histogram: 1 1 0 1 0 0 0 0 0 1
+GhostCell: 12.25 ave 14 max 11 min
+Histogram: 1 0 0 2 0 0 0 0 0 1
+EmptyCell: 11.25 ave 12 max 11 min
+Histogram: 3 0 0 0 0 0 0 0 0 1
+Surfs:    50 ave 50 max 50 min
+Histogram: 4 0 0 0 0 0 0 0 0 0
+GhostSurf: 0 ave 0 max 0 min
+Histogram: 4 0 0 0 0 0 0 0 0 0

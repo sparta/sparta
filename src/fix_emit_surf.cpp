@@ -70,6 +70,9 @@ FixEmitSurf::FixEmitSurf(SPARTA *sparta, int narg, char **arg) :
   subsonic = 0;
   subsonic_style = NOSUBSONIC;
   subsonic_warning = 0;
+  mflowflag = 0;
+  mflow_window = 0;
+  subsonic_window = 0;
   twopass = 0;
   max_npoint = 0;
 
@@ -101,6 +104,9 @@ FixEmitSurf::FixEmitSurf(SPARTA *sparta, int narg, char **arg) :
     error->all(FLERR,"Cannot use fix emit/surf with n != 0 and custom options");
   if (custom_any && subsonic)
     error->all(FLERR,"Cannot use fix emit/surf with subsonic and custom options");
+
+  if (mflowflag && npmode != FLOW)
+    error->all(FLERR,"Cannot use fix emit/surf mflow with n a constant or variable");
 
   if (custom_any) flag_custom_surf_changed = 1;
 
@@ -1237,7 +1243,8 @@ void FixEmitSurf::subsonic_inflow()
   // if needed sort particles for grid cells with tasks
 
   if (!particle->sorted) subsonic_sort();
-  subsonic_grid();
+  if (mflowflag) mflow_grid();
+  else subsonic_grid();
 
   // recalculate particle insertion counts for each task
   // recompute mixture vscale, since depends on temp_thermal
@@ -1412,9 +1419,18 @@ void FixEmitSurf::subsonic_grid()
 
     vstream = tasks[i].vstream;
     if (np) {
-      vstream[0] = mv[0] / masstot;
-      vstream[1] = mv[1] / masstot;
-      vstream[2] = mv[2] / masstot;
+      if (subsonic_window > 0) {
+        // exponential moving average to damp statistical fluctuations
+        // a = 1/(window+1); vstream holds the previous step's value
+        double a = 1.0 / (subsonic_window + 1.0);
+        vstream[0] = a*(mv[0]/masstot) + (1.0-a)*vstream[0];
+        vstream[1] = a*(mv[1]/masstot) + (1.0-a)*vstream[1];
+        vstream[2] = a*(mv[2]/masstot) + (1.0-a)*vstream[2];
+      } else {
+        vstream[0] = mv[0] / masstot;
+        vstream[1] = mv[1] / masstot;
+        vstream[2] = mv[2] / masstot;
+      }
     } else vstream[0] = vstream[1] = vstream[2] = 0.0;
 
     if (subsonic_style == PTBOTH) {
@@ -1478,6 +1494,119 @@ void FixEmitSurf::subsonic_grid()
 
   if (!subsonic_warning)
     subsonic_warning = subsonic_temperature_check(temp_exceed_flag,tempmax);
+}
+
+/* ----------------------------------------------------------------------
+   mass-flow inlet: choose a single global number density nrho_mflow each
+   step so the expected total inserted mass rate equals the target mflow
+   the per-task insertion count is linear in nrho, so
+     expected_mass_per_step = nrho * dt * S
+     S = sum over tasks,species of mol_inflow(indot,vscale,fraction)
+                                   * area * mass / cell-weight
+   setting it equal to mflow*dt gives nrho_mflow = mflow / S
+   S is built from the true clipped emit area (tasks[i].area), the actual
+   Maxwellian inflow flux (mol_inflow), and per-species masses, then summed
+   across procs - so the realized rate is independent of geometry, of the
+   user-supplied inlet area (there is none), and of the flux model details
+------------------------------------------------------------------------- */
+
+void FixEmitSurf::mflow_grid()
+{
+  int ip,np,icell,ispecies,isp;
+  double mass,masstot,indot,vscale_isp,acoef;
+  double mv[3],vnew[3];
+  double *v,*vstream,*vscale,*normal;
+
+  Surf::Line *lines = surf->lines;
+  Surf::Tri *tris = surf->tris;
+
+  Grid::ChildInfo *cinfo = grid->cinfo;
+  Particle::OnePart *particles = particle->particles;
+  int *next = particle->next;
+  Particle::Species *species = particle->species;
+  int *mspecies = particle->mixture[imix]->species;
+  double boltz = update->boltz;
+
+  // pass 1: per-task stream velocity from cell COM (optional EMA smoothing)
+  //         fixed inlet temperature tmflow -> per-task temps and vscale
+  // acoef = 1.0 (no window) -> vstream = current COM
+
+  acoef = 1.0;
+  if (mflow_window > 0) acoef = 1.0 / (mflow_window + 1.0);
+
+  for (int i = 0; i < ntask; i++) {
+    icell = tasks[i].pcell;
+    np = cinfo[icell].count;
+
+    mv[0] = mv[1] = mv[2] = 0.0;
+    masstot = 0.0;
+    ip = cinfo[icell].first;
+    while (ip >= 0) {
+      ispecies = particles[ip].ispecies;
+      mass = species[ispecies].mass;
+      v = particles[ip].v;
+      mv[0] += mass*v[0];
+      mv[1] += mass*v[1];
+      mv[2] += mass*v[2];
+      masstot += mass;
+      ip = next[ip];
+    }
+
+    vstream = tasks[i].vstream;
+    if (np && masstot > 0.0) {
+      vnew[0] = mv[0]/masstot;
+      vnew[1] = mv[1]/masstot;
+      vnew[2] = mv[2]/masstot;
+    } else vnew[0] = vnew[1] = vnew[2] = 0.0;
+
+    vstream[0] = acoef*vnew[0] + (1.0-acoef)*vstream[0];
+    vstream[1] = acoef*vnew[1] + (1.0-acoef)*vstream[1];
+    vstream[2] = acoef*vnew[2] + (1.0-acoef)*vstream[2];
+
+    tasks[i].temp_thermal = tmflow;
+    tasks[i].temp_rot = tasks[i].temp_vib = tmflow;
+
+    vscale = tasks[i].vscale;   // allocated because subsonic_style == PONLY
+    for (isp = 0; isp < nspecies; isp++)
+      vscale[isp] = sqrt(2.0 * boltz * tmflow / species[mspecies[isp]].mass);
+  }
+
+  // pass 2: accumulate S
+  // indot identical to subsonic_inflow tail and perform_task (normalflag)
+
+  double S_me = 0.0;
+  for (int i = 0; i < ntask; i++) {
+    icell = tasks[i].icell;
+    vstream = tasks[i].vstream;
+
+    if (normalflag) indot = magvstream;
+    else if (dimension == 2) {
+      normal = lines[tasks[i].isurf].norm;
+      indot = vstream[0]*normal[0] + vstream[1]*normal[1];
+    } else {
+      normal = tris[tasks[i].isurf].norm;
+      indot = vstream[0]*normal[0] + vstream[1]*normal[1] +
+        vstream[2]*normal[2];
+    }
+
+    for (isp = 0; isp < nspecies; isp++) {
+      mass = species[mspecies[isp]].mass;
+      vscale_isp = tasks[i].vscale[isp];
+      S_me += mol_inflow(indot,vscale_isp,fraction[isp]) *
+        tasks[i].area * mass / cinfo[icell].weight;
+    }
+  }
+
+  double S;
+  MPI_Allreduce(&S_me,&S,1,MPI_DOUBLE,MPI_SUM,world);
+
+  // global number density that makes expected inserted mass rate = mflow
+  // S == 0 (no inflow on any proc) -> insert nothing this step, self-corrects
+
+  double nrho_mflow = 0.0;
+  if (S > 0.0) nrho_mflow = mflow / S;
+
+  for (int i = 0; i < ntask; i++) tasks[i].nrho = nrho_mflow;
 }
 
 /* ----------------------------------------------------------------------
@@ -1584,7 +1713,48 @@ int FixEmitSurf::option(int narg, char **arg)
         error->all(FLERR,"Subsonic temperature cannot be <= 0.0");
       nsubsonic = psubsonic / (update->boltz * tsubsonic);
     }
-    return 3;
+
+    // optional EMA smoothing of the cell stream velocity: window N
+
+    int n = 3;
+    if (narg > 3 && strcmp(arg[3],"window") == 0) {
+      if (5 > narg) error->all(FLERR,"Illegal fix emit/surf command");
+      subsonic_window = atoi(arg[4]);
+      if (subsonic_window < 0) error->all(FLERR,"Illegal fix emit/surf command");
+      n = 5;
+    }
+    return n;
+  }
+
+  if (strcmp(arg[0],"mflow") == 0) {
+    if (3 > narg) error->all(FLERR,"Illegal fix emit/surf command");
+    mflowflag = 1;
+
+    // reuse the subsonic dispatch + PONLY per-task vscale machinery
+    // mflow_grid() overrides the PONLY nrho/temp with the mass-flow values
+
+    subsonic = 1;
+    subsonic_style = PONLY;
+
+    // target mass flow rate (mass/time) and fixed inlet temperature
+    // inlet area is NOT a user argument: it is the true clipped emit area
+
+    mflow = input->numeric(FLERR,arg[1]);
+    if (mflow < 0.0) error->all(FLERR,"Illegal fix emit/surf command");
+    tmflow = input->numeric(FLERR,arg[2]);
+    if (tmflow <= 0.0)
+      error->all(FLERR,"Fix emit/surf mflow temperature must be > 0.0");
+
+    // optional EMA smoothing of the cell stream velocity: window N
+
+    int n = 3;
+    if (narg > 3 && strcmp(arg[3],"window") == 0) {
+      if (5 > narg) error->all(FLERR,"Illegal fix emit/surf command");
+      mflow_window = atoi(arg[4]);
+      if (mflow_window < 0) error->all(FLERR,"Illegal fix emit/surf command");
+      n = 5;
+    }
+    return n;
   }
 
   if (strcmp(arg[0],"twopass") == 0) {

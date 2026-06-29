@@ -17,16 +17,23 @@ emit/surf = style name of this fix command :l
 mix-ID = ID of mixture to use when creating particles :l
 group-ID = ID of surface group that emits particles :l
 zero or more keyword/value pairs may be appended :l
-keyword = {n} or {normal} or {nevery} or {perspecies} or {region} or {subsonic} or {custom} :l
+keyword = {n} or {normal} or {nevery} or {perspecies} or {region} or {subsonic} or {mflow} or {custom} :l
   {n} value = Np = number of particles to create
                    Np can be a variable (see below)
   {normal} value = yes or no = emit normal to surface elements or with streaming velocity
   {nevery} value = Nstep = add particles every this many timesteps
   {perspecies} value = {yes} or {no}
   {region} value = region-ID
-  {subsonic} values = Psub Tsub
+  {subsonic} values = Psub Tsub keyword/value
     Psub = pressure setting at inflow boundary (pressure units)
     Tsub = temperature setting at inflow boundary, can be NULL (temperature units)
+    zero or one additional keyword/value pair may be appended:
+      {window} value = Nwin = moving-average window for the cell streaming velocity
+  {mflow} values = Mdot Tin keyword/value
+    Mdot = target mass flow rate through the surface group (mass/time units)
+    Tin = thermal temperature of inflow particles (temperature units)
+    zero or one additional keyword/value pair may be appended:
+      {window} value = Nwin = moving-average window for the cell streaming velocity
   {custom} values = attribute s_name
     attribute = {density} or {temperature} or {vstream} or {speed} or {fractions}
     s_name = custom per-surf vector or array with name :pre
@@ -38,6 +45,9 @@ fix in emit/surf air all
 fix in emit/face mymix myPatch region circle normal yes
 fix in emit/surf air all subsonic 0.1 300
 fix in emit/surf air all subsonic 0.05 NULL :pre
+
+fix in emit/surf air inlet mflow 1.0e-6 300
+fix in emit/surf air inlet normal no mflow 1.0e-6 300 window 1000 :pre
 
 read_surf sdata.circle custom myrho float 0 custom mystream float 3
 fix in emit/surf air all custom nrho s_myrho custom vstream s_mystream :pre
@@ -224,6 +234,15 @@ of particles in the cells containing the surface elements are computed
 and used to determine the properties of inserted particles on each
 timestep.
 
+The optional {window} keyword applies a moving average to the cell
+streaming velocity used by the subsonic boundary condition, to reduce
+the statistical fluctuations inherent in the instantaneous cell values
+(see "(Sun05)"_#Sun05).  On each timestep the velocity used is
+vstream = a*vnew + (1-a)*vold with a = 1/(Nwin+1), where vnew is the
+current center-of-mass velocity of the cell and vold is the value from
+the previous step; larger {Nwin} gives heavier smoothing.  The default
+Nwin = 0 disables smoothing and reproduces the instantaneous behavior.
+
 IMPORTANT NOTE: Caution must be exercised when using the subsonic
 boundary condition without specifying an inlet temperature. In this
 case the code tries to estimate the temperature of the flow from the
@@ -240,6 +259,46 @@ commands, so that particles hitting the surface disappear as if they
 were exiting the simulation domain.  That is necessary to produce the
 correct subsonic conditions that the particle insertions due to this
 command are trying to achieve.
+
+:line
+
+The {mflow} keyword imposes a target mass flow rate {Mdot} (in
+mass/time units) through the entire emitting surface group, rather than
+a prescribed pressure.  This is useful for internal-flow problems where
+the inflow rate, not the inlet pressure, is the known quantity.
+
+On each timestep the code computes a single number density that makes
+the {expected} total inserted mass rate, summed over all emitting grid
+cell/surface element pairs (and over all processors), equal to {Mdot}.
+It does this from the actual molecular inflow flux (equation 4.22 of
+"(Bird94)"_#Bird94, the same flux used for insertion) evaluated over
+the true overlap area of each surface element with its grid cell.  The
+inlet area is therefore computed internally from the surface geometry;
+it is not a user input, so the imposed mass flow rate is independent of
+the surface mesh resolution and is correct for arbitrary geometries.
+
+The inflow particles are given the thermal temperature {Tin}, which
+must be > 0.0.  By default the streaming direction in each cell is taken
+from the center-of-mass velocity of the particles currently in that
+cell (or, with {normal} set to {yes}, along the inward surface normal).
+Because that velocity is a noisy instantaneous quantity, the optional
+{window} keyword applies a moving average to it,
+vstream = a*vnew + (1-a)*vold with a = 1/(Nwin+1), to reduce
+statistical fluctuations; larger {Nwin} gives heavier smoothing.
+
+IMPORTANT NOTE: The imposed mass flow rate is achieved in an {expected}
+(statistical) sense.  The number of particles inserted on any single
+timestep fluctuates, so the realized rate should be measured as a
+time-average over many steps.  A clean way to verify it is from the
+fix's cumulative insertion count (see output below): realized mass rate
+= (ntotal * fnum * average-species-mass) / (Nsteps * dt).
+
+IMPORTANT NOTE: As with {subsonic}, you should use an appropriate
+"surf_collide"_surf_collide.html or "surf_react"_surf_react.html model
+on the emitting surfaces so particles hitting them disappear as if
+exiting the domain.  The {mflow} keyword cannot be combined with the
+{n} or {custom} keywords, and is currently a CPU-only feature (no
+KOKKOS variant).
 
 :line
 
@@ -363,7 +422,9 @@ emit/face"_fix_emit_face.html
 [Default:]
 
 The keyword defaults are n = 0, normal = no, nevery = 1, perspecies =
-yes, region = none, no subsonic settings.
+yes, region = none, no subsonic settings, no mflow settings.  For the
+{subsonic} and {mflow} keywords, the moving-average window defaults to
+0 (no smoothing).
 
 :line
 
@@ -374,3 +435,8 @@ Simulation of Gas Flows, Clarendon Press, Oxford (1994).
 :link(Fang02)
 [(Fang02)] Y. Fang and W. W. Liou, Microfluid Flow Computations
 Using a Parallel DSMC Code, AIAA 2002-1057. (2002).
+
+:link(Sun05)
+[(Sun05)] Q. Sun and I. D. Boyd, Evaluation of Macroscopic Properties
+in the Direct Simulation Monte Carlo Method, Journal of Thermophysics
+and Heat Transfer, 19(3), 329-335 (2005).
