@@ -310,6 +310,16 @@ void Collide::init()
                  "electrons be their own group");
   }
 
+  // warn if ambipolar and a single group (e.g. collide ... all)
+  // the light electrons inflate the single-group vremax, so many more
+  //   collision attempts are made than with a per-species grouping
+  // grouping electrons separately (e.g. collide ... species) is far faster
+
+  if (ambiflag && mixture->ngroup == 1)
+    error->warning(FLERR,"Single-group ambipolar collisions are inefficient; "
+                   "grouping electrons separately (e.g. collide ... species) "
+                   "is recommended");
+
   // vre_next = next timestep to zero vremax & remain, based on vre_every
 
   if (vre_every) vre_next = (update->ntimestep/vre_every)*vre_every + vre_every;

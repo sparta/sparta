@@ -16,6 +16,7 @@
 #include "stdlib.h"
 #include "string.h"
 #include "region_sphere.h"
+#include "input.h"
 #include "error.h"
 
 using namespace SPARTA_NS;
@@ -27,10 +28,10 @@ RegSphere::RegSphere(SPARTA *sparta, int narg, char **arg) :
 {
   options(narg-6,&arg[6]);
 
-  xc = atof(arg[2]);
-  yc = atof(arg[3]);
-  zc = atof(arg[4]);
-  radius = atof(arg[5]);
+  xc = input->numeric(FLERR,arg[2]);
+  yc = input->numeric(FLERR,arg[3]);
+  zc = input->numeric(FLERR,arg[4]);
+  radius = input->numeric(FLERR,arg[5]);
 
   // error check
 
