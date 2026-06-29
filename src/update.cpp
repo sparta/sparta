@@ -326,10 +326,22 @@ void Update::run(int nsteps)
     if (cellweightflag) particle->post_weight();
     timer->stamp(TIME_COMM);
 
-    if (collide) {
-      particle->sort();
-      timer->stamp(TIME_SORT);
+    // sort particles by grid cell if collisions are enabled
+    // also sort if reordering is requested this step, since reordering
+    //   requires the particles first be sorted
+    // reorder() must be called here, not from within sort(), so that it
+    //   only acts on the main timestep loop and not other sort() callers
 
+    int reorder_flag = (reorder_period &&
+                        ntimestep % reorder_period == 0);
+
+    if (collide || reorder_flag) {
+      particle->sort();
+      if (reorder_flag) particle->reorder();
+      timer->stamp(TIME_SORT);
+    }
+
+    if (collide) {
       collide->collisions();
       timer->stamp(TIME_COLLIDE);
     }
