@@ -230,7 +230,11 @@ void SurfCollide::dynamic()
     //   surfs are distributed and load balance/adaptation took place
 
     if (surf->estatus[tindex_custom] == 0) surf->spread_custom(tindex_custom);
-    t_persurf = surf->edvec_local[tindex_custom];
+
+    // edvec_local is indexed by the per-type slot ewhich[tindex_custom],
+    //  not by the global custom index tindex_custom (see Surf::add_custom)
+
+    t_persurf = surf->edvec_local[surf->ewhich[tindex_custom]];
   }
 }
 
