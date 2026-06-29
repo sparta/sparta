@@ -1036,9 +1036,13 @@ double Particle::erot(int isp, double temp_thermal, RanKnuth *erandom)
     eng = -log(erandom->uniform()) * update->boltz * temp_thermal;
   } else {
     a = 0.5*particle->species[isp].rotdof-1.0;
+    // sample E/kT from the equilibrium distribution x^a * exp(-x)
+    // candidate range must cover the high-energy tail: the mode is at
+    // x = a, the mean is a+1, the std dev is sqrt(a+1); use mean + ~9 std
+    // devs so the cut-off scales with rotdof rather than a fixed 10 kT
+    double xmax = a + 1.0 + 9.0*sqrt(a+1.0);
     while (1) {
-      // energy cut-off at 10 kT
-      erm = 10.0*erandom->uniform();
+      erm = xmax*erandom->uniform();
       b = pow(erm/a,a) * exp(a-erm);
       if (b > erandom->uniform()) break;
     }
@@ -1077,9 +1081,14 @@ double Particle::evib(int isp, double temp_thermal, RanKnuth *erandom)
       eng = -log(erandom->uniform()) * update->boltz * temp_thermal;
     else if (species[isp].vibdof > 2) {
       a = 0.5*particle->species[isp].vibdof-1.;
+      // sample E/kT from the equilibrium distribution x^a * exp(-x)
+      // candidate range must cover the high-energy tail: the mode is at
+      // x = a, the mean is a+1, the std dev is sqrt(a+1); use mean + ~9 std
+      // devs so the cut-off scales with vibdof (a fixed 10 kT cut-off is
+      // below the mean for molecules with many vibrational modes)
+      double xmax = a + 1.0 + 9.0*sqrt(a+1.0);
       while (1) {
-        // energy cut-off at 10 kT
-        erm = 10.0*erandom->uniform();
+        erm = xmax*erandom->uniform();
         b = pow(erm/a,a) * exp(a-erm);
         if (b > erandom->uniform()) break;
       }
