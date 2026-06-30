@@ -117,6 +117,8 @@ ComputeReactISurfGrid(SPARTA *sparta, int narg, char **arg) :
 
 ComputeReactISurfGrid::~ComputeReactISurfGrid()
 {
+  if (copy || copymode) return;
+
   memory->destroy(reaction2col);
   memory->destroy(array_surf_tally);
   memory->destroy(tally2surf);

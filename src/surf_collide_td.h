@@ -28,6 +28,7 @@ namespace SPARTA_NS {
 class SurfCollideTD : public SurfCollide {
  public:
   SurfCollideTD(class SPARTA *, int, char **);
+  SurfCollideTD(class SPARTA *sparta) : SurfCollide(sparta) {} // needed for Kokkos
   ~SurfCollideTD();
   void init();
   Particle::OnePart *collide(Particle::OnePart *&, double &,
@@ -35,7 +36,9 @@ class SurfCollideTD : public SurfCollide {
   void wrapper(Particle::OnePart *, double *, int *, double*);
   void flags_and_coeffs(int *, double *);
 
- private:
+  class RanKnuth *kokkos_random() { return random; }
+
+ protected:
   double barrier_val;
   double initen_trans, initen_rot, initen_vib;
   double bond_trans, bond_rot, bond_vib;

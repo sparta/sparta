@@ -35,6 +35,8 @@ class SurfCollideAdiabatic : public SurfCollide {
   void wrapper(Particle::OnePart *, double *, int *, double*);
   void flags_and_coeffs(int *, double *) {}
 
+  class RanKnuth *kokkos_random() { return random; }
+
  protected:
   class RanKnuth *random; // RNG for particle reflection
 

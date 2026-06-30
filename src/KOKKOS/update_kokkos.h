@@ -26,8 +26,15 @@
 #include "surf_collide_vanish_kokkos.h"
 #include "surf_collide_piston_kokkos.h"
 #include "surf_collide_transparent_kokkos.h"
+#include "surf_collide_adiabatic_kokkos.h"
+#include "surf_collide_impulsive_kokkos.h"
+#include "surf_collide_td_kokkos.h"
+#include "surf_collide_cll_kokkos.h"
 #include "compute_boundary_kokkos.h"
 #include "compute_surf_kokkos.h"
+#include "compute_isurf_grid_kokkos.h"
+#include "compute_react_isurf_grid_kokkos.h"
+#include "compute_react_surf_kokkos.h"
 
 namespace SPARTA_NS {
 
@@ -136,13 +143,31 @@ class UpdateKokkos : public Update {
   KKCopy<SurfCollideVanishKokkos> sc_kk_vanish_copy[KOKKOS_MAX_SURF_COLL_PER_TYPE];
   KKCopy<SurfCollidePistonKokkos> sc_kk_piston_copy[KOKKOS_MAX_SURF_COLL_PER_TYPE];
   KKCopy<SurfCollideTransparentKokkos> sc_kk_transparent_copy[KOKKOS_MAX_SURF_COLL_PER_TYPE];
+  KKCopy<SurfCollideAdiabaticKokkos> sc_kk_adiabatic_copy[KOKKOS_MAX_SURF_COLL_PER_TYPE];
+  KKCopy<SurfCollideImpulsiveKokkos> sc_kk_impulsive_copy[KOKKOS_MAX_SURF_COLL_PER_TYPE];
+  KKCopy<SurfCollideTDKokkos> sc_kk_td_copy[KOKKOS_MAX_SURF_COLL_PER_TYPE];
+  KKCopy<SurfCollideCLLKokkos> sc_kk_cll_copy[KOKKOS_MAX_SURF_COLL_PER_TYPE];
 
   //KKCopy<ComputeSurfKokkos> blist_active_copy[KOKKOS_MAX_GLIST];
   KKCopy<ComputeSurfKokkos> slist_active_copy[KOKKOS_MAX_SLIST];
+  KKCopy<ComputeISurfGridKokkos> slist_active_isurf_copy[KOKKOS_MAX_SLIST];
+  KKCopy<ComputeReactISurfGridKokkos> slist_active_react_isurf_copy[KOKKOS_MAX_SLIST];
+  KKCopy<ComputeReactSurfKokkos> slist_active_react_surf_copy[KOKKOS_MAX_SLIST];
   KKCopy<ComputeBoundaryKokkos> blist_active_copy[KOKKOS_MAX_BLIST];
+
+  // partition of slist_active (set in tally_set):
+  //   nslist_surf        = # of compute surf style tallies (slist_active_copy)
+  //   nslist_isurf       = # of compute isurf/grid tallies (slist_active_isurf_copy)
+  //   nslist_react_isurf = # of compute react/isurf/grid tallies
+  // nslist_surf + nslist_isurf + nslist_react_isurf == nsurf_tally
+
+  int nslist_surf,nslist_isurf,nslist_react_isurf,nslist_react_surf;
 
   ComputeBoundaryKokkos tmp_compute_boundary_kk;
   ComputeSurfKokkos tmp_compute_surf_kk;
+  ComputeISurfGridKokkos tmp_compute_isurf_grid_kk;
+  ComputeReactISurfGridKokkos tmp_compute_react_isurf_grid_kk;
+  ComputeReactSurfKokkos tmp_compute_react_surf_kk;
 
   typedef Kokkos::DualView<int[14], DeviceType::array_layout, DeviceType> tdual_int_14;
   typedef tdual_int_14::t_dev t_int_14;

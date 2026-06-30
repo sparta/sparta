@@ -229,6 +229,13 @@ void Surf::remove_custom(int index)
 {
   if (!ename || !ename[index]) return;
 
+  // ewhich may already be freed during Kokkos teardown: SurfKokkos's destructor
+  //   runs (and frees the Kokkos-managed custom data + nulls ewhich) before the
+  //   base Surf destructor deletes surf-react instances, whose destructors call
+  //   remove_custom.  The data is already freed there, so skip safely.
+
+  if (!ewhich) return;
+
   delete [] ename[index];
   ename[index] = NULL;
 
