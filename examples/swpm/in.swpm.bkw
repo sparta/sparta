@@ -83,10 +83,11 @@ collide_modify     reduce energy binary 4000 16 64
 # Diagnostics       #
 #####################
 # temperature  -> must stay constant (energy conservation under split/merge)
-# n            -> effective (weighted) particle count (weight conservation)
+# n            -> # of simulation particles per cell (varies with split/merge)
+# nrho         -> weighted number density (weight/mass conservation)
 # sonine a x   -> non-Maxwellian moments, decay to ~0 as BKW relaxes
 compute 1     thermal/grid all all temp
-compute 2     grid all all n
+compute 2     grid all all n nrho
 compute 3     sonine/grid all all a x 5
 
 compute 1r    reduce ave c_1[*]
@@ -94,7 +95,7 @@ compute 2r    reduce ave c_2[*]
 compute 3r    reduce ave c_3[*]
 
 stats              50
-stats_style        step np nattempt ncoll c_1r c_2r c_3r[1] c_3r[2]
+stats_style        step np nattempt ncoll c_1r c_2r[1] c_2r[2] c_3r[1] c_3r[2]
 
 timestep           1.0e-9
 run                1000

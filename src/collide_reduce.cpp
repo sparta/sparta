@@ -29,10 +29,12 @@
 #include "fix_ambipolar.h"
 #include "random_mars.h"
 #include "random_knuth.h"
+#include "math_const.h"
 #include "memory.h"
 #include "error.h"
 
 using namespace SPARTA_NS;
+using namespace MathConst;
 
 #define DELTADELETE 1024
 #define SMALL 1.0e-16
@@ -74,7 +76,7 @@ void Collide::reduce_energy(int istart, int iend,
 
   // find direction of velocity wrt CoM frame
 
-  double theta = 2.0 * 3.14159 * random->uniform();
+  double theta = 2.0 * MY_PI * random->uniform();
   double phi = acos(1.0 - 2.0 * random->uniform());
   double uvec[3];
   uvec[0] = sin(phi) * cos(theta);
@@ -133,25 +135,32 @@ void Collide::reduce_heat(int istart, int iend,
   jpart = &particles[plist[jp]];
 
   // precompute
+  // if the group has (near) zero thermal energy, qge below would be 0/0;
+  // fall back to the energy scheme (theta = 1, equal weights), which
+  // handles T = 0 correctly
 
   double sqT = sqrt(3.0*T);
   double qmag = sqrt(q[0]*q[0] + q[1]*q[1] + q[2]*q[2]);
-  double qge = qmag / (rho * pow(sqT,3.0));
+  double qge;
+  if (sqT < SMALL) qge = 0.0;
+  else qge = qmag / (rho * pow(sqT,3.0));
   double itheta = qge + sqrt(1.0 + qge*qge);
   double alpha = sqT*itheta;
   double beta = sqT/itheta;
 
   // find direction of velocity wrt CoM frame
+  // for zero heat flux any direction conserves the tallied moments, but the
+  // vector must have unit length or the thermal energy sqT placed along it
+  // is not conserved; sample uniformly on the unit sphere
 
   double uvec[3];
   if (qmag < SMALL) {
-    for (int d = 0; d < 3; d++) {
-      double A = sqrt(-log(random->uniform()));
-      double phi = 6.283185308 * random->uniform();
-      if (random->uniform() < 0.5) uvec[d] = A * cos(phi);
-      else uvec[d] = A * sin(phi);
-    }
-  } else 
+    double theta = 2.0 * MY_PI * random->uniform();
+    double phi = acos(1.0 - 2.0 * random->uniform());
+    uvec[0] = sin(phi) * cos(theta);
+    uvec[1] = sin(phi) * sin(theta);
+    uvec[2] = cos(phi);
+  } else
     for (int d = 0; d < 3; d++) uvec[d] = q[d]/qmag;
 
   // set reduced particle velocities
@@ -197,14 +206,25 @@ void Collide::reduce_stress(int istart, int iend,
   int ierror = MathEigen::jacobi3(pij,eval,evec);
 
   // find number of non-zero eigenvalues
+  // jacobi3 returns eigenvectors as columns (evec[d][i] = component d of
+  // eigenvector i), so compact columns, not rows
 
   int nK = 0;
   for (int i = 0; i < 3; i++) {
     if (fabs(eval[i]) >= SMALL && eval[i] > 0) {
       eval[nK] = eval[i];
-      for (int d = 0; d < 3; d++) evec[nK][d] = evec[i][d];
+      for (int d = 0; d < 3; d++) evec[d][nK] = evec[d][i];
       nK++;
     }
+  }
+
+  // degenerate group: all eigenvalues (near) zero, i.e. no thermal spread.
+  // fall back to a 2-particle energy-style merge; deleting every particle in
+  // the group (empty loop below) would destroy its mass, momentum and energy
+
+  if (nK == 0) {
+    reduce_energy(istart,iend,rho,V,T,Erot);
+    return;
   }
 
   // stress reduction can emit up to 2*nK = 6 survivor particles.  groups are

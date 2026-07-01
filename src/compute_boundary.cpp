@@ -303,7 +303,7 @@ void ComputeBoundary::boundary_tally(double dtremain,
       case ETOT:
         vsqpre = MathExtra::lensq3(vorig);
         vec[k++] += 0.5*mvv2e*origmass*vsqpre +
-          weight * (iorig->erot+iorig->evib);
+          weight * (iorig->erot+iorig->evib) * oswfrac;
         break;
       }
     }

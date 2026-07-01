@@ -101,9 +101,19 @@ Collide::Collide(SPARTA *sparta, int, char **arg) : Pointers(sparta)
 
   // stochastic weighted particle method
   stochastic_weight_flag = 0;
+  index_stochastic_weight = -1;
   max_stochastic_weight = 1.0;   // weights are stored relative to fnum
   reduceflag = 0;
+  reduction_type = ENERGY;
+  group_type = BINARY;
   Ncmin = Ncmax = Ngmin = Ngmax = 0;
+
+  // wtf/pre_wtf must be zero until the collide_modify split keyword sets
+  // them: they scale the collision attempt count (see attempt_collision)
+  // and the split weight transfer even when splitting was never requested
+
+  wtf = 0.0;
+  pre_wtf = 0.0;
 
   // used if near-neighbor model is invoked
 
