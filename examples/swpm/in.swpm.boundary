@@ -1,0 +1,73 @@
+################################################################################
+# SWPM regression test: weighted boundary tallies at diffuse walls
+#
+# Argon in a single grid cell between two diffuse walls of unequal temperature
+# (400 K at ylo, 200 K at yhi; x and z periodic), with SWPM splitting and
+# energy reduction active so the particles carry unequal stochastic weights.
+# Exercises surface collisions plus the weighted boundary tallies of compute
+# boundary: nflux, press and etot are tallied with the per-particle
+# stochastic weights of the incident and reflected particles.
+#
+# The single grid cell is deliberate: no particle ever migrates between grid
+# cells, so the run is deterministic for any MPI rank count and the stats
+# columns can be pinned by the gold log.
+#
+# Invariants / expected behavior:
+#   f_abnd[3][1], f_abnd[4][1] (net weighted particle flux at each wall) are
+#   identically zero: diffuse walls re-emit every incident particle with its
+#   incident weight.
+#   f_abnd[3][3] > 0 > f_abnd[4][3]: the hot wall heats the gas, the cold
+#   wall cools it.
+################################################################################
+
+seed               12137
+dimension          3
+
+variable T         equal 300.00
+variable ppc       equal 200
+variable nden      equal 4.247e22
+variable L         equal 1.0e-5
+
+species            air.species Ar
+
+mixture            air Ar vstream 0.0 0.0 0.0 temp ${T}
+mixture            air Ar frac 1.0
+
+boundary           p s p
+
+create_box         0.0 ${L} 0.0 ${L} 0.0 ${L}
+create_grid        1 1 1
+balance_grid       rcb part
+
+surf_collide       hot  diffuse 400 1.0 translate 0.0 0.0 0.0
+surf_collide       cold diffuse 200 1.0 translate 0.0 0.0 0.0
+
+bound_modify       ylo collide hot
+bound_modify       yhi collide cold
+
+collide            vss air air.vss
+collide_modify     remain no
+
+# fix stochastic_weight must precede collide_modify stochastic_weight yes
+fix                fweight stochastic_weight
+collide_modify     stochastic_weight yes
+collide_modify     split 8 1.0
+collide_modify     reduce energy binary 100 4 16
+
+variable Fnum      equal ${nden}*${L}*${L}*${L}/${ppc}
+global             nrho ${nden}
+global             fnum ${Fnum}
+
+create_particles   air n 0
+
+compute gT         temp
+compute bnd        boundary air nflux press etot
+fix    abnd        ave/time 5 20 100 c_bnd[*] mode vector
+
+stats              100
+stats_style        step np nattempt ncoll nbound c_gT &
+                   f_abnd[3][1] f_abnd[3][2] f_abnd[3][3] &
+                   f_abnd[4][1] f_abnd[4][2] f_abnd[4][3]
+
+timestep           1.0e-9
+run                500

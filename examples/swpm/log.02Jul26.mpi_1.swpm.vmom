@@ -1,0 +1,150 @@
+SPARTA (24 Sep 2025)
+Running on 1 MPI task(s)
+################################################################################
+# SWPM regression test: compute vmom/grid velocity moments
+#
+# Homogeneous argon gas in a single periodic cell with SWPM splitting and
+# energy reduction active, sampling the mass-weighted velocity moments
+# provided by the new compute vmom/grid:
+#   v2       <v^2>          second moment (isotropic)
+#   vx3..vz3 <v^3>_x,y,z    third moments per direction
+#   v4       <vx^4>         fourth moment (x components only, see doc)
+#
+# The moments are normalized by the weighted mass sum, so <v^2> is exactly
+# conserved by splitting, elastic collisions and energy reduction, while the
+# odd moments fluctuate around zero.  All columns are deterministic for the
+# fixed seed and captured in the gold log.
+################################################################################
+
+seed               12137
+dimension          3
+
+variable T         equal 298.15
+variable ppc       equal 200
+variable nden      equal 4.247e22
+variable L         equal 1.0e-5
+
+species            air.species Ar
+mixture            air Ar vstream 0.0 0.0 0.0 temp ${T}
+mixture            air Ar vstream 0.0 0.0 0.0 temp 298.15
+mixture            air Ar frac 1.0
+
+boundary           p p p
+create_box         0.0 ${L} 0.0 ${L} 0.0 ${L}
+create_box         0.0 1e-05 0.0 ${L} 0.0 ${L}
+create_box         0.0 1e-05 0.0 1e-05 0.0 ${L}
+create_box         0.0 1e-05 0.0 1e-05 0.0 1e-05
+Created orthogonal box = (0 0 0) to (1e-05 1e-05 1e-05)
+create_grid        1 1 1
+Created 1 child grid cells
+  CPU time = 0.000810838 secs
+  create/ghost percent = 98.3825 1.61746
+balance_grid       rcb part
+Balance grid migrated 0 cells
+  CPU time = 9.2919e-05 secs
+  reassign/sort/migrate/ghost percent = 81.1621 0.0979348 13.9336 4.80634
+
+variable Fnum      equal ${nden}*${L}*${L}*${L}/${ppc}
+variable Fnum      equal 4.247e+22*${L}*${L}*${L}/${ppc}
+variable Fnum      equal 4.247e+22*1e-05*${L}*${L}/${ppc}
+variable Fnum      equal 4.247e+22*1e-05*1e-05*${L}/${ppc}
+variable Fnum      equal 4.247e+22*1e-05*1e-05*1e-05/${ppc}
+variable Fnum      equal 4.247e+22*1e-05*1e-05*1e-05/200
+global             nrho ${nden}
+global             nrho 4.247e+22
+global             fnum ${Fnum}
+global             fnum 212350
+
+collide            vss air air.vss
+collide_modify     remain no
+
+# fix stochastic_weight must precede collide_modify stochastic_weight yes
+fix                fweight stochastic_weight
+collide_modify     stochastic_weight yes
+collide_modify     split 8 1.0
+collide_modify     reduce energy binary 100 4 16
+
+create_particles   air n 0
+Created 200 particles
+  CPU time = 0.000903745 secs
+
+compute q          vmom/grid all all v2 vx3 vy3 vz3 v4
+
+compute qr1        reduce ave c_q[1]
+compute qr2        reduce ave c_q[2]
+compute qr3        reduce ave c_q[3]
+compute qr4        reduce ave c_q[4]
+compute qr5        reduce ave c_q[5]
+
+stats              50
+stats_style        step np ncoll c_qr1 c_qr2 c_qr3 c_qr4 c_qr5
+
+timestep           1.0e-9
+run                500
+Memory usage per proc in Mbytes:
+  particles (ave,min,max) = 1.6875 1.6875 1.6875
+  grid      (ave,min,max) = 1.51379 1.51379 1.51379
+  surf      (ave,min,max) = 0 0 0
+  total     (ave,min,max) = 3.20135 3.20135 3.20135
+Step Np Ncoll c_qr1 c_qr2 c_qr3 c_qr4 c_qr5 
+       0      200        0    169535.76   -1219075.2    3701381.3    1684938.2 7.1811506e+09 
+      50       51        0    169535.76    6540673.1    5110012.7    5144469.6 5.6397509e+09 
+     100       75        0    169535.76      5535671    1349220.9    6387835.1 5.959337e+09 
+     150       20        0    169535.76      1691297    8154975.8    3846984.6 4.4082198e+09 
+     200       29        0    169535.76   -844673.25    5426230.6    6205669.1 3.2790704e+09 
+     250       45        0    169535.76   -5226314.3     10519962    5094819.2 4.7646056e+09 
+     300       63        0    169535.76   -2505214.7    4667939.8      2297694 5.2723495e+09 
+     350       90        0    169535.76    1952382.8    3366582.5    2919398.1 8.0956446e+09 
+     400       22        0    169535.76     -3653098   -4152365.7    2711192.3 1.0387993e+10 
+     450       31        0    169535.76   -6490776.4   -8284321.9     -7467462 7.721364e+09 
+     500       44        1    169535.76    1322687.8   -6786316.9    6323523.3 5.2787112e+09 
+Loop time of 0.000825404 on 1 procs for 500 steps with 44 particles
+Performance: 605763.965 timesteps/s, 26.654 Mparticle-step/s
+
+MPI task timing breakdown:
+Section |  min time  |  avg time  |  max time  |%varavg| %total
+---------------------------------------------------------------
+Move    | 0.00023087 | 0.00023087 | 0.00023087 |   0.0 | 27.97
+Coll    | 0.00027973 | 0.00027973 | 0.00027973 |   0.0 | 33.89
+Sort    | 5.3576e-05 | 5.3576e-05 | 5.3576e-05 |   0.0 |  6.49
+Comm    | 3.8287e-05 | 3.8287e-05 | 3.8287e-05 |   0.0 |  4.64
+Modify  | 0          | 0          | 0          |   0.0 |  0.00
+Output  | 0.00020446 | 0.00020446 | 0.00020446 |   0.0 | 24.77
+Other   |            | 1.849e-05  |            |       |  2.24
+
+Particle moves    = 23959 (24K)
+Cells touched     = 25380 (25.4K)
+Particle comms    = 0 (0K)
+Boundary collides = 0 (0K)
+Boundary exits    = 0 (0K)
+SurfColl checks   = 0 (0K)
+SurfColl occurs   = 0 (0K)
+Surf reactions    = 0 (0K)
+Collide attempts  = 530 (0.53K)
+Collide occurs    = 186 (0.186K)
+Reactions         = 0 (0K)
+Particles stuck   = 0
+Axisymm bad moves = 0
+
+Particle-moves/CPUsec/proc: 2.9027e+07
+Particle-moves/step: 47.918
+Cell-touches/particle/step: 1.05931
+Particle comm iterations/step: 1
+Particle fraction communicated: 0
+Particle fraction colliding with boundary: 0
+Particle fraction exiting boundary: 0
+Surface-checks/particle/step: 0
+Surface-collisions/particle/step: 0
+Surf-reactions/particle/step: 0
+Collision-attempts/particle/step: 0.0221211
+Collisions/particle/step: 0.00776326
+Reactions/particle/step: 0
+
+Particles: 44 ave 44 max 44 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+Cells:      1 ave 1 max 1 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+GhostCell: 0 ave 0 max 0 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+EmptyCell: 0 ave 0 max 0 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
