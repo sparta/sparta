@@ -227,7 +227,8 @@ command if these limits are violated.
 
 [Restrictions:]
 
-The SWPM capabilities are currently limited to single-species gases.
+The SWPM capabilities are currently limited to single-species gases
+without gas-phase chemistry (the "react"_react.html command).
 Rotational and (smooth) vibrational internal energy are supported and
 conserved by particle splitting and reduction.  Particle reduction cannot
 be combined with {vibrate discrete}: the merged particles carry continuous

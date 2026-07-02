@@ -221,6 +221,14 @@ void Collide::init()
     if (reduceflag && vibstyle == DISCRETE)
       error->all(FLERR,"Stochastic weighting particle reduction requires "
                  "vibrate smooth or no");
+
+    // the SWPM collision loop performs no reaction bookkeeping: reactant
+    // deletions would leave stale entries in the collision partner list,
+    // and product particles would be dropped with zero stochastic weight
+
+    if (react)
+      error->all(FLERR,"Stochastic weighting does not yet support "
+                 "gas-phase chemistry");
   }
 
   if (sparta->kokkos && !kokkos_flag)

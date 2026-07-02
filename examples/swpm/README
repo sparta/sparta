@@ -81,6 +81,22 @@ The regression decks print these as stats columns, so any regression that
 breaks conservation shows up as a changed column, not just a changed
 trajectory.
 
+audit_conservation.py
+---------------------
+
+Independent machine-precision conservation audit: evaluates every moment in
+Python from full-precision particle dumps (velocities, erot, evib, and the
+stochastic weight custom attribute), so an error in the SWPM dynamics cannot
+be masked by a matching error in SPARTA's weighted computes.  Part A
+isolates the reduction operator (collisions disabled, whole cell as one
+merge group) and verifies each scheme's exact guarantees AND the expected
+non-conservation beyond them (proving the audit's sensitivity); Part B runs
+the full method for 5000 steps and bounds the weight/momentum/total-energy
+drift at the floating-point-accumulation level (~1e-15 relative observed).
+
+  python3 audit_conservation.py /path/to/spa_binary
+  python3 audit_conservation.py "mpirun -np 4 /path/to/spa_binary"
+
 verify_swpm.py
 --------------
 
