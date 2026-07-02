@@ -222,10 +222,13 @@ void ComputeGridKokkos::operator()(TagComputeGrid_compute_per_grid_atomic<NEED_A
       a_tally(icell,k++) += d_particles[i].evib;
       break;
     case ENGELEC:
+      // always advance k to keep the per-value tally layout in sync;
+      // only accumulate when the eelec custom attribute exists
       if (index_eelec >= 0) {
         auto &d_eelecs = k_edvec.view_device()[d_ewhich[index_eelec]].k_view.view_device();
-        a_tally(icell,k++) += d_eelecs[i];
+        a_tally(icell,k) += d_eelecs[i];
       }
+      k++;
       break;
     case DOFROT:
       a_tally(icell,k++) += d_species[ispecies].rotdof;
@@ -298,10 +301,13 @@ void ComputeGridKokkos::operator()(TagComputeGrid_compute_per_grid, const int &i
         d_tally(icell,k++) += d_particles[i].evib;
         break;
       case ENGELEC:
+        // always advance k to keep the per-value tally layout in sync;
+        // only accumulate when the eelec custom attribute exists
         if (index_eelec >= 0) {
           auto &d_eelecs = k_edvec.view_device()[d_ewhich[index_eelec]].k_view.view_device();
-          d_tally(icell,k++) += d_eelecs[i];
+          d_tally(icell,k) += d_eelecs[i];
         }
+        k++;
         break;
       case DOFROT:
         d_tally(icell,k++) += d_species[ispecies].rotdof;

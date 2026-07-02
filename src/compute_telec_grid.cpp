@@ -119,7 +119,6 @@ void ComputeTelecGrid::init()
 
   char data_name[] = "eelec";
   index_eelec = particle->find_custom(data_name);
-  double *eelecs = NULL;
 
   if (index_eelec < 0)
     error->all(FLERR,"Cannot use compute telec/grid mode without "
@@ -276,6 +275,6 @@ bigint ComputeTelecGrid::memory_usage()
 {
   bigint bytes;
   bytes = nglocal * sizeof(double);
-  bytes = ntally*nglocal * sizeof(double);
+  bytes += ntally*nglocal * sizeof(double);
   return bytes;
 }

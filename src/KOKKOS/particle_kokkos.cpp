@@ -685,6 +685,18 @@ void ParticleKokkos::add_species(int narg, char **arg)
 {
   Particle::add_species(narg,arg);
 
+  update_elec_views();
+}
+
+/* ----------------------------------------------------------------------
+   flatten per-species electronic data (species[].elecdat) into device views
+   called whenever the species list changes, and defensively from consumers
+   (e.g. after a restart, where no species command may have been issued and
+   the views would otherwise be zero-length)
+------------------------------------------------------------------------- */
+
+void ParticleKokkos::update_elec_views()
+{
   MemKK::realloc_kokkos(d_nelecstates,"particle:nelecstates",nspecies);
   MemKK::realloc_kokkos(d_elecstates,"particle:elecstates",nspecies,
 maxelecstate);

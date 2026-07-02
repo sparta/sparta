@@ -611,10 +611,12 @@ void FixEmitSurf::create_task(int icell)
       tasks[ntask].temp_thermal = temp_thermal_custom;
       tasks[ntask].temp_rot = temp_thermal_custom;
       tasks[ntask].temp_vib = temp_thermal_custom;
+      tasks[ntask].temp_elec = temp_thermal_custom;
     } else {
       tasks[ntask].temp_thermal = temp_thermal;
       tasks[ntask].temp_rot = particle->mixture[imix]->temp_rot;
       tasks[ntask].temp_vib = particle->mixture[imix]->temp_vib;
+      tasks[ntask].temp_elec = particle->mixture[imix]->temp_elec;
     }
     tasks[ntask].magvstream = magvstream;
     tasks[ntask].vstream[0] = vstream[0];
@@ -1473,7 +1475,8 @@ void FixEmitSurf::subsonic_grid()
     }
 
     tasks[i].temp_thermal = temp_thermal_cell;
-    tasks[i].temp_rot = tasks[i].temp_vib = temp_thermal_cell;
+    tasks[i].temp_rot = tasks[i].temp_vib = tasks[i].temp_elec =
+      temp_thermal_cell;
   }
 
   // test if any task has invalid thermal temperature for first time

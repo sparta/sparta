@@ -619,10 +619,13 @@ void Particle::grow_species()
     if (species[isp].elecdat != NULL) {
       species[isp].elecdat->species_rel = (double **)
         memory->srealloc(species[isp].elecdat->species_rel, maxspecies*sizeof(double*),"elecdat:species_rel");
-      // newly added partner-species slots have no relationship data yet
-      for (int j = nspecies; j < maxspecies; ++j)
-        species[isp].elecdat->species_rel[j] = NULL;
       memory->grow(species[isp].elecdat->enforce_spin_conservation, maxspecies, "elecdat:enforce_spin_conservation");
+      // newly added partner-species slots have no relationship data yet:
+      // no species-specific relaxation numbers, spin conservation enforced
+      for (int j = nspecies; j < maxspecies; ++j) {
+        species[isp].elecdat->species_rel[j] = NULL;
+        species[isp].elecdat->enforce_spin_conservation[j] = true;
+      }
     }
   }
 }
@@ -1048,8 +1051,12 @@ void Particle::add_species(int narg, char **arg)
       memory->create(species[ii].elecdat->default_rel, nmode, "elecdat:default_rel");
       species[ii].elecdat->species_rel = (double**) memory->smalloc(maxspecies*sizeof(double*),"elecdat:species_rel");
       memory->create(species[ii].elecdat->enforce_spin_conservation, maxspecies, "elecdat:enforce_spin_conservation");
-      for (int isp = 0; isp < particle->nspecies; ++isp) {
+      // initialize the full allocated capacity, not just nspecies entries:
+      // slots past nspecies are read/freed once later species commands
+      // raise nspecies without necessarily growing maxspecies
+      for (int isp = 0; isp < maxspecies; ++isp) {
         species[ii].elecdat->species_rel[isp] = NULL;
+        species[ii].elecdat->enforce_spin_conservation[isp] = true;
       }
       for (int isp = 0; isp < particle->nspecies; ++isp) {
         species[ii].elecdat->enforce_spin_conservation[isp] = fileelec[j].enforce_spin_conservation[isp];
@@ -1256,7 +1263,7 @@ int Particle::ielec(int isp, double temp_elec, RanKnuth *erandom)
   if (collide) elecstyle = collide->elecstyle;
   if (elecstyle == DISCRETE) {
     Species species = particle->species[isp];
-    if (species.elecdat == NULL) return 0.0;
+    if (species.elecdat == NULL) return 0;
 
     electronic_distribution_func(isp, temp_elec);
 
@@ -1517,7 +1524,6 @@ void Particle::read_electronic_file()
   // read file line by line
   // skip blank lines or comment lines starting with '#'
 
-  char **words = new char*[128];
   char line[MAXLINE],copy[MAXLINE];
 
   while (fgets(line,MAXLINE,fp)) {
@@ -1537,15 +1543,24 @@ void Particle::read_electronic_file()
       memset(&fileelec[nfile],0,(maxfile-nfile)*sizeof(ElecFile));
     }
 
+    // size words to this line's count: a species with N electronic states
+    // has 2 + 5N words, which can exceed any fixed-size buffer
+
+    char **words = new char*[nwords];
     nwords = wordcount(line,words);
     ElecFile *vsp = &fileelec[nfile];
 
-    if (strlen(words[0]) + 1 > 16)
+    if (strlen(words[0]) + 1 > 16) {
+      delete [] words;
       error->one(FLERR,"Invalid species ID in electronic file");
+    }
     strcpy(vsp->id,words[0]);
 
     int isp = particle->find_species(words[0]);
-    if (isp < 0) continue;
+    if (isp < 0) {
+      delete [] words;
+      continue;
+    }
 
     int test_nmode = atoi(words[1]);
     if (test_nmode > 0) {
@@ -1583,20 +1598,40 @@ void Particle::read_electronic_file()
         vsp->elecspin[i] = atoi(words[j++]);
         vsp->elecdof[i] = atof(words[j++]);
       }
+
+      // state selection and temperature bisection assume the ground state
+      // comes first with zero energy and states are in ascending order
+
+      if (vsp->electemp[0] != 0.0)
+        error->one(FLERR,"First electronic state in electronic file "
+                   "must have zero energy");
+      for (int i = 1; i < vsp->nmode; ++i)
+        if (vsp->electemp[i] <= vsp->electemp[i-1])
+          error->one(FLERR,"Electronic states in electronic file "
+                     "must be in ascending energy order");
+
       nfile++;
     } else {
       // Cross-species line defining species-specific relaxation collision numbers
+      ElecFile *xsp = NULL;
       for (int i = 0; i < nfile; ++i) {
         if (strcmp(words[0],fileelec[i].id) == 0) {
-          vsp = &fileelec[i];
+          xsp = &fileelec[i];
           break;
         }
       }
+      if (!xsp)
+        error->one(FLERR,"Cross-species line in electronic file must "
+                   "follow the line defining that species' states");
+      vsp = xsp;
       if (nwords != 3 + vsp->nmode)
         error->one(FLERR,"Incorrect line format in electronic file");
 
       int jsp = particle->find_species(words[1]);
-      if (jsp < 0) continue;
+      if (jsp < 0) {
+        delete [] words;
+        continue;
+      }
 
       if (strcmp(words[2],"T") == 0) {
         vsp->enforce_spin_conservation[jsp] = true;
@@ -1610,9 +1645,9 @@ void Particle::read_electronic_file()
         vsp->elecrel[jsp][i] = atof(words[j++]);
       }
     }
-  }
 
-  delete [] words;
+    delete [] words;
+  }
 
   fclose(fp);
 }

@@ -142,7 +142,7 @@ ComputeGrid::ComputeGrid(SPARTA *sparta, int narg, char **arg) :
       set_map(ivalue,DOFVIB);
       tvib_flag = 1;
     } else if (strcmp(arg[iarg],"eelec") == 0) {
-      value[ivalue] = ENGELEC;
+      value[ivalue] = EELEC;
       set_map(ivalue,ENGELEC);
       set_map(ivalue,COUNT);
     } else if (strcmp(arg[iarg],"pxrho") == 0) {

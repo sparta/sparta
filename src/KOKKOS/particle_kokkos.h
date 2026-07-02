@@ -54,6 +54,7 @@ class ParticleKokkos : public Particle {
   void grow(int) override;
   void grow_species() override;
   void add_species(int, char **) override;
+  void update_elec_views();
   void pre_weight() override;
   void post_weight() override;
   void update_class_variables();

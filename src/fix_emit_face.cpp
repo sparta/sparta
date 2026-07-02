@@ -1091,7 +1091,8 @@ void FixEmitFace::subsonic_grid()
     }
 
     tasks[i].temp_thermal = temp_thermal_cell;
-    tasks[i].temp_rot = tasks[i].temp_vib = temp_thermal_cell;
+    tasks[i].temp_rot = tasks[i].temp_vib = tasks[i].temp_elec =
+      temp_thermal_cell;
   }
 
   // test if any task has invalid thermal temperature for first time
