@@ -185,13 +185,15 @@ reduced.  Reduction can only be used after {stochastic_weight yes} has
 been specified.
 
 The {reduction_choice} (the first {reduce} value) is either {energy},
-{heat}, or {stress}.  In all choices, the mass and momentum of each group
-are conserved.  If {energy} is chosen, the energy of each group is
-conserved.  If {heat} is chosen, the energy and heat flux of each group
-are conserved.  If {stress} is chosen, the energy, heat flux, and stress
-tensor of each group are conserved.  For the first two choices, all
-particles in a group are replaced by two particles.  For the last choice,
-all particles in a group are replaced by at most six particles.
+{heat}, or {stress}.  In all choices, the mass, momentum, rotational
+energy, and vibrational energy of each group are conserved.  If {energy}
+is chosen, the translational energy of each group is also conserved.  If
+{heat} is chosen, the translational energy and heat flux of each group
+are conserved.  If {stress} is chosen, the translational energy, heat
+flux, and stress tensor of each group are conserved.  For the first two
+choices, all particles in a group are replaced by two particles.  For the
+last choice, all particles in a group are replaced by at most six
+particles.
 
 {Ncmax} is the maximum number of particles a cell may have before
 particle reduction is triggered.  If a cell has more than {Ncmax}
@@ -225,7 +227,12 @@ command if these limits are violated.
 
 [Restrictions:]
 
-The SWPM capabilities are currently limited to monoatomic, single-species gases.
+The SWPM capabilities are currently limited to single-species gases.
+Rotational and (smooth) vibrational internal energy are supported and
+conserved by particle splitting and reduction.  Particle reduction cannot
+be combined with {vibrate discrete}: the merged particles carry continuous
+vibrational energies, which is inconsistent with the quantized levels of
+the discrete model.
 
 SWPM can be used with adaptive grids but will cause a significant increase
 in the number of particles.

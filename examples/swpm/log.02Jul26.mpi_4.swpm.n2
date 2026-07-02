@@ -1,0 +1,163 @@
+SPARTA (24 Sep 2025)
+Running on 4 MPI task(s)
+################################################################################
+# SWPM regression test: polyatomic gas (N2) with internal energy conservation
+#
+# Hot nitrogen (5000 K, vibrational temperature 3371 K) in a single periodic
+# cell with SWPM splitting and energy reduction active, and smooth rotational
+# and vibrational relaxation enabled.  The species file uses an artificially
+# fast vibrational relaxation probability (see n2.testvib.species) so all
+# three energy modes visibly exchange within the run.  Collisions exchange energy between the
+# translational, rotational and vibrational modes, while splitting copies the
+# parent's erot/evib and reduction redistributes the group's weighted
+# rotational AND vibrational energy to the merged survivors.
+#
+# Regression invariants (captured in the gold log):
+#   c_nr2            weighted number density   - conserved exactly
+#   c_vr[1-3]        weighted mean velocity    - conserved exactly (momentum)
+#   c_er1+c_er2+c_er3 (ke + erot + evib per weighted particle) - conserved
+#                    exactly: TOTAL energy is the invariant; the individual
+#                    modes exchange through trans/rot/vib relaxation, which
+#                    is visible in the gold log as c_er2 and c_er3 evolving
+#
+# The single grid cell keeps the run deterministic for any MPI rank count.
+################################################################################
+
+seed               12137
+dimension          3
+
+variable T         equal 5000.0
+variable ppc       equal 200
+variable nden      equal 4.247e22
+variable L         equal 1.0e-5
+
+species            n2.testvib.species N2
+mixture            air N2 vstream 0.0 0.0 0.0 temp ${T}
+mixture            air N2 vstream 0.0 0.0 0.0 temp 5000
+mixture            air N2 frac 1.0
+
+boundary           p p p
+create_box         0.0 ${L} 0.0 ${L} 0.0 ${L}
+create_box         0.0 1e-05 0.0 ${L} 0.0 ${L}
+create_box         0.0 1e-05 0.0 1e-05 0.0 ${L}
+create_box         0.0 1e-05 0.0 1e-05 0.0 1e-05
+Created orthogonal box = (0 0 0) to (1e-05 1e-05 1e-05)
+create_grid        1 1 1
+Created 1 child grid cells
+  CPU time = 0.00147016 secs
+  create/ghost percent = 57.3928 42.6072
+balance_grid       rcb part
+Balance grid migrated 0 cells
+  CPU time = 0.000303502 secs
+  reassign/sort/migrate/ghost percent = 86.2848 0.44316 5.05038 8.22169
+
+variable Fnum      equal ${nden}*${L}*${L}*${L}/${ppc}
+variable Fnum      equal 4.247e+22*${L}*${L}*${L}/${ppc}
+variable Fnum      equal 4.247e+22*1e-05*${L}*${L}/${ppc}
+variable Fnum      equal 4.247e+22*1e-05*1e-05*${L}/${ppc}
+variable Fnum      equal 4.247e+22*1e-05*1e-05*1e-05/${ppc}
+variable Fnum      equal 4.247e+22*1e-05*1e-05*1e-05/200
+global             nrho ${nden}
+global             nrho 4.247e+22
+global             fnum ${Fnum}
+global             fnum 212350
+
+collide            vss air air.vss
+collide_modify     remain no
+collide_modify     rotate smooth vibrate smooth
+
+# fix stochastic_weight must precede collide_modify stochastic_weight yes
+fix                fweight stochastic_weight
+collide_modify     stochastic_weight yes
+collide_modify     split 8 1.0
+collide_modify     reduce energy binary 100 4 16
+
+create_particles   air n 0
+Created 200 particles
+  CPU time = 0.00107773 secs
+
+compute n          grid all all n nrho
+compute v          grid all all u v w
+compute e          grid all all ke erot evib
+
+compute nr1        reduce ave c_n[1]
+compute nr2        reduce ave c_n[2]
+compute vr1        reduce ave c_v[1]
+compute vr2        reduce ave c_v[2]
+compute vr3        reduce ave c_v[3]
+compute er1        reduce ave c_e[1]
+compute er2        reduce ave c_e[2]
+compute er3        reduce ave c_e[3]
+
+stats              50
+stats_style        step np ncoll c_nr1 c_nr2 c_vr1 c_vr2 c_vr3                    c_er1 c_er2 c_er3
+
+timestep           1.0e-9
+run                500
+Memory usage per proc in Mbytes:
+  particles (ave,min,max) = 0.421875 0 1.6875
+  grid      (ave,min,max) = 1.13879 1.01379 1.51379
+  surf      (ave,min,max) = 0 0 0
+  total     (ave,min,max) = 1.56069 1.01379 3.20137
+Step Np Ncoll c_nr1 c_nr2 c_vr1 c_vr2 c_vr3 c_er1 c_er2 c_er3 
+       0      200        0          200    4.247e+22    22.331819    34.098687    100.08009 9.8160036e-20 6.1474698e-20 6.7415321e-20 
+      50       87        1           87    4.247e+22    22.331819    34.098687    100.08009 1.0311711e-19  5.90924e-20 6.4840542e-20 
+     100       40        2           40    4.247e+22    22.331819    34.098687    100.08009 1.0557012e-19 5.8520464e-20 6.295947e-20 
+     150       99        1           99    4.247e+22    22.331819    34.098687    100.08009 9.318627e-20 6.5497352e-20 6.8366434e-20 
+     200       52        1           52    4.247e+22    22.331819    34.098687    100.08009 8.3858545e-20 7.6709976e-20 6.6481535e-20 
+     250       27        0           27    4.247e+22    22.331819    34.098687    100.08009 9.2634117e-20 6.5931878e-20 6.8484061e-20 
+     300       81        3           81    4.247e+22    22.331819    34.098687    100.08009 8.7683049e-20 7.2851447e-20 6.6515559e-20 
+     350       36        1           36    4.247e+22    22.331819    34.098687    100.08009 9.9103869e-20 6.5837051e-20 6.2109135e-20 
+     400       95        2           95    4.247e+22    22.331819    34.098687    100.08009 9.9807648e-20 6.6231742e-20 6.1010665e-20 
+     450       63        0           63    4.247e+22    22.331819    34.098687    100.08009 9.7969563e-20 6.2642939e-20 6.6437554e-20 
+     500       27        1           27    4.247e+22    22.331819    34.098687    100.08009 1.0019466e-19 6.105952e-20 6.5795879e-20 
+Loop time of 0.00288108 on 4 procs for 500 steps with 27 particles
+Performance: 173545.836 timesteps/s, 4.686 Mparticle-step/s
+
+MPI task timing breakdown:
+Section |  min time  |  avg time  |  max time  |%varavg| %total
+---------------------------------------------------------------
+Move    | 2.3314e-05 | 0.00015763 | 0.00055441 |   0.0 |  5.47
+Coll    | 2.7299e-05 | 0.00019522 | 0.00069723 |   0.0 |  6.78
+Sort    | 2.078e-05  | 3.6055e-05 | 6.5788e-05 |   0.0 |  1.25
+Comm    | 0.0012198  | 0.0021836  | 0.0025133  |   1.2 | 75.79
+Modify  | 0          | 0          | 0          |   0.0 |  0.00
+Output  | 0.00026985 | 0.0002834  | 0.00031945 |   0.0 |  9.84
+Other   |            | 2.52e-05   |            |       |  0.87
+
+Particle moves    = 24902 (24.9K)
+Cells touched     = 32006 (32K)
+Particle comms    = 0 (0K)
+Boundary collides = 0 (0K)
+Boundary exits    = 0 (0K)
+SurfColl checks   = 0 (0K)
+SurfColl occurs   = 0 (0K)
+Surf reactions    = 0 (0K)
+Collide attempts  = 2580 (2.58K)
+Collide occurs    = 526 (0.526K)
+Reactions         = 0 (0K)
+Particles stuck   = 0
+Axisymm bad moves = 0
+
+Particle-moves/CPUsec/proc: 2.16082e+06
+Particle-moves/step: 49.804
+Cell-touches/particle/step: 1.28528
+Particle comm iterations/step: 1
+Particle fraction communicated: 0
+Particle fraction colliding with boundary: 0
+Particle fraction exiting boundary: 0
+Surface-checks/particle/step: 0
+Surface-collisions/particle/step: 0
+Surf-reactions/particle/step: 0
+Collision-attempts/particle/step: 0.103606
+Collisions/particle/step: 0.0211228
+Reactions/particle/step: 0
+
+Particles: 6.75 ave 27 max 0 min
+Histogram: 3 0 0 0 0 0 0 0 0 1
+Cells:      0.25 ave 1 max 0 min
+Histogram: 3 0 0 0 0 0 0 0 0 1
+GhostCell: 0.75 ave 1 max 0 min
+Histogram: 1 0 0 0 0 0 0 0 0 3
+EmptyCell: 0 ave 0 max 0 min
+Histogram: 4 0 0 0 0 0 0 0 0 0

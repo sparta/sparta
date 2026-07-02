@@ -38,6 +38,11 @@ Gold-log regression tests (single grid cell, full trajectory pinned):
   in.swpm.vmom          compute vmom/grid velocity moments under SWPM
   in.swpm.boundary      weighted boundary tallies (nflux/press/etot) at
                         diffuse walls of unequal temperature
+  in.swpm.n2            polyatomic gas (hot N2, n2.testvib.species): splitting
+                        copies erot/evib and reduction redistributes the
+                        group's weighted rotational AND vibrational energy;
+                        total (trans+rot+vib) energy is the pinned invariant
+                        while the modes exchange through relaxation
 
 Gold-log regression test (multi-cell, conserved invariants pinned):
   in.swpm.group.weight  heat-scheme reduction with weight-based grouping on a
@@ -69,6 +74,9 @@ grid cell and exactly (to floating point roundoff):
   - weighted momentum                (=> weighted mean velocity u,v,w)
   - weighted total energy            (=> weighted temperature)
   - weighted rotational energy
+  - weighted vibrational energy (vibrate smooth; reduction is rejected at
+    init with vibrate discrete, since merged survivors carry continuous
+    evib values inconsistent with quantized levels)
 The regression decks print these as stats columns, so any regression that
 breaks conservation shows up as a changed column, not just a changed
 trajectory.

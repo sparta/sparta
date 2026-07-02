@@ -213,6 +213,14 @@ void Collide::init()
     if (reduceflag && particle->nspecies > 1)
       error->all(FLERR,"Stochastic weighting particle reduction requires "
                  "a single species");
+
+    // particle reduction conserves vibrational energy by assigning the
+    // merged survivors continuous evib values, which is inconsistent with
+    // the quantized levels of the discrete vibrational model
+
+    if (reduceflag && vibstyle == DISCRETE)
+      error->all(FLERR,"Stochastic weighting particle reduction requires "
+                 "vibrate smooth or no");
   }
 
   if (sparta->kokkos && !kokkos_flag)

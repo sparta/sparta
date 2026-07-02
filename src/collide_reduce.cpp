@@ -56,7 +56,8 @@ void Collide::reduce_delete(int idx, double *stochastic_weights)
    Merge particles using energy scheme
 ------------------------------------------------------------------------- */
 void Collide::reduce_energy(int istart, int iend,
-                            double rho, double *V, double T, double Erot)
+                            double rho, double *V, double T, double Erot,
+                            double Evib)
 {
 
   // reduced particles chosen as first two in group
@@ -91,10 +92,14 @@ void Collide::reduce_energy(int istart, int iend,
     jpart->v[d] = V[d] - sqT*uvec[d];
   }
 
-  // set reduced particle rotational energies
+  // set reduced particle rotational and vibrational energies
+  // each survivor carries weight rho/2, so w_i*erot_i + w_j*erot_j = Erot
+  // (and likewise for Evib): internal energy is conserved exactly
 
   ipart->erot = Erot/(rho*0.5)*0.5;
   jpart->erot = Erot/(rho*0.5)*0.5;
+  ipart->evib = Evib/(rho*0.5)*0.5;
+  jpart->evib = Evib/(rho*0.5)*0.5;
 
   // set reduced particle stochastic weights (relative to fnum)
 
@@ -116,7 +121,7 @@ void Collide::reduce_energy(int istart, int iend,
 ------------------------------------------------------------------------- */
 void Collide::reduce_heat(int istart, int iend,
                           double rho, double *V, double T, double Erot,
-                          double *q)
+                          double Evib, double *q)
 {
 
   // reduced particles chosen as first two in group
@@ -175,10 +180,13 @@ void Collide::reduce_heat(int istart, int iend,
   double isw = rho/(1.0+itheta*itheta);
   double jsw = rho - isw;
 
-  // set reduced particle rotational energies
+  // set reduced particle rotational and vibrational energies
+  // w_i*(Erot/w_i/2) + w_j*(Erot/w_j/2) = Erot: conserved exactly
 
   ipart->erot = Erot/isw*0.5;
   jpart->erot = Erot/jsw*0.5;
+  ipart->evib = Evib/isw*0.5;
+  jpart->evib = Evib/jsw*0.5;
 
   stochastic_weights[plist[ip]] = isw;
   stochastic_weights[plist[jp]] = jsw;
@@ -197,7 +205,7 @@ void Collide::reduce_heat(int istart, int iend,
 ------------------------------------------------------------------------- */
 void Collide::reduce_stress(int istart, int iend,
                             double rho, double *V, double T, double Erot,
-                            double *q, double pij[3][3])
+                            double Evib, double *q, double pij[3][3])
 {
 
   // find eigenpairs of stress tensor
@@ -223,7 +231,7 @@ void Collide::reduce_stress(int istart, int iend,
   // the group (empty loop below) would destroy its mass, momentum and energy
 
   if (nK == 0) {
-    reduce_energy(istart,iend,rho,V,T,Erot);
+    reduce_energy(istart,iend,rho,V,T,Erot,Evib);
     return;
   }
 
@@ -269,10 +277,13 @@ void Collide::reduce_stress(int istart, int iend,
     isw = rho/(nK*(1.0+itheta*itheta));
     jsw = rho/nK - isw;
 
-    // set reduced particle rotational energies
+    // set reduced particle rotational and vibrational energies
+    // each of the nK pairs carries Erot/nK (and Evib/nK): conserved exactly
 
     ipart->erot = Erot/isw*0.5/nK;
     jpart->erot = Erot/jsw*0.5/nK;
+    ipart->evib = Evib/isw*0.5/nK;
+    jpart->evib = Evib/jsw*0.5/nK;
 
     stochastic_weights[plist[2*iK+istart]] = isw;
     stochastic_weights[plist[2*iK+1+istart]] = jsw;

@@ -188,6 +188,7 @@ void Collide::split(Particle::OnePart *&ip, Particle::OnePart *&jp,
   double xk[3],vk[3];
   double xl[3],vl[3];
   double erotk, erotl;
+  double evibk, evibl;
   int ks, ls;
   int kcell, lcell;
 
@@ -229,6 +230,8 @@ void Collide::split(Particle::OnePart *&ip, Particle::OnePart *&jp,
 
     erotk = ip->erot;
     erotl = jp->erot;
+    evibk = ip->evib;
+    evibl = jp->evib;
 
   // particle jp has larger weight
 
@@ -250,6 +253,8 @@ void Collide::split(Particle::OnePart *&ip, Particle::OnePart *&jp,
 
     erotk = jp->erot;
     erotl = ip->erot;
+    evibk = jp->evib;
+    evibl = ip->evib;
   }
 
   // update stochastic weights in custom array (relative to fnum)
@@ -276,7 +281,9 @@ void Collide::split(Particle::OnePart *&ip, Particle::OnePart *&jp,
   if(ksw > 0) {
     int id = MAXSMALLINT*random->uniform();
     Particle::OnePart *particles = particle->particles;
-    int reallocflag = particle->add_particle(id,ks,kcell,xk,vk,erotk,0.0);
+    // split particles are copies of their parent: same velocity, same
+    // internal energies, so all moments of the distribution are unchanged
+    int reallocflag = particle->add_particle(id,ks,kcell,xk,vk,erotk,evibk);
     if (reallocflag) {
       ip = particle->particles + (ip - particles);
       jp = particle->particles + (jp - particles);
@@ -298,7 +305,7 @@ void Collide::split(Particle::OnePart *&ip, Particle::OnePart *&jp,
     if(ksw <= 0) error->one(FLERR,"Bad addition to particle list");
     int id = MAXSMALLINT*random->uniform();
     Particle::OnePart *particles = particle->particles;
-    int reallocflag = particle->add_particle(id,ls,lcell,xl,vl,erotl,0.0);
+    int reallocflag = particle->add_particle(id,ls,lcell,xl,vl,erotl,evibl);
     if (reallocflag) {
       ip = particle->particles + (ip - particles);
       jp = particle->particles + (jp - particles);
@@ -469,12 +476,13 @@ void Collide::group_bt(int istart, int iend, int group_size_buffer)
   int np = iend-istart;
   if (np <= Ngmin) return;
 
-  // accumulate group totals: weight, mass, momentum, rotational energy
+  // accumulate group totals: weight, mass, momentum, rotational and
+  // vibrational energy
   // first pass forms the mean velocity used to build central moments below
 
-  double gsum, msum, Erot;
+  double gsum, msum, Erot, Evib;
   double mV[3];
-  gsum = msum = Erot = 0.0;
+  gsum = msum = Erot = Evib = 0.0;
   for (int i = 0; i < 3; i++) mV[i] = 0.0;
 
   int ispecies;
@@ -489,6 +497,7 @@ void Collide::group_bt(int istart, int iend, int group_size_buffer)
     gsum += psw;
     msum += pmsw;
     Erot += psw*ipart->erot;
+    Evib += psw*ipart->evib;
     for (int i = 0; i < 3; i++) mV[i] += pmsw*ipart->v[i];
   }
 
@@ -550,11 +559,11 @@ void Collide::group_bt(int istart, int iend, int group_size_buffer)
 
     // reduce based on type
     if (reduction_type == ENERGY) {
-      reduce_energy(istart, iend, gsum, V, T, Erot);
+      reduce_energy(istart, iend, gsum, V, T, Erot, Evib);
     } else if (reduction_type == HEAT) {
-      reduce_heat(istart, iend, gsum, V, T, Erot, q);
+      reduce_heat(istart, iend, gsum, V, T, Erot, Evib, q);
     } else if (reduction_type == STRESS) {
-      reduce_stress(istart, iend, gsum, V, T, Erot, q, pij);
+      reduce_stress(istart, iend, gsum, V, T, Erot, Evib, q, pij);
     }
 
   // group still too large so divide further

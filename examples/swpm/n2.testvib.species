@@ -1,0 +1,18 @@
+# N2 species data with an artificially fast vibrational relaxation
+# probability (VibRel = 0.2 instead of the physical ~1.9e-5), used by the
+# in.swpm.n2 regression test so that translational/rotational/vibrational
+# energy exchange is visible within a short run.  NOT physical data - do not
+# use for production simulations.
+
+# ID
+# Molwt (amu)
+# Molmass (kg)
+# Rotational dof
+# RotRel
+# Vibrational dof
+# VibRel
+# VibTemp (K)
+# species wt
+# charge
+
+N2  28.016   4.65E-26  2    0.2   2    0.2    3371.0    1.0      0.0

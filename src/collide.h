@@ -205,10 +205,11 @@ class Collide : protected Pointers {
   void group_bt(int, int, int);
   void group_octree(int, int, int);
   void reduce_delete(int, double *);
-  void reduce_energy(int, int, double, double *, double, double);
-  void reduce_heat(int, int, double, double *, double, double, double *);
-  void reduce_stress(int, int, double, double *, double, double, double *,
-                     double [3][3]);
+  void reduce_energy(int, int, double, double *, double, double, double);
+  void reduce_heat(int, int, double, double *, double, double, double,
+                   double *);
+  void reduce_stress(int, int, double, double *, double, double, double,
+                     double *, double [3][3]);
 };
 
 }

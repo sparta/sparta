@@ -106,6 +106,7 @@ if(SPARTA_ENABLE_TESTING)
         "in.swpm.1D"
         "in.swpm.boundary"
         "in.swpm.group.weight"
+        "in.swpm.n2"
         "in.swpm.periodic"
         "in.swpm.reduce.energy"
         "in.swpm.reduce.heat"
