@@ -32,6 +32,10 @@ CollideStyle(vss/kk,CollideVSSKokkos)
 #include "Kokkos_Random.hpp"
 #include "rand_pool_wrap.h"
 #include "kokkos_copy.h"
+#include "compute_gas_collision_grid_kokkos.h"
+#include "compute_gas_reaction_grid_kokkos.h"
+
+#define KOKKOS_MAX_GLIST 4
 
 namespace SPARTA_NS {
 
@@ -62,6 +66,12 @@ struct TagCollideCollisionsOne{};
 template < int GASTALLY, int ATOMIC_REDUCTION >
 struct TagCollideCollisionsOneAmbipolar{};
 
+template < int NEARCP, int GASTALLY, int ATOMIC_REDUCTION >
+struct TagCollideCollisionsGroup{};
+
+template < int GASTALLY, int ATOMIC_REDUCTION >
+struct TagCollideCollisionsGroupAmbipolar{};
+
 class CollideVSSKokkos : public CollideVSS {
  public:
   typedef COLLIDE_REDUCE value_type;
@@ -86,6 +96,8 @@ class CollideVSSKokkos : public CollideVSS {
 
   KOKKOS_INLINE_FUNCTION
   double attempt_collision_kokkos(int, int, double, rand_type &) const;
+  KOKKOS_INLINE_FUNCTION
+  double attempt_collision_kokkos(int, int, int, int, int, double, rand_type &) const;
   KOKKOS_INLINE_FUNCTION
   int test_collision_kokkos(int, int, int, Particle::OnePart *, Particle::OnePart *, struct State &, rand_type &) const;
   KOKKOS_INLINE_FUNCTION
@@ -118,6 +130,22 @@ class CollideVSSKokkos : public CollideVSS {
   KOKKOS_INLINE_FUNCTION
   void operator()(TagCollideCollisionsOneAmbipolar< GASTALLY, ATOMIC_REDUCTION >, const int&, COLLIDE_REDUCE&) const;
 
+  template < int NEARCP, int GASTALLY, int ATOMIC_REDUCTION >
+  KOKKOS_INLINE_FUNCTION
+  void operator()(TagCollideCollisionsGroup< NEARCP, GASTALLY, ATOMIC_REDUCTION >, const int&) const;
+
+  template < int NEARCP, int GASTALLY, int ATOMIC_REDUCTION >
+  KOKKOS_INLINE_FUNCTION
+  void operator()(TagCollideCollisionsGroup< NEARCP, GASTALLY, ATOMIC_REDUCTION >, const int&, COLLIDE_REDUCE&) const;
+
+  template < int GASTALLY, int ATOMIC_REDUCTION >
+  KOKKOS_INLINE_FUNCTION
+  void operator()(TagCollideCollisionsGroupAmbipolar< GASTALLY, ATOMIC_REDUCTION >, const int&) const;
+
+  template < int GASTALLY, int ATOMIC_REDUCTION >
+  KOKKOS_INLINE_FUNCTION
+  void operator()(TagCollideCollisionsGroupAmbipolar< GASTALLY, ATOMIC_REDUCTION >, const int&, COLLIDE_REDUCE&) const;
+
   typedef Kokkos::
     DualView<Params**, Kokkos::LayoutRight, DeviceType> tdual_params_2d;
   typedef tdual_params_2d::t_dev t_params_2d;
@@ -144,9 +172,23 @@ class CollideVSSKokkos : public CollideVSS {
   KKCopy<ReactTCEQKKokkos> react_tceqk_kk_copy;
   int react_style;   // 0=TCE, 1=QK, 2=TCEQK (set in setup)
 
+  // active gas/gas per-grid tally computes, partitioned by type
+  KKCopy<ComputeGasCollisionGridKokkos> glist_collision_copy[KOKKOS_MAX_GLIST];
+  KKCopy<ComputeGasReactionGridKokkos> glist_reaction_copy[KOKKOS_MAX_GLIST];
+  int nglist_collision,nglist_reaction;
+  ComputeGasCollisionGridKokkos tmp_compute_gas_collision_kk;
+  ComputeGasReactionGridKokkos tmp_compute_gas_reaction_kk;
+  void setup_gas_tally();
+  void finish_gas_tally();
+
   t_particle_1d d_particles;
   t_species_1d_const d_species;
   DAT::t_int_2d d_plist;
+
+  // group collision scratch (ngroups > 1)
+  DAT::t_int_1d d_species2group;
+  DAT::t_int_2d d_glist;
+  Kokkos::View<int***,DeviceType> d_nattempt_pair;
 
   DAT::t_int_1d d_ewhich;
   tdual_struct_tdual_int_1d_1d k_eivec;
@@ -211,6 +253,9 @@ class CollideVSSKokkos : public CollideVSS {
 
   template < int NEARCP, int GASTALLY > void collisions_one(COLLIDE_REDUCE&);
   template < int GASTALLY > void collisions_one_ambipolar(COLLIDE_REDUCE&);
+  template < int NEARCP, int GASTALLY > void collisions_group(COLLIDE_REDUCE&);
+  template < int GASTALLY > void collisions_group_ambipolar(COLLIDE_REDUCE&);
+  int egroup;        // mixture group containing the ambipolar electron species
 
   // VSS specific
 

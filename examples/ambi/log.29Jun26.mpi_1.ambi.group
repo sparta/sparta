@@ -1,0 +1,121 @@
+SPARTA (24 Sep 2025)
+Running on 1 MPI task(s)
+################################################################################
+# thermal plasma in a 2d box, non-reacting multigroup ambipolar collisions
+#
+# Exercises the ambipolar approximation with more than one collision group:
+# all heavy species (neutrals + ions) form one group and the ambipolar
+# electron species "e" is its own group, as required by collide ambipolar.
+#
+# Note:
+#  - The "comm/sort" option to the "global" command is used to match MPI runs.
+#  - The "twopass" option is used to match Kokkos runs.
+# The "comm/sort" and "twopass" options should not be used for production runs.
+################################################################################
+
+seed                12345
+dimension           2
+boundary            rr rr p
+global              gridcut 0.01 comm/sort yes
+create_box          -2.0 2.0 -2.0 2.0 -0.5 0.5
+Created orthogonal box = (-2 -2 -0.5) to (2 2 0.5)
+create_grid         20 20 1
+Created 400 child grid cells
+  CPU time = 0.000936031 secs
+  create/ghost percent = 93.9124 6.08762
+balance_grid        rcb cell
+Balance grid migrated 0 cells
+  CPU time = 5.50747e-05 secs
+  reassign/sort/migrate/ghost percent = 43.7229 0 21.645 34.632
+
+global              fnum 2.6404E16
+global              nrho 2.6404e20
+
+species             air.species N2 O2 N O NO N2+ O2+ N+ O+ NO+ e
+
+# collide mixture: all species, two groups
+# the ambipolar electron species e must be in a group by itself
+
+mixture             gas N2 O2 N O NO N2+ O2+ N+ O+ NO+ vstream 0 0 0 temp 5000.0 group heavy
+mixture             gas e group electron
+mixture             gas N2 frac 0.6
+mixture             gas N2+ frac 0.4
+
+fix                 ambi ambipolar e N+ N2+ NO+ O+ O2+
+
+collide             vss gas air.vss
+collide_modify      ambipolar yes
+
+create_particles    gas n 10000 twopass
+Created 10000 particles
+  CPU time = 0.00320506 secs
+
+compute             temp temp
+stats               50
+stats_style         step np nattempt ncoll c_temp
+
+timestep            1.0e-8
+run                 300
+Memory usage per proc in Mbytes:
+  particles (ave,min,max) = 2 2 2
+  grid      (ave,min,max) = 1.51379 1.51379 1.51379
+  surf      (ave,min,max) = 0 0 0
+  total     (ave,min,max) = 3.51379 3.51379 3.51379
+Step Np Natt Ncoll c_temp 
+       0    10000        0        0    4975.0406 
+      50    10000       77       34    4975.0911 
+     100    10000      108       38    4975.0667 
+     150    10000      134       57    4975.0591 
+     200    10000       37       16    4974.9255 
+     250    10000       70       28    4976.2863 
+     300    10000       50       18    4974.4373 
+Loop time of 0.0635989 on 1 procs for 300 steps with 10000 particles
+Performance: 4717.065 timesteps/s, 47.171 Mparticle-step/s
+
+MPI task timing breakdown:
+Section |  min time  |  avg time  |  max time  |%varavg| %total
+---------------------------------------------------------------
+Move    | 0.015433   | 0.015433   | 0.015433   |   0.0 | 24.27
+Coll    | 0.042727   | 0.042727   | 0.042727   |   0.0 | 67.18
+Sort    | 0.0051994  | 0.0051994  | 0.0051994  |   0.0 |  8.18
+Comm    | 5.1737e-05 | 5.1737e-05 | 5.1737e-05 |   0.0 |  0.08
+Modify  | 0          | 0          | 0          |   0.0 |  0.00
+Output  | 0.00013208 | 0.00013208 | 0.00013208 |   0.0 |  0.21
+Other   |            | 5.627e-05  |            |       |  0.09
+
+Particle moves    = 3000000 (3M)
+Cells touched     = 3000293 (3M)
+Particle comms    = 0 (0K)
+Boundary collides = 20 (0.02K)
+Boundary exits    = 0 (0K)
+SurfColl checks   = 0 (0K)
+SurfColl occurs   = 0 (0K)
+Surf reactions    = 0 (0K)
+Collide attempts  = 20534 (20.5K)
+Collide occurs    = 8182 (8.18K)
+Reactions         = 0 (0K)
+Particles stuck   = 0
+Axisymm bad moves = 0
+
+Particle-moves/CPUsec/proc: 4.71706e+07
+Particle-moves/step: 10000
+Cell-touches/particle/step: 1.0001
+Particle comm iterations/step: 1
+Particle fraction communicated: 0
+Particle fraction colliding with boundary: 6.66667e-06
+Particle fraction exiting boundary: 0
+Surface-checks/particle/step: 0
+Surface-collisions/particle/step: 0
+Surf-reactions/particle/step: 0
+Collision-attempts/particle/step: 0.00684467
+Collisions/particle/step: 0.00272733
+Reactions/particle/step: 0
+
+Particles: 10000 ave 10000 max 10000 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+Cells:      400 ave 400 max 400 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+GhostCell: 0 ave 0 max 0 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+EmptyCell: 0 ave 0 max 0 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
