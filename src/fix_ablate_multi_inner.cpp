@@ -558,7 +558,7 @@ void FixAblate::sync_multiv()
 {
   int i,j,ix,iy,iz,jx,jy,jz,ixfirst,iyfirst,izfirst,jcorner;
   int icell,jcell;
-  double total[nmultiv];
+  double total[6];   // total indexed by nmultiv = 4 (2D) or 6 (3D)
 
   comm_neigh_corners(CDELTA);
 
@@ -857,7 +857,7 @@ void FixAblate::sync_multiv_multid_inside()
 {
   int i,j,ix,iy,iz,jx,jy,jz,ixfirst,iyfirst,izfirst,jcorner;
   int icell,jcell;
-  double total[nmultiv];
+  double total[6];   // total indexed by nmultiv = 4 (2D) or 6 (3D)
 
   comm_neigh_corners(CDELTA);
 
