@@ -8,7 +8,9 @@ on:
 
 # Define jobs: mpi, mpi-stubs-fft, mpi-stubs-kokkos-exact-fft, and bigbig
 # Each jobs runs on ubuntu-22.04 and uses the cmake build system
-# All jobs except for bigbig and mpi-stubs-kokkos-exact-fft run ctest
+# All jobs except for bigbig run ctest. The mpi-stubs-kokkos-exact-fft job runs
+# the regression tests under KOKKOS ("-k on -sf kk") using the Serial backend
+# and SPARTA_KOKKOS_EXACT so results match the non-KOKKOS gold-standard logs.
 jobs:
   mpi:
     runs-on: ubuntu-22.04
@@ -24,6 +26,7 @@ jobs:
         cd build
         cmake -C ../cmake/presets/mpi.cmake \
           -DSPARTA_ENABLE_TESTING=ON \
+          -DPKG_PYTHON=ON \
           ../cmake
 
     - name: Build
@@ -54,6 +57,7 @@ jobs:
         cmake -C ../cmake/presets/serial.cmake \
           -DSPARTA_ENABLE_TESTING=ON \
           -DPKG_FFT=ON \
+          -DPKG_PYTHON=ON \
            ../cmake
 
     - name: Build
@@ -78,32 +82,41 @@ jobs:
     - uses: actions/checkout@v4
 
     - name: Configure
+      # Build the KOKKOS package with the Serial backend and SPARTA_KOKKOS_EXACT
+      # so that KOKKOS reproduces the non-KOKKOS results exactly. This allows the
+      # KOKKOS build to be regression tested against the existing (non-KOKKOS)
+      # gold-standard log files. SPARTA_SPA_ARGS passes the KOKKOS command-line
+      # args ("-k on -sf kk") to the sparta binary for every test.
       run: |
         mkdir build
         cd build
         cmake -C ../cmake/presets/serial.cmake \
           -DSPARTA_ENABLE_TESTING=ON \
-          -DSPARTA_DEFAULT_CXX_COMPILE_FLAGS='-DSPARTA_KOKKOS_EXACT' \
+          -DSPARTA_KOKKOS_EXACT=ON \
           -DPKG_KOKKOS=ON \
+          -DKokkos_ENABLE_SERIAL=ON \
+          -DKokkos_ENABLE_OPENMP=OFF \
           -DPKG_FFT=ON \
+          -DPKG_PYTHON=ON \
+          -DSPARTA_SPA_ARGS='-k on -sf kk' \
           ../cmake
 
     - name: Build
       run: cd build; make -j4
 
-#    - name: Test
-#      run: |
-#        cd build
-#        find -name 'log.archive*'
-#        sudo rm /bin/sh
-#        sudo ln -s /bin/bash /bin/sh
-#        ctest --output-on-failure -j4
+    - name: Test
+      run: |
+        cd build
+        find -name 'log.archive*'
+        sudo rm /bin/sh
+        sudo ln -s /bin/bash /bin/sh
+        ctest --output-on-failure -j4
 
-    #- uses: actions/upload-artifact@v4
-    #  if: '!cancelled()'
-    #  with:
-    #    name: 'mpi-stubs-kokkos-exact-fft-Artifacts'
-    #    path: 'build/examples/'
+    - uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: 'mpi-stubs-kokkos-exact-fft-Artifacts'
+        path: 'build/examples/'
   bigbig:
     runs-on: ubuntu-22.04
     steps:
@@ -118,6 +131,7 @@ jobs:
         cd build
         cmake -C ../cmake/presets/kokkos_omp.cmake \
           -DPKG_FFT=ON \
+          -DPKG_PYTHON=ON \
           -DSPARTA_DEFAULT_CXX_COMPILE_FLAGS='-DSPARTA_BIGBIG' \
           ../cmake
 

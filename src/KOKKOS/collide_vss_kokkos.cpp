@@ -1,6 +1,6 @@
 /* ----------------------------------------------------------------------
    SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
-   http://sparta.sandia.gov
+   http://sparta.github.io
    Steve Plimpton, sjplimp@gmail.com, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
@@ -46,6 +46,7 @@ enum{CONSTANT,VARIABLE};
 #define DELTACELLCOUNT 2
 
 #define MAXLINE 1024
+#define EPSZERO 1.0e-14
 #define BIG 1.0e20
 
 /* ---------------------------------------------------------------------- */
@@ -63,7 +64,7 @@ CollideVSSKokkos::CollideVSSKokkos(SPARTA *sparta, int narg, char **arg) :
   kokkos_flag = 1;
 
   // use 1D view for scalars to reduce GPU memory operations
-  printf("CONSTRUCTADOR\n");
+
   d_scalars = t_int_11("collide:scalars");
   h_scalars = t_host_int_11("collide:scalars_mirror");
 
@@ -129,6 +130,10 @@ void CollideVSSKokkos::init()
   if (ambiflag && nearcp)
     error->all(FLERR,"Ambipolar collision model does not yet support "
                "near-neighbor collisions");
+
+  if (subcellflag)
+    error->all(FLERR,"Cannot yet use subcell collisions with the "
+               "KOKKOS package");
 
   // require mixture to contain all species
 
@@ -215,21 +220,21 @@ void CollideVSSKokkos::init()
     memory->create(vremax_initial,ngroups,ngroups,"collide:vremax_initial");
 
     k_vremax_initial = DAT::tdual_float_2d("collide:vremax_initial",ngroups,ngroups);
-    k_vremax = DAT::tdual_float_3d("collide:vremax",nglocalmax,ngroups,ngroups);
-    d_vremax = k_vremax.d_view;
-    k_remain = DAT::tdual_float_3d("collide:remain",nglocalmax,ngroups,ngroups);
-    d_remain = k_remain.d_view;
+    MemKK::realloc_kokkos(k_vremax,"collide:vremax",nglocalmax,ngroups,ngroups);
+    d_vremax = k_vremax.view_device();
+    MemKK::realloc_kokkos(k_remain,"collide:remain",nglocalmax,ngroups,ngroups);
+    d_remain = k_remain.view_device();
 
     for (int igroup = 0; igroup < ngroups; igroup++) {
       for (int jgroup = 0; jgroup < ngroups; jgroup++) {
         vremax_initial[igroup][jgroup] = vremax_init(igroup,jgroup);
-        k_vremax_initial.h_view(igroup,jgroup) = vremax_initial[igroup][jgroup];
+        k_vremax_initial.view_host()(igroup,jgroup) = vremax_initial[igroup][jgroup];
       }
     }
 
     k_vremax_initial.modify_host();
     k_vremax_initial.sync_device();
-    d_vremax_initial = k_vremax_initial.d_view;
+    d_vremax_initial = k_vremax_initial.view_device();
   }
 
   // if recombination reactions exist, set flags per species pair
@@ -252,7 +257,6 @@ void CollideVSSKokkos::init()
         h_recomb_ijflag(i,j) = react->recomb_exist(i,j);
     Kokkos::deep_copy(d_recomb_ijflag,h_recomb_ijflag);
   }
-  //printf("INIT H\n");
 
   // find ambipolar fix
   // set ambipolar vector/array indices
@@ -271,7 +275,6 @@ void CollideVSSKokkos::init()
     FixAmbipolar *afix = (FixAmbipolar *) modify->fix[ifix];
     ambispecies = afix->especies;
   }
-  //printf("INIT I\n");
 
   // if ambipolar and multiple groups in mixture, ambispecies must be its own group
 
@@ -282,56 +285,58 @@ void CollideVSSKokkos::init()
       error->all(FLERR,"Multigroup ambipolar collisions require "
                  "electrons be their own group");
   }
-  //printf("INIT J\n");
+
+  // warn if ambipolar and a single group (e.g. collide ... all)
+  // the light electrons inflate the single-group vremax, so many more
+  //   collision attempts are made than with a per-species grouping
+  // grouping electrons separately (e.g. collide ... species) is far faster
+
+  if (ambiflag && mixture->ngroup == 1)
+    error->warning(FLERR,"Single-group ambipolar collisions are inefficient; "
+                   "grouping electrons separately (e.g. collide ... species) "
+                   "is recommended");
 
   // vre_next = next timestep to zero vremax & remain, based on vre_every
 
   if (vre_every) vre_next = (update->ntimestep/vre_every)*vre_every + vre_every;
   else vre_next = update->laststep + 1;
 
-  //printf("INIT J2\n");
   // if requested reset vremax & remain
   // must be after per-species vremax_initial is setup
 
   if (vre_first || vre_start) {
-    //printf("INIT J2a\n");
     reset_vremax();
-    //printf("INIT J2b\n");
     vre_first = 0;
-    //printf("INIT J2c\n");
   }
-  //printf("INIT J3\n");
 
 #ifdef SPARTA_KOKKOS_EXACT
   rand_pool.init(random);
 #endif
 
   // VSS specific
-  //printf("INIT K\n");
 
   k_params = tdual_params_2d("collide_vss:params",nparams,nparams);
   k_prefactor = DAT::tdual_float_2d("collide_vss:prefactor",nparams,nparams);
 
   for (int i = 0; i < nparams; i++) {
     for (int j = 0; j < nparams; j++){
-      k_params.h_view(i,j) = params[i][j];
-      k_prefactor.h_view(i,j) = prefactor[i][j];
+      k_params.view_host()(i,j) = params[i][j];
+      k_prefactor.view_host()(i,j) = prefactor[i][j];
     }
   }
 
   k_params.modify_host();
   k_params.sync_device();
-  d_params = k_params.d_view;
+  d_params = k_params.view_device();
+  d_params_const = k_params.view_device();
 
   k_prefactor.modify_host();
   k_prefactor.sync_device();
-  d_prefactor = k_prefactor.d_view;
+  d_prefactor = k_prefactor.view_device();
 
   // initialize running stats before each run
 
   ncollide_running = nattempt_running = nreact_running = 0;
-
-  //printf("INIT L\n");
 }
 
 /* ----------------------------------------------------------------------
@@ -341,30 +346,23 @@ void CollideVSSKokkos::init()
 
 void CollideVSSKokkos::reset_vremax()
 {
-  //printf("RESET 1\n");
   grid_kk_copy.copy((GridKokkos*)grid);
-  //printf("RESET 2\n");
 
-  this->sync(Device,ALL_MASK);
-  //printf("RESET 3\n");
+  k_vremax.clear_sync_state();
+  if (remainflag) k_remain.clear_sync_state();
 
   copymode = 1;
   Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagCollideResetVremax>(0,nglocal),*this);
   copymode = 0;
-  //printf("RESET 4\n");
 
   this->modified(Device,ALL_MASK);
-  //printf("RESET 5\n");
 }
 
 KOKKOS_INLINE_FUNCTION
 void CollideVSSKokkos::operator()(TagCollideResetVremax, const int &icell) const {
-  //printf("ngroups = %d\n", ngroups);
   for (int igroup = 0; igroup < ngroups; igroup++)
     for (int jgroup = 0; jgroup < ngroups; jgroup++) {
-      //printf("X\n");
       d_vremax(icell,igroup,jgroup) = d_vremax_initial(igroup,jgroup);
-      //printf("Y\n");
       if (remainflag) d_remain(icell,igroup,jgroup) = 0.0;
     }
 }
@@ -382,6 +380,10 @@ void CollideVSSKokkos::collisions()
     vre_next += vre_every;
   }
 
+  // copy Update count of gas/gas collision computes active on this timestep
+
+  ngas_tally = update->ngas_tally;
+
   // counters
 
   ncollide_one = nattempt_one = nreact_one = 0;
@@ -392,40 +394,47 @@ void CollideVSSKokkos::collisions()
     h_ncollide_one() = 0;
     h_nreact_one() = 0;
   }
-  
-  int mydim = domain->dimension;
+
   dt = update->dt;
   fnum = update->fnum;
   boltz = update->boltz;
 
   // perform collisions:
-  // variant for single group or multiple groups (not yet supported)
-  // variant for nearcp flag or not
   // variant for ambipolar approximation or not
+  // variant for nearcp flag or not
+  // variant for ngas_tally active or not
+  // variant for single group or multiple groups
+
+  if (ngas_tally)
+    error->all(FLERR,"Kokkos does not (yet) support tallying gas/gas collisions or reactions");
 
   if (ngroups != 1)
     error->all(FLERR,"Group collisions not yet supported with Kokkos");
 
   COLLIDE_REDUCE reduce;
 
-  if (subcellflag == 1) {
-    if (ambiflag)
-      error->all(FLERR,"Subcell collisions with ambipolar not yet supported with Kokkos");
-    else {
-      if (mydim == 2) collisions_one_subcell<2>(reduce);
-      else collisions_one_subcell<3>(reduce);
+  if (!ambiflag) {
+    if (!nearcp) {
+      if (!ngas_tally) {
+        collisions_one<0,0>(reduce);
+      } else if (ngas_tally) {
+        collisions_one<0,1>(reduce);
+      }
+    } else if (nearcp) {
+      if (!ngas_tally) {
+        collisions_one<1,0>(reduce);
+      } else if (ngas_tally) {
+        collisions_one<1,1>(reduce);
+      }
     }
-  } 
-  else {
-    if (!ambiflag) {
-      if (nearcp == 0)
-        collisions_one<0>(reduce);
-      else
-        collisions_one<1>(reduce);
-    } else {
-      collisions_one_ambipolar(reduce);
+  } else if (ambiflag) {
+    if (!ngas_tally) {
+      collisions_one_ambipolar<0>(reduce);
+    } else if (!ngas_tally) {
+      collisions_one_ambipolar<1>(reduce);
     }
   }
+
   // remove any particles deleted in chemistry reactions
   // if particles deleted/created by chemistry, particles are no longer sorted
 
@@ -466,29 +475,28 @@ void CollideVSSKokkos::collisions()
    NTC algorithm for a single group
 ------------------------------------------------------------------------- */
 
-template < int NEARCP > void CollideVSSKokkos::collisions_one(COLLIDE_REDUCE &reduce)
+template < int NEARCP, int GASTALLY > void CollideVSSKokkos::collisions_one(COLLIDE_REDUCE &reduce)
 {
   // loop over cells I own
+
+  this->sync(Device,ALL_MASK);
 
   ParticleKokkos* particle_kk = (ParticleKokkos*) particle;
   particle_kk->sync(Device,PARTICLE_MASK|SPECIES_MASK);
   if (vibstyle == DISCRETE) particle_kk->sync(Device,CUSTOM_MASK);
-  d_particles = particle_kk->k_particles.d_view;
-  d_species = particle_kk->k_species.d_view;
-  d_ewhich = particle_kk->k_ewhich.d_view;
+  d_particles = particle_kk->k_particles.view_device();
+  d_species = particle_kk->k_species.view_device();
+  d_ewhich = particle_kk->k_ewhich.view_device();
   k_eiarray = particle_kk->k_eiarray;
 
   GridKokkos* grid_kk = (GridKokkos*) grid;
   grid_kk->sync(Device,CINFO_MASK);
   d_plist = grid_kk->d_plist;
 
-  grid_kk_copy.copy(grid_kk);
-
   if (react) {
     ReactTCEKokkos* react_kk = (ReactTCEKokkos*) react;
     if (!react_kk)
       error->all(FLERR,"Must use TCE reactions with Kokkos");
-    react_kk_copy.copy(react_kk);
   }
 
   copymode = 1;
@@ -521,13 +529,13 @@ template < int NEARCP > void CollideVSSKokkos::collisions_one(COLLIDE_REDUCE &re
     if (d_dellist.extent(0) < maxdelete_extra) {
       memoryKK->destroy_kokkos(k_dellist,dellist);
       memoryKK->create_kokkos(k_dellist,dellist,maxdelete_extra,"collide:dellist");
-      d_dellist = k_dellist.d_view;
+      d_dellist = k_dellist.view_device();
     }
 
     maxcellcount = particle_kk->get_maxcellcount();
     auto maxcellcount_extra = maxcellcount*extra_factor;
     if (d_plist.extent(1) < maxcellcount_extra) {
-      d_plist = decltype(d_plist)();
+      d_plist = {};
       Kokkos::resize(grid_kk->d_plist,nglocal,maxcellcount_extra);
       d_plist = grid_kk->d_plist;
       if (NEARCP)
@@ -537,7 +545,7 @@ template < int NEARCP > void CollideVSSKokkos::collisions_one(COLLIDE_REDUCE &re
     auto nlocal_extra = particle->nlocal*extra_factor;
     if (d_particles.extent(0) < nlocal_extra) {
       particle->grow(nlocal_extra - particle->nlocal);
-      d_particles = particle_kk->k_particles.d_view;
+      d_particles = particle_kk->k_particles.view_device();
       k_eiarray = particle_kk->k_eiarray;
     }
   }
@@ -556,21 +564,27 @@ template < int NEARCP > void CollideVSSKokkos::collisions_one(COLLIDE_REDUCE &re
 
     Kokkos::deep_copy(d_scalars,h_scalars);
 
+    grid_kk_copy.copy(grid_kk);
+    if (react) {
+      ReactTCEKokkos* react_kk = (ReactTCEKokkos*) react;
+      react_kk_copy.copy(react_kk);
+    }
+
     if (sparta->kokkos->atomic_reduction) {
       if (sparta->kokkos->need_atomics)
-        Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagCollideCollisionsOne<NEARCP,1> >(0,nglocal),*this);
+        Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagCollideCollisionsOne<NEARCP,GASTALLY,1> >(0,nglocal),*this);
       else
-        Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagCollideCollisionsOne<NEARCP,0> >(0,nglocal),*this);
+        Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagCollideCollisionsOne<NEARCP,GASTALLY,0> >(0,nglocal),*this);
     } else
-      Kokkos::parallel_reduce(Kokkos::RangePolicy<DeviceType, TagCollideCollisionsOne<NEARCP,-1> >(0,nglocal),*this,reduce);
+      Kokkos::parallel_reduce(Kokkos::RangePolicy<DeviceType, TagCollideCollisionsOne<NEARCP,GASTALLY,-1> >(0,nglocal),*this,reduce);
 
     Kokkos::deep_copy(h_scalars,d_scalars);
 
     if (h_retry()) {
       //printf("Retrying, reason %i %i %i !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n",h_maxdelete() > d_dellist.extent(0),h_maxcellcount() > d_plist.extent(1),h_part_grow());
       if (!sparta->kokkos->react_retry_flag) {
-        error->one(FLERR,"Ran out of space in Kokkos collisions, increase collide/extra"
-                         " or use collide/retry");
+        error->one(FLERR,"Ran out of space in Kokkos collisions, increase react/extra"
+                         " or use react/retry");
       } else
         restore();
 
@@ -580,13 +594,13 @@ template < int NEARCP > void CollideVSSKokkos::collisions_one(COLLIDE_REDUCE &re
       if (d_dellist.extent(0) < maxdelete) {
         memoryKK->destroy_kokkos(k_dellist,dellist);
         memoryKK->grow_kokkos(k_dellist,dellist,maxdelete,"collide:dellist");
-        d_dellist = k_dellist.d_view;
+        d_dellist = k_dellist.view_device();
       }
 
       maxcellcount = h_maxcellcount();
       particle_kk->set_maxcellcount(maxcellcount);
       if (d_plist.extent(1) < maxcellcount) {
-        d_plist = decltype(d_plist)();
+        d_plist = {};
         Kokkos::resize(grid_kk->d_plist,nglocal,maxcellcount);
         d_plist = grid_kk->d_plist;
       }
@@ -594,7 +608,7 @@ template < int NEARCP > void CollideVSSKokkos::collisions_one(COLLIDE_REDUCE &re
       auto nlocal_new = h_nlocal();
       if (d_particles.extent(0) < nlocal_new) {
         particle->grow(nlocal_new - particle->nlocal);
-        d_particles = particle_kk->k_particles.d_view;
+        d_particles = particle_kk->k_particles.view_device();
         k_eiarray = particle_kk->k_eiarray;
       }
     }
@@ -609,11 +623,13 @@ template < int NEARCP > void CollideVSSKokkos::collisions_one(COLLIDE_REDUCE &re
   if (h_error_flag())
     error->one(FLERR,"Collision cell volume is zero");
 
+  this->modified(Device,ALL_MASK);
   particle_kk->modify(Device,PARTICLE_MASK);
+  if (vibstyle == DISCRETE) particle_kk->modify(Device,CUSTOM_MASK);
 
   d_particles = t_particle_1d(); // destroy reference to reduce memory use
-  d_nn_last_partner = decltype(d_nn_last_partner)();
-  d_plist = decltype(d_nn_last_partner)();
+  d_nn_last_partner = {};
+  d_plist = {};
 }
 
 KOKKOS_INLINE_FUNCTION
@@ -623,16 +639,16 @@ void CollideVSSKokkos::operator()(TagCollideZeroNN, const int &icell) const {
     d_nn_last_partner(icell,i) = 0;
 }
 
-template < int NEARCP, int ATOMIC_REDUCTION >
+template < int NEARCP, int GASTALLY, int ATOMIC_REDUCTION >
 KOKKOS_INLINE_FUNCTION
-void CollideVSSKokkos::operator()(TagCollideCollisionsOne< NEARCP, ATOMIC_REDUCTION >, const int &icell) const {
+void CollideVSSKokkos::operator()(TagCollideCollisionsOne< NEARCP, GASTALLY, ATOMIC_REDUCTION >, const int &icell) const {
   COLLIDE_REDUCE reduce;
-  this->template operator()< NEARCP, ATOMIC_REDUCTION >(TagCollideCollisionsOne< NEARCP, ATOMIC_REDUCTION >(), icell, reduce);
+  this->template operator()< NEARCP, GASTALLY, ATOMIC_REDUCTION >(TagCollideCollisionsOne< NEARCP, GASTALLY, ATOMIC_REDUCTION >(), icell, reduce);
 }
 
-template < int NEARCP, int ATOMIC_REDUCTION >
+template < int NEARCP, int GASTALLY, int ATOMIC_REDUCTION >
 KOKKOS_INLINE_FUNCTION
-void CollideVSSKokkos::operator()(TagCollideCollisionsOne< NEARCP, ATOMIC_REDUCTION >, const int &icell, COLLIDE_REDUCE &reduce) const {
+void CollideVSSKokkos::operator()(TagCollideCollisionsOne< NEARCP, GASTALLY, ATOMIC_REDUCTION >, const int &icell, COLLIDE_REDUCE &reduce) const {
   if (d_retry()) return;
 
   int np = grid_kk_copy.obj.d_cellcount[icell];
@@ -643,7 +659,7 @@ void CollideVSSKokkos::operator()(TagCollideCollisionsOne< NEARCP, ATOMIC_REDUCT
       d_nn_last_partner(icell,i) = 0;
   }
 
-  const double volume = grid_kk_copy.obj.k_cinfo.d_view[icell].volume / grid_kk_copy.obj.k_cinfo.d_view[icell].weight;
+  const double volume = grid_kk_copy.obj.k_cinfo.view_device()[icell].volume / grid_kk_copy.obj.k_cinfo.view_device()[icell].weight;
   if (volume == 0.0) d_error_flag() = 1;
 
   struct State precoln;       // state before collision
@@ -723,6 +739,14 @@ void CollideVSSKokkos::operator()(TagCollideCollisionsOne< NEARCP, ATOMIC_REDUCT
     }
 
     // perform collision and possible reaction
+    // if GASTALLY: tally prep with iorig/jorig, then trigger tally
+
+    Particle::OnePart iorig,jorig;
+
+    if (GASTALLY) {
+      iorig = *ipart;
+      jorig = *jpart;
+    }
 
     int index_kpart;
 
@@ -731,15 +755,20 @@ void CollideVSSKokkos::operator()(TagCollideCollisionsOne< NEARCP, ATOMIC_REDUCT
                                                    recomb_part3,recomb_species,recomb_density,index_kpart);
 
     if (ATOMIC_REDUCTION == 1)
-      Kokkos::atomic_increment(&d_ncollide_one());
+      Kokkos::atomic_inc(&d_ncollide_one());
     else if (ATOMIC_REDUCTION == 0)
       d_ncollide_one()++;
     else
       reduce.ncollide_one++;
 
+    //if (GASTALLY)
+    //  for (int m = 0; m < ngas_tally; m++)
+    //    glist_active[m]->gas_tally(icell,reactflag,
+    //                               &iorig,&jorig,ipart,jpart,kpart); //////
+
     if (reactflag) {
       if (ATOMIC_REDUCTION == 1)
-        Kokkos::atomic_increment(&d_nreact_one());
+        Kokkos::atomic_inc(&d_nreact_one());
       else if (ATOMIC_REDUCTION == 0)
         d_nreact_one()++;
       else
@@ -786,525 +815,41 @@ void CollideVSSKokkos::operator()(TagCollideCollisionsOne< NEARCP, ATOMIC_REDUCT
 
     }
   }
+
   rand_pool.free_state(rand_gen);
 }
-
-
-/* ----------------------------------------------------------------------
-   NTC algorithm for a single group with subcell method
-------------------------------------------------------------------------- */
-
-template < int DIM > void CollideVSSKokkos::collisions_one_subcell(COLLIDE_REDUCE &reduce)
-{
-  // loop over cells I own
-
-  ParticleKokkos* particle_kk = (ParticleKokkos*) particle;
-  particle_kk->sync(Device,PARTICLE_MASK|SPECIES_MASK);
-  if (vibstyle == DISCRETE) particle_kk->sync(Device,CUSTOM_MASK);
-  d_particles = particle_kk->k_particles.d_view;
-  d_species = particle_kk->k_species.d_view;
-  d_ewhich = particle_kk->k_ewhich.d_view;
-  k_eiarray = particle_kk->k_eiarray;
-
-  GridKokkos* grid_kk = (GridKokkos*) grid;
-  grid_kk->sync(Device,CINFO_MASK);
-  d_plist = grid_kk->d_plist;
-
-  grid_kk_copy.copy(grid_kk);
-
-  if (react) {
-    ReactTCEKokkos* react_kk = (ReactTCEKokkos*) react;
-    if (!react_kk)
-      error->all(FLERR,"Must use TCE reactions with Kokkos");
-    react_kk_copy.copy(react_kk);
-  }
-
-  copymode = 1;
-
-  if (int(d_subcell_count.extent(0)) < nglocal || int(d_subcell_count.extent(1)) < d_plist.extent(1)) {
-    d_subcell_list     = DAT::t_int_3d(Kokkos::view_alloc("collide:subcell_list",    Kokkos::WithoutInitializing),nglocal,d_plist.extent(1),d_plist.extent(1));
-    d_subcell_IDlist   = DAT::t_int_2d(Kokkos::view_alloc("collide:subcell_IDlist",  Kokkos::WithoutInitializing),nglocal,d_plist.extent(1));
-    d_subcell_ID_ilist = DAT::t_int_2d(Kokkos::view_alloc("collide:subcell_ID_ilist",Kokkos::WithoutInitializing),nglocal,d_plist.extent(1));
-    d_subcell_ID_jlist = DAT::t_int_2d(Kokkos::view_alloc("collide:subcell_ID_jlist",Kokkos::WithoutInitializing),nglocal,d_plist.extent(1));
-    d_subcell_ID_klist = DAT::t_int_2d(Kokkos::view_alloc("collide:subcell_ID_klist",Kokkos::WithoutInitializing),nglocal,d_plist.extent(1));
-    d_subcell_count    = DAT::t_int_2d(Kokkos::view_alloc("collide:subcell_count",   Kokkos::WithoutInitializing),nglocal,d_plist.extent(1));
-    d_neighbor_cells   = DAT::t_int_2d(Kokkos::view_alloc("collide:neighbor_cells",  Kokkos::WithoutInitializing),nglocal,d_plist.extent(1));
-  }
-
-  // ATOMIC_REDUCTION: 1 = use atomics
-  //                   0 = don't need atomics
-  //                  -1 = use parallel_reduce
-  //
-
-  // Reactions may create or delete more particles than existing views can hold.
-  //  Cannot grow a Kokkos view in a parallel loop, so
-  //  if the capacity of the view is exceeded, break out of parallel loop,
-  //  reallocate on the host, and then repeat the parallel loop again.
-  //  Unfortunately this leads to really messy code.
-
-  h_retry() = 1;
-
-  double extra_factor = sparta->kokkos->collide_extra;
-  if (sparta->kokkos->collide_retry_flag) extra_factor = 1.0;
-
-  if (react) {
-    auto maxdelete_extra = maxdelete*extra_factor;
-    if (d_dellist.extent(0) < maxdelete_extra) {
-      memoryKK->destroy_kokkos(k_dellist,dellist);
-      memoryKK->create_kokkos(k_dellist,dellist,maxdelete_extra,"collide:dellist");
-      d_dellist = k_dellist.d_view;
-    }
-
-    maxcellcount = particle_kk->get_maxcellcount();
-    auto maxcellcount_extra = maxcellcount*extra_factor;
-    if (d_plist.extent(1) < maxcellcount_extra) {
-      Kokkos::resize(grid_kk->d_plist,nglocal,maxcellcount_extra);
-      d_plist = grid_kk->d_plist;
-      d_subcell_list =     DAT::t_int_3d(Kokkos::view_alloc("collide:subcell_list",    Kokkos::WithoutInitializing),nglocal,maxcellcount_extra,maxcellcount_extra);
-      d_subcell_IDlist =   DAT::t_int_2d(Kokkos::view_alloc("collide:subcell_IDlist",  Kokkos::WithoutInitializing),nglocal,maxcellcount_extra);
-      d_subcell_ID_ilist = DAT::t_int_2d(Kokkos::view_alloc("collide:subcell_ID_ilist",Kokkos::WithoutInitializing),nglocal,maxcellcount_extra);
-      d_subcell_ID_jlist = DAT::t_int_2d(Kokkos::view_alloc("collide:subcell_ID_jlist",Kokkos::WithoutInitializing),nglocal,maxcellcount_extra);
-      d_subcell_ID_klist = DAT::t_int_2d(Kokkos::view_alloc("collide:subcell_ID_klist",Kokkos::WithoutInitializing),nglocal,maxcellcount_extra);
-      d_subcell_count =    DAT::t_int_2d(Kokkos::view_alloc("collide:subcell_count",   Kokkos::WithoutInitializing),nglocal,maxcellcount_extra);
-      d_neighbor_cells =   DAT::t_int_2d(Kokkos::view_alloc("collide:neighbor_cells",  Kokkos::WithoutInitializing),nglocal,maxcellcount_extra);
-    }
-
-    auto nlocal_extra = particle->nlocal*extra_factor;
-    if (d_particles.extent(0) < nlocal_extra) {
-      particle->grow(nlocal_extra - particle->nlocal);
-      d_particles = particle_kk->k_particles.d_view;
-      k_eiarray = particle_kk->k_eiarray;
-    }
-  }
-
-  while (h_retry()) {
-
-    if (react && sparta->kokkos->collide_retry_flag)
-      backup();
-
-    h_retry() = 0;
-    h_maxdelete() = maxdelete;
-    h_maxcellcount() = maxcellcount;
-    h_part_grow() = 0;
-    h_ndelete() = 0;
-    h_nlocal() = particle->nlocal;
-
-    Kokkos::deep_copy(d_scalars,h_scalars);
-
-    if (sparta->kokkos->atomic_reduction) {
-      if (sparta->kokkos->need_atomics)
-        Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagCollideCollisionsOneSubcell<DIM,1> >(0,nglocal),*this);
-      else
-        Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagCollideCollisionsOneSubcell<DIM,0> >(0,nglocal),*this);
-    } else
-      Kokkos::parallel_reduce(Kokkos::RangePolicy<DeviceType, TagCollideCollisionsOneSubcell<DIM,-1> >(0,nglocal),*this,reduce);
-
-    Kokkos::deep_copy(h_scalars,d_scalars);
-
-    if (h_retry()) {
-  
-      if (!sparta->kokkos->collide_retry_flag) {
-        error->one(FLERR,"Ran out of space in Kokkos collisions, increase collide/extra"
-                         " or use collide/retry");
-      } else
-        restore();
-
-      reduce = COLLIDE_REDUCE();
-
-      maxdelete = h_maxdelete();
-      auto maxdelete_extra = maxdelete*extra_factor;
-      if (d_dellist.extent(0) < maxdelete_extra) {
-        memoryKK->destroy_kokkos(k_dellist,dellist);
-        memoryKK->grow_kokkos(k_dellist,dellist,maxdelete_extra,"collide:dellist");
-        d_dellist = k_dellist.d_view;
-      }
-
-      maxcellcount = h_maxcellcount();
-      particle_kk->set_maxcellcount(maxcellcount);
-      auto maxcellcount_extra = maxcellcount*extra_factor;
-      if (d_plist.extent(1) < maxcellcount_extra) {
-        Kokkos::resize(grid_kk->d_plist,nglocal,maxcellcount_extra);
-        d_plist = grid_kk->d_plist;
-      }
-
-      auto nlocal_extra = h_nlocal()*extra_factor;
-      if (d_particles.extent(0) < nlocal_extra) {
-        particle->grow(nlocal_extra - particle->nlocal);
-        d_particles = particle_kk->k_particles.d_view;
-        k_eiarray = particle_kk->k_eiarray;
-      }
-    }
-  }
-
-  ndelete = h_ndelete();
-
-  particle->nlocal = h_nlocal();
-
-  DeviceType().fence();
-  copymode = 0;
-
-  if (h_error_flag())
-    error->one(FLERR,"Collision cell volume is zero");
-
-  particle_kk->modify(Device,PARTICLE_MASK);
-
-  d_particles = t_particle_1d(); // destroy reference to reduce memory use
-}
-
-template < int DIM, int ATOMIC_REDUCTION >
-KOKKOS_INLINE_FUNCTION
-void CollideVSSKokkos::operator()(TagCollideCollisionsOneSubcell< DIM, ATOMIC_REDUCTION >, const int &icell) const {
-  COLLIDE_REDUCE reduce;
-  this->template operator()< DIM, ATOMIC_REDUCTION >(TagCollideCollisionsOneSubcell< DIM, ATOMIC_REDUCTION >(), icell, reduce); 
-}
-
-template < int DIM, int ATOMIC_REDUCTION >
-KOKKOS_INLINE_FUNCTION
-void CollideVSSKokkos::operator()(TagCollideCollisionsOneSubcell< DIM, ATOMIC_REDUCTION >, const int &icell, COLLIDE_REDUCE &reduce) const {
-  if (d_retry()) return;
-
-  int np = grid_kk_copy.obj.d_cellcount[icell];
-  if (np <= 1) return;
-
-  const double volume = grid_kk_copy.obj.k_cinfo.d_view[icell].volume / grid_kk_copy.obj.k_cinfo.d_view[icell].weight;
-  if (volume == 0.0) d_error_flag() = 1;
-
-  struct State precoln;       // state before collision
-  struct State postcoln;      // state after collision
-
-  rand_type rand_gen = rand_pool.get_state();
-
-  // attempt = exact collision attempt count for a pair of groups
-  // nattempt = rounded attempt with RN
-
-  const double attempt = attempt_collision_kokkos(icell,np,volume,rand_gen);
-  const int nattempt = static_cast<int> (attempt);
-  if (!nattempt){
-    rand_pool.free_state(rand_gen);
-    return;
-  }
-  if (ATOMIC_REDUCTION == 1)
-    Kokkos::atomic_add(&d_nattempt_one(),nattempt);
-  else if (ATOMIC_REDUCTION == 0)
-    d_nattempt_one() += nattempt;
-  else
-    reduce.nattempt_one += nattempt;
-
-  int nsubcell_bydim, nscbd_sq;
-  int curr_subcell, isubcell, final_subcell;
-  int partner_count, temp_ctr;
-  int ibox,jbox,kbox,adj_ibox,adj_jbox,adj_kbox,radius;
-  int jj,jj_new;
-  double c_lo_x, c_lo_y, c_lo_z, oodx, oody, oodz;
-  double dim_inv;
-  if (DIM == 2) dim_inv = 1./2.;
-  else dim_inv = 1./3.;
-
-  // grab cell boundares for defining subgrid
-  nsubcell_bydim = (int)(pow((double)np, dim_inv));
-  nscbd_sq = nsubcell_bydim * nsubcell_bydim;
-  Grid::ChildCell *cells = grid->cells;
-  c_lo_x = cells[icell].lo[0];
-  c_lo_y = cells[icell].lo[1];
-  c_lo_z = cells[icell].lo[2];
-  oodx = ((double)nsubcell_bydim) / (cells[icell].hi[0] - c_lo_x);
-  oody = ((double)nsubcell_bydim) / (cells[icell].hi[1] - c_lo_y);
-  oodz = ((double)nsubcell_bydim) / (cells[icell].hi[2] - c_lo_z);
-
-  for (int tp = 0; tp < np; tp++) {
-    d_subcell_count(icell,tp) = 0;
-  }
-
-  // create subcell structure
-  for (int tp = 0; tp < np; tp++) {
-    int x_id, y_id, z_id;
-
-    x_id = (int)(((&d_particles[d_plist(icell,tp)])->x[0]-c_lo_x)*oodx); d_subcell_ID_ilist(icell,tp) = x_id;
-    y_id = (int)(((&d_particles[d_plist(icell,tp)])->x[1]-c_lo_y)*oody); d_subcell_ID_jlist(icell,tp) = y_id;
-    z_id = 0;
-    if (DIM == 3) {
-      z_id = (int)(((&d_particles[d_plist(icell,tp)])->x[2]-c_lo_z)*oodz);
-      d_subcell_ID_klist(icell,tp) = z_id;
-    }
-    curr_subcell = nscbd_sq*z_id + nsubcell_bydim*y_id + x_id;
-    d_subcell_IDlist(icell,tp) = curr_subcell;
-    d_subcell_list(icell,curr_subcell, d_subcell_count(icell,curr_subcell)) = tp;
-    d_subcell_count(icell,curr_subcell)++;
-  }
-
-  // perform collisions
-  // select random pair of particles, cannot be same
-  // test if collision actually occurs
-
-  for (int m = 0; m < nattempt; m++) {
-    const int i = np * rand_gen.drand();
-    int j;
-    // subcell ID for particle i
-    isubcell = d_subcell_IDlist(icell,i);
-
-    // radius == 0 case
-    final_subcell = isubcell;
-    partner_count = d_subcell_count(icell, final_subcell);
-    if (partner_count >= 2) {
-      j = d_subcell_list(icell, final_subcell, int(partner_count*rand_gen.drand()));
-      while (j == i) {
-        j = d_subcell_list(icell, final_subcell, int(partner_count*rand_gen.drand()));
-      }
-    }
-    // radius >= 1 case
-    else {
-      if (DIM == 2) {
-        ibox = d_subcell_ID_ilist(icell, i);
-        jbox = d_subcell_ID_jlist(icell, i);
-
-        radius=1;
-        while (radius < nsubcell_bydim) {
-          partner_count = 0;
-          temp_ctr = 0;
-
-          // 2-D looping over neighbors
-          for (int adj_i = -radius; adj_i <= radius; adj_i++) {
-            adj_ibox = ibox + adj_i;
-            // Bottom
-            adj_jbox = jbox - radius;
-            if (0 <= adj_ibox && adj_ibox < nsubcell_bydim && 0 <= adj_jbox && adj_jbox < nsubcell_bydim) {
-              d_neighbor_cells(icell, temp_ctr++) = nsubcell_bydim*adj_jbox + adj_ibox;
-            }
-            // Top
-            adj_jbox = jbox + radius;
-            if (0 <= adj_ibox && adj_ibox < nsubcell_bydim && 0 <= adj_jbox && adj_jbox < nsubcell_bydim) {
-              d_neighbor_cells(icell, temp_ctr++) = nsubcell_bydim*adj_jbox + adj_ibox;
-            }
-          }
-          for (int adj_j = -radius+1; adj_j <= radius-1; adj_j++) {
-            adj_jbox = jbox + adj_j;
-            // Left
-            adj_ibox = ibox - radius;
-            if (0 <= adj_ibox && adj_ibox < nsubcell_bydim && 0 <= adj_jbox && adj_jbox < nsubcell_bydim) {
-              d_neighbor_cells(icell, temp_ctr++) = nsubcell_bydim*adj_jbox + adj_ibox;
-            }
-            // Right
-            adj_ibox = ibox + radius;
-            if (0 <= adj_ibox && adj_ibox < nsubcell_bydim && 0 <= adj_jbox && adj_jbox < nsubcell_bydim) {
-              d_neighbor_cells(icell, temp_ctr++) = nsubcell_bydim*adj_jbox + adj_ibox;
-            }
-          }
-          // looking for partner at this radius
-          // if good, leave. if not, radius++
-          for (int tc = 0; tc < temp_ctr; tc++) {
-            partner_count += d_subcell_count(icell, d_neighbor_cells(icell,tc));
-          }
-          if (partner_count == 0) radius++;
-          else break;
-        }
-      }
-      else if (DIM == 3) {
-        ibox = d_subcell_ID_ilist(icell, i);
-        jbox = d_subcell_ID_jlist(icell, i);
-        kbox = d_subcell_ID_klist(icell, i);
-        radius=1;
-        while (radius < nsubcell_bydim) {
-          partner_count = 0;
-          temp_ctr = 0;
-
-          // 3-D looping over neighbors
-          for (int adj_i = -radius; adj_i <= radius; adj_i++) {
-            adj_ibox = ibox + adj_i;
-            for (int adj_j = -radius; adj_j <= radius; adj_j++) {
-              adj_jbox = jbox + adj_j;
-              // Bottom
-              adj_kbox = kbox - radius;
-              if (0 <= adj_ibox && adj_ibox < nsubcell_bydim && 0 <= adj_jbox && adj_jbox < nsubcell_bydim && 0 <= adj_kbox && adj_kbox < nsubcell_bydim) {
-                d_neighbor_cells(icell, temp_ctr++) = nsubcell_bydim*(nsubcell_bydim*adj_kbox + adj_jbox) + adj_ibox;
-              }
-              // Top
-              adj_kbox = kbox + radius;
-              if (0 <= adj_ibox && adj_ibox < nsubcell_bydim && 0 <= adj_jbox && adj_jbox < nsubcell_bydim && 0 <= adj_kbox && adj_kbox < nsubcell_bydim) {
-                d_neighbor_cells(icell, temp_ctr++) = nsubcell_bydim*(nsubcell_bydim*adj_kbox + adj_jbox) + adj_ibox;
-              }
-            }
-            for (int adj_k = -radius+1; adj_k <= radius-1; adj_k++) {
-              adj_kbox = kbox + adj_k;
-              // Front
-              adj_jbox = jbox - radius;
-              if (0 <= adj_ibox && adj_ibox < nsubcell_bydim && 0 <= adj_jbox && adj_jbox < nsubcell_bydim && 0 <= adj_kbox && adj_kbox < nsubcell_bydim) {
-                d_neighbor_cells(icell, temp_ctr++) = nsubcell_bydim*(nsubcell_bydim*adj_kbox + adj_jbox) + adj_ibox;
-              }
-              // Back
-              adj_jbox = jbox + radius;
-              if (0 <= adj_ibox && adj_ibox < nsubcell_bydim && 0 <= adj_jbox && adj_jbox < nsubcell_bydim && 0 <= adj_kbox && adj_kbox < nsubcell_bydim) {
-                d_neighbor_cells(icell, temp_ctr++) = nsubcell_bydim*(nsubcell_bydim*adj_kbox + adj_jbox) + adj_ibox;
-              }
-            }
-          }
-          for (int adj_j = -radius+1; adj_j <= radius-1; adj_j++) {
-            adj_jbox = jbox + adj_j;
-            for (int adj_k = -radius+1; adj_k <= radius-1; adj_k++) {
-              adj_kbox = kbox + adj_k;
-              // Left
-              adj_ibox = ibox - radius;
-              if (0 <= adj_ibox && adj_ibox < nsubcell_bydim && 0 <= adj_jbox && adj_jbox < nsubcell_bydim && 0 <= adj_kbox && adj_kbox < nsubcell_bydim) {
-                d_neighbor_cells(icell, temp_ctr++) = nsubcell_bydim*(nsubcell_bydim*adj_kbox + adj_jbox) + adj_ibox;
-              }
-              // Right
-              adj_ibox = ibox + radius;
-              if (0 <= adj_ibox && adj_ibox < nsubcell_bydim && 0 <= adj_jbox && adj_jbox < nsubcell_bydim && 0 <= adj_kbox && adj_kbox < nsubcell_bydim) {
-                d_neighbor_cells(icell, temp_ctr++) = nsubcell_bydim*(nsubcell_bydim*adj_kbox + adj_jbox) + adj_ibox;
-              }
-            }
-          }
-
-          // looking for partner at this radius
-          // if good, leave. if not, radius++
-          for (int tc = 0; tc < temp_ctr; tc++) {
-            partner_count = partner_count + d_subcell_count(icell, d_neighbor_cells(icell, tc));
-          }
-          if (partner_count == 0) radius++;
-          else break;
-        }
-      }
-
-      // We have a valid list of partners - select one randomly
-      jj = partner_count * rand_gen.drand();
-      for (int tc = 0; tc < temp_ctr; tc++) {
-        jj_new = jj - d_subcell_count(icell, int(d_neighbor_cells(icell, tc)));
-        if (jj_new < 0) {
-          final_subcell = d_neighbor_cells(icell, tc);
-          break;
-        }
-        else jj = jj_new;
-      }
-      j = d_subcell_list(icell, final_subcell, jj);
-    }
-
-    Particle::OnePart* ipart = &d_particles[d_plist(icell,i)];
-    Particle::OnePart* jpart = &d_particles[d_plist(icell,j)];
-    Particle::OnePart* kpart;
-
-    // test if collision actually occurs, then perform it
-    // ijspecies = species before collision chemistry
-    // continue to next collision if no reaction
-
-    if (!test_collision_kokkos(icell,0,0,ipart,jpart,precoln,rand_gen)) continue;
-
-    // if recombination reaction is possible for this IJ pair
-    // pick a 3rd particle to participate and set cell number density
-    // unless boost factor turns it off, or there is no 3rd particle
-
-    Particle::OnePart* recomb_part3 = NULL;
-    int recomb_species = -1;
-    double recomb_density = 0.0;
-    if (recombflag && d_recomb_ijflag(ipart->ispecies,jpart->ispecies)) {
-      if (rand_gen.drand() > recomb_boost_inverse)
-        recomb_species = -1;
-      else if (np <= 2)
-        recomb_species = -1;
-      else {
-        int k = np * rand_gen.drand();
-        while (k == i || k == j) k = np * rand_gen.drand();
-        recomb_part3 = &d_particles[d_plist(icell,k)];
-        recomb_species = recomb_part3->ispecies;
-        recomb_density = np * fnum / volume;
-      }
-    }
-
-    // perform collision and possible reaction
-
-    int index_kpart;
-
-    setup_collision_kokkos(ipart,jpart,precoln,postcoln);
-    const int reactflag = perform_collision_kokkos(ipart,jpart,kpart,precoln,postcoln,rand_gen,
-                                                   recomb_part3,recomb_species,recomb_density,index_kpart);
-
-    if (ATOMIC_REDUCTION == 1)
-      Kokkos::atomic_increment(&d_ncollide_one());
-    else if (ATOMIC_REDUCTION == 0)
-      d_ncollide_one()++;
-    else
-      reduce.ncollide_one++;
-
-    if (reactflag) {
-      if (ATOMIC_REDUCTION == 1)
-        Kokkos::atomic_increment(&d_nreact_one());
-      else if (ATOMIC_REDUCTION == 0)
-        d_nreact_one()++;
-      else
-        reduce.nreact_one++;
-    } else {
-      rand_pool.free_state(rand_gen);
-      continue;
-    }
-
-    // if jpart destroyed, delete from plist
-    // also add particle to deletion list
-    // exit attempt loop if only single particle left
-
-    if (!jpart) {
-      int ndelete = Kokkos::atomic_fetch_add(&d_ndelete(),1);
-      if (ndelete < d_dellist.extent(0)) {
-        d_dellist(ndelete) = d_plist(icell,j);
-      } else {
-        d_retry() = 1;
-        d_maxdelete() += DELTADELETE;
-        rand_pool.free_state(rand_gen);
-        return;
-      }
-      np--;
-      d_plist(icell,j) = d_plist(icell,np);
-      if (np < 2) break;
-    }
-
-    // if kpart created, add to plist
-    // kpart was just added to particle list, so index = nlocal-1
-    // particle data structs may have been realloced by kpart
-
-    if (kpart) {
-      if (np < d_plist.extent(1)) {
-        d_plist(icell,np++) = index_kpart;
-      } else {
-        d_retry() = 1;
-        d_maxcellcount() += DELTACELLCOUNT;
-        rand_pool.free_state(rand_gen);
-        return;
-      }
-
-    }
-  }
-  rand_pool.free_state(rand_gen);
-}  
-
 
 /* ----------------------------------------------------------------------
    NTC algorithm for a single group with ambipolar approximation
 ------------------------------------------------------------------------- */
 
+template < int GASTALLY >
 void CollideVSSKokkos::collisions_one_ambipolar(COLLIDE_REDUCE &reduce)
 {
   // ambipolar vectors
 
+  this->sync(Device,ALL_MASK);
+
   ParticleKokkos* particle_kk = (ParticleKokkos*) particle;
   particle_kk->sync(Device,PARTICLE_MASK|SPECIES_MASK|CUSTOM_MASK);
-  d_particles = particle_kk->k_particles.d_view;
-  d_species = particle_kk->k_species.d_view;
-  d_ewhich = particle_kk->k_ewhich.d_view;
-  auto h_ewhich = particle_kk->k_ewhich.h_view;
+  d_particles = particle_kk->k_particles.view_device();
+  d_species = particle_kk->k_species.view_device();
+  d_ewhich = particle_kk->k_ewhich.view_device();
+  auto h_ewhich = particle_kk->k_ewhich.view_host();
   k_eivec = particle_kk->k_eivec;
   k_eiarray = particle_kk->k_eiarray;
   k_edarray = particle_kk->k_edarray;
-  d_ionambi = k_eivec.h_view[h_ewhich[index_ionambi]].k_view.d_view;
-  d_velambi = k_edarray.h_view[h_ewhich[index_velambi]].k_view.d_view;
+  d_ionambi = k_eivec.view_host()[h_ewhich[index_ionambi]].k_view.view_device();
+  d_velambi = k_edarray.view_host()[h_ewhich[index_velambi]].k_view.view_device();
 
   GridKokkos* grid_kk = (GridKokkos*) grid;
   grid_kk->sync(Device,CINFO_MASK);
   d_plist = grid_kk->d_plist;
 
-  grid_kk_copy.copy(grid_kk);
-
   if (react) {
     ReactTCEKokkos* react_kk = (ReactTCEKokkos*) react;
     if (!react_kk)
       error->all(FLERR,"Must use TCE reactions with Kokkos");
-    react_kk_copy.copy(react_kk);
   }
 
   copymode = 1;
@@ -1339,12 +884,12 @@ void CollideVSSKokkos::collisions_one_ambipolar(COLLIDE_REDUCE &reduce)
     if (d_dellist.extent(0) < maxdelete_extra) {
       memoryKK->destroy_kokkos(k_dellist,dellist);
       memoryKK->grow_kokkos(k_dellist,dellist,maxdelete_extra,"collide:dellist");
-      d_dellist = k_dellist.d_view;
+      d_dellist = k_dellist.view_device();
     }
 
     auto maxcellcount_extra = maxcellcount*extra_factor;
     if (d_plist.extent(1) < maxcellcount_extra) {
-      d_plist = decltype(d_plist)();
+      d_plist = {};
       Kokkos::resize(grid_kk->d_plist,nglocal,maxcellcount_extra);
       d_plist = grid_kk->d_plist;
     }
@@ -1352,13 +897,14 @@ void CollideVSSKokkos::collisions_one_ambipolar(COLLIDE_REDUCE &reduce)
     auto nlocal_extra = particle->nlocal*extra_factor;
     if (d_particles.extent(0) < nlocal_extra) {
       particle->grow(nlocal_extra - particle->nlocal);
-      d_particles = particle_kk->k_particles.d_view;
-      auto h_ewhich = particle_kk->k_ewhich.h_view;
+      particle_kk->sync(Device,PARTICLE_MASK|SPECIES_MASK|CUSTOM_MASK);
+      d_particles = particle_kk->k_particles.view_device();
+      auto h_ewhich = particle_kk->k_ewhich.view_host();
       k_eivec = particle_kk->k_eivec;
       k_eiarray = particle_kk->k_eiarray;
       k_edarray = particle_kk->k_edarray;
-      d_ionambi = k_eivec.h_view[h_ewhich[index_ionambi]].k_view.d_view;
-      d_velambi = k_edarray.h_view[h_ewhich[index_velambi]].k_view.d_view;
+      d_ionambi = k_eivec.view_host()[h_ewhich[index_ionambi]].k_view.view_device();
+      d_velambi = k_edarray.view_host()[h_ewhich[index_velambi]].k_view.view_device();
     }
   }
 
@@ -1377,13 +923,19 @@ void CollideVSSKokkos::collisions_one_ambipolar(COLLIDE_REDUCE &reduce)
 
     Kokkos::deep_copy(d_scalars,h_scalars);
 
+    grid_kk_copy.copy(grid_kk);
+    if (react) {
+      ReactTCEKokkos* react_kk = (ReactTCEKokkos*) react;
+      react_kk_copy.copy(react_kk);
+    }
+
     if (sparta->kokkos->atomic_reduction) {
       if (sparta->kokkos->need_atomics)
-        Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagCollideCollisionsOneAmbipolar<1> >(0,nglocal),*this);
+        Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagCollideCollisionsOneAmbipolar<GASTALLY,1> >(0,nglocal),*this);
       else
-        Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagCollideCollisionsOneAmbipolar<0> >(0,nglocal),*this);
+        Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagCollideCollisionsOneAmbipolar<GASTALLY,0> >(0,nglocal),*this);
     } else
-      Kokkos::parallel_reduce(Kokkos::RangePolicy<DeviceType, TagCollideCollisionsOneAmbipolar<-1> >(0,nglocal),*this,reduce);
+      Kokkos::parallel_reduce(Kokkos::RangePolicy<DeviceType, TagCollideCollisionsOneAmbipolar<GASTALLY,-1> >(0,nglocal),*this,reduce);
 
     Kokkos::deep_copy(h_scalars,d_scalars);
 
@@ -1392,8 +944,8 @@ void CollideVSSKokkos::collisions_one_ambipolar(COLLIDE_REDUCE &reduce)
       //printf("%i %i %i %i %i %i %i !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n",h_maxelectron(),d_elist.extent(1),h_maxdelete(),d_dellist.extent(0),h_maxcellcount(),d_plist.extent(1),h_part_grow());
 
       if (!sparta->kokkos->react_retry_flag) {
-        error->one(FLERR,"Ran out of space in Kokkos collisions, increase collide/extra"
-                         " or use collide/retry");
+        error->one(FLERR,"Ran out of space in Kokkos collisions, increase react/extra"
+                         " or use react/retry");
       } else
         restore();
 
@@ -1409,13 +961,13 @@ void CollideVSSKokkos::collisions_one_ambipolar(COLLIDE_REDUCE &reduce)
       if (d_dellist.extent(0) < maxdelete) {
         memoryKK->destroy_kokkos(k_dellist,dellist);
         memoryKK->grow_kokkos(k_dellist,dellist,maxdelete,"collide:dellist");
-        d_dellist = k_dellist.d_view;
+        d_dellist = k_dellist.view_device();
       }
 
       maxcellcount = h_maxcellcount();
       particle_kk->set_maxcellcount(maxcellcount);
       if (d_plist.extent(1) < maxcellcount) {
-        d_plist = decltype(d_plist)();
+        d_plist = {};
         Kokkos::resize(grid_kk->d_plist,nglocal,maxcellcount);
         d_plist = grid_kk->d_plist;
       }
@@ -1423,13 +975,14 @@ void CollideVSSKokkos::collisions_one_ambipolar(COLLIDE_REDUCE &reduce)
       auto nlocal_new = h_nlocal();
       if (d_particles.extent(0) < nlocal_new) {
         particle->grow(nlocal_new - particle->nlocal);
-        d_particles = particle_kk->k_particles.d_view;
-        auto h_ewhich = particle_kk->k_ewhich.h_view;
+        particle_kk->sync(Device,PARTICLE_MASK|SPECIES_MASK|CUSTOM_MASK);
+        d_particles = particle_kk->k_particles.view_device();
+        auto h_ewhich = particle_kk->k_ewhich.view_host();
         k_eivec = particle_kk->k_eivec;
         k_eiarray = particle_kk->k_eiarray;
         k_edarray = particle_kk->k_edarray;
-        d_ionambi = k_eivec.h_view[h_ewhich[index_ionambi]].k_view.d_view;
-        d_velambi = k_edarray.h_view[h_ewhich[index_velambi]].k_view.d_view;
+        d_ionambi = k_eivec.view_host()[h_ewhich[index_ionambi]].k_view.view_device();
+        d_velambi = k_edarray.view_host()[h_ewhich[index_velambi]].k_view.view_device();
       }
     }
   }
@@ -1445,28 +998,29 @@ void CollideVSSKokkos::collisions_one_ambipolar(COLLIDE_REDUCE &reduce)
   else if (h_error_flag() == 2)
     error->one(FLERR,"Collisions in cell did not conserve electron count");
 
+  this->modified(Device,ALL_MASK);
   particle_kk->modify(Device,PARTICLE_MASK|CUSTOM_MASK);
 
   d_particles = t_particle_1d(); // destroy reference to reduce memory use
-  d_plist = decltype(d_nn_last_partner)();
+  d_plist = {};
 }
 
-template < int ATOMIC_REDUCTION >
+template < int GASTALLY, int ATOMIC_REDUCTION >
 KOKKOS_INLINE_FUNCTION
-void CollideVSSKokkos::operator()(TagCollideCollisionsOneAmbipolar< ATOMIC_REDUCTION >, const int &icell) const {
+void CollideVSSKokkos::operator()(TagCollideCollisionsOneAmbipolar< GASTALLY, ATOMIC_REDUCTION >, const int &icell) const {
   COLLIDE_REDUCE reduce;
-  this->template operator()< ATOMIC_REDUCTION >(TagCollideCollisionsOneAmbipolar< ATOMIC_REDUCTION >(), icell, reduce);
+  this->template operator()< GASTALLY, ATOMIC_REDUCTION >(TagCollideCollisionsOneAmbipolar< GASTALLY, ATOMIC_REDUCTION >(), icell, reduce);
 }
 
-template < int ATOMIC_REDUCTION >
+template < int GASTALLY, int ATOMIC_REDUCTION >
 KOKKOS_INLINE_FUNCTION
-void CollideVSSKokkos::operator()(TagCollideCollisionsOneAmbipolar< ATOMIC_REDUCTION >, const int &icell, COLLIDE_REDUCE &reduce) const {
+void CollideVSSKokkos::operator()(TagCollideCollisionsOneAmbipolar< GASTALLY, ATOMIC_REDUCTION >, const int &icell, COLLIDE_REDUCE &reduce) const {
   if (d_retry()) return;
 
   int np = grid_kk_copy.obj.d_cellcount[icell];
   if (np <= 1) return;
 
-  const double volume = grid_kk_copy.obj.k_cinfo.d_view[icell].volume / grid_kk_copy.obj.k_cinfo.d_view[icell].weight;
+  const double volume = grid_kk_copy.obj.k_cinfo.view_device()[icell].volume / grid_kk_copy.obj.k_cinfo.view_device()[icell].weight;
   if (volume == 0.0) d_error_flag() = 1;
 
   struct State precoln;       // state before collision
@@ -1594,7 +1148,14 @@ void CollideVSSKokkos::operator()(TagCollideCollisionsOneAmbipolar< ATOMIC_REDUC
 
     // perform collision
     // ijspecies = species before collision chemistry
-    // continue to next collision if no reaction
+    // if GASTALLY: tally prep with iorig/jorig, then trigger tally
+
+    Particle::OnePart iorig,jorig;
+
+    if (GASTALLY) {
+      iorig = *ipart;
+      jorig = *jpart;
+    }
 
     int index_kpart = 0;
 
@@ -1609,6 +1170,11 @@ void CollideVSSKokkos::operator()(TagCollideCollisionsOneAmbipolar< ATOMIC_REDUC
       d_ncollide_one()++;
     else
       reduce.ncollide_one++;
+
+    //if (GASTALLY)
+    //  for (int m = 0; m < ngas_tally; m++)
+    //    glist_active[m]->gas_tally(icell,reactflag,
+    //                               &iorig,&jorig,ipart,jpart,kpart); //////
 
     if (reactflag) {
       if (ATOMIC_REDUCTION == 1)
@@ -1832,6 +1398,12 @@ int CollideVSSKokkos::test_collision_kokkos(int icell, int igroup, int jgroup,
   double dv  = vi[1] - vj[1];
   double dw  = vi[2] - vj[2];
   double vr2 = du*du + dv*dv + dw*dw;
+
+  // prevent division by zero
+
+  if (vr2 < EPSZERO && d_params(ispecies,jspecies).omega >= 1.0)
+    return 0;
+
   double vro  = pow(vr2,1.0-d_params(ispecies,jspecies).omega);
 
   // although the vremax is calcualted for the group,
@@ -1895,110 +1467,114 @@ int CollideVSSKokkos::perform_collision_kokkos(Particle::OnePart *&ip,
                                   Particle::OnePart *&p3, int &recomb_species, double &recomb_density,
                                   int &index_kpart) const
 {
-  int reactflag,kspecies;
+  int reaction,kspecies;
   double x[3],v[3];
 
   // if gas-phase chemistry defined, attempt and perform reaction
   // if a 3rd particle is created, its kspecies >= 0 is returned
   // if 2nd particle is removed, its jspecies is set to -1
+  // reaction = 0 if no reaction occurs
+  // reaction = 1 to N for which reaction occurs
+  // reaction is returned to caller
 
   if (react_defined)
-    reactflag = react_kk_copy.obj.attempt_kk(ip,jp,
+    reaction = react_kk_copy.obj.attempt_kk(ip,jp,
                                              precoln.etrans,precoln.erot,
                                              precoln.evib,postcoln.etotal,kspecies,
                                              recomb_species,recomb_density,d_species);
-  else reactflag = 0;
+  else reaction = 0;
 
+  // just collision, no reaction
+
+  if (!reaction) {
+    if (precoln.ave_dof > 0.0) EEXCHANGE_NonReactingEDisposal(ip,jp,precoln,postcoln,rand_gen);
+    SCATTER_TwoBodyScattering(ip,jp,precoln,postcoln,rand_gen);
+    return reaction;
+  }
+
+  // reaction took place
   // repartition energy and perform velocity scattering for I,J,K particles
   // reaction may have changed species of I,J particles
   // J,K particles may have been removed or created by reaction
 
   kp = NULL;
 
-  if (reactflag) {
+  // add 3rd K particle if reaction created it
+  // index of new K particle = nlocal-1
+  // if add_particle() performs a realloc:
+  //   make copy of x,v
 
-    // add 3rd K particle if reaction created it
-    // index of new K particle = nlocal-1
-    // if add_particle() performs a realloc:
-    //   make copy of x,v, then repoint ip,jp to new particles data struct
+  if (kspecies >= 0) {
+    int id = MAXSMALLINT*rand_gen.drand();
 
-    if (kspecies >= 0) {
-      int id = MAXSMALLINT*rand_gen.drand();
-
-      memcpy(x,ip->x,3*sizeof(double));
-      memcpy(v,ip->v,3*sizeof(double));
-      index_kpart = Kokkos::atomic_fetch_add(&d_nlocal(),1);
-      int reallocflag =
-        ParticleKokkos::add_particle_kokkos(d_particles,index_kpart,id,kspecies,ip->icell,x,v,0.0,0.0);
-      if (reallocflag) {
-        d_retry() = 1;
-        d_part_grow() = 1;
-        return 0;
-      }
-
-      kp = &d_particles[index_kpart];
-      EEXCHANGE_ReactingEDisposal(ip,jp,kp,precoln,postcoln,rand_gen);
-      SCATTER_ThreeBodyScattering(ip,jp,kp,precoln,postcoln,rand_gen);
-
-    // remove 2nd J particle if recombination reaction removed it
-    // p3 is 3rd particle participating in energy exchange
-
-    } else if (jp->ispecies < 0) {
-      double *vi = ip->v;
-      double *vj = jp->v;
-
-      const double divisor = 1.0 / (precoln.imass + precoln.jmass);
-      const double ucmf = ((precoln.imass*vi[0]) + (precoln.jmass*vj[0])) * divisor;
-      const double vcmf = ((precoln.imass*vi[1]) + (precoln.jmass*vj[1])) * divisor;
-      const double wcmf = ((precoln.imass*vi[2]) + (precoln.jmass*vj[2])) * divisor;
-
-      vi[0] = ucmf;
-      vi[1] = vcmf;
-      vi[2] = wcmf;
-
-      jp = NULL;
-
-      // account for 3rd body energy via another call to setup_collision()
-      // set precoln.vr2 = relative velocity between ip and 3rd body p3
-
-      const double *vp3 = p3->v;
-      const double du  = vi[0] - vp3[0];
-      const double dv  = vi[1] - vp3[1];
-      const double dw  = vi[2] - vp3[2];
-      const double vr2 = du*du + dv*dv + dw*dw;
-      precoln.vr2 = vr2;
-
-      // save postcoln.etotal from previous setup_collision()
-      // add 3rd body internal energy to it
-      // ip internal energy is already included in postcoln.etotal
-
-      double partial_energy =  postcoln.etotal + p3->erot + p3->evib;
-      ip->erot = 0.0;
-      ip->evib = 0.0;
-      p3->erot = 0.0;
-      p3->evib = 0.0;
-
-      // 2nd call to setup_collision() sets new postcoln.etotal
-      // then add saved partial_energy to it
-
-      setup_collision_kokkos(ip,p3,precoln,postcoln);
-      postcoln.etotal += partial_energy;
-
-      if (precoln.ave_dof > 0.0) EEXCHANGE_ReactingEDisposal(ip,p3,jp,precoln,postcoln,rand_gen);
-      SCATTER_TwoBodyScattering(ip,p3,precoln,postcoln,rand_gen);
-
-    } else {
-      EEXCHANGE_ReactingEDisposal(ip,jp,kp,precoln,postcoln,rand_gen);
-      SCATTER_TwoBodyScattering(ip,jp,precoln,postcoln,rand_gen);
+    memcpy(x,ip->x,3*sizeof(double));
+    memcpy(v,ip->v,3*sizeof(double));
+    index_kpart = Kokkos::atomic_fetch_add(&d_nlocal(),1);
+    int reallocflag =
+      ParticleKokkos::add_particle_kokkos(d_particles,index_kpart,id,kspecies,ip->icell,x,v,0.0,0.0);
+    if (reallocflag) {
+      d_retry() = 1;
+      d_part_grow() = 1;
+      return 0;
     }
 
+    kp = &d_particles[index_kpart];
+    EEXCHANGE_ReactingEDisposal(ip,jp,kp,precoln,postcoln,rand_gen);
+    SCATTER_ThreeBodyScattering(ip,jp,kp,precoln,postcoln,rand_gen);
+
+  // remove 2nd J particle if recombination reaction removed it
+  // p3 is 3rd particle participating in energy exchange
+
+  } else if (jp->ispecies < 0) {
+    double *vi = ip->v;
+    double *vj = jp->v;
+
+    const double divisor = 1.0 / (precoln.imass + precoln.jmass);
+    const double ucmf = ((precoln.imass*vi[0]) + (precoln.jmass*vj[0])) * divisor;
+    const double vcmf = ((precoln.imass*vi[1]) + (precoln.jmass*vj[1])) * divisor;
+    const double wcmf = ((precoln.imass*vi[2]) + (precoln.jmass*vj[2])) * divisor;
+
+    vi[0] = ucmf;
+    vi[1] = vcmf;
+    vi[2] = wcmf;
+
+    jp = NULL;
+
+    // account for 3rd body energy via another call to setup_collision()
+    // set precoln.vr2 = relative velocity between ip and 3rd body p3
+
+    const double *vp3 = p3->v;
+    const double du  = vi[0] - vp3[0];
+    const double dv  = vi[1] - vp3[1];
+    const double dw  = vi[2] - vp3[2];
+    const double vr2 = du*du + dv*dv + dw*dw;
+    precoln.vr2 = vr2;
+
+    // save postcoln.etotal from previous setup_collision()
+    // add 3rd body internal energy to it
+    // ip internal energy is already included in postcoln.etotal
+
+    double partial_energy =  postcoln.etotal + p3->erot + p3->evib;
+    ip->erot = 0.0;
+    ip->evib = 0.0;
+    p3->erot = 0.0;
+    p3->evib = 0.0;
+
+    // 2nd call to setup_collision() sets new postcoln.etotal
+    // then add saved partial_energy to it
+
+    setup_collision_kokkos(ip,p3,precoln,postcoln);
+    postcoln.etotal += partial_energy;
+
+    if (precoln.ave_dof > 0.0) EEXCHANGE_ReactingEDisposal(ip,p3,jp,precoln,postcoln,rand_gen);
+    SCATTER_TwoBodyScattering(ip,p3,precoln,postcoln,rand_gen);
+
   } else {
-    kp = NULL;
-    if (precoln.ave_dof > 0.0) EEXCHANGE_NonReactingEDisposal(ip,jp,precoln,postcoln,rand_gen);
+    EEXCHANGE_ReactingEDisposal(ip,jp,kp,precoln,postcoln,rand_gen);
     SCATTER_TwoBodyScattering(ip,jp,precoln,postcoln,rand_gen);
   }
 
-  return reactflag;
+  return reaction;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -2164,7 +1740,7 @@ void CollideVSSKokkos::EEXCHANGE_NonReactingEDisposal(Particle::OnePart *ip,
               p->evib = 0.0;
 
               int nmode = d_species[sp].nvibmode;
-              auto &d_vibmode = k_eiarray.d_view[d_ewhich[index_vibmode]].k_view.d_view;
+              const auto &d_vibmode = k_eiarray.view_device()[d_ewhich[index_vibmode]].k_view.view_device();
               int pindex = p - d_particles.data();
 
               for (int imode = 0; imode < nmode; imode++) {
@@ -2367,7 +1943,7 @@ void CollideVSSKokkos::EEXCHANGE_ReactingEDisposal(Particle::OnePart *ip,
         p->evib = 0.0;
 
         int nmode = d_species[sp].nvibmode;
-        auto &d_vibmode = k_eiarray.d_view[d_ewhich[index_vibmode]].k_view.d_view;
+        const auto &d_vibmode = k_eiarray.view_device()[d_ewhich[index_vibmode]].k_view.view_device();
         int pindex = p - d_particles.data();
 
         for (int imode = 0; imode < nmode; imode++) {
@@ -2639,13 +2215,15 @@ int CollideVSSKokkos::pack_grid_one(int icell, char *buf_char, int memflag)
 
   Grid::ChildCell *cells = grid->cells;
 
+  this->sync(Host,ALL_MASK);
+
   int n = 0;
   if (memflag) {
     for (int igroup = 0; igroup < ngroups; igroup++) {
       for (int jgroup = 0; jgroup < ngroups; jgroup++) {
-        buf[n++] = k_vremax.h_view(icell,igroup,jgroup);
+        buf[n++] = k_vremax.view_host()(icell,igroup,jgroup);
         if (remainflag)
-          buf[n++] = k_remain.h_view(icell,igroup,jgroup);
+          buf[n++] = k_remain.view_host()(icell,igroup,jgroup);
       }
     }
   } else {
@@ -2662,9 +2240,9 @@ int CollideVSSKokkos::pack_grid_one(int icell, char *buf_char, int memflag)
       if (memflag) {
         for (int igroup = 0; igroup < ngroups; igroup++) {
           for (int jgroup = 0; jgroup < ngroups; jgroup++) {
-            buf[n++] = k_vremax.h_view(m,igroup,jgroup);
+            buf[n++] = k_vremax.view_host()(m,igroup,jgroup);
             if (remainflag)
-              buf[n++] = k_remain.h_view(m,igroup,jgroup);
+              buf[n++] = k_remain.view_host()(m,igroup,jgroup);
           }
         }
       } else {
@@ -2692,31 +2270,41 @@ int CollideVSSKokkos::unpack_grid_one(int icell, char *buf_char)
   Grid::SplitInfo *sinfo = grid->sinfo;
 
   grow_percell(1);
+
+  this->sync(Host,ALL_MASK);
+
   int n = 0;
   for (int igroup = 0; igroup < ngroups; igroup++) {
     for (int jgroup = 0; jgroup < ngroups; jgroup++) {
-      k_vremax.h_view(icell,igroup,jgroup) = buf[n++];
+      k_vremax.view_host()(icell,igroup,jgroup) = buf[n++];
       if (remainflag)
-        k_remain.h_view(icell,igroup,jgroup) = buf[n++];
+        k_remain.view_host()(icell,igroup,jgroup) = buf[n++];
     }
   }
   nglocal++;
+
+  this->modified(Host,ALL_MASK);
 
   if (cells[icell].nsplit > 1) {
     int isplit = cells[icell].isplit;
     int nsplit = cells[icell].nsplit;
     grow_percell(nsplit);
+
+    this->sync(Host,ALL_MASK);
+
     for (int i = 0; i < nsplit; i++) {
       int m = sinfo[isplit].csubs[i];
       for (int igroup = 0; igroup < ngroups; igroup++) {
         for (int jgroup = 0; jgroup < ngroups; jgroup++) {
-          k_vremax.h_view(m,igroup,jgroup) = buf[n++];
+          k_vremax.view_host()(m,igroup,jgroup) = buf[n++];
           if (remainflag)
-            k_remain.h_view(m,igroup,jgroup) = buf[n++];
+            k_remain.view_host()(m,igroup,jgroup) = buf[n++];
         }
       }
     }
     nglocal += nsplit;
+
+    this->modified(Host,ALL_MASK);
   }
 
   return n*sizeof(double);
@@ -2733,9 +2321,9 @@ void CollideVSSKokkos::copy_grid_one(int icell, int jcell)
   this->sync(Host,ALL_MASK);
   for (int igroup = 0; igroup < ngroups; igroup++) {
     for (int jgroup = 0; jgroup < ngroups; jgroup++) {
-      k_vremax.h_view(jcell,igroup,jgroup) = k_vremax.h_view(icell,igroup,jgroup);
+      k_vremax.view_host()(jcell,igroup,jgroup) = k_vremax.view_host()(icell,igroup,jgroup);
       if (remainflag)
-        k_remain.h_view(jcell,igroup,jgroup) = k_remain.h_view(icell,igroup,jgroup);
+        k_remain.view_host()(jcell,igroup,jgroup) = k_remain.view_host()(icell,igroup,jgroup);
     }
   }
   this->modified(Host,ALL_MASK);
@@ -2763,8 +2351,8 @@ void CollideVSSKokkos::add_grid_one()
   this->sync(Host,ALL_MASK);
   for (int igroup = 0; igroup < ngroups; igroup++)
     for (int jgroup = 0; jgroup < ngroups; jgroup++) {
-      k_vremax.h_view(nglocal,igroup,jgroup) = vremax_initial[igroup][jgroup];
-      if (remainflag) k_remain.h_view(nglocal,igroup,jgroup) = 0.0;
+      k_vremax.view_host()(nglocal,igroup,jgroup) = vremax_initial[igroup][jgroup];
+      if (remainflag) k_remain.view_host()(nglocal,igroup,jgroup) = 0.0;
     }
   this->modified(Host,ALL_MASK);
 
@@ -2790,18 +2378,20 @@ void CollideVSSKokkos::adapt_grid()
   this->modified(Host,ALL_MASK); // force resize on host
 
   nglocalmax = nglocal;
-  k_vremax.resize(nglocalmax,ngroups,ngroups);
-  d_vremax = k_vremax.d_view;
+  k_vremax.resize(Kokkos::view_alloc(Kokkos::WithoutInitializing),
+                  nglocalmax,ngroups,ngroups);
+  d_vremax = k_vremax.view_device();
   if (remainflag) {
-    k_remain.resize(nglocalmax,ngroups,ngroups);
-    d_remain = k_remain.d_view;
+    k_remain.resize(Kokkos::view_alloc(Kokkos::WithoutInitializing),
+                    nglocalmax,ngroups,ngroups);
+    d_remain = k_remain.view_device();
   }
   this->sync(Host,ALL_MASK);
   for (int icell = nglocal_old; icell < nglocal; icell++)
     for (int igroup = 0; igroup < ngroups; igroup++)
       for (int jgroup = 0; jgroup < ngroups; jgroup++) {
-        k_vremax.h_view(icell,igroup,jgroup) = vremax_initial[igroup][jgroup];
-        if (remainflag) k_remain.h_view(icell,igroup,jgroup) = 0.0;
+        k_vremax.view_host()(icell,igroup,jgroup) = vremax_initial[igroup][jgroup];
+        if (remainflag) k_remain.view_host()(icell,igroup,jgroup) = 0.0;
       }
 
   this->modified(Host,ALL_MASK);
@@ -2818,11 +2408,13 @@ void CollideVSSKokkos::grow_percell(int n)
 
   this->sync(Device,ALL_MASK); // force resize on device
 
-  k_vremax.resize(nglocalmax,ngroups,ngroups);
-  d_vremax = k_vremax.d_view;
+  k_vremax.resize(Kokkos::view_alloc(Kokkos::WithoutInitializing),
+                  nglocalmax,ngroups,ngroups);
+  d_vremax = k_vremax.view_device();
   if (remainflag) {
-    k_remain.resize(nglocalmax,ngroups,ngroups);
-    d_remain = k_remain.d_view;
+    k_remain.resize(Kokkos::view_alloc(Kokkos::WithoutInitializing),
+                    nglocalmax,ngroups,ngroups);
+    d_remain = k_remain.view_device();
   }
 
   this->modified(Device,ALL_MASK); // needed for auto sync
@@ -2904,8 +2496,8 @@ void CollideVSSKokkos::backup()
 void CollideVSSKokkos::restore()
 {
   ParticleKokkos* particle_kk = (ParticleKokkos*) particle;
-  Kokkos::deep_copy(particle_kk->k_particles.d_view,d_particles_backup);
-  d_particles = particle_kk->k_particles.d_view;
+  Kokkos::deep_copy(particle_kk->k_particles.view_device(),d_particles_backup);
+  d_particles = particle_kk->k_particles.view_device();
 
   GridKokkos* grid_kk = (GridKokkos*) grid;
   Kokkos::deep_copy(grid_kk->d_plist,d_plist_backup);
@@ -2915,15 +2507,15 @@ void CollideVSSKokkos::restore()
   Kokkos::deep_copy(d_remain,d_remain_backup);
 
   if (ambiflag) {
-    auto h_ewhich = particle_kk->k_ewhich.h_view;
+    auto h_ewhich = particle_kk->k_ewhich.view_host();
 
-    Kokkos::deep_copy(particle_kk->k_eivec.h_view[h_ewhich[index_ionambi]].k_view.d_view,d_ionambi_backup);
-    Kokkos::deep_copy(particle_kk->k_edarray.h_view[h_ewhich[index_velambi]].k_view.d_view,d_velambi_backup);
+    Kokkos::deep_copy(particle_kk->k_eivec.view_host()[h_ewhich[index_ionambi]].k_view.view_device(),d_ionambi_backup);
+    Kokkos::deep_copy(particle_kk->k_edarray.view_host()[h_ewhich[index_velambi]].k_view.view_device(),d_velambi_backup);
 
     k_eivec = particle_kk->k_eivec;
     k_edarray = particle_kk->k_edarray;
-    d_ionambi = k_eivec.h_view[h_ewhich[index_ionambi]].k_view.d_view;
-    d_velambi = k_edarray.h_view[h_ewhich[index_velambi]].k_view.d_view;
+    d_ionambi = k_eivec.view_host()[h_ewhich[index_ionambi]].k_view.view_device();
+    d_velambi = k_edarray.view_host()[h_ewhich[index_velambi]].k_view.view_device();
   }
 
   if (react) {
@@ -2945,13 +2537,13 @@ void CollideVSSKokkos::restore()
 
   // deallocate references to reduce memory use
 
-  d_particles_backup = decltype(d_particles_backup)();
-  d_plist_backup = decltype(d_plist_backup)();
-  d_vremax_backup = decltype(d_vremax_backup)();
-  d_remain_backup = decltype(d_remain_backup)();
+  d_particles_backup = {};
+  d_plist_backup = {};
+  d_vremax_backup = {};
+  d_remain_backup = {};
 
   if (ambiflag) {
-    d_ionambi_backup = decltype(d_ionambi_backup)();
-    d_velambi_backup = decltype(d_velambi_backup)();
+    d_ionambi_backup = {};
+    d_velambi_backup = {};
   }
 }

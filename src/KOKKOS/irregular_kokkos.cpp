@@ -1,6 +1,6 @@
 /* ----------------------------------------------------------------------
    SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
-   http://sparta.sandia.gov
+   http://sparta.github.io
    Steve Plimpton, sjplimp@gmail.com, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
@@ -118,14 +118,14 @@ int IrregularKokkos::create_data_uniform(int n, int *proclist, int sort)
     indexmax = n;
     memoryKK->destroy_kokkos(k_index_send,index_send);
     memoryKK->create_kokkos(k_index_send,index_send,indexmax,"irregular:index_send");
-    d_index_send = k_index_send.d_view;
+    d_index_send = k_index_send.view_device();
   }
 
   if (work1[me] > indexselfmax) {
     indexselfmax = work1[me];
     memoryKK->destroy_kokkos(k_index_self,index_self);
     memoryKK->create_kokkos(k_index_self,index_self,indexselfmax,"irregular:index_self");
-    d_index_self = k_index_self.d_view;
+    d_index_self = k_index_self.view_device();
   }
 
   // proc_send = procs I send to
@@ -264,14 +264,14 @@ int IrregularKokkos::augment_data_uniform(int n, int *proclist)
     indexmax = n;
     memoryKK->destroy_kokkos(k_index_send,index_send);
     memoryKK->create_kokkos(k_index_send,index_send,indexmax,"irregular:index_send");
-    d_index_send = k_index_send.d_view;
+    d_index_send = k_index_send.view_device();
   }
 
   if (num_self > indexselfmax) {
     indexselfmax = num_self;
     memoryKK->destroy_kokkos(k_index_self,index_self);
     memoryKK->create_kokkos(k_index_self,index_self,indexselfmax,"irregular:index_self");
-    d_index_self = k_index_self.d_view;
+    d_index_self = k_index_self.view_device();
   }
 
   // work2 = offsets into index_send for each proc I send to
@@ -357,7 +357,7 @@ void IrregularKokkos::exchange_uniform(DAT::t_char_1d d_sendbuf_in, int nbytes_i
 
   // post all receives, starting after self copies
 
-  int offset = num_self*nbytes;
+  bigint offset = (bigint)num_self*nbytes;
   for (int irecv = 0; irecv < nrecv; irecv++) {
     if (sparta->kokkos->gpu_aware_flag) {
       MPI_Irecv(&d_recvbuf_ptr[offset],num_recv[irecv]*nbytes,MPI_CHAR,
@@ -366,10 +366,14 @@ void IrregularKokkos::exchange_uniform(DAT::t_char_1d d_sendbuf_in, int nbytes_i
       MPI_Irecv(h_recvbuf.data() + offset,num_recv[irecv]*nbytes,MPI_CHAR,
                 proc_recv[irecv],0,world,&request[irecv]);
     }
-    offset += num_recv[irecv]*nbytes;
+    offset += (bigint)num_recv[irecv]*nbytes;
   }
 
   // reallocate buf for largest send if necessary
+
+  if ((bigint)sendmax*nbytes > MAXSMALLINT)
+    error->one(FLERR,"Irregular comm send buffer exceeds 2 GB, try using"
+                     "'global mem/limit' command");
 
   if (sparta->kokkos->gpu_aware_flag) {
     if (sendmax*nbytes > bufmax) {
@@ -432,8 +436,8 @@ void IrregularKokkos::exchange_uniform(DAT::t_char_1d d_sendbuf_in, int nbytes_i
       k_index_self.sync_host();
 
       for (int i = 0; i < num_self; i++) {
-        const int m = k_index_self.h_view[i];
-        memcpy(&h_recvbuf[i*nbytes],&h_sendbuf[m*nbytes],nbytes);
+        const int m = k_index_self.view_host()[i];
+        memcpy(&h_recvbuf[(bigint)i*nbytes],&h_sendbuf[(bigint)m*nbytes],nbytes);
       }
     }
   }
@@ -451,11 +455,11 @@ void IrregularKokkos::exchange_uniform(DAT::t_char_1d d_sendbuf_in, int nbytes_i
 KOKKOS_INLINE_FUNCTION
 void IrregularKokkos::operator()(TagIrregularPackBuffer, const int &i) const {
   const int m = d_index_send[offset_send + i];
-  memcpy(&d_buf[i*nbytes],&d_sendbuf[m*nbytes],nbytes);
+  memcpy(&d_buf[(bigint)i*nbytes],&d_sendbuf[(bigint)m*nbytes],nbytes);
 }
 
 KOKKOS_INLINE_FUNCTION
 void IrregularKokkos::operator()(TagIrregularUnpackBufferSelf, const int &i) const {
   const int m = d_index_self[i];
-  memcpy(&d_recvbuf[i*nbytes],&d_sendbuf[m*nbytes],nbytes);
+  memcpy(&d_recvbuf[(bigint)i*nbytes],&d_sendbuf[(bigint)m*nbytes],nbytes);
 }

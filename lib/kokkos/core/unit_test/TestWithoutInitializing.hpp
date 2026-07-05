@@ -1,27 +1,19 @@
-//@HEADER
-// ************************************************************************
-//
-//                        Kokkos v. 4.0
-//       Copyright (2022) National Technology & Engineering
-//               Solutions of Sandia, LLC (NTESS).
-//
-// Under the terms of Contract DE-NA0003525 with NTESS,
-// the U.S. Government retains certain rights in this software.
-//
-// Part of Kokkos, under the Apache License v2.0 with LLVM Exceptions.
-// See https://kokkos.org/LICENSE for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-//
-//@HEADER
+// SPDX-FileCopyrightText: Copyright Contributors to the Kokkos project
 
+#include <Kokkos_Macros.hpp>
+#ifdef KOKKOS_ENABLE_EXPERIMENTAL_CXX20_MODULES
+import kokkos.core;
+#else
 #include <Kokkos_Core.hpp>
+#endif
 
 #include "tools/include/ToolTestingUtilities.hpp"
 
 TEST(TEST_CATEGORY, resize_realloc_no_init) {
   using namespace Kokkos::Test::Tools;
   listen_tool_events(Config::DisableAll(), Config::EnableKernels());
-  Kokkos::View<int*** * [1][2][3][4], TEST_EXECSPACE> bla("bla", 5, 6, 7, 8);
+  Kokkos::View<int**** [1][2][3][4], TEST_EXECSPACE> bla("bla", 5, 6, 7, 8);
 
   auto success = validate_absence(
       [&]() {
@@ -48,7 +40,7 @@ TEST(TEST_CATEGORY, resize_realloc_no_alloc) {
   using namespace Kokkos::Test::Tools;
   listen_tool_events(Config::DisableAll(), Config::EnableKernels(),
                      Config::EnableAllocs());
-  Kokkos::View<int*** * [1][2][3][4], TEST_EXECSPACE> bla("bla", 8, 7, 6, 5);
+  Kokkos::View<int**** [1][2][3][4], TEST_EXECSPACE> bla("bla", 8, 7, 6, 5);
 
   auto success = validate_absence(
       [&]() {
@@ -73,8 +65,8 @@ TEST(TEST_CATEGORY, resize_realloc_no_alloc) {
 
 TEST(TEST_CATEGORY, realloc_exec_space) {
 #ifdef KOKKOS_ENABLE_CUDA
-  if (std::is_same<typename TEST_EXECSPACE::memory_space,
-                   Kokkos::CudaUVMSpace>::value)
+  if (std::is_same_v<typename TEST_EXECSPACE::memory_space,
+                     Kokkos::CudaUVMSpace>)
     GTEST_SKIP() << "skipping since CudaUVMSpace requires additional fences";
 #endif
 // FIXME_OPENMPTARGET The OpenMPTarget backend doesn't implement allocate taking
@@ -133,8 +125,7 @@ TEST(TEST_CATEGORY, view_alloc) {
       },
       [&](BeginFenceEvent event) {
         return MatchDiagnostic{
-            event.descriptor().find(
-                "Kokkos::Impl::ViewValueFunctor: View init/destroy fence") !=
+            event.descriptor().find("Kokkos::View::initialization") !=
             std::string::npos};
       });
   ASSERT_TRUE(success);
@@ -155,8 +146,7 @@ TEST(TEST_CATEGORY, view_alloc_exec_space) {
       },
       [&](BeginFenceEvent event) {
         return MatchDiagnostic{
-            event.descriptor().find(
-                "Kokkos::Impl::ViewValueFunctor: View init/destroy fence") !=
+            event.descriptor().find("Kokkos::View::initialization") !=
             std::string::npos};
       });
   ASSERT_TRUE(success);
@@ -177,8 +167,7 @@ TEST(TEST_CATEGORY, view_alloc_int) {
       },
       [&](BeginFenceEvent event) {
         return MatchDiagnostic{
-            event.descriptor().find(
-                "Kokkos::Impl::ViewValueFunctor: View init/destroy fence") !=
+            event.descriptor().find("Kokkos::View::initialization") !=
             std::string::npos};
       });
   ASSERT_TRUE(success);
@@ -199,8 +188,7 @@ TEST(TEST_CATEGORY, view_alloc_exec_space_int) {
       },
       [&](BeginFenceEvent event) {
         return MatchDiagnostic{
-            event.descriptor().find(
-                "Kokkos::Impl::ViewValueFunctor: View init/destroy fence") !=
+            event.descriptor().find("Kokkos::View::initialization") !=
             std::string::npos};
       });
   ASSERT_TRUE(success);
@@ -220,19 +208,39 @@ TEST(TEST_CATEGORY, deep_copy_zero_memset) {
     GTEST_SKIP() << "skipping since the OpenACC backend doesn't implement "
                     "ZeroMemset";
 #endif
+#ifdef KOKKOS_ENABLE_OPENMP
+  if (std::is_same_v<TEST_EXECSPACE, Kokkos::OpenMP>)
+    GTEST_SKIP() << "skipping since the OpenMP backend doesn't use ZeroMemset";
+#endif
 
   using namespace Kokkos::Test::Tools;
   listen_tool_events(Config::DisableAll(), Config::EnableKernels());
   Kokkos::View<int*, TEST_EXECSPACE> bla("bla", 8);
 
-  auto success =
-      validate_absence([&]() { Kokkos::deep_copy(bla, 0); },
-                       [&](BeginParallelForEvent) {
-                         return MatchDiagnostic{true, {"Found begin event"}};
-                       },
-                       [&](EndParallelForEvent) {
-                         return MatchDiagnostic{true, {"Found end event"}};
-                       });
+  // for MI300A with unified memory, ZeroMemset uses a parallel for
+  auto success = false;
+#ifdef KOKKOS_IMPL_HIP_UNIFIED_MEMORY
+  if constexpr (!std::is_same_v<TEST_EXECSPACE::memory_space,
+                                Kokkos::HostSpace>)
+    success = validate_existence(
+        [&]() { Kokkos::deep_copy(bla, 0); },
+        [&](BeginParallelForEvent e) {
+          const bool found =
+              (e.descriptor().find("Kokkos::ZeroMemset via parallel_for") !=
+               std::string::npos);
+          return MatchDiagnostic{found, {"Found expected parallel_for label"}};
+        });
+  else
+#endif
+    success =
+        validate_absence([&]() { Kokkos::deep_copy(bla, 0); },
+                         [&](BeginParallelForEvent) {
+                           return MatchDiagnostic{true, {"Found begin event"}};
+                         },
+                         [&](EndParallelForEvent) {
+                           return MatchDiagnostic{true, {"Found end event"}};
+                         });
+
   ASSERT_TRUE(success);
   listen_tool_events(Config::DisableAll());
 }
@@ -241,7 +249,7 @@ TEST(TEST_CATEGORY, resize_exec_space) {
   using namespace Kokkos::Test::Tools;
   listen_tool_events(Config::DisableAll(), Config::EnableFences(),
                      Config::EnableKernels());
-  Kokkos::View<int*** * [1][2][3][4], TEST_EXECSPACE> bla("bla", 8, 7, 6, 5);
+  Kokkos::View<int**** [1][2][3][4], TEST_EXECSPACE> bla("bla", 8, 7, 6, 5);
 
   auto success = validate_absence(
       [&]() {
@@ -317,7 +325,7 @@ TEST(TEST_CATEGORY, view_allocation_exec_space_int) {
 #endif
 
 #ifdef KOKKOS_ENABLE_CUDA
-  if (std::is_same<TEST_EXECSPACE::memory_space, Kokkos::CudaUVMSpace>::value)
+  if (std::is_same_v<TEST_EXECSPACE::memory_space, Kokkos::CudaUVMSpace>)
     GTEST_SKIP()
         << "skipping since the CudaUVMSpace requires additiional fences";
 #endif

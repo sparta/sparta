@@ -1,6 +1,6 @@
 /* ----------------------------------------------------------------------
    SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
-   http://sparta.sandia.gov
+   http://sparta.github.io
    Steve Plimpton, sjplimp@gmail.com, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
@@ -15,14 +15,14 @@
 // loop counters for doing a pack/unpack
 
 struct pack_plan_2d {
-  int nfast;                 // # of elements in fast index
-  int nslow;                 // # of elements in slow index
-  int nstride;               // stride between succesive slow indices
-  int nqty;                  // # of values/element
+  int nfast;            // # of elements in fast index
+  int nslow;            // # of elements in slow index
+  int nstride;          // stride between succesive slow indices
+  int nqty;             // # of values/element
 };
 
-#if !defined(PACK_POINTER) && !defined(PACK_MEMCPY)
-#define PACK_ARRAY
+#if !defined(FFT_PACK_POINTER) && !defined(FFT_PACK_MEMCPY)
+#define FFT_PACK_ARRAY
 #endif
 
 #ifndef PACK_DATA
@@ -45,14 +45,13 @@ struct pack_plan_2d {
    pack/unpack with array indices
 ------------------------------------------------------------------------- */
 
-#ifdef PACK_ARRAY
+#ifdef FFT_PACK_ARRAY
 
 /* ----------------------------------------------------------------------
    pack from data -> buf
 ------------------------------------------------------------------------- */
 
 static void pack_2d(PACK_DATA *data, PACK_DATA *buf, struct pack_plan_2d *plan)
-
 {
   int in,out,fast,slow;
   int nfast,nslow,nstride;
@@ -168,7 +167,7 @@ static void unpack_2d_permute_n(PACK_DATA *buf, PACK_DATA *data, struct pack_pla
    pack/unpack with pointers
 ------------------------------------------------------------------------- */
 
-#ifdef PACK_POINTER
+#ifdef FFT_PACK_POINTER
 
 /* ----------------------------------------------------------------------
    pack from data -> buf
@@ -303,7 +302,7 @@ static void unpack_2d_permute_n(PACK_DATA *buf, PACK_DATA *data, struct pack_pla
      just use PACK_POINTER versions
 ------------------------------------------------------------------------- */
 
-#ifdef PACK_MEMCPY
+#ifdef FFT_PACK_MEMCPY
 
 /* ----------------------------------------------------------------------
    pack from data -> buf

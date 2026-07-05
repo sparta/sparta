@@ -1,6 +1,6 @@
 /* ----------------------------------------------------------------------
    SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
-   http://sparta.sandia.gov
+   http://sparta.github.io
    Steve Plimpton, sjplimp@gmail.com, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
@@ -17,6 +17,7 @@
 #define EPSSQ 1.0e-16
 #define EPSSQNEG -1.0e-16
 #define EPSSELF 1.0e-6
+#define EPSTIME 1.0e-16
 
 enum{OUTSIDE,INSIDE,ONSURF2OUT,ONSURF2IN};    // same as Update
 
@@ -171,6 +172,17 @@ bool axi_horizontal_line(double tdelta, double *x, double *v,
     nc = 1;
   }
 
+  // check for roundoff issue which can occur when
+  //  axisym surf is nearly exactly on grid cell edge
+  // round-off in solution to quadratic equation
+  //   can cause t1 or t2 to be EPSTIME greater than tdelta and miss collision
+  // force a collision in this special case by setting t1/t2 = tdelta
+
+  if (t1 > tdelta && (t1-tdelta) < EPSTIME && tdelta > 0.0)
+    t1 = tdelta;
+  else if (t2 > tdelta && (t2-tdelta) < EPSTIME && tdelta > 0.0)
+    t2 = tdelta;
+
   // require first collision time >= 0.0 and <= tdelta
 
   if (t1 < 0.0 || t1 > tdelta) {
@@ -281,6 +293,15 @@ bool axi_line_intersect(double tdelta, double *x, double *v,
   // loop over 1 or 2 possible collision times
 
   while (1) {
+
+    // check for roundoff issue which can occur when
+    //  axisym surf is nearly exactly on grid cell edge
+    // round-off in solution to quadratic equation
+    //   can cause t1 to be EPSTIME greater than tdelta and miss collision
+    // force a collision in this special case by setting t1 = tdelta
+
+    if (t1 > tdelta && (t1-tdelta) < EPSTIME && tdelta > 0.0)
+      t1 = tdelta;
 
     // test for collision time >= 0.0 and <= tdelta
 

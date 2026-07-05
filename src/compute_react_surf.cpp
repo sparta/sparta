@@ -1,6 +1,6 @@
 /* ----------------------------------------------------------------------
    SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
-   http://sparta.sandia.gov
+   http://sparta.github.io
    Steve Plimpton, sjplimp@gmail.com, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
@@ -199,7 +199,8 @@ void ComputeReactSurf::clear()
    jp != NULL means two particles after collision
 ------------------------------------------------------------------------- */
 
-void ComputeReactSurf::surf_tally(int isurf, int icell, int reaction,
+void ComputeReactSurf::surf_tally(double dtremain,
+                                  int isurf, int icell, int reaction,
                                   Particle::OnePart *iorig,
                                   Particle::OnePart *ip, Particle::OnePart *jp)
 {

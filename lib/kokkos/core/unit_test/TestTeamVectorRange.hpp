@@ -1,20 +1,12 @@
-//@HEADER
-// ************************************************************************
-//
-//                        Kokkos v. 4.0
-//       Copyright (2022) National Technology & Engineering
-//               Solutions of Sandia, LLC (NTESS).
-//
-// Under the terms of Contract DE-NA0003525 with NTESS,
-// the U.S. Government retains certain rights in this software.
-//
-// Part of Kokkos, under the Apache License v2.0 with LLVM Exceptions.
-// See https://kokkos.org/LICENSE for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-//
-//@HEADER
+// SPDX-FileCopyrightText: Copyright Contributors to the Kokkos project
 
+#include <Kokkos_Macros.hpp>
+#ifdef KOKKOS_ENABLE_EXPERIMENTAL_CXX20_MODULES
+import kokkos.core;
+#else
 #include <Kokkos_Core.hpp>
+#endif
 
 #include <Kokkos_Timer.hpp>
 #include <iostream>
@@ -356,8 +348,8 @@ struct functor_teamvector_reduce_reducer {
 template <typename Scalar, class ExecutionSpace>
 bool test_scalar(int nteams, int team_size, int test) {
   Kokkos::View<int, Kokkos::LayoutLeft, ExecutionSpace> d_flag("flag");
-  typename Kokkos::View<int, Kokkos::LayoutLeft, ExecutionSpace>::HostMirror
-      h_flag("h_flag");
+  typename Kokkos::View<int, Kokkos::LayoutLeft,
+                        ExecutionSpace>::host_mirror_type h_flag("h_flag");
   h_flag() = 0;
   Kokkos::deep_copy(d_flag, h_flag);
 
@@ -436,12 +428,6 @@ namespace Test {
 
 TEST(TEST_CATEGORY, team_teamvector_range) {
   ASSERT_TRUE((TestTeamVectorRange::Test<TEST_EXECSPACE>(0)));
-#if defined(KOKKOS_ENABLE_CUDA) && \
-    defined(KOKKOS_COMPILER_NVHPC)  // FIXME_NVHPC 23.7
-  if constexpr (std::is_same_v<TEST_EXECSPACE, Kokkos::Cuda>) {
-    GTEST_SKIP() << "Disabling 2/3rd of the test for now";
-  }
-#endif
   ASSERT_TRUE((TestTeamVectorRange::Test<TEST_EXECSPACE>(1)));
   // FIXME_OPENMPTARGET - Use of kokkos reducers currently results in runtime
   // memory errors.

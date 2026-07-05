@@ -1,6 +1,6 @@
 "Previous Section"_Manual.html - "SPARTA WWW Site"_sws - "SPARTA Documentation"_sd - "SPARTA Commands"_sc - "Next Section"_Section_start.html :c
 
-:link(sws,http://sparta.sandia.gov)
+:link(sws,https://sparta.github.io)
 :link(sd,Manual.html)
 :link(sc,Section_commands.html#comm)
 
@@ -160,7 +160,7 @@ plotting, and visualization for SPARTA simulations.  Pizza.py is
 written in "Python"_python and is available for download from "the
 Pizza.py WWW site"_pizza. :l,ule
 
-:link(pizza,http://pizza.sandia.gov)
+:link(pizza,https://lammps.github.io/pizza)
 :link(python,http://www.python.org)
 
 :line
@@ -233,7 +233,7 @@ remain part of the code.
 
 In the spirit of an open-source code, these are various ways you can
 contribute to making SPARTA better.  You can send email to the
-"developers"_http://sparta.sandia.gov/authors.html on any of these
+"developers"_https://sparta.github.io/authors.html on any of these
 topics.
 
 Point prospective users to the "SPARTA WWW Site"_sws.  Mention it in
@@ -242,7 +242,7 @@ talks or link to it from your WWW site. :ulb,l
 If you find an error or omission in this manual or on the "SPARTA WWW
 Site"_sws, or have a suggestion for something to clarify or include,
 send an email to the
-"developers"_http://sparta.sandia.gov/authors.html. :l
+"developers"_https://sparta.github.io/authors.html. :l
 
 If you find a bug, "Section 12.1"_Section_errors.html#err_2 describes
 how to report it. :l
@@ -285,19 +285,19 @@ Energy"_doe (DOE).
 
 If you use SPARTA results in your published work, please cite the
 paper(s) listed under the "Citing SPARTA
-link"_http://sparta.sandia.gov/cite.html of the SPARTA WWW page, and
+link"_https://sparta.github.io/cite.html of the SPARTA WWW page, and
 include a pointer to the "SPARTA WWW Site"_sws
-(http://sparta.sandia.gov):
+(https://sparta.github.io):
 
-The "Publications link"_http://sparta.sandia.gov/papers.html on the
+The "Publications link"_https://sparta.github.io/papers.html on the
 SPARTA WWW page lists papers that have cited SPARTA.  If your paper is
 not listed there, feel free to send us the info.  If the simulations
 in your paper produced cool pictures or animations, we'll be pleased
-to add them to the "Pictures"_http://sparta.sandia.gov/pictures.html
-or "Movies"_http://sparta.sandia.gov/movies.html pages of the SPARTA
+to add them to the "Pictures"_https://sparta.github.io/pictures.html
+or "Movies"_https://sparta.github.io/movies.html pages of the SPARTA
 WWW site.
 
 The core group of SPARTA developers is at Sandia National Labs:
 
-Steve Plimpton, sjplimp at sandia.gov
+Steve Plimpton, sjplimp at gmail.com
 Michael Gallis, magalli at sandia.gov :ul

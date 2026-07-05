@@ -1,6 +1,6 @@
 /* ----------------------------------------------------------------------
    SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
-   http://sparta.sandia.gov
+   http://sparta.github.io
    Steve Plimpton, sjplimp@gmail.com, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
@@ -264,4 +264,9 @@ void FixSurfTemp::end_of_step()
   // flag custom attribute as updated
 
   surf->estatus[tindex] = 0;
+
+  // invoke fixes which use per-surf custom attributes
+  // example: fix emit/surf
+
+  modify->custom_surf_changed();
 }

@@ -1,5 +1,5 @@
 <HTML>
-<CENTER><A HREF = "http://sparta.sandia.gov">SPARTA WWW Site</A> - <A HREF = "Manual.html">SPARTA Documentation</A> - <A HREF = "Section_commands.html#comm">SPARTA Commands</A> 
+<CENTER><A HREF = "https://sparta.github.io">SPARTA WWW Site</A> - <A HREF = "Manual.html">SPARTA Documentation</A> - <A HREF = "Section_commands.html#comm">SPARTA Commands</A> 
 </CENTER>
 
 
@@ -56,11 +56,12 @@ or triangles (3d).  Similarly, if surface elements have been removed
 by the <A HREF = "remove_surf.html">remove_surf</A> command, then points may have
 also been deleted.  In either case, surface points and elements are
 renumbered by these operations to create compressed, contiguous lists.
-These lists are what is output by this command.
+These lists of surface elements are what is output by this command.
 </P>
 <P>The output file is written as a text file in the same format as the
 file the <A HREF = "read_surf.html">read_surf</A> command reads for explicit
-surfaces.
+surfaces.  See the <A HREF = "read_surf.html">read_surf</A> doc page for a
+description of its format.
 </P>
 <P>Similar to <A HREF = "dump.html">dump</A> files, the surface filename can contain
 two wild-card characters.  If a "*" appears in the filename, it is
@@ -80,10 +81,19 @@ discussed below can alter the number of files written.
 </P>
 <P>Note that implicit surfaces read in by the
 <A HREF = "read_isurf.html">read_isurf</A> command can be written out by the
-write_surf command, e.g. for visualization purposes.  But the file
-created by this command cannot be read back in to SPARTA via the
-<A HREF = "read_isurf.html">read_isurf</A> command, because this command creates
-files in an explicit surface format.
+write_surf command, e.g. for visualization purposes or to start a
+second simulation treating implicit surfaces previously ablated via
+the <A HREF = "fix_ablate.html">fix ablate</A> command as constant, unchanging
+explicit surfaces.  Because this command creates files in an explicit
+surface format, it can only be read back in to SPARTA via the
+<A HREF = "read_surf.html">read_surf</A> command.  It cannot be read back in via the
+<A HREF = "read_isurf.html">read_isurf</A> command.
+</P>
+<P>Also note, that implicit surfaces use the grid cell ID as the surface
+element ID for all line segments (2d) or triangles (3d) in the same
+grid cell.  When this command writes them to a file, the surface
+element IDs in the file become integers between 1 and N, where N is
+the total number of implicit surface elements.
 </P>
 <P>See the <A HREF = "Section_howto.html#howto_13">Howto 6.13</A> section of the manual
 for a discussion of explicit and implicit surfaces as well as
@@ -134,7 +144,9 @@ next 3 processors and write it to a surface file.
 </P>
 <HR>
 
-<P><B>Restrictions:</B> none
+<P><B>Restrictions:</B>
+</P>
+<P>The <I>custom</I> keyword cannot be used with implicit surfaces.
 </P>
 <P><B>Related commands:</B>
 </P>

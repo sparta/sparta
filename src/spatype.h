@@ -1,6 +1,6 @@
 /* ----------------------------------------------------------------------
    SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
-   http://sparta.sandia.gov
+   http://sparta.github.io
    Steve Plimpton, sjplimp@gmail.com, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
@@ -11,6 +11,10 @@
 
    See the README file in the top-level SPARTA directory.
 ------------------------------------------------------------------------- */
+
+#if __cplusplus <= 199711L
+  #error SPARTA requires a C++11 compliant compiler
+#endif
 
 // define integer data types used by SPARTA and associated size limits
 
@@ -89,6 +93,7 @@ typedef int64_t bigint;
 #define CELLINT_FORMAT "%u"
 #define SURFINT_FORMAT "%d"
 #define BIGINT_FORMAT "%" PRId64
+#define BIGUINT_FORMAT "%" PRIu64
 #define ATOCELLINT atoi
 #define ATOSURFINT atoi
 #define ATOBIGINT ATOLL
@@ -111,6 +116,7 @@ typedef int64_t bigint;
 #define CELLINT_FORMAT "%" PRIu64
 #define SURFINT_FORMAT "%" PRId64
 #define BIGINT_FORMAT "%" PRId64
+#define BIGUINT_FORMAT "%" PRIu64
 #define ATOCELLINT ATOLL
 #define ATOSURFINT ATOLL
 #define ATOBIGINT ATOLL
@@ -133,6 +139,7 @@ typedef int bigint;
 #define CELLINT_FORMAT "%u"
 #define SURFINT_FORMAT "%d"
 #define BIGINT_FORMAT "%d"
+#define BIGUINT_FORMAT "%u"
 #define ATOCELLINT atoi
 #define ATOSURFINT atoi
 #define ATOBIGINT atoi

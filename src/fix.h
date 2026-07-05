@@ -1,6 +1,6 @@
 /* ----------------------------------------------------------------------
    SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
-   http://sparta.sandia.gov
+   http://sparta.github.io
    Steve Plimpton, sjplimp@gmail.com, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
@@ -27,9 +27,10 @@ class Fix : protected Pointers {
   int nevery;                    // how often to call an end_of_step fix
   int time_depend;               // 1 if requires continuous timestepping
   int gridmigrate;               // 0/1 if per grid cell info must migrate
-  int flag_update_custom;         // 0/1 if has update_custom() method
+  int flag_update_custom;        // 0/1 if has update_custom() method
   int flag_gas_react;            // 0/1 if has gas_react() method
   int flag_surf_react;           // 0/1 if has surf_react() method
+  int flag_custom_surf_changed;  // 0/1 if depends on custom per-surf attributes
 
   int scalar_flag;               // 0/1 if compute_scalar() function exists
   int vector_flag;               // 0/1 if compute_vector() function exists
@@ -62,7 +63,7 @@ class Fix : protected Pointers {
   int per_grid_field;            // 0/1 if produces per-grid external field
   int field_active[3];           // 0/1 for active x,y,z components of ext field
 
-  int START_OF_STEP,END_OF_STEP;    // mask settings
+  int START_OF_STEP,END_OF_STEP,POST_RUN;    // mask settings
 
   int kokkos_flag;              // 0/1 if Kokkos fix
   int copy,uncopy,copymode;     // used by Kokkos, prevent deallocation of
@@ -81,6 +82,7 @@ class Fix : protected Pointers {
 
   virtual void start_of_step() {}
   virtual void end_of_step() {}
+  virtual void post_run() {}
   virtual void update_custom(int, double, double, double, double *) {}
   virtual void gas_react(int) {}
   virtual void surf_react(Particle::OnePart *, int &, int &) {}
@@ -92,6 +94,7 @@ class Fix : protected Pointers {
   virtual void add_grid_one() {}
   virtual void reset_grid_count(int) {}
   virtual void grid_changed() {}
+  virtual void custom_surf_changed() {}
 
   virtual double compute_scalar() {return 0.0;}
   virtual double compute_vector(int) {return 0.0;}

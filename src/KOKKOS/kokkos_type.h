@@ -1,6 +1,6 @@
 /* -*- c++ -*- ----------------------------------------------------------
    SPARTA - Large-scale Atomic/Molecular Massively Parallel Simulator
-   http://sparta.sandia.gov, Sandia National Laboratories
+   http://sparta.github.io, Sandia National Laboratories
    Steve Plimpton, sjplimp@gmail.com
 
    Copyright (2003) Sandia Corporation.  Under the terms of Contract
@@ -10,7 +10,7 @@
 
    See the README file in the top-level SPARTA directory.
 ------------------------------------------------------------------------- */
-// AAAAAAA
+
 #ifndef SPARTA_STYPE_KOKKOS_H
 #define SPARTA_STYPE_KOKKOS_H
 
@@ -39,7 +39,7 @@ namespace Kokkos {
   struct sparta_float3 {
     float x,y,z;
     KOKKOS_INLINE_FUNCTION
-    sparta_float3():x(0.0f),z(0.0f),y(0.0f) {}
+    sparta_float3():x(0.0f),y(0.0f),z(0.0f) {}
 
     KOKKOS_INLINE_FUNCTION
     void operator += (const sparta_float3& tmp) {
@@ -58,7 +58,7 @@ namespace Kokkos {
   struct sparta_double3 {
     double x,y,z;
     KOKKOS_INLINE_FUNCTION
-    sparta_double3():x(0.0),z(0.0),y(0.0) {}
+    sparta_double3():x(0.0),y(0.0),z(0.0) {}
 
     KOKKOS_INLINE_FUNCTION
     void operator += (const sparta_double3& tmp) {
@@ -276,17 +276,17 @@ public:
 
 // define precision
 
-#ifndef PRECISION
-#define PRECISION 2
+#ifndef SPA_PRECISION
+#define SPA_PRECISION 2
 #endif
-#if PRECISION==1
+#if SPA_PRECISION==1
 typedef float SPARTA_FLOAT;
 #else
 typedef double SPARTA_FLOAT;
 #endif
 
 #ifndef PREC_FORCE
-#define PREC_FORCE PRECISION
+#define PREC_FORCE SPA_PRECISION
 #endif
 
 #if PREC_FORCE==1
@@ -296,7 +296,7 @@ typedef double F_FLOAT;
 #endif
 
 #ifndef PREC_ENERGY
-#define PREC_ENERGY PRECISION
+#define PREC_ENERGY SPA_PRECISION
 #endif
 
 #if PREC_ENERGY==1
@@ -332,7 +332,7 @@ struct s_EV_FLOAT {
 typedef struct s_EV_FLOAT EV_FLOAT;
 
 #ifndef PREC_POS
-#define PREC_POS PRECISION
+#define PREC_POS SPA_PRECISION
 #endif
 
 #if PREC_POS==1
@@ -342,7 +342,7 @@ typedef double X_FLOAT;
 #endif
 
 #ifndef PREC_VELOCITIES
-#define PREC_VELOCITIES PRECISION
+#define PREC_VELOCITIES SPA_PRECISION
 #endif
 
 #if PREC_VELOCITIES==1
@@ -489,14 +489,6 @@ typedef tdual_int_2d::t_dev_const_um t_int_2d_const_um;
 typedef tdual_int_2d::t_dev_const_randomread t_int_2d_randomread;
 
 typedef Kokkos::
-  DualView<int***, Kokkos::LayoutRight, DeviceType> tdual_int_3d;
-typedef tdual_int_3d::t_dev t_int_3d;
-typedef tdual_int_3d::t_dev_const t_int_3d_const;
-typedef tdual_int_3d::t_dev_um t_int_3d_um;
-typedef tdual_int_3d::t_dev_const_um t_int_3d_const_um;
-typedef tdual_int_3d::t_dev_const_randomread t_int_3d_randomread;
-
-typedef Kokkos::
   DualView<SPARTA_NS::cellint*, DeviceType::array_layout, DeviceType>
   tdual_cellint_1d;
 typedef tdual_cellint_1d::t_dev t_cellint_1d;
@@ -624,13 +616,6 @@ typedef tdual_int_2d::t_host_um t_int_2d_um;
 typedef tdual_int_2d::t_host_const_um t_int_2d_const_um;
 typedef tdual_int_2d::t_host_const_randomread t_int_2d_randomread;
 
-typedef Kokkos::DualView<int***, Kokkos::LayoutRight, DeviceType> tdual_int_3d;
-typedef tdual_int_3d::t_host t_int_3d;
-typedef tdual_int_3d::t_host_const t_int_3d_const;
-typedef tdual_int_3d::t_host_um t_int_3d_um;
-typedef tdual_int_3d::t_host_const_um t_int_3d_const_um;
-typedef tdual_int_3d::t_host_const_randomread t_int_3d_randomread;
-
 typedef Kokkos::DualView<SPARTA_NS::cellint*, DeviceType::array_layout, DeviceType> tdual_cellint_1d;
 typedef tdual_cellint_1d::t_host t_cellint_1d;
 typedef tdual_cellint_1d::t_host_const t_cellint_1d_const;
@@ -747,7 +732,7 @@ void buffer_view(BufferView &buf, DualView &view,
                  const size_t n7 = 0) {
 
   buf = BufferView(
-          view.template d_view.data(),
+          view.d_view.data(),
           n0,n1,n2,n3,n4,n5,n6,n7);
 
 }

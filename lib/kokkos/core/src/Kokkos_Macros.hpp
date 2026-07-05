@@ -1,18 +1,5 @@
-//@HEADER
-// ************************************************************************
-//
-//                        Kokkos v. 4.0
-//       Copyright (2022) National Technology & Engineering
-//               Solutions of Sandia, LLC (NTESS).
-//
-// Under the terms of Contract DE-NA0003525 with NTESS,
-// the U.S. Government retains certain rights in this software.
-//
-// Part of Kokkos, under the Apache License v2.0 with LLVM Exceptions.
-// See https://kokkos.org/LICENSE for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-//
-//@HEADER
+// SPDX-FileCopyrightText: Copyright Contributors to the Kokkos project
 
 #ifndef KOKKOS_MACROS_HPP
 #define KOKKOS_MACROS_HPP
@@ -27,7 +14,7 @@
  *  KOKKOS_ENABLE_OPENMPTARGET        Kokkos::Experimental::OpenMPTarget
  *                                    execution space
  *  KOKKOS_ENABLE_HIP                 Kokkos::HIP execution space
- *  KOKKOS_ENABLE_SYCL                Kokkos::Experimental::SYCL execution space
+ *  KOKKOS_ENABLE_SYCL                Kokkos::SYCL execution space
  *  KOKKOS_ENABLE_HWLOC               HWLOC library is available.
  *  KOKKOS_ENABLE_DEBUG_BOUNDS_CHECK  Insert array bounds checks, is expensive!
  *  KOKKOS_ENABLE_CUDA_UVM            Use CUDA UVM for Cuda memory space.
@@ -55,7 +42,14 @@
 
 #ifndef KOKKOS_DONT_INCLUDE_CORE_CONFIG_H
 #include <KokkosCore_config.h>
+#include <impl/Kokkos_DesulAtomicsConfig.hpp>
 #include <impl/Kokkos_NvidiaGpuArchitectures.hpp>
+#endif
+
+#if __has_include(<version>)
+#include <version>
+#else
+#include <ciso646>
 #endif
 
 //----------------------------------------------------------------------------
@@ -65,7 +59,6 @@
  *
  *  KOKKOS_COMPILER_NVCC
  *  KOKKOS_COMPILER_GNU
- *  KOKKOS_COMPILER_INTEL
  *  KOKKOS_COMPILER_INTEL_LLVM
  *  KOKKOS_COMPILER_CRAYC
  *  KOKKOS_COMPILER_APPLECC
@@ -119,14 +112,11 @@
 #define KOKKOS_CLASS_LAMBDA [ =, *this ]
 #endif
 
-//#if !defined( __CUDA_ARCH__ ) // Not compiling Cuda code to 'ptx'.
+// #if !defined( __CUDA_ARCH__ ) // Not compiling Cuda code to 'ptx'.
 
 // Intel compiler for host code.
 
-#if defined(__INTEL_COMPILER)
-#define KOKKOS_COMPILER_INTEL __INTEL_COMPILER
-
-#elif defined(__INTEL_LLVM_COMPILER)
+#if defined(__INTEL_LLVM_COMPILER)
 #define KOKKOS_COMPILER_INTEL_LLVM __INTEL_LLVM_COMPILER
 
 // Cray compiler for device offload code
@@ -158,8 +148,8 @@
 #define KOKKOS_COMPILER_GNU \
   __GNUC__ * 100 + __GNUC_MINOR__ * 10 + __GNUC_PATCHLEVEL__
 
-#if (820 > KOKKOS_COMPILER_GNU)
-#error "Compiling with GCC version earlier than 8.2.0 is not supported."
+#if (1040 > KOKKOS_COMPILER_GNU)
+#error "Compiling with GCC version earlier than 10.4.0 is not supported."
 #endif
 
 #elif defined(_MSC_VER)
@@ -178,18 +168,15 @@
 //----------------------------------------------------------------------------
 // Intel compiler macros
 
-#if defined(KOKKOS_COMPILER_INTEL) || defined(KOKKOS_COMPILER_INTEL_LLVM)
-#if defined(KOKKOS_COMPILER_INTEL_LLVM) && \
-    KOKKOS_COMPILER_INTEL_LLVM >= 20230100
+#if defined(KOKKOS_COMPILER_INTEL_LLVM)
+#if KOKKOS_COMPILER_INTEL_LLVM >= 20230100
 #define KOKKOS_ENABLE_PRAGMA_UNROLL 1
+
+#ifndef __SYCL_DEVICE_ONLY__
 #define KOKKOS_ENABLE_PRAGMA_LOOPCOUNT 1
 #define KOKKOS_ENABLE_PRAGMA_VECTOR 1
-
 #define KOKKOS_ENABLE_PRAGMA_IVDEP 1
 #endif
-
-#if !defined(KOKKOS_MEMORY_ALIGNMENT)
-#define KOKKOS_MEMORY_ALIGNMENT 64
 #endif
 
 #if defined(_WIN32)
@@ -200,14 +187,10 @@
 
 #ifndef KOKKOS_IMPL_ALIGN_PTR
 #if defined(_WIN32)
-#define KOKKOS_IMPL_ALIGN_PTR(size) __declspec(align_value(size))
+#define KOKKOS_IMPL_ALIGN_PTR(size)
 #else
 #define KOKKOS_IMPL_ALIGN_PTR(size) __attribute__((align_value(size)))
 #endif
-#endif
-
-#if defined(KOKKOS_COMPILER_INTEL) && (1900 > KOKKOS_COMPILER_INTEL)
-#error "Compiling with Intel version earlier than 19.0.5 is not supported."
 #endif
 
 #if !defined(KOKKOS_ENABLE_ASM) && !defined(_WIN32)
@@ -239,10 +222,10 @@
 // CLANG compiler macros
 
 #if defined(KOKKOS_COMPILER_CLANG)
-//#define KOKKOS_ENABLE_PRAGMA_UNROLL 1
-//#define KOKKOS_ENABLE_PRAGMA_IVDEP 1
-//#define KOKKOS_ENABLE_PRAGMA_LOOPCOUNT 1
-//#define KOKKOS_ENABLE_PRAGMA_VECTOR 1
+// #define KOKKOS_ENABLE_PRAGMA_UNROLL 1
+// #define KOKKOS_ENABLE_PRAGMA_IVDEP 1
+// #define KOKKOS_ENABLE_PRAGMA_LOOPCOUNT 1
+// #define KOKKOS_ENABLE_PRAGMA_VECTOR 1
 
 #if !defined(KOKKOS_IMPL_HOST_FORCEINLINE_FUNCTION)
 #define KOKKOS_IMPL_HOST_FORCEINLINE_FUNCTION \
@@ -260,10 +243,10 @@
 // GNU Compiler macros
 
 #if defined(KOKKOS_COMPILER_GNU)
-//#define KOKKOS_ENABLE_PRAGMA_UNROLL 1
-//#define KOKKOS_ENABLE_PRAGMA_IVDEP 1
-//#define KOKKOS_ENABLE_PRAGMA_LOOPCOUNT 1
-//#define KOKKOS_ENABLE_PRAGMA_VECTOR 1
+// #define KOKKOS_ENABLE_PRAGMA_UNROLL 1
+// #define KOKKOS_ENABLE_PRAGMA_IVDEP 1
+// #define KOKKOS_ENABLE_PRAGMA_LOOPCOUNT 1
+// #define KOKKOS_ENABLE_PRAGMA_VECTOR 1
 
 #if !defined(KOKKOS_IMPL_HOST_FORCEINLINE_FUNCTION)
 #define KOKKOS_IMPL_HOST_FORCEINLINE_FUNCTION \
@@ -285,7 +268,7 @@
 #if defined(KOKKOS_COMPILER_NVHPC)
 #define KOKKOS_ENABLE_PRAGMA_UNROLL 1
 #define KOKKOS_ENABLE_PRAGMA_IVDEP 1
-//#define KOKKOS_ENABLE_PRAGMA_LOOPCOUNT 1
+// #define KOKKOS_ENABLE_PRAGMA_LOOPCOUNT 1
 #define KOKKOS_ENABLE_PRAGMA_VECTOR 1
 #endif
 
@@ -332,12 +315,31 @@
 #define KOKKOS_DEFAULTED_FUNCTION
 #endif
 
+#if !defined(KOKKOS_DEDUCTION_GUIDE)
+#define KOKKOS_DEDUCTION_GUIDE
+#endif
+
 #if !defined(KOKKOS_IMPL_HOST_FUNCTION)
 #define KOKKOS_IMPL_HOST_FUNCTION
 #endif
 
 #if !defined(KOKKOS_IMPL_DEVICE_FUNCTION)
 #define KOKKOS_IMPL_DEVICE_FUNCTION
+#endif
+
+// FIXME_OPENACC FIXME_OPENMPTARGET
+// Move to setup files once there is more content
+// clang-format off
+#if defined(KOKKOS_ENABLE_OPENACC)
+#define KOKKOS_IMPL_RELOCATABLE_FUNCTION @"KOKKOS_RELOCATABLE_FUNCTION is not supported for the OpenACC backend"
+#endif
+#if defined(KOKKOS_ENABLE_OPENMPTARGET)
+#define KOKKOS_IMPL_RELOCATABLE_FUNCTION @"KOKKOS_RELOCATABLE_FUNCTION is not supported for the OpenMPTarget backend"
+#endif
+// clang-format on
+
+#if !defined(KOKKOS_IMPL_RELOCATABLE_FUNCTION)
+#define KOKKOS_IMPL_RELOCATABLE_FUNCTION
 #endif
 
 //----------------------------------------------------------------------------
@@ -352,10 +354,14 @@
 #define KOKKOS_FORCEINLINE_FUNCTION \
   KOKKOS_IMPL_FORCEINLINE_FUNCTION  \
   __attribute__((annotate("KOKKOS_FORCEINLINE_FUNCTION")))
+#define KOKKOS_RELOCATABLE_FUNCTION \
+  KOKKOS_IMPL_RELOCATABLE_FUNCTION  \
+  __attribute__((annotate("KOKKOS_RELOCATABLE_FUNCTION")))
 #else
 #define KOKKOS_FUNCTION KOKKOS_IMPL_FUNCTION
 #define KOKKOS_INLINE_FUNCTION KOKKOS_IMPL_INLINE_FUNCTION
 #define KOKKOS_FORCEINLINE_FUNCTION KOKKOS_IMPL_FORCEINLINE_FUNCTION
+#define KOKKOS_RELOCATABLE_FUNCTION KOKKOS_IMPL_RELOCATABLE_FUNCTION
 #endif
 
 //----------------------------------------------------------------------------
@@ -368,12 +374,53 @@
 //----------------------------------------------------------------------------
 // Define Macro for alignment:
 
-#if !defined(KOKKOS_MEMORY_ALIGNMENT)
-#define KOKKOS_MEMORY_ALIGNMENT 64
+#ifdef KOKKOS_ENABLE_DEPRECATED_CODE_4
+#ifndef KOKKOS_MEMORY_ALIGNMENT
+#define KOKKOS_IMPL_MEMORY_ALIGNMENT 64
+#ifdef KOKKOS_ENABLE_DEPRECATION_WARNINGS
+#define KOKKOS_MEMORY_ALIGNMENT                                         \
+  [] {                                                                  \
+    int memory_alignment                                                \
+        [[deprecated("KOKKOS_MEMORY_ALIGNMENT macro is deprecated")]] = \
+            KOKKOS_IMPL_MEMORY_ALIGNMENT;                               \
+    return memory_alignment;                                            \
+  }();
+#else
+#define KOKKOS_MEMORY_ALIGNMENT KOKKOS_IMPL_MEMORY_ALIGNMENT
+#endif
+#else
+#define KOKKOS_IMPL_MEMORY_ALIGNMENT KOKKOS_MEMORY_ALIGNMENT
+#endif
+#else  // KOKKOS_ENABLE_DEPRECATED_CODE_4
+#ifdef KOKKOS_MEMORY_ALIGNMENT
+static_assert(false,
+              "External definition of KOKKOS_MEMORY_ALIGNMENT is not allowed");
+#endif
 #endif
 
-#if !defined(KOKKOS_MEMORY_ALIGNMENT_THRESHOLD)
-#define KOKKOS_MEMORY_ALIGNMENT_THRESHOLD 1
+#ifdef KOKKOS_ENABLE_DEPRECATED_CODE_4
+#ifndef KOKKOS_MEMORY_ALIGNMENT_THRESHOLD
+#define KOKKOS_IMPL_MEMORY_ALIGNMENT_THRESHOLD 1
+#ifdef KOKKOS_ENABLE_DEPRECATION_WARNINGS
+#define KOKKOS_MEMORY_ALIGNMENT_THRESHOLD                            \
+  [] {                                                               \
+    int memory_alignment [[deprecated(                               \
+        "KOKKOS_MEMORY_ALIGNMENT_THRESHOLD macro is deprecated")]] = \
+        KOKKOS_IMPL_MEMORY_ALIGNMENT_THRESHOLD;                      \
+    return memory_alignment;                                         \
+  }();
+#else
+#define KOKKOS_MEMORY_ALIGNMENT_THRESHOLD KOKKOS_IMPL_MEMORY_ALIGNMENT_THRESHOLD
+#endif
+#else
+#define KOKKOS_IMPL_MEMORY_ALIGNMENT_THRESHOLD KOKKOS_MEMORY_ALIGNMENT_THRESHOLD
+#endif
+#else  // KOKKOS_ENABLE_DEPRECATED_CODE_4
+#ifdef KOKKOS_MEMORY_ALIGNMENT_THRESHOLD
+static_assert(
+    false,
+    "External definition of KOKKOS_MEMORY_ALIGNMENT_THRESHOLD is not allowed");
+#endif
 #endif
 
 #if !defined(KOKKOS_IMPL_ALIGN_PTR)
@@ -517,17 +564,6 @@ static constexpr bool kokkos_omp_on_host() { return false; }
 #endif
 
 //----------------------------------------------------------------------------
-// If compiling with CUDA, we must use relocatable device code to enable the
-// task policy.
-
-#if defined(KOKKOS_ENABLE_CUDA)
-#if defined(KOKKOS_ENABLE_CUDA_RELOCATABLE_DEVICE_CODE)
-#define KOKKOS_ENABLE_TASKDAG
-#endif
-// FIXME_SYCL Tasks not implemented
-#elif !defined(KOKKOS_ENABLE_HIP) && !defined(KOKKOS_ENABLE_SYCL)
-#define KOKKOS_ENABLE_TASKDAG
-#endif
 
 #if defined(KOKKOS_ENABLE_CUDA) && defined(KOKKOS_ENABLE_DEPRECATED_CODE_4)
 #define KOKKOS_ENABLE_CUDA_LDG_INTRINSIC
@@ -540,8 +576,7 @@ static constexpr bool kokkos_omp_on_host() { return false; }
 // Guard intel compiler version 19 and older
 // intel error #2651: attribute does not apply to any entity
 // using <deprecated_type> KOKKOS_DEPRECATED = ...
-#if defined(KOKKOS_ENABLE_DEPRECATION_WARNINGS) && !defined(__NVCC__) && \
-    (!defined(KOKKOS_COMPILER_INTEL) || KOKKOS_COMPILER_INTEL >= 2021)
+#if defined(KOKKOS_ENABLE_DEPRECATION_WARNINGS) && !defined(__NVCC__)
 #define KOKKOS_DEPRECATED [[deprecated]]
 #define KOKKOS_DEPRECATED_WITH_COMMENT(comment) [[deprecated(comment)]]
 #else
@@ -562,23 +597,61 @@ static constexpr bool kokkos_omp_on_host() { return false; }
 #define KOKKOS_IMPL_WARNING(desc) KOKKOS_IMPL_DO_PRAGMA(message(#desc))
 #endif
 
-#define KOKKOS_ATTRIBUTE_NODISCARD [[nodiscard]]
+// clang-format off
+#if defined(__NVCOMPILER)
+  #define KOKKOS_IMPL_DISABLE_DEPRECATED_WARNINGS_PUSH() \
+    _Pragma("diag_suppress 1216") \
+    _Pragma("diag_suppress deprecated_entity_with_custom_message")
+  #define KOKKOS_IMPL_DISABLE_DEPRECATED_WARNINGS_POP() \
+    _Pragma("diag_default 1216") \
+    _Pragma("diag_suppress deprecated_entity_with_custom_message")
+#elif defined(__EDG__)
+  #define KOKKOS_IMPL_DISABLE_DEPRECATED_WARNINGS_PUSH() \
+    _Pragma("warning push")                              \
+    _Pragma("warning disable 1478")
+  #define KOKKOS_IMPL_DISABLE_DEPRECATED_WARNINGS_POP() \
+    _Pragma("warning pop")
+#elif defined(__GNUC__) || defined(__clang__)
+  #define KOKKOS_IMPL_DISABLE_DEPRECATED_WARNINGS_PUSH() \
+    _Pragma("GCC diagnostic push")                       \
+    _Pragma("GCC diagnostic ignored \"-Wdeprecated-declarations\"")
+  #define KOKKOS_IMPL_DISABLE_DEPRECATED_WARNINGS_POP() \
+    _Pragma("GCC diagnostic pop")
+#elif defined(_MSC_VER)
+  #define KOKKOS_IMPL_DISABLE_DEPRECATED_WARNINGS_PUSH() \
+    _Pragma("warning(push)")                             \
+    _Pragma("warning(disable: 4996)")
+  #define KOKKOS_IMPL_DISABLE_DEPRECATED_WARNINGS_POP() \
+    _Pragma("warning(pop)")
+#else
+  #define KOKKOS_IMPL_DISABLE_DEPRECATED_WARNINGS_PUSH()
+  #define KOKKOS_IMPL_DISABLE_DEPRECATED_WARNINGS_POP()
+#endif
 
-#if (defined(KOKKOS_COMPILER_GNU) || defined(KOKKOS_COMPILER_CLANG) ||        \
-     defined(KOKKOS_COMPILER_INTEL) || defined(KOKKOS_COMPILER_INTEL_LLVM) || \
-     defined(KOKKOS_COMPILER_NVHPC)) &&                                       \
+#if defined(__NVCOMPILER)
+#define KOKKOS_IMPL_DISABLE_UNREACHABLE_WARNINGS_PUSH() \
+  _Pragma("diag_suppress code_is_unreachable")          \
+  _Pragma("diag_suppress initialization_not_reachable")
+#define KOKKOS_IMPL_DISABLE_UNREACHABLE_WARNINGS_POP() \
+  _Pragma("diag_default code_is_unreachable")          \
+  _Pragma("diag_default initialization_not_reachable")
+#else
+#define KOKKOS_IMPL_DISABLE_UNREACHABLE_WARNINGS_PUSH()
+#define KOKKOS_IMPL_DISABLE_UNREACHABLE_WARNINGS_POP()
+#endif
+// clang-format on
+
+#ifdef KOKKOS_ENABLE_DEPRECATED_CODE_4
+#define KOKKOS_ATTRIBUTE_NODISCARD [[nodiscard]]
+#endif
+
+#if (defined(KOKKOS_COMPILER_GNU) || defined(KOKKOS_COMPILER_CLANG) ||         \
+     defined(KOKKOS_COMPILER_INTEL_LLVM) || defined(KOKKOS_COMPILER_NVHPC)) && \
     !defined(_WIN32) && !defined(__ANDROID__)
 #if __has_include(<execinfo.h>)
 #define KOKKOS_IMPL_ENABLE_STACKTRACE
 #endif
 #define KOKKOS_IMPL_ENABLE_CXXABI
-#endif
-
-// WORKAROUND for AMD aomp which apparently defines CUDA_ARCH when building for
-// AMD GPUs with OpenMP Target ???
-#if defined(__CUDA_ARCH__) && !defined(__CUDACC__) && \
-    !defined(KOKKOS_ENABLE_HIP) && !defined(KOKKOS_ENABLE_CUDA)
-#undef __CUDA_ARCH__
 #endif
 
 #if (defined(KOKKOS_IMPL_WINDOWS_CUDA) || defined(KOKKOS_COMPILER_MSVC)) && \
@@ -589,6 +662,16 @@ static constexpr bool kokkos_omp_on_host() { return false; }
 #define KOKKOS_IMPL_ENFORCE_EMPTY_BASE_OPTIMIZATION __declspec(empty_bases)
 #else
 #define KOKKOS_IMPL_ENFORCE_EMPTY_BASE_OPTIMIZATION
+#endif
+
+#if defined(KOKKOS_IMPL_BUILD_SHARED_LIBS) && defined(_WIN32)
+#ifdef KOKKOS_IMPL_EXPORT_SYMBOLS
+#define KOKKOS_IMPL_EXPORT __declspec(dllexport)
+#else
+#define KOKKOS_IMPL_EXPORT __declspec(dllimport)
+#endif
+#else
+#define KOKKOS_IMPL_EXPORT
 #endif
 
 #endif  // #ifndef KOKKOS_MACROS_HPP

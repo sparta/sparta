@@ -1,6 +1,6 @@
 /* ----------------------------------------------------------------------
    SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
-   http://sparta.sandia.gov
+   http://sparta.github.io
    Steve Plimpton, sjplimp@gmail.com, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
@@ -44,7 +44,7 @@ class FixEmit : public Fix {
   virtual void create_task(int) = 0;
   virtual void perform_task() = 0;
 
-  void create_tasks();
+  virtual void create_tasks();
   double mol_inflow(double, double, double);
   int subsonic_temperature_check(int, double);
   void options(int, char **);

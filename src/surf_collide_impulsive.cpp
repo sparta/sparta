@@ -1,6 +1,6 @@
 /* ----------------------------------------------------------------------
    SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
-   http://sparta.sandia.gov
+   http://sparta.github.io
    Steve Plimpton, sjplimp@gmail.com, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
@@ -41,6 +41,8 @@ using namespace MathConst;
 
 enum{NONE,DISCRETE,SMOOTH};
 enum{NUMERIC,CUSTOM,VARIABLE,VAREQUAL,VARSURF};   // surf_collide classes
+
+#define SMALL 1.0e-6              // roundoff tolerance for summed-fraction check
 
 /* ---------------------------------------------------------------------- */
 
@@ -121,7 +123,7 @@ SurfCollideImpulsive::SurfCollideImpulsive(SPARTA *sparta, int narg, char **arg)
       if (vib_frac < 0.0 || vib_frac > 1.0 )
         error->all(FLERR,"Illegal surf_collide impulsive internal energy "
                    "vibrational fraction");
-      if (rot_frac + vib_frac > 1.0)
+      if (rot_frac + vib_frac > 1.0 + SMALL)
         error->all(FLERR,"Illegal surf_collide impulsive internal energy "
                    "rot-vib fraction sum");
       iarg += 3;

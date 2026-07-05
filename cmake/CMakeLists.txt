@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.12.0)
+cmake_minimum_required(VERSION 3.16.0)
 
 project(SPARTA)
 
@@ -6,11 +6,38 @@ set(SPARTA_BUILD_VER "1.0.0")
 set(SPARTA_API_VER "1")
 
 # ######### BEGIN CMAKE POLICY SETTINGS ##########
-if(${CMAKE_VERSION} VERSION_GREATER_EQUAL "3.12.0")
-  message(STATUS "Setting policy CMP0074 to use <TPL>_ROOT variables")
-  cmake_policy(SET CMP0074 NEW)
+message(STATUS "Setting policy CMP0074 to use <TPL>_ROOT variables")
+cmake_policy(SET CMP0074 NEW)
+
+if(POLICY CMP0144)
+  cmake_policy(SET CMP0144 NEW)
 endif()
 # ######### END CMAKE POLICY SETTINGS ##########
+
+# we require C++11 without extensions. Kokkos requires at least C++20 (currently)
+if(NOT CMAKE_CXX_STANDARD)
+  set(CMAKE_CXX_STANDARD 11)
+endif()
+if(CMAKE_CXX_STANDARD LESS 11)
+  message(FATAL_ERROR "C++ standard must be set to at least 11")
+endif()
+if(PKG_KOKKOS AND (CMAKE_CXX_STANDARD LESS 20))
+  set(CMAKE_CXX_STANDARD 20)
+endif()
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF CACHE BOOL "Use compiler extensions")
+# ugly hacks for MSVC which by default always reports an old C++ standard in the __cplusplus macro
+# and prints lots of pointless warnings about "unsafe" functions
+if(MSVC)
+  if((CMAKE_CXX_COMPILER_ID STREQUAL "MSVC") OR (CMAKE_CXX_COMPILER_ID STREQUAL "Intel"))
+    add_compile_options(/Zc:__cplusplus)
+    add_compile_options(/wd4244)
+    add_compile_options(/wd4267)
+    add_compile_options(/wd4250)
+    add_compile_options(/EHsc)
+  endif()
+  add_compile_definitions(_CRT_SECURE_NO_WARNINGS)
+endif()
 
 # ######### BEGIN SET COMMON DIRS ##########
 set(SPARTA_TPL_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../lib)
@@ -76,6 +103,8 @@ set(TARGET_SPARTA spa_${SPARTA_MACHINE})
 
 set(TARGET_SPARTA_LIB sparta_${SPARTA_MACHINE})
 if(BUILD_SHARED_LIBS)
+  # Force PIC so intermediate static package libs link into the shared libsparta
+  set(CMAKE_POSITION_INDEPENDENT_CODE ON)
   set(TARGET_SPARTA_LIB_LINK "libsparta${CMAKE_SHARED_LIBRARY_SUFFIX}")
   set(TARGET_SPARTA_LIB_NAME
       "libsparta_${SPARTA_MACHINE}${CMAKE_SHARED_LIBRARY_SUFFIX}")

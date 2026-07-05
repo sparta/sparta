@@ -1,6 +1,6 @@
 /* ----------------------------------------------------------------------
    SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
-   http://sparta.sandia.gov
+   http://sparta.github.io
    Steve Plimpton, sjplimp@gmail.com, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
@@ -72,9 +72,6 @@ class DumpParticle : public Dump {
   char **id_custom;          // their IDs
   int *custom;               // list of indices for the Custom attributes
 
-  int ntypes;                // # of particle types
-  char **typenames;             // array of element names for each type
-
   virtual void init_style();
   void write_header(bigint);
   int count();
@@ -113,6 +110,7 @@ class DumpParticle : public Dump {
   void pack_id(int);
   void pack_type(int);
   void pack_proc(int);
+  void pack_cellid(int);
 
   void pack_x(int);
   void pack_y(int);

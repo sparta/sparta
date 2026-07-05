@@ -1,18 +1,5 @@
-//@HEADER
-// ************************************************************************
-//
-//                        Kokkos v. 4.0
-//       Copyright (2022) National Technology & Engineering
-//               Solutions of Sandia, LLC (NTESS).
-//
-// Under the terms of Contract DE-NA0003525 with NTESS,
-// the U.S. Government retains certain rights in this software.
-//
-// Part of Kokkos, under the Apache License v2.0 with LLVM Exceptions.
-// See https://kokkos.org/LICENSE for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-//
-//@HEADER
+// SPDX-FileCopyrightText: Copyright Contributors to the Kokkos project
 
 #ifndef KOKKOS_IMPL_PUBLIC_INCLUDE
 #define KOKKOS_IMPL_PUBLIC_INCLUDE
@@ -54,9 +41,11 @@ void* OpenMPTargetSpace::impl_allocate(
   static_assert(sizeof(void*) == sizeof(uintptr_t),
                 "Error sizeof(void*) != sizeof(uintptr_t)");
 
-  void* ptr;
+  void* ptr = omp_target_alloc(arg_alloc_size, omp_get_default_device());
 
-  ptr = omp_target_alloc(arg_alloc_size, omp_get_default_device());
+  if (!ptr) {
+    Kokkos::Impl::throw_bad_alloc(name(), arg_alloc_size, arg_label);
+  }
 
   if (Kokkos::Profiling::profileLibraryLoaded()) {
     const size_t reported_size =

@@ -1,6 +1,6 @@
 /* ----------------------------------------------------------------------
    SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
-   http://sparta.sandia.gov
+   http://sparta.github.io
    Steve Plimpton, sjplimp@gmail.com, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
@@ -62,7 +62,7 @@ void ComputeCountKokkos::init()
     maxspecies = particle->nspecies;
     memoryKK->destroy_kokkos(k_count,count);
     memoryKK->create_kokkos(k_count,count,maxspecies,"compute/count:count");
-    d_count = k_count.d_view;
+    d_count = k_count.view_device();
   }
 
   // check if the group count in any accessed mixtures has changed
@@ -95,7 +95,7 @@ double ComputeCountKokkos::compute_scalar()
   k_count.modify_device();
   k_count.sync_host();
   for (int m=0; m<maxspecies; ++m)
-    count[m] = k_count.h_view(m);
+    count[m] = k_count.view_host()(m);
 
   bigint one;
   if (spmix[0] == SPECIES) one = count[index[0]];
@@ -125,7 +125,7 @@ void ComputeCountKokkos::compute_vector()
   k_count.modify_device();
   k_count.sync_host();
   for (int m=0; m<maxspecies; ++m)
-    count[m] = k_count.h_view(m);
+    count[m] = k_count.view_host()(m);
 
   for (i = 0; i < nvalues; i++) {
     onevec[i] = 0;
@@ -154,7 +154,7 @@ void ComputeCountKokkos::per_species_tally_kokkos()
 
   ParticleKokkos* particle_kk = (ParticleKokkos*) particle;
   particle_kk->sync(Device,PARTICLE_MASK);
-  d_particles = particle_kk->k_particles.d_view;
+  d_particles = particle_kk->k_particles.view_device();
 
   need_dup = sparta->kokkos->need_dup<DeviceType>();
   if (need_dup)
@@ -173,7 +173,7 @@ void ComputeCountKokkos::per_species_tally_kokkos()
 
   if (need_dup) {
     Kokkos::Experimental::contribute(d_count, dup_count);
-    dup_count = decltype(dup_count)(); // free duplicated memory
+    dup_count = {}; // free duplicated memory
   }
 
   d_particles = t_particle_1d(); // destroy reference to reduce memory use

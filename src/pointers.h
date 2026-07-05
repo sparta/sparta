@@ -1,6 +1,6 @@
 /* ----------------------------------------------------------------------
    SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
-   http://sparta.sandia.gov
+   http://sparta.github.io
    Steve Plimpton, sjplimp@gmail.com, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
@@ -62,13 +62,14 @@ class Pointers {
     react(ptr->react),
     output(ptr->output),
     timer(ptr->timer),
+    python(ptr->python),
     memoryKK(ptr->memoryKK),
     world(ptr->world),
     infile(ptr->infile),
     screen(ptr->screen),
     logfile(ptr->logfile) {}
 
-  virtual ~Pointers() {}
+  virtual ~Pointers() noexcept(false) {}
 
  protected:
   SPARTA *sparta;
@@ -89,7 +90,8 @@ class Pointers {
   Output *&output;
   Timer *&timer;
 
-  MemoryKokkos *&memoryKK;
+  class Python *&python;
+  class MemoryKokkos *&memoryKK;
 
   MPI_Comm &world;
   FILE *&infile;

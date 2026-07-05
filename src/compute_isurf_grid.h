@@ -1,6 +1,6 @@
 /* ----------------------------------------------------------------------
    SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
-   http://sparta.sandia.gov
+   http://sparta.github.io
    Steve Plimpton, sjplimp@gmail.com, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
@@ -35,7 +35,7 @@ class ComputeISurfGrid : public Compute {
   virtual void init();
   void compute_per_grid();
   virtual void clear();
-  virtual void surf_tally(int, int, int, Particle::OnePart *,
+  virtual void surf_tally(double, int, int, int, Particle::OnePart *,
                           Particle::OnePart *, Particle::OnePart *);
   virtual int tallyinfo(surfint *&);
   void post_process_isurf_grid();

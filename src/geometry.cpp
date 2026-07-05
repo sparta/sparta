@@ -1,6 +1,6 @@
 /* ----------------------------------------------------------------------
    SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
-   http://sparta.sandia.gov
+   http://sparta.github.io
    Steve Plimpton, sjplimp@gmail.com, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
@@ -21,6 +21,7 @@
 #define EPSSQ 1.0e-16
 #define EPSSQNEG -1.0e-16
 #define EPSSELF 1.0e-6
+#define EPSTIME 1.0e-16
 
 enum{OUTSIDE,INSIDE,ONSURF2OUT,ONSURF2IN};    // same as Update
 
@@ -791,6 +792,15 @@ bool axi_line_intersect(double tdelta, double *x, double *v,
 
   while (1) {
 
+    // check for roundoff issue which can occur when
+    //  axisym surf is nearly exactly on grid cell edge
+    // round-off in solution to quadratic equation
+    //   can cause t1 to be EPSTIME greater than tdelta and miss collision
+    // force a collision in this special case by setting t1 = tdelta
+
+    if (t1 > tdelta && (t1-tdelta) < EPSTIME && tdelta > 0.0)
+      t1 = tdelta;
+
     // test for collision time >= 0.0 and <= tdelta
 
     if (t1 > tdelta) return false;
@@ -934,6 +944,17 @@ bool axi_horizontal_line(double tdelta, double *x, double *v,
     if (fabs(t1) < fabs(t2)) t1 = t2;
     nc = 1;
   }
+
+  // check for roundoff issue which can occur when
+  //  axisym surf is nearly exactly on grid cell edge
+  // round-off in solution to quadratic equation
+  //   can cause t1 or t2 to be EPSTIME greater than tdelta and miss collision
+  // force a collision in this special case by setting t1/t2 = tdelta
+
+  if (t1 > tdelta && (t1-tdelta) < EPSTIME && tdelta > 0.0)
+    t1 = tdelta;
+  else if (t2 > tdelta && (t2-tdelta) < EPSTIME && tdelta > 0.0)
+    t2 = tdelta;
 
   // require first collision time >= 0.0 and <= tdelta
 
@@ -1498,6 +1519,54 @@ double tri_fraction(double *x, double *v0, double *v1, double *v2)
   fracsq = MIN(fracsq,MathExtra::lensq3(segment)/lensq);
 
   return fracsq;
+}
+
+/* ----------------------------------------------------------------------
+   compute area of an arbitrary convex polygon (does not work for concave)
+   npoint = number of points
+   cpath = series of x,y,z triplets that define the polygon
+            e.g. returned from cut2/3d clip_external() function
+   center = computed centroid of polygon
+------------------------------------------------------------------------- */
+
+double poly_area(int npoint, double *cpath, double* center)
+{
+  double area = 0.0;
+  double v1[3],v2[3],xproduct[3];
+  double pt0[3],pti[3],ptip1[3],tri_center[3];
+
+  center[0] = 0.0;
+  center[1] = 0.0;
+  center[2] = 0.0;
+
+  pt0[0] = cpath[0];
+  pt0[1] = cpath[1];
+  pt0[2] = cpath[2];
+
+  for (int i = 1; i < npoint-1; i++) {
+    pti[0] = cpath[3*i];
+    pti[1] = cpath[3*i+1];
+    pti[2] = cpath[3*i+2];
+
+    ptip1[0] = cpath[3*(i+1)];
+    ptip1[1] = cpath[3*(i+1)+1];
+    ptip1[2] = cpath[3*(i+1)+2];
+
+    MathExtra::sub3(pti,pt0,v1);
+    MathExtra::sub3(ptip1,pt0,v2);
+    MathExtra::cross3(v1,v2,xproduct);
+    double tri_area = 0.5*sqrt(MathExtra::dot3(xproduct,xproduct));
+
+    MathExtra::add3(pt0,pti,tri_center);
+    MathExtra::add3(tri_center,ptip1,tri_center);
+    MathExtra::scale3(tri_area/3.0,tri_center);
+    MathExtra::add3(center,tri_center,center);
+    area += tri_area;
+  }
+
+  MathExtra::scale3(1.0/area,center);
+
+  return area;
 }
 
 /* ---------------------------------------------------------------------- */

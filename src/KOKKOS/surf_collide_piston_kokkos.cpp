@@ -1,6 +1,6 @@
 /* ----------------------------------------------------------------------
    SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
-   http://sparta.sandia.gov
+   http://sparta.github.io
    Steve Plimpton, sjplimp@gmail.com, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
@@ -59,25 +59,21 @@ SurfCollidePistonKokkos::SurfCollidePistonKokkos(SPARTA *sparta) :
   sr_kk_global_copy{VAL_2(KKCopy<SurfReactGlobalKokkos>(sparta))},
   sr_kk_prob_copy{VAL_2(KKCopy<SurfReactProbKokkos>(sparta))}
 {
-  id = NULL;
-  style = NULL;
-
-  t_owned = NULL;
-  t_localghost = NULL;
+  copy = 1;
 }
 
 /* ---------------------------------------------------------------------- */
 
 SurfCollidePistonKokkos::~SurfCollidePistonKokkos()
 {
-  if (!uncopy) return;
+  if (uncopy) {
+    fix_ambi_kk_copy.uncopy();
+    fix_vibmode_kk_copy.uncopy();
 
-  fix_ambi_kk_copy.uncopy();
-  fix_vibmode_kk_copy.uncopy();
-
-  for (int i = 0; i < KOKKOS_MAX_SURF_REACT_PER_TYPE; i++) {
-    sr_kk_global_copy[i].uncopy();
-    sr_kk_prob_copy[i].uncopy();
+    for (int i = 0; i < KOKKOS_MAX_SURF_REACT_PER_TYPE; i++) {
+      sr_kk_global_copy[i].uncopy();
+      sr_kk_prob_copy[i].uncopy();
+    }
   }
 }
 
@@ -153,7 +149,7 @@ void SurfCollidePistonKokkos::pre_collide()
 
   ParticleKokkos* particle_kk = (ParticleKokkos*) particle;
   particle_kk->sync(Device,PARTICLE_MASK|SPECIES_MASK);
-  d_particles = particle_kk->k_particles.d_view;
+  d_particles = particle_kk->k_particles.view_device();
 
   Kokkos::deep_copy(d_scalars,0);
 }
@@ -178,7 +174,7 @@ void SurfCollidePistonKokkos::post_collide()
 void SurfCollidePistonKokkos::backup()
 {
   ParticleKokkos* particle_kk = (ParticleKokkos*) particle;
-  d_particles = particle_kk->k_particles.d_view;
+  d_particles = particle_kk->k_particles.view_device();
 
   if (surf->nsr > 0) {
     int nglob,nprob;

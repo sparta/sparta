@@ -1,6 +1,6 @@
 /* ----------------------------------------------------------------------
    SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
-   http://sparta.sandia.gov
+   http://sparta.github.io
    Steve Plimpton, sjplimp@gmail.com, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
@@ -31,7 +31,7 @@ class Irregular : protected Pointers {
   void create_procs(int, int *, int sort = 0);
   virtual int create_data_uniform(int, int *, int sort = 0);
   int create_data_uniform_grouped(int, int *, int sort = 0);
-  int create_data_variable(int, int *, int *, int &, int sort = 0);
+  int create_data_variable(int, int *, int *, bigint &, int sort = 0);
   virtual int augment_data_uniform(int, int *);
   void exchange_uniform(char *, int, char *);
   void exchange_variable(char *, int *, char *);
@@ -72,7 +72,7 @@ class Irregular : protected Pointers {
   int offsetmax;             // current size of offset_send
   int *size_send;            // # of bytes of send to each proc
   int *size_recv;            // # of bytes to recv from each proc
-  int *offset_send;          // list of byte offsets for each send datum
+  bigint *offset_send;       // list of byte offsets for each send datum
 };
 
 }

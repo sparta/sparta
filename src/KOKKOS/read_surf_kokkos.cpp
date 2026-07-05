@@ -1,6 +1,6 @@
 /* ----------------------------------------------------------------------
    SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
-   http://sparta.sandia.gov
+   http://sparta.github.io
    Steve Plimpton, sjplimp@gmail.com, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
@@ -57,8 +57,10 @@ ReadSurfKokkos::ReadSurfKokkos(SPARTA *sparta) : ReadSurf(sparta)
 
 void ReadSurfKokkos::command(int narg, char **arg)
 {
+  SurfKokkos* surf_kk = (SurfKokkos*) surf;
+  surf_kk->sync(Host,ALL_MASK);
+
   ReadSurf::command(narg,arg);
 
-  SurfKokkos* surf_kk = (SurfKokkos*) surf;
   surf_kk->modify(Host,ALL_MASK);
 }

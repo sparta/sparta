@@ -1,6 +1,6 @@
 /* ----------------------------------------------------------------------
    SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
-   http://sparta.sandia.gov
+   http://sparta.github.io
    Steve Plimpton, sjplimp@gmail.com, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
@@ -63,8 +63,8 @@ double ComputeTempKokkos::compute_scalar_kokkos()
   invoked_scalar = update->ntimestep;
   ParticleKokkos* particle_kk = (ParticleKokkos*) particle;
   particle_kk->sync(Device, PARTICLE_MASK|SPECIES_MASK);
-  d_particles = particle_kk->k_particles.d_view;
-  d_species = particle_kk->k_species.d_view;
+  d_particles = particle_kk->k_particles.view_device();
+  d_species = particle_kk->k_species.view_device();
   int nlocal = particle->nlocal;
 
   double t = 0.0;

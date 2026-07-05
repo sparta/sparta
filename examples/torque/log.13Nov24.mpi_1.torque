@@ -1,0 +1,200 @@
+SPARTA (4 Sep 2024)
+Running on 1 MPI task(s)
+################################################################################
+# 3d flow around a cube
+#
+# Note:
+#  - The "comm/sort” option to the “global” command is used to match MPI runs.
+#  - The “twopass” option is used to match Kokkos runs.
+# The "comm/sort" and "twopass" options should not be used for production runs.
+################################################################################
+
+seed	    	    12345
+dimension   	    3
+global              gridcut 0.1 comm/sort yes
+
+# MESH
+boundary	    o o o
+create_box  	    -0.075 0.075 -0.075 0.075 -0.075 0.075
+Created orthogonal box = (-0.075 -0.075 -0.075) to (0.075 0.075 0.075)
+create_grid         10 10 10  levels 3 subset 2*3 * * * 2 2 2 # split each level into 2x2x2
+Created 64000 child grid cells
+  CPU time = 0.0381334 secs
+  create/ghost percent = 26.5691 73.4309
+# really needs ~350 on a side to get cells ~1/3 mean free path
+# 30^3 = 27e3 cells, 100^3 = 1e6 cells, 200^3 = 8e6 cells, 300^3 = 27e6 cells
+balance_grid        rcb cell
+Balance grid migrated 0 cells
+  CPU time = 0.0112486 secs
+  reassign/sort/migrate/ghost percent = 28.1018 2.4656 10.1545 59.2781
+
+# FLOW
+# For 20 particles/cell. Should be 10-30/cell for optimal performance
+# nsim = 20*[27e3 1e6, 8e6, 27e6] = [540e3, 20e6, 160e6, 540e6] particles
+# P=nkT, P=120Pa, T=56K, k=1.38065e-23 J/K =>
+# nrho = 1.552e23 particles m-3
+# box volume = 0.15^3 = 3e-3 m3
+# nreal=nrho*V = 5e20 particles
+# fnum= nreal/nsim = 5e20/[5.4e5 2e7, 1.6e8, 5.4e8] ~ [1e15, 2.5e13, 3e12, 1e12]
+global		    nrho 1.552e23 fnum 5.0e17  # fnum increased to speed up sim
+
+# v=1046m/s, T=56K, P=120Pa => M=7
+species		    air.species N2 O2 #N O NO  Minimize species and reactions to speed up
+#mixture  	    air N2 O2 N O NO vstream 1046.0 0 0 temp 56.0
+mixture		    air N2 O2 vstream 1046.0 0 0 temp 56.0
+mixture 	    air N2 frac 0.79
+mixture		    air O2 frac 0.21
+#mixture	    air N  frac 0.
+#mixture	    air O  frac 0.
+#mixture 	    air NO frac 0.
+
+
+# SURFACES
+read_surf           sdata.cube512 scale 0.0503 0.0503 0.0503 rotate -27. 0 1 0  # replace with sdata.cube to show old method does not work with large faces
+  3072 triangles
+  -0.0338267 0.0338267 xlo xhi
+  -0.02515 0.02515 ylo yhi
+  -0.0338267 0.0338267 zlo zhi
+  0.00314375 min triangle edge length
+  4.94158e-06 min triangle area
+  1296 0 = cells overlapping surfs, overlap cells with unmarked corner pts
+  2 tiny edges removed
+  60976 1728 1296 = cells outside/inside/overlapping surfs
+  1248 48 = surf cells with 1,2,etc splits
+  0.00324774 0.00324774 = cell-wise and global flow volume
+  CPU time = 0.0960735 secs
+  read/check/sort/surf2grid/ghost/inout/particle percent = 1.90658 2.97202 2.60148 67.464 25.0559 6.40028 0.000386163
+  surf2grid time = 0.064815 secs
+  map/comm1/comm2/comm3/comm4/split percent = 28.0808 2.69185 24.4642 1.12249 1.29421 37.684
+surf_collide	    1 diffuse 56.0 0.9
+# diffuse, at 56K but should probably be warmer, 0.0 = all specular. 1.0 = all diffuse
+#surf_react    	    1 prob air.surf
+surf_modify         all collide 1 #react 1  No reactions to speed up
+
+# COLLISIONS
+collide		    vss air air.vss
+react		    tce air.tce
+fix		    in emit/face air xlo twopass
+timestep 	    1.e-7   # Mean collision time = 1.5e-7s for the free flow, but too high for the flow behind the shock
+
+# OUTPUT
+# images
+compute             2 surf all all n press ke
+fix                 save ave/surf all 1 50 50 c_2[*] ave running
+region              slab block INF INF INF INF INF INF
+#dump                2 image all 3000 cube4_*.ppm type type pdiam 3.e-5 #                    view 70 -120 size 512 512 axes yes 0.25 0.01 #                    surf f_save[2] 0.0
+#dump_modify         2 pad 4 region slab  # pad 4 = 0000 0001 0002 ...  region to plot
+#dump_modify         2 cmap surf min max cf 0.0 2 min white max blue
+
+# flow field
+compute	            c1 thermal/grid all air temp press          # calculate cell T,P
+compute		    c2 grid all air n nrho massrho u v w        # densities, velocity
+fix		    f1 ave/grid all 1 3000 3000 c_c1[*] c_c2[*] # average over 3000 timesteps
+#dump		    d1 grid all 3000 cube4.field.* xlo xhi ylo yhi zlo zhi f_f1[*]
+
+# integrated forces
+compute 	    s1 surf all all fx fy fz press             # force vector (may have shear)
+fix		    f2 ave/surf all 1 3000 3000 c_s1[*]        # time averaged forces on each face
+compute		    r1 reduce sum f_f2[*]                      # drag,side-force,lift
+
+# Old torque calculation from forces on face centers
+# Requires many small faces so only a small error between face center and impact location
+compute	    	    s2 property/surf all xc yc zc              # position of face centers
+variable 	    mx surf c_s2[2]*c_s1[3]-c_s2[3]*c_s1[2]    # moment x component  M = r x F
+variable 	    my surf c_s2[3]*c_s1[1]-c_s2[1]*c_s1[3]    # moment y component
+variable 	    mz surf c_s2[1]*c_s1[2]-c_s2[2]*c_s1[1]    # moment z component
+fix		    f3 ave/surf all 1 3000 3000 v_mx v_my v_mz # time averaged moments on each face
+compute             r2 reduce sum f_f3[*]                      # total torque on body
+# New torque from impacts calculation
+# Calculates torque based on actual impact location. Will give accurate result even with large faces.
+compute	    	    s5 surf all all tx ty tz com 0.0 0.0 0.0 # torque about center of mass at origin
+fix		    f4 ave/surf all 1 3000 3000 c_s5[*]      # time averaged torque on each face
+compute	    	    r3 reduce sum f_f4[*]                    # net torque on body
+#dump		    d2 surf all 3000 cube4.surf.* id f_f2[*] f_f3[*] f_f4[*] # face_id, forces, torques(x2)
+
+# aerodynamic coefficients
+variable	    Cd equal c_r1[1]/10.284816  # q=0.5*rho*v^2=4065Pa, A=0.00253009m2
+variable	    Cy equal c_r1[2]/10.284816
+variable	    Cl equal c_r1[3]/10.284816
+variable	    Cmx equal c_r2[1]/0.517326  # q=0.5*rho*v^2=4065Pa, A=0.00253009m2, D=0.0503m
+variable	    Cmy equal c_r2[2]/0.517326
+variable	    Cmz equal c_r2[3]/0.517326
+variable	    Cmx2 equal c_r3[1]/0.517326 # repeat using new more accurate method
+variable	    Cmy2 equal c_r3[2]/0.517326
+variable	    Cmz2 equal c_r3[3]/0.517326
+
+stats		    3000 # output stats every n timesteps
+stats_style	    step time np v_Cd v_Cy v_Cl    v_Cmx v_Cmy v_Cmz    v_Cmx2 v_Cmy2 v_Cmz2
+stats_modify 	    flush yes # write to screen as soon as available (otherwise buffers until run complete)
+
+#fix                 f6 adapt 1000 all refine coarsen particle 100 8 # 1->2x2x2=8. Optimal=10-30/cell
+#fix                 f7 balance 1000 1.1 rcb cell
+
+#restart	    	    9000 cube4.restart.*
+run 		    9000
+Memory usage per proc in Mbytes:
+  particles (ave,min,max) = 0 0 0
+  grid      (ave,min,max) = 11.9894 11.9894 11.9894
+  surf      (ave,min,max) = 0.386719 0.386719 0.386719
+  total     (ave,min,max) = 27.4919 27.4919 27.4919
+Step Time Np v_Cd v_Cy v_Cl v_Cmx v_Cmy v_Cmz v_Cmx2 v_Cmy2 v_Cmz2 
+       0            0        0            0            0            0            0            0            0            0            0            0 
+    3000       0.0003     1049    2.5001511 -0.0047992118   0.12628693  -0.02309792  0.057770354   0.06739428 -0.022149603  0.060321825  0.065069737 
+    6000       0.0006     1161    2.5848934 -0.055915619  0.019229954  0.020700424   0.05109796  0.016840811  0.020824466  0.050325081  0.019573105 
+    9000       0.0009     1137    2.7456945 0.0080608671   0.07300298 0.0018931441 -0.0073329725 -0.0066887937 0.0014853872 -0.0090220464 -0.0083306912 
+Loop time of 33.625 on 1 procs for 9000 steps with 1137 particles
+
+MPI task timing breakdown:
+Section |  min time  |  avg time  |  max time  |%varavg| %total
+---------------------------------------------------------------
+Move    | 0.74699    | 0.74699    | 0.74699    |   0.0 |  2.22
+Coll    | 11.298     | 11.298     | 11.298     |   0.0 | 33.60
+Sort    | 1.2476     | 1.2476     | 1.2476     |   0.0 |  3.71
+Comm    | 0.0051681  | 0.0051681  | 0.0051681  |   0.0 |  0.02
+Modify  | 20.32      | 20.32      | 20.32      |   0.0 | 60.43
+Output  | 0.00068367 | 0.00068367 | 0.00068367 |   0.0 |  0.00
+Other   |            | 0.006558   |            |       |  0.02
+
+Particle moves    = 9170481 (9.17M)
+Cells touched     = 9428845 (9.43M)
+Particle comms    = 0 (0K)
+Boundary collides = 0 (0K)
+Boundary exits    = 5334 (5.33K)
+SurfColl checks   = 2353976 (2.35M)
+SurfColl occurs   = 1178 (1.18K)
+Surf reactions    = 0 (0K)
+Collide attempts  = 46671994 (46.7M)
+Collide occurs    = 34234712 (34.2M)
+Reactions         = 0 (0K)
+Particles stuck   = 0
+Axisymm bad moves = 0
+
+Particle-moves/CPUsec/proc: 272728
+Particle-moves/step: 1018.94
+Cell-touches/particle/step: 1.02817
+Particle comm iterations/step: 1
+Particle fraction communicated: 0
+Particle fraction colliding with boundary: 0
+Particle fraction exiting boundary: 0.000581649
+Surface-checks/particle/step: 0.256691
+Surface-collisions/particle/step: 0.000128456
+Surf-reactions/particle/step: 0
+Collision-attempts/particle/step: 5.08937
+Collisions/particle/step: 3.73314
+Reactions/particle/step: 0
+
+Gas reaction tallies:
+  style tce #-of-reactions 45
+
+Particles: 1137 ave 1137 max 1137 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+Cells:      64096 ave 64096 max 64096 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+GhostCell: 0 ave 0 max 0 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+EmptyCell: 0 ave 0 max 0 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+Surfs:    3072 ave 3072 max 3072 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+GhostSurf: 0 ave 0 max 0 min
+Histogram: 1 0 0 0 0 0 0 0 0 0

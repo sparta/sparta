@@ -1,6 +1,6 @@
 /* ----------------------------------------------------------------------
    SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
-   http://sparta.sandia.gov
+   http://sparta.github.io
    Steve Plimpton, sjplimp@gmail.com, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
@@ -32,6 +32,8 @@
 #define SPARTA_FFT_LIB "FFTW3"
 #elif defined(FFT_MKL)
 #define SPARTA_FFT_LIB "MKL FFT"
+#elif defined(FFT_MKL_GPU)
+#define SPARTA_FFT_LIB "MKL GPU FFT"
 #elif defined(FFT_CUFFT)
 #define SPARTA_FFT_LIB "cuFFT"
 #elif defined(FFT_HIPFFT)

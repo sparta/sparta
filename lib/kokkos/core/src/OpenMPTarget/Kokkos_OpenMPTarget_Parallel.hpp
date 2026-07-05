@@ -1,18 +1,5 @@
-//@HEADER
-// ************************************************************************
-//
-//                        Kokkos v. 4.0
-//       Copyright (2022) National Technology & Engineering
-//               Solutions of Sandia, LLC (NTESS).
-//
-// Under the terms of Contract DE-NA0003525 with NTESS,
-// the U.S. Government retains certain rights in this software.
-//
-// Part of Kokkos, under the Apache License v2.0 with LLVM Exceptions.
-// See https://kokkos.org/LICENSE for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-//
-//@HEADER
+// SPDX-FileCopyrightText: Copyright Contributors to the Kokkos project
 
 #ifndef KOKKOS_OPENMPTARGET_PARALLEL_HPP
 #define KOKKOS_OPENMPTARGET_PARALLEL_HPP
@@ -23,6 +10,7 @@
 #include <impl/Kokkos_Traits.hpp>
 
 #include <Kokkos_Atomic.hpp>
+#include <Kokkos_BitManipulation.hpp>
 #include "Kokkos_OpenMPTarget_Abort.hpp"
 #include <OpenMPTarget/Kokkos_OpenMPTarget_Macros.hpp>
 
@@ -116,8 +104,8 @@ class OpenMPTargetExecTeamMember {
   // FIXME_OPENMPTARGET this function currently ignores the reducer passed.
   template <typename ReducerType>
   KOKKOS_INLINE_FUNCTION std::enable_if_t<is_reducer<ReducerType>::value>
-  team_reduce(ReducerType const&, typename ReducerType::value_type& value) const
-      noexcept {
+  team_reduce(ReducerType const&,
+              typename ReducerType::value_type& value) const noexcept {
 #pragma omp barrier
 
     using value_type = typename ReducerType::value_type;
@@ -505,6 +493,12 @@ class TeamPolicyInternal<Kokkos::Experimental::OpenMPTarget, Properties...>
         m_chunk_size(0) {
     init(league_size_request, team_size_request, 1);
   }
+
+  // FIXME_OPENMPTARGET https://github.com/kokkos/kokkos/issues/8510
+  TeamPolicyInternal(const PolicyUpdate, const TeamPolicyInternal& other,
+                     typename traits::execution_space)
+      : TeamPolicyInternal(other) {}
+
   inline static size_t vector_length_max() {
     return 32; /* TODO: this is bad. Need logic that is compiler and backend
                   aware */
@@ -554,9 +548,9 @@ class TeamPolicyInternal<Kokkos::Experimental::OpenMPTarget, Properties...>
 
     if (concurrency == 0) concurrency = 1;
 
-    if (m_chunk_size > 0) {
-      if (!Impl::is_integral_power_of_two(m_chunk_size))
-        Kokkos::abort("TeamPolicy blocking granularity must be power of two");
+    if (m_chunk_size > 0 &&
+        !Kokkos::has_single_bit(static_cast<unsigned>(m_chunk_size))) {
+      Kokkos::abort("TeamPolicy blocking granularity must be power of two");
     }
 
     int new_chunk_size = 1;
@@ -699,14 +693,14 @@ struct TeamThreadRangeBoundariesStruct<iType, OpenMPTargetExecTeamMember> {
   using index_type = iType;
   const iType start;
   const iType end;
-  const OpenMPTargetExecTeamMember& team;
+  const OpenMPTargetExecTeamMember& member;
 
-  TeamThreadRangeBoundariesStruct(const OpenMPTargetExecTeamMember& thread_,
-                                  iType count)
-      : start(0), end(count), team(thread_) {}
-  TeamThreadRangeBoundariesStruct(const OpenMPTargetExecTeamMember& thread_,
-                                  iType begin_, iType end_)
-      : start(begin_), end(end_), team(thread_) {}
+  TeamThreadRangeBoundariesStruct(const OpenMPTargetExecTeamMember& arg_thread,
+                                  iType arg_count)
+      : start(0), end(arg_count), member(arg_thread) {}
+  TeamThreadRangeBoundariesStruct(const OpenMPTargetExecTeamMember& arg_thread,
+                                  iType arg_begin, iType arg_end)
+      : start(arg_begin), end(arg_end), member(arg_thread) {}
 };
 
 template <typename iType>
@@ -714,14 +708,15 @@ struct ThreadVectorRangeBoundariesStruct<iType, OpenMPTargetExecTeamMember> {
   using index_type = iType;
   const index_type start;
   const index_type end;
-  const OpenMPTargetExecTeamMember& team;
+  const OpenMPTargetExecTeamMember& member;
 
-  ThreadVectorRangeBoundariesStruct(const OpenMPTargetExecTeamMember& thread_,
-                                    index_type count)
-      : start(0), end(count), team(thread_) {}
-  ThreadVectorRangeBoundariesStruct(const OpenMPTargetExecTeamMember& thread_,
-                                    index_type begin_, index_type end_)
-      : start(begin_), end(end_), team(thread_) {}
+  ThreadVectorRangeBoundariesStruct(
+      const OpenMPTargetExecTeamMember& arg_thread, index_type arg_count)
+      : start(0), end(arg_count), member(arg_thread) {}
+  ThreadVectorRangeBoundariesStruct(
+      const OpenMPTargetExecTeamMember& arg_thread, index_type arg_begin,
+      index_type arg_end)
+      : start(arg_begin), end(arg_end), member(arg_thread) {}
 };
 
 template <typename iType>
@@ -729,59 +724,18 @@ struct TeamVectorRangeBoundariesStruct<iType, OpenMPTargetExecTeamMember> {
   using index_type = iType;
   const index_type start;
   const index_type end;
-  const OpenMPTargetExecTeamMember& team;
+  const OpenMPTargetExecTeamMember& member;
 
-  TeamVectorRangeBoundariesStruct(const OpenMPTargetExecTeamMember& thread_,
-                                  index_type count)
-      : start(0), end(count), team(thread_) {}
-  TeamVectorRangeBoundariesStruct(const OpenMPTargetExecTeamMember& thread_,
-                                  index_type begin_, index_type end_)
-      : start(begin_), end(end_), team(thread_) {}
+  TeamVectorRangeBoundariesStruct(const OpenMPTargetExecTeamMember& arg_thread,
+                                  index_type arg_count)
+      : start(0), end(arg_count), member(arg_thread) {}
+  TeamVectorRangeBoundariesStruct(const OpenMPTargetExecTeamMember& arg_thread,
+                                  index_type arg_begin, index_type arg_end)
+      : start(arg_begin), end(arg_end), member(arg_thread) {}
 };
 
 }  // namespace Impl
 
-}  // namespace Kokkos
-//----------------------------------------------------------------------------
-//----------------------------------------------------------------------------
-namespace Kokkos {
-namespace Impl {
-
-//----------------------------------------------------------------------------
-/** \brief  Data for OpenMPTarget thread execution */
-
-class OpenMPTargetExec {
- public:
-  // FIXME_OPENMPTARGET - Currently the maximum number of
-  // teams possible is calculated based on NVIDIA's Volta GPU. In
-  // future this value should be based on the chosen architecture for the
-  // OpenMPTarget backend.
-  static int MAX_ACTIVE_THREADS;
-
- private:
-  static void* scratch_ptr;
-
- public:
-  static void verify_is_process(const char* const);
-  static void verify_initialized(const char* const);
-
-  static int* get_lock_array(int num_teams);
-  static void* get_scratch_ptr();
-  static void clear_scratch();
-  static void clear_lock_array();
-  static void resize_scratch(int64_t team_reduce_bytes,
-                             int64_t team_shared_bytes,
-                             int64_t thread_local_bytes, int64_t league_size);
-
-  static void* m_scratch_ptr;
-  static std::mutex m_mutex_scratch_ptr;
-  static int64_t m_scratch_size;
-  static int* m_lock_array;
-  static uint64_t m_lock_size;
-  static uint32_t* m_uniquetoken_ptr;
-};
-
-}  // namespace Impl
 }  // namespace Kokkos
 
 #endif /* KOKKOS_OPENMPTARGET_PARALLEL_HPP */

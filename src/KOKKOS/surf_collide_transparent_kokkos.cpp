@@ -1,6 +1,6 @@
 /* ----------------------------------------------------------------------
    SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
-   http://sparta.sandia.gov
+   http://sparta.github.io
    Steve Plimpton, sjplimp@gmail.com, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
@@ -25,8 +25,8 @@ SurfCollideTransparentKokkos::SurfCollideTransparentKokkos(SPARTA *sparta, int n
   kokkosable = 1;
 
   k_nsingle = DAT::tdual_int_scalar("SurfCollide:nsingle");
-  d_nsingle = k_nsingle.d_view;
-  h_nsingle = k_nsingle.h_view;
+  d_nsingle = k_nsingle.view_device();
+  h_nsingle = k_nsingle.view_host();
 
   allowreact = 0;
 }
@@ -34,11 +34,7 @@ SurfCollideTransparentKokkos::SurfCollideTransparentKokkos(SPARTA *sparta, int n
 SurfCollideTransparentKokkos::SurfCollideTransparentKokkos(SPARTA *sparta) :
   SurfCollideTransparent(sparta)
 {
-  id = NULL;
-  style = NULL;
-
-  t_owned = NULL;
-  t_localghost = NULL;
+  copy = 1;
 }
 
 /* ---------------------------------------------------------------------- */

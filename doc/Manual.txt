@@ -1,7 +1,7 @@
 <HEAD>
 <TITLE>SPARTA Users Manual</TITLE>
-<META NAME="docnumber" CONTENT="7 Mar 2024 version">
-<META NAME="author" CONTENT="http://sparta.sandia.gov - Sandia National Laboratories">
+<META NAME="docnumber" CONTENT="24 Sep 2025 version">
+<META NAME="author" CONTENT="https://sparta.github.io - Sandia National Laboratories">
 <META NAME="copyright" CONTENT="Copyright (2014) Sandia Corporation.  This software and manual is distributed under the GNU General Public License.">
 </HEAD>
 
@@ -9,7 +9,7 @@
 
 "SPARTA WWW Site"_sws - "SPARTA Documentation"_sd - "SPARTA Commands"_sc :c
 
-:link(sws,http://sparta.sandia.gov)
+:link(sws,https://sparta.github.io)
 :link(sd,Manual.html)
 :link(sc,Section_commands.html#comm)
 
@@ -18,7 +18,7 @@
 <H1></H1>
 
 SPARTA Documentation :c,h3
-7 Mar 2024 version :c,h4
+24 Sep 2025 version :c,h4
 
 Version info: :h4
 
@@ -58,12 +58,12 @@ request under the terms of the GNU Lesser General Public License
 (LGPL).
 
 The primary developers of SPARTA are "Steve Plimpton"_sjp, and Michael
-Gallis who can be contacted at sjplimp,magalli at sandia.gov.  The
-"SPARTA WWW Site"_sws at http://sparta.sandia.gov has more information
-about the code and its uses.
+Gallis who can be contacted at sjplimp at gmail.com and magalli at
+sandia.gov.  The "SPARTA WWW Site"_sws at https://sparta.github.io has
+more information about the code and its uses.
 
-:link(bug,http://sparta.sandia.gov/bug.html)
-:link(sjp,http://www.sandia.gov/~sjplimp)
+:link(bug,https://sparta.github.io/bug.html)
+:link(sjp,https://sjplimp.github.io)
 
 :line
 
@@ -90,9 +90,10 @@ it gives quick access to documentation for all SPARTA commands.
   2.2 "Making SPARTA"_start_2 :b
   2.3 "Building SPARTA with optional packages"_start_3 :b
   2.4 "Building SPARTA as a library"_start_4 :b
-  2.5 "Running SPARTA"_start_5 :b
-  2.6 "Command-line options"_start_6 :b
-  2.7 "Screen output"_start_7 :ule,b
+  2.5 "Testing SPARTA"_start_5 :b
+  2.6 "Running SPARTA"_start_6 :b
+  2.7 "Command-line options"_start_7 :b
+  2.8 "Screen output"_start_8 :ule,b
 "Commands"_Section_commands.html :l
   3.1 "SPARTA input script"_cmd_1 :ulb,b
   3.2 "Parsing rules"_cmd_2 :b
@@ -122,7 +123,8 @@ it gives quick access to documentation for all SPARTA commands.
   6.15 "Transparent surface elements"_howto_15 :b
   6.16 "Visualizing SPARTA output with ParaView"_howto_16 :b
   6.17 "Custom per-particle, per-grid, per-surf attributes"_howto_17 :b
-  6.18 "Variable timestep simulations"_howto_18 :ule,b
+  6.18 "Variable timestep simulations"_howto_18 :b
+  6.19 "Details of particles in SPARTA"_howto_19 :ule,b
 "Example problems"_Section_example.html :l
 "Performance & scalability"_Section_perf.html :l
 "Additional tools"_Section_tools.html :l
@@ -193,6 +195,7 @@ it gives quick access to documentation for all SPARTA commands.
 :link(howto_16,Section_howto.html#howto_16)
 :link(howto_17,Section_howto.html#howto_17)
 :link(howto_18,Section_howto.html#howto_18)
+:link(howto_19,Section_howto.html#howto_19)
 
 :link(mod_1,Section_modify.html#mod_1)
 :link(mod_2,Section_modify.html#mod_2)

@@ -1,6 +1,6 @@
 /* ----------------------------------------------------------------------
    SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
-   http://sparta.sandia.gov
+   http://sparta.github.io
    Steve Plimpton, sjplimp@gmail.com, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
@@ -172,7 +172,8 @@ void ComputeBoundary::clear()
    jp != NULL means two particles after collision
 ------------------------------------------------------------------------- */
 
-void ComputeBoundary::boundary_tally(int iface, int istyle, int reaction,
+void ComputeBoundary::boundary_tally(double dtremain,
+                                     int iface, int istyle, int reaction,
                                      Particle::OnePart *iorig,
                                      Particle::OnePart *ip,
                                      Particle::OnePart *jp)

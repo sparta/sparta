@@ -1,6 +1,6 @@
 "SPARTA WWW Site"_sws - "SPARTA Documentation"_sd - "SPARTA Commands"_sc :c
 
-:link(sws,http://sparta.sandia.gov)
+:link(sws,https://sparta.github.io)
 :link(sd,Manual.html)
 :link(sc,Section_commands.html#comm)
 
@@ -49,11 +49,12 @@ or triangles (3d).  Similarly, if surface elements have been removed
 by the "remove_surf"_remove_surf.html command, then points may have
 also been deleted.  In either case, surface points and elements are
 renumbered by these operations to create compressed, contiguous lists.
-These lists are what is output by this command.
+These lists of surface elements are what is output by this command.
 
 The output file is written as a text file in the same format as the
 file the "read_surf"_read_surf.html command reads for explicit
-surfaces.
+surfaces.  See the "read_surf"_read_surf.html doc page for a
+description of its format.
 
 Similar to "dump"_dump.html files, the surface filename can contain
 two wild-card characters.  If a "*" appears in the filename, it is
@@ -73,10 +74,19 @@ discussed below can alter the number of files written.
 
 Note that implicit surfaces read in by the
 "read_isurf"_read_isurf.html command can be written out by the
-write_surf command, e.g. for visualization purposes.  But the file
-created by this command cannot be read back in to SPARTA via the
-"read_isurf"_read_isurf.html command, because this command creates
-files in an explicit surface format.
+write_surf command, e.g. for visualization purposes or to start a
+second simulation treating implicit surfaces previously ablated via
+the "fix ablate"_fix_ablate.html command as constant, unchanging
+explicit surfaces.  Because this command creates files in an explicit
+surface format, it can only be read back in to SPARTA via the
+"read_surf"_read_surf.html command.  It cannot be read back in via the
+"read_isurf"_read_isurf.html command.
+
+Also note, that implicit surfaces use the grid cell ID as the surface
+element ID for all line segments (2d) or triangles (3d) in the same
+grid cell.  When this command writes them to a file, the surface
+element IDs in the file become integers between 1 and N, where N is
+the total number of implicit surface elements.
 
 See the "Howto 6.13"_Section_howto.html#howto_13 section of the manual
 for a discussion of explicit and implicit surfaces as well as
@@ -127,7 +137,9 @@ next 3 processors and write it to a surface file.
 
 :line
 
-[Restrictions:] none
+[Restrictions:]
+
+The {custom} keyword cannot be used with implicit surfaces.
 
 [Related commands:]
 

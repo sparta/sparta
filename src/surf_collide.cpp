@@ -1,6 +1,6 @@
 /* ----------------------------------------------------------------------
    SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
-   http://sparta.sandia.gov
+   http://sparta.github.io
    Steve Plimpton, sjplimp@gmail.com, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
@@ -61,7 +61,8 @@ SurfCollide::SurfCollide(SPARTA *sparta, int, char **arg) :
   n_owned = n_localghost = 0;
   t_owned = t_localghost = NULL;
 
-  kokkosable = copy = uncopy = copymode = 0;
+  kokkosable = copy = copymode = 0;
+  uncopy = 1;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -229,7 +230,11 @@ void SurfCollide::dynamic()
     //   surfs are distributed and load balance/adaptation took place
 
     if (surf->estatus[tindex_custom] == 0) surf->spread_custom(tindex_custom);
-    t_persurf = surf->edvec_local[tindex_custom];
+
+    // edvec_local is indexed by the per-type slot ewhich[tindex_custom],
+    //  not by the global custom index tindex_custom (see Surf::add_custom)
+
+    t_persurf = surf->edvec_local[surf->ewhich[tindex_custom]];
   }
 }
 

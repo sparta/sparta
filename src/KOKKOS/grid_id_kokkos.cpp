@@ -1,6 +1,6 @@
 /* ----------------------------------------------------------------------
    SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
-   http://sparta.sandia.gov
+   http://sparta.github.io
    Steve Plimpton, sjplimp@gmail.com, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
@@ -21,12 +21,13 @@ void GridKokkos::update_hash()
   typedef hash_type::size_type size_type;    // uint32_t
   typedef hash_type::key_type key_type;      // cellint
   typedef hash_type::value_type value_type;  // int
-  typedef hash_type::HostMirror host_hash_type;
+  typedef hash_type::host_mirror_type host_hash_type;
 
   size_type failed_count = 0;
 
   // Copy the keys:values from hash to Kokkos::UnorderedMap that lives on host
   host_hash_type hash_h(2*hash->size()); // double hash capacity to prevent insertion failure
+  hash_kk = hash_type(2*hash->size());
   for (volatile auto it : *hash) { // volatile keyword works around a suspected compiler bug
     key_type key = static_cast<key_type>(it.first);
     value_type val = static_cast<value_type>(it.second);

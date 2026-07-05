@@ -1,5 +1,5 @@
 <HTML>
-<CENTER><A HREF = "http://sparta.sandia.gov">SPARTA WWW Site</A> - <A HREF = "Manual.html">SPARTA Documentation</A> - <A HREF = "Section_commands.html#comm">SPARTA Commands</A> 
+<CENTER><A HREF = "https://sparta.github.io">SPARTA WWW Site</A> - <A HREF = "Manual.html">SPARTA Documentation</A> - <A HREF = "Section_commands.html#comm">SPARTA Commands</A> 
 </CENTER>
 
 
@@ -27,7 +27,7 @@
 
 <LI>one or more values can be appended 
 
-<LI>value = <I>n</I> or <I>nwt</I> or <I>nflux</I> or <I>nflux_incident</I> or <I>mflux</I> or <I>mflux_incident</I> or <I>fx</I> or <I>fy</I> or <I>fz</I> or <I>press</I> or <I>px</I> or <I>py</I> or <I>pz</I> or <I>shx</I> or <I>shy</I> or <I>shz</I> or <I>ke</I> 
+<LI>value = <I>n</I> or <I>nwt</I> or <I>nflux</I> or <I>nflux_incident</I> or <I>mflux</I> or <I>mflux_incident</I> or <I>fx</I> or <I>fy</I> or <I>fz</I> or <I>tx</I> or <I>ty</I> or <I>tz</I> or <I>press</I> or <I>px</I> or <I>py</I> or <I>pz</I> or <I>shx</I> or <I>shy</I> or <I>shz</I> or <I>ke</I> 
 
 <PRE>  n = count of particles hitting surface element
   nwt = weighted count of particles hitting surface element
@@ -36,6 +36,7 @@
   mflux = net flux of mass through surface element
   mflux_incident = incident flux of mass on surface element
   fx,fy,fz = components of force on surface element
+  tx,ty,tz = components of torque on body center-of-mass
   press = magnitude of normal pressure on surface element
   px,py,pz = components of normal pressure on surface element
   shx,shy,shz = components of shear stress on surface element
@@ -47,9 +48,10 @@
 </PRE>
 <LI>zero or more keyword/setting pairs can be appended 
 
-<LI>keyword = <I>norm</I> 
+<LI>keyword = <I>norm</I> or <I>com</I> 
 
-<PRE>  norm arg = <I>flux</I> or <I>flow</I> for dividing flux quantities by area or not 
+<PRE>  norm arg = <I>flux</I> or <I>flow</I> for dividing flux quantities by area or not
+  com args = Cx Cy Cz = coords of center-of-mass of body for calculating torque 
 </PRE>
 
 </UL>
@@ -80,9 +82,9 @@ stats_style step cpu np c_2[1] c_2[2]
 </P>
 <P>Define a computation that calculates one or more values for each
 explicit surface element in a surface element group, based on the
-particles that collide with that element. The values are summed for
-each group of species in the specified mixture.  See the
-<A HREF = "mixture.html">mixture</A> command for how a set of species can be
+particles that collide with that element or are emitted from it.  The
+values are summed for each group of species in the specified mixture.
+See the <A HREF = "mixture.html">mixture</A> command for how a set of species can be
 partitioned into groups.  Only surface elements in the surface group
 specified by <I>group-ID</I> are included in the calculations.  See the
 <A HREF = "group.html">group surf</A> command for info on how surface elements can
@@ -100,13 +102,15 @@ explicit triangle or line segment may span multiple grid cells.  See
 </P>
 <P>Note that when a particle collides with a surface element, it can
 bounce off (possibly as a different species), be captured by the
-surface (vanish), or a 2nd particle can also be emitted.  The formulas
-below account for all the possible outcomes.  For example, the kinetic
-energy flux <I>ke</I> onto a suface element for a single collision includes
-a positive contribution from the incoming particle and negative
-contributions from 0, 1, or 2 outgoing particles.  The exception is
-the <I>n</I> and <I>nwt</I> values which simply tally counts of particles
-colliding with the surface element.
+surface (vanish), or a 2nd particle can also be emitted.
+Additionally, surface elements can emit particles directly -- see the
+<A HREF = "fix_emit_surf.html">fix_emit_surf</A> command doc page.  The formulas
+below account for all these possible outcomes.  For example, the
+kinetic energy flux <I>ke</I> onto a suface element for a single collision
+includes a positive contribution from the incoming particle and
+negative contributions from 0, 1, or 2 outgoing particles.  The
+exception is the <I>n</I> and <I>nwt</I> values which simply tally counts of
+particles colliding with the surface element.
 </P>
 <P>If the explicit surface element is transparent, the particle will pass
 through the surface unaltered.  See the transparent keyword for the
@@ -187,19 +191,44 @@ included in the Nflux formula.  Then Mflux quantity becomes
 effectively a mass flow rate (mass per time).  See discussion of the
 <I>norm</I> keyword below.
 </P>
-<P>The <I>fx</I>, <I>fy</I>, <I>fz</I> values calculate the components of force extered
-on the surface element by particles in the group, with respect to the
-x, y, z coordinate axes.  These are computed as
+<P>The <I>fx</I>, <I>fy</I>, <I>fz</I> values calculate the xyz components of force
+exerted on the surface element by particles in the group.  These are
+computed as
 </P>
 <PRE>p_delta = mass * (V_post - V_pre)
-Px = - Sum_i (p_delta_x) / (dt / fnum)
-Py = - Sum_i (p_delta_y) / (dt / fnum)
-Pz = - Sum_i (p_delta_z) / (dt / fnum) 
+Fx = - Sum_i (p_delta_x) / (dt / fnum)
+Fy = - Sum_i (p_delta_y) / (dt / fnum)
+Fz = - Sum_i (p_delta_z) / (dt / fnum) 
 </PRE>
 <P>where p_delta is the change in momentum of a particle, whose velocity
 changes from V_pre to V_post when colliding with the surface element.
 The force exerted on the surface element is the sum over all
 contributing p_delta, normalized by dt and fnum as defined before.
+</P>
+<P>The <I>tx</I>, <I>ty</I>, <I>tz</I> values calculate the xyz components of torque Tq
+exerted on the entire body by particles in the group colliding with
+this surface element.  Use of these values requires the the
+center-of-mass (COM) of the body be specified so the torque can be
+calculated around the COM.  The COM can be the geometric center of a
+triangulated object, or it can reflect an uneven distribution of mass
+within the body.  The torque components are computed as
+</P>
+<PRE>p_delta = mass * (V_post - V_pre)
+force = p_delta / (dt / fnum)
+R = Xcollide - Xcom
+Tq = R x force 
+</PRE>
+<P>where p_delta is the change in momentum of a particle, whose velocity
+changes from V_pre to V_post when colliding with the surface element.
+The vector R is from the COM specified by the <I>com</I> keyword Xcollide =
+the collision point on the surface.  The force exerted on then the
+surface element is the sum over all contributing p_delta, normalized
+by dt and fnum as defined before.
+</P>
+<P>Note that if the surfaces defined in a simulation represent multiple
+objects each with their own COM, then you should use this command
+multiple times with different surface groups, if you want to
+calculate the torque on each object.
 </P>
 <P>The <I>press</I> value calculates the pressure <I>P</I> exerted on the surface
 element in the normal direction by particles in the group, such that
@@ -370,7 +399,7 @@ un-normalized flux values produced by this compute.
 </P>
 <HR>
 
-<P><B>Optional norm keyword:</B>
+<P><B>Optional keywords</B>
 </P>
 <P>If the <I>norm</I> keyword is used with a setting of <I>flow</I>, then the
 formulas above for all flux values will not use the surface element
@@ -381,8 +410,14 @@ mflux, ke, erot, evib, etot.
 surface (e.g. mass per time), not the flux (e.g. mass per area per
 time).
 </P>
-<P>If the setting is <I>flux</I> (the default), then the flux formulas will be
-calculated as shown with the area A in the denominator.
+<P>If the <I>norm</I> keyword setting is <I>flux</I> (the default), then the flux
+formulas will be calculated as shown with the area A in the
+denominator.
+</P>
+<P>The <I>com</I> keyword is only used if torque is being computed by any of
+the <I>tx</I>, <I>ty</I>, <I>tz</I> values.  The <I>Cx</I>, <I>Cy</I>, <I>Cz</I> settings are the
+coordinates of the center-of-mass of the body around which the torque
+will be calculated.
 </P>
 <HR>
 
@@ -424,7 +459,7 @@ enabled if SPARTA was built with that package.  See the <A HREF = "Section_start
 SPARTA</A> section for more info.
 </P>
 <P>You can specify the accelerated styles explicitly in your input script
-by including their suffix, or you can use the <A HREF = "Section_start.html#start_6">-suffix command-line
+by including their suffix, or you can use the <A HREF = "Section_start.html#start_7">-suffix command-line
 switch</A> when you invoke SPARTA, or you can
 use the <A HREF = "suffix.html">suffix</A> command in your input script.
 </P>

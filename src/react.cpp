@@ -1,6 +1,6 @@
 /* ----------------------------------------------------------------------
    SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
-   http://sparta.sandia.gov
+   http://sparta.github.io
    Steve Plimpton, sjplimp@gmail.com, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
@@ -42,7 +42,8 @@ React::React(SPARTA *sparta, int, char **arg) : Pointers(sparta)
   double seed = update->ranmaster->uniform();
   random->reset(seed,comm->me,100);
 
-  copy = uncopy = copymode = 0;
+  copy = copymode = 0;
+  uncopy = 1;
 }
 
 /* ---------------------------------------------------------------------- */

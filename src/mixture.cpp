@@ -1,6 +1,6 @@
 /* ----------------------------------------------------------------------
    SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
-   http://sparta.sandia.gov
+   http://sparta.github.io
    Steve Plimpton, sjplimp@gmail.com, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
@@ -26,6 +26,7 @@
 using namespace SPARTA_NS;
 
 #define DELTA 8
+#define SMALL 1.0e-6
 
 /* ---------------------------------------------------------------------- */
 
@@ -277,7 +278,7 @@ void Mixture::init()
 
 int Mixture::init_fraction(int *fflag, double *fuser, double *f, double *c)
 {
-  // sum = total frac for species with explicity set fractions
+  // sum = total frac for species with explicitly set fractions
   // nimplicit = number of unset species
 
   double sum = 0.0;
@@ -287,7 +288,10 @@ int Mixture::init_fraction(int *fflag, double *fuser, double *f, double *c)
     else nimplicit++;
   }
 
-  if (sum > 1.0) return 1;
+  // use a small tolerance so that fractions which sum to 1.0 are not
+  // rejected due to order-dependent floating-point roundoff in the sum above
+
+  if (sum > 1.0 + SMALL) return 1;
 
   // fraction for each unset species = equal portion of unset remainder
   // cummulative = cummulative fraction across species

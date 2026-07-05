@@ -1,6 +1,6 @@
 /* ----------------------------------------------------------------------
    SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
-   http://sparta.sandia.gov
+   http://sparta.github.io
    Steve Plimpton, sjplimp@gmail.com, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
@@ -51,6 +51,7 @@ class FixTempRescaleKokkos : public FixTempRescale {
 
   FixTempRescaleKokkos(class SPARTA *, int, char **);
   virtual ~FixTempRescaleKokkos() {}
+  void end_of_step() override;
 
   KOKKOS_INLINE_FUNCTION
   void operator()(TagFixTempRescale_end_of_step_no_average, const int&) const;

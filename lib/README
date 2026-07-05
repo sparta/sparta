@@ -17,3 +17,5 @@ The libraries in this directory are the following:
 
 kokkos        Kokkos package for GPU and many-core acceleration
                 from Kokkos development team (Sandia)
+python        hooks to the system Python library, used by the PYTHON package
+                from the SPARTA development team

@@ -1,6 +1,6 @@
 /* ----------------------------------------------------------------------
    SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
-   http://sparta.sandia.gov
+   http://sparta.github.io
    Steve Plimpton, sjplimp@gmail.com, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
@@ -20,6 +20,7 @@
 #include "domain.h"
 #include "region.h"
 #include "particle.h"
+#include "grid.h"
 #include "mixture.h"
 #include "modify.h"
 #include "compute.h"
@@ -33,11 +34,10 @@ using namespace SPARTA_NS;
 
 // customize by adding keyword
 
-enum{ID,TYPE,PROC,X,Y,Z,XS,YS,ZS,VX,VY,VZ,KE,EROT,EVIB,
+enum{ID,TYPE,PROC,CELLID,X,Y,Z,XS,YS,ZS,VX,VY,VZ,KE,EROT,EVIB,
      CUSTOM,COMPUTE,FIX,VARIABLE};
 enum{LT,LE,GT,GE,EQ,NEQ};
-enum{INT,DOUBLE,BIGINT,STRING};        // same as Dump
-
+enum{INT,DOUBLE,BIGINT,UINT,BIGUINT,STRING};    // same as Dump
 enum{PERIODIC,OUTFLOW,REFLECT,SURFACE,AXISYM};  // same as Domain
 
 #define INVOKED_PER_PARTICLE 8
@@ -131,11 +131,6 @@ DumpParticle::DumpParticle(SPARTA *sparta, int narg, char **arg) :
   dchoose = NULL;
   clist = NULL;
 
-  // element names
-
-  ntypes = particle->nspecies;
-  typenames = NULL;
-
   // setup format strings
 
   vformat = new char*[size_one];
@@ -144,8 +139,11 @@ DumpParticle::DumpParticle(SPARTA *sparta, int narg, char **arg) :
   format_default[0] = '\0';
 
   for (int i = 0; i < size_one; i++) {
-    if (vtype[i] == INT) strcat(format_default,"%d ");
-    else if (vtype[i] == DOUBLE) strcat(format_default,"%g ");
+    if (vtype[i] == DOUBLE) strcat(format_default,"%g ");
+    else if (vtype[i] == INT) strcat(format_default,"%d ");
+    else if (vtype[i] == BIGINT) strcat(format_default,BIGINT_FORMAT " ");
+    else if (vtype[i] == UINT) strcat(format_default,"%u ");
+    else if (vtype[i] == BIGUINT) strcat(format_default,BIGUINT_FORMAT " ");
     else if (vtype[i] == STRING) strcat(format_default,"%s ");
     vformat[i] = NULL;
   }
@@ -207,11 +205,6 @@ DumpParticle::~DumpParticle()
   memory->destroy(choose);
   memory->destroy(dchoose);
   memory->destroy(clist);
-
-  if (typenames) {
-    for (int i = 1; i <= ntypes; i++) delete [] typenames[i];
-    delete [] typenames;
-  }
 
   for (int i = 0; i < size_one; i++) delete [] vformat[i];
   delete [] vformat;
@@ -364,6 +357,7 @@ int DumpParticle::count()
 
   // un-choose if not in mixture
 
+  Grid::ChildCell *cells = grid->cells;
   Particle::OnePart *particles = particle->particles;
   int *species2species = particle->mixture[imix]->species2species;
 
@@ -406,6 +400,10 @@ int DumpParticle::count()
         nstride = 1;
       } else if (thresh_array[ithresh] == PROC) {
         for (i = 0; i < nlocal; i++) dchoose[i] = me;
+        ptr = dchoose;
+        nstride = 1;
+      } else if (thresh_array[ithresh] == CELLID) {
+        for (i = 0; i < nlocal; i++) dchoose[i] = cells[particles[i].icell].id;
         ptr = dchoose;
         nstride = 1;
 
@@ -630,10 +628,11 @@ void DumpParticle::write_text(int n, double *mybuf)
   int m = 0;
   for (i = 0; i < n; i++) {
     for (j = 0; j < size_one; j++) {
-      if (vtype[j] == INT) fprintf(fp,vformat[j],static_cast<int> (mybuf[m]));
-      else if (vtype[j] == DOUBLE) fprintf(fp,vformat[j],mybuf[m]);
-      else if (vtype[j] == STRING)
-        fprintf(fp,vformat[j],typenames[(int) mybuf[m]]);
+      if (vtype[j] == DOUBLE) fprintf(fp,vformat[j],mybuf[m]);
+      else if (vtype[j] == INT) fprintf(fp,vformat[j],(int) ubuf(mybuf[m]).i);
+      else if (vtype[j] == BIGINT) fprintf(fp,vformat[j],(bigint) ubuf(mybuf[m]).i);
+      else if (vtype[j] == UINT) fprintf(fp,vformat[j],(uint32_t) ubuf(mybuf[m]).i);
+      else if (vtype[j] == BIGUINT) fprintf(fp,vformat[j],(uint64_t) ubuf(mybuf[m]).i);
       m++;
     }
     fprintf(fp,"\n");
@@ -660,6 +659,10 @@ int DumpParticle::parse_fields(int narg, char **arg)
     } else if (strcmp(arg[iarg],"proc") == 0) {
       pack_choice[i] = &DumpParticle::pack_proc;
       vtype[i] = INT;
+    } else if (strcmp(arg[iarg],"cellID") == 0) {
+      pack_choice[i] = &DumpParticle::pack_cellid;
+      if (sizeof(cellint) == sizeof(smallint)) vtype[i] = INT;
+      else vtype[i] = BIGINT;
 
     } else if (strcmp(arg[iarg],"x") == 0) {
       pack_choice[i] = &DumpParticle::pack_x;
@@ -992,6 +995,7 @@ int DumpParticle::modify_param(int narg, char **arg)
     if (strcmp(arg[1],"id") == 0) thresh_array[nthresh] = ID;
     else if (strcmp(arg[1],"type") == 0) thresh_array[nthresh] = TYPE;
     else if (strcmp(arg[1],"proc") == 0) thresh_array[nthresh] = PROC;
+    else if (strcmp(arg[1],"cellID") == 0) thresh_array[nthresh] = CELLID;
 
     else if (strcmp(arg[1],"x") == 0) thresh_array[nthresh] = X;
     else if (strcmp(arg[1],"y") == 0) thresh_array[nthresh] = Y;
@@ -1259,14 +1263,18 @@ void DumpParticle::pack_custom(int n)
     if (particle->esize[index] == 0) {
       int *vector = particle->eivec[particle->ewhich[index]];
       for (int i = 0; i < nchoose; i++) {
-        buf[n] = vector[clist[i]];
+        // store bit-punned (ubuf), NOT numeric: write_text/write_binary decode
+        // INT columns via ubuf(buf[m]).i. Numeric storage made every INT
+        // custom attribute print as 0 (low 32 bits of IEEE-754 double).
+        buf[n] = ubuf(vector[clist[i]]).d;
         n += size_one;
       }
     } else {
       int icol = argindex[n]-1;
       int **array = particle->eiarray[particle->ewhich[index]];
       for (int i = 0; i < nchoose; i++) {
-        buf[n] = array[clist[i]][icol];
+        // see comment above: bit-punned encoding required for INT decode
+        buf[n] = ubuf(array[clist[i]][icol]).d;
         n += size_one;
       }
     }
@@ -1299,7 +1307,7 @@ void DumpParticle::pack_id(int n)
   Particle::OnePart *particles = particle->particles;
 
   for (int i = 0; i < nchoose; i++) {
-    buf[n] = particles[clist[i]].id;
+    buf[n] = ubuf(particles[clist[i]].id).d;
     n += size_one;
   }
 }
@@ -1311,7 +1319,7 @@ void DumpParticle::pack_type(int n)
   Particle::OnePart *particles = particle->particles;
 
   for (int i = 0; i < nchoose; i++) {
-    buf[n] = particles[clist[i]].ispecies + 1;
+    buf[n] = ubuf(particles[clist[i]].ispecies + 1).d;
     n += size_one;
   }
 }
@@ -1321,7 +1329,26 @@ void DumpParticle::pack_type(int n)
 void DumpParticle::pack_proc(int n)
 {
   for (int i = 0; i < nchoose; i++) {
-    buf[n] = me;
+    buf[n] = ubuf(me).d;
+    n += size_one;
+  }
+}
+
+/* ---------------------------------------------------------------------- */
+
+void DumpParticle::pack_cellid(int n)
+{
+  Particle::OnePart *particles = particle->particles;
+  Grid::ChildCell *cells = grid->cells;
+
+  int icell;
+
+  for (int i = 0; i < nchoose; i++) {
+    icell = particles[clist[i]].icell;
+    // store bit-punned (ubuf), NOT numeric: write_text/write_binary decode
+    // the cellid column via ubuf(buf[m]).i (vtype INT/BIGINT). Numeric storage
+    // printed 0/garbage and could not hold a cellint that overflows a double.
+    buf[n] = ubuf(cells[icell].id).d;
     n += size_one;
   }
 }

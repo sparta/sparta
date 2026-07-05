@@ -1,6 +1,6 @@
 /* ----------------------------------------------------------------------
    SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
-   http://sparta.sandia.gov
+   http://sparta.github.io
    Steve Plimpton, sjplimp@gmail.com, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
@@ -59,19 +59,7 @@ SurfReactProbKokkos::SurfReactProbKokkos(SPARTA *sparta) :
 #endif
             )
 {
-  random = NULL;
-  random_backup = NULL;
-
-  id = NULL;
-  style = NULL;
-  tally_single = NULL;
-  tally_total = NULL;
-  tally_single_all = NULL;
-  tally_total_all = NULL;
-
-  rlist = NULL;
-  reactions = NULL;
-  indices = NULL;
+  copy = 1;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -183,7 +171,7 @@ void SurfReactProbKokkos::pre_react()
 {
   ParticleKokkos* particle_kk = (ParticleKokkos*) particle;
   particle_kk->sync(Device,PARTICLE_MASK);
-  d_particles = particle_kk->k_particles.d_view;
+  d_particles = particle_kk->k_particles.view_device();
 }
 
 /* ---------------------------------------------------------------------- */
@@ -191,7 +179,7 @@ void SurfReactProbKokkos::pre_react()
 void SurfReactProbKokkos::backup()
 {
   ParticleKokkos* particle_kk = (ParticleKokkos*) particle;
-  d_particles = particle_kk->k_particles.d_view;
+  d_particles = particle_kk->k_particles.view_device();
 
 #ifdef SPARTA_KOKKOS_EXACT
   if (!random_backup)

@@ -1,6 +1,6 @@
 /* ----------------------------------------------------------------------
    SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
-   http://sparta.sandia.gov
+   http://sparta.github.io
    Steve Plimpton, sjplimp@gmail.com, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
@@ -65,6 +65,7 @@ int Grid::add_custom(char *name, int type, int size)
                                        "grid:ename");
     memory->grow(etype,ncustom,"grid:etype");
     memory->grow(esize,ncustom,"grid:etype");
+    memory->grow(estatus,ncustom,"grid:estatus");
     memory->grow(ewhich,ncustom,"grid:etype");
   }
 
@@ -73,6 +74,7 @@ int Grid::add_custom(char *name, int type, int size)
   strcpy(ename[index],name);
   etype[index] = type;
   esize[index] = size;
+  estatus[index] = 0;
 
   if (type == INT) {
     if (size == 0) {
@@ -191,6 +193,8 @@ void Grid::reallocate_custom(int nold, int nnew)
 
 void Grid::remove_custom(int index)
 {
+  if (!ename || !ename[index]) return;
+
   delete [] ename[index];
   ename[index] = NULL;
 
@@ -355,7 +359,7 @@ void Grid::read_restart_custom(FILE *fp)
   if (nactive == 0) return;
 
   // order that custom vectors/arrays are in restart file
-  //   matches order the per-particle custom values will be read from file
+  //   matches order the per-grid custom values will be read from file
 
   int n,type,size;
   char *name;

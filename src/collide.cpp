@@ -1,6 +1,6 @@
 /* ----------------------------------------------------------------------
    SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
-   http://sparta.sandia.gov
+   http://sparta.github.io
    Steve Plimpton, sjplimp@gmail.com, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
@@ -15,21 +15,21 @@
 #include "math.h"
 #include "string.h"
 #include "collide.h"
-#include "domain.h"
 #include "particle.h"
 #include "mixture.h"
 #include "update.h"
 #include "grid.h"
+#include "domain.h"
 #include "comm.h"
 #include "react.h"
 #include "modify.h"
 #include "fix.h"
 #include "fix_ambipolar.h"
+#include "compute.h"
 #include "random_mars.h"
 #include "random_knuth.h"
 #include "memory.h"
 #include "error.h"
-
 
 using namespace SPARTA_NS;
 
@@ -64,18 +64,12 @@ Collide::Collide(SPARTA *sparta, int, char **arg) : Pointers(sparta)
   plist = NULL;
   p2g = NULL;
 
-  subcell_list = NULL;
-  subcell_IDlist = NULL;
-  subcell_ID_ilist = NULL;
-  subcell_ID_jlist = NULL;
-  subcell_ID_klist = NULL;
-  subcell_count = NULL;
-  subcell_mostrecent = NULL;
-  subcell_next = NULL;
-  subcell_first = NULL;
-  neighbor_cells = NULL;
-
   subcellflag = 0;
+  subcell_id = NULL;
+  subcell_count = NULL;
+  subcell_first = NULL;
+  subcell_next = NULL;
+  subcell_ring = NULL;
 
   nglocal = nglocalmax = 0;
 
@@ -91,7 +85,6 @@ Collide::Collide(SPARTA *sparta, int, char **arg) : Pointers(sparta)
   vre_start = 1;
   vre_every = 0;
   remainflag = 1;
-  vmax = NULL;
   vremax = NULL;
   vremax_initial = NULL;
   remain = NULL;
@@ -134,6 +127,12 @@ Collide::~Collide()
   memory->destroy(plist);
   memory->destroy(p2g);
 
+  memory->destroy(subcell_id);
+  memory->destroy(subcell_count);
+  memory->destroy(subcell_first);
+  memory->destroy(subcell_next);
+  memory->destroy(subcell_ring);
+
   if (ngroups > 1) {
     delete [] ngroup;
     delete [] maxgroup;
@@ -146,25 +145,12 @@ Collide::~Collide()
   memory->sfree(elist);
   memory->destroy(vremax);
   memory->destroy(vremax_initial);
-  memory->destroy(vmax);
   memory->destroy(remain);
   memory->destroy(nn_last_partner);
   memory->destroy(nn_last_partner_igroup);
   memory->destroy(nn_last_partner_jgroup);
 
-  if (ngroups == 1) {
-    memory->destroy(subcell_IDlist);
-    memory->destroy(subcell_ID_ilist);
-    memory->destroy(subcell_ID_jlist);
-    memory->destroy(subcell_ID_klist);
-    memory->destroy(subcell_list);
-    memory->destroy(subcell_count);
-    memory->destroy(subcell_first);
-    memory->destroy(subcell_next);
-    memory->destroy(subcell_mostrecent);
-    memory->destroy(neighbor_cells);
-  }
-
+  memory->destroy(recomb_ijflag);
 }
 
 /* ---------------------------------------------------------------------- */
@@ -176,9 +162,13 @@ void Collide::init()
   if (ambiflag && nearcp)
     error->all(FLERR,"Ambipolar collision model does not yet support "
                "near-neighbor collisions");
+
   if (ambiflag && subcellflag)
     error->all(FLERR,"Ambipolar collision model does not yet support "
-	       "subcell collisions");
+               "subcell collisions");
+
+  if (nearcp && subcellflag)
+    error->all(FLERR,"Cannot use both nearcp and subcell collisions");
 
   // require mixture to contain all species
 
@@ -241,10 +231,6 @@ void Collide::init()
 
   oldgroups = ngroups;
   ngroups = mixture->ngroup;
-	
-  if (ngroups > 1 && subcellflag)
-    error->all(FLERR,"Multipe-groups collision model does not yet support "
-	       "subcell collisions");
 
   if (ngroups != oldgroups) {
     if (oldgroups == 1) {
@@ -267,18 +253,6 @@ void Collide::init()
     if (ngroups == 1) {
       npmax = DELTAPART;
       memory->create(plist,npmax,"collide:plist");
-      if (subcellflag) {
-        memory->create(subcell_list,npmax,npmax,"collide:subcell_list");
-        memory->create(subcell_IDlist,npmax,"collide:subcell_IDlist");
-        memory->create(subcell_ID_ilist,npmax,"collide:subcell_ID_ilist");
-        memory->create(subcell_ID_jlist,npmax,"collide:subcell_ID_jlist");
-        memory->create(subcell_ID_klist,npmax,"collide:subcell_ID_klist");
-        memory->create(subcell_count,npmax,"collide:subcell_count");
-        memory->create(neighbor_cells,npmax,"collide:neighbor_cells");
-        memory->create(subcell_mostrecent, npmax,"collide:subcell_mostrecent");
-        memory->create(subcell_next, npmax,"collide:subcell_next");
-        memory->create(subcell_first, npmax,"collide:subcell_first");
-      }
     }
     if (ngroups > 1) {
       ngroup = new int[ngroups];
@@ -292,6 +266,15 @@ void Collide::init()
     }
   }
 
+  if (subcellflag && ngroups > 1)
+    error->all(FLERR,"Cannot yet use subcell collisions with "
+               "multiple collision groups");
+
+  // (re)allocate subcell method data structs to match current plist length
+  // also deallocates them if subcell method no longer enabled
+
+  subcell_alloc();
+
   // allocate vremax,remain if group count changed
   // will always be allocated on first run since oldgroups = 0
   // set vremax_intitial via values calculated by collide style
@@ -299,13 +282,11 @@ void Collide::init()
   if (ngroups != oldgroups) {
     memory->destroy(vremax);
     memory->destroy(vremax_initial);
-    memory->destroy(vmax);
     memory->destroy(remain);
     nglocal = grid->nlocal;
     nglocalmax = nglocal;
     memory->create(vremax,nglocalmax,ngroups,ngroups,"collide:vremax");
     memory->create(vremax_initial,ngroups,ngroups,"collide:vremax_initial");
-    memory->create(vmax,nglocalmax,ngroups,ngroups,"collide:vmax");
     if (remainflag)
       memory->create(remain,nglocalmax,ngroups,ngroups,"collide:remain");
 
@@ -359,6 +340,16 @@ void Collide::init()
                  "electrons be their own group");
   }
 
+  // warn if ambipolar and a single group (e.g. collide ... all)
+  // the light electrons inflate the single-group vremax, so many more
+  //   collision attempts are made than with a per-species grouping
+  // grouping electrons separately (e.g. collide ... species) is far faster
+
+  if (ambiflag && mixture->ngroup == 1)
+    error->warning(FLERR,"Single-group ambipolar collisions are inefficient; "
+                   "grouping electrons separately (e.g. collide ... species) "
+                   "is recommended");
+
   // vre_next = next timestep to zero vremax & remain, based on vre_every
 
   if (vre_every) vre_next = (update->ntimestep/vre_every)*vre_every + vre_every;
@@ -379,83 +370,16 @@ void Collide::init()
 
 /* ---------------------------------------------------------------------- */
 
-void Collide::modify_params(int narg, char **arg)
+void Collide::setup()
 {
-  if (narg == 0) error->all(FLERR,"Illegal collide_modify command");
+  // copy Update list of gas/gas collision computes
+  // done once after Update->setup()
 
-  int iarg = 0;
-  while (iarg < narg) {
-    if (strcmp(arg[iarg],"vremax") == 0) {
-      if (iarg+3 > narg) error->all(FLERR,"Illegal collide_modify command");
-      vre_every = atoi(arg[iarg+1]);
-      if (vre_every < 0) error->all(FLERR,"Illegal collide_modify command");
-      if (strcmp(arg[iarg+2],"yes") == 0) vre_start = 1;
-      else if (strcmp(arg[iarg+2],"no") == 0) vre_start = 0;
-      else error->all(FLERR,"Illegal collide_modify command");
-      iarg += 3;
-    } else if (strcmp(arg[iarg],"remain") == 0) {
-      if (iarg+2 > narg) error->all(FLERR,"Illegal collide_modify command");
-      if (strcmp(arg[iarg+1],"yes") == 0) remainflag = 1;
-      else if (strcmp(arg[iarg+1],"no") == 0) remainflag = 0;
-      else error->all(FLERR,"Illegal collide_modify command");
-      iarg += 2;
-    } else if (strcmp(arg[iarg],"rotate") == 0) {
-      if (iarg+2 > narg) error->all(FLERR,"Illegal collide_modify command");
-      if (strcmp(arg[iarg+1],"no") == 0) rotstyle = NONE;
-      // not yet supported
-      //else if (strcmp(arg[iarg+1],"discrete") == 0) rotstyle = DISCRETE;
-      else if (strcmp(arg[iarg+1],"smooth") == 0) rotstyle = SMOOTH;
-      else error->all(FLERR,"Illegal collide_modify command");
-      iarg += 2;
-    } else if (strcmp(arg[iarg],"vibrate") == 0) {
-      if (iarg+2 > narg) error->all(FLERR,"Illegal collide_modify command");
-      if (strcmp(arg[iarg+1],"no") == 0) vibstyle = NONE;
-      else if (strcmp(arg[iarg+1],"discrete") == 0) vibstyle = DISCRETE;
-      else if (strcmp(arg[iarg+1],"smooth") == 0) vibstyle = SMOOTH;
-      else error->all(FLERR,"Illegal collide_modify command");
-      iarg += 2;
-    } else if (strcmp(arg[iarg],"ambipolar") == 0) {
-      if (iarg+2 > narg) error->all(FLERR,"Illegal collide_modify command");
-      if (strcmp(arg[iarg+1],"no") == 0) ambiflag = 0;
-      else if (strcmp(arg[iarg+1],"yes") == 0) ambiflag = 1;
-      else error->all(FLERR,"Illegal collide_modify command");
-      iarg += 2;
-    } else if (strcmp(arg[iarg],"nearcp") == 0) {
-      if (iarg+3 > narg) error->all(FLERR,"Illegal collide_modify command");
-      if (strcmp(arg[iarg+1],"yes") == 0) nearcp = 1;
-      else if (strcmp(arg[iarg+1],"no") == 0) nearcp = 0;
-      else error->all(FLERR,"Illegal collide_modify command");
-      nearlimit = atoi(arg[iarg+2]);
-      if (nearcp && nearlimit <= 0)
-        error->all(FLERR,"Illegal collide_modify command");
-      iarg += 3;
-    } else if (strcmp(arg[iarg],"subcell") == 0) {
-      if (iarg+2 > narg) error->all(FLERR,"Illegal collide_modify command");
-      if (strcmp(arg[iarg+1],"no") == 0) subcellflag = 0;
-      else if (strcmp(arg[iarg+1],"yes") == 0) subcellflag = 1;
-      else error->all(FLERR,"Illegal collide_modify command");
-      iarg += 2;
-    }
-  }
+  glist_active = update->glist_active;
 }
 
 /* ----------------------------------------------------------------------
-   reset vremax to initial species-based values
-   reset remain to 0.0
-------------------------------------------------------------------------- */
-
-void Collide::reset_vremax()
-{
-  for (int icell = 0; icell < nglocal; icell++)
-    for (int igroup = 0; igroup < ngroups; igroup++)
-      for (int jgroup = 0; jgroup < ngroups; jgroup++) {
-        vremax[icell][igroup][jgroup] = vremax_initial[igroup][jgroup];
-        if (remainflag) remain[icell][igroup][jgroup] = 0.0;
-      }
-}
-
-/* ----------------------------------------------------------------------
-  NTC algorithm
+   NTC algorithm
 ------------------------------------------------------------------------- */
 
 void Collide::collisions()
@@ -467,40 +391,56 @@ void Collide::collisions()
     vre_next += vre_every;
   }
 
+  // copy Update count of gas/gas collision computes active on this timestep
+
+  ngas_tally = update->ngas_tally;
+
   // counters
 
   ncollide_one = nattempt_one = nreact_one = 0;
   ndelete = 0;
 
   // perform collisions:
-  // variant for single group or multiple groups
-  // variant for nearcp flag or not
   // variant for ambipolar approximation or not
-
-  int grid_dim = domain->dimension;
+  // variant for subcell flag or not (subcell requires a single group)
+  // variant for nearcp flag or not
+  // variant for ngas_tally active or not
+  // variant for single group or multiple groups
 
   if (!ambiflag) {
-    if (ngroups == 1) {
-      if (subcellflag == 1) {
-        if (grid_dim == 2) collisions_one_subcell<2>();
-        else if (grid_dim == 3) collisions_one_subcell<3>();
+    if (subcellflag) {
+      int dimension = domain->dimension;
+      if (!ngas_tally) {
+        if (dimension == 2) collisions_one_subcell<2,0>();
+        else collisions_one_subcell<3,0>();
+      } else {
+        if (dimension == 2) collisions_one_subcell<2,1>();
+        else collisions_one_subcell<3,1>();
       }
-      else {
-        if (nearcp == 0) collisions_one<0>();
-        else collisions_one<1>();
+    } else if (!nearcp) {
+      if (!ngas_tally) {
+        if (ngroups == 1) collisions_one<0,0>();
+        else collisions_group<0,0>();
+      } else if (ngas_tally) {
+        if (ngroups == 1) collisions_one<0,1>();
+        else collisions_group<0,1>();
+      }
+    } else if (nearcp) {
+      if (!ngas_tally) {
+        if (ngroups == 1) collisions_one<1,0>();
+        else collisions_group<1,0>();
+      } else if (ngas_tally) {
+        if (ngroups == 1) collisions_one<1,1>();
+        else collisions_group<1,1>();
       }
     }
-    else {
-      if (nearcp == 0) collisions_group<0>();
-      else collisions_group<1>(); 
-    }
-  }
-  else { 
-    if (ngroups == 1) {
-      collisions_one_ambipolar();
-    }
-    else {
-      collisions_group_ambipolar();
+  } else if (ambiflag) {
+    if (!ngas_tally) {
+      if (ngroups == 1) collisions_one_ambipolar<0>();
+      else collisions_group_ambipolar<0>();
+    } else if (!ngas_tally) {
+      if (ngroups == 1) collisions_one_ambipolar<1>();
+      else collisions_group_ambipolar<1>();
     }
   }
 
@@ -522,12 +462,12 @@ void Collide::collisions()
    NTC algorithm for a single group
 ------------------------------------------------------------------------- */
 
-template < int NEARCP > void Collide::collisions_one()
+template < int NEARCP, int GASTALLY > void Collide::collisions_one()
 {
-  int i,j,k,n,ip,np;
+  int i,j,k,m,n,ip,np;
   int nattempt,reactflag;
   double attempt,volume;
-  double t_setup = 0.0; double tt = 0.0;
+  Particle::OnePart iorig,jorig;
   Particle::OnePart *ipart,*jpart,*kpart;
 
   // loop over cells I own
@@ -577,6 +517,7 @@ template < int NEARCP > void Collide::collisions_one()
     // perform collisions
     // select random pair of particles, cannot be same
     // test if collision actually occurs
+
     for (int iattempt = 0; iattempt < nattempt; iattempt++) {
       i = np * random->uniform();
       if (NEARCP) j = find_nn(i,np);
@@ -617,10 +558,22 @@ template < int NEARCP > void Collide::collisions_one()
       }
 
       // perform collision and possible reaction
+      // if GASTALLY: tally prep with iorig/jorig, then trigger tally
+
+      if (GASTALLY) {
+        memcpy(&iorig,ipart,sizeof(Particle::OnePart));
+        memcpy(&jorig,jpart,sizeof(Particle::OnePart));
+      }
 
       setup_collision(ipart,jpart);
       reactflag = perform_collision(ipart,jpart,kpart);
       ncollide_one++;
+
+      if (GASTALLY)
+        for (m = 0; m < ngas_tally; m++)
+          glist_active[m]->gas_tally(icell,reactflag,
+                                     &iorig,&jorig,ipart,jpart,kpart);
+
       if (reactflag) nreact_one++;
       else continue;
 
@@ -657,18 +610,424 @@ template < int NEARCP > void Collide::collisions_one()
 }
 
 /* ----------------------------------------------------------------------
+   NTC algorithm for a single group with transient adaptive subcells
+   Bird's alternative to nearest-neighbor collision partner selection:
+     each timestep, bin particles in cell into a transient grid of
+     subcells with (on average) one or more particles per subcell,
+     select collision partner from same subcell if possible,
+     else from expanding shells of neighbor subcells
+   keeps mean collision separation small even for large cells,
+     see Bird 2007 (Sophisticated DSMC) and
+     Gallis et al, Phys Fluids 21, 017103 (2009)
+------------------------------------------------------------------------- */
+
+template < int DIM, int GASTALLY > void Collide::collisions_one_subcell()
+{
+  int i,j,k,m,n,ip,np;
+  int nattempt,reactflag;
+  double attempt,volume;
+  Particle::OnePart iorig,jorig;
+  Particle::OnePart *ipart,*jpart,*kpart;
+
+  int nsub,nsubsq,isc,jsc,scount,jexcl;
+  int ibox,jbox,kbox,radius,nring,ncand,jcand;
+  int ilo,ihi,jlo,jhi,klo,khi,i2,j2,k2;
+  double lo[3],ood[3];
+
+  // loop over cells I own
+
+  Grid::ChildInfo *cinfo = grid->cinfo;
+  Grid::ChildCell *cells = grid->cells;
+
+  Particle::OnePart *particles = particle->particles;
+  int *next = particle->next;
+
+  for (int icell = 0; icell < nglocal; icell++) {
+    np = cinfo[icell].count;
+    if (np <= 1) continue;
+
+    ip = cinfo[icell].first;
+    volume = cinfo[icell].volume / cinfo[icell].weight;
+    if (volume == 0.0) error->one(FLERR,"Collision cell volume is zero");
+
+    // setup particle list and subcell vectors for this cell
+
+    if (np > npmax) {
+      while (np > npmax) npmax += DELTAPART;
+      memory->destroy(plist);
+      memory->create(plist,npmax,"collide:plist");
+      subcell_alloc();
+    }
+
+    // nn_last_partner[i] = index+1 of last collision partner of particle I
+    // used to avoid an immediate 2nd collision of same pair,
+    //   which Bird's subcell method disallows as unphysical
+
+    if (np > max_nn) realloc_nn(np,nn_last_partner);
+    memset(nn_last_partner,0,np*sizeof(int));
+
+    n = 0;
+    while (ip >= 0) {
+      plist[n++] = ip;
+      ip = next[ip];
+    }
+
+    // attempt = exact collision attempt count for all particles in cell
+    // nattempt = rounded attempt with RN
+
+    attempt = attempt_collision(icell,np,volume);
+    nattempt = static_cast<int> (attempt);
+
+    if (!nattempt) continue;
+    nattempt_one += nattempt;
+
+    // bin particles in cell into transient grid of subcells
+    // nsub = # of subcells in each dimension = floor(np^(1/DIM))
+    //   so that # of subcells <= np, one or more particles per subcell
+    //   small tolerance insures exact roots are not rounded down
+
+    if (DIM == 2) nsub = static_cast<int> (sqrt((double) np) + 1.0e-9);
+    else nsub = static_cast<int> (cbrt((double) np) + 1.0e-9);
+    nsubsq = nsub*nsub;
+
+    lo[0] = cells[icell].lo[0];
+    lo[1] = cells[icell].lo[1];
+    lo[2] = cells[icell].lo[2];
+    ood[0] = nsub / (cells[icell].hi[0] - lo[0]);
+    ood[1] = nsub / (cells[icell].hi[1] - lo[1]);
+    if (DIM == 3) ood[2] = nsub / (cells[icell].hi[2] - lo[2]);
+    else ood[2] = 0.0;
+
+    subcell_rebin(DIM,np,nsub,lo,ood);
+
+    // perform collisions
+    // select random first particle
+    // select collision partner from same or nearby subcell, cannot be same
+    // test if collision actually occurs
+
+    for (int iattempt = 0; iattempt < nattempt; iattempt++) {
+      i = np * random->uniform();
+      isc = subcell_id[i];
+      jexcl = -1;
+      j = -1;
+
+      // if another particle is in same subcell, select partner randomly
+      //   from the others in the same subcell
+      // if partner was just collided with by particle I and
+      //   others are in same subcell, select a different partner,
+      //   else fall thru to shell search for next-nearest partner
+
+      scount = subcell_count[isc];
+      if (scount >= 2) {
+        do {
+          jcand = static_cast<int> (scount*random->uniform());
+          j = subcell_first[isc];
+          while (jcand--) j = subcell_next[j];
+        } while (j == i);
+
+        if (nn_last_partner[i] == j+1 && nn_last_partner[j] == i+1) {
+          jexcl = j;
+          if (scount > 2) {
+            do {
+              jcand = static_cast<int> (scount*random->uniform());
+              j = subcell_first[isc];
+              while (jcand--) j = subcell_next[j];
+            } while (j == i || j == jexcl);
+          } else j = -1;
+        }
+      }
+
+      // search shells of neighbor subcells with increasing radius
+      //   until one or more candidate partners found
+      // select partner randomly from all particles in the shell
+      // shell list of subcells is clipped to bounds of subcell grid
+
+      if (j < 0) {
+        ibox = isc % nsub;
+        jbox = (isc / nsub) % nsub;
+        kbox = isc / nsubsq;      // 0 for DIM = 2
+
+        for (radius = 1; radius < nsub; radius++) {
+          nring = 0;
+          ilo = MAX(ibox-radius,0);
+          ihi = MIN(ibox+radius,nsub-1);
+          jlo = MAX(jbox-radius+1,0);
+          jhi = MIN(jbox+radius-1,nsub-1);
+
+          if (DIM == 2) {
+
+            // bottom/top rows of shell, full extent in x
+            // left/right columns of shell, exclusive extent in y
+
+            if (jbox-radius >= 0)
+              for (i2 = ilo; i2 <= ihi; i2++)
+                subcell_ring[nring++] = (jbox-radius)*nsub + i2;
+            if (jbox+radius < nsub)
+              for (i2 = ilo; i2 <= ihi; i2++)
+                subcell_ring[nring++] = (jbox+radius)*nsub + i2;
+            if (ibox-radius >= 0)
+              for (j2 = jlo; j2 <= jhi; j2++)
+                subcell_ring[nring++] = j2*nsub + (ibox-radius);
+            if (ibox+radius < nsub)
+              for (j2 = jlo; j2 <= jhi; j2++)
+                subcell_ring[nring++] = j2*nsub + (ibox+radius);
+
+          } else {
+
+            // bottom/top faces of shell, full extent in x,y
+            // front/back faces of shell, full extent in x, exclusive in z
+            // left/right faces of shell, exclusive extent in y,z
+
+            int jflo = MAX(jbox-radius,0);
+            int jfhi = MIN(jbox+radius,nsub-1);
+            klo = MAX(kbox-radius+1,0);
+            khi = MIN(kbox+radius-1,nsub-1);
+
+            if (kbox-radius >= 0)
+              for (j2 = jflo; j2 <= jfhi; j2++)
+                for (i2 = ilo; i2 <= ihi; i2++)
+                  subcell_ring[nring++] = (kbox-radius)*nsubsq + j2*nsub + i2;
+            if (kbox+radius < nsub)
+              for (j2 = jflo; j2 <= jfhi; j2++)
+                for (i2 = ilo; i2 <= ihi; i2++)
+                  subcell_ring[nring++] = (kbox+radius)*nsubsq + j2*nsub + i2;
+            if (jbox-radius >= 0)
+              for (k2 = klo; k2 <= khi; k2++)
+                for (i2 = ilo; i2 <= ihi; i2++)
+                  subcell_ring[nring++] = k2*nsubsq + (jbox-radius)*nsub + i2;
+            if (jbox+radius < nsub)
+              for (k2 = klo; k2 <= khi; k2++)
+                for (i2 = ilo; i2 <= ihi; i2++)
+                  subcell_ring[nring++] = k2*nsubsq + (jbox+radius)*nsub + i2;
+            if (ibox-radius >= 0)
+              for (k2 = klo; k2 <= khi; k2++)
+                for (j2 = jlo; j2 <= jhi; j2++)
+                  subcell_ring[nring++] = k2*nsubsq + j2*nsub + (ibox-radius);
+            if (ibox+radius < nsub)
+              for (k2 = klo; k2 <= khi; k2++)
+                for (j2 = jlo; j2 <= jhi; j2++)
+                  subcell_ring[nring++] = k2*nsubsq + j2*nsub + (ibox+radius);
+          }
+
+          // ncand = # of candidate partners in shell subcells
+          // if none, expand search to next shell
+
+          ncand = 0;
+          for (m = 0; m < nring; m++) ncand += subcell_count[subcell_ring[m]];
+          if (!ncand) continue;
+
+          // select random particle from all candidates in shell
+
+          jcand = static_cast<int> (ncand*random->uniform());
+          jsc = subcell_ring[0];
+          for (m = 0; m < nring; m++) {
+            jsc = subcell_ring[m];
+            if (jcand < subcell_count[jsc]) break;
+            jcand -= subcell_count[jsc];
+          }
+          j = subcell_first[jsc];
+          while (jcand--) j = subcell_next[j];
+
+          // if partner was just collided with by particle I:
+          // select a different partner from shell if it has others,
+          //   else expand search to next shell for next-nearest partner
+
+          if (nn_last_partner[i] == j+1 && nn_last_partner[j] == i+1) {
+            jexcl = j;
+            if (ncand > 1) {
+              do {
+                jcand = static_cast<int> (ncand*random->uniform());
+                for (m = 0; m < nring; m++) {
+                  jsc = subcell_ring[m];
+                  if (jcand < subcell_count[jsc]) break;
+                  jcand -= subcell_count[jsc];
+                }
+                j = subcell_first[jsc];
+                while (jcand--) j = subcell_next[j];
+              } while (j == jexcl);
+            } else {
+              j = -1;
+              continue;
+            }
+          }
+          break;
+        }
+
+        // only remaining partner is the one just collided with: accept it
+
+        if (j < 0) j = jexcl;
+      }
+
+      ipart = &particles[plist[i]];
+      jpart = &particles[plist[j]];
+
+      // test if collision actually occurs
+      // continue to next collision if no reaction
+
+      if (!test_collision(icell,0,0,ipart,jpart)) continue;
+
+      nn_last_partner[i] = j+1;
+      nn_last_partner[j] = i+1;
+
+      // if recombination reaction is possible for this IJ pair
+      // pick a 3rd particle to participate and set cell number density
+      // unless boost factor turns it off, or there is no 3rd particle
+
+      if (recombflag && recomb_ijflag[ipart->ispecies][jpart->ispecies]) {
+        if (random->uniform() > react->recomb_boost_inverse)
+          react->recomb_species = -1;
+        else if (np <= 2)
+          react->recomb_species = -1;
+        else {
+          k = np * random->uniform();
+          while (k == i || k == j) k = np * random->uniform();
+          react->recomb_part3 = &particles[plist[k]];
+          react->recomb_species = react->recomb_part3->ispecies;
+          react->recomb_density = np * update->fnum / volume;
+        }
+      }
+
+      // perform collision and possible reaction
+      // if GASTALLY: tally prep with iorig/jorig, then trigger tally
+
+      if (GASTALLY) {
+        memcpy(&iorig,ipart,sizeof(Particle::OnePart));
+        memcpy(&jorig,jpart,sizeof(Particle::OnePart));
+      }
+
+      setup_collision(ipart,jpart);
+      reactflag = perform_collision(ipart,jpart,kpart);
+      ncollide_one++;
+
+      if (GASTALLY)
+        for (m = 0; m < ngas_tally; m++)
+          glist_active[m]->gas_tally(icell,reactflag,
+                                     &iorig,&jorig,ipart,jpart,kpart);
+
+      if (reactflag) nreact_one++;
+      else continue;
+
+      // if jpart destroyed: delete from plist, add particle to deletion list
+      // exit attempt loop if only single particle left
+
+      if (!jpart) {
+        if (ndelete == maxdelete) {
+          maxdelete += DELTADELETE;
+          memory->grow(dellist,maxdelete,"collide:dellist");
+        }
+        dellist[ndelete++] = plist[j];
+        np--;
+        plist[j] = plist[np];
+        nn_last_partner[j] = nn_last_partner[np];
+        if (np < 2) break;
+      }
+
+      // if kpart created, add to plist
+      // kpart was just added to particle list, so index = nlocal-1
+      // particle data structs may have been realloced by kpart
+
+      if (kpart) {
+        if (np == npmax) {
+          npmax += DELTAPART;
+          memory->grow(plist,npmax,"collide:plist");
+          subcell_alloc();
+        }
+        set_nn(np);
+        plist[np++] = particle->nlocal-1;
+        particles = particle->particles;
+      }
+
+      // if plist was changed by a reaction,
+      // rebin particles into subcells so vectors stay consistent with plist
+      // keep same subcell grid even though np has changed by one
+
+      if (!jpart || kpart) subcell_rebin(DIM,np,nsub,lo,ood);
+    }
+  }
+}
+
+/* ----------------------------------------------------------------------
+   allocate/reallocate subcell method vectors to length npmax
+   contents do not persist, vectors are refilled for each grid cell
+   deallocate and skip if subcell method not enabled
+------------------------------------------------------------------------- */
+
+void Collide::subcell_alloc()
+{
+  memory->destroy(subcell_id);
+  memory->destroy(subcell_count);
+  memory->destroy(subcell_first);
+  memory->destroy(subcell_next);
+  memory->destroy(subcell_ring);
+  subcell_id = subcell_count = subcell_first = subcell_next =
+    subcell_ring = NULL;
+
+  if (!subcellflag || ngroups > 1) return;
+
+  memory->create(subcell_id,npmax,"collide:subcell_id");
+  memory->create(subcell_count,npmax,"collide:subcell_count");
+  memory->create(subcell_first,npmax,"collide:subcell_first");
+  memory->create(subcell_next,npmax,"collide:subcell_next");
+  memory->create(subcell_ring,npmax,"collide:subcell_ring");
+}
+
+/* ----------------------------------------------------------------------
+   bin np particles in plist into transient grid of subcells
+   nsub = # of subcells in each dimension of grid cell
+   lo = lower corner of grid cell, ood = inverse subcell edge lengths
+   creates subcell_first/next linked list of particles in each subcell
+   subcell indices are clamped to grid bounds
+     to guard against round-off for particles on upper cell faces
+------------------------------------------------------------------------- */
+
+void Collide::subcell_rebin(int dim, int np, int nsub, double *lo, double *ood)
+{
+  int ix,iy,iz,isc;
+  double *x;
+
+  int nsubcell = nsub*nsub;
+  if (dim == 3) nsubcell *= nsub;
+
+  for (isc = 0; isc < nsubcell; isc++) {
+    subcell_count[isc] = 0;
+    subcell_first[isc] = -1;
+  }
+
+  Particle::OnePart *particles = particle->particles;
+
+  for (int n = 0; n < np; n++) {
+    x = particles[plist[n]].x;
+    ix = static_cast<int> ((x[0]-lo[0])*ood[0]);
+    ix = MIN(MAX(ix,0),nsub-1);
+    iy = static_cast<int> ((x[1]-lo[1])*ood[1]);
+    iy = MIN(MAX(iy,0),nsub-1);
+    if (dim == 3) {
+      iz = static_cast<int> ((x[2]-lo[2])*ood[2]);
+      iz = MIN(MAX(iz,0),nsub-1);
+    } else iz = 0;
+
+    isc = (iz*nsub + iy)*nsub + ix;
+    subcell_id[n] = isc;
+    subcell_next[n] = subcell_first[isc];
+    subcell_first[isc] = n;
+    subcell_count[isc]++;
+  }
+}
+
+/* ----------------------------------------------------------------------
    NTC algorithm for multiple groups, loop over pairs of groups
    pre-compute # of attempts per group pair
 ------------------------------------------------------------------------- */
 
-template < int NEARCP > void Collide::collisions_group()
+template < int NEARCP, int GASTALLY > void Collide::collisions_group()
 {
-  int i,j,k,n,ii,jj,ip,np,isp,ng;
+  int i,j,k,m,n,ii,jj,ip,np,isp,ng;
   int pindex,ipair,igroup,jgroup,newgroup,ngmax;
   int nattempt,reactflag;
   int *ni,*nj,*ilist,*jlist;
   int *nn_igroup,*nn_jgroup;
   double attempt,volume;
+  Particle::OnePart iorig,jorig;
   Particle::OnePart *ipart,*jpart,*kpart;
 
   // loop over cells I own
@@ -682,6 +1041,7 @@ template < int NEARCP > void Collide::collisions_group()
   for (int icell = 0; icell < nglocal; icell++) {
     np = cinfo[icell].count;
     if (np <= 1) continue;
+
     ip = cinfo[icell].first;
     volume = cinfo[icell].volume / cinfo[icell].weight;
     if (volume == 0.0) error->one(FLERR,"Collision cell volume is zero");
@@ -829,10 +1189,22 @@ template < int NEARCP > void Collide::collisions_group()
         }
 
         // perform collision and possible reaction
+        // if GASTALLY: tally prep with iorig/jorig, then trigger tally
+
+        if (GASTALLY) {
+          memcpy(&iorig,ipart,sizeof(Particle::OnePart));
+          memcpy(&jorig,jpart,sizeof(Particle::OnePart));
+        }
 
         setup_collision(ipart,jpart);
         reactflag = perform_collision(ipart,jpart,kpart);
         ncollide_one++;
+
+        if (GASTALLY)
+          for (m = 0; m < ngas_tally; m++)
+            glist_active[m]->gas_tally(icell,reactflag,
+                                       &iorig,&jorig,ipart,jpart,kpart);
+
         if (reactflag) nreact_one++;
         else continue;
 
@@ -930,373 +1302,15 @@ template < int NEARCP > void Collide::collisions_group()
 }
 
 /* ----------------------------------------------------------------------
-   NTC algorithm for a single group using the subcell method
-------------------------------------------------------------------------- */
-template < int DIM > void Collide::collisions_one_subcell()
-{
-
-  int i,j,k,m,n,ip,np;
-  int nattempt,reactflag;
-  double attempt,volume;
-  Particle::OnePart *ipart,*jpart,*kpart;
-	
-  int curr_subcell, isubcell, final_subcell;
-  int partner_count, temp_ctr;
-  int nsubcell_bydim, nscbd_sq;
-  int ibox, jbox, kbox, adj_ibox, adj_jbox, adj_kbox, radius;
-  int jj, jj_new;
-  double c_lo_x, c_lo_y, c_lo_z, oodx, oody, oodz, dim_inv;
-  int x_id, y_id, z_id;
-  if (DIM == 2) dim_inv = 1./2.;
-  else dim_inv = 1./3.;
- 
-  // loop over cells I own  
-
-  Grid::ChildInfo *cinfo = grid->cinfo;
- 
-  Particle::OnePart *particles = particle->particles;
-  int *next = particle->next; 
-
-  for (int icell = 0; icell < nglocal; icell++) {
-    np = cinfo[icell].count;
-    if (np <= 1) continue;
- 
-    ip = cinfo[icell].first;
-    volume = cinfo[icell].volume / cinfo[icell].weight;
-    if (volume == 0.0) error->one(FLERR, "Collision cell volume is zero");
- 
-    if (np > npmax) { 
-      while (np > npmax) npmax += DELTAPART;
- 
-      memory->destroy(plist);
-      memory->create(plist,npmax,"collide:plist");
- 
-      memory->destroy(subcell_mostrecent);
-      memory->create(subcell_mostrecent,npmax,"collide:subcell_mostrecent");
-
-      memory->destroy(subcell_next);
-      memory->create(subcell_next,npmax,"collide:subcell_mostrecent");
-
-      memory->destroy(subcell_first);
-      memory->create(subcell_first,npmax,"collide:subell_first");
-
-      memory->destroy(subcell_IDlist);
-      memory->create(subcell_IDlist,npmax,"collide:subcell_IDlist");
-	    
-      memory->destroy(subcell_ID_ilist);
-      memory->create(subcell_ID_ilist,npmax,"collide:subcell_ID_ilist");
-	    
-      memory->destroy(subcell_ID_jlist);
-      memory->create(subcell_ID_jlist,npmax,"collide:subcell_ID_jlist");
-	    
-      memory->destroy(subcell_ID_klist);
-      memory->create(subcell_ID_klist,npmax,"collide:subcell_ID_klist");
- 
-      memory->destroy(subcell_count);
-      memory->create(subcell_count,npmax,"collide:subcell_count");
- 
-      memory->destroy(neighbor_cells);
-      memory->create(neighbor_cells,npmax,"collide:neighbor_cells");
-    }
-
-    // attempt = exact collision attempt count for all particles in cell
-    // nattempt = rounded attempt with RN
-    // if no attempts, continue to next grid cell
-    attempt = attempt_collision(icell,np,volume);
-    nattempt = static_cast<int> (attempt);
-    if (!nattempt) continue;
-    nattempt_one += nattempt;
-	
-    Grid::ChildCell *cells = grid->cells;
-	  
-    // subcell grid size
-    nsubcell_bydim = (int)(pow((double)np, dim_inv));
-    nscbd_sq = nsubcell_bydim * nsubcell_bydim;
-  
-    // grab cell boundaries for defining subgrid
-    c_lo_x = cells[icell].lo[0];
-    c_lo_y = cells[icell].lo[1];
-    c_lo_z = cells[icell].lo[2];
-    oodx = ((double)nsubcell_bydim) / (cells[icell].hi[0] - c_lo_x);
-    oody = ((double)nsubcell_bydim) / (cells[icell].hi[1] - c_lo_y);
-    oodz = ((double)nsubcell_bydim) / (cells[icell].hi[2] - c_lo_z);
-	  
-    // clear arrays for use
-    if (DIM == 2) {
-      memset(subcell_count, 0, nscbd_sq*sizeof(int));
-      memset(subcell_first, -1, nscbd_sq*sizeof(int));
-      memset(subcell_next, -1, nscbd_sq*sizeof(int));
-    } else {
-      memset(subcell_count, 0, nscbd_sq*nsubcell_bydim * sizeof(int));
-      memset(subcell_first, -1, nscbd_sq*nsubcell_bydim * sizeof(int));
-      memset(subcell_next, -1, nscbd_sq*nsubcell_bydim * sizeof(int));
-    }
-	    
-    n = 0;
-    while (ip >= 0) {
-      plist[n] = ip;
-
-      // subcell ID
-      x_id = (int)(((&particles[plist[n]])->x[0]-c_lo_x)*oodx); subcell_ID_ilist[n] = x_id;
-      y_id = (int)(((&particles[plist[n]])->x[1]-c_lo_y)*oody); subcell_ID_jlist[n] = y_id;
-      z_id = 0;
-      if (DIM == 3) {
-        z_id = (int)(((&particles[plist[n]])->x[2]-c_lo_z)*oodz); subcell_ID_klist[n] = z_id;
-      }
-      curr_subcell = nscbd_sq*z_id + nsubcell_bydim*y_id + x_id;
-      subcell_IDlist[n] = curr_subcell;
-      
-      // update arrays
-      if (subcell_first[curr_subcell] < 0) {
-        subcell_first[curr_subcell] = n;
-      } else {
-        subcell_next[subcell_mostrecent[curr_subcell]] = n;
-      }
-      subcell_mostrecent[curr_subcell] = n;
- 
-      subcell_count[curr_subcell]++;      
-
-      ip = next[ip];
-      n++;
-    }
-
-    // perform collisions
-    // select pair of particles according to subcell structure, cannot be the same
-    // test if collision actually occurs
-
-    for (int iattempt = 0; iattempt < nattempt; iattempt++) {
-      i = np * random->uniform();
-
-      // subcell ID for particle i
-      isubcell = subcell_IDlist[i];
-
-      // radius == 0 case
-      final_subcell = isubcell;
-      partner_count = subcell_count[final_subcell];
-      if (partner_count >= 2) {
-        j = i;
-        while (j == i) {
-          j = subcell_first[isubcell];
-          jj = int(partner_count*random->uniform());
-          while (jj > 0) {
-            j = subcell_next[j];
-            jj--;
-          } 
-        }
-      }
-      // radius >= 1 case
-      else {
-        if (DIM == 2) {
-          ibox = subcell_ID_ilist[i];
-          jbox = subcell_ID_jlist[i];
-          radius=1;
-          while (radius < nsubcell_bydim) {
-            partner_count = 0;
-            temp_ctr = 0;
-
-            // 2-D looping over neighbors
-            for (int adj_i = -radius; adj_i <= radius; adj_i++) {
-              adj_kbox = 0;
-              adj_ibox = ibox + adj_i;
-              // Bottom
-              adj_jbox = jbox - radius;
-              if (0 <= adj_ibox && adj_ibox < nsubcell_bydim && 0 <= adj_jbox && adj_jbox < nsubcell_bydim && 0 <= adj_kbox && adj_kbox < nsubcell_bydim) {
-                neighbor_cells[temp_ctr++] = nsubcell_bydim*(nsubcell_bydim*adj_kbox + adj_jbox) + adj_ibox;
-              }
-              // Top
-              adj_jbox = jbox + radius;
-              if (0 <= adj_ibox && adj_ibox < nsubcell_bydim && 0 <= adj_jbox && adj_jbox < nsubcell_bydim && 0 <= adj_kbox && adj_kbox < nsubcell_bydim) {
-                neighbor_cells[temp_ctr++] = nsubcell_bydim*(nsubcell_bydim*adj_kbox + adj_jbox) + adj_ibox;
-              }
-            }
-            for (int adj_j = -radius+1; adj_j <= radius-1; adj_j++) {
-              adj_kbox = 0;
-              adj_jbox = jbox + adj_j;
-              // Left
-              adj_ibox = ibox - radius;
-              if (0 <= adj_ibox && adj_ibox < nsubcell_bydim && 0 <= adj_jbox && adj_jbox < nsubcell_bydim && 0 <= adj_kbox && adj_kbox < nsubcell_bydim) {
-                neighbor_cells[temp_ctr++] = nsubcell_bydim*(nsubcell_bydim*adj_kbox + adj_jbox) + adj_ibox;
-              }
-              // Right
-              adj_ibox = ibox + radius;
-              if (0 <= adj_ibox && adj_ibox < nsubcell_bydim && 0 <= adj_jbox && adj_jbox < nsubcell_bydim && 0 <= adj_kbox && adj_kbox < nsubcell_bydim) {
-                neighbor_cells[temp_ctr++] = nsubcell_bydim*(nsubcell_bydim*adj_kbox + adj_jbox) + adj_ibox;
-              }
-            }
-
-            // looking for partner at this radius
-            // if good, leave. if not, radius++ 
-            for (int tc = 0; tc < temp_ctr; tc++) {
-              partner_count += subcell_count[neighbor_cells[tc]];
-            }
-            if (partner_count == 0) radius++;
-            else break;
-          }
-        }
-        else if (DIM == 3) {
-          ibox = subcell_ID_ilist[i];
-          jbox = subcell_ID_jlist[i];
-          kbox = subcell_ID_klist[i];
-          radius=1;
-          while (radius < nsubcell_bydim) {
-            partner_count = 0;
-            temp_ctr = 0;
-
-            // 3-D looping over neighbors
-            for (int adj_i = -radius; adj_i <= radius; adj_i++) {
-              adj_ibox = ibox + adj_i;
-              for (int adj_j = -radius; adj_j <= radius; adj_j++) {
-                adj_jbox = jbox + adj_j;
-                // Bottom
-                adj_kbox = kbox - radius;
-                if (0 <= adj_ibox && adj_ibox < nsubcell_bydim && 0 <= adj_jbox && adj_jbox < nsubcell_bydim && 0 <= adj_kbox && adj_kbox < nsubcell_bydim) {
-                  neighbor_cells[temp_ctr++] = nsubcell_bydim*(nsubcell_bydim*adj_kbox + adj_jbox) + adj_ibox;
-                }
-                // Top
-                adj_kbox = kbox + radius;
-                if (0 <= adj_ibox && adj_ibox < nsubcell_bydim && 0 <= adj_jbox && adj_jbox < nsubcell_bydim && 0 <= adj_kbox && adj_kbox < nsubcell_bydim) {
-                  neighbor_cells[temp_ctr++] = nsubcell_bydim*(nsubcell_bydim*adj_kbox + adj_jbox) + adj_ibox;
-                }
-              }
-              for (int adj_k = -radius+1; adj_k <= radius-1; adj_k++) {
-                adj_kbox = kbox + adj_k;
-                // Front
-                adj_jbox = jbox - radius;
-                if (0 <= adj_ibox && adj_ibox < nsubcell_bydim && 0 <= adj_jbox && adj_jbox < nsubcell_bydim && 0 <= adj_kbox && adj_kbox < nsubcell_bydim) {
-                  neighbor_cells[temp_ctr++] = nsubcell_bydim*(nsubcell_bydim*adj_kbox + adj_jbox) + adj_ibox;
-                }
-                // Back
-                adj_jbox = jbox + radius;
-                if (0 <= adj_ibox && adj_ibox < nsubcell_bydim && 0 <= adj_jbox && adj_jbox < nsubcell_bydim && 0 <= adj_kbox && adj_kbox < nsubcell_bydim) {
-                  neighbor_cells[temp_ctr++] = nsubcell_bydim*(nsubcell_bydim*adj_kbox + adj_jbox) + adj_ibox;
-                }
-              }
-            }
-            for (int adj_j = -radius+1; adj_j <= radius-1; adj_j++) {
-              adj_jbox = jbox + adj_j;
-              for (int adj_k = -radius+1; adj_k <= radius-1; adj_k++) {
-                adj_kbox = kbox + adj_k;
-                // Left
-                adj_ibox = ibox - radius;              
-                if (0 <= adj_ibox && adj_ibox < nsubcell_bydim && 0 <= adj_jbox && adj_jbox < nsubcell_bydim && 0 <= adj_kbox && adj_kbox < nsubcell_bydim) {
-                  neighbor_cells[temp_ctr++] = nsubcell_bydim*(nsubcell_bydim*adj_kbox + adj_jbox) + adj_ibox;
-                }
-                // Right
-                adj_ibox = ibox + radius;              
-                if (0 <= adj_ibox && adj_ibox < nsubcell_bydim && 0 <= adj_jbox && adj_jbox < nsubcell_bydim && 0 <= adj_kbox && adj_kbox < nsubcell_bydim) {
-                  neighbor_cells[temp_ctr++] = nsubcell_bydim*(nsubcell_bydim*adj_kbox + adj_jbox) + adj_ibox;
-                }
-              }
-            }
-
-            // looking for partner at this radius
-            // if good, leave. if not, radius++ 
-            for (int tc = 0; tc < temp_ctr; tc++) {
-              partner_count += subcell_count[neighbor_cells[tc]];
-            }
-            if (partner_count == 0) radius++;
-            else break;
-          }
-        }
-        
-        // random partner selection from designated subcells
-        jj = partner_count * random->uniform();
-        for (int tc = 0; tc < temp_ctr; tc++) {
-          jj_new = jj - subcell_count[neighbor_cells[tc]];
-          if (jj_new < 0) {
-            final_subcell = neighbor_cells[tc];
-            break;
-          }
-          else jj = jj_new;
-        }
-        j = subcell_first[final_subcell];
-        while (jj > 0) {
-          j = subcell_next[j];
-          jj--;
-        }
-      }
-
-      ipart = &particles[plist[i]];
-      jpart = &particles[plist[j]];
-
-      // test if collision actually occurs
-      // continue to next collision if no reaction
-      if (!test_collision(icell,0,0,ipart,jpart)) {
-        continue;
-      }
-
-      // if recombination reaction is possible for this IJ pair
-      // pick a 3rd particle to participate and set cell number density
-      // unless boost factor turns it off, or there is no 3rd particle
-      if (recombflag && recomb_ijflag[ipart->ispecies][jpart->ispecies]) {
-        if (random->uniform() > react->recomb_boost_inverse)
-          react->recomb_species = -1;
-        else if (np <= 2)
-          react->recomb_species = -1;
-        else {
-          k = np * random->uniform();
-          while (k == i || k == j) k = np * random->uniform();
-          react->recomb_part3 = &particles[plist[k]];
-          react->recomb_species = react->recomb_part3->ispecies;
-          react->recomb_density = np * update->fnum / volume;
-        }
-      }
-
-      // perform collision and possible reaction
-      setup_collision(ipart,jpart);
-      reactflag = perform_collision(ipart,jpart,kpart);
-      ncollide_one++;
-      if (reactflag) nreact_one++;
-      else continue;
-      
-      // if jpart destroyed: delete from plist, add particle to deleteion list
-      // exit attempt loop if only single particle left
-
-      if (!jpart) {
-        if (ndelete == maxdelete) {
-          maxdelete += DELTADELETE;
-          memory->grow(dellist,maxdelete,"collide:dellist");
-        }
-        dellist[ndelete++] = plist[j];
-        np--;
-        plist[j] = plist[np];
-        if (np < 2) break;
-      }
-
-      // if kpart created, add to plist
-      // kpart was just added to particle list, so index = nlocal-1
-      // particle data structs may have been realloced by kpart
-
-      if (kpart) {
-        if (np == npmax) {
-          npmax += DELTAPART;
-          memory->grow(plist,npmax,"collide:plist");
-          memory->grow(subcell_next,npmax,"collide:subcell_next");
-          memory->grow(subcell_first,npmax,"collide:subcell_first");
-          memory->grow(subcell_mostrecent,npmax,"collide:subcell_mostrecent");
-          memory->grow(subcell_IDlist,npmax,"collide:subcell_IDlist");
-	  memory->grow(subcell_IDlist,npmax,"collide:subcell_ID_ilist");
-	  memory->grow(subcell_IDlist,npmax,"collide:subcell_ID_jlist");
-          memory->grow(subcell_IDlist,npmax,"collide:subcell_ID_klist");
-          memory->grow(subcell_count,npmax,"collide:subcell_count");
-          memory->grow(neighbor_cells,npmax,"collide:neighbor_cells");  
-        }
-        plist[np++] = particle->nlocal-1;
-        particles = particle->particles;
-      }
-
-    }
-  }
-}
-
-/* ----------------------------------------------------------------------
    NTC algorithm for a single group with ambipolar approximation
 ------------------------------------------------------------------------- */
-void Collide::collisions_one_ambipolar()
+
+template < int GASTALLY > void Collide::collisions_one_ambipolar()
 {
-  int i,j,k,n,ip,np,nelectron,nptotal,jspecies,tmp;
+  int i,j,k,m,n,ip,np,nelectron,nptotal,ispecies,jspecies,tmp;
   int nattempt,reactflag;
   double attempt,volume;
+  Particle::OnePart iorig,jorig;
   Particle::OnePart *ipart,*jpart,*kpart,*p,*ep;
 
   // ambipolar vectors
@@ -1315,6 +1329,7 @@ void Collide::collisions_one_ambipolar()
   for (int icell = 0; icell < nglocal; icell++) {
     np = cinfo[icell].count;
     if (np <= 1) continue;
+
     ip = cinfo[icell].first;
     volume = cinfo[icell].volume / cinfo[icell].weight;
     if (volume == 0.0) error->one(FLERR,"Collision cell volume is zero");
@@ -1434,12 +1449,23 @@ void Collide::collisions_one_ambipolar()
 
       // perform collision
       // ijspecies = species before collision chemistry
-      // continue to next collision if no reaction
+      // if GASTALLY: tally prep with iorig/jorig, then trigger tally
+
+      if (GASTALLY) {
+        memcpy(&iorig,ipart,sizeof(Particle::OnePart));
+        memcpy(&jorig,jpart,sizeof(Particle::OnePart));
+      }
 
       jspecies = jpart->ispecies;
       setup_collision(ipart,jpart);
       reactflag = perform_collision(ipart,jpart,kpart);
       ncollide_one++;
+
+      if (GASTALLY)
+        for (m = 0; m < ngas_tally; m++)
+          glist_active[m]->gas_tally(icell,reactflag,
+                                     &iorig,&jorig,ipart,jpart,kpart);
+
       if (reactflag) nreact_one++;
       else continue;
 
@@ -1583,14 +1609,14 @@ void Collide::collisions_one_ambipolar()
    loop over pairs of groups, pre-compute # of attempts per group pair
 ------------------------------------------------------------------------- */
 
-void Collide::collisions_group_ambipolar()
+template < int GASTALLY > void Collide::collisions_group_ambipolar()
 {
-  double tt; double t_setup = 0;
-  int i,j,k,n,ii,jj,ip,np,isp,ng;
-  int pindex,ipair,igroup,jgroup,newgroup,jspecies,tmp;
+  int i,j,k,m,n,ii,jj,ip,np,isp,ng;
+  int pindex,ipair,igroup,jgroup,newgroup,ispecies,jspecies,tmp;
   int nattempt,reactflag,nelectron;
   int *ni,*nj,*ilist,*jlist,*tmpvec;
   double attempt,volume;
+  Particle::OnePart iorig,jorig;
   Particle::OnePart *ipart,*jpart,*kpart,*p,*ep;
 
   // ambipolar vectors
@@ -1599,6 +1625,7 @@ void Collide::collisions_group_ambipolar()
   double **velambi = particle->edarray[particle->ewhich[index_velambi]];
 
   // loop over cells I own
+
   Grid::ChildInfo *cinfo = grid->cinfo;
 
   Particle::OnePart *particles = particle->particles;
@@ -1610,6 +1637,7 @@ void Collide::collisions_group_ambipolar()
   for (int icell = 0; icell < nglocal; icell++) {
     np = cinfo[icell].count;
     if (np <= 1) continue;
+
     ip = cinfo[icell].first;
     volume = cinfo[icell].volume / cinfo[icell].weight;
     if (volume == 0.0) error->one(FLERR,"Collision cell volume is zero");
@@ -1646,7 +1674,6 @@ void Collide::collisions_group_ambipolar()
     n = 0;
     nelectron = 0;
 
-    tt = MPI_Wtime();
     while (ip >= 0) {
       isp = particles[ip].ispecies;
       igroup = species2group[isp];
@@ -1660,16 +1687,12 @@ void Collide::collisions_group_ambipolar()
       p2g[n][1] = ng;
       plist[n] = ip;
       ngroup[igroup]++;
-      //double xc0,xc1,xc2;
+
       if (ionambi[ip]) {
         p = &particles[ip];
         ep = &elist[nelectron];
         memcpy(ep,p,nbytes);
         memcpy(ep->v,velambi[ip],3*sizeof(double));
-        //xc0 = ep->x[0];
-        //xc1 = ep->x[1];
-        //xc2 = ep->x[2];
-        //printf("electron coords = %f %f %f\n", xc0, xc1, xc2);
         ep->ispecies = ambispecies;
         nelectron++;
 
@@ -1685,7 +1708,7 @@ void Collide::collisions_group_ambipolar()
       n++;
       ip = next[ip];
     }
-    t_setup += MPI_Wtime() - tt;
+
     // attempt = exact collision attempt count for a pair of groups
     // double loop over N^2 / 2 pairs of groups
     // temporarily include nelectrons in count for egroup
@@ -1704,12 +1727,12 @@ void Collide::collisions_group_ambipolar()
 
         if (nattempt) {
           if (igroup == egroup) {
-            gpair[npair][0] = jgroup;
-            gpair[npair][1] = igroup;
-          } else {
-            gpair[npair][0] = igroup;
-            gpair[npair][1] = jgroup;
-          }
+              gpair[npair][0] = jgroup;
+              gpair[npair][1] = igroup;
+            } else {
+              gpair[npair][0] = igroup;
+              gpair[npair][1] = jgroup;
+            }
           gpair[npair][2] = nattempt;
           nattempt_one += nattempt;
           npair++;
@@ -1792,12 +1815,24 @@ void Collide::collisions_group_ambipolar()
 
         // perform collision
         // ijspecies = species before collision chemistry
-        // continue to next collision if no reaction
+        // if GASTALLY: tally prep with iorig/jorig, then trigger tally
 
+        if (GASTALLY) {
+          memcpy(&iorig,ipart,sizeof(Particle::OnePart));
+          memcpy(&jorig,jpart,sizeof(Particle::OnePart));
+        }
+
+        ispecies = ipart->ispecies;
         jspecies = jpart->ispecies;
         setup_collision(ipart,jpart);
         reactflag = perform_collision(ipart,jpart,kpart);
         ncollide_one++;
+
+        if (GASTALLY)
+          for (m = 0; m < ngas_tally; m++)
+            glist_active[m]->gas_tally(icell,reactflag,
+                                       &iorig,&jorig,ipart,jpart,kpart);
+
         if (reactflag) nreact_one++;
         else continue;
 
@@ -2089,6 +2124,84 @@ void Collide::ambi_reset(int i, int j, int jsp,
   } else if (!jp) {
     if (jsp == e) ionambi[i] = 0;   // 1st reactant is now 1st product neutral
   }
+}
+
+/* ---------------------------------------------------------------------- */
+
+void Collide::modify_params(int narg, char **arg)
+{
+  if (narg == 0) error->all(FLERR,"Illegal collide_modify command");
+
+  int iarg = 0;
+  while (iarg < narg) {
+    if (strcmp(arg[iarg],"vremax") == 0) {
+      if (iarg+3 > narg) error->all(FLERR,"Illegal collide_modify command");
+      vre_every = atoi(arg[iarg+1]);
+      if (vre_every < 0) error->all(FLERR,"Illegal collide_modify command");
+      if (strcmp(arg[iarg+2],"yes") == 0) vre_start = 1;
+      else if (strcmp(arg[iarg+2],"no") == 0) vre_start = 0;
+      else error->all(FLERR,"Illegal collide_modify command");
+      iarg += 3;
+    } else if (strcmp(arg[iarg],"remain") == 0) {
+      if (iarg+2 > narg) error->all(FLERR,"Illegal collide_modify command");
+      if (strcmp(arg[iarg+1],"yes") == 0) remainflag = 1;
+      else if (strcmp(arg[iarg+1],"no") == 0) remainflag = 0;
+      else error->all(FLERR,"Illegal collide_modify command");
+      iarg += 2;
+    } else if (strcmp(arg[iarg],"rotate") == 0) {
+      if (iarg+2 > narg) error->all(FLERR,"Illegal collide_modify command");
+      if (strcmp(arg[iarg+1],"no") == 0) rotstyle = NONE;
+      // not yet supported
+      //else if (strcmp(arg[iarg+1],"discrete") == 0) rotstyle = DISCRETE;
+      else if (strcmp(arg[iarg+1],"smooth") == 0) rotstyle = SMOOTH;
+      else error->all(FLERR,"Illegal collide_modify command");
+      iarg += 2;
+    } else if (strcmp(arg[iarg],"vibrate") == 0) {
+      if (iarg+2 > narg) error->all(FLERR,"Illegal collide_modify command");
+      if (strcmp(arg[iarg+1],"no") == 0) vibstyle = NONE;
+      else if (strcmp(arg[iarg+1],"discrete") == 0) vibstyle = DISCRETE;
+      else if (strcmp(arg[iarg+1],"smooth") == 0) vibstyle = SMOOTH;
+      else error->all(FLERR,"Illegal collide_modify command");
+      iarg += 2;
+    } else if (strcmp(arg[iarg],"ambipolar") == 0) {
+      if (iarg+2 > narg) error->all(FLERR,"Illegal collide_modify command");
+      if (strcmp(arg[iarg+1],"no") == 0) ambiflag = 0;
+      else if (strcmp(arg[iarg+1],"yes") == 0) ambiflag = 1;
+      else error->all(FLERR,"Illegal collide_modify command");
+      iarg += 2;
+    } else if (strcmp(arg[iarg],"nearcp") == 0) {
+      if (iarg+3 > narg) error->all(FLERR,"Illegal collide_modify command");
+      if (strcmp(arg[iarg+1],"yes") == 0) nearcp = 1;
+      else if (strcmp(arg[iarg+1],"no") == 0) nearcp = 0;
+      else error->all(FLERR,"Illegal collide_modify command");
+      nearlimit = atoi(arg[iarg+2]);
+      if (nearcp && nearlimit <= 0)
+        error->all(FLERR,"Illegal collide_modify command");
+      iarg += 3;
+    } else if (strcmp(arg[iarg],"subcell") == 0) {
+      if (iarg+2 > narg) error->all(FLERR,"Illegal collide_modify command");
+      if (strcmp(arg[iarg+1],"yes") == 0) subcellflag = 1;
+      else if (strcmp(arg[iarg+1],"no") == 0) subcellflag = 0;
+      else error->all(FLERR,"Illegal collide_modify command");
+      iarg += 2;
+
+    } else error->all(FLERR,"Illegal collide_modify command");
+  }
+}
+
+/* ----------------------------------------------------------------------
+   reset vremax to initial species-based values
+   reset remain to 0.0
+------------------------------------------------------------------------- */
+
+void Collide::reset_vremax()
+{
+  for (int icell = 0; icell < nglocal; icell++)
+    for (int igroup = 0; igroup < ngroups; igroup++)
+      for (int jgroup = 0; jgroup < ngroups; jgroup++) {
+        vremax[icell][igroup][jgroup] = vremax_initial[igroup][jgroup];
+        if (remainflag) remain[icell][igroup][jgroup] = 0.0;
+      }
 }
 
 /* ----------------------------------------------------------------------

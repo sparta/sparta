@@ -1,6 +1,6 @@
 /* ----------------------------------------------------------------------
    SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
-   http://sparta.sandia.gov
+   http://sparta.github.io
    Steve Plimpton, sjplimp@gmail.com, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
@@ -78,8 +78,8 @@ class ComputeFFTGrid : public Compute {
                         //           in buffer received from FFT decomp via
                         //           irregular comm
 
-  class FFT3D *fft3d;
-  class FFT2D *fft2d;
+  class FFT3d *fft3d;
+  class FFT2d *fft2d;
   class Irregular *irregular1,*irregular2;
 
   virtual void fft_create();

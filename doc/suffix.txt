@@ -1,6 +1,6 @@
 "SPARTA WWW Site"_sws - "SPARTA Documentation"_sd - "SPARTA Commands"_sc :c
 
-:link(sws,http://sparta.sandia.gov)
+:link(sws,https://sparta.github.io)
 :link(sd,Manual.html)
 :link(sc,Section_commands.html#comm)
 
@@ -24,7 +24,7 @@ suffix kk :pre
 
 This command allows you to use variants of various styles if they
 exist.  In that respect it operates the same as the "-suffix
-command-line switch"_Section_start.html#start_6.  It also has options
+command-line switch"_Section_start.html#start_7.  It also has options
 to turn off or back on any suffix setting made via the command line.
 
 The specified style {kk} refers to the optional KOKKOS package that
@@ -57,6 +57,6 @@ commands in your input script.
 
 [Related commands:]
 
-"Command-line switch -suffix"_Section_start.html#start_6
+"Command-line switch -suffix"_Section_start.html#start_7
 
 [Default:] none

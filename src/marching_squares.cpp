@@ -1,6 +1,6 @@
 /* ----------------------------------------------------------------------
    SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
-   http://sparta.sandia.gov
+   http://sparta.github.io
    Steve Plimpton, sjplimp@gmail.com, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
@@ -48,10 +48,11 @@ MarchingSquares::MarchingSquares(SPARTA *sparta, int ggroup_caller,
      based on ave value at cell center
 ------------------------------------------------------------------------- */
 
-void MarchingSquares::invoke(double **cvalues, int *svalues)
+void MarchingSquares::invoke(double **cvalues, double ***mvalues, int *svalues)
 {
   int i,ipt,isurf,nsurf,which;
   double v00,v01,v10,v11;
+  double i0, i1, i2, i3;
   int bit0,bit1,bit2,bit3;
   double ave;
   double *lo,*hi;
@@ -80,10 +81,37 @@ void MarchingSquares::invoke(double **cvalues, int *svalues)
     // cvalues are ordered lower-left, lower-right, upper-left, upper-right
     // Vyx encodes this as 0/1 in each dim
 
-    v00 = cvalues[icell][0];
-    v01 = cvalues[icell][1];
-    v10 = cvalues[icell][2];
-    v11 = cvalues[icell][3];
+    if (cvalues) {
+      v00 = cvalues[icell][0];
+      v01 = cvalues[icell][1];
+      v10 = cvalues[icell][2];
+      v11 = cvalues[icell][3];
+
+      i0  = interpolate(v00,v01,lo[0],hi[0]);
+      i1  = interpolate(v01,v11,lo[1],hi[1]);
+      i2  = interpolate(v10,v11,lo[0],hi[0]);
+      i3  = interpolate(v00,v10,lo[1],hi[1]);
+
+    } else {
+      v00 = v01 = v10 = v11 = 0.0;
+
+      for (i = 0; i < 4; i++) {
+        v00 += mvalues[icell][0][i];
+        v01 += mvalues[icell][1][i];
+        v10 += mvalues[icell][2][i];
+        v11 += mvalues[icell][3][i];
+      }
+
+      v00 /= 4.0;
+      v01 /= 4.0;
+      v10 /= 4.0;
+      v11 /= 4.0;
+
+      i0  = interpolate(mvalues[icell][0][1],mvalues[icell][1][0],lo[0],hi[0]);
+      i1  = interpolate(mvalues[icell][1][3],mvalues[icell][3][2],lo[1],hi[1]);
+      i2  = interpolate(mvalues[icell][2][1],mvalues[icell][3][0],lo[0],hi[0]);
+      i3  = interpolate(mvalues[icell][0][3],mvalues[icell][2][2],lo[1],hi[1]);
+    }
 
     // make last 2 bits consistent with Wiki page (see NOTE above)
 
@@ -103,32 +131,32 @@ void MarchingSquares::invoke(double **cvalues, int *svalues)
     case 1:
       nsurf = 1;
       pt[0][0] = lo[0];
-      pt[0][1] = interpolate(v00,v10,lo[1],hi[1]);
-      pt[1][0] = interpolate(v00,v01,lo[0],hi[0]);
+      pt[0][1] = i3;
+      pt[1][0] = i0;
       pt[1][1] = lo[1];
       break;
 
     case 2:
       nsurf = 1;
-      pt[0][0] = interpolate(v00,v01,lo[0],hi[0]);
+      pt[0][0] = i0;
       pt[0][1] = lo[1];
       pt[1][0] = hi[0];
-      pt[1][1] = interpolate(v01,v11,lo[1],hi[1]);
+      pt[1][1] = i1;
       break;
 
     case 3:
       nsurf = 1;
       pt[0][0] = lo[0];
-      pt[0][1] = interpolate(v00,v10,lo[1],hi[1]);
+      pt[0][1] = i3;
       pt[1][0] = hi[0];
-      pt[1][1] = interpolate(v01,v11,lo[1],hi[1]);
+      pt[1][1] = i1;
       break;
 
     case 4:
       nsurf = 1;
       pt[0][0] = hi[0];
-      pt[0][1] = interpolate(v01,v11,lo[1],hi[1]);
-      pt[1][0] = interpolate(v10,v11,lo[0],hi[0]);
+      pt[0][1] = i1;
+      pt[1][0] = i2;
       pt[1][1] = hi[1];
       break;
 
@@ -137,54 +165,54 @@ void MarchingSquares::invoke(double **cvalues, int *svalues)
       ave = 0.25 * (v00 + v01 + v10 + v11);
       if (ave > thresh) {
         pt[0][0] = lo[0];
-        pt[0][1] = interpolate(v00,v10,lo[1],hi[1]);
-        pt[1][0] = interpolate(v10,v11,lo[0],hi[0]);
+        pt[0][1] = i3;
+        pt[1][0] = i2;
         pt[1][1] = hi[1];
         pt[2][0] = hi[0];
-        pt[2][1] = interpolate(v01,v11,lo[1],hi[1]);
-        pt[3][0] = interpolate(v00,v01,lo[0],hi[0]);
+        pt[2][1] = i1;
+        pt[3][0] = i0;
         pt[3][1] = lo[1];
       } else {
         pt[0][0] = lo[0];
-        pt[0][1] = interpolate(v00,v10,lo[1],hi[1]);
-        pt[1][0] = interpolate(v00,v01,lo[0],hi[0]);
+        pt[0][1] = i3;
+        pt[1][0] = i0;
         pt[1][1] = lo[1];
         pt[2][0] = hi[0];
-        pt[2][1] = interpolate(v01,v11,lo[1],hi[1]);
-        pt[3][0] = interpolate(v10,v11,lo[0],hi[0]);
+        pt[2][1] = i1;
+        pt[3][0] = i2;
         pt[3][1] = hi[1];
       }
       break;
 
     case 6:
       nsurf = 1;
-      pt[0][0] = interpolate(v00,v01,lo[0],hi[0]);
+      pt[0][0] = i0;
       pt[0][1] = lo[1];
-      pt[1][0] = interpolate(v10,v11,lo[0],hi[0]);
+      pt[1][0] = i2;
       pt[1][1] = hi[1];
       break;
 
     case 7:
       nsurf = 1;
       pt[0][0] = lo[0];
-      pt[0][1] = interpolate(v00,v10,lo[1],hi[1]);
-      pt[1][0] = interpolate(v10,v11,lo[0],hi[0]);
+      pt[0][1] = i3;
+      pt[1][0] = i2;
       pt[1][1] = hi[1];
       break;
 
     case 8:
       nsurf = 1;
-      pt[0][0] = interpolate(v10,v11,lo[0],hi[0]);
+      pt[0][0] = i2;
       pt[0][1] = hi[1];
       pt[1][0] = lo[0];
-      pt[1][1] = interpolate(v00,v10,lo[1],hi[1]);
+      pt[1][1] = i3;
       break;
 
     case 9:
       nsurf = 1;
-      pt[0][0] = interpolate(v10,v11,lo[0],hi[0]);
+      pt[0][0] = i2;
       pt[0][1] = hi[1];
-      pt[1][0] = interpolate(v00,v01,lo[0],hi[0]);
+      pt[1][0] = i0;
       pt[1][1] = lo[1];
       break;
 
@@ -192,56 +220,56 @@ void MarchingSquares::invoke(double **cvalues, int *svalues)
       nsurf = 2;
       ave = 0.25 * (v00 + v01 + v10 + v11);
       if (ave > thresh) {
-        pt[0][0] = interpolate(v00,v01,lo[0],hi[0]);
+        pt[0][0] = i0;
         pt[0][1] = lo[1];
         pt[1][0] = lo[0];
-        pt[1][1] = interpolate(v00,v10,lo[1],hi[1]);
-        pt[2][0] = interpolate(v10,v11,lo[0],hi[0]);
+        pt[1][1] = i3;
+        pt[2][0] = i2;
         pt[2][1] = hi[1];
         pt[3][0] = hi[0];
-        pt[3][1] = interpolate(v01,v11,lo[1],hi[1]);
+        pt[3][1] = i1;
       } else {
-        pt[0][0] = interpolate(v10,v11,lo[0],hi[0]);
+        pt[0][0] = i2;
         pt[0][1] = hi[1];
         pt[1][0] = lo[0];
-        pt[1][1] = interpolate(v00,v10,lo[1],hi[1]);
-        pt[2][0] = interpolate(v00,v01,lo[0],hi[0]);
+        pt[1][1] = i3;
+        pt[2][0] = i0;
         pt[2][1] = lo[1];
         pt[3][0] = hi[0];
-        pt[3][1] = interpolate(v01,v11,lo[1],hi[1]);
+        pt[3][1] = i1;
       }
       break;
 
     case 11:
       nsurf = 1;
-      pt[0][0] = interpolate(v10,v11,lo[0],hi[0]);
+      pt[0][0] = i2;
       pt[0][1] = hi[1];
       pt[1][0] = hi[0];
-      pt[1][1] = interpolate(v01,v11,lo[1],hi[1]);
+      pt[1][1] = i1;
       break;
 
     case 12:
       nsurf = 1;
       pt[0][0] = hi[0];
-      pt[0][1] = interpolate(v01,v11,lo[1],hi[1]);
+      pt[0][1] = i1;
       pt[1][0] = lo[0];
-      pt[1][1] = interpolate(v00,v10,lo[1],hi[1]);
+      pt[1][1] = i3;
       break;
 
     case 13:
       nsurf = 1;
       pt[0][0] = hi[0];
-      pt[0][1] = interpolate(v01,v11,lo[1],hi[1]);
-      pt[1][0] = interpolate(v00,v01,lo[0],hi[0]);
+      pt[0][1] = i1;
+      pt[1][0] = i0;
       pt[1][1] = lo[1];
       break;
 
     case 14:
       nsurf = 1;
-      pt[0][0] = interpolate(v00,v01,lo[0],hi[0]);
+      pt[0][0] = i0;
       pt[0][1] = lo[1];
       pt[1][0] = lo[0];
-      pt[1][1] = interpolate(v00,v10,lo[1],hi[1]);
+      pt[1][1] = i3;
       break;
 
     case 15:
@@ -289,7 +317,8 @@ void MarchingSquares::invoke(double **cvalues, int *svalues)
 double MarchingSquares::interpolate(double v0, double v1, double lo, double hi)
 {
   double value = lo + (hi-lo)*(thresh-v0)/(v1-v0);
-  value = MAX(value,lo);
-  value = MIN(value,hi);
+  double ibuffer = (hi-lo)*mindist;
+  value = MAX(value,lo+ibuffer);
+  value = MIN(value,hi-ibuffer);
   return value;
 }

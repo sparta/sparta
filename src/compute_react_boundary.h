@@ -1,6 +1,6 @@
 /* ----------------------------------------------------------------------
    SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
-   http://sparta.sandia.gov
+   http://sparta.github.io
    Steve Plimpton, sjplimp@gmail.com, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
@@ -33,7 +33,7 @@ class ComputeReactBoundary : public Compute {
   virtual void init();
   virtual void compute_array();
   virtual void clear();
-  virtual void boundary_tally(int, int, int, Particle::OnePart *,
+  virtual void boundary_tally(double, int, int, int, Particle::OnePart *,
                               Particle::OnePart *, Particle::OnePart *);
 
  protected:

@@ -1,6 +1,6 @@
 /* ----------------------------------------------------------------------
    SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
-   http://sparta.sandia.gov
+   http://sparta.github.io
    Steve Plimpton, sjplimp@gmail.com, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
@@ -14,9 +14,6 @@
 
 #ifndef SPARTA_KK_COPY_H
 #define SPARTA_KK_COPY_H
-
-#include "grid_kokkos.h"
-#include "domain_kokkos.h"
 
 // Need a copy of classes instantiated on the stack at the class level scope.
 // However, this isn't directly possible due to issues with pointers.h
@@ -33,10 +30,9 @@ class KKCopy {
   KKCopy(SPARTA *sparta):
   obj(sparta) {
     ptr_temp = NULL;
-    obj.copy = 1;
-    obj.copymode = 0;
-    obj.uncopy = 0;
     save();
+    obj.copy = 1;
+    obj.uncopy = 0;
   }
 
   ~KKCopy() {}
@@ -44,6 +40,7 @@ class KKCopy {
   void copy(void* orig) {
     memcpy((void*)&obj, orig, sizeof(ClassStyle));
     obj.copy = 1;
+    obj.uncopy = 0;
   }
 
   void uncopy() {

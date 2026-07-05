@@ -1,6 +1,6 @@
 /* ----------------------------------------------------------------------
    SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
-   http://sparta.sandia.gov
+   http://sparta.github.io
    Steve Plimpton, sjplimp@gmail.com, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
@@ -67,6 +67,9 @@ class Grid : protected Pointers {
   char **ename;             // name of each attribute
   int *etype;               // type = INT/DOUBLE of each attribute
   int *esize;               // size = 0 for vector, N for array columns
+  int *estatus;             // status = 0/1 for each attribute
+                            //   0 = only owned ghost values are stored
+                            //   1 = owned + ghost values are stored
   int *ewhich;              // index into eivec,eiarray,edvec,edarray for data
 
   int **eivec;              // pointer to each integer vector

@@ -1,6 +1,6 @@
 /* ----------------------------------------------------------------------
    SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
-   http://sparta.sandia.gov
+   http://sparta.github.io
    Steve Plimpton, sjplimp@gmail.com, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
@@ -34,7 +34,7 @@ class CommKokkos : public Comm {
 
   CommKokkos(class SPARTA *);
   ~CommKokkos();
-  int migrate_particles(int, int*, DAT::t_int_1d &);
+  int migrate_particles(int, int*, const DAT::t_int_1d &);
   void migrate_cells(int);
 
   template<int NEED_ATOMICS, int HAVE_CUSTOM>

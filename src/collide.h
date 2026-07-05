@@ -1,6 +1,6 @@
 /* ----------------------------------------------------------------------
    SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
-   http://sparta.sandia.gov
+   http://sparta.github.io
    Steve Plimpton, sjplimp@gmail.com, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
@@ -37,8 +37,7 @@ class Collide : protected Pointers {
   Collide(class SPARTA *, int, char **);
   virtual ~Collide();
   virtual void init();
-  void modify_params(int, char **);
-  void reset_vremax();
+  virtual void setup();
   virtual void collisions();
 
   virtual double vremax_init(int, int) = 0;
@@ -46,13 +45,13 @@ class Collide : protected Pointers {
   virtual double attempt_collision(int, int, int, double) = 0;
   virtual int test_collision(int, int, int,
                              Particle::OnePart *, Particle::OnePart *) = 0;
-  //virtual int test_collision_mcf(int, int, double, int, int,
-  //                           Particle::OnePart *, Particle::OnePart *) = 0;
   virtual void setup_collision(Particle::OnePart *, Particle::OnePart *) = 0;
   virtual int perform_collision(Particle::OnePart *&, Particle::OnePart *&,
                                 Particle::OnePart *&) = 0;
-
   virtual double extract(int, int, const char *) {return 0.0;}
+
+  void modify_params(int, char **);
+  void reset_vremax();
 
   virtual int pack_grid_one(int, char *, int);
   virtual int unpack_grid_one(int, char *);
@@ -66,21 +65,21 @@ class Collide : protected Pointers {
  protected:
   int npmax;          // max # of particles in plist
   int *plist;         // list of particle indices for the entire cell
-	
-  // for subcell methods
-  int **subcell_list;
-  int *subcell_IDlist;
-  int *subcell_ID_ilist;
-  int *subcell_ID_jlist;
-  int *subcell_ID_klist;
-  int *subcell_count;
-  
-  int *subcell_mostrecent;
-  int *subcell_first;
-  int *subcell_next;
-  int *neighbor_cells;
 
-  int subcellflag;       // 1 if subcell option is enabled
+  int subcellflag;    // 1 if transient subcell method is enabled
+
+  // transient subcell method data structs, used per grid cell
+  // per-particle vectors are indexed same as plist
+  // per-subcell vectors are indexed by flattened subcell ID
+  // # of subcells <= # of particles in cell,
+  //   so all vectors can be allocated to length npmax
+
+  int *subcell_id;      // subcell ID of each particle in plist
+  int *subcell_count;   // # of particles in each subcell
+  int *subcell_first;   // plist index of 1st particle in each subcell
+  int *subcell_next;    // plist index of next particle in same subcell
+                        //   chain length = subcell_count of the subcell
+  int *subcell_ring;    // list of subcell IDs in shell around a subcell
 
   int nglocal;        // current size of per-cell arrays
   int nglocalmax;     // max allocated size of per-cell arrays (vremax, remain)
@@ -117,7 +116,8 @@ class Collide : protected Pointers {
   double ***remain;   // collision number remainder, per cell, per group pair
   double **vremax_initial;   // initial vremax value, per group pair
 
-  double ***vmax;    // for mcf method
+  int ngas_tally;            // copy of gas/gas Compute info setup by Update
+  class Compute **glist_active;
 
   // recombination reactions
 
@@ -138,7 +138,8 @@ class Collide : protected Pointers {
 
   int maxelectron;              // max # elist can hold
   Particle::OnePart *elist;     // list of ambipolar electrons
-                                // for one grid cell or pair of groups in cell
+
+  // for one grid cell or pair of groups in cell
   // Kokkos data
 
   int oldgroups;         // pass from parent to child class
@@ -175,19 +176,19 @@ class Collide : protected Pointers {
     ngroup[igroup]--;
   }
 
-  template < int > void collisions_one();
-	
-  template < int > void collisions_one_subcell();
+  template < int,int > void collisions_one();
+  template < int,int > void collisions_one_subcell();
+  template < int,int > void collisions_group();
+  template < int > void collisions_one_ambipolar();
+  template < int > void collisions_group_ambipolar();
 
-  template < int > void collisions_group();
- 
-  void collisions_one_ambipolar();
- 
-  void collisions_group_ambipolar();
+  void subcell_alloc();
+  void subcell_rebin(int, int, int, double *, double *);
 
   void ambi_reset(int, int, int, Particle::OnePart *, Particle::OnePart *,
                   Particle::OnePart *, int *);
   void ambi_check();
+
   void grow_percell(int);
 
   int find_nn(int, int);

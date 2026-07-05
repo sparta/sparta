@@ -1,6 +1,6 @@
 /* ----------------------------------------------------------------------
    SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
-   http://sparta.sandia.gov
+   http://sparta.github.io
    Steve Plimpton, sjplimp@gmail.com, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
@@ -28,9 +28,10 @@ namespace SPARTA_NS {
 class RegPlane : public Region {
  public:
   RegPlane(class SPARTA *, int, char **);
+  RegPlane(class SPARTA *sparta) : Region(sparta) {} // needed for Kokkos
   int inside(double *);
 
- private:
+ protected:
   double xp,yp,zp;
   double normal[3];
 };

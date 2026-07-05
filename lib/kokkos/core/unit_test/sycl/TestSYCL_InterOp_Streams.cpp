@@ -1,18 +1,5 @@
-//@HEADER
-// ************************************************************************
-//
-//                        Kokkos v. 4.0
-//       Copyright (2022) National Technology & Engineering
-//               Solutions of Sandia, LLC (NTESS).
-//
-// Under the terms of Contract DE-NA0003525 with NTESS,
-// the U.S. Government retains certain rights in this software.
-//
-// Part of Kokkos, under the Apache License v2.0 with LLVM Exceptions.
-// See https://kokkos.org/LICENSE for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-//
-//@HEADER
+// SPDX-FileCopyrightText: Copyright Contributors to the Kokkos project
 
 #include <TestSYCL_Category.hpp>
 #include <Test_InterOp_Streams.hpp>
@@ -22,7 +9,7 @@ namespace Test {
 TEST(sycl, raw_sycl_queues) {
   // Make sure all queues use the same context
   Kokkos::initialize();
-  Kokkos::Experimental::SYCL default_space;
+  Kokkos::SYCL default_space;
   sycl::context default_context = default_space.sycl_queue().get_context();
 
   sycl::queue queue(default_context, sycl::default_selector_v,
