@@ -30,6 +30,8 @@ class Collide : protected Pointers {
   int vibstyle;       // none/discrete/smooth vibrational modes
   int nearcp;         // 1 for near neighbor collisions
   int nearlimit;      // limit on neighbor serach for near neigh collisions
+  int mcflag;         // 0 for NTC attempt counts (default)
+                      // 1 for majorant collision frequency (MCF) attempt counts
 
   int ncollide_one,nattempt_one,nreact_one;
   bigint ncollide_running,nattempt_running,nreact_running;

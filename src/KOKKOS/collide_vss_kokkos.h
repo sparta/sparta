@@ -270,4 +270,9 @@ class CollideVSSKokkos : public CollideVSS {
 
 /* ERROR/WARNING messages:
 
+E: Cannot yet use collide_modify scheme mcf with the KOKKOS package
+
+The majorant collision frequency (MCF) scheme is not yet supported by
+the KOKKOS package.  Use the default NTC scheme instead.
+
 */

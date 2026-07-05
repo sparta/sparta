@@ -131,6 +131,10 @@ void CollideVSSKokkos::init()
     error->all(FLERR,"Ambipolar collision model does not yet support "
                "near-neighbor collisions");
 
+  if (mcflag)
+    error->all(FLERR,"Cannot yet use collide_modify scheme mcf "
+               "with the KOKKOS package");
+
   // require mixture to contain all species
 
   int imix = particle->find_mixture(mixID);
