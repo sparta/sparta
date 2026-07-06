@@ -1,18 +1,5 @@
-//@HEADER
-// ************************************************************************
-//
-//                        Kokkos v. 4.0
-//       Copyright (2022) National Technology & Engineering
-//               Solutions of Sandia, LLC (NTESS).
-//
-// Under the terms of Contract DE-NA0003525 with NTESS,
-// the U.S. Government retains certain rights in this software.
-//
-// Part of Kokkos, under the Apache License v2.0 with LLVM Exceptions.
-// See https://kokkos.org/LICENSE for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-//
-//@HEADER
+// SPDX-FileCopyrightText: Copyright Contributors to the Kokkos project
 
 #ifndef KOKKOS_ARRAY_HPP
 #define KOKKOS_ARRAY_HPP
@@ -103,15 +90,20 @@ struct Array {
   using pointer         = T*;
   using const_pointer   = std::add_const_t<T>*;
 
-  KOKKOS_INLINE_FUNCTION static constexpr size_type size() { return N; }
-  KOKKOS_INLINE_FUNCTION static constexpr bool empty() { return false; }
-  KOKKOS_INLINE_FUNCTION constexpr size_type max_size() const { return N; }
+  KOKKOS_INLINE_FUNCTION static constexpr size_type size() noexcept {
+    return N;
+  }
+  KOKKOS_INLINE_FUNCTION static constexpr bool empty() noexcept {
+    return false;
+  }
+  KOKKOS_INLINE_FUNCTION constexpr size_type max_size() const noexcept {
+    return N;
+  }
 
   template <typename iType>
   KOKKOS_INLINE_FUNCTION constexpr reference operator[](const iType& i) {
-    static_assert(
-        (std::is_integral<iType>::value || std::is_enum<iType>::value),
-        "Must be integral argument");
+    static_assert((std::is_integral_v<iType> || std::is_enum_v<iType>),
+                  "Must be integral argument");
     KOKKOS_ARRAY_BOUNDS_CHECK(i, N);
     return m_internal_implementation_private_member_data[i];
   }
@@ -119,18 +111,37 @@ struct Array {
   template <typename iType>
   KOKKOS_INLINE_FUNCTION constexpr const_reference operator[](
       const iType& i) const {
-    static_assert(
-        (std::is_integral<iType>::value || std::is_enum<iType>::value),
-        "Must be integral argument");
+    static_assert((std::is_integral_v<iType> || std::is_enum_v<iType>),
+                  "Must be integral argument");
     KOKKOS_ARRAY_BOUNDS_CHECK(i, N);
     return m_internal_implementation_private_member_data[i];
   }
 
-  KOKKOS_INLINE_FUNCTION constexpr pointer data() {
+  KOKKOS_INLINE_FUNCTION constexpr pointer data() noexcept {
     return &m_internal_implementation_private_member_data[0];
   }
-  KOKKOS_INLINE_FUNCTION constexpr const_pointer data() const {
+  KOKKOS_INLINE_FUNCTION constexpr const_pointer data() const noexcept {
     return &m_internal_implementation_private_member_data[0];
+  }
+
+  KOKKOS_INLINE_FUNCTION constexpr pointer begin() noexcept { return data(); }
+
+  KOKKOS_INLINE_FUNCTION constexpr const_pointer begin() const noexcept {
+    return data();
+  }
+
+  KOKKOS_INLINE_FUNCTION constexpr pointer end() noexcept { return data() + N; }
+
+  KOKKOS_INLINE_FUNCTION constexpr const_pointer end() const noexcept {
+    return data() + N;
+  }
+
+  KOKKOS_INLINE_FUNCTION constexpr const_pointer cbegin() const noexcept {
+    return data();
+  }
+
+  KOKKOS_INLINE_FUNCTION constexpr const_pointer cend() const noexcept {
+    return data() + N;
   }
 
   friend KOKKOS_FUNCTION constexpr bool operator==(Array const& lhs,
@@ -173,31 +184,53 @@ struct Array<T, 0> {
   using pointer         = T*;
   using const_pointer   = std::add_const_t<T>*;
 
-  KOKKOS_INLINE_FUNCTION static constexpr size_type size() { return 0; }
-  KOKKOS_INLINE_FUNCTION static constexpr bool empty() { return true; }
-  KOKKOS_INLINE_FUNCTION constexpr size_type max_size() const { return 0; }
+  KOKKOS_INLINE_FUNCTION static constexpr size_type size() noexcept {
+    return 0;
+  }
+  KOKKOS_INLINE_FUNCTION static constexpr bool empty() noexcept { return true; }
+  KOKKOS_INLINE_FUNCTION constexpr size_type max_size() const noexcept {
+    return 0;
+  }
 
   template <typename iType>
   KOKKOS_INLINE_FUNCTION reference operator[](const iType&) {
-    static_assert(
-        (std::is_integral<iType>::value || std::is_enum<iType>::value),
-        "Must be integer argument");
+    static_assert((std::is_integral_v<iType> || std::is_enum_v<iType>),
+                  "Must be integer argument");
     Kokkos::abort("Unreachable code");
     return *reinterpret_cast<pointer>(-1);
   }
 
   template <typename iType>
   KOKKOS_INLINE_FUNCTION const_reference operator[](const iType&) const {
-    static_assert(
-        (std::is_integral<iType>::value || std::is_enum<iType>::value),
-        "Must be integer argument");
+    static_assert((std::is_integral_v<iType> || std::is_enum_v<iType>),
+                  "Must be integer argument");
     Kokkos::abort("Unreachable code");
     return *reinterpret_cast<const_pointer>(-1);
   }
 
-  KOKKOS_INLINE_FUNCTION constexpr pointer data() { return nullptr; }
-  KOKKOS_INLINE_FUNCTION constexpr const_pointer data() const {
+  KOKKOS_INLINE_FUNCTION constexpr pointer data() noexcept { return nullptr; }
+  KOKKOS_INLINE_FUNCTION constexpr const_pointer data() const noexcept {
     return nullptr;
+  }
+
+  KOKKOS_INLINE_FUNCTION constexpr pointer begin() noexcept { return data(); }
+
+  KOKKOS_INLINE_FUNCTION constexpr const_pointer begin() const noexcept {
+    return data();
+  }
+
+  KOKKOS_INLINE_FUNCTION constexpr pointer end() noexcept { return data(); }
+
+  KOKKOS_INLINE_FUNCTION constexpr const_pointer end() const noexcept {
+    return data();
+  }
+
+  KOKKOS_INLINE_FUNCTION constexpr const_pointer cbegin() const noexcept {
+    return data();
+  }
+
+  KOKKOS_INLINE_FUNCTION constexpr const_pointer cend() const noexcept {
+    return data();
   }
 
   friend KOKKOS_FUNCTION constexpr bool operator==(Array const&,
@@ -248,18 +281,16 @@ struct KOKKOS_DEPRECATED
 
   template <typename iType>
   KOKKOS_INLINE_FUNCTION reference operator[](const iType& i) {
-    static_assert(
-        (std::is_integral<iType>::value || std::is_enum<iType>::value),
-        "Must be integral argument");
+    static_assert((std::is_integral_v<iType> || std::is_enum_v<iType>),
+                  "Must be integral argument");
     KOKKOS_ARRAY_BOUNDS_CHECK(i, m_size);
     return m_elem[i];
   }
 
   template <typename iType>
   KOKKOS_INLINE_FUNCTION const_reference operator[](const iType& i) const {
-    static_assert(
-        (std::is_integral<iType>::value || std::is_enum<iType>::value),
-        "Must be integral argument");
+    static_assert((std::is_integral_v<iType> || std::is_enum_v<iType>),
+                  "Must be integral argument");
     KOKKOS_ARRAY_BOUNDS_CHECK(i, m_size);
     return m_elem[i];
   }
@@ -278,6 +309,7 @@ struct KOKKOS_DEPRECATED
 
   KOKKOS_INLINE_FUNCTION
   Array& operator=(const Array& rhs) {
+    if (&rhs == this) return *this;
     const size_t n = size() < rhs.size() ? size() : rhs.size();
     for (size_t i = 0; i < n; ++i) m_elem[i] = rhs[i];
     return *this;
@@ -318,18 +350,16 @@ struct KOKKOS_DEPRECATED
 
   template <typename iType>
   KOKKOS_INLINE_FUNCTION reference operator[](const iType& i) {
-    static_assert(
-        (std::is_integral<iType>::value || std::is_enum<iType>::value),
-        "Must be integral argument");
+    static_assert((std::is_integral_v<iType> || std::is_enum_v<iType>),
+                  "Must be integral argument");
     KOKKOS_ARRAY_BOUNDS_CHECK(i, m_size);
     return m_elem[i * m_stride];
   }
 
   template <typename iType>
   KOKKOS_INLINE_FUNCTION const_reference operator[](const iType& i) const {
-    static_assert(
-        (std::is_integral<iType>::value || std::is_enum<iType>::value),
-        "Must be integral argument");
+    static_assert((std::is_integral_v<iType> || std::is_enum_v<iType>),
+                  "Must be integral argument");
     KOKKOS_ARRAY_BOUNDS_CHECK(i, m_size);
     return m_elem[i * m_stride];
   }
@@ -348,6 +378,7 @@ struct KOKKOS_DEPRECATED
 
   KOKKOS_INLINE_FUNCTION
   Array& operator=(const Array& rhs) {
+    if (&rhs == this) return *this;
     const size_t n = size() < rhs.size() ? size() : rhs.size();
     for (size_t i = 0; i < n; ++i) m_elem[i * m_stride] = rhs[i];
     return *this;

@@ -1,18 +1,5 @@
-//@HEADER
-// ************************************************************************
-//
-//                        Kokkos v. 4.0
-//       Copyright (2022) National Technology & Engineering
-//               Solutions of Sandia, LLC (NTESS).
-//
-// Under the terms of Contract DE-NA0003525 with NTESS,
-// the U.S. Government retains certain rights in this software.
-//
-// Part of Kokkos, under the Apache License v2.0 with LLVM Exceptions.
-// See https://kokkos.org/LICENSE for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-//
-//@HEADER
+// SPDX-FileCopyrightText: Copyright Contributors to the Kokkos project
 
 #ifndef KOKKOS_BIN_OPS_PUBLIC_API_HPP_
 #define KOKKOS_BIN_OPS_PUBLIC_API_HPP_
@@ -45,7 +32,7 @@ struct BinOp1D {
     // For integral types the number of bins may be larger than the range
     // in which case we can exactly have one unique value per bin
     // and then don't need to sort bins.
-    if (std::is_integral<typename KeyViewType::const_value_type>::value &&
+    if (std::is_integral_v<typename KeyViewType::const_value_type> &&
         (static_cast<double>(max) - static_cast<double>(min)) <=
             static_cast<double>(max_bins)) {
       mul_ = 1.;

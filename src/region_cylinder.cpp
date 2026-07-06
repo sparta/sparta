@@ -16,6 +16,7 @@
 #include "stdlib.h"
 #include "string.h"
 #include "region_cylinder.h"
+#include "input.h"
 #include "error.h"
 
 using namespace SPARTA_NS;
@@ -33,14 +34,14 @@ RegCylinder::RegCylinder(SPARTA *sparta, int narg, char **arg) :
     error->all(FLERR,"Illegal region cylinder command");
 
   axis = arg[2][0];
-  c1 = atof(arg[3]);
-  c2 = atof(arg[4]);
-  radius = atof(arg[5]);
+  c1 = input->numeric(FLERR,arg[3]);
+  c2 = input->numeric(FLERR,arg[4]);
+  radius = input->numeric(FLERR,arg[5]);
 
   if (strcmp(arg[6],"INF") == 0) lo = -BIG;
-  else lo = atof(arg[6]);
+  else lo = input->numeric(FLERR,arg[6]);
   if (strcmp(arg[7],"INF") == 0) hi = BIG;
-  else hi = atof(arg[7]);
+  else hi = input->numeric(FLERR,arg[7]);
 
   // error check
 

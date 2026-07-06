@@ -47,6 +47,7 @@ Fix::Fix(SPARTA *sparta, int, char **arg) : Pointers(sparta)
   time_depend = 0;
   gridmigrate = 0;
   flag_update_custom = flag_gas_react = flag_surf_react = 0;
+  flag_custom_surf_changed = 0;
 
   scalar_flag = vector_flag = array_flag = 0;
   per_particle_flag = per_grid_flag = per_surf_flag = 0;
@@ -59,7 +60,8 @@ Fix::Fix(SPARTA *sparta, int, char **arg) : Pointers(sparta)
   POST_RUN = 3;
 
   kokkos_flag = 0;
-  copy = uncopy = copymode = 0;
+  copy = copymode = 0;
+  uncopy = 1;
 
   execution_space = Host;
   datamask_read = ALL_MASK;

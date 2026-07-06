@@ -222,8 +222,10 @@ assigning colors to particles and other image features.
 </H4>
 <P>Particles are drawn by default using the <I>color</I> and <I>diameter</I>
 settings.  The <I>particle</I> keyword allow you to turn off the drawing of
-all particles, if the specified value is <I>no</I>.  Only particles in a
-geometric region can be drawn using the <A HREF = "dump_modify.html">dump_modify
+all particles, if the specified value is <I>no</I>.
+</P>
+<P>Only particles in the specified mixture ID (mix-ID) are drawn.  Only
+particles in a geometric region can be drawn using the <A HREF = "dump_modify.html">dump_modify
 region</A> command.
 </P>
 <P>The <I>color</I> and <I>diameter</I> settings determine the color and size of
@@ -296,8 +298,10 @@ rectangle that is infinitely thin in the z dimension, which allows you
 to still see the particles in the grid cell.  For 3d, the grid cell is
 drawn as a solid brick, which will obscure the particles inside it.
 </P>
-<P>Only grid cells in a geometric region can be drawn using the
-<A HREF = "dump_modify.html">dump_modify region</A> command.
+<P>Only grid cells in a grid group can be drawn using the <A HREF = "dump_modify.html">dump_modify
+gridgroup</A> command.  Only grid cells in a geometric
+region can be drawn using the <A HREF = "dump_modify.html">dump_modify region</A>
+command.
 </P>
 <P>The <I>gridx</I> and <I>gridy</I> and <I>gridz</I> keywords turn on the drawing of of
 a 2d plane of grid cells at the specified coordinate.  This is a way
@@ -360,8 +364,10 @@ setting is ignored.  The entire surface is rendered, which in 3d will
 hide any grid cells (or fractions of a grid cell) that are inside the
 surface.
 </P>
-<P>The <A HREF = "dump_modify.html">dump_modify region</A> command does not apply to
-surface element drawing.
+<P>Only surface elements in a surface group can be drawn using the
+<A HREF = "dump_modify.html">dump_modify surfgroup</A> command.  The <A HREF = "dump_modify.html">dump_modify
+region</A> command does not apply to surface element
+drawing.
 </P>
 <P>If <I>one</I> is specified for the <I>color</I> setting, then the color of every
 surface element is drawn with the color specified by the <A HREF = "dump_modify.html">dump_modify

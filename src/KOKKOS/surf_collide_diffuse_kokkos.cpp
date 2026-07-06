@@ -87,28 +87,24 @@ SurfCollideDiffuseKokkos::SurfCollideDiffuseKokkos(SPARTA *sparta) :
 #endif
            )
 {
-  random = NULL;
-  random_backup = NULL;
-  id = NULL;
-  style = NULL;
-
-  t_owned = NULL;
-  t_localghost = NULL;
+  copy = 1;
 }
 
 /* ---------------------------------------------------------------------- */
 
 SurfCollideDiffuseKokkos::~SurfCollideDiffuseKokkos()
 {
-  if (!uncopy) return;
+  if (uncopy) {
+    fix_ambi_kk_copy.uncopy();
+    fix_vibmode_kk_copy.uncopy();
 
-  fix_ambi_kk_copy.uncopy();
-  fix_vibmode_kk_copy.uncopy();
-
-  for (int i = 0; i < KOKKOS_MAX_SURF_REACT_PER_TYPE; i++) {
-    sr_kk_global_copy[i].uncopy();
-    sr_kk_prob_copy[i].uncopy();
+    for (int i = 0; i < KOKKOS_MAX_SURF_REACT_PER_TYPE; i++) {
+      sr_kk_global_copy[i].uncopy();
+      sr_kk_prob_copy[i].uncopy();
+    }
   }
+
+  if (copy) return;
 
 #ifdef SPARTA_KOKKOS_EXACT
   rand_pool.destroy();
@@ -206,7 +202,7 @@ void SurfCollideDiffuseKokkos::dynamic()
 
   } else if (tmode == CUSTOM) {
     SurfKokkos* surf_kk = (SurfKokkos*) surf;
-    auto h_edvec_local = surf_kk->k_edvec_local.h_view;
+    auto h_edvec_local = surf_kk->k_edvec_local.view_host();
 
     // spread owned values to local+ghost values via spread_custom()
     // estatus == 1 means owned values already spread to local+ghost values
@@ -215,8 +211,12 @@ void SurfCollideDiffuseKokkos::dynamic()
 
     if (surf->estatus[tindex_custom] == 0) surf->spread_custom(tindex_custom);
 
-    h_edvec_local[tindex_custom].k_view.sync_device();
-    d_t_persurf = h_edvec_local[tindex_custom].k_view.d_view;
+    // edvec_local is indexed by the per-type slot ewhich[tindex_custom],
+    //  not by the global custom index tindex_custom (see Surf::add_custom)
+
+    int ewhich = surf->ewhich[tindex_custom];
+    h_edvec_local[ewhich].k_view.sync_device();
+    d_t_persurf = h_edvec_local[ewhich].k_view.view_device();
   }
 }
 
@@ -278,8 +278,8 @@ void SurfCollideDiffuseKokkos::pre_collide()
 
   ParticleKokkos* particle_kk = (ParticleKokkos*) particle;
   particle_kk->sync(Device,PARTICLE_MASK|SPECIES_MASK);
-  d_particles = particle_kk->k_particles.d_view;
-  d_species = particle_kk->k_species.d_view;
+  d_particles = particle_kk->k_particles.view_device();
+  d_species = particle_kk->k_species.view_device();
   boltz = update->boltz;
 
   rotstyle = NONE;
@@ -312,7 +312,7 @@ void SurfCollideDiffuseKokkos::post_collide()
 void SurfCollideDiffuseKokkos::backup()
 {
   ParticleKokkos* particle_kk = (ParticleKokkos*) particle;
-  d_particles = particle_kk->k_particles.d_view;
+  d_particles = particle_kk->k_particles.view_device();
 
   if (surf->nsr > 0) {
     int nglob,nprob;

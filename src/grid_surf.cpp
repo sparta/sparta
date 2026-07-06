@@ -516,7 +516,7 @@ void Grid::surf2grid_surf_algorithm(int outflag)
 
     irregular = new Irregular(sparta);
     int nrecv1 = irregular->create_data_uniform(nsend,proclist1,1);
-    char *rbuf1 = (char *) memory->smalloc(nrecv1*nbytes_surf,"surf2grid:rbuf");
+    char *rbuf1 = (char *) memory->smalloc((bigint)nrecv1*nbytes_surf,"surf2grid:rbuf");
     irregular->exchange_uniform(sbuf1,nbytes_surf,rbuf1);
     delete irregular;
 
@@ -571,7 +571,7 @@ void Grid::surf2grid_surf_algorithm(int outflag)
 
     irregular = new Irregular(sparta);
     int nrecv2 = irregular->create_data_uniform(nsend,proclist2,1);
-    Send2 *rbuf2 = (Send2 *) memory->smalloc(nrecv2*sizeof(Send2),"surf2grid:rbuf2");
+    Send2 *rbuf2 = (Send2 *) memory->smalloc((bigint)nrecv2*sizeof(Send2),"surf2grid:rbuf2");
     irregular->exchange_uniform((char *) sbuf2,sizeof(Send2),(char *) rbuf2);
     delete irregular;
 
@@ -716,7 +716,7 @@ void Grid::surf2grid_surf_algorithm(int outflag)
 
     irregular = new Irregular(sparta);
     int nrecv3 = irregular->create_data_uniform(nsend,proclist3,1);
-    Send3 *rbuf3 = (Send3 *) memory->smalloc(nrecv3*sizeof(Send3),
+    Send3 *rbuf3 = (Send3 *) memory->smalloc((bigint)nrecv3*sizeof(Send3),
                                              "surf2grid:rbuf3");
     irregular->exchange_uniform((char *) sbuf3,sizeof(Send3),(char *) rbuf3);
     delete irregular;

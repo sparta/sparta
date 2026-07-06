@@ -38,8 +38,7 @@ class Collide : protected Pointers {
   Collide(class SPARTA *, int, char **);
   virtual ~Collide();
   virtual void init();
-  void modify_params(int, char **);
-  void reset_vremax();
+  virtual void setup();
   virtual void collisions();
 
   virtual double vremax_init(int, int) = 0;
@@ -62,10 +61,12 @@ class Collide : protected Pointers {
   virtual int perform_collision(Particle::OnePart *&, Particle::OnePart *&,
                                 Particle::OnePart *&) = 0;
   virtual int perform_collision_SWS(Particle::OnePart *&, Particle::OnePart *&,     // SWS
-                                Particle::OnePart *&,int &,int &,int &,int &) = 0;    
-
+                                Particle::OnePart *&,int &,int &,int &,int &) = 0;   // SWS
 
   virtual double extract(int, int, const char *) {return 0.0;}
+
+  void modify_params(int, char **);
+  void reset_vremax();
 
   virtual int pack_grid_one(int, char *, int);
   virtual int unpack_grid_one(int, char *);
@@ -118,6 +119,9 @@ class Collide : protected Pointers {
   double ***remain;   // collision number remainder, per cell, per group pair
   double **vremax_initial;   // initial vremax value, per group pair
 
+  int ngas_tally;            // copy of gas/gas Compute info setup by Update
+  class Compute **glist_active;
+
   // recombination reactions
 
   int recombflag;               // 1 if recomb reactions enabled, 0 if not
@@ -137,7 +141,8 @@ class Collide : protected Pointers {
 
   int maxelectron;              // max # elist can hold
   Particle::OnePart *elist;     // list of ambipolar electrons
-                                // for one grid cell or pair of groups in cell
+
+  // for one grid cell or pair of groups in cell
   // Kokkos data
 
   int oldgroups;         // pass from parent to child class
@@ -174,17 +179,19 @@ class Collide : protected Pointers {
     ngroup[igroup]--;
   }
 
-  template < int > void collisions_one();
-  template < int > void collisions_group();
-  void collisions_one_ambipolar();
-  void collisions_group_ambipolar();
-  template < int > void collisions_one_SWS();        // SWS
-  template < int > void collisions_group_SWS();      // SWS
-  void collisions_one_ambipolar_SWS();               // SWS
-  void collisions_group_ambipolar_SWS();             // SWS
+  template < int,int > void collisions_one();
+  template < int,int > void collisions_group();
+  template < int > void collisions_one_ambipolar();
+  template < int > void collisions_group_ambipolar();
+  template < int,int > void collisions_one_SWS();        // SWS
+  template < int,int > void collisions_group_SWS();      // SWS
+  template < int > void collisions_one_ambipolar_SWS();  // SWS
+  template < int > void collisions_group_ambipolar_SWS();// SWS
+
   void ambi_reset(int, int, int, Particle::OnePart *, Particle::OnePart *,
                   Particle::OnePart *, int *);
   void ambi_check();
+
   void grow_percell(int);
 
   int find_nn(int, int);

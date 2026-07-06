@@ -43,6 +43,8 @@ FixDtResetKokkos::FixDtResetKokkos(SPARTA *sparta, int narg, char **arg) :
 {
   kokkos_flag = 1;
   execution_space = Device;
+  datamask_read = EMPTY_MASK;
+  datamask_modify = EMPTY_MASK;
 }
 
 /* ---------------------------------------------------------------------- */

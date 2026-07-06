@@ -1,18 +1,5 @@
-//@HEADER
-// ************************************************************************
-//
-//                        Kokkos v. 4.0
-//       Copyright (2022) National Technology & Engineering
-//               Solutions of Sandia, LLC (NTESS).
-//
-// Under the terms of Contract DE-NA0003525 with NTESS,
-// the U.S. Government retains certain rights in this software.
-//
-// Part of Kokkos, under the Apache License v2.0 with LLVM Exceptions.
-// See https://kokkos.org/LICENSE for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-//
-//@HEADER
+// SPDX-FileCopyrightText: Copyright Contributors to the Kokkos project
 
 #ifndef KOKKOS_IMPL_PUBLIC_INCLUDE
 #include <Kokkos_Macros.hpp>
@@ -502,7 +489,7 @@ template <class MemSpace1, class MemSpace2, class ExecutionSpace>
 struct DeepCopy<MemSpace1, MemSpace2, ExecutionSpace,
                 std::enable_if_t<is_cuda_type_space<MemSpace1>::value &&
                                  is_cuda_type_space<MemSpace2>::value &&
-                                 !std::is_same<ExecutionSpace, Cuda>::value>> {
+                                 !std::is_same_v<ExecutionSpace, Cuda>>> {
   inline DeepCopy(void* dst, const void* src, size_t n) {
     DeepCopyCuda(dst, src, n);
   }
@@ -526,7 +513,7 @@ struct DeepCopy<MemSpace1, MemSpace2, ExecutionSpace,
 template <class MemSpace, class ExecutionSpace>
 struct DeepCopy<MemSpace, HostSpace, ExecutionSpace,
                 std::enable_if_t<is_cuda_type_space<MemSpace>::value &&
-                                 !std::is_same<ExecutionSpace, Cuda>::value>> {
+                                 !std::is_same_v<ExecutionSpace, Cuda>>> {
   inline DeepCopy(void* dst, const void* src, size_t n) {
     DeepCopyCuda(dst, src, n);
   }
@@ -549,7 +536,7 @@ struct DeepCopy<MemSpace, HostSpace, ExecutionSpace,
 template <class MemSpace, class ExecutionSpace>
 struct DeepCopy<HostSpace, MemSpace, ExecutionSpace,
                 std::enable_if_t<is_cuda_type_space<MemSpace>::value &&
-                                 !std::is_same<ExecutionSpace, Cuda>::value>> {
+                                 !std::is_same_v<ExecutionSpace, Cuda>>> {
   inline DeepCopy(void* dst, const void* src, size_t n) {
     DeepCopyCuda(dst, src, n);
   }

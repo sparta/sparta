@@ -1,18 +1,5 @@
-//@HEADER
-// ************************************************************************
-//
-//                        Kokkos v. 4.0
-//       Copyright (2022) National Technology & Engineering
-//               Solutions of Sandia, LLC (NTESS).
-//
-// Under the terms of Contract DE-NA0003525 with NTESS,
-// the U.S. Government retains certain rights in this software.
-//
-// Part of Kokkos, under the Apache License v2.0 with LLVM Exceptions.
-// See https://kokkos.org/LICENSE for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-//
-//@HEADER
+// SPDX-FileCopyrightText: Copyright Contributors to the Kokkos project
 
 #include <TestStdAlgorithmsCommon.hpp>
 
@@ -53,13 +40,13 @@ TEST(std_algorithms_mod_ops_test, move) {
   // move constr
   MyMovableType b(std::move(a));
   ASSERT_EQ(b.m_value, 11);
-  ASSERT_EQ(a.m_value, -2);
+  ASSERT_EQ(a.m_value, -2);  // NOLINT(bugprone-use-after-move)
 
   // move assign
   MyMovableType c;
   c = std::move(b);
   ASSERT_EQ(c.m_value, 11);
-  ASSERT_EQ(b.m_value, -4);
+  ASSERT_EQ(b.m_value, -4);  // NOLINT(bugprone-use-after-move)
 }
 
 template <class ViewType>
@@ -70,7 +57,7 @@ struct StdAlgoModSeqOpsTestMove {
   void operator()(const int index) const {
     typename ViewType::value_type a{11};
     using move_t = decltype(std::move(a));
-    static_assert(std::is_rvalue_reference<move_t>::value);
+    static_assert(std::is_rvalue_reference_v<move_t>);
     m_view(index) = std::move(a);
   }
 

@@ -1,20 +1,10 @@
-//@HEADER
-// ************************************************************************
-//
-//                        Kokkos v. 4.0
-//       Copyright (2022) National Technology & Engineering
-//               Solutions of Sandia, LLC (NTESS).
-//
-// Under the terms of Contract DE-NA0003525 with NTESS,
-// the U.S. Government retains certain rights in this software.
-//
-// Part of Kokkos, under the Apache License v2.0 with LLVM Exceptions.
-// See https://kokkos.org/LICENSE for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-//
-//@HEADER
+// SPDX-FileCopyrightText: Copyright Contributors to the Kokkos project
 
 #include <TestStdAlgorithmsCommon.hpp>
+#ifdef KOKKOS_ENABLE_EXPERIMENTAL_CXX20_MODULES
+#include <std_algorithms/impl/Kokkos_RandomAccessIterator.hpp>
+#endif
 
 namespace KE = Kokkos::Experimental;
 
@@ -37,12 +27,18 @@ struct random_access_iterator_test : std_algorithms_test {
 
 TEST_F(random_access_iterator_test, constructor) {
   // just tests that constructor works
-  auto it1 = KE::Impl::RandomAccessIterator<static_view_t>(m_static_view);
-  auto it2 = KE::Impl::RandomAccessIterator<dyn_view_t>(m_dynamic_view);
-  auto it3 = KE::Impl::RandomAccessIterator<strided_view_t>(m_strided_view);
-  auto it4 = KE::Impl::RandomAccessIterator<static_view_t>(m_static_view, 3);
-  auto it5 = KE::Impl::RandomAccessIterator<dyn_view_t>(m_dynamic_view, 3);
-  auto it6 = KE::Impl::RandomAccessIterator<strided_view_t>(m_strided_view, 3);
+  [[maybe_unused]] auto it1 =
+      KE::Impl::RandomAccessIterator<static_view_t>(m_static_view);
+  [[maybe_unused]] auto it2 =
+      KE::Impl::RandomAccessIterator<dyn_view_t>(m_dynamic_view);
+  [[maybe_unused]] auto it3 =
+      KE::Impl::RandomAccessIterator<strided_view_t>(m_strided_view);
+  [[maybe_unused]] auto it4 =
+      KE::Impl::RandomAccessIterator<static_view_t>(m_static_view, 3);
+  [[maybe_unused]] auto it5 =
+      KE::Impl::RandomAccessIterator<dyn_view_t>(m_dynamic_view, 3);
+  [[maybe_unused]] auto it6 =
+      KE::Impl::RandomAccessIterator<strided_view_t>(m_strided_view, 3);
   EXPECT_TRUE(true);
 }
 

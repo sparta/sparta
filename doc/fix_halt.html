@@ -41,8 +41,8 @@
 </UL>
 <P><B>Examples:</B>
 </P>
-<PRE>fix 10 halt 10 tlimit > 3600.0
-fix 10 halt 10 v_myCheck != 0 error soft 
+<PRE>fix 1 halt 10 tlimit > 3600.0
+fix 1 halt 10 v_myCheck != 0 error soft 
 </PRE>
 <P><B>Description:</B>
 </P>
@@ -74,10 +74,10 @@ general means of computing some attribute of the current system.  For
 example, the following two versions of a fix halt command will both
 stop the run after an hour of walltime:
 </P>
-<PRE>fix 10 halt 10 tlimit > 3600.0 
+<PRE>fix 1 halt 10 tlimit > 3600.0 
 </PRE>
 <PRE>variable cpu equal cpu
-fix 10 halt 10 v_cpu > 3600.0 
+fix 1 halt 10 v_cpu > 3600.0 
 </PRE>
 <P>The commands above apply only to the time spent in the current run
 command. If multiple run commands are used in the same input script,
@@ -85,14 +85,20 @@ one can also stop the run after a predetermined amount of <I>total</I>
 walltime:
 </P>
 <PRE>variable wall equal wall
-fix 10 halt 10 v_wall > 3600.0 
+fix 1 halt 10 v_wall > 3600.0 
 </PRE>
 <P>Similarly one can stop the run after a predetermined amount of
 simulation time, which is useful when using a <A HREF = "fix_dt_reset.html">variable
 timestep</A>:
 </P>
 <PRE>variable time equal time
-fix 10 halt 10 v_time > 1.0e-3 
+fix 1 halt 10 v_time > 1.0e-3 
+</PRE>
+<P>One can also stop the run if a file exists. The example below
+checks for a file named "EXIT" in the current directory:
+</P>
+<PRE>variable file equal is_file(EXIT)
+fix 1 halt 10 v_file > 0 
 </PRE>
 <P>The choice of operators listed above are the usual comparison
 operators. The XOR operation (exclusive or) is also included as "|^".

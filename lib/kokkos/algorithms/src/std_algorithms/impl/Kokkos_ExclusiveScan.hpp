@@ -1,23 +1,15 @@
-//@HEADER
-// ************************************************************************
-//
-//                        Kokkos v. 4.0
-//       Copyright (2022) National Technology & Engineering
-//               Solutions of Sandia, LLC (NTESS).
-//
-// Under the terms of Contract DE-NA0003525 with NTESS,
-// the U.S. Government retains certain rights in this software.
-//
-// Part of Kokkos, under the Apache License v2.0 with LLVM Exceptions.
-// See https://kokkos.org/LICENSE for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-//
-//@HEADER
+// SPDX-FileCopyrightText: Copyright Contributors to the Kokkos project
 
 #ifndef KOKKOS_STD_ALGORITHMS_EXCLUSIVE_SCAN_IMPL_HPP
 #define KOKKOS_STD_ALGORITHMS_EXCLUSIVE_SCAN_IMPL_HPP
 
+#include <Kokkos_Macros.hpp>
+#ifdef KOKKOS_ENABLE_EXPERIMENTAL_CXX20_MODULES
+import kokkos.core;
+#else
 #include <Kokkos_Core.hpp>
+#endif
 #include "Kokkos_Constraints.hpp"
 #include "Kokkos_HelperPredicates.hpp"
 #include "Kokkos_ValueWrapperForNoNeutralElement.hpp"
@@ -103,7 +95,7 @@ OutputIteratorType exclusive_scan_custom_op_exespace_impl(
 
   // aliases
   using index_type    = typename InputIteratorType::difference_type;
-  using unary_op_type = StdNumericScanIdentityReferenceUnaryFunctor<ValueType>;
+  using unary_op_type = StdNumericScanIdentityReferenceUnaryFunctor;
   using func_type     = TransformExclusiveScanFunctorWithValueWrapper<
       ExecutionSpace, index_type, ValueType, InputIteratorType,
       OutputIteratorType, BinaryOpType, unary_op_type>;
@@ -177,7 +169,7 @@ KOKKOS_FUNCTION OutputIteratorType exclusive_scan_custom_op_team_impl(
 
   // aliases
   using exe_space     = typename TeamHandleType::execution_space;
-  using unary_op_type = StdNumericScanIdentityReferenceUnaryFunctor<ValueType>;
+  using unary_op_type = StdNumericScanIdentityReferenceUnaryFunctor;
   using index_type    = typename InputIteratorType::difference_type;
   using func_type     = TransformExclusiveScanFunctorWithoutValueWrapper<
       exe_space, index_type, ValueType, InputIteratorType, OutputIteratorType,

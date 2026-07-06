@@ -1,25 +1,17 @@
-//@HEADER
-// ************************************************************************
-//
-//                        Kokkos v. 4.0
-//       Copyright (2022) National Technology & Engineering
-//               Solutions of Sandia, LLC (NTESS).
-//
-// Under the terms of Contract DE-NA0003525 with NTESS,
-// the U.S. Government retains certain rights in this software.
-//
-// Part of Kokkos, under the Apache License v2.0 with LLVM Exceptions.
-// See https://kokkos.org/LICENSE for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-//
-//@HEADER
+// SPDX-FileCopyrightText: Copyright Contributors to the Kokkos project
 
 #include <filesystem>
 #include <fstream>
 #include <regex>
 
 #include <TestCuda_Category.hpp>
+#include <Kokkos_Macros.hpp>
+#ifdef KOKKOS_ENABLE_EXPERIMENTAL_CXX20_MODULES
+import kokkos.core;
+#else
 #include <Kokkos_Core.hpp>
+#endif
 #include <Kokkos_Graph.hpp>
 
 #include <gtest/gtest.h>
@@ -34,12 +26,14 @@ struct Increment {
   void operator()(const int) const { ++data(); }
 };
 
+// FIXME_GRAPH
+// NOLINTBEGIN(bugprone-unchecked-optional-access)
 class TEST_CATEGORY_FIXTURE(GraphInterOp) : public ::testing::Test {
  public:
   using execution_space = Kokkos::Cuda;
-  using view_t =
-      Kokkos::View<int, execution_space, Kokkos::MemoryTraits<Kokkos::Atomic>>;
-  using graph_t = Kokkos::Experimental::Graph<execution_space>;
+  using view_t          = Kokkos::View<int, Kokkos::CudaUVMSpace,
+                              Kokkos::MemoryTraits<Kokkos::Atomic>>;
+  using graph_t         = Kokkos::Experimental::Graph<execution_space>;
 
   void SetUp() override {
     data = view_t(Kokkos::view_alloc(exec, "witness"));
@@ -95,17 +89,6 @@ TEST_F(TEST_CATEGORY_FIXTURE(GraphInterOp), count_nodes) {
 
 // Use native Cuda graph to generate a DOT representation.
 TEST_F(TEST_CATEGORY_FIXTURE(GraphInterOp), debug_dot_print) {
-#if CUDA_VERSION < 11600
-  GTEST_SKIP() << "Export a graph to DOT requires Cuda 11.6.";
-#elif defined(_GLIBCXX_RELEASE) && _GLIBCXX_RELEASE < 9
-  GTEST_SKIP()
-      << "The GNU C++ Library (libstdc++) versions less than 9.1 "
-         "require linking with `-lstdc++fs` when using std::filesystem";
-#elif defined(_LIBCPP_VERSION) && _LIBCPP_VERSION < 110000
-  GTEST_SKIP()
-      << "The LLVM C++ Standard Library (libc++) versions less than "
-         "11 require linking with `-lc++fs` when using std::filesystem";
-#else
   graph->instantiate();
 
   const auto dot = std::filesystem::temp_directory_path() / "cuda_graph.dot";
@@ -130,7 +113,6 @@ TEST_F(TEST_CATEGORY_FIXTURE(GraphInterOp), debug_dot_print) {
   ASSERT_TRUE(std::regex_search(buffer.str(), std::regex(expected)))
       << "Could not find expected signature regex " << std::quoted(expected)
       << " in " << dot;
-#endif
 }
 
 // Ensure that the graph has been instantiated with the default flag.
@@ -147,5 +129,24 @@ TEST_F(TEST_CATEGORY_FIXTURE(GraphInterOp), instantiation_flags) {
   ASSERT_EQ(flags, 0u);
 #endif
 }
+
+// Build a Kokkos::Graph from an existing cudaGraph_t.
+TEST_F(TEST_CATEGORY_FIXTURE(GraphInterOp), construct_from_native) {
+  cudaGraph_t native_graph = nullptr;
+  KOKKOS_IMPL_CUDA_SAFE_CALL(cudaGraphCreate(&native_graph, 0));
+
+  Kokkos::Experimental::Graph graph_from_native(this->exec, native_graph);
+
+  ASSERT_EQ(native_graph, graph_from_native.native_graph());
+
+  graph_from_native.root_node().then_parallel_for(1, Increment<view_t>{data});
+
+  graph_from_native.submit(this->exec);
+
+  this->exec.fence();
+
+  ASSERT_EQ(data(), 1);
+}
+// NOLINTEND(bugprone-unchecked-optional-access)
 
 }  // namespace

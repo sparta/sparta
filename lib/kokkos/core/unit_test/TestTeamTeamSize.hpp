@@ -1,24 +1,16 @@
-//@HEADER
-// ************************************************************************
-//
-//                        Kokkos v. 4.0
-//       Copyright (2022) National Technology & Engineering
-//               Solutions of Sandia, LLC (NTESS).
-//
-// Under the terms of Contract DE-NA0003525 with NTESS,
-// the U.S. Government retains certain rights in this software.
-//
-// Part of Kokkos, under the Apache License v2.0 with LLVM Exceptions.
-// See https://kokkos.org/LICENSE for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-//
-//@HEADER
+// SPDX-FileCopyrightText: Copyright Contributors to the Kokkos project
 
 #include <cstdio>
 #include <sstream>
 #include <iostream>
 
+#include <Kokkos_Macros.hpp>
+#ifdef KOKKOS_ENABLE_EXPERIMENTAL_CXX20_MODULES
+import kokkos.core;
+#else
 #include <Kokkos_Core.hpp>
+#endif
 
 namespace Test {
 
@@ -53,8 +45,21 @@ struct FunctorReduce {
 using policy_type = Kokkos::TeamPolicy<TEST_EXECSPACE>;
 using policy_type_128_8 =
     Kokkos::TeamPolicy<TEST_EXECSPACE, Kokkos::LaunchBounds<128, 8> >;
+
+// We need to special case for NVIDIA architectures which don't have space for
+// 2048 threads ptxas warns and with errors as warning errors out: "ptxas error
+// : Value of threads per SM for entry _ZN6... is out of range. .minnctapersm
+// will be ignored" And yes I understand I am lying now with the name of the
+// policy
+#if defined(KOKKOS_ARCH_TURING75) || defined(KOKKOS_ARCH_AMPERE86) || \
+    defined(KOKKOS_ARCH_AMPERE87) || defined(KOKKOS_ARCH_ADA89) ||    \
+    defined(KOKKOS_ARCH_BLACKWELL120)
+using policy_type_1024_2 =
+    Kokkos::TeamPolicy<TEST_EXECSPACE, Kokkos::LaunchBounds<1024, 1> >;
+#else
 using policy_type_1024_2 =
     Kokkos::TeamPolicy<TEST_EXECSPACE, Kokkos::LaunchBounds<1024, 2> >;
+#endif
 
 template <class T, int N, class PolicyType, int S>
 void test_team_policy_max_recommended_static_size(int scratch_size) {

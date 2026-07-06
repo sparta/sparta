@@ -1,0 +1,47 @@
+
+####################### GS method ######################################## 
+
+# Adsorption
+O(g) --> O(s)
+AA  A  1.0 0 0 1
+
+# DA reaction
+O2(g) --> 2O(s)
+DA  A  1.0 0 0 2
+
+# DA reaction
+O2(g) --> O(s) + O(g)
+DA  A  0.5 0 0 1
+cll 300 1 1 1 1
+
+# DA reaction
+CO2(g) --> C(b) + 2O(g)
+DA  A  0.5 0 0 1
+cll 300 1 1 1 1
+
+#LH1 reaction 
+O(g) + O(s) --> CO2(g)
+LH1  A  536.3e5   0 6.5565e2 1
+td 300.0 
+
+#LH3 reaction 
+O(g) --> CO(s)
+LH3  A  157.49   0 6.24e3 1
+
+#ER reaction 
+O(g) --> CO(g)
+ER  A  15.749   0 6.24e3
+cll 300 1 1 1 1
+
+#CI reaction 
+O(g) + O(s) --> O(g) + O(g)
+CI  A  1e8  0 0 
+cll 300 1 1 1 1
+td  300.0
+
+#################################
+
+#CD reaction 
+C(g) --> C(b)
+CD  A  0.75 0 0 1
+

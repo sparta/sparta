@@ -30,6 +30,8 @@
 #include "timer.h"
 #include "memory.h"
 
+#include <string>
+
 using namespace SPARTA_NS;
 
 // local function prototypes, code at end of file
@@ -101,6 +103,34 @@ void Finish::end(int flag, double time_multiple_runs)
                          "Loop time of %g on %d procs for %d steps with "
                          BIGINT_FORMAT " particles\n",
                          time_loop,nprocs,update->nsteps,particle->nglobal);
+  }
+
+  // performance metrics
+
+  if (me == 0) {
+    if (timeflag && (update->nsteps > 0) && (update->dt != 0.0)) {
+      double t_step = ((double) time_loop) / ((double) update->nsteps);
+      double step_t = 1.0 / t_step;
+      double particlestep_s = (double)particle->nglobal * step_t;
+      std::string particlestep_u = "particle-step/s";
+      if (particlestep_s > 1000000000.0) {
+        particlestep_u = "Gparticle-step/s";
+        particlestep_s /= 1000000000.0;
+      } else if (particlestep_s > 1000000.0) {
+        particlestep_u = "Mparticle-step/s";
+        particlestep_s /= 1000000.0;
+      } else if (particlestep_s > 1000.0) {
+        particlestep_u = "kparticle-step/s";
+        particlestep_s /= 1000.0;
+      }
+
+      if (screen) fprintf(screen,
+                          "Performance: %.3f timesteps/s, %.3f %s\n",
+                          step_t, particlestep_s, particlestep_u.c_str());
+      if (logfile) fprintf(logfile,
+                           "Performance: %.3f timesteps/s, %.3f %s\n",
+                           step_t, particlestep_s, particlestep_u.c_str());
+    }
   }
 
   // timing breakdowns

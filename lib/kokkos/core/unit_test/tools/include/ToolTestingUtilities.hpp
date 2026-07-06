@@ -1,18 +1,5 @@
-//@HEADER
-// ************************************************************************
-//
-//                        Kokkos v. 4.0
-//       Copyright (2022) National Technology & Engineering
-//               Solutions of Sandia, LLC (NTESS).
-//
-// Under the terms of Contract DE-NA0003525 with NTESS,
-// the U.S. Government retains certain rights in this software.
-//
-// Part of Kokkos, under the Apache License v2.0 with LLVM Exceptions.
-// See https://kokkos.org/LICENSE for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-//
-//@HEADER
+// SPDX-FileCopyrightText: Copyright Contributors to the Kokkos project
 /**
  * Before digging in to the code, it's worth taking a moment to review this
  * design. Fundamentally, what we're looking to do is allow people to test that
@@ -37,7 +24,12 @@
  * Current examples are in TestEventCorrectness.hpp
  */
 
+#include <Kokkos_Macros.hpp>
+#ifdef KOKKOS_ENABLE_EXPERIMENTAL_CXX20_MODULES
+import kokkos.core;
+#else
 #include <Kokkos_Core.hpp>
+#endif
 #include <sstream>
 #include <iostream>
 #include <utility>
@@ -311,6 +303,8 @@ struct EventBase {
 template <class Derived>
 struct UniquelyIdentifiableEventType : public EventBase {
   uintptr_t kind() const override { return event_type_uid<Derived>(); }
+  // NOLINTNEXTLINE(bugprone-crtp-constructor-accessibility)
+  UniquelyIdentifiableEventType() = default;
 };
 
 /**
@@ -324,8 +318,6 @@ struct BeginOperation : public UniquelyIdentifiableEventType<Derived> {
   const std::string name;
   const uint32_t deviceID;
   uint64_t kID;
-  BeginOperation(const std::string& n, const uint32_t devID, uint64_t k)
-      : name(n), deviceID(devID), kID(k) {}
   std::string descriptor() const override {
     std::stringstream s;
     s << Derived::begin_op_name() << " { \"" << name << "\", ";
@@ -335,6 +327,11 @@ struct BeginOperation : public UniquelyIdentifiableEventType<Derived> {
     s << "}";
     return s.str();
   }
+
+ private:
+  BeginOperation(const std::string& n, const uint32_t devID, uint64_t k)
+      : name(n), deviceID(devID), kID(k) {}
+  friend Derived;
 };
 /**
  * @brief Analogous to BeginOperation, there are a lot of things in Kokkos
@@ -346,7 +343,6 @@ struct BeginOperation : public UniquelyIdentifiableEventType<Derived> {
 template <class Derived>
 struct EndOperation : public UniquelyIdentifiableEventType<Derived> {
   uint64_t kID;
-  EndOperation(uint64_t k) : kID(k) {}
 
   std::string descriptor() const override {
     std::stringstream s;
@@ -355,6 +351,10 @@ struct EndOperation : public UniquelyIdentifiableEventType<Derived> {
     s << "}";
     return s.str();
   }
+
+ private:
+  EndOperation(uint64_t k) : kID(k) {}
+  friend Derived;
 };
 
 /**
@@ -512,9 +512,12 @@ struct DataEvent : public UniquelyIdentifiableEventType<Derived> {
       << "}";
     return s.str();
   }
+
+ private:
   DataEvent(SpaceHandleType h, std::string n, EventBase::PtrHandle p,
             uint64_t s)
       : handle(h), name(n), ptr(p), size(s) {}
+  friend Derived;
 };
 
 struct AllocateDataEvent final : public DataEvent<AllocateDataEvent> {
@@ -550,26 +553,29 @@ struct ProfileSectionManipulationEvent
     s << Derived::event_name() << "{ " << id << "}";
     return s.str();
   }
-  ProfileSectionManipulationEvent(uint32_t d_i) : id(d_i){};
+
+ private:
+  ProfileSectionManipulationEvent(uint32_t d_i) : id(d_i) {}
+  friend Derived;
 };
 
 struct StartProfileSectionEvent final
     : public ProfileSectionManipulationEvent<StartProfileSectionEvent> {
   static std::string event_name() { return "StartProfileSectionEvent"; }
   StartProfileSectionEvent(uint32_t d_i)
-      : ProfileSectionManipulationEvent<StartProfileSectionEvent>(d_i){};
+      : ProfileSectionManipulationEvent<StartProfileSectionEvent>(d_i) {}
 };
 struct StopProfileSectionEvent final
     : public ProfileSectionManipulationEvent<StopProfileSectionEvent> {
   static std::string event_name() { return "StopProfileSectionEvent"; }
   StopProfileSectionEvent(uint32_t d_i)
-      : ProfileSectionManipulationEvent<StopProfileSectionEvent>(d_i){};
+      : ProfileSectionManipulationEvent<StopProfileSectionEvent>(d_i) {}
 };
 struct DestroyProfileSectionEvent final
     : public ProfileSectionManipulationEvent<DestroyProfileSectionEvent> {
   static std::string event_name() { return "DestroyProfileSectionEvent"; }
   DestroyProfileSectionEvent(uint32_t d_i)
-      : ProfileSectionManipulationEvent<DestroyProfileSectionEvent>(d_i){};
+      : ProfileSectionManipulationEvent<DestroyProfileSectionEvent>(d_i) {}
 };
 
 struct ProfileEvent final : public UniquelyIdentifiableEventType<ProfileEvent> {
@@ -621,14 +627,17 @@ struct DualViewEvent : public UniquelyIdentifiableEventType<Derived> {
   std::string name;
   EventBase::PtrHandle ptr;
   bool is_device;
-  DualViewEvent(std::string n, EventBase::PtrHandle p, bool i_d)
-      : name(n), ptr(p), is_device(i_d) {}
   std::string descriptor() const override {
     std::stringstream s;
     s << Derived::event_name() << " { \"" << name << "\", " << std::hex << ptr
       << ", " << std::boolalpha << is_device << "}";
     return s.str();
   }
+
+ private:
+  DualViewEvent(std::string n, EventBase::PtrHandle p, bool i_d)
+      : name(n), ptr(p), is_device(i_d) {}
+  friend Derived;
 };
 struct DualViewModifyEvent final : public DualViewEvent<DualViewModifyEvent> {
   static std::string event_name() { return "DualViewModifyEvent"; }
@@ -687,9 +696,12 @@ struct TypeDeclarationEvent : public UniquelyIdentifiableEventType<Derived> {
     return Derived::event_name() + "{ \"" + name + "\"," +
            std::to_string(variable_id) + "}";
   }
+
+ private:
   TypeDeclarationEvent(std::string n, size_t v_i,
                        Kokkos::Tools::Experimental::VariableInfo i)
       : name(n), variable_id(v_i), info(i) {}
+  friend Derived;
 };
 struct DeclareOutputTypeEvent final
     : public TypeDeclarationEvent<DeclareOutputTypeEvent> {
@@ -1197,7 +1209,7 @@ void listen_tool_events_impl(std::integral_constant<int, priority> prio,
   listen_tool_events_impl(prio, in, configs...);
 }
 template <class... Configs>
-void listen_tool_events(Configs... confs) {
+static void listen_tool_events(Configs... confs) {
   ToolValidatorConfiguration conf;
   listen_tool_events_impl(std::integral_constant<int, 0>{}, conf, confs...);
   listen_tool_events_impl(std::integral_constant<int, 1>{}, conf, confs...);
@@ -1220,7 +1232,7 @@ void listen_tool_events(Configs... confs) {
  * matchers success, false otherwise
  */
 template <class Lambda, class... Matchers>
-bool validate_event_set(const Lambda& lam, Matchers&&... matchers) {
+static bool validate_event_set(const Lambda& lam, Matchers&&... matchers) {
   // First, erase events from previous invocations
   found_events.clear();
   // Invoke the lambda (this will populate found_events, via tooling)
@@ -1245,7 +1257,7 @@ bool validate_event_set(const Lambda& lam, Matchers&&... matchers) {
  * @return auto
  */
 template <class Lambda>
-auto get_event_set(const Lambda& lam) {
+static auto get_event_set(const Lambda& lam) {
   found_events.clear();
   lam();
   // return compare_event_vectors(expected, found_events);
@@ -1273,7 +1285,7 @@ MatchDiagnostic check_presence_of(const EventBasePtr& event, const Matcher& m,
 }
 
 template <class Lambda, class... Matchers>
-bool validate_absence(const Lambda& lam, const Matchers... matchers) {
+static bool validate_absence(const Lambda& lam, const Matchers... matchers) {
   // First, erase events from previous invocations
   found_events.clear();
   // Invoke the lambda (this will populate found_events, via tooling)
@@ -1298,7 +1310,7 @@ bool validate_absence(const Lambda& lam, const Matchers... matchers) {
 }
 
 template <class Lambda, class Matcher>
-bool validate_existence(const Lambda& lam, const Matcher matcher) {
+static bool validate_existence(const Lambda& lam, const Matcher matcher) {
   // First, erase events from previous invocations
   found_events.clear();
   // Invoke the lambda (this will populate found_events, via tooling)

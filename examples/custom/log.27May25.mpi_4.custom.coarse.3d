@@ -1,0 +1,128 @@
+SPARTA (20 Jan 2025)
+Running on 4 MPI task(s)
+# advect particles via VSS collisional flow on a uniform grid
+# particles reflect off global box boundaries
+
+variable            x index 20
+variable            y index 20
+variable            z index 20
+
+variable            lx equal 10
+variable            ly equal 10
+variable            lz equal 10
+
+seed	    	    12345
+dimension   	    3
+#global              gridcut 1.0e-5
+
+boundary	    rr rr rr
+
+create_box  	    0 ${lx} 0 ${ly} 0 ${lz}
+create_box  	    0 10 0 ${ly} 0 ${lz}
+create_box  	    0 10 0 10 0 ${lz}
+create_box  	    0 10 0 10 0 10
+Created orthogonal box = (0 0 0) to (10 10 10)
+create_grid 	    $x $y $z
+create_grid 	    20 $y $z
+create_grid 	    20 20 $z
+create_grid 	    20 20 20
+Created 8000 child grid cells
+  CPU time = 0.00209532 secs
+  create/ghost percent = 30.9219 69.0781
+
+species		    air.species N O
+mixture		    air N O vstream 0.0 0.0 0.0 temp 273.15
+
+global              nrho 1.0
+global              fnum 1.0
+
+#collide		    vss air air.vss
+
+#create_particles    air n $n
+
+stats		    10
+compute             temp temp
+stats_style	    step cpu np nattempt ncoll c_temp
+
+custom              grid create rho float 0 create vstream float 3
+Custom grid attributes set = 0
+custom              grid file/coarse 1 text file.coarse.3d                     4 rho vstream[1] vstream[2] vstream[3]
+Reading custom file/coarse file.coarse.3d ...
+  50 coarse grid points with 4 values each
+  KD tree stats:
+    50 = points stored
+    99 = # of nodes
+    49 = # of branches
+    50 = # of leaves
+    9 = maxdepth
+    8000 = number of grid cell searches
+    4.84552 = ave distance of nearest points
+    29.7139 = ave node count to find nearest points
+    28.0516 = ave leaf count to find nearest points
+    1 = ave count of neighbor points
+    24.8302 = ave node count to find neighbor points
+    19.7849 = ave leaf count to find neighbor points
+Custom grid attributes set = 32000
+
+dump                1 grid all 10 dump.coarse.3d id xc yc g_rho g_vstream[*]
+
+timestep 	    0.1
+run                 10
+Memory usage per proc in Mbytes:
+  particles (ave,min,max) = 0 0 0
+  grid      (ave,min,max) = 1.51379 1.51379 1.51379
+  surf      (ave,min,max) = 0 0 0
+  total     (ave,min,max) = 1.51379 1.51379 1.51379
+Step CPU Np Natt Ncoll c_temp 
+       0            0        0        0        0            0 
+      10  0.001392762        0        0        0            0 
+Loop time of 0.00139818 on 4 procs for 10 steps with 0 particles
+
+MPI task timing breakdown:
+Section |  min time  |  avg time  |  max time  |%varavg| %total
+---------------------------------------------------------------
+Move    | 6.62e-07   | 7.0125e-07 | 7.21e-07   |   0.0 |  0.05
+Coll    | 0          | 0          | 0          |   0.0 |  0.00
+Sort    | 0          | 0          | 0          |   0.0 |  0.00
+Comm    | 4.5674e-05 | 4.6051e-05 | 4.6287e-05 |   0.0 |  3.29
+Modify  | 0          | 0          | 0          |   0.0 |  0.00
+Output  | 0.0013473  | 0.0013481  | 0.0013499  |   0.0 | 96.42
+Other   |            | 3.365e-06  |            |       |  0.24
+
+Particle moves    = 0 (0K)
+Cells touched     = 0 (0K)
+Particle comms    = 0 (0K)
+Boundary collides = 0 (0K)
+Boundary exits    = 0 (0K)
+SurfColl checks   = 0 (0K)
+SurfColl occurs   = 0 (0K)
+Surf reactions    = 0 (0K)
+Collide attempts  = 0 (0K)
+Collide occurs    = 0 (0K)
+Reactions         = 0 (0K)
+Particles stuck   = 0
+Axisymm bad moves = 0
+
+Particle-moves/CPUsec/proc: 0
+Particle-moves/step: 0
+Cell-touches/particle/step: 0
+Particle comm iterations/step: 0
+Particle fraction communicated: 0
+Particle fraction colliding with boundary: 0
+Particle fraction exiting boundary: 0
+Surface-checks/particle/step: 0
+Surface-collisions/particle/step: 0
+Surf-reactions/particle/step: 0
+Collision-attempts/particle/step: 0
+Collisions/particle/step: 0
+Reactions/particle/step: 0
+
+Particles: 0 ave 0 max 0 min
+Histogram: 4 0 0 0 0 0 0 0 0 0
+Cells:      2000 ave 2000 max 2000 min
+Histogram: 4 0 0 0 0 0 0 0 0 0
+GhostCell: 6000 ave 6000 max 6000 min
+Histogram: 4 0 0 0 0 0 0 0 0 0
+EmptyCell: 0 ave 0 max 0 min
+Histogram: 4 0 0 0 0 0 0 0 0 0
+

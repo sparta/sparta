@@ -39,14 +39,15 @@ class CollideVSS : public Collide {
   virtual double attempt_collision_SWS(int, int, double, double, double);   // SWS
   double attempt_collision_SWS(int, int, int, double);   // SWS
 
-  virtual int test_collision(int, int, int, Particle::OnePart *, Particle::OnePart *);
+  virtual int test_collision(int, int, int, Particle::OnePart *,
+                             Particle::OnePart *);
   virtual int test_collision_SWS(int, int, int, Particle::OnePart *, Particle::OnePart *, double);   // SWS
-  
+
   virtual void setup_collision(Particle::OnePart *, Particle::OnePart *);
   virtual void setup_collision_SWS(Particle::OnePart *, Particle::OnePart *);   // SWS
 
   virtual int perform_collision(Particle::OnePart *&, Particle::OnePart *&,
-                        Particle::OnePart *&);
+                                Particle::OnePart *&);
   virtual int perform_collision_SWS(Particle::OnePart *&, Particle::OnePart *&,   // SWS
                         Particle::OnePart *&, int &,int &,int &,int &);
 

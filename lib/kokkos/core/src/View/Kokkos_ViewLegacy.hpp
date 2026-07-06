@@ -1,18 +1,5 @@
-//@HEADER
-// ************************************************************************
-//
-//                        Kokkos v. 4.0
-//       Copyright (2022) National Technology & Engineering
-//               Solutions of Sandia, LLC (NTESS).
-//
-// Under the terms of Contract DE-NA0003525 with NTESS,
-// the U.S. Government retains certain rights in this software.
-//
-// Part of Kokkos, under the Apache License v2.0 with LLVM Exceptions.
-// See https://kokkos.org/LICENSE for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-//
-//@HEADER
+// SPDX-FileCopyrightText: Copyright Contributors to the Kokkos project
 
 #ifndef KOKKOS_IMPL_PUBLIC_INCLUDE
 #include <Kokkos_Macros.hpp>
@@ -26,6 +13,7 @@ static_assert(false,
 #include <string>
 #include <algorithm>
 #include <initializer_list>
+#include <sstream>
 
 #include <Kokkos_Core_fwd.hpp>
 #include <Kokkos_HostSpace.hpp>
@@ -33,6 +21,7 @@ static_assert(false,
 #include <Kokkos_ExecPolicy.hpp>
 #include <View/Hooks/Kokkos_ViewHooks.hpp>
 
+#include <impl/Kokkos_InitializeFinalize.hpp>
 #include <impl/Kokkos_Tools.hpp>
 #include <impl/Kokkos_Utilities.hpp>
 
@@ -239,40 +228,72 @@ class View : public ViewTraits<DataType, Properties...> {
       Kokkos::Impl::ViewMapping<traits, typename traits::specialize>;
   template <typename V>
   friend struct Kokkos::Impl::ViewTracker;
-  using hooks_policy = typename traits::hooks_policy;
+  using hooks_policy                     = typename traits::hooks_policy;
+  static constexpr bool has_hooks_policy = !std::is_void_v<hooks_policy>;
 
   view_tracker_type m_track;
   map_type m_map;
 
  public:
   //----------------------------------------
-  /** \brief  Compatible view of array of scalar types */
-  using array_type =
+  /** \brief  Compatible view of data type */
+#ifdef KOKKOS_ENABLE_DEPRECATED_CODE_5
+  using type = std::conditional_t<
+      has_hooks_policy,
       View<typename traits::scalar_array_type, typename traits::array_layout,
            typename traits::device_type, typename traits::hooks_policy,
-           typename traits::memory_traits>;
+           typename traits::memory_traits>,
+      View<typename traits::scalar_array_type, typename traits::array_layout,
+           typename traits::device_type, typename traits::memory_traits>>;
+#else
+  using type = std::conditional_t<
+      has_hooks_policy,
+      View<typename traits::data_type, typename traits::array_layout,
+           typename traits::device_type, typename traits::hooks_policy,
+           typename traits::memory_traits>,
+      View<typename traits::data_type, typename traits::array_layout,
+           typename traits::device_type, typename traits::memory_traits>>;
+#endif
+
+#ifdef KOKKOS_ENABLE_DEPRECATED_CODE_5
+  /** \brief  Compatible view of array of data types */
+  using array_type KOKKOS_DEPRECATED_WITH_COMMENT("Use type instead.") = type;
+#endif
 
   /** \brief  Compatible view of const data type */
-  using const_type =
+  using const_type = std::conditional_t<
+      has_hooks_policy,
       View<typename traits::const_data_type, typename traits::array_layout,
            typename traits::device_type, typename traits::hooks_policy,
-           typename traits::memory_traits>;
+           typename traits::memory_traits>,
+      View<typename traits::const_data_type, typename traits::array_layout,
+           typename traits::device_type, typename traits::memory_traits>>;
 
   /** \brief  Compatible view of non-const data type */
-  using non_const_type =
+  using non_const_type = std::conditional_t<
+      has_hooks_policy,
       View<typename traits::non_const_data_type, typename traits::array_layout,
            typename traits::device_type, typename traits::hooks_policy,
-           typename traits::memory_traits>;
+           typename traits::memory_traits>,
+      View<typename traits::non_const_data_type, typename traits::array_layout,
+           typename traits::device_type, typename traits::memory_traits>>;
 
   /** \brief  Compatible host mirror view */
-  using host_mirror_type =
+  using host_mirror_type = std::conditional_t<
+      has_hooks_policy,
       View<typename traits::non_const_data_type, typename traits::array_layout,
            Device<DefaultHostExecutionSpace,
                   typename traits::host_mirror_space::memory_space>,
-           typename traits::hooks_policy>;
+           typename traits::hooks_policy>,
+      View<typename traits::non_const_data_type, typename traits::array_layout,
+           Device<DefaultHostExecutionSpace,
+                  typename traits::host_mirror_space::memory_space>>>;
 
+#ifdef KOKKOS_ENABLE_DEPRECATED_CODE_4
   /** \brief  Compatible host mirror view */
-  using HostMirror = host_mirror_type;
+  using HostMirror KOKKOS_DEPRECATED_WITH_COMMENT(
+      "Use host_mirror_type instead.") = host_mirror_type;
+#endif
 
   /** \brief Unified types */
   using uniform_type = typename Impl::ViewUniformType<View, 0>::type;
@@ -357,30 +378,40 @@ class View : public ViewTraits<DataType, Properties...> {
            m_map.dimension_6() * m_map.dimension_7();
   }
 
+#ifdef KOKKOS_ENABLE_DEPRECATED_CODE_4
+  KOKKOS_DEPRECATED_WITH_COMMENT("Use stride(0) instead")
   KOKKOS_INLINE_FUNCTION constexpr size_t stride_0() const {
     return m_map.stride_0();
   }
+  KOKKOS_DEPRECATED_WITH_COMMENT("Use stride(1) instead")
   KOKKOS_INLINE_FUNCTION constexpr size_t stride_1() const {
     return m_map.stride_1();
   }
+  KOKKOS_DEPRECATED_WITH_COMMENT("Use stride(2) instead")
   KOKKOS_INLINE_FUNCTION constexpr size_t stride_2() const {
     return m_map.stride_2();
   }
+  KOKKOS_DEPRECATED_WITH_COMMENT("Use stride(3) instead")
   KOKKOS_INLINE_FUNCTION constexpr size_t stride_3() const {
     return m_map.stride_3();
   }
+  KOKKOS_DEPRECATED_WITH_COMMENT("Use stride(4) instead")
   KOKKOS_INLINE_FUNCTION constexpr size_t stride_4() const {
     return m_map.stride_4();
   }
+  KOKKOS_DEPRECATED_WITH_COMMENT("Use stride(5) instead")
   KOKKOS_INLINE_FUNCTION constexpr size_t stride_5() const {
     return m_map.stride_5();
   }
+  KOKKOS_DEPRECATED_WITH_COMMENT("Use stride(6) instead")
   KOKKOS_INLINE_FUNCTION constexpr size_t stride_6() const {
     return m_map.stride_6();
   }
+  KOKKOS_DEPRECATED_WITH_COMMENT("Use stride(7) instead")
   KOKKOS_INLINE_FUNCTION constexpr size_t stride_7() const {
     return m_map.stride_7();
   }
+#endif
 
   template <typename iType>
   KOKKOS_INLINE_FUNCTION constexpr std::enable_if_t<std::is_integral_v<iType>,
@@ -574,9 +605,6 @@ class View : public ViewTraits<DataType, Properties...> {
       return m_map.m_impl_handle[i0 * m_map.m_impl_offset.m_stride.S0 +
                                  i1 * m_map.m_impl_offset.m_stride.S1];
     }
-#if defined KOKKOS_COMPILER_INTEL
-    __builtin_unreachable();
-#endif
   }
 
   // Rank 0 -> 8 operator() except for rank-1 and rank-2 with default map which
@@ -690,9 +718,6 @@ class View : public ViewTraits<DataType, Properties...> {
       return m_map.m_impl_handle[i0 * m_map.m_impl_offset.m_stride.S0 +
                                  i1 * m_map.m_impl_offset.m_stride.S1];
     }
-#if defined KOKKOS_COMPILER_INTEL
-    __builtin_unreachable();
-#endif
   }
 
   //------------------------------
@@ -881,19 +906,78 @@ class View : public ViewTraits<DataType, Properties...> {
   KOKKOS_DEFAULTED_FUNCTION
   View() = default;
 
+// FIXME_NVCC: nvcc 12.2 and 12.3 view these as ambiguous even though they have
+// exclusive requirements clauses. 12.6 Also has some issues though it manifests
+// differently
+#if defined(KOKKOS_ENABLE_CUDA) || defined(KOKKOS_COMPILER_NVHPC)
+#define KOKKOS_IMPL_VIEW_HOOKS_NVCC_WORKAROUND 1
+#endif
+#ifdef KOKKOS_IMPL_VIEW_HOOKS_NVCC_WORKAROUND
   KOKKOS_FUNCTION
   View(const View& other) : m_track(other.m_track), m_map(other.m_map) {
+    if constexpr (has_hooks_policy) {
+      KOKKOS_IF_ON_HOST((hooks_policy::copy_construct(*this, other);))
+    }
+  }
+#else
+  KOKKOS_DEFAULTED_FUNCTION
+  View(const View&)
+    requires(!has_hooks_policy)
+  = default;
+
+  KOKKOS_FUNCTION
+  View(const View& other)
+    requires(has_hooks_policy)
+      : m_track(other.m_track), m_map(other.m_map) {
     KOKKOS_IF_ON_HOST((hooks_policy::copy_construct(*this, other);))
   }
+#endif
 
+#ifdef KOKKOS_IMPL_VIEW_HOOKS_NVCC_WORKAROUND
   KOKKOS_FUNCTION
   View(View&& other)
       : m_track{std::move(other.m_track)}, m_map{std::move(other.m_map)} {
-    KOKKOS_IF_ON_HOST((hooks_policy::move_construct(*this, other);))
+    if constexpr (has_hooks_policy) {
+      KOKKOS_IF_ON_HOST((hooks_policy::move_construct(*this, other);))
+    }
   }
+#else
+  KOKKOS_DEFAULTED_FUNCTION
+  View(View&&)
+    requires(!has_hooks_policy)
+  = default;
 
   KOKKOS_FUNCTION
+  View(View&& other)
+    requires(has_hooks_policy)
+      : m_track{std::move(other.m_track)}, m_map{std::move(other.m_map)} {
+    KOKKOS_IF_ON_HOST((hooks_policy::move_construct(*this, other);))
+  }
+#endif
+
+#ifdef KOKKOS_IMPL_VIEW_HOOKS_NVCC_WORKAROUND
+  KOKKOS_FUNCTION
   View& operator=(const View& other) {
+    m_map   = other.m_map;
+    m_track = other.m_track;
+
+    if constexpr (has_hooks_policy) {
+      KOKKOS_IF_ON_HOST(
+          (if (&other != this) { hooks_policy::copy_assign(*this, other); }))
+    }
+
+    return *this;
+  }
+#else
+  KOKKOS_DEFAULTED_FUNCTION
+  View& operator=(const View&)
+    requires(!has_hooks_policy)
+  = default;
+
+  KOKKOS_FUNCTION
+  View& operator=(const View& other)
+    requires(has_hooks_policy)
+  {
     m_map   = other.m_map;
     m_track = other.m_track;
 
@@ -901,9 +985,31 @@ class View : public ViewTraits<DataType, Properties...> {
 
     return *this;
   }
+#endif
 
+#ifdef KOKKOS_IMPL_VIEW_HOOKS_NVCC_WORKAROUND
   KOKKOS_FUNCTION
   View& operator=(View&& other) {
+    m_map   = std::move(other.m_map);
+    m_track = std::move(other.m_track);
+
+    if constexpr (has_hooks_policy) {
+      KOKKOS_IF_ON_HOST(
+          (if (&other != this) { hooks_policy::move_assign(*this, other); }))
+    }
+
+    return *this;
+  }
+#else
+  KOKKOS_DEFAULTED_FUNCTION
+  View& operator=(View&&)
+    requires(!has_hooks_policy)
+  = default;
+
+  KOKKOS_FUNCTION
+  View& operator=(View&& other)
+    requires(has_hooks_policy)
+  {
     m_map   = std::move(other.m_map);
     m_track = std::move(other.m_track);
 
@@ -911,6 +1017,8 @@ class View : public ViewTraits<DataType, Properties...> {
 
     return *this;
   }
+#endif
+#undef KOKKOS_IMPL_VIEW_HOOKS_NVCC_WORKAROUND
 
   //----------------------------------------
   // Compatible view copy constructor and assignment
@@ -956,17 +1064,8 @@ class View : public ViewTraits<DataType, Properties...> {
                               Args... args)
       : m_track(src_view), m_map() {
     using SrcType = View<RT, RP...>;
-
     using Mapping = Kokkos::Impl::ViewMapping<void, typename SrcType::traits,
                                               Arg0, Args...>;
-
-    using DstType = typename Mapping::type;
-
-    static_assert(
-        Kokkos::Impl::ViewMapping<traits, typename DstType::traits,
-                                  typename traits::specialize>::is_assignable,
-        "Subview construction requires compatible view and subview arguments");
-
     Mapping::assign(m_map, src_view.m_map, arg0, args...);
   }
 
@@ -991,6 +1090,25 @@ class View : public ViewTraits<DataType, Properties...> {
       std::enable_if_t<!Impl::ViewCtorProp<P...>::has_pointer,
                        typename traits::array_layout> const& arg_layout)
       : m_track(), m_map() {
+    if (bool was_finalized = is_finalized();
+        was_finalized || !is_initialized()) {
+      std::stringstream ss;
+      ss << "Kokkos ERROR: View ";
+      constexpr bool has_label = Impl::ViewCtorProp<P...>::has_label;
+      if constexpr (has_label) {
+        auto const& lbl = Impl::get_property<Impl::LabelTag>(arg_prop);
+        ss << "(label=\"" << lbl << "\") ";
+      }
+      ss << "is being constructed ";
+      if (was_finalized) {
+        ss << "after finalize() ";
+      } else {
+        ss << "before initialize() ";
+      }
+      ss << "has been called";
+      auto const err = ss.str();
+      abort(err.c_str());
+    }
     // Copy the input allocation properties with possibly defaulted properties
     // We need to split it in two to avoid MSVC compiler errors
     auto prop_copy_tmp =
@@ -998,19 +1116,9 @@ class View : public ViewTraits<DataType, Properties...> {
     auto prop_copy = Impl::with_properties_if_unset(
         prop_copy_tmp, typename traits::device_type::memory_space{},
         typename traits::device_type::execution_space{});
-    using alloc_prop = decltype(prop_copy);
 
-    static_assert(traits::is_managed,
+    static_assert(!traits::memory_traits::is_unmanaged,
                   "View allocation constructor requires managed memory");
-
-    if (alloc_prop::initialize &&
-        !alloc_prop::execution_space::impl_is_initialized()) {
-      // If initializing view data then
-      // the execution space must be initialized.
-      Kokkos::Impl::throw_runtime_exception(
-          "Constructing View and initializing data with uninitialized "
-          "execution space");
-    }
 
 #ifdef KOKKOS_ENABLE_DEBUG_BOUNDS_CHECK
     if constexpr (std::is_same_v<typename traits::array_layout,
@@ -1031,8 +1139,8 @@ class View : public ViewTraits<DataType, Properties...> {
       const std::string& alloc_name =
           Impl::get_property<Impl::LabelTag>(prop_copy);
       Impl::runtime_check_rank(
-          *this, std::is_same<typename traits::specialize, void>::value, i0, i1,
-          i2, i3, i4, i5, i6, i7, alloc_name.c_str());
+          *this, std::is_same_v<typename traits::specialize, void>, i0, i1, i2,
+          i3, i4, i5, i6, i7, alloc_name.c_str());
     }
 #endif
 
@@ -1059,8 +1167,8 @@ class View : public ViewTraits<DataType, Properties...> {
         ,
         m_map(arg_prop, arg_layout) {
     static_assert(
-        std::is_same<pointer_type,
-                     typename Impl::ViewCtorProp<P...>::pointer_type>::value,
+        std::is_same_v<pointer_type,
+                       typename Impl::ViewCtorProp<P...>::pointer_type>,
         "Constructing View to wrap user memory must supply matching pointer "
         "type");
 
@@ -1081,8 +1189,8 @@ class View : public ViewTraits<DataType, Properties...> {
       size_t i7 = arg_layout.dimension[7];
 
       Impl::runtime_check_rank(
-          *this, std::is_same<typename traits::specialize, void>::value, i0, i1,
-          i2, i3, i4, i5, i6, i7, "UNMANAGED");
+          *this, std::is_same_v<typename traits::specialize, void>, i0, i1, i2,
+          i3, i4, i5, i6, i7, "UNMANAGED");
     }
 #endif
   }
@@ -1304,34 +1412,25 @@ class View : public ViewTraits<DataType, Properties...> {
   // MDSpan converting constructors
 #ifdef KOKKOS_ENABLE_IMPL_MDSPAN
   template <typename U = typename Impl::MDSpanViewTraits<traits>::mdspan_type>
-  KOKKOS_INLINE_FUNCTION
-#ifndef KOKKOS_ENABLE_CXX17
-      explicit(traits::is_managed)
-#endif
-          View(const typename Impl::MDSpanViewTraits<traits>::mdspan_type& mds,
-               std::enable_if_t<
-                   !std::is_same_v<Impl::UnsupportedKokkosArrayLayout, U>>* =
-                   nullptr)
+  KOKKOS_INLINE_FUNCTION explicit(!traits::memory_traits::is_unmanaged) View(
+      const typename Impl::MDSpanViewTraits<traits>::mdspan_type& mds,
+      std::enable_if_t<
+          !std::is_same_v<Impl::UnsupportedKokkosArrayLayout, U>>* = nullptr)
       : View(mds.data_handle(),
              Impl::array_layout_from_mapping<
                  typename traits::array_layout,
                  typename Impl::MDSpanViewTraits<traits>::mdspan_type>(
-                 mds.mapping())) {
-  }
+                 mds.mapping())) {}
 
   template <class ElementType, class ExtentsType, class LayoutType,
             class AccessorType>
-  KOKKOS_INLINE_FUNCTION
-#ifndef KOKKOS_ENABLE_CXX17
-      explicit(!std::is_convertible_v<
-               Kokkos::mdspan<ElementType, ExtentsType, LayoutType,
-                              AccessorType>,
-               typename Impl::MDSpanViewTraits<traits>::mdspan_type>)
-#endif
-          View(const Kokkos::mdspan<ElementType, ExtentsType, LayoutType,
-                                    AccessorType>& mds)
-      : View(typename Impl::MDSpanViewTraits<traits>::mdspan_type(mds)) {
-  }
+  KOKKOS_INLINE_FUNCTION explicit(
+      !std::is_convertible_v<
+          Kokkos::mdspan<ElementType, ExtentsType, LayoutType, AccessorType>,
+          typename Impl::MDSpanViewTraits<traits>::mdspan_type>)
+      View(const Kokkos::mdspan<ElementType, ExtentsType, LayoutType,
+                                AccessorType>& mds)
+      : View(typename Impl::MDSpanViewTraits<traits>::mdspan_type(mds)) {}
 
   //----------------------------------------
   // Conversion to MDSpan
@@ -1346,8 +1445,9 @@ class View : public ViewTraits<DataType, Properties...> {
                 std::is_assignable<mdspan<OtherElementType, OtherExtents,
                                           OtherLayoutPolicy, OtherAccessor>,
                                    ImplNaturalMDSpanType>>::value>>
-  KOKKOS_INLINE_FUNCTION constexpr operator mdspan<
-      OtherElementType, OtherExtents, OtherLayoutPolicy, OtherAccessor>() {
+  KOKKOS_INLINE_FUNCTION constexpr
+  operator mdspan<OtherElementType, OtherExtents, OtherLayoutPolicy,
+                  OtherAccessor>() const {
     using mdspan_type = typename Impl::MDSpanViewTraits<traits>::mdspan_type;
     return mdspan_type{data(),
                        Impl::mapping_from_view_mapping<mdspan_type>(m_map)};
@@ -1361,7 +1461,7 @@ class View : public ViewTraits<DataType, Properties...> {
                 typename OtherAccessorType::data_handle_type>>>
   KOKKOS_INLINE_FUNCTION constexpr auto to_mdspan(
       const OtherAccessorType& other_accessor =
-          typename Impl::MDSpanViewTraits<traits>::accessor_type()) {
+          typename Impl::MDSpanViewTraits<traits>::accessor_type()) const {
     using mdspan_type = typename Impl::MDSpanViewTraits<traits>::mdspan_type;
     using ret_mdspan_type =
         mdspan<typename mdspan_type::element_type,
@@ -1413,10 +1513,13 @@ as_view_of_rank_n(View<T, Args...>) {
   return {};
 }
 
-template <typename Function, typename... Args>
-void apply_to_view_of_static_rank(Function&& f, View<Args...> a) {
-  f(a);
-}
+template <typename ViewType>
+struct ApplyToViewOfStaticRank {
+  template <typename Function>
+  static void apply(Function&& f, ViewType a) {
+    f(a);
+  }
+};
 
 }  // namespace Impl
 
@@ -1487,114 +1590,7 @@ KOKKOS_INLINE_FUNCTION bool operator!=(const View<LT, LP...>& lhs,
 
 } /* namespace Kokkos */
 
-//----------------------------------------------------------------------------
-//----------------------------------------------------------------------------
-
-namespace Kokkos {
-namespace Impl {
-
-template <class Specialize, typename A, typename B>
-struct CommonViewValueType;
-
-template <typename A, typename B>
-struct CommonViewValueType<void, A, B> {
-  using value_type = std::common_type_t<A, B>;
-};
-
-template <class Specialize, class ValueType>
-struct CommonViewAllocProp;
-
-template <class ValueType>
-struct CommonViewAllocProp<void, ValueType> {
-  using value_type        = ValueType;
-  using scalar_array_type = ValueType;
-
-  template <class... Views>
-  KOKKOS_INLINE_FUNCTION CommonViewAllocProp(const Views&...) {}
-};
-
-template <class... Views>
-struct DeduceCommonViewAllocProp;
-
-// Base case must provide types for:
-// 1. specialize  2. value_type  3. is_view  4. prop_type
-template <class FirstView>
-struct DeduceCommonViewAllocProp<FirstView> {
-  using specialize = typename FirstView::traits::specialize;
-
-  using value_type = typename FirstView::traits::value_type;
-
-  enum : bool { is_view = is_view<FirstView>::value };
-
-  using prop_type = CommonViewAllocProp<specialize, value_type>;
-};
-
-template <class FirstView, class... NextViews>
-struct DeduceCommonViewAllocProp<FirstView, NextViews...> {
-  using NextTraits = DeduceCommonViewAllocProp<NextViews...>;
-
-  using first_specialize = typename FirstView::traits::specialize;
-  using first_value_type = typename FirstView::traits::value_type;
-
-  enum : bool { first_is_view = is_view<FirstView>::value };
-
-  using next_specialize = typename NextTraits::specialize;
-  using next_value_type = typename NextTraits::value_type;
-
-  enum : bool { next_is_view = NextTraits::is_view };
-
-  // common types
-
-  // determine specialize type
-  // if first and next specialize differ, but are not the same specialize, error
-  // out
-  static_assert(!(!std::is_same_v<first_specialize, next_specialize> &&
-                  !std::is_void_v<first_specialize> &&
-                  !std::is_void_v<next_specialize>),
-                "Kokkos DeduceCommonViewAllocProp ERROR: Only one non-void "
-                "specialize trait allowed");
-
-  // otherwise choose non-void specialize if either/both are non-void
-  using specialize =
-      std::conditional_t<std::is_same_v<first_specialize, next_specialize>,
-                         first_specialize,
-                         std::conditional_t<(std::is_void_v<first_specialize> &&
-                                             !std::is_void_v<next_specialize>),
-                                            next_specialize, first_specialize>>;
-
-  using value_type = typename CommonViewValueType<specialize, first_value_type,
-                                                  next_value_type>::value_type;
-
-  enum : bool { is_view = (first_is_view && next_is_view) };
-
-  using prop_type = CommonViewAllocProp<specialize, value_type>;
-};
-
-}  // end namespace Impl
-
-template <class... Views>
-using DeducedCommonPropsType =
-    typename Impl::DeduceCommonViewAllocProp<Views...>::prop_type;
-
-// This function is required in certain scenarios where users customize
-// Kokkos View internals. One example are dynamic length embedded ensemble
-// types. The function is used to propagate necessary information
-// (like the ensemble size) when creating new views.
-// However, most of the time it is called with a single view.
-// Furthermore, the propagated information is not just for view allocations.
-// From what I can tell, the type of functionality provided by
-// common_view_alloc_prop is the equivalent of propagating accessors in mdspan,
-// a mechanism we will eventually use to replace this clunky approach here, when
-// we are finally mdspan based.
-// TODO: get rid of this when we have mdspan
-template <class... Views>
-KOKKOS_INLINE_FUNCTION DeducedCommonPropsType<Views...> common_view_alloc_prop(
-    Views const&... views) {
-  return DeducedCommonPropsType<Views...>(views...);
-}
-
-}  // namespace Kokkos
-
+#include <View/Kokkos_ViewCommonType.hpp>
 #include <View/Kokkos_ViewUniformType.hpp>
 #include <View/Kokkos_ViewAtomic.hpp>
 

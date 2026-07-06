@@ -1,25 +1,17 @@
-//@HEADER
-// ************************************************************************
-//
-//                        Kokkos v. 4.0
-//       Copyright (2022) National Technology & Engineering
-//               Solutions of Sandia, LLC (NTESS).
-//
-// Under the terms of Contract DE-NA0003525 with NTESS,
-// the U.S. Government retains certain rights in this software.
-//
-// Part of Kokkos, under the Apache License v2.0 with LLVM Exceptions.
-// See https://kokkos.org/LICENSE for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-//
-//@HEADER
+// SPDX-FileCopyrightText: Copyright Contributors to the Kokkos project
 
 #ifndef KOKKOS_SORT_PUBLIC_API_HPP_
 #define KOKKOS_SORT_PUBLIC_API_HPP_
 
 #include "./impl/Kokkos_SortImpl.hpp"
 #include <std_algorithms/Kokkos_BeginEnd.hpp>
+#include <Kokkos_Macros.hpp>
+#ifdef KOKKOS_ENABLE_EXPERIMENTAL_CXX20_MODULES
+import kokkos.core;
+#else
 #include <Kokkos_Core.hpp>
+#endif
 #include <algorithm>
 
 namespace Kokkos {
@@ -53,13 +45,9 @@ void sort(const ExecutionSpace& exec,
 
   if constexpr (Impl::better_off_calling_std_sort_v<ExecutionSpace>) {
     exec.fence("Kokkos::sort without comparator use std::sort");
-    if (view.span_is_contiguous()) {
-      std::sort(view.data(), view.data() + view.size());
-    } else {
-      auto first = ::Kokkos::Experimental::begin(view);
-      auto last  = ::Kokkos::Experimental::end(view);
-      std::sort(first, last);
-    }
+    auto first = ::Kokkos::Experimental::begin(view);
+    auto last  = ::Kokkos::Experimental::end(view);
+    std::sort(first, last);
   } else {
     Impl::sort_device_view_without_comparator(exec, view);
   }
@@ -111,13 +99,9 @@ void sort(const ExecutionSpace& exec,
 
   if constexpr (Impl::better_off_calling_std_sort_v<ExecutionSpace>) {
     exec.fence("Kokkos::sort with comparator use std::sort");
-    if (view.span_is_contiguous()) {
-      std::sort(view.data(), view.data() + view.size(), comparator);
-    } else {
-      auto first = ::Kokkos::Experimental::begin(view);
-      auto last  = ::Kokkos::Experimental::end(view);
-      std::sort(first, last, comparator);
-    }
+    auto first = ::Kokkos::Experimental::begin(view);
+    auto last  = ::Kokkos::Experimental::end(view);
+    std::sort(first, last, comparator);
   } else {
     Impl::sort_device_view_with_comparator(exec, view, comparator);
   }

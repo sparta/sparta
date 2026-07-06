@@ -1,22 +1,14 @@
-//@HEADER
-// ************************************************************************
-//
-//                        Kokkos v. 4.0
-//       Copyright (2022) National Technology & Engineering
-//               Solutions of Sandia, LLC (NTESS).
-//
-// Under the terms of Contract DE-NA0003525 with NTESS,
-// the U.S. Government retains certain rights in this software.
-//
-// Part of Kokkos, under the Apache License v2.0 with LLVM Exceptions.
-// See https://kokkos.org/LICENSE for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-//
-//@HEADER
+// SPDX-FileCopyrightText: Copyright Contributors to the Kokkos project
 
 #include <impl/Kokkos_StringManipulation.hpp>
 #include <impl/Kokkos_HostSharedPtr.hpp>
+#include <Kokkos_Macros.hpp>
+#ifdef KOKKOS_ENABLE_EXPERIMENTAL_CXX20_MODULES
+import kokkos.core;
+#else
 #include <Kokkos_Core.hpp>
+#endif
 
 #include <gtest/gtest.h>
 
@@ -237,17 +229,17 @@ TEST(TEST_CATEGORY, host_shared_ptr_tracking) {
   host_shared_ptr_test_reference_counting<typename TEST_EXECSPACE::memory_space,
                                           Kokkos::HostSpace>();
 #ifdef KOKKOS_ENABLE_CUDA
-  if (std::is_same<TEST_EXECSPACE, Kokkos::Cuda>::value)
+  if (std::is_same_v<TEST_EXECSPACE, Kokkos::Cuda>)
     host_shared_ptr_test_reference_counting<Kokkos::CudaUVMSpace,
                                             Kokkos::CudaUVMSpace>();
 #endif
 #ifdef KOKKOS_ENABLE_SYCL
-  if (std::is_same<TEST_EXECSPACE, Kokkos::SYCL>::value)
+  if (std::is_same_v<TEST_EXECSPACE, Kokkos::SYCL>)
     host_shared_ptr_test_reference_counting<Kokkos::SYCLSharedUSMSpace,
                                             Kokkos::SYCLSharedUSMSpace>();
 #endif
 #ifdef KOKKOS_ENABLE_HIP
-  if (std::is_same<TEST_EXECSPACE, Kokkos::HIP>::value) {
+  if (std::is_same_v<TEST_EXECSPACE, Kokkos::HIP>) {
     host_shared_ptr_test_reference_counting<Kokkos::HIPHostPinnedSpace,
                                             Kokkos::HIPHostPinnedSpace>();
     host_shared_ptr_test_reference_counting<Kokkos::HIPManagedSpace,

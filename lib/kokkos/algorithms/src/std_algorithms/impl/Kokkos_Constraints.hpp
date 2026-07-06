@@ -1,24 +1,20 @@
-//@HEADER
-// ************************************************************************
-//
-//                        Kokkos v. 4.0
-//       Copyright (2022) National Technology & Engineering
-//               Solutions of Sandia, LLC (NTESS).
-//
-// Under the terms of Contract DE-NA0003525 with NTESS,
-// the U.S. Government retains certain rights in this software.
-//
-// Part of Kokkos, under the Apache License v2.0 with LLVM Exceptions.
-// See https://kokkos.org/LICENSE for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-//
-//@HEADER
+// SPDX-FileCopyrightText: Copyright Contributors to the Kokkos project
 
 #ifndef KOKKOS_STD_ALGORITHMS_CONSTRAINTS_HPP_
 #define KOKKOS_STD_ALGORITHMS_CONSTRAINTS_HPP_
 
+#include <Kokkos_Macros.hpp>
+#ifdef KOKKOS_ENABLE_EXPERIMENTAL_CXX20_MODULES
+import kokkos.core;
+#else
+#include <Kokkos_Core.hpp>
+#endif
+#include <Kokkos_Assert.hpp>
+
 #include <Kokkos_DetectionIdiom.hpp>
-#include <Kokkos_View.hpp>
+
+#include <iterator>
 
 namespace Kokkos {
 namespace Experimental {
@@ -238,12 +234,9 @@ KOKKOS_INLINE_FUNCTION void expect_no_overlap(
     [[maybe_unused]] IteratorType2 s_first) {
   if constexpr (is_kokkos_iterator_v<IteratorType1> &&
                 is_kokkos_iterator_v<IteratorType2>) {
-    auto const view1 = first.view();
-    auto const view2 = s_first.view();
-
-    std::size_t stride1  = view1.stride(0);
-    std::size_t stride2  = view2.stride(0);
-    ptrdiff_t first_diff = view1.data() - view2.data();
+    std::size_t stride1  = first.stride();
+    std::size_t stride2  = s_first.stride();
+    ptrdiff_t first_diff = first.data() - s_first.data();
 
     // FIXME If strides are not identical, checks may not be made
     // with the cost of O(1)
@@ -251,8 +244,8 @@ KOKKOS_INLINE_FUNCTION void expect_no_overlap(
     // If first_diff == 0, there is already an overlap
     if (stride1 == stride2 || first_diff == 0) {
       [[maybe_unused]] bool is_no_overlap  = (first_diff % stride1);
-      auto* first_pointer1                 = view1.data();
-      auto* first_pointer2                 = view2.data();
+      auto* first_pointer1                 = first.data();
+      auto* first_pointer2                 = s_first.data();
       [[maybe_unused]] auto* last_pointer1 = first_pointer1 + (last - first);
       [[maybe_unused]] auto* last_pointer2 = first_pointer2 + (last - first);
       KOKKOS_EXPECTS(first_pointer1 >= last_pointer2 ||

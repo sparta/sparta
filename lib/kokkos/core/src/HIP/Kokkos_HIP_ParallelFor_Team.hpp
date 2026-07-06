@@ -1,18 +1,5 @@
-//@HEADER
-// ************************************************************************
-//
-//                        Kokkos v. 4.0
-//       Copyright (2022) National Technology & Engineering
-//               Solutions of Sandia, LLC (NTESS).
-//
-// Under the terms of Contract DE-NA0003525 with NTESS,
-// the U.S. Government retains certain rights in this software.
-//
-// Part of Kokkos, under the Apache License v2.0 with LLVM Exceptions.
-// See https://kokkos.org/LICENSE for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-//
-//@HEADER
+// SPDX-FileCopyrightText: Copyright Contributors to the Kokkos project
 
 #ifndef KOKKOS_HIP_PARALLEL_FOR_TEAM_HPP
 #define KOKKOS_HIP_PARALLEL_FOR_TEAM_HPP
@@ -59,13 +46,13 @@ class ParallelFor<FunctorType, Kokkos::TeamPolicy<Properties...>, HIP> {
   size_t m_num_scratch_locks;
 
   template <typename TagType>
-  __device__ inline std::enable_if_t<std::is_void<TagType>::value> exec_team(
+  __device__ inline std::enable_if_t<std::is_void_v<TagType>> exec_team(
       const member_type& member) const {
     m_functor(member);
   }
 
   template <typename TagType>
-  __device__ inline std::enable_if_t<!std::is_void<TagType>::value> exec_team(
+  __device__ inline std::enable_if_t<!std::is_void_v<TagType>> exec_team(
       const member_type& member) const {
     m_functor(TagType(), member);
   }
@@ -88,9 +75,11 @@ class ParallelFor<FunctorType, Kokkos::TeamPolicy<Properties...>, HIP> {
          league_rank += gridDim.x) {
       this->template exec_team<work_tag>(typename Policy::member_type(
           kokkos_impl_hip_shared_memory<void>(), m_shmem_begin, m_shmem_size,
-          static_cast<void*>(static_cast<char*>(m_scratch_ptr[1]) +
-                             ptrdiff_t(threadid / (blockDim.x * blockDim.y)) *
-                                 m_scratch_size[1]),
+          static_cast<void*>(
+              static_cast<char*>(m_scratch_ptr[1]) +
+              ptrdiff_t(threadid /
+                        static_cast<size_t>(blockDim.x * blockDim.y)) *
+                  m_scratch_size[1]),
           m_scratch_size[1], league_rank, m_league_size));
     }
     if (m_scratch_size[1] > 0) {
@@ -115,14 +104,13 @@ class ParallelFor<FunctorType, Kokkos::TeamPolicy<Properties...>, HIP> {
   ParallelFor(FunctorType const& arg_functor, Policy const& arg_policy)
       : m_functor(arg_functor),
         m_policy(arg_policy),
-        m_league_size(arg_policy.league_size()),
-        m_team_size(arg_policy.team_size()),
-        m_vector_size(arg_policy.impl_vector_length()) {
+        m_league_size(m_policy.league_size()),
+        m_team_size(m_policy.team_size()),
+        m_vector_size(m_policy.impl_vector_length()) {
     auto internal_space_instance =
         m_policy.space().impl_internal_space_instance();
     if (m_team_size < 0) {
-      m_team_size =
-          arg_policy.team_size_recommended(arg_functor, ParallelForTag());
+      m_team_size = m_policy.team_size_recommended(m_functor, ParallelForTag());
       if (m_team_size <= 0)
         Kokkos::Impl::throw_runtime_exception(
             "Kokkos::Impl::ParallelFor<HIP, TeamPolicy> could not find a "
@@ -149,7 +137,7 @@ class ParallelFor<FunctorType, Kokkos::TeamPolicy<Properties...>, HIP> {
           m_scratch_pool_id,
           static_cast<std::int64_t>(m_scratch_size[1]) *
               (std::min(
-                  static_cast<std::int64_t>(HIP().concurrency() /
+                  static_cast<std::int64_t>(m_policy.space().concurrency() /
                                             (m_team_size * m_vector_size)),
                   static_cast<std::int64_t>(m_league_size))));
     }

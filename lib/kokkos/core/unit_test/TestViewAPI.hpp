@@ -1,22 +1,14 @@
-//@HEADER
-// ************************************************************************
-//
-//                        Kokkos v. 4.0
-//       Copyright (2022) National Technology & Engineering
-//               Solutions of Sandia, LLC (NTESS).
-//
-// Under the terms of Contract DE-NA0003525 with NTESS,
-// the U.S. Government retains certain rights in this software.
-//
-// Part of Kokkos, under the Apache License v2.0 with LLVM Exceptions.
-// See https://kokkos.org/LICENSE for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-//
-//@HEADER
+// SPDX-FileCopyrightText: Copyright Contributors to the Kokkos project
 
 #include <gtest/gtest.h>
 
+#include <Kokkos_Macros.hpp>
+#ifdef KOKKOS_ENABLE_EXPERIMENTAL_CXX20_MODULES
+import kokkos.core;
+#else
 #include <Kokkos_Core.hpp>
+#endif
 #include <sstream>
 #include <iostream>
 
@@ -880,15 +872,15 @@ struct TestViewMirror {
   }
 
   void static testit() {
-    test_mirror<Kokkos::MemoryTraits<0> >();
+    test_mirror<Kokkos::MemoryTraits<> >();
     test_mirror<Kokkos::MemoryTraits<Kokkos::Unmanaged> >();
-    test_mirror_view<Kokkos::MemoryTraits<0> >();
+    test_mirror_view<Kokkos::MemoryTraits<> >();
     test_mirror_view<Kokkos::MemoryTraits<Kokkos::Unmanaged> >();
-    test_mirror_copy<Kokkos::MemoryTraits<0> >();
+    test_mirror_copy<Kokkos::MemoryTraits<> >();
     test_mirror_copy<Kokkos::MemoryTraits<Kokkos::Unmanaged> >();
     test_mirror_copy_const_data_type();
     test_allocated();
-    test_mirror_no_initialize<Kokkos::MemoryTraits<0> >();
+    test_mirror_no_initialize<Kokkos::MemoryTraits<> >();
     test_mirror_no_initialize<Kokkos::MemoryTraits<Kokkos::Unmanaged> >();
   }
 };
@@ -950,10 +942,18 @@ class TestViewAPI {
 
   static void run_test_mirror() {
     using view_type   = Kokkos::View<int, host>;
-    using mirror_type = typename view_type::HostMirror;
+    using mirror_type = typename view_type::host_mirror_type;
 
+#ifdef KOKKOS_ENABLE_DEPRECATED_CODE_4
+#ifdef KOKKOS_ENABLE_DEPRECATION_WARNINGS
+    KOKKOS_IMPL_DISABLE_DEPRECATED_WARNINGS_PUSH()
+#endif
     static_assert(std::is_same_v<typename view_type::HostMirror,
                                  typename view_type::host_mirror_type>);
+#ifdef KOKKOS_ENABLE_DEPRECATION_WARNINGS
+    KOKKOS_IMPL_DISABLE_DEPRECATED_WARNINGS_POP()
+#endif
+#endif
 
     static_assert(std::is_same_v<typename view_type::memory_space,
                                  typename mirror_type::memory_space>);
@@ -968,7 +968,7 @@ class TestViewAPI {
   }
 
   static void run_test_scalar() {
-    using hView0 = typename dView0::HostMirror;
+    using hView0 = typename dView0::host_mirror_type;
 
     dView0 dx, dy;
     hView0 hx, hy;
@@ -990,31 +990,32 @@ class TestViewAPI {
   }
 
   static void run_test_contruction_from_layout() {
-    using hView0 = typename dView0::HostMirror;
-    using hView1 = typename dView1::HostMirror;
-    using hView2 = typename dView2::HostMirror;
-    using hView3 = typename dView3::HostMirror;
-    using hView4 = typename dView4::HostMirror;
+    using hView0 = typename dView0::host_mirror_type;
+    using hView1 = typename dView1::host_mirror_type;
+    using hView2 = typename dView2::host_mirror_type;
+    using hView3 = typename dView3::host_mirror_type;
+    using hView4 = typename dView4::host_mirror_type;
 
-    hView0 hv_0("dView0::HostMirror");
-    hView1 hv_1("dView1::HostMirror", N0);
-    hView2 hv_2("dView2::HostMirror", N0);
-    hView3 hv_3("dView3::HostMirror", N0);
-    hView4 hv_4("dView4::HostMirror", N0);
+    hView0 hv_0("dView0::host_mirror_type");
+    hView1 hv_1("dView1::host_mirror_type", N0);
+    hView2 hv_2("dView2::host_mirror_type", N0);
+    hView3 hv_3("dView3::host_mirror_type", N0);
+    hView4 hv_4("dView4::host_mirror_type", N0);
 
-    dView0 dv_0_1(nullptr);
+    dView0 dummy("dummy");
+    dView0 dv_0_1(dummy.data());
     dView0 dv_0_2(hv_0.label(), hv_0.layout());
 
-    dView1 dv_1_1(nullptr, N0);
+    dView1 dv_1_1(dummy.data(), N0);
     dView1 dv_1_2(hv_1.label(), hv_1.layout());
 
-    dView2 dv_2_1(nullptr, N0);
+    dView2 dv_2_1(dummy.data(), N0);
     dView2 dv_2_2(hv_2.label(), hv_2.layout());
 
-    dView3 dv_3_1(nullptr, N0);
+    dView3 dv_3_1(dummy.data(), N0);
     dView3 dv_3_2(hv_3.label(), hv_3.layout());
 
-    dView4 dv_4_1(nullptr, N0);
+    dView4 dv_4_1(dummy.data(), N0);
     dView4 dv_4_2(hv_4.label(), hv_4.layout());
   }
 
@@ -1081,11 +1082,11 @@ class TestViewAPI {
     // usual "(void)" marker to avoid compiler warnings for unused
     // variables.
 
-    using hView0 = typename dView0::HostMirror;
-    using hView1 = typename dView1::HostMirror;
-    using hView2 = typename dView2::HostMirror;
-    using hView3 = typename dView3::HostMirror;
-    using hView4 = typename dView4::HostMirror;
+    using hView0 = typename dView0::host_mirror_type;
+    using hView1 = typename dView1::host_mirror_type;
+    using hView2 = typename dView2::host_mirror_type;
+    using hView3 = typename dView3::host_mirror_type;
+    using hView4 = typename dView4::host_mirror_type;
 
     {
       hView0 thing;
@@ -1358,12 +1359,11 @@ class TestViewAPI {
     ASSERT_EQ(original.use_count(), 1);
 
     // test_refcount_poison_copy_functor throws during copy construction
-    try {
-      Kokkos::parallel_for(
-          Kokkos::RangePolicy<typename DeviceType::execution_space>(0, N0),
-          test_refcount_poison_copy_functor(original));
-    } catch (const std::bad_alloc &) {
-    }
+    ASSERT_THROW(
+        Kokkos::parallel_for(
+            Kokkos::RangePolicy<typename DeviceType::execution_space>(0, N0),
+            test_refcount_poison_copy_functor(original));
+        , std::bad_alloc);
 
     // Ensure refcounting is enabled, we should increment here
     auto copy = original;
@@ -1423,7 +1423,7 @@ class TestViewAPI {
     // an lvalue reference due to retrieving through texture cache
     // therefore not allowed to query the underlying pointer.
 #if defined(KOKKOS_ENABLE_CUDA)
-    if (!std::is_same<typename device::execution_space, Kokkos::Cuda>::value)
+    if (!std::is_same_v<typename device::execution_space, Kokkos::Cuda>)
 #endif
     {
       ASSERT_EQ(x.data(), xr.data());

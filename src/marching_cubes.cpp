@@ -812,7 +812,7 @@ void MarchingCubes::cleanup()
   int nrecv = irregular->create_data_uniform(nsend,proclist,1);
 
   SendDatum *bufrecv = (SendDatum *)
-    memory->smalloc(nrecv*sizeof(SendDatum),"readisurf:bufrecv");
+    memory->smalloc((bigint)nrecv*sizeof(SendDatum),"readisurf:bufrecv");
 
   irregular->exchange_uniform((char *) bufsend,sizeof(SendDatum),
                               (char *) bufrecv);

@@ -1,18 +1,5 @@
-//@HEADER
-// ************************************************************************
-//
-//                        Kokkos v. 4.0
-//       Copyright (2022) National Technology & Engineering
-//               Solutions of Sandia, LLC (NTESS).
-//
-// Under the terms of Contract DE-NA0003525 with NTESS,
-// the U.S. Government retains certain rights in this software.
-//
-// Part of Kokkos, under the Apache License v2.0 with LLVM Exceptions.
-// See https://kokkos.org/LICENSE for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-//
-//@HEADER
+// SPDX-FileCopyrightText: Copyright Contributors to the Kokkos project
 
 #ifndef KOKKOS_SYCL_PARALLEL_REDUCE_RANGE_HPP
 #define KOKKOS_SYCL_PARALLEL_REDUCE_RANGE_HPP
@@ -113,7 +100,7 @@ class Kokkos::Impl::ParallelReduce<
         });
       };
 
-#ifdef SYCL_EXT_ONEAPI_GRAPH
+#ifdef KOKKOS_IMPL_SYCL_GRAPH_SUPPORT
       if constexpr (Policy::is_graph_kernel::value) {
         sycl_attach_kernel_to_node(*this, cgh_lambda);
       } else
@@ -167,7 +154,7 @@ class Kokkos::Impl::ParallelReduce<
                   else
                     functor(WorkTag(), id + begin, update);
                 }
-                item.barrier(sycl::access::fence_space::local_space);
+                sycl::group_barrier(item.get_group());
 
                 SYCLReduction::workgroup_reduction<>(
                     item, local_mem, results_ptr, device_accessible_result_ptr,
@@ -180,7 +167,7 @@ class Kokkos::Impl::ParallelReduce<
                       scratch_flags_ref(*scratch_flags);
                   num_teams_done[0] = ++scratch_flags_ref;
                 }
-                item.barrier(sycl::access::fence_space::local_space);
+                sycl::group_barrier(item.get_group());
                 if (num_teams_done[0] == n_wgroups) {
                   if (local_id == 0) *scratch_flags = 0;
                   if (local_id >= n_wgroups)
@@ -223,7 +210,7 @@ class Kokkos::Impl::ParallelReduce<
                       scratch_flags_ref(*scratch_flags);
                   num_teams_done[0] = ++scratch_flags_ref;
                 }
-                item.barrier(sycl::access::fence_space::local_space);
+                sycl::group_barrier(item.get_group());
                 if (num_teams_done[0] == n_wgroups) {
                   if (local_id == 0) *scratch_flags = 0;
                   if (local_id >= n_wgroups)
@@ -263,19 +250,10 @@ class Kokkos::Impl::ParallelReduce<
         auto multiple = kernel.get_info<sycl::info::kernel_device_specific::
                                             preferred_work_group_size_multiple>(
             q.get_device());
-        // FIXME_SYCL The code below queries the kernel for the maximum subgroup
-        // size but it turns out that this is not accurate and choosing a larger
-        // subgroup size gives better peformance (and is what the oneAPI
-        // reduction algorithm does).
-#ifndef KOKKOS_ARCH_INTEL_GPU
         auto max =
             kernel
                 .get_info<sycl::info::kernel_device_specific::work_group_size>(
                     q.get_device());
-#else
-        auto max =
-            q.get_device().get_info<sycl::info::device::max_work_group_size>();
-#endif
 
         auto max_local_memory =
             q.get_device().get_info<sycl::info::device::local_mem_size>();
@@ -295,7 +273,7 @@ class Kokkos::Impl::ParallelReduce<
         // maximum number of work groups, also see
         // https://github.com/intel/llvm/blob/756ba2616111235bba073e481b7f1c8004b34ee6/sycl/source/detail/reduction.cpp#L51-L62
         size_t max_work_groups =
-            2 *
+            static_cast<size_t>(2) *
             q.get_device().get_info<sycl::info::device::max_compute_units>();
         int values_per_thread = 1;
         size_t n_wgroups      = (size + wgroup_size - 1) / wgroup_size;
@@ -327,7 +305,7 @@ class Kokkos::Impl::ParallelReduce<
             reduction_lambda);
       };
 
-#ifdef SYCL_EXT_ONEAPI_GRAPH
+#ifdef KOKKOS_IMPL_SYCL_GRAPH_SUPPORT
       if constexpr (Policy::is_graph_kernel::value) {
         sycl_attach_kernel_to_node(*this, cgh_lambda);
       } else
@@ -354,7 +332,8 @@ class Kokkos::Impl::ParallelReduce<
       space.fence(
           "Kokkos::Impl::ParallelReduce<SYCL, RangePolicy>::execute: result "
           "not device-accessible");
-      std::memcpy(m_result_ptr, host_result_ptr,
+      std::memcpy(static_cast<void*>(m_result_ptr),
+                  static_cast<const void*>(host_result_ptr),
                   sizeof(*m_result_ptr) * value_count);
     }
 

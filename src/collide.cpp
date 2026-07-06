@@ -24,6 +24,7 @@
 #include "modify.h"
 #include "fix.h"
 #include "fix_ambipolar.h"
+#include "compute.h"
 #include "random_mars.h"
 #include "random_knuth.h"
 #include "memory.h"
@@ -317,6 +318,16 @@ void Collide::init()
                  "electrons be their own group");
   }
 
+  // warn if ambipolar and a single group (e.g. collide ... all)
+  // the light electrons inflate the single-group vremax, so many more
+  //   collision attempts are made than with a per-species grouping
+  // grouping electrons separately (e.g. collide ... species) is far faster
+
+  if (ambiflag && mixture->ngroup == 1)
+    error->warning(FLERR,"Single-group ambipolar collisions are inefficient; "
+                   "grouping electrons separately (e.g. collide ... species) "
+                   "is recommended");
+
   // vre_next = next timestep to zero vremax & remain, based on vre_every
 
   if (vre_every) vre_next = (update->ntimestep/vre_every)*vre_every + vre_every;
@@ -337,78 +348,16 @@ void Collide::init()
 
 /* ---------------------------------------------------------------------- */
 
-void Collide::modify_params(int narg, char **arg)
+void Collide::setup()
 {
-  if (narg == 0) error->all(FLERR,"Illegal collide_modify command");
+  // copy Update list of gas/gas collision computes
+  // done once after Update->setup()
 
-  int iarg = 0;
-  while (iarg < narg) {
-    if (strcmp(arg[iarg],"vremax") == 0) {
-      if (iarg+3 > narg) error->all(FLERR,"Illegal collide_modify command");
-      vre_every = atoi(arg[iarg+1]);
-      if (vre_every < 0) error->all(FLERR,"Illegal collide_modify command");
-      if (strcmp(arg[iarg+2],"yes") == 0) vre_start = 1;
-      else if (strcmp(arg[iarg+2],"no") == 0) vre_start = 0;
-      else error->all(FLERR,"Illegal collide_modify command");
-      iarg += 3;
-    } else if (strcmp(arg[iarg],"remain") == 0) {
-      if (iarg+2 > narg) error->all(FLERR,"Illegal collide_modify command");
-      if (strcmp(arg[iarg+1],"yes") == 0) remainflag = 1;
-      else if (strcmp(arg[iarg+1],"no") == 0) remainflag = 0;
-      else error->all(FLERR,"Illegal collide_modify command");
-      iarg += 2;
-    } else if (strcmp(arg[iarg],"rotate") == 0) {
-      if (iarg+2 > narg) error->all(FLERR,"Illegal collide_modify command");
-      if (strcmp(arg[iarg+1],"no") == 0) rotstyle = NONE;
-      // not yet supported
-      //else if (strcmp(arg[iarg+1],"discrete") == 0) rotstyle = DISCRETE;
-      else if (strcmp(arg[iarg+1],"smooth") == 0) rotstyle = SMOOTH;
-      else error->all(FLERR,"Illegal collide_modify command");
-      iarg += 2;
-    } else if (strcmp(arg[iarg],"vibrate") == 0) {
-      if (iarg+2 > narg) error->all(FLERR,"Illegal collide_modify command");
-      if (strcmp(arg[iarg+1],"no") == 0) vibstyle = NONE;
-      else if (strcmp(arg[iarg+1],"discrete") == 0) vibstyle = DISCRETE;
-      else if (strcmp(arg[iarg+1],"smooth") == 0) vibstyle = SMOOTH;
-      else error->all(FLERR,"Illegal collide_modify command");
-      iarg += 2;
-    } else if (strcmp(arg[iarg],"ambipolar") == 0) {
-      if (iarg+2 > narg) error->all(FLERR,"Illegal collide_modify command");
-      if (strcmp(arg[iarg+1],"no") == 0) ambiflag = 0;
-      else if (strcmp(arg[iarg+1],"yes") == 0) ambiflag = 1;
-      else error->all(FLERR,"Illegal collide_modify command");
-      iarg += 2;
-    } else if (strcmp(arg[iarg],"nearcp") == 0) {
-      if (iarg+3 > narg) error->all(FLERR,"Illegal collide_modify command");
-      if (strcmp(arg[iarg+1],"yes") == 0) nearcp = 1;
-      else if (strcmp(arg[iarg+1],"no") == 0) nearcp = 0;
-      else error->all(FLERR,"Illegal collide_modify command");
-      nearlimit = atoi(arg[iarg+2]);
-      if (nearcp && nearlimit <= 0)
-        error->all(FLERR,"Illegal collide_modify command");
-      iarg += 3;
-
-    } else error->all(FLERR,"Illegal collide_modify command");
-  }
+  glist_active = update->glist_active;
 }
 
 /* ----------------------------------------------------------------------
-   reset vremax to initial species-based values
-   reset remain to 0.0
-------------------------------------------------------------------------- */
-
-void Collide::reset_vremax()
-{
-  for (int icell = 0; icell < nglocal; icell++)
-    for (int igroup = 0; igroup < ngroups; igroup++)
-      for (int jgroup = 0; jgroup < ngroups; jgroup++) {
-        vremax[icell][igroup][jgroup] = vremax_initial[igroup][jgroup];
-        if (remainflag) remain[icell][igroup][jgroup] = 0.0;
-      }
-}
-
-/* ----------------------------------------------------------------------
-  NTC algorithm
+   NTC algorithm
 ------------------------------------------------------------------------- */
 
 void Collide::collisions()
@@ -420,46 +369,80 @@ void Collide::collisions()
     vre_next += vre_every;
   }
 
+  // copy Update count of gas/gas collision computes active on this timestep
+
+  ngas_tally = update->ngas_tally;
+
   // counters
 
   ncollide_one = nattempt_one = nreact_one = 0;
   ndelete = 0;
 
   // perform collisions:
-  // variant for single group or multiple groups
-  // variant for nearcp flag or not
   // variant for ambipolar approximation or not
-  
+  // variant for nearcp flag or not
+  // variant for ngas_tally active or not
+  // variant for single group or multiple groups
+  // variant for species weighting scheme (SWS) or not
+
   int sws = particle->sws;
+
   if (!ambiflag) {
-    if (nearcp == 0) {
-      if (ngroups == 1) {
-        if (sws == 0) collisions_one<0>();
-        else collisions_one_SWS<0>();        // SWS
+    if (!nearcp) {
+      if (!ngas_tally) {
+        if (ngroups == 1) {
+          if (!sws) collisions_one<0,0>();
+          else collisions_one_SWS<0,0>();          // SWS
+        } else {
+          if (!sws) collisions_group<0,0>();
+          else collisions_group_SWS<0,0>();        // SWS
         }
-      else {
-        if (sws == 0) collisions_group<0>();
-        else  collisions_group_SWS<0>();     // SWS
+      } else if (ngas_tally) {
+        if (ngroups == 1) {
+          if (!sws) collisions_one<0,1>();
+          else collisions_one_SWS<0,1>();          // SWS
+        } else {
+          if (!sws) collisions_group<0,1>();
+          else collisions_group_SWS<0,1>();        // SWS
         }
-    } else {
-      if (ngroups == 1) {
-        if (sws == 0) collisions_one<1>();
-        else collisions_one_SWS<1>();        // SWS
+      }
+    } else if (nearcp) {
+      if (!ngas_tally) {
+        if (ngroups == 1) {
+          if (!sws) collisions_one<1,0>();
+          else collisions_one_SWS<1,0>();          // SWS
+        } else {
+          if (!sws) collisions_group<1,0>();
+          else collisions_group_SWS<1,0>();        // SWS
         }
-      else {
-        if (sws == 0) collisions_group<1>();
-        else collisions_group_SWS<1>();      // SWS
+      } else if (ngas_tally) {
+        if (ngroups == 1) {
+          if (!sws) collisions_one<1,1>();
+          else collisions_one_SWS<1,1>();          // SWS
+        } else {
+          if (!sws) collisions_group<1,1>();
+          else collisions_group_SWS<1,1>();        // SWS
         }
+      }
     }
-  } else {
-    if (ngroups == 1) {
-      if (sws == 0) collisions_one_ambipolar();
-      else collisions_one_ambipolar_SWS();   // SWS
+  } else if (ambiflag) {
+    if (!ngas_tally) {
+      if (ngroups == 1) {
+        if (!sws) collisions_one_ambipolar<0>();
+        else collisions_one_ambipolar_SWS<0>();    // SWS
+      } else {
+        if (!sws) collisions_group_ambipolar<0>();
+        else collisions_group_ambipolar_SWS<0>();  // SWS
       }
-    else {
-      if (sws == 0) collisions_group_ambipolar();
-      else collisions_group_ambipolar_SWS(); // SWS
+    } else if (ngas_tally) {
+      if (ngroups == 1) {
+        if (!sws) collisions_one_ambipolar<1>();
+        else collisions_one_ambipolar_SWS<1>();    // SWS
+      } else {
+        if (!sws) collisions_group_ambipolar<1>();
+        else collisions_group_ambipolar_SWS<1>();  // SWS
       }
+    }
   }
 
   // remove any particles deleted in chemistry reactions
@@ -480,11 +463,12 @@ void Collide::collisions()
    NTC algorithm for a single group
 ------------------------------------------------------------------------- */
 
-template < int NEARCP > void Collide::collisions_one()
+template < int NEARCP, int GASTALLY > void Collide::collisions_one()
 {
-  int i,j,k,n,ip,np;
+  int i,j,k,m,n,ip,np;
   int nattempt,reactflag;
   double attempt,volume;
+  Particle::OnePart iorig,jorig;
   Particle::OnePart *ipart,*jpart,*kpart;
 
   // loop over cells I own
@@ -575,10 +559,22 @@ template < int NEARCP > void Collide::collisions_one()
       }
 
       // perform collision and possible reaction
+      // if GASTALLY: tally prep with iorig/jorig, then trigger tally
+
+      if (GASTALLY) {
+        memcpy(&iorig,ipart,sizeof(Particle::OnePart));
+        memcpy(&jorig,jpart,sizeof(Particle::OnePart));
+      }
 
       setup_collision(ipart,jpart);
       reactflag = perform_collision(ipart,jpart,kpart);
       ncollide_one++;
+
+      if (GASTALLY)
+        for (m = 0; m < ngas_tally; m++)
+          glist_active[m]->gas_tally(icell,reactflag,
+                                     &iorig,&jorig,ipart,jpart,kpart);
+
       if (reactflag) nreact_one++;
       else continue;
 
@@ -619,14 +615,15 @@ template < int NEARCP > void Collide::collisions_one()
    pre-compute # of attempts per group pair
 ------------------------------------------------------------------------- */
 
-template < int NEARCP > void Collide::collisions_group()
+template < int NEARCP, int GASTALLY > void Collide::collisions_group()
 {
-  int i,j,k,n,ii,jj,ip,np,isp,ng;
+  int i,j,k,m,n,ii,jj,ip,np,isp,ng;
   int pindex,ipair,igroup,jgroup,newgroup,ngmax;
   int nattempt,reactflag;
   int *ni,*nj,*ilist,*jlist;
   int *nn_igroup,*nn_jgroup;
   double attempt,volume;
+  Particle::OnePart iorig,jorig;
   Particle::OnePart *ipart,*jpart,*kpart;
 
   // loop over cells I own
@@ -640,6 +637,7 @@ template < int NEARCP > void Collide::collisions_group()
   for (int icell = 0; icell < nglocal; icell++) {
     np = cinfo[icell].count;
     if (np <= 1) continue;
+
     ip = cinfo[icell].first;
     volume = cinfo[icell].volume / cinfo[icell].weight;
     if (volume == 0.0) error->one(FLERR,"Collision cell volume is zero");
@@ -787,10 +785,22 @@ template < int NEARCP > void Collide::collisions_group()
         }
 
         // perform collision and possible reaction
+        // if GASTALLY: tally prep with iorig/jorig, then trigger tally
+
+        if (GASTALLY) {
+          memcpy(&iorig,ipart,sizeof(Particle::OnePart));
+          memcpy(&jorig,jpart,sizeof(Particle::OnePart));
+        }
 
         setup_collision(ipart,jpart);
         reactflag = perform_collision(ipart,jpart,kpart);
         ncollide_one++;
+
+        if (GASTALLY)
+          for (m = 0; m < ngas_tally; m++)
+            glist_active[m]->gas_tally(icell,reactflag,
+                                       &iorig,&jorig,ipart,jpart,kpart);
+
         if (reactflag) nreact_one++;
         else continue;
 
@@ -891,11 +901,12 @@ template < int NEARCP > void Collide::collisions_group()
    NTC algorithm for a single group with ambipolar approximation
 ------------------------------------------------------------------------- */
 
-void Collide::collisions_one_ambipolar()
+template < int GASTALLY > void Collide::collisions_one_ambipolar()
 {
-  int i,j,k,n,ip,np,nelectron,nptotal,jspecies,tmp;
+  int i,j,k,m,n,ip,np,nelectron,nptotal,ispecies,jspecies,tmp;
   int nattempt,reactflag;
   double attempt,volume;
+  Particle::OnePart iorig,jorig;
   Particle::OnePart *ipart,*jpart,*kpart,*p,*ep;
 
   // ambipolar vectors
@@ -914,6 +925,7 @@ void Collide::collisions_one_ambipolar()
   for (int icell = 0; icell < nglocal; icell++) {
     np = cinfo[icell].count;
     if (np <= 1) continue;
+
     ip = cinfo[icell].first;
     volume = cinfo[icell].volume / cinfo[icell].weight;
     if (volume == 0.0) error->one(FLERR,"Collision cell volume is zero");
@@ -1033,12 +1045,23 @@ void Collide::collisions_one_ambipolar()
 
       // perform collision
       // ijspecies = species before collision chemistry
-      // continue to next collision if no reaction
+      // if GASTALLY: tally prep with iorig/jorig, then trigger tally
+
+      if (GASTALLY) {
+        memcpy(&iorig,ipart,sizeof(Particle::OnePart));
+        memcpy(&jorig,jpart,sizeof(Particle::OnePart));
+      }
 
       jspecies = jpart->ispecies;
       setup_collision(ipart,jpart);
       reactflag = perform_collision(ipart,jpart,kpart);
       ncollide_one++;
+
+      if (GASTALLY)
+        for (m = 0; m < ngas_tally; m++)
+          glist_active[m]->gas_tally(icell,reactflag,
+                                     &iorig,&jorig,ipart,jpart,kpart);
+
       if (reactflag) nreact_one++;
       else continue;
 
@@ -1182,13 +1205,14 @@ void Collide::collisions_one_ambipolar()
    loop over pairs of groups, pre-compute # of attempts per group pair
 ------------------------------------------------------------------------- */
 
-void Collide::collisions_group_ambipolar()
+template < int GASTALLY > void Collide::collisions_group_ambipolar()
 {
-  int i,j,k,n,ii,jj,ip,np,isp,ng;
-  int pindex,ipair,igroup,jgroup,newgroup,jspecies,tmp;
+  int i,j,k,m,n,ii,jj,ip,np,isp,ng;
+  int pindex,ipair,igroup,jgroup,newgroup,ispecies,jspecies,tmp;
   int nattempt,reactflag,nelectron;
   int *ni,*nj,*ilist,*jlist,*tmpvec;
   double attempt,volume;
+  Particle::OnePart iorig,jorig;
   Particle::OnePart *ipart,*jpart,*kpart,*p,*ep;
 
   // ambipolar vectors
@@ -1209,6 +1233,7 @@ void Collide::collisions_group_ambipolar()
   for (int icell = 0; icell < nglocal; icell++) {
     np = cinfo[icell].count;
     if (np <= 1) continue;
+
     ip = cinfo[icell].first;
     volume = cinfo[icell].volume / cinfo[icell].weight;
     if (volume == 0.0) error->one(FLERR,"Collision cell volume is zero");
@@ -1386,12 +1411,24 @@ void Collide::collisions_group_ambipolar()
 
         // perform collision
         // ijspecies = species before collision chemistry
-        // continue to next collision if no reaction
+        // if GASTALLY: tally prep with iorig/jorig, then trigger tally
 
+        if (GASTALLY) {
+          memcpy(&iorig,ipart,sizeof(Particle::OnePart));
+          memcpy(&jorig,jpart,sizeof(Particle::OnePart));
+        }
+
+        ispecies = ipart->ispecies;
         jspecies = jpart->ispecies;
         setup_collision(ipart,jpart);
         reactflag = perform_collision(ipart,jpart,kpart);
         ncollide_one++;
+
+        if (GASTALLY)
+          for (m = 0; m < ngas_tally; m++)
+            glist_active[m]->gas_tally(icell,reactflag,
+                                       &iorig,&jorig,ipart,jpart,kpart);
+
         if (reactflag) nreact_one++;
         else continue;
 
@@ -1611,11 +1648,12 @@ void Collide::collisions_group_ambipolar()
    NTC algorithm for a single group using Species Weighting Scheme
 ------------------------------------------------------------------------- */
 
-template < int NEARCP > void Collide::collisions_one_SWS()
+template < int NEARCP, int GASTALLY > void Collide::collisions_one_SWS()
 {
-  int i,j,k,n,ip,np;
+  int i,j,k,m,n,ip,np;
   int nattempt,reactflag;
   double attempt,volume;
+  Particle::OnePart iorig,jorig;
   Particle::OnePart *ipart,*jpart,*kpart;
   double count_wi;   // SWS
   Particle::Species *species = particle->species;   // SWS
@@ -1717,14 +1755,26 @@ template < int NEARCP > void Collide::collisions_one_SWS()
       }
 
       // perform collision and possible reaction
+      // if GASTALLY: tally prep with iorig/jorig, then trigger tally
+
+      if (GASTALLY) {
+        memcpy(&iorig,ipart,sizeof(Particle::OnePart));
+        memcpy(&jorig,jpart,sizeof(Particle::OnePart));
+      }
 
       setup_collision_SWS(ipart,jpart);   // SWS
 
       n_i = 1;                   // SWS
       n_j = n_k = n_pre = 0;     // SWS
       reactflag = perform_collision_SWS(ipart,jpart,kpart,n_i,n_j,n_k,n_pre);   // SWS
-      
+
       ncollide_one++;
+
+      if (GASTALLY)
+        for (m = 0; m < ngas_tally; m++)
+          glist_active[m]->gas_tally(icell,reactflag,
+                                     &iorig,&jorig,ipart,jpart,kpart);
+
       if (reactflag) nreact_one++;
       else continue;
 
@@ -1884,16 +1934,17 @@ template < int NEARCP > void Collide::collisions_one_SWS()
    loop over pairs of groups pre-compute # of attempts per group pair
 ------------------------------------------------------------------------- */
 
-template < int NEARCP > void Collide::collisions_group_SWS()
+template < int NEARCP, int GASTALLY > void Collide::collisions_group_SWS()
 {
   double wi;        // SWS
   double count_wi;  // SWS
-  int i,j,k,n,ii,jj,ip,np,isp,ng;
+  int i,j,k,m,n,ii,jj,ip,np,isp,ng;
   int pindex,ipair,igroup,jgroup,newgroup,ngmax;
   int nattempt,reactflag;
   int *ni,*nj,*ilist,*jlist;
   int *nn_igroup,*nn_jgroup;
   double attempt,volume;
+  Particle::OnePart iorig,jorig;
   Particle::OnePart *ipart,*jpart,*kpart;
   int n_i,n_j,n_k,n_pre,i_loop;  // SWS
 
@@ -2069,10 +2120,22 @@ template < int NEARCP > void Collide::collisions_group_SWS()
         }
 
         // perform collision and possible reaction
+        // if GASTALLY: tally prep with iorig/jorig, then trigger tally
+
+        if (GASTALLY) {
+          memcpy(&iorig,ipart,sizeof(Particle::OnePart));
+          memcpy(&jorig,jpart,sizeof(Particle::OnePart));
+        }
 
         setup_collision_SWS(ipart,jpart);  // SWS
         reactflag = perform_collision_SWS(ipart,jpart,kpart,n_i,n_j,n_k,n_pre);  // SWS
         ncollide_one++;
+
+        if (GASTALLY)
+          for (m = 0; m < ngas_tally; m++)
+            glist_active[m]->gas_tally(icell,reactflag,
+                                       &iorig,&jorig,ipart,jpart,kpart);
+
         if (reactflag) nreact_one++;
         else continue;
 
@@ -2174,11 +2237,12 @@ template < int NEARCP > void Collide::collisions_group_SWS()
    using Species Weighting Scheme
 ------------------------------------------------------------------------- */
 
-void Collide::collisions_one_ambipolar_SWS()
+template < int GASTALLY > void Collide::collisions_one_ambipolar_SWS()
 {
-  int i,j,k,n,ip,np,nelectron,nptotal,jspecies,tmp;
+  int i,j,k,m,n,ip,np,nelectron,nptotal,jspecies,tmp;
   int nattempt,reactflag;
   double attempt,volume;
+  Particle::OnePart iorig,jorig;
 
   int n_i,n_j,n_k,n_pre,i_loop;  // SWS
   double x[3],v[3];              // SWS
@@ -2336,6 +2400,12 @@ void Collide::collisions_one_ambipolar_SWS()
       // perform collision
       // ijspecies = species before collision chemistry
       // continue to next collision if no reaction
+      // if GASTALLY: tally prep with iorig/jorig, then trigger tally
+
+      if (GASTALLY) {
+        memcpy(&iorig,ipart,sizeof(Particle::OnePart));
+        memcpy(&jorig,jpart,sizeof(Particle::OnePart));
+      }
 
       jspecies = jpart->ispecies;
       setup_collision_SWS(ipart,jpart);  // SWS
@@ -2358,6 +2428,12 @@ void Collide::collisions_one_ambipolar_SWS()
       reactflag = perform_collision_SWS(ipart,jpart,kpart,n_i,n_j,n_k,n_pre);
 
       ncollide_one++;
+
+      if (GASTALLY)
+        for (m = 0; m < ngas_tally; m++)
+          glist_active[m]->gas_tally(icell,reactflag,
+                                     &iorig,&jorig,ipart,jpart,kpart);
+
       if (reactflag) nreact_one++;
       else continue;
 
@@ -2786,15 +2862,16 @@ void Collide::collisions_one_ambipolar_SWS()
    using Species Weighting Scheme
 ------------------------------------------------------------------------- */
 
-void Collide::collisions_group_ambipolar_SWS()
+template < int GASTALLY > void Collide::collisions_group_ambipolar_SWS()
 {
   double wi;  // SWS
   double count_wi;  // SWS
-  int i,j,k,n,ii,jj,ip,np,isp,ng;
+  int i,j,k,m,n,ii,jj,ip,np,isp,ng;
   int pindex,ipair,igroup,jgroup,newgroup,jspecies,tmp;
   int nattempt,reactflag,nelectron;
   int *ni,*nj,*ilist,*jlist,*tmpvec;
   double attempt,volume;
+  Particle::OnePart iorig,jorig;
   Particle::OnePart *ipart,*jpart,*kpart,*p,*ep;
   int n_i,n_j,n_k,n_pre,i_loop;   // SWS
 
@@ -3008,11 +3085,23 @@ void Collide::collisions_group_ambipolar_SWS()
         // perform collision
         // ijspecies = species before collision chemistry
         // continue to next collision if no reaction
+        // if GASTALLY: tally prep with iorig/jorig, then trigger tally
+
+        if (GASTALLY) {
+          memcpy(&iorig,ipart,sizeof(Particle::OnePart));
+          memcpy(&jorig,jpart,sizeof(Particle::OnePart));
+        }
 
         jspecies = jpart->ispecies;
         setup_collision_SWS(ipart,jpart);  // SWS
         reactflag = perform_collision_SWS(ipart,jpart,kpart,n_i,n_j,n_k,n_pre);  // SWS
         ncollide_one++;
+
+        if (GASTALLY)
+          for (m = 0; m < ngas_tally; m++)
+            glist_active[m]->gas_tally(icell,reactflag,
+                                       &iorig,&jorig,ipart,jpart,kpart);
+
         if (reactflag) nreact_one++;
         else continue;
 
@@ -3304,6 +3393,78 @@ void Collide::ambi_reset(int i, int j, int jsp,
   } else if (!jp) {
     if (jsp == e) ionambi[i] = 0;   // 1st reactant is now 1st product neutral
   }
+}
+
+/* ---------------------------------------------------------------------- */
+
+void Collide::modify_params(int narg, char **arg)
+{
+  if (narg == 0) error->all(FLERR,"Illegal collide_modify command");
+
+  int iarg = 0;
+  while (iarg < narg) {
+    if (strcmp(arg[iarg],"vremax") == 0) {
+      if (iarg+3 > narg) error->all(FLERR,"Illegal collide_modify command");
+      vre_every = atoi(arg[iarg+1]);
+      if (vre_every < 0) error->all(FLERR,"Illegal collide_modify command");
+      if (strcmp(arg[iarg+2],"yes") == 0) vre_start = 1;
+      else if (strcmp(arg[iarg+2],"no") == 0) vre_start = 0;
+      else error->all(FLERR,"Illegal collide_modify command");
+      iarg += 3;
+    } else if (strcmp(arg[iarg],"remain") == 0) {
+      if (iarg+2 > narg) error->all(FLERR,"Illegal collide_modify command");
+      if (strcmp(arg[iarg+1],"yes") == 0) remainflag = 1;
+      else if (strcmp(arg[iarg+1],"no") == 0) remainflag = 0;
+      else error->all(FLERR,"Illegal collide_modify command");
+      iarg += 2;
+    } else if (strcmp(arg[iarg],"rotate") == 0) {
+      if (iarg+2 > narg) error->all(FLERR,"Illegal collide_modify command");
+      if (strcmp(arg[iarg+1],"no") == 0) rotstyle = NONE;
+      // not yet supported
+      //else if (strcmp(arg[iarg+1],"discrete") == 0) rotstyle = DISCRETE;
+      else if (strcmp(arg[iarg+1],"smooth") == 0) rotstyle = SMOOTH;
+      else error->all(FLERR,"Illegal collide_modify command");
+      iarg += 2;
+    } else if (strcmp(arg[iarg],"vibrate") == 0) {
+      if (iarg+2 > narg) error->all(FLERR,"Illegal collide_modify command");
+      if (strcmp(arg[iarg+1],"no") == 0) vibstyle = NONE;
+      else if (strcmp(arg[iarg+1],"discrete") == 0) vibstyle = DISCRETE;
+      else if (strcmp(arg[iarg+1],"smooth") == 0) vibstyle = SMOOTH;
+      else error->all(FLERR,"Illegal collide_modify command");
+      iarg += 2;
+    } else if (strcmp(arg[iarg],"ambipolar") == 0) {
+      if (iarg+2 > narg) error->all(FLERR,"Illegal collide_modify command");
+      if (strcmp(arg[iarg+1],"no") == 0) ambiflag = 0;
+      else if (strcmp(arg[iarg+1],"yes") == 0) ambiflag = 1;
+      else error->all(FLERR,"Illegal collide_modify command");
+      iarg += 2;
+    } else if (strcmp(arg[iarg],"nearcp") == 0) {
+      if (iarg+3 > narg) error->all(FLERR,"Illegal collide_modify command");
+      if (strcmp(arg[iarg+1],"yes") == 0) nearcp = 1;
+      else if (strcmp(arg[iarg+1],"no") == 0) nearcp = 0;
+      else error->all(FLERR,"Illegal collide_modify command");
+      nearlimit = atoi(arg[iarg+2]);
+      if (nearcp && nearlimit <= 0)
+        error->all(FLERR,"Illegal collide_modify command");
+      iarg += 3;
+
+    } else error->all(FLERR,"Illegal collide_modify command");
+  }
+}
+
+/* ----------------------------------------------------------------------
+   reset vremax to initial species-based values
+   reset remain to 0.0
+------------------------------------------------------------------------- */
+
+void Collide::reset_vremax()
+{
+  for (int icell = 0; icell < nglocal; icell++)
+    for (int igroup = 0; igroup < ngroups; igroup++)
+      for (int jgroup = 0; jgroup < ngroups; jgroup++) {
+        vremax[icell][igroup][jgroup] = vremax_initial[igroup][jgroup];
+        if (remainflag) remain[icell][igroup][jgroup] = 0.0;
+      }
 }
 
 /* ----------------------------------------------------------------------

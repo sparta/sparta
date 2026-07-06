@@ -1,18 +1,5 @@
-//@HEADER
-// ************************************************************************
-//
-//                        Kokkos v. 4.0
-//       Copyright (2022) National Technology & Engineering
-//               Solutions of Sandia, LLC (NTESS).
-//
-// Under the terms of Contract DE-NA0003525 with NTESS,
-// the U.S. Government retains certain rights in this software.
-//
-// Part of Kokkos, under the Apache License v2.0 with LLVM Exceptions.
-// See https://kokkos.org/LICENSE for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-//
-//@HEADER
+// SPDX-FileCopyrightText: Copyright Contributors to the Kokkos project
 
 /*! \file launch_latency.cpp
 
@@ -33,11 +20,19 @@
     3. Avg functor completion latency: (M (launch + sync)) / M
 */
 
+#include <Kokkos_Macros.hpp>
+#ifdef KOKKOS_ENABLE_EXPERIMENTAL_CXX20_MODULES
+import kokkos.core;
+#else
 #include <Kokkos_Core.hpp>
+#endif
+
+#include <iostream>
+#include <string>
 
 template <int V>
 struct TestFunctor {
-  double values[V];
+  double values[V] = {};
   Kokkos::View<double*> a;
   int K;
   TestFunctor(Kokkos::View<double*> a_, int K_) : a(a_), K(K_) {}
@@ -50,7 +45,7 @@ struct TestFunctor {
 
 template <int V>
 struct TestRFunctor {
-  double values[V];
+  double values[V] = {};
   Kokkos::View<double*> a;
   int K;
   TestRFunctor(Kokkos::View<double*> a_, int K_) : a(a_), K(K_) {}
@@ -247,12 +242,15 @@ int main(int argc, char* argv[]) {
       // anything that doesn't start with --
       if (arg.size() < 2 ||
           (arg.size() >= 2 && arg[0] != '-' && arg[1] != '-')) {
+        // signing off that arg.data() is null terminated
+        // NOLINTBEGIN(bugprone-suspicious-stringview-data-usage)
         if (i == 1)
           N = atoi(arg.data());
         else if (i == 2)
           M = atoi(arg.data());
         else if (i == 3)
           K = atoi(arg.data());
+        // NOLINTEND(bugprone-suspicious-stringview-data-usage)
         else {
           Kokkos::abort("unexpected argument!");
         }

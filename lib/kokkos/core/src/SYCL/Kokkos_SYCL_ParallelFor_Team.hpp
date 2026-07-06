@@ -1,18 +1,5 @@
-//@HEADER
-// ************************************************************************
-//
-//                        Kokkos v. 4.0
-//       Copyright (2022) National Technology & Engineering
-//               Solutions of Sandia, LLC (NTESS).
-//
-// Under the terms of Contract DE-NA0003525 with NTESS,
-// the U.S. Government retains certain rights in this software.
-//
-// Part of Kokkos, under the Apache License v2.0 with LLVM Exceptions.
-// See https://kokkos.org/LICENSE for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-//
-//@HEADER
+// SPDX-FileCopyrightText: Copyright Contributors to the Kokkos project
 
 #ifndef KOKKOS_SYCL_PARALLEL_FOR_TEAM_HPP
 #define KOKKOS_SYCL_PARALLEL_FOR_TEAM_HPP
@@ -71,12 +58,13 @@ class Kokkos::Impl::ParallelFor<FunctorType, Kokkos::TeamPolicy<Properties...>,
 
       auto lambda = [=](sycl::nd_item<2> item) {
         const member_type team_member(
-            KOKKOS_IMPL_SYCL_GET_MULTI_PTR(team_scratch_memory_L0), shmem_begin,
-            scratch_size[0],
+            team_scratch_memory_L0
+                .get_multi_ptr<sycl::access::decorated::yes>(),
+            shmem_begin, scratch_size[0],
             global_scratch_ptr + item.get_group(1) * scratch_size[1],
             scratch_size[1], item, item.get_group_linear_id(),
             item.get_group_range(1));
-        if constexpr (std::is_void<work_tag>::value)
+        if constexpr (std::is_void_v<work_tag>)
           functor_wrapper.get_functor()(team_member);
         else
           functor_wrapper.get_functor()(work_tag(), team_member);
@@ -106,12 +94,13 @@ class Kokkos::Impl::ParallelFor<FunctorType, Kokkos::TeamPolicy<Properties...>,
 #endif
       cgh.parallel_for(
           sycl::nd_range<2>(
-              sycl::range<2>(m_team_size, m_league_size * final_vector_size),
+              sycl::range<2>(m_team_size, static_cast<size_t>(m_league_size) *
+                                              final_vector_size),
               sycl::range<2>(m_team_size, final_vector_size)),
           lambda);
     };
 
-#ifdef SYCL_EXT_ONEAPI_GRAPH
+#ifdef KOKKOS_IMPL_SYCL_GRAPH_SUPPORT
     if constexpr (Policy::is_graph_kernel::value) {
       sycl_attach_kernel_to_node(*this, cgh_lambda);
       return {};
@@ -161,12 +150,11 @@ class Kokkos::Impl::ParallelFor<FunctorType, Kokkos::TeamPolicy<Properties...>,
   ParallelFor(FunctorType const& arg_functor, Policy const& arg_policy)
       : m_functor(arg_functor),
         m_policy(arg_policy),
-        m_league_size(arg_policy.league_size()),
-        m_team_size(arg_policy.team_size()),
-        m_vector_size(arg_policy.impl_vector_length()) {
+        m_league_size(m_policy.league_size()),
+        m_team_size(m_policy.team_size()),
+        m_vector_size(m_policy.impl_vector_length()) {
     if (m_team_size < 0) {
-      m_team_size =
-          m_policy.team_size_recommended(arg_functor, ParallelForTag{});
+      m_team_size = m_policy.team_size_recommended(m_functor, ParallelForTag{});
       if (m_team_size <= 0)
         Kokkos::Impl::throw_runtime_exception(
             "Kokkos::Impl::ParallelFor<SYCL, TeamPolicy> could not find a "

@@ -1,22 +1,16 @@
-//@HEADER
-// ************************************************************************
-//
-//                        Kokkos v. 4.0
-//       Copyright (2022) National Technology & Engineering
-//               Solutions of Sandia, LLC (NTESS).
-//
-// Under the terms of Contract DE-NA0003525 with NTESS,
-// the U.S. Government retains certain rights in this software.
-//
-// Part of Kokkos, under the Apache License v2.0 with LLVM Exceptions.
-// See https://kokkos.org/LICENSE for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-//
-//@HEADER
+// SPDX-FileCopyrightText: Copyright Contributors to the Kokkos project
 
 #include <gtest/gtest.h>
 
+#include <Kokkos_Macros.hpp>
+#ifdef KOKKOS_ENABLE_EXPERIMENTAL_CXX20_MODULES
+import kokkos.core;
+import kokkos.dyn_rank_view;
+#else
+#include <Kokkos_Core.hpp>
 #include <Kokkos_DynRankView.hpp>
+#endif
 
 namespace {
 
@@ -27,7 +21,7 @@ void test_dyn_rank_view_team_scratch() {
   using policy_type     = Kokkos::TeamPolicy<execution_space>;
   using team_type       = policy_type::member_type;
 
-  int N0 = 10, N1 = 4, N2 = 3;
+  size_t N0 = 10, N1 = 4, N2 = 3;
   size_t shmem_size = drv_type::shmem_size(N0, N1, N2);
   ASSERT_GE(shmem_size, N0 * N1 * N2 * sizeof(int));
 
@@ -40,9 +34,9 @@ void test_dyn_rank_view_team_scratch() {
         drv_type scr(team.team_scratch(0), N0, N1, N2);
         // Control that the code ran at all
         if (scr.rank() != 3) errors() |= 1u;
-        if (scr.extent_int(0) != N0) errors() |= 2u;
-        if (scr.extent_int(1) != N1) errors() |= 4u;
-        if (scr.extent_int(2) != N2) errors() |= 8u;
+        if (scr.extent(0) != N0) errors() |= 2u;
+        if (scr.extent(1) != N1) errors() |= 4u;
+        if (scr.extent(2) != N2) errors() |= 8u;
         Kokkos::parallel_for(
             Kokkos::TeamThreadMDRange(team, N0, N1, N2),
             [=](int i, int j, int k) { scr(i, j, k) = i * 100 + j * 10 + k; });

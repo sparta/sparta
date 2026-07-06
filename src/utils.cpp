@@ -509,6 +509,22 @@ bool utils::is_double(const std::string &str)
       strmatch(str, "^[+-]?\\d*\\.?\\d+[eE][+-]?\\d+$");
 }
 
+
+/* ----------------------------------------------------------------------
+   Return whether string is a valid ID string
+------------------------------------------------------------------------- */
+
+bool utils::is_id(const std::string &str)
+{
+  if (str.empty()) return false;
+
+  for (const auto &c : str) {
+    if (isalnum(c) || (c == '_')) continue;
+    return false;
+  }
+  return true;
+}
+
 /* ------------------------------------------------------------------ */
 
 extern "C" {
