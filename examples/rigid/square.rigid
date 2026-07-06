@@ -1,5 +1,4 @@
-# square rigid body
+# square rigid body: 1x1 plate, uniform density
+# mtotal xcm ycm zcm ixx iyy izz ixy ixz iyz vxcm vycm vzcm lx ly lz
 
-1.0 5 5 0 1 1 2 -1 0 0 0 0 0 0 0 0
-
-
+1.0 5 5 0 0.083333333 0.083333333 0.166666667 0 0 0 0 0 0 0 0 0

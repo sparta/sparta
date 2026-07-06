@@ -1,0 +1,44 @@
+################################################################################
+# 2d rigid body square bouncing between a static wall and the box boundary
+#
+# the body is given an initial velocity toward a static wall
+# push-off spring forces repel it before contact, both from the
+# static wall surface and from the simulation box boundary
+# no particles are created, so the trajectory is deterministic
+################################################################################
+
+seed	    	    12345
+dimension   	    2
+boundary            r r p
+
+create_box  	    0 10 0 10 -0.5 0.5
+create_grid 	    20 20 1
+
+global		    nrho 1.0 fnum 0.001
+
+species		    air.species N
+mixture		    air N vstream 0 0 0 temp 273.0
+
+read_surf           data.square group body
+read_surf           data.wall group wall
+surf_collide	    1 specular
+surf_modify         all collide 1
+
+timestep 	    0.0001
+
+compute             csurf surf body all fx fy fz tx ty tz com 5 5 0
+
+global              rigid 1
+
+# push = spring constant and cutoff distance for push-off forces
+# pushbound yes also applies push-off from non-periodic box boundaries
+
+fix		    1 rigid body csurf body &
+		    mass 1.0e-22 com 5 5 0 vcom 50 0 0 &
+		    moi 8.3333333e-24 8.3333333e-24 1.6666667e-23 0 0 0 &
+                    angmom 0 0 0 &
+		    push 1.0e-18 0.5 pushbound yes
+
+stats		    250
+stats_style         step f_1[1] f_1[4] f_1[15] f_1[20] f_1[21]
+run 		    3500
