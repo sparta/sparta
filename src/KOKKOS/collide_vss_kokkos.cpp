@@ -863,19 +863,24 @@ void CollideVSSKokkos::collisions_one_ambipolar(COLLIDE_REDUCE &reduce)
 
   h_retry() = 1;
 
+  // the elist of split-off ambipolar electrons must be allocated whether
+  // or not reactions are defined: ambipolar collisions create a temporary
+  // electron for every ambipolar ion on every timestep.  Only the extra
+  // sizing for reaction-created particles/deletions is react-specific.
+
+  double extra_factor = 1.0;
+  if (react && sparta->kokkos->react_retry_flag)
+    extra_factor = sparta->kokkos->react_extra;
+
+  maxcellcount = particle_kk->get_maxcellcount();
+
+  auto maxelectron_extra = maxcellcount*extra_factor;
+  if (d_elist.extent(0) < nglocal || d_elist.extent(1) < maxelectron_extra) {
+    d_elist = t_particle_2d(); // reduce memory use by deallocating first
+    d_elist = t_particle_2d(Kokkos::view_alloc("collide:elist",Kokkos::WithoutInitializing),nglocal,maxelectron_extra);
+  }
+
   if (react) {
-    double extra_factor = 1.0;
-    if (sparta->kokkos->react_retry_flag)
-      extra_factor = sparta->kokkos->react_extra;
-
-    maxcellcount = particle_kk->get_maxcellcount();
-
-    auto maxelectron_extra = maxcellcount*extra_factor;
-    if (d_elist.extent(0) < nglocal || d_elist.extent(1) < maxelectron_extra) {
-      d_elist = t_particle_2d(); // reduce memory use by deallocating first
-      d_elist = t_particle_2d(Kokkos::view_alloc("collide:elist",Kokkos::WithoutInitializing),nglocal,maxelectron_extra);
-    }
-
     auto maxdelete_extra = maxdelete*extra_factor;
     if (d_dellist.extent(0) < maxdelete_extra) {
       memoryKK->destroy_kokkos(k_dellist,dellist);
