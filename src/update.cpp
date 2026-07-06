@@ -251,6 +251,10 @@ void Update::init()
   // setup when using fix rigid for rigid body objects comprised of surfs
 
   if (rigidflag) {
+    if (domain->axisymmetric)
+      error->all(FLERR,"Cannot use global rigid with axisymmetric domain");
+    if (sparta->kokkos)
+      error->all(FLERR,"Cannot yet use global rigid with KOKKOS");
     int irigidfix = modify->find_fix(rigidID);
     if (irigidfix < 0) error->all(FLERR,"Fix ID for global rigid is not found");
     fixrigid = (FixRigid *) modify->fix[irigidfix];
@@ -392,6 +396,8 @@ template < int DIM, int SURF, int OPT, int RIGID > void Update::move()
   cellint *neigh;
   double dtremain,frac,newfrac,param,minparam,rnew,dtsurf,tc,tmp;
   double xnew[3],xhold[3],xc[3],vc[3],minxc[3],minvc[3];
+  int minmoving;
+  double nhit[3],vwallhit[3],minnorm[3],minvwall[3];
   double *x,*v,*lo,*hi;
   double Lx,Ly,Lz,dx,dy,dz;
   double *boxlo, *boxhi;
@@ -785,83 +791,70 @@ template < int DIM, int SURF, int OPT, int RIGID > void Update::move()
 
             // for axisymmetric, dtsurf = time that particle stays in cell
             // used as arg to axi_line_intersect()
+            // for RIGID, dtsurf = same quantity
+            // used as time window for moving surf intersection tests
 
-            if (DIM == 1) {
+            if (DIM == 1 || RIGID) {
               if (outface == INTERIOR) dtsurf = dtremain;
               else dtsurf = dtremain * frac;
             }
 
             // check for collisions with triangles or lines in cell
             // find 1st surface hit via minparam
-            // skip collisions with previous surf, but not for axisymmetric
-	    // NOTE: what about collisions with previous surf if RIGID ??
+            // skip collisions with previous surf,
+            //   but not for axisymmetric or moving rigid-body surfs
+            //   a moving surf can advance into a just-reflected particle,
+            //   immediate re-hits are rejected by the outward side test
             // not considered collision if 2 params are tied and one INSIDE surf
             // if collision occurs, perform collision with surface model
             // reset x,v,xnew,dtremain and continue single particle trajectory
-	    
+            // for RIGID: moving surf tests use the body motion for this step,
+            //   x is the particle position at time dt-dtremain from
+            //   the start of the step, its path spans the next dtsurf
+
             cflag = 0;
             minparam = 2.0;
+            minmoving = 0;
             csurfs = cells[icell].csurfs;
 
             for (m = 0; m < nsurf; m++) {
               isurf = csurfs[m];
 
               if (DIM > 1) {
-                if (isurf == exclude) continue;
+                if (isurf == exclude) {
+                  if (!RIGID) continue;
+                  if (irigid[isurf] < 0) continue;
+                }
               }
               if (DIM == 3) {
                 tri = &tris[isurf];
-		if (RIGID) {
-		  if (irigid[isurf] >= 0) {
-		    
-		    // NOTE: what rigid body attributes does Ryan need added to args
-		    // can access them from FixRigid class
-		    //   e.g. omega for body or displace for isurf's info in FixRigid
-		  
-		    double *omega = fixrigid->omega;
-		    double **displace = fixrigid->displace[irigid[isurf]];
-
-		    hitflag = Geometry::
-		      line_tri_moving_intersect(x,xnew,tri->p1,tri->p2,tri->p3,
-						tri->norm,xc,param,side);
-		  } else {
-		    hitflag = Geometry::
-		      line_tri_intersect(x,xnew,tri->p1,tri->p2,tri->p3,
-					 tri->norm,xc,param,side);
-		  }
-		  
+                if (RIGID && irigid[isurf] >= 0) {
+                  hitflag = Geometry::
+                    line_tri_moving_intersect(x,v,dt-dtremain,dtsurf,
+                                              tri->p1,tri->p2,tri->p3,
+                                              tri->norm,fixrigid->xcm,
+                                              fixrigid->vcm,fixrigid->omega,
+                                              xc,nhit,vwallhit,param,side);
                 } else {
-		  hitflag = Geometry::
-		    line_tri_intersect(x,xnew,tri->p1,tri->p2,tri->p3,
-				       tri->norm,xc,param,side);
-		}
+                  hitflag = Geometry::
+                    line_tri_intersect(x,xnew,tri->p1,tri->p2,tri->p3,
+                                       tri->norm,xc,param,side);
+                }
               }
               if (DIM == 2) {
                 line = &lines[isurf];
-		if (RIGID) {
-		  if (irigid[isurf] >= 0) {
-		    
-		    // NOTE: what rigid body attributes does Ryan need added to args
-		    // can access them from FixRigid class
-		    //   e.g. omega for body or displace for isurf's info in FixRigid
-		  
-		    double *omega = fixrigid->omega;
-		    double **displace = fixrigid->displace[irigid[isurf]];
-
-		    hitflag = Geometry::
-		      line_line_moving_intersect(x,xnew,line->p1,line->p2,
-						 line->norm,xc,param,side);
-		  } else {
-		    hitflag = Geometry::
-		      line_line_intersect(x,xnew,line->p1,line->p2,
-					  line->norm,xc,param,side);
-		  }
-		  
-		} else {
-		  hitflag = Geometry::
-		    line_line_intersect(x,xnew,line->p1,line->p2,
-					line->norm,xc,param,side);
-		}
+                if (RIGID && irigid[isurf] >= 0) {
+                  hitflag = Geometry::
+                    line_line_moving_intersect(x,v,dt-dtremain,dtsurf,
+                                               line->p1,line->p2,
+                                               line->norm,fixrigid->xcm,
+                                               fixrigid->vcm,fixrigid->omega,
+                                               xc,nhit,vwallhit,param,side);
+                } else {
+                  hitflag = Geometry::
+                    line_line_intersect(x,xnew,line->p1,line->p2,
+                                        line->norm,xc,param,side);
+                }
               }
               if (DIM == 1) {
                 line = &lines[isurf];
@@ -945,6 +938,21 @@ template < int DIM, int SURF, int OPT, int RIGID > void Update::move()
                   minvc[1] = vc[1];
                   minvc[2] = vc[2];
                 }
+
+                // for hit on moving surf, save normal and
+                // wall velocity at hit time and hit point
+
+                if (RIGID) {
+                  if (irigid[isurf] >= 0) {
+                    minmoving = 1;
+                    minnorm[0] = nhit[0];
+                    minnorm[1] = nhit[1];
+                    minnorm[2] = nhit[2];
+                    minvwall[0] = vwallhit[0];
+                    minvwall[1] = vwallhit[1];
+                    minvwall[2] = vwallhit[2];
+                  } else minmoving = 0;
+                }
               }
 
             } // END of for loop over surfs
@@ -980,14 +988,36 @@ template < int DIM, int SURF, int OPT, int RIGID > void Update::move()
               if (nsurf_tally)
                 memcpy(&iorig,&particles[i],sizeof(Particle::OnePart));
 
-	      // NOTE: for moving RIGID body, should norm be partially updated ?
-	      
-              if (DIM == 3)
-                jpart = surf->sc[tri->isc]->
-                  collide(ipart,dtremain,minsurf,tri->norm,tri->isr,reaction);
-              if (DIM != 3)
-                jpart = surf->sc[line->isc]->
-                  collide(ipart,dtremain,minsurf,line->norm,line->isr,reaction);
+              // for hit on moving surf:
+              // perform the collision in the frame of the moving wall:
+              //   subtract wall velocity, collide with the surf normal
+              //   evaluated at the hit time, then add wall velocity back
+              // makes all collision models (specular, diffuse, CLL, ...)
+              //   correct in the local rest frame of the wall
+
+              if (RIGID && minmoving) {
+                v[0] -= minvwall[0];
+                v[1] -= minvwall[1];
+                v[2] -= minvwall[2];
+              }
+
+              if (DIM == 3) {
+                if (RIGID && minmoving)
+                  jpart = surf->sc[tri->isc]->
+                    collide(ipart,dtremain,minsurf,minnorm,tri->isr,reaction);
+                else
+                  jpart = surf->sc[tri->isc]->
+                    collide(ipart,dtremain,minsurf,tri->norm,tri->isr,reaction);
+              }
+              if (DIM != 3) {
+                if (RIGID && minmoving)
+                  jpart = surf->sc[line->isc]->
+                    collide(ipart,dtremain,minsurf,minnorm,line->isr,reaction);
+                else
+                  jpart = surf->sc[line->isc]->
+                    collide(ipart,dtremain,minsurf,line->norm,line->isr,
+                            reaction);
+              }
 
               if (jpart) {
                 particles = particle->particles;
@@ -999,7 +1029,22 @@ template < int DIM, int SURF, int OPT, int RIGID > void Update::move()
                 pstop++;
               }
 
-	      // NOTE: for moving RIGID body, is surf tally in compute correct ?
+              // add wall velocity to post-collision particle velocities,
+              //   so surf tallies below see space-frame velocities
+              //   and thus tally the full momentum exchange with the wall
+
+              if (RIGID && minmoving) {
+                if (ipart) {
+                  v[0] += minvwall[0];
+                  v[1] += minvwall[1];
+                  v[2] += minvwall[2];
+                }
+                if (jpart) {
+                  jpart->v[0] += minvwall[0];
+                  jpart->v[1] += minvwall[1];
+                  jpart->v[2] += minvwall[2];
+                }
+              }
 
               if (nsurf_tally)
                 for (m = 0; m < nsurf_tally; m++)

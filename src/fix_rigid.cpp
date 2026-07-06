@@ -53,6 +53,8 @@ enum{OUTSIDE,INSIDE,ONSURF2OUT,ONSURF2IN};    // same as Update
 
 enum{CELLUNKNOWN,CELLOUTSIDE,CELLINSIDE,CELLOVERLAP};
 
+enum{PERIODIC,OUTFLOW,REFLECT,SURFACE,AXISYM};  // same as Domain
+
 enum{OVERLAY,CUTCELL};          // remap modes
 
 // local box/box overlap test, touching counts as overlap
@@ -354,6 +356,26 @@ void FixRigid::init()
   // end_of_step() extends this to every step of the run
 
   csurf->addstep(update->ntimestep+1);
+
+  // body surfs cannot be transparent or have surface reactions assigned
+
+  Surf::Line *lines = surf->lines;
+  Surf::Tri *tris = surf->tris;
+
+  int transparent,isr;
+  for (int i = 0; i < nsurf; i++) {
+    if (dim == 2) {
+      transparent = lines[slist[i]].transparent;
+      isr = lines[slist[i]].isr;
+    } else {
+      transparent = tris[slist[i]].transparent;
+      isr = tris[slist[i]].isr;
+    }
+    if (transparent)
+      error->all(FLERR,"Fix rigid body surfs cannot be transparent");
+    if (isr >= 0)
+      error->all(FLERR,"Fix rigid body surfs cannot have surface reactions");
+  }
 
   // fix rigid must be defined before fixes which change the grid,
   // so its end_of_step() restores overlaid grid cells before they run
@@ -794,6 +816,29 @@ void FixRigid::end_of_step()
       MathExtra::norm3(tris[index].norm);
     }
   }
+
+  // error if body now extends beyond a periodic boundary,
+  //   b/c body coords are not wrapped across periodic boundaries
+  // body is allowed to exit thru non-periodic boundaries
+
+  body_bbox(0);
+
+  int outflag = 0;
+  double *boxlo = domain->boxlo;
+  double *boxhi = domain->boxhi;
+  int *bflag = domain->bflag;
+
+  if (bflag[0] == PERIODIC && bbodylo[0] < boxlo[0]) outflag = 1;
+  if (bflag[1] == PERIODIC && bbodyhi[0] > boxhi[0]) outflag = 1;
+  if (bflag[2] == PERIODIC && bbodylo[1] < boxlo[1]) outflag = 1;
+  if (bflag[3] == PERIODIC && bbodyhi[1] > boxhi[1]) outflag = 1;
+  if (dim == 3) {
+    if (bflag[4] == PERIODIC && bbodylo[2] < boxlo[2]) outflag = 1;
+    if (bflag[5] == PERIODIC && bbodyhi[2] > boxhi[2]) outflag = 1;
+  }
+
+  if (outflag)
+    error->all(FLERR,"Fix rigid body moved beyond a periodic boundary");
 
   // for cutcell mode: full re-map of surfs to grid cells,
   //   including cut/split cells and INSIDE/OUTSIDE cell typing
