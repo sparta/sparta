@@ -43,6 +43,21 @@ class ComputeSurf : public Compute {
   void reallocate();
   bigint memory_usage();
 
+  // reset center-of-mass for torque tallies
+  // used by fix rigid to keep COM current as a rigid body moves
+
+  void set_com(const double *newcom)
+  {
+    com[0] = newcom[0];
+    com[1] = newcom[1];
+    com[2] = newcom[2];
+  }
+
+  // check values are exactly fx,fy,fz,tx,ty,tz for a single group
+  // used by fix rigid to insure its compute tallies force/torque
+
+  int force_torque_colcheck();
+
  protected:
   int groupbit,imix,nvalue,ngroup,ntotal;
   int maxsurf,combined;

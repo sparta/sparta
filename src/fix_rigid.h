@@ -29,7 +29,13 @@ class FixRigid : public Fix {
  public:
   double omega[3];        // omega in space frame
   double ***displace;     // displacement in body frame of line/tri points from COM
-  
+
+  double xcm[3],vcm[3];   // COM and velocity of COM
+  double quat[4];         // quaternion for orientation of body
+
+  double xcmnew[3];       // new COM at end of timestep
+  double quatnew[4];      // new quaternion at end of timestep
+
   FixRigid(class SPARTA *, int, char **);
   virtual ~FixRigid();
   int setmask();
@@ -41,9 +47,10 @@ class FixRigid : public Fix {
  protected:
   int igroup,groupbit;
   char *csurfID;
-  int icompute;
-  class Compute *csurf;
+  class ComputeSurf *csurf;
   char *infile;
+  char *outfile;
+  int outevery;
 
   int dim;
   int massflag,comflag,vcomflag,moiflag,angmomflag;
@@ -51,26 +58,24 @@ class FixRigid : public Fix {
   int pseudoflag;
   int nparticle_user;
   double pmass_user,frac_user;
+  class RanKnuth *random;   // RNG for pseudo particles
 
   int rigidindex;   // for custom per-surf vector
-  
+
   int nsurf;     // # of surfs which comprise surface of rigid body
   int *slist;    // list of surf indices for rigid body surfs
 
   double massbody;        // total mass of rigid body enclosed by surfs
-  double xcm[3],vcm[3];   // COM and velocity of COM
   double moi[6];          // 6 MOI in space frame
   double inertia[3];      // 3 diagonalized MOI in body frame
   double angmom[3];       // angular momentum in space frame
-  double quat[4];         // quaternion for orientation of body
   double ex_space[3],ey_space[3],ez_space[3];  // prinicpal axes of body
   double fcm[3];          // force on COM in space frame
   double torque[3];       // torque on body in space frame
-
-  double xcmnew[3];       // new COM at end of timestep
-  double quatnew[4];      // new quaternion at end of timestep
+  double fpush[3];        // push-off force on COM from static surfs
 
   void read_infile(char *);
+  void write_outfile();
   void setup_body();
 };
 

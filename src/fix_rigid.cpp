@@ -22,6 +22,7 @@
 #include "comm.h"
 #include "modify.h"
 #include "compute.h"
+#include "compute_surf.h"
 #include "input.h"
 #include "random_knuth.h"
 #include "random_mars.h"
@@ -51,16 +52,22 @@ FixRigid::FixRigid(SPARTA *sparta, int narg, char **arg) :
   if (narg < 5) error->all(FLERR,"Illegal fix rigid command");
 
   vector_flag = 1;
-  size_vector = 12;
+  size_vector = 22;
   global_freq = 1;
   nevery = 1;
-  
+
   if (!surf->exist) error->all(FLERR,"Fix rigid requires surf elements exist");
   if (domain->axisymmetric)
     error->all(FLERR,"Fix rigid cannot be used with axisymmetric domains");
   if (surf->implicit || surf->distributed)
     error->all(FLERR,"Fix rigid can only be used with explicit non-distributed surf elements");
-  
+
+  // only a single rigid body is allowed
+
+  for (int ifix = 0; ifix < modify->nfix; ifix++)
+    if (strcmp(modify->fix[ifix]->style,"rigid") == 0)
+      error->all(FLERR,"Only one fix rigid command can be defined");
+
   igroup = surf->find_group(arg[2]);
   if (igroup < 0) error->all(FLERR,"Fix rigid surf group ID does not exist");
   groupbit = surf->bitmask[igroup];
@@ -73,10 +80,12 @@ FixRigid::FixRigid(SPARTA *sparta, int narg, char **arg) :
   if (n < 0) error->all(FLERR,"Fix rigid compute ID does not exist");
 
   // parse body params
-  
+
   dim = domain->dimension;
   infile = NULL;
-  
+  slist = NULL;
+  displace = NULL;
+
   int iarg = 4;
   if (strcmp(arg[iarg],"body") == 0) {
     if (iarg+22 > narg) error->all(FLERR,"Fix rigid body args not valid");
@@ -135,8 +144,10 @@ FixRigid::FixRigid(SPARTA *sparta, int narg, char **arg) :
   // optional args
 
   pseudoflag = 0;
+  outfile = NULL;
+  outevery = 0;
   double scale = 1.0;
-  
+
   while (iarg < narg) {
     if (strcmp(arg[iarg],"pseudo") == 0) {
       if (iarg+4 > narg) error->all(FLERR,"Fix rigid body args not valid");
@@ -149,8 +160,35 @@ FixRigid::FixRigid(SPARTA *sparta, int narg, char **arg) :
       if (iarg+2 > narg) error->all(FLERR,"Fix rigid body args not valid");
       scale = input->numeric(FLERR,arg[iarg+1]);
       iarg += 2;
+    } else if (strcmp(arg[iarg],"outfile") == 0) {
+      if (iarg+3 > narg) error->all(FLERR,"Fix rigid body args not valid");
+      int n = strlen(arg[iarg+1]) + 1;
+      outfile = new char[n];
+      strcpy(outfile,arg[iarg+1]);
+      outevery = input->inumeric(FLERR,arg[iarg+2]);
+      if (outevery <= 0) error->all(FLERR,"Fix rigid body args not valid");
+      iarg += 3;
     } else error->all(FLERR,"Fix rigid body args not valid");
   }
+
+  // for 2d, insure all body params are consistent with in-plane motion
+
+  if (dim == 2) {
+    if (xcm[2] != 0.0 || vcm[2] != 0.0)
+      error->all(FLERR,"Fix rigid z components of com and vcom "
+                 "must be zero for 2d");
+    if (angmom[0] != 0.0 || angmom[1] != 0.0)
+      error->all(FLERR,"Fix rigid x,y components of angmom "
+                 "must be zero for 2d");
+    if (moi[4] != 0.0 || moi[5] != 0.0)
+      error->all(FLERR,"Fix rigid ixz,iyz components of moi "
+                 "must be zero for 2d");
+  }
+
+  // RNG for pseudo particles
+
+  random = NULL;
+  if (pseudoflag) random = new RanKnuth(update->ranmaster->uniform());
 
   // apply mass scaling to body params which depend on mass
   // whether defined by fix rigid keywords or read from infile
@@ -172,18 +210,12 @@ FixRigid::FixRigid(SPARTA *sparta, int narg, char **arg) :
 
   setup_body();
 
-  // DEBUG
-  
-  printf("EX %g %g %g\n",ex_space[0],ex_space[1],ex_space[2]);
-  printf("EY %g %g %g\n",ey_space[0],ey_space[1],ey_space[2]);
-  printf("EZ %g %g %g\n",ez_space[0],ez_space[1],ez_space[2]);
-
   // create rigid = custom per-surf vector
   //   unless already exists, due to restart file
-  // rigid = index into short list of rigie surfs for mobile surfs
+  // rigid = index into short list of rigid surfs for mobile surfs
   // rigid = -1 for static surfs
-  
-  int rigidindex = surf->find_custom((char *) "rigid");
+
+  rigidindex = surf->find_custom((char *) "rigid");
   if (rigidindex < 0) rigidindex = surf->add_custom((char *) "rigid",INT,0);
 
   int *irigid = surf->eivec[surf->ewhich[rigidindex]];
@@ -200,6 +232,12 @@ FixRigid::FixRigid(SPARTA *sparta, int narg, char **arg) :
  
 FixRigid::~FixRigid()
 {
+  delete [] csurfID;
+  delete [] infile;
+  delete [] outfile;
+  delete random;
+  memory->destroy(slist);
+  memory->destroy(displace);
   surf->remove_custom(rigidindex);
 }
 
@@ -224,26 +262,33 @@ void FixRigid::init()
 
   // check that specified compute is valid for use with fix rigid
   // NOTE: check that it operates on same surf group ?
-  
+
   int n = modify->find_compute(csurfID);
   if (n < 0) error->all(FLERR,"Could not find fix rigid compute ID");
-  csurf = modify->compute[n];
-  if (strcmp(csurf->style,"surf") != 0)
+  if (strcmp(modify->compute[n]->style,"surf") != 0)
     error->all(FLERR,"Fix rigid compute is not style surf");
+  csurf = (ComputeSurf *) modify->compute[n];
   if (csurf->per_surf_flag == 0)
     error->all(FLERR,"Fix rigid compute does not compute per-surf info");
-  if (csurf->size_per_surf_cols != 6)
-    error->all(FLERR,"Fix rigid compute must produce per-surf array with 6 columns");
+  if (csurf->size_per_surf_cols != 6 || !csurf->force_torque_colcheck())
+    error->all(FLERR,"Fix rigid compute must tally exactly "
+               "fx fy fz tx ty tz for a single group");
+
+  // insure the compute tallies on the first step of the next run
+  // end_of_step() extends this to every step of the run
+
+  csurf->addstep(update->ntimestep+1);
 }
 
 /* ---------------------------------------------------------------------- */
 
 void FixRigid::start_of_step()
 {
-  // still TODO:
-  // change COM within compute surf - note that COM is not constant thru step
-  //   maybe should set COM in compute_surf to half-step position?
-  // remap RB surfs to grid cells they ovlerlap at any point during advection
+  // reset COM used by compute surf for torque tallies to current COM
+  // torque is thus about the start-of-step COM,
+  //   consistent with the accuracy of the time integration below
+
+  csurf->set_com(xcm);
 
   // time integrate from current position to end-of-step position
   // use full-step semi-implicit Euler algorithm
@@ -276,8 +321,17 @@ void FixRigid::start_of_step()
   angmom[2] += dt * torque[2];
 
   // compute new omega from new angmom, both in spatial frame
-  
+
   MathExtra::angmom_to_omega(angmom,ex_space,ey_space,ez_space,inertia,omega);
+
+  // for 2d, insure COM stays in plane and rotation is about z axis
+  // guards against small numeric drift in principal axes
+
+  if (dim == 2) {
+    xcmnew[2] = 0.0;
+    omega[0] = 0.0;
+    omega[1] = 0.0;
+  }
 
   // update quaternion by full step using new omega in spatial frame
   // use dq/dt = 1/2 omega q
@@ -301,7 +355,7 @@ void FixRigid::end_of_step()
   // NOTE: this could access fix ave/surf for f/t from many steps of collisions ?
 
   if (!pseudoflag) {
-    
+
     if (!(csurf->invoked_flag & INVOKED_PER_SURF)) {
       csurf->compute_per_surf();
       csurf->invoked_flag |= INVOKED_PER_SURF;
@@ -311,21 +365,41 @@ void FixRigid::end_of_step()
     double **array = csurf->array_surf;
 
     // sum per-surf force/torque to body fcm/torque
-    
-    fcm[0] = fcm[1] = fcm[2] = 0.0;
-    torque[0] = torque[1] = torque[2] = 0.0;
-    
-    int index;
-    
-    for (int i = 0; i < nsurf; i++) {
-      index = slist[i];
-      fcm[0] += array[index][0];
-      fcm[1] += array[index][1];
-      fcm[2] += array[index][2];
-      torque[0] += array[index][3];
-      torque[1] += array[index][4];
-      torque[2] += array[index][5];
+    // array rows are surfs each proc owns:
+    //   for explicit non-distributed surfs, proc owns every Pth surf,
+    //   row M of array = surf with local index me + M*nprocs
+    // sum rows for owned surfs in body group, then Allreduce for all procs
+
+    Surf::Line *lines = surf->lines;
+    Surf::Tri *tris = surf->tris;
+    int nslocal = surf->nlocal;
+    int me = comm->me;
+    int nprocs = comm->nprocs;
+
+    double ft_mine[6],ft_all[6];
+    for (int i = 0; i < 6; i++) ft_mine[i] = 0.0;
+
+    int mask;
+    int m = 0;
+    for (int i = me; i < nslocal; i += nprocs, m++) {
+      if (dim == 2) mask = lines[i].mask;
+      else mask = tris[i].mask;
+      if (!(mask & groupbit)) continue;
+      for (int j = 0; j < 6; j++) ft_mine[j] += array[m][j];
     }
+
+    MPI_Allreduce(ft_mine,ft_all,6,MPI_DOUBLE,MPI_SUM,world);
+
+    fcm[0] = ft_all[0];
+    fcm[1] = ft_all[1];
+    fcm[2] = ft_all[2];
+    torque[0] = ft_all[3];
+    torque[1] = ft_all[4];
+    torque[2] = ft_all[5];
+
+    // insure the compute tallies on the next step
+
+    csurf->addstep(update->ntimestep+1);
   }
 
   // bounce N pseudo (fictitious) particles off object, see how it moves
@@ -334,8 +408,9 @@ void FixRigid::end_of_step()
   // whichever surf it hits first, compute force/torque on object
 
   if (pseudoflag) {
-    
-    RanKnuth *random = new RanKnuth(update->ranmaster->uniform());
+
+    fcm[0] = fcm[1] = fcm[2] = 0.0;
+    torque[0] = torque[1] = torque[2] = 0.0;
 
     Surf::Line *lines = surf->lines;
     Surf::Tri *tris = surf->tris;
@@ -533,13 +608,8 @@ void FixRigid::end_of_step()
       }
     }
 
-    /*
-    printf("F/T %ld hits %d\n",update->ntimestep,nhits);
-    printf("FCM %g %g %g\n",fcm[0],fcm[1],fcm[2]);
-    printf("TQ %g %g %g\n",torque[0],torque[1],torque[2]);
-    */
   }
-  
+
   // reset xcm/quat to new xcm/quat calculated in start_of_step()
 
   xcm[0] = xcmnew[0];
@@ -567,13 +637,6 @@ void FixRigid::end_of_step()
     // what about quat for 2d rotations ?
   }
 
-  /*
-  printf("XCM %g %g %g\n",xcm[0],xcm[1],xcm[2]);
-  printf("VCM %g %g %g\n",vcm[0],vcm[1],vcm[2]);
-  printf("ANG %g %g %g\n",angmom[0],angmom[1],angmom[2]);
-  printf("OMG %g %g %g\n",omega[0],omega[1],omega[2]);
-  */
-  
   // update Surf class properties of lines and tris in body
   // line and tri positions and orientations
   // set via Line/Tri end/corner points and norm
@@ -623,26 +686,53 @@ void FixRigid::end_of_step()
     }
   }
 
-  /*
-  printf("LINE1 pt1 %g %g pt2 %g %g NORM %g %g %g\n",
-	 lines[0].p1[0],lines[0].p1[1],
-	 lines[0].p2[0],lines[0].p2[1],
-	 lines[0].norm[0],lines[0].norm[1],lines[0].norm[2]);
-  printf("LINE2 pt1 %g %g pt2 %g %g NORM %g %g %g\n",
-	 lines[1].p1[0],lines[1].p1[1],
-	 lines[1].p2[0],lines[1].p2[1],
-	 lines[1].norm[0],lines[1].norm[1],lines[1].norm[2]);
-  printf("LINE3 pt1 %g %g pt2 %g %g NORM %g %g %g\n",
-	 lines[2].p1[0],lines[2].p1[1],
-	 lines[2].p2[0],lines[2].p2[1],
-	 lines[2].norm[0],lines[2].norm[1],lines[2].norm[2]);
-  printf("LINE4 pt1 %g %g pt2 %g %g NORM %g %g %g\n",
-	 lines[3].p1[0],lines[3].p1[1],
-	 lines[3].p2[0],lines[3].p2[1],
-	 lines[3].norm[0],lines[3].norm[1],lines[3].norm[2]);
-  */
-  
-  // printf("END %ld\n",update->ntimestep);
+  // write body state to output file every outevery steps
+  // file is compatible with the infile option for run continuation
+
+  if (outfile && update->ntimestep % outevery == 0) write_outfile();
+}
+
+/* ----------------------------------------------------------------------
+   write current rigid body attributes to output file
+   format matches what the infile option reads
+   moi is written in the space frame for the current body orientation
+------------------------------------------------------------------------- */
+
+void FixRigid::write_outfile()
+{
+  if (comm->me) return;
+
+  // reconstruct space-frame moi from principal moments and current axes
+  // I_space = sum over K of inertia[K] e_K outer-product e_K
+
+  double ispace[6];
+  ispace[0] = inertia[0]*ex_space[0]*ex_space[0] +
+    inertia[1]*ey_space[0]*ey_space[0] + inertia[2]*ez_space[0]*ez_space[0];
+  ispace[1] = inertia[0]*ex_space[1]*ex_space[1] +
+    inertia[1]*ey_space[1]*ey_space[1] + inertia[2]*ez_space[1]*ez_space[1];
+  ispace[2] = inertia[0]*ex_space[2]*ex_space[2] +
+    inertia[1]*ey_space[2]*ey_space[2] + inertia[2]*ez_space[2]*ez_space[2];
+  ispace[3] = inertia[0]*ex_space[0]*ex_space[1] +
+    inertia[1]*ey_space[0]*ey_space[1] + inertia[2]*ez_space[0]*ez_space[1];
+  ispace[4] = inertia[0]*ex_space[0]*ex_space[2] +
+    inertia[1]*ey_space[0]*ey_space[2] + inertia[2]*ez_space[0]*ez_space[2];
+  ispace[5] = inertia[0]*ex_space[1]*ex_space[2] +
+    inertia[1]*ey_space[1]*ey_space[2] + inertia[2]*ez_space[1]*ez_space[2];
+
+  FILE *fp = fopen(outfile,"w");
+  if (fp == nullptr) error->one(FLERR,"Cannot open fix rigid outfile");
+
+  fprintf(fp,"# rigid body state from fix %s rigid at timestep " BIGINT_FORMAT
+          "\n",id,update->ntimestep);
+  fprintf(fp,"# mtotal xcm ycm zcm ixx iyy izz ixy ixz iyz "
+          "vxcm vycm vzcm lx ly lz\n");
+  fprintf(fp,"%.15g %.15g %.15g %.15g %.15g %.15g %.15g %.15g %.15g %.15g "
+          "%.15g %.15g %.15g %.15g %.15g %.15g\n",
+          massbody,xcm[0],xcm[1],xcm[2],
+          ispace[0],ispace[1],ispace[2],ispace[3],ispace[4],ispace[5],
+          vcm[0],vcm[1],vcm[2],angmom[0],angmom[1],angmom[2]);
+
+  fclose(fp);
 }
 
 /* ----------------------------------------------------------------------
@@ -849,6 +939,7 @@ void FixRigid::setup_body()
 
   fcm[0] = fcm[1] = fcm[2] = 0.0;
   torque[0] = torque[1] = torque[2] = 0.0;
+  fpush[0] = fpush[1] = fpush[2] = 0.0;
 }
 
 /* ----------------------------------------------------------------------
@@ -857,21 +948,13 @@ void FixRigid::setup_body()
 
 double FixRigid::compute_vector(int index)
 {
-  if (index == 0) return xcm[0];
-  if (index == 1) return xcm[1];
-  if (index == 2) return xcm[2];
-  
-  if (index == 3) return vcm[0];
-  if (index == 4) return vcm[1];
-  if (index == 5) return vcm[2];
-  
-  if (index == 6) return fcm[0];
-  if (index == 7) return fcm[1];
-  if (index == 8) return fcm[2];
-  
-  if (index == 9) return torque[0];
-  if (index == 10) return torque[1];
-  if (index == 11) return torque[2];
+  if (index < 3) return xcm[index];
+  if (index < 6) return vcm[index-3];
+  if (index < 9) return fcm[index-6];
+  if (index < 12) return torque[index-9];
+  if (index < 15) return omega[index-12];
+  if (index < 19) return quat[index-15];
+  if (index < 22) return fpush[index-19];
 
   return 0.0;
 }
