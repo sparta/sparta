@@ -177,10 +177,26 @@ FixRigid::FixRigid(SPARTA *sparta, int narg, char **arg) :
   outfile = NULL;
   outevery = 0;
   remapmode = OVERLAY;
+  pushflag = 0;
+  pushboundflag = 0;
   double scale = 1.0;
 
   while (iarg < narg) {
-    if (strcmp(arg[iarg],"remap") == 0) {
+    if (strcmp(arg[iarg],"push") == 0) {
+      if (iarg+3 > narg) error->all(FLERR,"Fix rigid body args not valid");
+      pushflag = 1;
+      kpush = input->numeric(FLERR,arg[iarg+1]);
+      pushcutoff = input->numeric(FLERR,arg[iarg+2]);
+      if (kpush < 0.0 || pushcutoff <= 0.0)
+        error->all(FLERR,"Fix rigid body args not valid");
+      iarg += 3;
+    } else if (strcmp(arg[iarg],"pushbound") == 0) {
+      if (iarg+2 > narg) error->all(FLERR,"Fix rigid body args not valid");
+      if (strcmp(arg[iarg+1],"yes") == 0) pushboundflag = 1;
+      else if (strcmp(arg[iarg+1],"no") == 0) pushboundflag = 0;
+      else error->all(FLERR,"Fix rigid body args not valid");
+      iarg += 2;
+    } else if (strcmp(arg[iarg],"remap") == 0) {
       if (iarg+2 > narg) error->all(FLERR,"Fix rigid body args not valid");
       if (strcmp(arg[iarg+1],"overlay") == 0) remapmode = OVERLAY;
       else if (strcmp(arg[iarg+1],"cutcell") == 0) remapmode = CUTCELL;
@@ -207,6 +223,9 @@ FixRigid::FixRigid(SPARTA *sparta, int narg, char **arg) :
       iarg += 3;
     } else error->all(FLERR,"Fix rigid body args not valid");
   }
+
+  if (pushboundflag && !pushflag)
+    error->all(FLERR,"Fix rigid pushbound requires push keyword");
 
   // for 2d, insure all body params are consistent with in-plane motion
 
@@ -817,11 +836,21 @@ void FixRigid::end_of_step()
     }
   }
 
+  // bbox around body elements at their new positions
+
+  body_bbox(0);
+
+  // push-off forces from static surfs and domain boundaries
+  //   which are within pushcutoff of the body
+  // computed for the end-of-step geometry, so they are part of the
+  //   force/torque applied in the next step's time integration
+
+  fpush[0] = fpush[1] = fpush[2] = 0.0;
+  if (pushflag) push_off();
+
   // error if body now extends beyond a periodic boundary,
   //   b/c body coords are not wrapped across periodic boundaries
   // body is allowed to exit thru non-periodic boundaries
-
-  body_bbox(0);
 
   int outflag = 0;
   double *boxlo = domain->boxlo;
@@ -1113,6 +1142,165 @@ void FixRigid::setup_body()
   fcm[0] = fcm[1] = fcm[2] = 0.0;
   torque[0] = torque[1] = torque[2] = 0.0;
   fpush[0] = fpush[1] = fpush[2] = 0.0;
+}
+
+/* ----------------------------------------------------------------------
+   push-off forces on the body from too-close static surfs
+   for each body element corner pt within pushcutoff of a static surf,
+     apply a linear spring force F = kpush * (pushcutoff - dist)
+     in the direction of the static surf outward normal
+   if pushboundflag is set, the same spring force is applied by
+     non-periodic simulation box boundaries
+   forces are added to fcm/torque for the next step's time integration
+     and accumulated in fpush for diagnostic output
+   computed identically on every proc: all surfs are stored everywhere,
+     so no communication is needed and all procs stay in sync
+   NOTE: a corner pt shared by adjacent body elements contributes once
+     per element, and a corner close to several static elements
+     interacts with each of them, so kpush is a per-contact stiffness
+------------------------------------------------------------------------- */
+
+void FixRigid::push_off()
+{
+  int i,j,m,index;
+  double dsq,d,scale;
+  double *pts[3],*norm;
+  double fone[3],rdelta[3],tq[3];
+
+  Surf::Line *lines = surf->lines;
+  Surf::Tri *tris = surf->tris;
+  int nslocal = surf->nlocal;
+  int *irigid = surf->eivec[surf->ewhich[rigidindex]];
+
+  int npoint = dim;     // 2 corner pts per line, 3 per tri
+  double cutsq = pushcutoff*pushcutoff;
+
+  // cutlo/cuthi = bbox around body inflated by pushcutoff
+  // requires body_bbox() was called for current body position
+
+  double cutlo[3],cuthi[3];
+  for (j = 0; j < 3; j++) {
+    cutlo[j] = bbodylo[j] - pushcutoff;
+    cuthi[j] = bbodyhi[j] + pushcutoff;
+  }
+
+  // loop over static surfs whose bbox overlaps the inflated body bbox
+
+  for (m = 0; m < nslocal; m++) {
+    if (irigid[m] >= 0) continue;
+
+    if (dim == 2) {
+      if (MAX(lines[m].p1[0],lines[m].p2[0]) < cutlo[0]) continue;
+      if (MIN(lines[m].p1[0],lines[m].p2[0]) > cuthi[0]) continue;
+      if (MAX(lines[m].p1[1],lines[m].p2[1]) < cutlo[1]) continue;
+      if (MIN(lines[m].p1[1],lines[m].p2[1]) > cuthi[1]) continue;
+      norm = lines[m].norm;
+    } else {
+      if (MAX(tris[m].p1[0],MAX(tris[m].p2[0],tris[m].p3[0])) < cutlo[0])
+        continue;
+      if (MIN(tris[m].p1[0],MIN(tris[m].p2[0],tris[m].p3[0])) > cuthi[0])
+        continue;
+      if (MAX(tris[m].p1[1],MAX(tris[m].p2[1],tris[m].p3[1])) < cutlo[1])
+        continue;
+      if (MIN(tris[m].p1[1],MIN(tris[m].p2[1],tris[m].p3[1])) > cuthi[1])
+        continue;
+      if (MAX(tris[m].p1[2],MAX(tris[m].p2[2],tris[m].p3[2])) < cutlo[2])
+        continue;
+      if (MIN(tris[m].p1[2],MIN(tris[m].p2[2],tris[m].p3[2])) > cuthi[2])
+        continue;
+      norm = tris[m].norm;
+    }
+
+    // spring force on each body corner pt within pushcutoff
+
+    for (i = 0; i < nsurf; i++) {
+      index = slist[i];
+      if (dim == 2) {
+        pts[0] = lines[index].p1;
+        pts[1] = lines[index].p2;
+      } else {
+        pts[0] = tris[index].p1;
+        pts[1] = tris[index].p2;
+        pts[2] = tris[index].p3;
+      }
+
+      for (j = 0; j < npoint; j++) {
+        if (dim == 2)
+          dsq = Geometry::distsq_point_line(pts[j],lines[m].p1,lines[m].p2);
+        else
+          dsq = Geometry::distsq_point_tri(pts[j],tris[m].p1,tris[m].p2,
+                                           tris[m].p3,tris[m].norm);
+        if (dsq >= cutsq) continue;
+
+        d = sqrt(dsq);
+        scale = kpush * (pushcutoff-d);
+        fone[0] = scale*norm[0];
+        fone[1] = scale*norm[1];
+        fone[2] = scale*norm[2];
+
+        fpush[0] += fone[0];
+        fpush[1] += fone[1];
+        fpush[2] += fone[2];
+        MathExtra::sub3(pts[j],xcm,rdelta);
+        MathExtra::cross3(rdelta,fone,tq);
+        torque[0] += tq[0];
+        torque[1] += tq[1];
+        torque[2] += tq[2];
+      }
+    }
+  }
+
+  // spring force from non-periodic simulation box boundaries
+
+  if (pushboundflag) {
+    double *boxlo = domain->boxlo;
+    double *boxhi = domain->boxhi;
+    int *bflag = domain->bflag;
+
+    int nface = 2*dim;
+    double fsign[6] = {1.0,-1.0,1.0,-1.0,1.0,-1.0};
+
+    for (i = 0; i < nsurf; i++) {
+      index = slist[i];
+      if (dim == 2) {
+        pts[0] = lines[index].p1;
+        pts[1] = lines[index].p2;
+      } else {
+        pts[0] = tris[index].p1;
+        pts[1] = tris[index].p2;
+        pts[2] = tris[index].p3;
+      }
+
+      for (j = 0; j < npoint; j++) {
+        for (int iface = 0; iface < nface; iface++) {
+          if (bflag[iface] == PERIODIC) continue;
+          int idim = iface/2;
+          if (iface % 2 == 0) d = pts[j][idim] - boxlo[idim];
+          else d = boxhi[idim] - pts[j][idim];
+          if (d >= pushcutoff) continue;
+
+          scale = kpush * (pushcutoff-d) * fsign[iface];
+          fone[0] = fone[1] = fone[2] = 0.0;
+          fone[idim] = scale;
+
+          fpush[0] += fone[0];
+          fpush[1] += fone[1];
+          fpush[2] += fone[2];
+          MathExtra::sub3(pts[j],xcm,rdelta);
+          MathExtra::cross3(rdelta,fone,tq);
+          torque[0] += tq[0];
+          torque[1] += tq[1];
+          torque[2] += tq[2];
+        }
+      }
+    }
+  }
+
+  // add push-off force to body force for next step's integration
+
+  fcm[0] += fpush[0];
+  fcm[1] += fpush[1];
+  fcm[2] += fpush[2];
 }
 
 /* ----------------------------------------------------------------------

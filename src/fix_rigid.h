@@ -78,6 +78,11 @@ class FixRigid : public Fix {
   double torque[3];       // torque on body in space frame
   double fpush[3];        // push-off force on COM from static surfs
 
+  int pushflag;           // 1 if push-off forces are enabled
+  int pushboundflag;      // 1 to also push off non-periodic boundaries
+  double kpush;           // spring constant for push-off force
+  double pushcutoff;      // distance below which push-off is applied
+
   // remap of body surfs to grid cells
 
   int remapmode;          // OVERLAY or CUTCELL
@@ -101,6 +106,7 @@ class FixRigid : public Fix {
   void write_outfile();
   void setup_body();
 
+  void push_off();              // spring forces from close static surfs
   void grid_rebuild();          // full re-map of all surfs to grid cells
   void overlay_assign();        // per-step overlay of body surfs into cells
   void overlay_restore();       // undo overlay of previous step
