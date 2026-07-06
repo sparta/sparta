@@ -126,7 +126,7 @@ class SurfCollideImpulsiveKokkos : public SurfCollideImpulsive {
     reaction = 0;
     int velreset = 0;
 
-    if (REACT) {
+    if (REACT && isr >= 0) {
       if (ambi_flag || vibmode_flag) memcpy(&iorig,ip,sizeof(Particle::OnePart));
 
       int sr_type = sr_type_list[isr];

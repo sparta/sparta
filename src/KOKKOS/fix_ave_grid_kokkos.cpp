@@ -56,8 +56,14 @@ FixAveGridKokkos::FixAveGridKokkos(SPARTA *sparta, int narg, char **arg) :
   // to the host by its tallyinfo(), then collated to per-grid by the host base
   // class.  Skip all Kokkos-specific allocation and leave the host base ctor's
   // allocations intact; the overridden methods below delegate to FixAveGrid.
+  // Clear kokkos_flag so device consumers of per-grid fix output do not try to
+  // read the (unallocated) device views; they read the host array_grid instead.
 
-  if (flavor == PERGRIDSURF) return;
+  if (flavor == PERGRIDSURF) {
+    kokkos_flag = 0;
+    execution_space = Host;
+    return;
+  }
 
   nglocal = maxgrid = grid->nlocal;
 

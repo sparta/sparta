@@ -398,7 +398,7 @@ void Collide::collisions()
     if (!ngas_tally) {
       if (ngroups == 1) collisions_one_ambipolar<0>();
       else collisions_group_ambipolar<0>();
-    } else if (!ngas_tally) {
+    } else if (ngas_tally) {
       if (ngroups == 1) collisions_one_ambipolar<1>();
       else collisions_group_ambipolar<1>();
     }

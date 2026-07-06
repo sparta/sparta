@@ -31,6 +31,7 @@ ComputeReactSurfKokkos::ComputeReactSurfKokkos(SPARTA *sparta, int narg, char **
   ComputeReactSurf(sparta, narg, arg)
 {
   kokkos_flag = 1;
+  nsurf_tally_alloc = 0;
 }
 
 ComputeReactSurfKokkos::ComputeReactSurfKokkos(SPARTA *sparta) :
@@ -38,6 +39,7 @@ ComputeReactSurfKokkos::ComputeReactSurfKokkos(SPARTA *sparta) :
 {
   copy = 1;
   uncopy = 0;
+  nsurf_tally_alloc = 0;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -149,7 +151,7 @@ int ComputeReactSurfKokkos::tallyinfo(surfint *&ptr)
   int iend = nsurf-1;
 
   while (1) {
-    while (h_surf2tally[istart] != -1 && istart < nsurf-2) istart++;
+    while (istart < nsurf && h_surf2tally[istart] != -1) istart++;
     while (h_surf2tally[iend] == -1 && iend > 0) iend--;
     if (istart >= iend) {
       ntally = istart;

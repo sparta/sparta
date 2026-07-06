@@ -39,7 +39,9 @@
 namespace SPARTA_NS {
 
 #define KOKKOS_MAX_SURF_COLL_PER_TYPE 2
-#define KOKKOS_MAX_TOT_SURF_COLL 10
+// 9 supported surf_collide types (specular, diffuse, vanish, piston,
+//   transparent, adiabatic, impulsive, td, cll) x KOKKOS_MAX_SURF_COLL_PER_TYPE
+#define KOKKOS_MAX_TOT_SURF_COLL 18
 #define KOKKOS_MAX_BLIST 2
 #define KOKKOS_MAX_SLIST 2
 

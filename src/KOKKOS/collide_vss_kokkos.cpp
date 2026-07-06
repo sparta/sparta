@@ -274,6 +274,16 @@ void CollideVSSKokkos::init()
   recombflag = 0;
   if (react) {
     react_defined = 1;
+
+    // the collision kernels blind-cast react to a Kokkos react type (e.g.
+    //   ReactTCEKokkos) and byte-copy it into the functor; a host-only react
+    //   style would be reinterpreted as a device object -> UB.  The collide
+    //   style string is "vss" (suffix-created), so react's own init() cannot
+    //   catch this; require a Kokkos-enabled (ReactBirdKokkos-derived) react.
+
+    if (!dynamic_cast<ReactBirdKokkos*>(react))
+      error->all(FLERR,"Must use a Kokkos-enabled reaction style with collide vss/kk");
+
     recombflag = react->recombflag;
     recomb_boost_inverse = react->recomb_boost_inverse;
   }
@@ -543,30 +553,28 @@ void CollideVSSKokkos::setup_gas_tally()
 {
   nglist_collision = nglist_reaction = 0;
 
+  // dispatch by dynamic_cast, not by style string, so a compute the user
+  //   typed with the explicit "/kk" suffix is still recognized
+
   for (int i = 0; i < ngas_tally; i++) {
     Compute *c = update->glist_active[i];
-    if (strcmp(c->style,"gas/collision/grid") == 0) {
-      ComputeGasCollisionGridKokkos *ckk =
-        dynamic_cast<ComputeGasCollisionGridKokkos*>(c);
-      if (!ckk)
-        error->all(FLERR,"Must use Kokkos-enabled compute gas/collision/grid with Kokkos");
+    if (ComputeGasCollisionGridKokkos *ckk =
+          dynamic_cast<ComputeGasCollisionGridKokkos*>(c)) {
       if (nglist_collision >= KOKKOS_MAX_GLIST)
         error->all(FLERR,"Kokkos supports at most KOKKOS_MAX_GLIST instances of compute gas/collision/grid");
       ckk->pre_gas_tally();
       glist_collision_copy[nglist_collision].copy(ckk);
       nglist_collision++;
-    } else if (strcmp(c->style,"gas/reaction/grid") == 0) {
-      ComputeGasReactionGridKokkos *ckk =
-        dynamic_cast<ComputeGasReactionGridKokkos*>(c);
-      if (!ckk)
-        error->all(FLERR,"Must use Kokkos-enabled compute gas/reaction/grid with Kokkos");
+    } else if (ComputeGasReactionGridKokkos *ckk =
+                 dynamic_cast<ComputeGasReactionGridKokkos*>(c)) {
       if (nglist_reaction >= KOKKOS_MAX_GLIST)
         error->all(FLERR,"Kokkos supports at most KOKKOS_MAX_GLIST instances of compute gas/reaction/grid");
       ckk->pre_gas_tally();
       glist_reaction_copy[nglist_reaction].copy(ckk);
       nglist_reaction++;
     } else {
-      error->all(FLERR,"Kokkos does not (yet) support compute gas/collision/tally or compute gas/reaction/tally");
+      error->all(FLERR,"Kokkos does not (yet) support this gas tally compute; "
+                       "use a Kokkos-enabled gas tally compute (-sf kk)");
     }
   }
 
@@ -588,10 +596,27 @@ void CollideVSSKokkos::finish_gas_tally()
 {
   for (int i = 0; i < ngas_tally; i++) {
     Compute *c = update->glist_active[i];
-    if (strcmp(c->style,"gas/collision/grid") == 0)
-      ((ComputeGasCollisionGridKokkos*)c)->post_gas_tally();
-    else if (strcmp(c->style,"gas/reaction/grid") == 0)
-      ((ComputeGasReactionGridKokkos*)c)->post_gas_tally();
+    if (ComputeGasCollisionGridKokkos *ckk = dynamic_cast<ComputeGasCollisionGridKokkos*>(c))
+      ckk->post_gas_tally();
+    else if (ComputeGasReactionGridKokkos *ckk = dynamic_cast<ComputeGasReactionGridKokkos*>(c))
+      ckk->post_gas_tally();
+  }
+}
+
+/* ----------------------------------------------------------------------
+   re-zero the active gas tally per-grid arrays
+   called on the react/retry rollback path so tally events from the aborted
+     collision pass are not double-counted when the kernel re-runs
+------------------------------------------------------------------------- */
+
+void CollideVSSKokkos::clear_gas_tally()
+{
+  for (int i = 0; i < ngas_tally; i++) {
+    Compute *c = update->glist_active[i];
+    if (ComputeGasCollisionGridKokkos *ckk = dynamic_cast<ComputeGasCollisionGridKokkos*>(c))
+      ckk->clear();
+    else if (ComputeGasReactionGridKokkos *ckk = dynamic_cast<ComputeGasReactionGridKokkos*>(c))
+      ckk->clear();
   }
 }
 
@@ -721,6 +746,9 @@ template < int NEARCP, int GASTALLY > void CollideVSSKokkos::collisions_one(COLL
                          " or use react/retry");
       } else
         restore();
+
+      // undo gas tally events from the aborted pass before the kernel re-runs
+      if (ngas_tally) clear_gas_tally();
 
       reduce = COLLIDE_REDUCE();
 
@@ -1572,6 +1600,9 @@ void CollideVSSKokkos::collisions_one_ambipolar(COLLIDE_REDUCE &reduce)
                          " or use react/retry");
       } else
         restore();
+
+      // undo gas tally events from the aborted pass before the kernel re-runs
+      if (ngas_tally) clear_gas_tally();
 
       reduce = COLLIDE_REDUCE();
 

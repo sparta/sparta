@@ -172,7 +172,7 @@ void SurfCollideAdiabaticKokkos::pre_collide()
         sr_map[n] = nprob;
         nprob++;
       } else {
-        error->all(FLERR,"Unknown Kokkos surface reaction method");
+        error->all(FLERR,"This Kokkos surf_collide style supports only surf_react global/prob; surf_react adsorb requires surf_collide cll");
       }
     }
 

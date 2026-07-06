@@ -556,7 +556,8 @@ template < int DIM, int SURF, int REACT, int OPT > void UpdateKokkos::move()
     domain_kk_copy.copy((DomainKokkos*)domain);
 
     if (surf->nsc > KOKKOS_MAX_TOT_SURF_COLL)
-      error->all(FLERR,"Kokkos currently supports two instances of each surface collide method");
+      error->all(FLERR,"Kokkos currently supports at most two instances of each "
+                       "surface collide method");
 
     if (surf->nsc > 0) {
       int nspec,ndiff,nvan,npist,ntrans,nadia,nimpul,ntd,ncll;
@@ -2099,48 +2100,45 @@ void UpdateKokkos::tally_set(bigint ntimestep)
 
   nslist_surf = nslist_isurf = nslist_react_isurf = nslist_react_surf = 0;
 
+  // dispatch by dynamic_cast, not by style string: the styles are also
+  //   registered under explicit "/kk" names (e.g. isurf/grid/kk), so a
+  //   style-string compare would reject a compute the user typed with the
+  //   suffix.  The four Kokkos tally computes are unrelated class hierarchies,
+  //   so the casts are mutually exclusive and order-independent.
+
   if (nsurf_tally) {
     for (i = 0; i < nsurf_tally; i++) {
-      if (strcmp(slist_active[i]->style,"isurf/grid") == 0) {
-        ComputeISurfGridKokkos* compute_isurf_kk =
-          dynamic_cast<ComputeISurfGridKokkos*>(slist_active[i]);
-        if (!compute_isurf_kk)
-          error->all(FLERR,"Must use Kokkos-enabled compute isurf/grid with Kokkos");
+      if (ComputeISurfGridKokkos* compute_isurf_kk =
+            dynamic_cast<ComputeISurfGridKokkos*>(slist_active[i])) {
         if (nslist_isurf >= KOKKOS_MAX_SLIST)
           error->all(FLERR,"Kokkos currently only supports two instances of compute isurf/grid");
         compute_isurf_kk->pre_surf_tally();
         slist_active_isurf_copy[nslist_isurf].copy(compute_isurf_kk);
         nslist_isurf++;
-      } else if (strcmp(slist_active[i]->style,"react/isurf/grid") == 0) {
-        ComputeReactISurfGridKokkos* compute_react_isurf_kk =
-          dynamic_cast<ComputeReactISurfGridKokkos*>(slist_active[i]);
-        if (!compute_react_isurf_kk)
-          error->all(FLERR,"Must use Kokkos-enabled compute react/isurf/grid with Kokkos");
+      } else if (ComputeReactISurfGridKokkos* compute_react_isurf_kk =
+                   dynamic_cast<ComputeReactISurfGridKokkos*>(slist_active[i])) {
         if (nslist_react_isurf >= KOKKOS_MAX_SLIST)
           error->all(FLERR,"Kokkos currently only supports two instances of compute react/isurf/grid");
         compute_react_isurf_kk->pre_surf_tally();
         slist_active_react_isurf_copy[nslist_react_isurf].copy(compute_react_isurf_kk);
         nslist_react_isurf++;
-      } else if (strcmp(slist_active[i]->style,"react/surf") == 0) {
-        ComputeReactSurfKokkos* compute_react_surf_kk =
-          dynamic_cast<ComputeReactSurfKokkos*>(slist_active[i]);
-        if (!compute_react_surf_kk)
-          error->all(FLERR,"Must use Kokkos-enabled compute react/surf with Kokkos");
+      } else if (ComputeReactSurfKokkos* compute_react_surf_kk =
+                   dynamic_cast<ComputeReactSurfKokkos*>(slist_active[i])) {
         if (nslist_react_surf >= KOKKOS_MAX_SLIST)
           error->all(FLERR,"Kokkos currently only supports two instances of compute react/surf");
         compute_react_surf_kk->pre_surf_tally();
         slist_active_react_surf_copy[nslist_react_surf].copy(compute_react_surf_kk);
         nslist_react_surf++;
-      } else {
-        ComputeSurfKokkos* compute_surf_kk =
-          dynamic_cast<ComputeSurfKokkos*>(slist_active[i]);
-        if (!compute_surf_kk)
-          error->all(FLERR,"Kokkos does not (yet) support compute surf/collision/tally or compute surf/reaction/tally");
+      } else if (ComputeSurfKokkos* compute_surf_kk =
+                   dynamic_cast<ComputeSurfKokkos*>(slist_active[i])) {
         if (nslist_surf >= KOKKOS_MAX_SLIST)
           error->all(FLERR,"Kokkos currently only supports two instances of compute surface");
         compute_surf_kk->pre_surf_tally();
         slist_active_copy[nslist_surf].copy(compute_surf_kk);
         nslist_surf++;
+      } else {
+        error->all(FLERR,"Kokkos does not (yet) support this surf tally compute; "
+                         "use a Kokkos-enabled surf tally compute (-sf kk)");
       }
     }
   }

@@ -87,6 +87,10 @@ class SurfReactAdsorbKokkos : public SurfReactAdsorb {
   // per-state-slot data: FACE mode => 6 box faces; SURF mode => nlocal+nghost surfs
 
   int nstate_;                             // # of state slots (nface or nall)
+  int state_synced_to_device;              // 1 if d_*_state matches host state;
+                                           //   host state only changes on sync
+                                           //   steps, so the H2D copy in
+                                           //   pre_react() can be skipped otherwise
   DAT::t_int_1d d_total_state;             // [nstate]
   DAT::t_float_1d d_area,d_weight;         // [nstate]
   DAT::t_int_2d d_species_state;           // [nstate][nspecies_surf]
@@ -129,6 +133,14 @@ class SurfReactAdsorbKokkos : public SurfReactAdsorb {
 
   RanKnuth* random_backup;
 
+  // snapshots for the react/retry rollback path (backup()/restore());
+  //   d_species_delta and d_mark accumulate across steps until a sync step,
+  //   so restore() must reset them to the pre-move values, not zero
+
+  DAT::t_int_1d d_scalars_backup;
+  DAT::t_int_2d d_species_delta_backup;
+  DAT::t_int_1d d_mark_backup;
+
   DAT::t_int_1d d_scalars;
   HAT::t_int_1d h_scalars;
   DAT::t_int_scalar d_nsingle;
@@ -160,6 +172,14 @@ class SurfReactAdsorbKokkos : public SurfReactAdsorb {
     int idx;
     if (mode == SRA_KK::FACE) idx = -(isurf+1);
     else idx = isurf;
+
+    // guard the mode/index mismatch the CPU react() catches with error->one
+    //   (adsorb surf model on a box face, or face model on a surf element);
+    //   without this an out-of-range idx silently indexes d_area/d_weight etc.
+
+    if (idx < 0 || idx >= nstate_)
+      Kokkos::abort("Surf_react adsorb model applied to the wrong boundary type "
+                    "(face model on surfs or surf model on box faces)");
 
     int n = d_reactions_n[ip->ispecies];
     if (n == 0) return 0;

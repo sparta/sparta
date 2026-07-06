@@ -36,6 +36,7 @@ class ComputeISurfGridKokkos : public ComputeISurfGrid {
   void init_normflux();
   void clear();
   int tallyinfo(surfint *&);
+  void post_process_isurf_grid();
   void pre_surf_tally();
   void post_surf_tally();
 
@@ -271,6 +272,8 @@ void surf_tally_kk(double /*dtremain*/, int isurf, int /*icell*/, int /*reaction
   DAT::t_int_1d d_surf2tally;
 
   DAT::t_float_1d d_normflux;         // normalization factor for each surf element
+
+  int nsurf_tally_alloc;              // current device tally allocation (nsurf)
 
   t_species_1d d_species;
   DAT::t_int_2d d_s2g;

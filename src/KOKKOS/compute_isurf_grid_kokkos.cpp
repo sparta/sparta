@@ -32,6 +32,7 @@ ComputeISurfGridKokkos::ComputeISurfGridKokkos(SPARTA *sparta, int narg, char **
   ComputeISurfGrid(sparta, narg, arg)
 {
   kokkos_flag = 1;
+  nsurf_tally_alloc = 0;
 
   // hash is allocated/used only on the host; not needed for device tally
 
@@ -42,6 +43,7 @@ ComputeISurfGridKokkos::ComputeISurfGridKokkos(SPARTA *sparta) :
   ComputeISurfGrid(sparta)
 {
   copy = 1;
+  nsurf_tally_alloc = 0;
   uncopy = 0;
 }
 
@@ -92,6 +94,8 @@ void ComputeISurfGridKokkos::init_normflux()
 
   memoryKK->grow_kokkos(k_array_surf_tally,array_surf_tally,nsurf,ntotal,"isurf/grid:array_surf_tally");
   d_array_surf_tally = k_array_surf_tally.view_device();
+
+  nsurf_tally_alloc = nsurf;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -100,6 +104,14 @@ void ComputeISurfGridKokkos::clear()
 {
   // reset all set surf2tally values to -1
   // called by Update at beginning of timesteps surf tallying is done
+
+  // implicit-surf count can grow mid-run (e.g. fix ablate) while the grid
+  //   cell count is unchanged, so reallocate() early-returns and never
+  //   re-runs init_normflux(); rebuild normflux + device tally views here so
+  //   surf_tally_kk does not index the device views (or normflux) out of bounds
+
+  int nsurf = surf->nlocal + surf->nghost;
+  if (nsurf > nsurf_tally_alloc) init_normflux();
 
   Kokkos::deep_copy(d_array_surf_tally,0);
   Kokkos::deep_copy(d_surf2tally,-1);
@@ -166,7 +178,7 @@ int ComputeISurfGridKokkos::tallyinfo(surfint *&ptr)
   int iend = nsurf-1;
 
   while (1) {
-    while (h_surf2tally[istart] != -1 && istart < nsurf-2) istart++;
+    while (istart < nsurf && h_surf2tally[istart] != -1) istart++;
     while (h_surf2tally[iend] == -1 && iend > 0) iend--;
     if (istart >= iend) {
       ntally = istart;
@@ -181,6 +193,21 @@ int ComputeISurfGridKokkos::tallyinfo(surfint *&ptr)
   }
 
   return ntally;
+}
+
+/* ----------------------------------------------------------------------
+   sync the device per-surf tally to the host (tallyinfo) before the host
+   base class collates it to per-grid; consumers (e.g. fix ablate, dump grid,
+   grid-style variables) read the compute directly via post_process_isurf_grid()
+   rather than tallyinfo()
+------------------------------------------------------------------------- */
+
+void ComputeISurfGridKokkos::post_process_isurf_grid()
+{
+  if (combined) return;
+  surfint *dummy;
+  tallyinfo(dummy);
+  ComputeISurfGrid::post_process_isurf_grid();
 }
 
 /* ---------------------------------------------------------------------- */

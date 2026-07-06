@@ -180,6 +180,7 @@ class CollideVSSKokkos : public CollideVSS {
   ComputeGasReactionGridKokkos tmp_compute_gas_reaction_kk;
   void setup_gas_tally();
   void finish_gas_tally();
+  void clear_gas_tally();
 
   t_particle_1d d_particles;
   t_species_1d_const d_species;

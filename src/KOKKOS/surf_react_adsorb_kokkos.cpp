@@ -317,6 +317,11 @@ void SurfReactAdsorbKokkos::init_reactions_gs_kokkos()
   nstate_ = (mode == SRA_KK::FACE) ? nface : (surf->nlocal + surf->nghost);
   int ns = MAX(nstate_,1);
 
+  // device state views are (re)allocated here; force pre_react() to push the
+  //   current host state to the device on its next call
+
+  state_synced_to_device = 0;
+
   d_total_state = DAT::t_int_1d("sra:total_state",ns);
   d_area = DAT::t_float_1d("sra:area",ns);
   d_weight = DAT::t_float_1d("sra:weight",ns);
@@ -368,23 +373,29 @@ void SurfReactAdsorbKokkos::pre_react()
     weight = surf->edvec_local[surf->ewhich[weight_index]];
   }
 
-  // copy current per-slot state (changes only at sync) host->device
+  // copy current per-slot state host->device
+  // host state (total_state/species_state) only changes on sync steps (in
+  //   tally_update), so skip the copy while the device copy is already current
 
-  auto h_total = Kokkos::create_mirror_view(d_total_state);
-  auto h_area = Kokkos::create_mirror_view(d_area);
-  auto h_weight = Kokkos::create_mirror_view(d_weight);
-  auto h_sstate = Kokkos::create_mirror_view(d_species_state);
-  for (int i = 0; i < nstate_; i++) {
-    h_total(i) = total_state[i];
-    h_area(i) = area[i];
-    h_weight(i) = weight[i];
-    for (int j = 0; j < nspecies_surf; j++)
-      h_sstate(i,j) = species_state[i][j];
+  if (!state_synced_to_device) {
+    auto h_total = Kokkos::create_mirror_view(d_total_state);
+    auto h_area = Kokkos::create_mirror_view(d_area);
+    auto h_weight = Kokkos::create_mirror_view(d_weight);
+    auto h_sstate = Kokkos::create_mirror_view(d_species_state);
+    for (int i = 0; i < nstate_; i++) {
+      h_total(i) = total_state[i];
+      h_area(i) = area[i];
+      h_weight(i) = weight[i];
+      for (int j = 0; j < nspecies_surf; j++)
+        h_sstate(i,j) = species_state[i][j];
+    }
+    Kokkos::deep_copy(d_total_state,h_total);
+    Kokkos::deep_copy(d_area,h_area);
+    Kokkos::deep_copy(d_weight,h_weight);
+    Kokkos::deep_copy(d_species_state,h_sstate);
+
+    state_synced_to_device = 1;
   }
-  Kokkos::deep_copy(d_total_state,h_total);
-  Kokkos::deep_copy(d_area,h_area);
-  Kokkos::deep_copy(d_weight,h_weight);
-  Kokkos::deep_copy(d_species_state,h_sstate);
 }
 
 /* ---------------------------------------------------------------------- */
@@ -408,28 +419,43 @@ void SurfReactAdsorbKokkos::tally_update()
   //   so the device picks up the new particles on the next sync
 
   ParticleKokkos* particle_kk = (ParticleKokkos*) particle;
-  if (psflag) particle_kk->sync(Host,PARTICLE_MASK);
 
-  // device -> host: reaction counts
+  // the base tally_update() accumulates GS reaction counts every step, but
+  //   consumes the per-slot deltas/mark and runs PS chemistry (host particle
+  //   insertion) only on a sync step; gate the expensive D2H/H2D transfers on
+  //   the sync step so a ps/gsps run does not round-trip state every step
+
+  const int sync_step = (update->ntimestep % nsync == 0);
+
+  // PS chemistry desorbs/inserts particles on the host inside the base
+  //   tally_update(); make the host particle list current first so
+  //   add_particle() appends to up-to-date data
+
+  if (psflag && sync_step) particle_kk->sync(Host,PARTICLE_MASK);
+
+  // device -> host: reaction counts (consumed by the base every step)
 
   Kokkos::deep_copy(h_scalars,d_scalars);
   nsingle = h_nsingle();
   for (int i = 0; i < nlist_gs; i++) tally_single[i] = h_tally_single[i];
 
-  // device -> host: perspecies deltas (+ mark for SURF) accumulated since sync
+  // device -> host: perspecies deltas (+ mark for SURF) accumulated since sync;
+  //   only update_state_*() consumes them, and only on a sync step
 
-  k_species_delta.modify_device();
-  k_species_delta.sync_host();
-  auto h_delta = k_species_delta.view_host();
-  for (int i = 0; i < nstate_; i++)
-    for (int j = 0; j < nspecies_surf; j++)
-      species_delta[i][j] = h_delta(i,j);
+  if (sync_step) {
+    k_species_delta.modify_device();
+    k_species_delta.sync_host();
+    auto h_delta = k_species_delta.view_host();
+    for (int i = 0; i < nstate_; i++)
+      for (int j = 0; j < nspecies_surf; j++)
+        species_delta[i][j] = h_delta(i,j);
 
-  if (mode == SRA_KK::SURF) {
-    k_mark.modify_device();
-    k_mark.sync_host();
-    auto h_m = k_mark.view_host();
-    for (int i = 0; i < nstate_; i++) mark[i] = h_m(i);
+    if (mode == SRA_KK::SURF) {
+      k_mark.modify_device();
+      k_mark.sync_host();
+      auto h_m = k_mark.view_host();
+      for (int i = 0; i < nstate_; i++) mark[i] = h_m(i);
+    }
   }
 
   // host logic: accumulate tallies and (every nsync) sync per-slot state;
@@ -440,11 +466,12 @@ void SurfReactAdsorbKokkos::tally_update()
 
   // PS chemistry may have appended particles on the host
 
-  if (psflag) particle_kk->modify(Host,PARTICLE_MASK);
+  if (psflag && sync_step) particle_kk->modify(Host,PARTICLE_MASK);
 
   // mirror re-zeroed host deltas (+ mark) back to device (only on a sync step)
 
-  if (update->ntimestep % nsync == 0) {
+  if (sync_step) {
+    auto h_delta = k_species_delta.view_host();
     for (int i = 0; i < nstate_; i++)
       for (int j = 0; j < nspecies_surf; j++)
         h_delta(i,j) = species_delta[i][j];
@@ -457,6 +484,11 @@ void SurfReactAdsorbKokkos::tally_update()
       k_mark.sync_device();
     }
     Kokkos::deep_copy(d_scalars,0);
+
+    // host per-slot state was just updated by update_state_*(); force
+    //   pre_react() to re-push it to the device on the next step
+
+    state_synced_to_device = 0;
   }
 }
 
@@ -466,6 +498,32 @@ void SurfReactAdsorbKokkos::backup()
 {
   ParticleKokkos* particle_kk = (ParticleKokkos*) particle;
   d_particles = particle_kk->k_particles.view_device();
+
+  // snapshot the reaction tallies and the cross-step per-slot deltas so a
+  //   react/retry re-run does not double-count them; d_species_delta and
+  //   d_mark persist across steps until a sync step, so they cannot simply
+  //   be zeroed on restore (unlike surf_react global/prob)
+
+  if (d_scalars_backup.extent(0) != d_scalars.extent(0))
+    d_scalars_backup = DAT::t_int_1d(
+      Kokkos::view_alloc("surf_react_adsorb:scalars_backup",Kokkos::WithoutInitializing),
+      d_scalars.extent(0));
+  Kokkos::deep_copy(d_scalars_backup,d_scalars);
+
+  if (d_species_delta_backup.extent(0) != d_species_delta.extent(0) ||
+      d_species_delta_backup.extent(1) != d_species_delta.extent(1))
+    d_species_delta_backup = DAT::t_int_2d(
+      Kokkos::view_alloc("surf_react_adsorb:species_delta_backup",Kokkos::WithoutInitializing),
+      d_species_delta.extent(0),d_species_delta.extent(1));
+  Kokkos::deep_copy(d_species_delta_backup,d_species_delta);
+
+  if (mode == SRA_KK::SURF) {
+    if (d_mark_backup.extent(0) != d_mark.extent(0))
+      d_mark_backup = DAT::t_int_1d(
+        Kokkos::view_alloc("surf_react_adsorb:mark_backup",Kokkos::WithoutInitializing),
+        d_mark.extent(0));
+    Kokkos::deep_copy(d_mark_backup,d_mark);
+  }
 
 #ifdef SPARTA_KOKKOS_EXACT
   if (!random_backup)
@@ -478,6 +536,11 @@ void SurfReactAdsorbKokkos::backup()
 
 void SurfReactAdsorbKokkos::restore()
 {
+  Kokkos::deep_copy(d_scalars,d_scalars_backup);
+  Kokkos::deep_copy(d_species_delta,d_species_delta_backup);
+  if (mode == SRA_KK::SURF)
+    Kokkos::deep_copy(d_mark,d_mark_backup);
+
 #ifdef SPARTA_KOKKOS_EXACT
   memcpy(random,random_backup,sizeof(RanKnuth));
 #endif
