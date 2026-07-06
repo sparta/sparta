@@ -266,20 +266,14 @@ FixRigid::FixRigid(SPARTA *sparta, int narg, char **arg) :
 
   setup_body();
 
-  // create rigid = custom per-surf vector
-  //   unless already exists, due to restart file
-  // rigid = index into short list of rigid surfs for mobile surfs
-  // rigid = -1 for static surfs
+  // irigid = per-surf flags, indexed by local surf index
+  // -1 for static surfs, else index into slist of body surfs
+  // accessed by Update::move() to detect moving surfs
+  // every proc stores all surfs (non-distributed), so length = nlocal
 
-  rigidindex = surf->find_custom((char *) "rigid");
-  if (rigidindex < 0) rigidindex = surf->add_custom((char *) "rigid",INT,0);
-
-  int *irigid = surf->eivec[surf->ewhich[rigidindex]];
-
-  Surf::Line *lines = surf->lines;
-  Surf::Tri *tris = surf->tris;
   int nslocal = surf->nlocal;
-  
+  memory->create(irigid,nslocal,"fix_rigid:irigid");
+
   for (int i = 0; i < nslocal; i++) irigid[i] = -1;
   for (int i = 0; i < nsurf; i++) irigid[slist[i]] = i;
 
@@ -334,8 +328,8 @@ FixRigid::~FixRigid()
   memory->destroy(modified);
   memory->destroy(nsurf_saved);
   memory->sfree(csurfs_saved);
+  memory->destroy(irigid);
   delete cpage;
-  surf->remove_custom(rigidindex);
 }
 
 /* ---------------------------------------------------------------------- */
@@ -1170,7 +1164,6 @@ void FixRigid::push_off()
   Surf::Line *lines = surf->lines;
   Surf::Tri *tris = surf->tris;
   int nslocal = surf->nlocal;
-  int *irigid = surf->eivec[surf->ewhich[rigidindex]];
 
   int npoint = dim;     // 2 corner pts per line, 3 per tri
   double cutsq = pushcutoff*pushcutoff;

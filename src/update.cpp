@@ -260,8 +260,7 @@ void Update::init()
     fixrigid = (FixRigid *) modify->fix[irigidfix];
     if (strcmp(fixrigid->style,"rigid") != 0)
       error->all(FLERR,"Fix for global rigid is not a fix rigid command");
-    int rigidindex = surf->find_custom((char *) "rigid");
-    irigid = surf->eivec[surf->ewhich[rigidindex]];
+    irigid = fixrigid->irigid;
   }
 }
 

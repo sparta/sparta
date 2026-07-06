@@ -37,6 +37,10 @@ class FixRigid : public Fix {
   double xcmnew[3];       // new COM at end of timestep
   double quatnew[4];      // new quaternion at end of timestep
 
+  int *irigid;            // per-surf flags, indexed by local surf index:
+                          // -1 = static surf,
+                          // else index into body's list of surfs
+
   FixRigid(class SPARTA *, int, char **);
   virtual ~FixRigid();
   int setmask();
@@ -63,8 +67,6 @@ class FixRigid : public Fix {
   int nparticle_user;
   double pmass_user,frac_user;
   class RanKnuth *random;   // RNG for pseudo particles
-
-  int rigidindex;   // for custom per-surf vector
 
   int nsurf;     // # of surfs which comprise surface of rigid body
   int *slist;    // list of surf indices for rigid body surfs
