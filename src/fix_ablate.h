@@ -64,6 +64,8 @@ class FixAblate : public Fix {
   int ncorner;
   int nmultiv;
   int sgroupbit;
+  int isc_default;        // default isc index for newly created implicit surfs
+  int isr_default;        // default isr index for newly created implicit surfs
   double thresh;
   double sum_delta;
   int ndelete;

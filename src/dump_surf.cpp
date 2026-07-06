@@ -817,14 +817,18 @@ void DumpSurf::pack_custom(int n)
     if (surf->esize[index] == 0) {
       int *vector = surf->eivec[surf->ewhich[index]];
       for (int i = 0; i < nchoose; i++) {
-        buf[n] = vector[clocal[i]];
+        // store bit-punned (ubuf), NOT numeric: write_text/write_binary decode
+        // INT columns via ubuf(buf[m]).i. Numeric storage made every INT
+        // custom attribute print as 0 (low 32 bits of IEEE-754 double).
+        buf[n] = ubuf(vector[clocal[i]]).d;
         n += size_one;
       }
     } else {
       int icol = argindex[n]-1;
       int **array = surf->eiarray[surf->ewhich[index]];
       for (int i = 0; i < nchoose; i++) {
-        buf[n] = array[clocal[i]][icol];
+        // see comment above: bit-punned encoding required for INT decode
+        buf[n] = ubuf(array[clocal[i]][icol]).d;
         n += size_one;
       }
     }

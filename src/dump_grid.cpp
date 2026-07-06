@@ -803,14 +803,18 @@ void DumpGrid::pack_custom(int n)
     if (grid->esize[index] == 0) {
       int *vector = grid->eivec[grid->ewhich[index]];
       for (int i = 0; i < ncpart; i++) {
-        buf[n] = vector[cpart[i]];
+        // store bit-punned (ubuf), NOT numeric: write_text/write_binary decode
+        // INT columns via ubuf(buf[m]).i. Numeric storage made every INT
+        // custom attribute print as 0 (low 32 bits of IEEE-754 double).
+        buf[n] = ubuf(vector[cpart[i]]).d;
         n += size_one;
       }
     } else {
       int icol = argindex[n]-1;
       int **array = grid->eiarray[grid->ewhich[index]];
       for (int i = 0; i < ncpart; i++) {
-        buf[n] = array[cpart[i]][icol];
+        // see comment above: bit-punned encoding required for INT decode
+        buf[n] = ubuf(array[cpart[i]][icol]).d;
         n += size_one;
       }
     }
