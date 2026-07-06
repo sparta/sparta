@@ -1449,6 +1449,21 @@ void Grid::set_inout()
     return;
   }
 
+  // if no cell overlaps a surf, just mark all cells as OUTSIDE
+  // can occur when all surfs are in mobile rigid bodies (fix rigid),
+  //   which are excluded from static surf assignment to grid cells
+
+  int overlap_mine = 0;
+  for (icell = 0; icell < nlocal; icell++)
+    if (cinfo[icell].type == OVERLAP) overlap_mine = 1;
+  int overlap_any;
+  MPI_Allreduce(&overlap_mine,&overlap_any,1,MPI_INT,MPI_MAX,world);
+
+  if (!overlap_any) {
+    for (icell = 0; icell < nlocal; icell++) cinfo[icell].type = OUTSIDE;
+    return;
+  }
+
   // set dimensional dependent quantities
 
   int faceflip[6] = {XHI,XLO,YHI,YLO,ZHI,ZLO};

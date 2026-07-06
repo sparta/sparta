@@ -79,12 +79,18 @@ int Cut3d::surf2grid(cellint id_caller, double *lo_caller, double *hi_caller,
 
   Surf::Tri *tris = surf->tris;
   int ntotal = surf->nsurf;
+  int rigidbits = surf->rigidbits;
 
   double value;
   double *x1,*x2,*x3;
 
   nsurf = 0;
   for (int m = 0; m < ntotal; m++) {
+
+    // skip surfs in mobile rigid bodies, e.g. set by fix rigid
+
+    if (tris[m].mask & rigidbits) continue;
+
     x1 = tris[m].p1;
     x2 = tris[m].p2;
     x3 = tris[m].p3;
@@ -144,6 +150,7 @@ int Cut3d::surf2grid_list(cellint id_caller,
   surfs = surfs_caller;
 
   Surf::Tri *tris = surf->tris;
+  int rigidbits = surf->rigidbits;
 
   int m;
   double value;
@@ -152,6 +159,11 @@ int Cut3d::surf2grid_list(cellint id_caller,
   nsurf = 0;
   for (int i = 0; i < nlist; i++) {
     m = list[i];
+
+    // skip surfs in mobile rigid bodies, e.g. set by fix rigid
+
+    if (tris[m].mask & rigidbits) continue;
+
     x1 = tris[m].p1;
     x2 = tris[m].p2;
     x3 = tris[m].p3;

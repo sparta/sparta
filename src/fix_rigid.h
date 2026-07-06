@@ -22,6 +22,7 @@ FixStyle(rigid,FixRigid)
 #define SPARTA_FIX_RIGID_H
 
 #include "fix.h"
+#include "my_page.h"
 
 namespace SPARTA_NS {
 
@@ -40,8 +41,11 @@ class FixRigid : public Fix {
   virtual ~FixRigid();
   int setmask();
   void init();
+  void setup();
   virtual void start_of_step();
   virtual void end_of_step();
+  void grid_changed();
+  double compute_scalar();
   double compute_vector(int);
 
  protected:
@@ -74,9 +78,35 @@ class FixRigid : public Fix {
   double torque[3];       // torque on body in space frame
   double fpush[3];        // push-off force on COM from static surfs
 
+  // remap of body surfs to grid cells
+
+  int remapmode;          // OVERLAY or CUTCELL
+
+  int nmodified;          // # of cells with body surfs overlaid this step
+  int maxmodified;        // allocated size of overlay restore lists
+  int *modified;          // indices of cells whose csurfs were overridden
+  int *nsurf_saved;       // saved static nsurf of each modified cell
+  surfint **csurfs_saved; // saved static csurfs ptr of each modified cell
+  MyPage<surfint> *cpage; // storage for merged static+body surf lists
+
+  double **elemlo;        // per-element swept bounding boxes for this step
+  double **elemhi;
+  surfint *tmplist;       // work list of body elements overlapping one cell
+  double bbodylo[3];      // bounding box around entire body,
+  double bbodyhi[3];      //   swept over the current step
+
+  bigint ndeleted;        // running count of deleted particles
+
   void read_infile(char *);
   void write_outfile();
   void setup_body();
+
+  void grid_rebuild();          // full re-map of all surfs to grid cells
+  void overlay_assign();        // per-step overlay of body surfs into cells
+  void overlay_restore();       // undo overlay of previous step
+  void body_bbox(int);          // swept bbox of body elements over a step
+  int inside_body(double *);    // 1 if point is inside rigid body, else 0
+  bigint remove_inside_particles(int);
 };
 
 }
