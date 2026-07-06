@@ -430,10 +430,12 @@ The {rigid} keyword enables a mobile rigid-body object composed of
 surface elements (lines in 2d, triangles in 3d) to be simulated.  The
 fixID argument is the ID of a "fix rigid"_fix_rigid.html command which
 defines the set of surfaces in the rigid body.  If fixID is specified
-as NULL, then the motion of the rigid-body object is disabled.  The
-instance o the "fix rigid"_fix_rigid.html command shoud also be
-deleted via the "unfix"_unfix.html command.
- 
+as NULL, then the motion of the rigid-body object is disabled.  In
+that case the instance of the "fix rigid"_fix_rigid.html command
+should also be deleted via the "unfix"_unfix.html command.  See
+"Section 6.20"_Section_howto.html#howto_20 for an overview of rigid
+body surface objects.
+
 [Restrictions:]
 
 The global surfmax command must be used before surface elements are

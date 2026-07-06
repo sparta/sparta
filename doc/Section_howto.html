@@ -1869,13 +1869,65 @@ etc.
 
 <A NAME = "howto_20"></A><H4>6.20 Rigid body surface objects in SPARTA 
 </H4>
-<P>Overview of why use this feature
+<P>An object defined by a collection of surface elements (a closed line
+polygon in 2d or a closed surface triangulation in 3d) can be treated
+as a mobile rigid body which interacts with the particles in the
+simulation.  Each timestep, particles which bounce off the object
+impart force and torque to it, which cause the object to translate
+and rotate in response to the flow.  The flow itself is affected by
+the presence and motion of the object.  This can be useful for
+modeling the effect of gas flows on large particulates, e.g. dust
+grains or droplets which are much larger than the gas molecules.
 </P>
-<P>fix rigid
-compute surf
-custom surf ?
-dump surf for viz - individual tris ?
-stats with 12 values for the body
-push-off forces
+<P>Three commands work together to enable this:
+</P>
+<UL><LI>The <A HREF = "read_surf.html">read_surf</A> command reads the object geometry and
+should assign its surface elements to a <A HREF = "group.html">group</A>, which
+identifies the rigid body. 
+
+<P>A <A HREF = "compute_surf.html">compute surf</A> command tallies the force and
+torque exerted on each surface element of the body by particle
+collisions.  It must tally exactly the 6 values fx fy fz tx ty tz for
+a single mixture group and use its <I>com</I> keyword, e.g.
+</P>
+<PRE>compute csurf surf all all fx fy fz tx ty tz com 5 5 0 
+</PRE>
+<LI>A <A HREF = "fix_rigid.html">fix rigid</A> command defines the body's mass,
+center-of-mass, moments of inertia, and initial velocities, and time
+integrates its motion using the force/torque tallied by the compute.
+The <A HREF = "global.html">global rigid</A> command must also be set with the ID
+of the fix, so the particle mover checks for collisions with the
+moving surface elements. 
+
+
+</UL>
+<P>Particles collide with the exact translating and rotating position of
+each line or triangle during the timestep, and reflect off the moving
+wall with the assigned <A HREF = "surf_collide.html">surf_collide</A> model applied
+in the local rest frame of the wall.  The force and torque from
+collisions during one step move the body on the following step; see
+the <A HREF = "fix_rigid.html">fix rigid</A> doc page for details of the time
+integration scheme and this one-step lag.
+</P>
+<P>The <I>remap</I> option of <A HREF = "fix_rigid.html">fix rigid</A> selects how the
+moving surfs are assigned to grid cells each step.  The default
+<I>overlay</I> mode simply adds the moving surfs to the collision lists of
+the grid cells they sweep through, without cutting or splitting the
+cells, which is fast but means cells overlapped by the body retain
+their full flow volume.  The <I>cutcell</I> mode re-computes cut and split
+cell info every step, exactly as <A HREF = "fix_move_surf.html">fix move/surf</A>
+does, which is accurate but expensive.
+</P>
+<P>If the object approaches other static (non-moving) surface elements,
+optional push-off spring forces can repel it before contact, via the
+<I>push</I> and <I>pushbound</I> options of <A HREF = "fix_rigid.html">fix rigid</A>.
+</P>
+<P>The state of the body (position, velocities, orientation, forces) is
+available as a 22-value global vector computed by the fix, for
+printing with <A HREF = "stats_style.html">stats_style</A>.  The moving surface
+elements themselves can be visualized with the <A HREF = "dump_image.html">dump
+image</A> command or output by <A HREF = "dump.html">dump surf</A>,
+since their coordinates are updated every timestep.  See the
+examples/rigid directory for example input scripts.
 </P>
 </HTML>

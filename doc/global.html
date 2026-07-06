@@ -436,9 +436,11 @@ uniform, or when fix adapt is enabled, otherwise an error will result.
 surface elements (lines in 2d, triangles in 3d) to be simulated.  The
 fixID argument is the ID of a <A HREF = "fix_rigid.html">fix rigid</A> command which
 defines the set of surfaces in the rigid body.  If fixID is specified
-as NULL, then the motion of the rigid-body object is disabled.  The
-instance o the <A HREF = "fix_rigid.html">fix rigid</A> command shoud also be
-deleted via the <A HREF = "unfix.html">unfix</A> command.
+as NULL, then the motion of the rigid-body object is disabled.  In
+that case the instance of the <A HREF = "fix_rigid.html">fix rigid</A> command
+should also be deleted via the <A HREF = "unfix.html">unfix</A> command.  See
+<A HREF = "Section_howto.html#howto_20">Section 6.20</A> for an overview of rigid
+body surface objects.
 </P>
 <P><B>Restrictions:</B>
 </P>
