@@ -17,6 +17,7 @@
 #include "stdlib.h"
 #include "collide_vss_kokkos.h"
 #include "grid.h"
+#include "domain.h"
 #include "update.h"
 #include "particle_kokkos.h"
 #include "mixture.h"
@@ -131,9 +132,12 @@ void CollideVSSKokkos::init()
     error->all(FLERR,"Ambipolar collision model does not yet support "
                "near-neighbor collisions");
 
-  if (subcellflag)
-    error->all(FLERR,"Cannot yet use subcell collisions with the "
-               "KOKKOS package");
+  if (ambiflag && subcellflag)
+    error->all(FLERR,"Ambipolar collision model does not yet support "
+               "subcell collisions");
+
+  if (nearcp && subcellflag)
+    error->all(FLERR,"Cannot use both nearcp and subcell collisions");
 
   // require mixture to contain all species
 
@@ -414,7 +418,11 @@ void CollideVSSKokkos::collisions()
   COLLIDE_REDUCE reduce;
 
   if (!ambiflag) {
-    if (!nearcp) {
+    if (subcellflag) {
+      // ngas_tally errors out above, so only the GASTALLY = 0 case is needed
+      if (domain->dimension == 2) collisions_one_subcell<2,0>(reduce);
+      else collisions_one_subcell<3,0>(reduce);
+    } else if (!nearcp) {
       if (!ngas_tally) {
         collisions_one<0,0>(reduce);
       } else if (ngas_tally) {
@@ -817,6 +825,564 @@ void CollideVSSKokkos::operator()(TagCollideCollisionsOne< NEARCP, GASTALLY, ATO
   }
 
   rand_pool.free_state(rand_gen);
+}
+
+/* ----------------------------------------------------------------------
+   (re)allocate the per-cell transient subcell scratch views
+   all are sized (nglocal, maxcellcount), same as d_nn_last_partner
+------------------------------------------------------------------------- */
+
+void CollideVSSKokkos::grow_subcell_views(int n1, int n2)
+{
+  if (int(d_nn_last_partner.extent(0)) < n1 ||
+      int(d_nn_last_partner.extent(1)) < n2)
+    MemKK::realloc_kokkos(d_nn_last_partner,"collide:nn_last_partner",n1,n2);
+
+  if (int(d_subcell_id.extent(0)) < n1 || int(d_subcell_id.extent(1)) < n2) {
+    MemKK::realloc_kokkos(d_subcell_id,"collide:subcell_id",n1,n2);
+    MemKK::realloc_kokkos(d_subcell_count,"collide:subcell_count",n1,n2);
+    MemKK::realloc_kokkos(d_subcell_first,"collide:subcell_first",n1,n2);
+    MemKK::realloc_kokkos(d_subcell_next,"collide:subcell_next",n1,n2);
+    MemKK::realloc_kokkos(d_subcell_ring,"collide:subcell_ring",n1,n2);
+  }
+}
+
+/* ----------------------------------------------------------------------
+   NTC algorithm for a single group with the transient subcell method
+   Kokkos port of Collide::collisions_one_subcell()
+   per-cell subcell binning is thread-private via the (icell,*) view row
+------------------------------------------------------------------------- */
+
+template < int DIM, int GASTALLY > void CollideVSSKokkos::collisions_one_subcell(COLLIDE_REDUCE &reduce)
+{
+  // loop over cells I own
+
+  this->sync(Device,ALL_MASK);
+
+  ParticleKokkos* particle_kk = (ParticleKokkos*) particle;
+  particle_kk->sync(Device,PARTICLE_MASK|SPECIES_MASK);
+  if (vibstyle == DISCRETE) particle_kk->sync(Device,CUSTOM_MASK);
+  d_particles = particle_kk->k_particles.view_device();
+  d_species = particle_kk->k_species.view_device();
+  d_ewhich = particle_kk->k_ewhich.view_device();
+  k_eiarray = particle_kk->k_eiarray;
+
+  GridKokkos* grid_kk = (GridKokkos*) grid;
+  grid_kk->sync(Device,CINFO_MASK|CELL_MASK);
+  d_plist = grid_kk->d_plist;
+
+  if (react) {
+    ReactTCEKokkos* react_kk = (ReactTCEKokkos*) react;
+    if (!react_kk)
+      error->all(FLERR,"Must use TCE reactions with Kokkos");
+  }
+
+  copymode = 1;
+
+  grow_subcell_views(nglocal,d_plist.extent(1));
+
+  /* ATOMIC_REDUCTION: 1 = use atomics
+                       0 = don't need atomics
+                      -1 = use parallel_reduce
+  */
+
+  // Reactions may create or delete more particles than existing views can hold.
+  //  Cannot grow a Kokkos view in a parallel loop, so
+  //  if the capacity of the view is exceeded, break out of parallel loop,
+  //  reallocate on the host, and then repeat the parallel loop again.
+
+  h_retry() = 1;
+
+  if (react) {
+    double extra_factor = 1.0;
+    if (sparta->kokkos->react_retry_flag)
+      extra_factor = sparta->kokkos->react_extra;
+
+    auto maxdelete_extra = maxdelete*extra_factor;
+    if (d_dellist.extent(0) < maxdelete_extra) {
+      memoryKK->destroy_kokkos(k_dellist,dellist);
+      memoryKK->create_kokkos(k_dellist,dellist,maxdelete_extra,"collide:dellist");
+      d_dellist = k_dellist.view_device();
+    }
+
+    maxcellcount = particle_kk->get_maxcellcount();
+    auto maxcellcount_extra = maxcellcount*extra_factor;
+    if (d_plist.extent(1) < maxcellcount_extra) {
+      d_plist = {};
+      Kokkos::resize(grid_kk->d_plist,nglocal,maxcellcount_extra);
+      d_plist = grid_kk->d_plist;
+      grow_subcell_views(nglocal,int(maxcellcount_extra));
+    }
+
+    auto nlocal_extra = particle->nlocal*extra_factor;
+    if (d_particles.extent(0) < nlocal_extra) {
+      particle->grow(nlocal_extra - particle->nlocal);
+      d_particles = particle_kk->k_particles.view_device();
+      k_eiarray = particle_kk->k_eiarray;
+    }
+  }
+
+  while (h_retry()) {
+
+    if (react && sparta->kokkos->react_retry_flag)
+      backup();
+
+    h_retry() = 0;
+    h_maxdelete() = maxdelete;
+    h_maxcellcount() = maxcellcount;
+    h_part_grow() = 0;
+    h_ndelete() = 0;
+    h_nlocal() = particle->nlocal;
+
+    Kokkos::deep_copy(d_scalars,h_scalars);
+
+    grid_kk_copy.copy(grid_kk);
+    if (react) {
+      ReactTCEKokkos* react_kk = (ReactTCEKokkos*) react;
+      react_kk_copy.copy(react_kk);
+    }
+
+    if (sparta->kokkos->atomic_reduction) {
+      if (sparta->kokkos->need_atomics)
+        Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagCollideCollisionsOneSubcell<DIM,GASTALLY,1> >(0,nglocal),*this);
+      else
+        Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagCollideCollisionsOneSubcell<DIM,GASTALLY,0> >(0,nglocal),*this);
+    } else
+      Kokkos::parallel_reduce(Kokkos::RangePolicy<DeviceType, TagCollideCollisionsOneSubcell<DIM,GASTALLY,-1> >(0,nglocal),*this,reduce);
+
+    Kokkos::deep_copy(h_scalars,d_scalars);
+
+    if (h_retry()) {
+      if (!sparta->kokkos->react_retry_flag) {
+        error->one(FLERR,"Ran out of space in Kokkos collisions, increase react/extra"
+                         " or use react/retry");
+      } else
+        restore();
+
+      reduce = COLLIDE_REDUCE();
+
+      maxdelete = h_maxdelete();
+      if (d_dellist.extent(0) < maxdelete) {
+        memoryKK->destroy_kokkos(k_dellist,dellist);
+        memoryKK->grow_kokkos(k_dellist,dellist,maxdelete,"collide:dellist");
+        d_dellist = k_dellist.view_device();
+      }
+
+      maxcellcount = h_maxcellcount();
+      particle_kk->set_maxcellcount(maxcellcount);
+      if (d_plist.extent(1) < maxcellcount) {
+        d_plist = {};
+        Kokkos::resize(grid_kk->d_plist,nglocal,maxcellcount);
+        d_plist = grid_kk->d_plist;
+        grow_subcell_views(nglocal,maxcellcount);
+      }
+
+      auto nlocal_new = h_nlocal();
+      if (d_particles.extent(0) < nlocal_new) {
+        particle->grow(nlocal_new - particle->nlocal);
+        d_particles = particle_kk->k_particles.view_device();
+        k_eiarray = particle_kk->k_eiarray;
+      }
+    }
+  }
+
+  ndelete = h_ndelete();
+
+  particle->nlocal = h_nlocal();
+
+  copymode = 0;
+
+  if (h_error_flag())
+    error->one(FLERR,"Collision cell volume is zero");
+
+  this->modified(Device,ALL_MASK);
+  particle_kk->modify(Device,PARTICLE_MASK);
+  if (vibstyle == DISCRETE) particle_kk->modify(Device,CUSTOM_MASK);
+
+  d_particles = t_particle_1d(); // destroy reference to reduce memory use
+  d_nn_last_partner = {};
+  d_subcell_id = {};
+  d_subcell_count = {};
+  d_subcell_first = {};
+  d_subcell_next = {};
+  d_subcell_ring = {};
+  d_plist = {};
+}
+
+template < int DIM, int GASTALLY, int ATOMIC_REDUCTION >
+KOKKOS_INLINE_FUNCTION
+void CollideVSSKokkos::operator()(TagCollideCollisionsOneSubcell< DIM, GASTALLY, ATOMIC_REDUCTION >, const int &icell) const {
+  COLLIDE_REDUCE reduce;
+  this->template operator()< DIM, GASTALLY, ATOMIC_REDUCTION >(TagCollideCollisionsOneSubcell< DIM, GASTALLY, ATOMIC_REDUCTION >(), icell, reduce);
+}
+
+template < int DIM, int GASTALLY, int ATOMIC_REDUCTION >
+KOKKOS_INLINE_FUNCTION
+void CollideVSSKokkos::operator()(TagCollideCollisionsOneSubcell< DIM, GASTALLY, ATOMIC_REDUCTION >, const int &icell, COLLIDE_REDUCE &reduce) const {
+  if (d_retry()) return;
+
+  int np = grid_kk_copy.obj.d_cellcount[icell];
+  if (np <= 1) return;
+
+  // zero previous-partner records for this cell
+  // used to avoid an immediate 2nd collision of the same pair
+
+  for (int ii = 0; ii < np; ii++)
+    d_nn_last_partner(icell,ii) = 0;
+
+  const double volume = grid_kk_copy.obj.k_cinfo.view_device()[icell].volume / grid_kk_copy.obj.k_cinfo.view_device()[icell].weight;
+  if (volume == 0.0) d_error_flag() = 1;
+
+  struct State precoln;       // state before collision
+  struct State postcoln;      // state after collision
+
+  rand_type rand_gen = rand_pool.get_state();
+
+  // attempt = exact collision attempt count for this cell
+  // nattempt = rounded attempt with RN
+
+  const double attempt = attempt_collision_kokkos(icell,np,volume,rand_gen);
+  const int nattempt = static_cast<int> (attempt);
+  if (!nattempt) {
+    rand_pool.free_state(rand_gen);
+    return;
+  }
+  if (ATOMIC_REDUCTION == 1)
+    Kokkos::atomic_add(&d_nattempt_one(),nattempt);
+  else if (ATOMIC_REDUCTION == 0)
+    d_nattempt_one() += nattempt;
+  else
+    reduce.nattempt_one += nattempt;
+
+  // subcell grid: nsub subcells per dim so # subcells <= np
+  //   small tolerance insures exact roots are not rounded down
+
+  int nsub;
+  if (DIM == 2) nsub = static_cast<int> (sqrt((double) np) + 1.0e-9);
+  else nsub = static_cast<int> (cbrt((double) np) + 1.0e-9);
+  const int nsubsq = nsub*nsub;
+
+  auto cell = grid_kk_copy.obj.k_cells.view_device()[icell];
+  double lo[3],ood[3];
+  lo[0] = cell.lo[0];
+  lo[1] = cell.lo[1];
+  lo[2] = cell.lo[2];
+  ood[0] = nsub / (cell.hi[0] - lo[0]);
+  ood[1] = nsub / (cell.hi[1] - lo[1]);
+  if (DIM == 3) ood[2] = nsub / (cell.hi[2] - lo[2]);
+  else ood[2] = 0.0;
+
+  rebin_subcell<DIM>(icell,np,nsub,lo,ood);
+
+  // perform collisions
+  // select random first particle, partner from same or nearby subcell
+  // test if collision actually occurs
+
+  for (int m = 0; m < nattempt; m++) {
+    const int i = np * rand_gen.drand();
+    const int j = find_nn_subcell<DIM>(rand_gen,i,np,icell,nsub,nsubsq);
+
+    Particle::OnePart* ipart = &d_particles[d_plist(icell,i)];
+    Particle::OnePart* jpart = &d_particles[d_plist(icell,j)];
+    Particle::OnePart* kpart;
+
+    // test if collision actually occurs, then perform it
+    // continue to next collision if no reaction
+
+    if (!test_collision_kokkos(icell,0,0,ipart,jpart,precoln,rand_gen)) continue;
+
+    d_nn_last_partner(icell,i) = j+1;
+    d_nn_last_partner(icell,j) = i+1;
+
+    // if recombination reaction is possible for this IJ pair
+    // pick a 3rd particle to participate and set cell number density
+    // unless boost factor turns it off, or there is no 3rd particle
+
+    Particle::OnePart* recomb_part3 = NULL;
+    int recomb_species = -1;
+    double recomb_density = 0.0;
+    if (recombflag && d_recomb_ijflag(ipart->ispecies,jpart->ispecies)) {
+      if (rand_gen.drand() > recomb_boost_inverse)
+        recomb_species = -1;
+      else if (np <= 2)
+        recomb_species = -1;
+      else {
+        int k = np * rand_gen.drand();
+        while (k == i || k == j) k = np * rand_gen.drand();
+        recomb_part3 = &d_particles[d_plist(icell,k)];
+        recomb_species = recomb_part3->ispecies;
+        recomb_density = np * fnum / volume;
+      }
+    }
+
+    // perform collision and possible reaction
+
+    Particle::OnePart iorig,jorig;
+
+    if (GASTALLY) {
+      iorig = *ipart;
+      jorig = *jpart;
+    }
+
+    int index_kpart;
+
+    setup_collision_kokkos(ipart,jpart,precoln,postcoln);
+    const int reactflag = perform_collision_kokkos(ipart,jpart,kpart,precoln,postcoln,rand_gen,
+                                                   recomb_part3,recomb_species,recomb_density,index_kpart);
+
+    if (ATOMIC_REDUCTION == 1)
+      Kokkos::atomic_inc(&d_ncollide_one());
+    else if (ATOMIC_REDUCTION == 0)
+      d_ncollide_one()++;
+    else
+      reduce.ncollide_one++;
+
+    if (reactflag) {
+      if (ATOMIC_REDUCTION == 1)
+        Kokkos::atomic_inc(&d_nreact_one());
+      else if (ATOMIC_REDUCTION == 0)
+        d_nreact_one()++;
+      else
+        reduce.nreact_one++;
+    } else
+      continue;
+
+    // if jpart destroyed, delete from plist, add to deletion list
+    // exit attempt loop if only single particle left
+
+    if (!jpart) {
+      int ndelete = Kokkos::atomic_fetch_add(&d_ndelete(),1);
+      if (ndelete < d_dellist.extent(0)) {
+        d_dellist(ndelete) = d_plist(icell,j);
+      } else {
+        d_retry() = 1;
+        d_maxdelete() += DELTADELETE;
+        rand_pool.free_state(rand_gen);
+        return;
+      }
+      np--;
+      d_plist(icell,j) = d_plist(icell,np);
+      d_nn_last_partner(icell,j) = d_nn_last_partner(icell,np);
+      if (np < 2) break;
+    }
+
+    // if kpart created, add to plist
+    // kpart was just added to particle list, index = index_kpart
+
+    if (kpart) {
+      if (np < d_plist.extent(1)) {
+        d_nn_last_partner(icell,np) = 0;
+        d_plist(icell,np++) = index_kpart;
+      } else {
+        d_retry() = 1;
+        d_maxcellcount() += DELTACELLCOUNT;
+        rand_pool.free_state(rand_gen);
+        return;
+      }
+    }
+
+    // if plist was changed by a reaction, rebin particles into subcells
+    // so subcell vectors stay consistent with plist
+    // keep same subcell grid even though np changed by one
+
+    if (!jpart || kpart) rebin_subcell<DIM>(icell,np,nsub,lo,ood);
+  }
+
+  rand_pool.free_state(rand_gen);
+}
+
+/* ----------------------------------------------------------------------
+   bin np particles of cell icell into transient subcell linked lists
+   Kokkos port of Collide::subcell_rebin()
+------------------------------------------------------------------------- */
+
+template < int DIM >
+KOKKOS_INLINE_FUNCTION
+void CollideVSSKokkos::rebin_subcell(int icell, int np, int nsub,
+                                     const double *lo, const double *ood) const
+{
+  int nsubcell = nsub*nsub;
+  if (DIM == 3) nsubcell *= nsub;
+
+  for (int isc = 0; isc < nsubcell; isc++) {
+    d_subcell_count(icell,isc) = 0;
+    d_subcell_first(icell,isc) = -1;
+  }
+
+  for (int n = 0; n < np; n++) {
+    double *x = d_particles[d_plist(icell,n)].x;
+    int ix = static_cast<int> ((x[0]-lo[0])*ood[0]);
+    ix = MIN(MAX(ix,0),nsub-1);
+    int iy = static_cast<int> ((x[1]-lo[1])*ood[1]);
+    iy = MIN(MAX(iy,0),nsub-1);
+    int iz;
+    if (DIM == 3) {
+      iz = static_cast<int> ((x[2]-lo[2])*ood[2]);
+      iz = MIN(MAX(iz,0),nsub-1);
+    } else iz = 0;
+
+    int isc = (iz*nsub + iy)*nsub + ix;
+    d_subcell_id(icell,n) = isc;
+    d_subcell_next(icell,n) = d_subcell_first(icell,isc);
+    d_subcell_first(icell,isc) = n;
+    d_subcell_count(icell,isc)++;
+  }
+}
+
+/* ----------------------------------------------------------------------
+   for particle I, find collision partner J via the transient subcell method
+   partner is random from same subcell, else expanding shells of subcells
+   excludes an I,J pair that most recently collided with each other
+   Kokkos port of the partner-selection logic in Collide::collisions_one_subcell()
+------------------------------------------------------------------------- */
+
+template < int DIM >
+KOKKOS_INLINE_FUNCTION
+int CollideVSSKokkos::find_nn_subcell(rand_type &rand_gen, int i, int np, int icell,
+                                      int nsub, int nsubsq) const
+{
+  int isc = d_subcell_id(icell,i);
+  int jexcl = -1;
+  int j = -1;
+  int jcand;
+
+  // if another particle is in same subcell, select partner randomly from it
+  // if that partner most recently collided with I, pick a different one,
+  //   else fall thru to shell search for next-nearest partner
+
+  int scount = d_subcell_count(icell,isc);
+  if (scount >= 2) {
+    do {
+      jcand = static_cast<int> (scount*rand_gen.drand());
+      j = d_subcell_first(icell,isc);
+      while (jcand--) j = d_subcell_next(icell,j);
+    } while (j == i);
+
+    if (d_nn_last_partner(icell,i) == j+1 && d_nn_last_partner(icell,j) == i+1) {
+      jexcl = j;
+      if (scount > 2) {
+        do {
+          jcand = static_cast<int> (scount*rand_gen.drand());
+          j = d_subcell_first(icell,isc);
+          while (jcand--) j = d_subcell_next(icell,j);
+        } while (j == i || j == jexcl);
+      } else j = -1;
+    }
+  }
+
+  // search shells of neighbor subcells with increasing radius
+  //   until one or more candidate partners found
+  // select partner randomly from all particles in the shell
+  // shell list of subcells is clipped to bounds of subcell grid
+
+  if (j < 0) {
+    int ibox = isc % nsub;
+    int jbox = (isc / nsub) % nsub;
+    int kbox = isc / nsubsq;     // 0 for DIM = 2
+
+    for (int radius = 1; radius < nsub; radius++) {
+      int nring = 0;
+      int ilo = MAX(ibox-radius,0);
+      int ihi = MIN(ibox+radius,nsub-1);
+      int jlo = MAX(jbox-radius+1,0);
+      int jhi = MIN(jbox+radius-1,nsub-1);
+
+      if (DIM == 2) {
+        if (jbox-radius >= 0)
+          for (int i2 = ilo; i2 <= ihi; i2++)
+            d_subcell_ring(icell,nring++) = (jbox-radius)*nsub + i2;
+        if (jbox+radius < nsub)
+          for (int i2 = ilo; i2 <= ihi; i2++)
+            d_subcell_ring(icell,nring++) = (jbox+radius)*nsub + i2;
+        if (ibox-radius >= 0)
+          for (int j2 = jlo; j2 <= jhi; j2++)
+            d_subcell_ring(icell,nring++) = j2*nsub + (ibox-radius);
+        if (ibox+radius < nsub)
+          for (int j2 = jlo; j2 <= jhi; j2++)
+            d_subcell_ring(icell,nring++) = j2*nsub + (ibox+radius);
+      } else {
+        int jflo = MAX(jbox-radius,0);
+        int jfhi = MIN(jbox+radius,nsub-1);
+        int klo = MAX(kbox-radius+1,0);
+        int khi = MIN(kbox+radius-1,nsub-1);
+
+        if (kbox-radius >= 0)
+          for (int j2 = jflo; j2 <= jfhi; j2++)
+            for (int i2 = ilo; i2 <= ihi; i2++)
+              d_subcell_ring(icell,nring++) = (kbox-radius)*nsubsq + j2*nsub + i2;
+        if (kbox+radius < nsub)
+          for (int j2 = jflo; j2 <= jfhi; j2++)
+            for (int i2 = ilo; i2 <= ihi; i2++)
+              d_subcell_ring(icell,nring++) = (kbox+radius)*nsubsq + j2*nsub + i2;
+        if (jbox-radius >= 0)
+          for (int k2 = klo; k2 <= khi; k2++)
+            for (int i2 = ilo; i2 <= ihi; i2++)
+              d_subcell_ring(icell,nring++) = k2*nsubsq + (jbox-radius)*nsub + i2;
+        if (jbox+radius < nsub)
+          for (int k2 = klo; k2 <= khi; k2++)
+            for (int i2 = ilo; i2 <= ihi; i2++)
+              d_subcell_ring(icell,nring++) = k2*nsubsq + (jbox+radius)*nsub + i2;
+        if (ibox-radius >= 0)
+          for (int k2 = klo; k2 <= khi; k2++)
+            for (int j2 = jlo; j2 <= jhi; j2++)
+              d_subcell_ring(icell,nring++) = k2*nsubsq + j2*nsub + (ibox-radius);
+        if (ibox+radius < nsub)
+          for (int k2 = klo; k2 <= khi; k2++)
+            for (int j2 = jlo; j2 <= jhi; j2++)
+              d_subcell_ring(icell,nring++) = k2*nsubsq + j2*nsub + (ibox+radius);
+      }
+
+      // ncand = # of candidate partners in shell subcells
+      // if none, expand search to next shell
+
+      int ncand = 0;
+      for (int mm = 0; mm < nring; mm++)
+        ncand += d_subcell_count(icell,d_subcell_ring(icell,mm));
+      if (!ncand) continue;
+
+      // select random particle from all candidates in shell
+
+      jcand = static_cast<int> (ncand*rand_gen.drand());
+      int jsc = d_subcell_ring(icell,0);
+      for (int mm = 0; mm < nring; mm++) {
+        jsc = d_subcell_ring(icell,mm);
+        if (jcand < d_subcell_count(icell,jsc)) break;
+        jcand -= d_subcell_count(icell,jsc);
+      }
+      j = d_subcell_first(icell,jsc);
+      while (jcand--) j = d_subcell_next(icell,j);
+
+      // if partner most recently collided with I:
+      // pick a different one from shell if it has others,
+      //   else expand search to next shell for next-nearest partner
+
+      if (d_nn_last_partner(icell,i) == j+1 && d_nn_last_partner(icell,j) == i+1) {
+        jexcl = j;
+        if (ncand > 1) {
+          do {
+            jcand = static_cast<int> (ncand*rand_gen.drand());
+            for (int mm = 0; mm < nring; mm++) {
+              jsc = d_subcell_ring(icell,mm);
+              if (jcand < d_subcell_count(icell,jsc)) break;
+              jcand -= d_subcell_count(icell,jsc);
+            }
+            j = d_subcell_first(icell,jsc);
+            while (jcand--) j = d_subcell_next(icell,j);
+          } while (j == jexcl);
+        } else {
+          j = -1;
+          continue;
+        }
+      }
+      break;
+    }
+
+    // only remaining partner is the one just collided with: accept it
+
+    if (j < 0) j = jexcl;
+  }
+
+  return j;
 }
 
 /* ----------------------------------------------------------------------

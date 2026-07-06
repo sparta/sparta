@@ -126,8 +126,9 @@ limit as with {nearcp}; for cells with many particles the subcell
 method is typically faster than {nearcp} with a large {Nlimit}.
 
 The {subcell} and {nearcp} options are mutually exclusive.  The
-{subcell} option does not yet support the ambipolar approximation,
-mixtures with multiple collision groups, or the KOKKOS package.
+{subcell} option does not yet support the ambipolar approximation or
+mixtures with multiple collision groups.  It is supported by the
+KOKKOS package.
 
 If the {ambipolar} keyword is set to {yes}, then collisions within a
 grid cell with use the ambipolar approximation.  This requires use of
