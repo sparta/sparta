@@ -404,6 +404,7 @@ This is indicated by additional letters in parenthesis: k = KOKKOS.
 "ave/surf"_fix_ave_surf.html,
 "ave/time"_fix_ave_time.html,
 "balance (k)"_fix_balance.html,
+"controller"_fix_controller.html,
 "custom"_fix_custom.html,
 "dt/reset (k)"_fix_dt_reset.html,
 "elecmode (k)"_fix_elecmode.html,

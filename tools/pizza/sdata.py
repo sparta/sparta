@@ -495,7 +495,7 @@ class sdata:
   # create a custom 3d surf from list of points and lines
 
   def surf3d(self,id,plist,tlist):
-    if self.ids.has_key(id): raise Exception("ID %s is already in use" % id)
+    if id in self.ids: raise Exception("ID %s is already in use" % id)
     if self.dim == 2: raise Exception("cannot have both 2d/3d surfs")
     self.dim = 3
 
@@ -657,7 +657,7 @@ class sdata:
   # refine surf to form a new surf with lines/tris <= size
 
   def refine(self,id,size):
-    if not self.ids.has_key(id):
+    if id not in self.ids:
       raise Exception("ID %s is not defined" % id)
 
     surf = self.surfs[self.ids[id]]
