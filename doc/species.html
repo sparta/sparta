@@ -138,16 +138,15 @@ allowed in the file.  Comment lines start with a "#" character.  All
 other lines must have the following format with values separated by
 whitespace:
 </P>
-<PRE>species-ID N temp1 relax1 degen1 temp2 relax2 degen2 ... tempN relaxN degenN 
+<PRE>species-ID N temp1 relax1 degen1 temp2 relax2 degen2 ...
 </PRE>
 <P>The species-ID is a string that will be matched against the requested
-species-ID, as described above.  N is the number of distinct
-vibrational modes that follow.  Because a mode may be degenerate, N can
-range from 1 up to the corresponding vibdof value = 4,6,8 (divided by
-two) used in the species file; i.e. N is at most 2,3,4.  N equals
-vibdof/2 only when every mode has degeneracy 1.
+species-ID, as described above.  N is the total number of vibrational
+oscillators, which must be either 2,3,4 and must match the corresponding
+vibdof value = 4,6,8 (divided by two) used in the species file.
 </P>
-<P>For each of the N modes, 3 values are listed:
+<P>One or more distinct vibrational modes then follow, each listed as 3
+values:
 </P>
 <UL><LI>tempI = vibrational temperature of mode I (temperature units)
 <LI>relaxI = inverse vibrational relaxation number of mode I (unitless)
@@ -155,14 +154,14 @@ vibdof/2 only when every mode has degeneracy 1.
 </UL>
 <P>The degeneracy degenI is the number of independent oscillators of equal
 frequency that make up mode I.  For example, the doubly-degenerate
-bending mode of CO2 has degenI = 2.  The sum of the degeneracies over
-all N listed modes must equal the vibdof value (= 4,6,8) divided by two,
-as specified in the species file.  Internally each mode is expanded into
-degenI independent oscillators, so a degenerate mode may equivalently be
-listed once with degenI = g or as g separate modes each with degeneracy
-1.  For example, these two CO2 entries (vibdof = 8) are equivalent:
+bending mode of CO2 has degenI = 2.  The degeneracies of the listed
+modes must sum to N, so the number of modes listed may be fewer than N.
+Internally each mode is expanded into degenI independent oscillators, so
+a degenerate mode may equivalently be listed once with degenI = g or as
+g separate modes each with degeneracy 1.  For example, these two CO2
+entries (vibdof = 8, so N = 4) are equivalent:
 </P>
-<PRE>CO2 3 1918.6 0.05 1 3382.0 0.05 1 959.0 0.05 2
+<PRE>CO2 4 1918.6 0.05 1 3382.0 0.05 1 959.0 0.05 2
 CO2 4 1918.6 0.05 1 3382.0 0.05 1 959.0 0.05 1 959.0 0.05 1
 </PRE>
 <P>These quantities are used during collisions if vibrational energy is
