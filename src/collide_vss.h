@@ -41,7 +41,8 @@ class CollideVSS : public Collide {
 
   virtual int test_collision(int, int, int, Particle::OnePart *,
                              Particle::OnePart *);
-  virtual int test_collision_SWS(int, int, int, Particle::OnePart *, Particle::OnePart *, double);   // SWS
+  virtual int test_collision_SWS(int, int, int, Particle::OnePart *,
+                                 Particle::OnePart *, double);   // SWS
 
   virtual void setup_collision(Particle::OnePart *, Particle::OnePart *);
   virtual void setup_collision_SWS(Particle::OnePart *, Particle::OnePart *);   // SWS
@@ -49,7 +50,7 @@ class CollideVSS : public Collide {
   virtual int perform_collision(Particle::OnePart *&, Particle::OnePart *&,
                                 Particle::OnePart *&);
   virtual int perform_collision_SWS(Particle::OnePart *&, Particle::OnePart *&,   // SWS
-                        Particle::OnePart *&, int &,int &,int &,int &);
+                                    Particle::OnePart *&, int &,int &,int &,int &);
 
   double extract(int, int, const char *);
 

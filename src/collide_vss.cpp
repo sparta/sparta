@@ -328,6 +328,12 @@ double du  = vi[0] - vj[0];
 double dv  = vi[1] - vj[1];
 double dw  = vi[2] - vj[2];
 double vr2 = du*du + dv*dv + dw*dw;
+
+// prevent division by zero
+
+if (vr2 < EPSZERO && params[ispecies][jspecies].omega >= 1.0)
+  return 0;
+
 double vro  = pow(vr2,1.0-params[ispecies][jspecies].omega);
 
 // although the vremax is calculated for the group,

@@ -380,68 +380,56 @@ void Collide::collisions()
 
   // perform collisions:
   // variant for ambipolar approximation or not
+  // variant for SWS (species weighting scheme) or not
   // variant for nearcp flag or not
   // variant for ngas_tally active or not
   // variant for single group or multiple groups
-  // variant for species weighting scheme (SWS) or not
 
   int sws = particle->sws;
+  if (sws && ngas_tally)
+    error->all(FLERR,"Gas collision tally computes are not yet supported "
+               "with the species weighting scheme (SWS)");
 
   if (!ambiflag) {
     if (!nearcp) {
       if (!ngas_tally) {
         if (ngroups == 1) {
-          if (!sws) collisions_one<0,0>();
-          else collisions_one_SWS<0,0>();          // SWS
+          if (sws == 0) collisions_one<0,0>();
+          else collisions_one_SWS<0>();        // SWS
         } else {
-          if (!sws) collisions_group<0,0>();
-          else collisions_group_SWS<0,0>();        // SWS
+          if (sws == 0) collisions_group<0,0>();
+          else collisions_group_SWS<0>();      // SWS
         }
       } else if (ngas_tally) {
-        if (ngroups == 1) {
-          if (!sws) collisions_one<0,1>();
-          else collisions_one_SWS<0,1>();          // SWS
-        } else {
-          if (!sws) collisions_group<0,1>();
-          else collisions_group_SWS<0,1>();        // SWS
-        }
+        if (ngroups == 1) collisions_one<0,1>();
+        else collisions_group<0,1>();
       }
     } else if (nearcp) {
       if (!ngas_tally) {
         if (ngroups == 1) {
-          if (!sws) collisions_one<1,0>();
-          else collisions_one_SWS<1,0>();          // SWS
+          if (sws == 0) collisions_one<1,0>();
+          else collisions_one_SWS<1>();        // SWS
         } else {
-          if (!sws) collisions_group<1,0>();
-          else collisions_group_SWS<1,0>();        // SWS
+          if (sws == 0) collisions_group<1,0>();
+          else collisions_group_SWS<1>();      // SWS
         }
       } else if (ngas_tally) {
-        if (ngroups == 1) {
-          if (!sws) collisions_one<1,1>();
-          else collisions_one_SWS<1,1>();          // SWS
-        } else {
-          if (!sws) collisions_group<1,1>();
-          else collisions_group_SWS<1,1>();        // SWS
-        }
+        if (ngroups == 1) collisions_one<1,1>();
+        else collisions_group<1,1>();
       }
     }
   } else if (ambiflag) {
     if (!ngas_tally) {
       if (ngroups == 1) {
-        if (!sws) collisions_one_ambipolar<0>();
-        else collisions_one_ambipolar_SWS<0>();    // SWS
+        if (sws == 0) collisions_one_ambipolar<0>();
+        else collisions_one_ambipolar_SWS();   // SWS
       } else {
-        if (!sws) collisions_group_ambipolar<0>();
-        else collisions_group_ambipolar_SWS<0>();  // SWS
+        if (sws == 0) collisions_group_ambipolar<0>();
+        else collisions_group_ambipolar_SWS(); // SWS
       }
     } else if (ngas_tally) {
-      if (ngroups == 1) {
-        if (!sws) collisions_one_ambipolar<1>();
-        else collisions_one_ambipolar_SWS<1>();    // SWS
-      } else {
-        if (!sws) collisions_group_ambipolar<1>();
-        else collisions_group_ambipolar_SWS<1>();  // SWS
-      }
+      if (ngroups == 1) collisions_one_ambipolar<1>();
+      else collisions_group_ambipolar<1>();
     }
   }
 
@@ -1648,12 +1636,11 @@ template < int GASTALLY > void Collide::collisions_group_ambipolar()
    NTC algorithm for a single group using Species Weighting Scheme
 ------------------------------------------------------------------------- */
 
-template < int NEARCP, int GASTALLY > void Collide::collisions_one_SWS()
+template < int NEARCP > void Collide::collisions_one_SWS()
 {
-  int i,j,k,m,n,ip,np;
+  int i,j,k,n,ip,np;
   int nattempt,reactflag;
   double attempt,volume;
-  Particle::OnePart iorig,jorig;
   Particle::OnePart *ipart,*jpart,*kpart;
   double count_wi;   // SWS
   Particle::Species *species = particle->species;   // SWS
@@ -1755,26 +1742,14 @@ template < int NEARCP, int GASTALLY > void Collide::collisions_one_SWS()
       }
 
       // perform collision and possible reaction
-      // if GASTALLY: tally prep with iorig/jorig, then trigger tally
-
-      if (GASTALLY) {
-        memcpy(&iorig,ipart,sizeof(Particle::OnePart));
-        memcpy(&jorig,jpart,sizeof(Particle::OnePart));
-      }
 
       setup_collision_SWS(ipart,jpart);   // SWS
 
       n_i = 1;                   // SWS
       n_j = n_k = n_pre = 0;     // SWS
       reactflag = perform_collision_SWS(ipart,jpart,kpart,n_i,n_j,n_k,n_pre);   // SWS
-
+      
       ncollide_one++;
-
-      if (GASTALLY)
-        for (m = 0; m < ngas_tally; m++)
-          glist_active[m]->gas_tally(icell,reactflag,
-                                     &iorig,&jorig,ipart,jpart,kpart);
-
       if (reactflag) nreact_one++;
       else continue;
 
@@ -1934,17 +1909,16 @@ template < int NEARCP, int GASTALLY > void Collide::collisions_one_SWS()
    loop over pairs of groups pre-compute # of attempts per group pair
 ------------------------------------------------------------------------- */
 
-template < int NEARCP, int GASTALLY > void Collide::collisions_group_SWS()
+template < int NEARCP > void Collide::collisions_group_SWS()
 {
   double wi;        // SWS
   double count_wi;  // SWS
-  int i,j,k,m,n,ii,jj,ip,np,isp,ng;
+  int i,j,k,n,ii,jj,ip,np,isp,ng;
   int pindex,ipair,igroup,jgroup,newgroup,ngmax;
   int nattempt,reactflag;
   int *ni,*nj,*ilist,*jlist;
   int *nn_igroup,*nn_jgroup;
   double attempt,volume;
-  Particle::OnePart iorig,jorig;
   Particle::OnePart *ipart,*jpart,*kpart;
   int n_i,n_j,n_k,n_pre,i_loop;  // SWS
 
@@ -2120,22 +2094,10 @@ template < int NEARCP, int GASTALLY > void Collide::collisions_group_SWS()
         }
 
         // perform collision and possible reaction
-        // if GASTALLY: tally prep with iorig/jorig, then trigger tally
-
-        if (GASTALLY) {
-          memcpy(&iorig,ipart,sizeof(Particle::OnePart));
-          memcpy(&jorig,jpart,sizeof(Particle::OnePart));
-        }
 
         setup_collision_SWS(ipart,jpart);  // SWS
         reactflag = perform_collision_SWS(ipart,jpart,kpart,n_i,n_j,n_k,n_pre);  // SWS
         ncollide_one++;
-
-        if (GASTALLY)
-          for (m = 0; m < ngas_tally; m++)
-            glist_active[m]->gas_tally(icell,reactflag,
-                                       &iorig,&jorig,ipart,jpart,kpart);
-
         if (reactflag) nreact_one++;
         else continue;
 
@@ -2237,12 +2199,11 @@ template < int NEARCP, int GASTALLY > void Collide::collisions_group_SWS()
    using Species Weighting Scheme
 ------------------------------------------------------------------------- */
 
-template < int GASTALLY > void Collide::collisions_one_ambipolar_SWS()
+void Collide::collisions_one_ambipolar_SWS()
 {
-  int i,j,k,m,n,ip,np,nelectron,nptotal,jspecies,tmp;
+  int i,j,k,n,ip,np,nelectron,nptotal,jspecies,tmp;
   int nattempt,reactflag;
   double attempt,volume;
-  Particle::OnePart iorig,jorig;
 
   int n_i,n_j,n_k,n_pre,i_loop;  // SWS
   double x[3],v[3];              // SWS
@@ -2400,12 +2361,6 @@ template < int GASTALLY > void Collide::collisions_one_ambipolar_SWS()
       // perform collision
       // ijspecies = species before collision chemistry
       // continue to next collision if no reaction
-      // if GASTALLY: tally prep with iorig/jorig, then trigger tally
-
-      if (GASTALLY) {
-        memcpy(&iorig,ipart,sizeof(Particle::OnePart));
-        memcpy(&jorig,jpart,sizeof(Particle::OnePart));
-      }
 
       jspecies = jpart->ispecies;
       setup_collision_SWS(ipart,jpart);  // SWS
@@ -2428,12 +2383,6 @@ template < int GASTALLY > void Collide::collisions_one_ambipolar_SWS()
       reactflag = perform_collision_SWS(ipart,jpart,kpart,n_i,n_j,n_k,n_pre);
 
       ncollide_one++;
-
-      if (GASTALLY)
-        for (m = 0; m < ngas_tally; m++)
-          glist_active[m]->gas_tally(icell,reactflag,
-                                     &iorig,&jorig,ipart,jpart,kpart);
-
       if (reactflag) nreact_one++;
       else continue;
 
@@ -2862,16 +2811,15 @@ template < int GASTALLY > void Collide::collisions_one_ambipolar_SWS()
    using Species Weighting Scheme
 ------------------------------------------------------------------------- */
 
-template < int GASTALLY > void Collide::collisions_group_ambipolar_SWS()
+void Collide::collisions_group_ambipolar_SWS()
 {
   double wi;  // SWS
   double count_wi;  // SWS
-  int i,j,k,m,n,ii,jj,ip,np,isp,ng;
+  int i,j,k,n,ii,jj,ip,np,isp,ng;
   int pindex,ipair,igroup,jgroup,newgroup,jspecies,tmp;
   int nattempt,reactflag,nelectron;
   int *ni,*nj,*ilist,*jlist,*tmpvec;
   double attempt,volume;
-  Particle::OnePart iorig,jorig;
   Particle::OnePart *ipart,*jpart,*kpart,*p,*ep;
   int n_i,n_j,n_k,n_pre,i_loop;   // SWS
 
@@ -3085,23 +3033,11 @@ template < int GASTALLY > void Collide::collisions_group_ambipolar_SWS()
         // perform collision
         // ijspecies = species before collision chemistry
         // continue to next collision if no reaction
-        // if GASTALLY: tally prep with iorig/jorig, then trigger tally
-
-        if (GASTALLY) {
-          memcpy(&iorig,ipart,sizeof(Particle::OnePart));
-          memcpy(&jorig,jpart,sizeof(Particle::OnePart));
-        }
 
         jspecies = jpart->ispecies;
         setup_collision_SWS(ipart,jpart);  // SWS
         reactflag = perform_collision_SWS(ipart,jpart,kpart,n_i,n_j,n_k,n_pre);  // SWS
         ncollide_one++;
-
-        if (GASTALLY)
-          for (m = 0; m < ngas_tally; m++)
-            glist_active[m]->gas_tally(icell,reactflag,
-                                       &iorig,&jorig,ipart,jpart,kpart);
-
         if (reactflag) nreact_one++;
         else continue;
 

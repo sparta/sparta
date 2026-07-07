@@ -61,7 +61,7 @@ class Collide : protected Pointers {
   virtual int perform_collision(Particle::OnePart *&, Particle::OnePart *&,
                                 Particle::OnePart *&) = 0;
   virtual int perform_collision_SWS(Particle::OnePart *&, Particle::OnePart *&,     // SWS
-                                Particle::OnePart *&,int &,int &,int &,int &) = 0;   // SWS
+                                Particle::OnePart *&,int &,int &,int &,int &) = 0;
 
   virtual double extract(int, int, const char *) {return 0.0;}
 
@@ -183,10 +183,10 @@ class Collide : protected Pointers {
   template < int,int > void collisions_group();
   template < int > void collisions_one_ambipolar();
   template < int > void collisions_group_ambipolar();
-  template < int,int > void collisions_one_SWS();        // SWS
-  template < int,int > void collisions_group_SWS();      // SWS
-  template < int > void collisions_one_ambipolar_SWS();  // SWS
-  template < int > void collisions_group_ambipolar_SWS();// SWS
+  template < int > void collisions_one_SWS();        // SWS
+  template < int > void collisions_group_SWS();      // SWS
+  void collisions_one_ambipolar_SWS();               // SWS
+  void collisions_group_ambipolar_SWS();             // SWS
 
   void ambi_reset(int, int, int, Particle::OnePart *, Particle::OnePart *,
                   Particle::OnePart *, int *);
