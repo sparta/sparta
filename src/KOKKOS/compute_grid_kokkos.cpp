@@ -35,7 +35,13 @@ enum{NUM,NRHO,NFRAC,MASS,MASSRHO,MASSFRAC,
 
 // internal accumulators
 
-enum{COUNT,MASSSUM,MVX,MVY,MVZ,MVXSQ,MVYSQ,MVZSQ,MVSQ,
+// NOTE: this enum must stay identical (same order) to the one in the
+// non-KOKKOS compute_grid.cpp: the map/unique arrays are built by the shared
+// ComputeGrid constructor, so a mismatch shifts every accumulator index.
+// SIMCOUNT (raw simulator-particle count) was added there for the stochastic
+// weighting method; KOKKOS never uses weights, so it tallies 1.0 like COUNT.
+
+enum{COUNT,SIMCOUNT,MASSSUM,MVX,MVY,MVZ,MVXSQ,MVYSQ,MVZSQ,MVSQ,
      ENGROT,ENGVIB,DOFROT,DOFVIB,CELLCOUNT,CELLMASS,LASTSIZE};
 
 // max # of quantities to accumulate for any user value
@@ -181,6 +187,9 @@ void ComputeGridKokkos::operator()(TagComputeGrid_compute_per_grid_atomic<NEED_A
     case COUNT:
       a_tally(icell,k++) += 1.0;
       break;
+    case SIMCOUNT:
+      a_tally(icell,k++) += 1.0;
+      break;
     case MASSSUM:
       a_tally(icell,k++) += mass;
       break;
@@ -249,6 +258,9 @@ void ComputeGridKokkos::operator()(TagComputeGrid_compute_per_grid, const int &i
     for (int m = 0; m < npergroup; m++) {
       switch (d_unique[m]) {
       case COUNT:
+        d_tally(icell,k++) += 1.0;
+        break;
+      case SIMCOUNT:
         d_tally(icell,k++) += 1.0;
         break;
       case MASSSUM:
