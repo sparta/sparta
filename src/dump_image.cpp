@@ -1602,10 +1602,10 @@ void DumpImage::create_image()
       else m = isurf;
 
       if (dim == 2) {
-        if (!(lines[isurf].mask & surf_groupbit)) continue;
+        if (!(lines[m].mask & surf_groupbit)) continue;
         image->draw_line(lines[m].p1,lines[m].p2,color,diameter);
       } else {
-        if (!(tris[isurf].mask & surf_groupbit)) continue;
+        if (!(tris[m].mask & surf_groupbit)) continue;
         image->draw_triangle(tris[m].p1,tris[m].p2,tris[m].p3,color);
       }
     }
