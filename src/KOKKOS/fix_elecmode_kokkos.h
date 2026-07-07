@@ -41,7 +41,8 @@ class FixElecmodeKokkos : public FixElecmode {
   void update_custom_kokkos(int, double, double, double, double, const double *) const;
 
  private:
-  int boltz,elecstyle;
+  double boltz;
+  int elecstyle;
 
 #ifndef SPARTA_KOKKOS_EXACT
   Kokkos::Random_XorShift64_Pool<DeviceType> rand_pool;

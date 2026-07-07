@@ -302,8 +302,10 @@ void ComputeGrid::compute_per_grid()
         vec[k++] += particles[i].evib;
         break;
       case ENGELEC:
-        if (index_eelec >= 0)
-          vec[k++] += eelecs[i];
+        // always advance k to keep the per-value tally layout in sync;
+        // only accumulate when the eelec custom attribute exists
+        if (index_eelec >= 0) vec[k] += eelecs[i];
+        k++;
         break;
       case DOFROT:
         vec[k++] += species[ispecies].rotdof;

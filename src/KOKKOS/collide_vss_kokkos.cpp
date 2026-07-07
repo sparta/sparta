@@ -376,7 +376,9 @@ void CollideVSSKokkos::collisions()
     vre_next += vre_every;
   }
 
-  if (elecstyle == DISCRETE && grid->maxlocal > (int)d_cumulative_probabilities.extent(0))
+  if (elecstyle == DISCRETE &&
+      (grid->maxlocal > (int)d_cumulative_probabilities.extent(0) ||
+       particle->maxelecstate > (int)d_cumulative_probabilities.extent(1)))
     MemKK::realloc_kokkos(d_cumulative_probabilities,"collide:cumulative_probabilities",grid->maxlocal,particle->maxelecstate);
 
   // copy Update count of gas/gas collision computes active on this timestep
@@ -553,7 +555,9 @@ template < int NEARCP, int GASTALLY > void CollideVSSKokkos::collisions_one(COLL
     if (d_particles.extent(0) < nlocal_extra) {
       particle->grow(nlocal_extra - particle->nlocal);
       d_particles = particle_kk->k_particles.view_device();
+      k_eivec = particle_kk->k_eivec;
       k_eiarray = particle_kk->k_eiarray;
+      k_edvec = particle_kk->k_edvec;
     }
   }
 
@@ -616,7 +620,9 @@ template < int NEARCP, int GASTALLY > void CollideVSSKokkos::collisions_one(COLL
       if (d_particles.extent(0) < nlocal_new) {
         particle->grow(nlocal_new - particle->nlocal);
         d_particles = particle_kk->k_particles.view_device();
+        k_eivec = particle_kk->k_eivec;
         k_eiarray = particle_kk->k_eiarray;
+        k_edvec = particle_kk->k_edvec;
       }
     }
   }
@@ -632,7 +638,8 @@ template < int NEARCP, int GASTALLY > void CollideVSSKokkos::collisions_one(COLL
 
   this->modified(Device,ALL_MASK);
   particle_kk->modify(Device,PARTICLE_MASK);
-  if (vibstyle == DISCRETE) particle_kk->modify(Device,CUSTOM_MASK);
+  if (vibstyle == DISCRETE || elecstyle == DISCRETE)
+    particle_kk->modify(Device,CUSTOM_MASK);
 
   d_particles = t_particle_1d(); // destroy reference to reduce memory use
   d_nn_last_partner = {};
@@ -2187,20 +2194,20 @@ void CollideVSSKokkos::EEXCHANGE_ReactingEDisposal(int icell,
   postcoln.evib = ip->evib + jp->evib;
   postcoln.eelec = 0.0;
   if (elecstyle == DISCRETE) {
-    double *eelecs = particle->edvec[particle->ewhich[index_eelec]];
+    auto &d_eelecs = k_edvec.view_device()[d_ewhich[index_eelec]].k_view.view_device();
     if (d_nelecstates[ip->ispecies] > 0)
-      postcoln.eelec += eelecs[ip - d_particles.data()];
+      postcoln.eelec += d_eelecs[ip - d_particles.data()];
     if (d_nelecstates[jp->ispecies] > 0)
-      postcoln.eelec += eelecs[jp - d_particles.data()];
+      postcoln.eelec += d_eelecs[jp - d_particles.data()];
   }
 
   if (kp) {
     postcoln.erot += kp->erot;
     postcoln.evib += kp->evib;
     if (elecstyle == DISCRETE) {
-      double *eelecs = particle->edvec[particle->ewhich[index_eelec]];
+      auto &d_eelecs = k_edvec.view_device()[d_ewhich[index_eelec]].k_view.view_device();
       if (d_nelecstates[kp->ispecies] > 0)
-        postcoln.eelec += eelecs[kp - d_particles.data()];
+        postcoln.eelec += d_eelecs[kp - d_particles.data()];
     }
   }
 

@@ -78,7 +78,7 @@ class ComputeTelecGridKokkos : public ComputeTelecGrid, public KokkosBase {
   DAT::t_int_1d d_cellcount;
   DAT::t_int_2d d_plist;
 
-  DAT::t_float_1d d_tspecies;
+  DAT::t_float_2d d_tspecies;
 
   DAT::t_int_2d d_groupspecies;
 

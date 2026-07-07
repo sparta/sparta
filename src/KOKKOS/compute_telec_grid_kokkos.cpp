@@ -50,7 +50,8 @@ ComputeTelecGridKokkos::ComputeTelecGridKokkos(SPARTA *sparta, int narg, char **
   Kokkos::deep_copy(d_groupspecies,h_groupspecies);
 
   k_s2t = DAT::tdual_int_1d("compute/telec/grid:s2t",nspecies);
-  d_tspecies = DAT::t_float_1d("d_tspecies",nspecies);
+  // per-cell scratch, sized (maxlocal,nspecies) in post_process_grid_kokkos
+  d_tspecies = DAT::t_float_2d("d_tspecies",1,nspecies);
 
   for (int n = 0; n < nspecies; n++)
     k_s2t.view_host()(n) = s2t[n];
@@ -226,13 +227,15 @@ double ComputeTelecGridKokkos::elec_energy(int icell, int isp, double temp_elec)
 ------------------------------------------------------------------------- */
 
 KOKKOS_INLINE_FUNCTION
-double ComputeTelecGridKokkos::bisectTelec(int icell, int isp, double eelec, double count) const
+double ComputeTelecGridKokkos::bisectTelec(int icell, int isp, double e_total, double n_part) const
 {
   // short circuit the function for the most common case
+  // (e_total/n_part are the species' tallied electronic energy and particle
+  //  count for this cell; named to avoid shadowing the eelec/count members)
 
-  if (eelec == 0.0) return 0.0;
+  if (e_total == 0.0) return 0.0;
 
-  double target_energy_per_part = eelec/count;
+  double target_energy_per_part = e_total/n_part;
 
   double t_elec = d_elecstates(isp,1).temp;
 
@@ -342,8 +345,12 @@ post_process_grid_kokkos(int index, int /*nsample*/,
   d_nelecstates = particle_kk->d_nelecstates;
   d_elecstates = particle_kk->d_elecstates;
 
-  if (grid->maxlocal > (int)d_cumulative_probabilities.extent(0))
+  if (grid->maxlocal > (int)d_cumulative_probabilities.extent(0) ||
+      particle->maxelecstate > (int)d_cumulative_probabilities.extent(1)) {
     MemKK::realloc_kokkos(d_cumulative_probabilities,"collide:cumulative_probabilities",grid->maxlocal,particle->maxelecstate);
+    // per-cell scratch for species temperatures (avoids cross-cell race)
+    MemKK::realloc_kokkos(d_tspecies,"telec/grid:tspecies",grid->maxlocal,nspecies);
+  }
 
   nsp = nmap[index] / 2;
   eelec = emap[0];
@@ -365,13 +372,13 @@ void ComputeTelecGridKokkos::operator()(TagComputeTelecGrid_post_process_grid, c
     const int ispecies = d_groupspecies(index,isp);
     if (d_nelecstates[ispecies] == 0 ||
         d_etally(icell,eelc) == 0.0) {
-      d_tspecies[isp] = 0.0;
+      d_tspecies(icell,isp) = 0.0;
       eelc += 2;
       cnt = eelc+1;
       continue;
     }
 
-    d_tspecies[isp] = bisectTelec(icell, ispecies,
+    d_tspecies(icell,isp) = bisectTelec(icell, ispecies,
                                   d_etally(icell,eelc), d_etally(icell,cnt));
     eelc += 2;
     cnt = eelc+1;
@@ -381,7 +388,7 @@ void ComputeTelecGridKokkos::operator()(TagComputeTelecGrid_post_process_grid, c
   double denom = 0.0;
   cnt = count;
   for (int isp = 0; isp < nsp; isp++) {
-    numer += d_tspecies[isp]*d_etally(icell,cnt);
+    numer += d_tspecies(icell,isp)*d_etally(icell,cnt);
     denom += d_etally(icell,cnt);
     cnt += 2;
   }
