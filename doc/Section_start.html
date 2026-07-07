@@ -77,7 +77,7 @@ job on your machine, please find a local expert to help you.
 </P>
 <P>SPARTA requires that the compiler supports C++11. SPARTA will throw an error
 if this is not the case. If you are building SPARTA with Kokkos, the compiler
-must support C++17.
+must support C++20.
 </P>
 <P>If you have a build problem that you are convinced is a SPARTA issue
 (e.g. the compiler complains about a line of SPARTA source code), then
@@ -86,7 +86,8 @@ please send an email to the
 </P>
 <P>If you succeed in building SPARTA on a new kind of machine, for which
 there isn't a similar Makefile in the src/MAKE directory or .cmake file
-in cmake/presets, send it to the 
+in cmake/presets (for KOKKOS builds, a .cmake file in cmake/presets),
+send it to the 
 <A HREF = "https://sparta.github.io/authors.html">developers</A> and we'll include it in future SPARTA releases.
 </P>
 <HR>
@@ -118,7 +119,7 @@ installed.  To build SPARTA with optional packages, see <A HREF = "#start_3">thi
 section</A> below.
 </P>
 <P>IMPORTANT NOTE: The optional KOKKOS accelerator package does not
-support Makefiles and must be build using CMake instead (see below).
+support Makefiles and must be built using CMake instead (see below).
 </P>
 <P><B>Step 1</B>
 </P>
@@ -475,7 +476,7 @@ CMake options (with example values) for our purposes here are:
 <P>If your cmake command line is getting too long, consider placing it in a bash
 script and escaping newlines. For example:
 </P>
-<PRE>cmake -C  /path/to/sparta/cmake/presets/NAME.cmake -D  -D<OPTION_NAME>=<VALUE> /path/to/sparta/cmake 
+<PRE>cmake -C /path/to/sparta/cmake/presets/NAME.cmake -D<OPTION_NAME>=<VALUE> /path/to/sparta/cmake 
 </PRE>
 <P><B>Step 4</B>
 </P>
@@ -725,6 +726,77 @@ depending on how many cores your compilation machine has. N is the number of
 cores the build runs on.
 </P>
 <P>You should get build/src/spa_tutorial and build/src/libsparta.a.
+</P>
+<P><B>Building with the KOKKOS package:</B>
+</P>
+<P>The KOKKOS package must be built with CMake (GNU Makefile builds are not
+supported for KOKKOS). The presets in cmake/presets/ set up all required
+Kokkos options for each supported backend and target platform. Choose the
+preset that matches your hardware:
+</P>
+<UL><LI>kokkos_omp.cmake      - Multi-core CPUs via OpenMP threading
+<LI>kokkos_mpi_only.cmake - Multi-core CPUs, MPI only (no threading)
+<LI>kokkos_cuda.cmake     - NVIDIA GPUs via CUDA (default: Hopper/H100)
+<LI>kokkos_hip.cmake      - AMD GPUs via HIP (default: MI250X)
+<LI>elcapitan_kokkos.cmake - AMD MI300A APU via HIP (Cray MPICH)
+<LI>kokkos_sycl.cmake     - Intel Ponte Vecchio GPUs via SYCL 
+</UL>
+<P>Example: build for multi-core CPUs with OpenMP threading:
+</P>
+<PRE>mkdir build
+cd build
+cmake -C /path/to/sparta/cmake/presets/kokkos_omp.cmake /path/to/sparta/cmake
+make -j 4 
+</PRE>
+<P>The executable will be named spa_kokkos_omp (the suffix comes from the preset).
+</P>
+<P>Example: build for NVIDIA A100 GPUs (override the default Hopper arch):
+</P>
+<PRE>mkdir build
+cd build
+cmake -C /path/to/sparta/cmake/presets/kokkos_cuda.cmake       -DKokkos_ARCH_HOPPER90=OFF -DKokkos_ARCH_AMPERE80=ON       /path/to/sparta/cmake
+make -j 4 
+</PRE>
+<P>Example: build for NVIDIA V100 GPUs:
+</P>
+<PRE>mkdir build
+cd build
+cmake -C /path/to/sparta/cmake/presets/kokkos_cuda.cmake       -DKokkos_ARCH_HOPPER90=OFF -DKokkos_ARCH_VOLTA70=ON       /path/to/sparta/cmake
+make -j 4 
+</PRE>
+<P>Example: build for AMD MI300X GPUs:
+</P>
+<PRE>mkdir build
+cd build
+cmake -C /path/to/sparta/cmake/presets/kokkos_hip.cmake       -DKokkos_ARCH_VEGA90A=OFF -DKokkos_ARCH_AMD_GFX942=ON       /path/to/sparta/cmake
+make -j 4 
+</PRE>
+<P>After building, run SPARTA with the KOKKOS package using the -k, -sf,
+and -pk command-line switches. The -k on g Ng switch specifies Ng GPUs
+per node. Examples (assuming a node with 4 GPUs):
+</P>
+<P>For CUDA (NVIDIA) or HIP (AMD) GPUs, 4 MPI tasks using 4 GPUs:
+</P>
+<PRE>mpirun -np 4 spa_kokkos_cuda -k on g 4 -sf kk -in in.collide 
+</PRE>
+<P>For OpenMP on 16-core CPUs, 2 MPI tasks each using 8 threads:
+</P>
+<PRE>mpirun -np 2 spa_kokkos_omp -k on t 8 -sf kk -in in.collide 
+</PRE>
+<P>If you are migrating from the GNU Makefile build system, the Kokkos
+KOKKOS_DEVICES and KOKKOS_ARCH Makefile variables map to CMake options as
+follows:
+</P>
+<UL><LI>KOKKOS_DEVICES=OpenMP  ->  -DKokkos_ENABLE_OPENMP=ON
+<LI>KOKKOS_DEVICES=Cuda    ->  -DKokkos_ENABLE_CUDA=ON
+<LI>KOKKOS_ARCH=Volta70    ->  -DKokkos_ARCH_VOLTA70=ON
+<LI>KOKKOS_ARCH=Ampere80   ->  -DKokkos_ARCH_AMPERE80=ON
+<LI>KOKKOS_ARCH=Hopper90   ->  -DKokkos_ARCH_HOPPER90=ON
+<LI>KOKKOS_ARCH=Power9     ->  -DKokkos_ARCH_POWER9=ON
+<LI>KOKKOS_ARCH=ARMv8-TX2  ->  -DKokkos_ARCH_ARMV8_THUNDERX2=ON 
+</UL>
+<P>See <A HREF = "Section_accelerate.html#acc_3">Section 5.3</A> for the full list of
+architecture options and detailed instructions for each KOKKOS backend.
 </P>
 <HR>
 

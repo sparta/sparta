@@ -39,6 +39,7 @@ using namespace MathConst;
 #define DELTASEND 1024
 #define EPSILON_GRID 1.0e-3
 #define EPSILON 1.0e-4
+#define SMALL 1.0e-6              // roundoff tolerance for corner-value bounds checks
 
 enum{CVAL,SVAL,IVAL,INVAL};
 enum{XLO,XHI,YLO,YHI,ZLO,ZHI,INTERIOR};         // same as Domain
@@ -708,7 +709,7 @@ void CreateISurf::sync(int which)
 {
   int i,j,ix,iy,iz,jx,jy,jz,ixfirst,iyfirst,izfirst,jcorner,jin;
   int icell,jcell;
-  double dtotal[nmulti], dtemp;
+  double dtotal[6], dtemp;   // dtotal indexed by nmulti = 4 (2D) or 6 (3D)
 
   comm_neigh_corners(which);
 
@@ -1553,8 +1554,13 @@ void CreateISurf::set_cvalues_voxel()
     dz = cells[icell].hi[2] - cells[icell].lo[2];
     sfrac = (dx*dy*dz - cvol) / (dx*dy*dz);
 
-    if (sfrac < 0.0 || sfrac > 1.0)
+    // use a small tolerance so that a cell which is essentially fully solid
+    // or fully open is not rejected due to floating-point roundoff in the
+    // clipped volume; genuine errors still fall well outside [0,1]
+
+    if (sfrac < 0.0 - SMALL || sfrac > 1.0 + SMALL)
       error->one(FLERR,"Calculated solid fraction above one or negative");
+    sfrac = MIN(MAX(sfrac,0.0),1.0);
 
     for (int ic = 0; ic < ncorner; ic++)
       tmp_cvalues[icell][ic] = MIN(MAX(sfrac*cin,0.0),255.0);
@@ -1594,8 +1600,13 @@ void CreateISurf::set_cvalues_ave()
         if (nval == 0) tmp_cvalues[icell][ic] = cin;
         else {
           ivalsum /= nval;
-          if (ivalsum > 1.0)
+
+          // tolerate roundoff so an averaged location that lands exactly on
+          // the cell boundary is not rejected; clamp before use
+
+          if (ivalsum > 1.0 + SMALL)
             error->one(FLERR,"Calculated vertex location outside cell");
+          ivalsum = MIN(ivalsum,1.0);
           tmp_cvalues[icell][ic] = MAX(param2cval(ivalsum,0.0),0.0);
         }
       } // end svalues
