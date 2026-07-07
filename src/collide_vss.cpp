@@ -736,12 +736,19 @@ int CollideVSS::select_elec_state(Particle::OnePart *p, Particle::OnePart *jp, d
       }
     }
   }
+  // if no selectable state has any weight (e.g. every allowed state has a
+  // zero relaxation probability), leave the particle in its current state
+
+  if (state_probability[max_level] <= 0.0)
+    return estates[p - particle->particles];
+
   // Select a state from the distribution
-  int ielec;
+  int ielec,ilast;
   double eelec = 0.0;
   do {
     double rand_state = random->uniform()*state_probability[max_level];
     ielec = 0;
+    ilast = -1;
     // bound by max_level: roundoff can leave rand_state >= 0 after the last
     // included state, which would index states[] past max_level/nelecstate
     while (rand_state >= 0 && ielec <= max_level) {
@@ -753,10 +760,13 @@ int CollideVSS::select_elec_state(Particle::OnePart *p, Particle::OnePart *jp, d
         } else {
           rand_state -= species[p->ispecies].elecdat->states[ielec].degen*get_elec_phi(p->ispecies, jp->ispecies, ielec, E_Dispose);
         }
+        ilast = ielec;
       }
       ++ielec;
     }
-    --ielec;
+    // floating-point round-off can leave rand_state non-negative after all
+    // weights are subtracted, so clamp to the last spin-allowed state
+    ielec = ilast;
     eelec = species[p->ispecies].elecdat->states[ielec].temp*update->boltz;
     State_prob = pow((1.0 - eelec / E_Dispose),
                      (1.5 - omega));

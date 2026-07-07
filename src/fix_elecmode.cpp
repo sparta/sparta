@@ -52,8 +52,15 @@ FixElecmode::FixElecmode(SPARTA *sparta, int narg, char **arg) :
     error->all(FLERR,"Cannot use fix elecmode without "
                "collide_modify electronic discrete");
 
-  index_elecstate = particle->add_custom((char *) "elecstate",INT,0);
-  index_eelec = particle->add_custom((char *) "eelec",DOUBLE,0);
+  // check if custom attributes already exist, due to restart file
+  // else create per-particle attributes
+
+  index_elecstate = particle->find_custom((char *) "elecstate");
+  if (index_elecstate < 0)
+    index_elecstate = particle->add_custom((char *) "elecstate",INT,0);
+  index_eelec = particle->find_custom((char *) "eelec");
+  if (index_eelec < 0)
+    index_eelec = particle->add_custom((char *) "eelec",DOUBLE,0);
 }
 
 /* ---------------------------------------------------------------------- */
