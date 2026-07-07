@@ -550,11 +550,17 @@ void Collide::group_bt(int istart, int iend, int group_size_buffer)
 
     // scale values to be consistent with definitions in
     // .. stochastic numerics book
+    // use the mass-weighted mean mass of the group (mbar = msum/gsum) as the
+    // representative mass.  for a single-species group this is exactly the
+    // species mass; using a single particle's mass here instead would make
+    // the result depend on particle ordering.  reduction is restricted to
+    // single-species groups (enforced in Collide::init), so this is exact.
 
-    T *= update->boltz/mass;
+    double mbar = msum/gsum;
+    T *= update->boltz/mbar;
     for (int i = 0; i < 3; i++) {
-      q[i] /= mass;
-      for(int j = 0; j < 3; j++) pij[i][j] /= mass;
+      q[i] /= mbar;
+      for(int j = 0; j < 3; j++) pij[i][j] /= mbar;
     }
 
     // reduce based on type
