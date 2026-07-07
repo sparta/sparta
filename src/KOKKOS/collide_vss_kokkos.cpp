@@ -33,6 +33,7 @@
 #include "modify.h"
 #include "fix.h"
 #include "fix_ambipolar.h"
+#include "fix_ambipolar_kokkos.h"
 
 using namespace SPARTA_NS;
 using namespace MathConst;
@@ -270,6 +271,8 @@ void CollideVSSKokkos::init()
       if (strcmp(modify->fix[ifix]->style,"ambipolar") == 0) break;
     FixAmbipolar *afix = (FixAmbipolar *) modify->fix[ifix];
     ambispecies = afix->especies;
+    FixAmbipolarKokkos *afix_kk = (FixAmbipolarKokkos *) afix;
+    d_ions = afix_kk->d_ions;
   }
 
   // if ambipolar and multiple groups in mixture, ambispecies must be its own group
@@ -2168,9 +2171,20 @@ void CollideVSSKokkos::ambi_reset_kokkos(int i, int j, int jsp, int index_kpart,
 
   if (kp) {
     int k = index_kpart;
-    d_ionambi[k] = 0;
-    if (jsp != e) return;
 
+    // no electron reactant: I/J order is not canonical if an ion is the
+    // third body (e.g. AB + C+ -> A + C+ + B), so sync each product's
+    // ion flag to its post-reaction species
+    // also correct for all-neutral dissociation, where flags stay 0
+
+    if (jsp != e) {
+      d_ionambi[i] = d_ions[ip->ispecies];
+      d_ionambi[j] = d_ions[jp->ispecies];
+      d_ionambi[k] = d_ions[kp->ispecies];
+      return;
+    }
+
+    d_ionambi[k] = 0;
     if (d_ionambi[i]) {                // nothing to change
     } else if (kp->ispecies == e) {
       d_ionambi[i] = 1;                // 1st reactant is now 1st product ion
@@ -2193,7 +2207,8 @@ void CollideVSSKokkos::ambi_reset_kokkos(int i, int j, int jsp, int index_kpart,
   // ambi reaction if J reactant is electron
 
   } else if (!jp) {
-    if (jsp == e) d_ionambi[i] = 0;   // 1st reactant is now 1st product neutral
+    if (jsp == e) d_ionambi[i] = 0;   // R: A+ + e -> A, 1st product neutral
+    else d_ionambi[i] = d_ions[ip->ispecies];  // sync product to its species
   }
 }
 
