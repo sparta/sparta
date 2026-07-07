@@ -19,15 +19,15 @@ boundary	    rr rr rr
 create_box  	    0 0.0001 0 0.0001 0 0.0001
 Created orthogonal box = (0 0 0) to (0.0001 0.0001 0.0001)
 create_grid 	    2 2 2
-WARNING: Could not acquire nearby ghost cells b/c grid partition is not clumped (/home/runner/work/sparta/sparta/src/grid.cpp:473)
+WARNING: Could not acquire nearby ghost cells b/c grid partition is not clumped (../grid.cpp:473)
 Created 8 child grid cells
-  CPU time = 0.0012133 secs
-  create/ghost percent = 92.4791 7.52088
+  CPU time = 0.00130782 secs
+  create/ghost percent = 95.3458 4.65416
 
 balance_grid        rcb part
 Balance grid migrated 4 cells
-  CPU time = 0.000375232 secs
-  reassign/sort/migrate/ghost percent = 69.2977 0.669986 10.397 19.6353
+  CPU time = 0.000396074 secs
+  reassign/sort/migrate/ghost percent = 74.9034 0.31282 11.8437 12.94
 
 species		    air.species N2 O2 N2+ e elecfile air.elec
 mixture		    air N2 O2 N2+ e vstream 0.0 0.0 0.0 temp 20000.0 trot 100.0 tvib 100.0 telec 100.0
@@ -51,7 +51,7 @@ collide_modify      remain no
 
 create_particles    noelectron n 40000 twopass
 Created 40000 particles
-  CPU time = 0.00504254 secs
+  CPU time = 0.00615602 secs
 
 stats		    100
 compute             temp temp
@@ -77,36 +77,37 @@ stats_style	    step cpu np nattempt ncoll c_Ttrans c_Eelec c_Telec c_Telec2[*] 
 
 timestep 	    1.00E-9
 run 		    1000
+WARNING: Single-group ambipolar collisions are inefficient; grouping electrons separately (e.g. collide ... species) is recommended (../collide.cpp:332)
 Memory usage per proc in Mbytes:
   particles (ave,min,max) = 2.1875 2.1875 2.1875
   grid      (ave,min,max) = 1.51379 1.51379 1.51379
   surf      (ave,min,max) = 0 0 0
-  total     (ave,min,max) = 3.70181 3.70181 3.70181
+  total     (ave,min,max) = 3.70184 3.70184 3.70184
 Step CPU Np Natt Ncoll c_Ttrans c_Eelec c_Telec c_Telec2[1] c_Telec2[2] c_Telec2[3] c_Telec2[4] c_Den c_Den2 c_Den3 
        0            0    40000        0        0    20111.231            0            0            0            0            0            0 1.2525267e+21 1.2904242e+21 2.8522115e+20 
-     100  0.082873241    40000    13935      894    20104.224 1.4181073e-20    5352.4947     12084.48            0            0            0 1.2525267e+21 1.2904242e+21 2.8522115e+20 
-     200   0.15891838    40000    13935      881    20094.786 1.6169861e-20    5462.5438     12335.34            0            0            0 1.2525267e+21 1.2904242e+21 2.8522115e+20 
-     300   0.23442803    40000    13939      895    20085.756 1.6763851e-20     5492.234    12400.165            0            0            0 1.2525267e+21 1.2904242e+21 2.8522115e+20 
-     400   0.30961295    40000    13935      841    20074.818 1.7549801e-20    5538.8413    12505.939            0            0            0 1.2525267e+21 1.2904242e+21 2.8522115e+20 
-     500   0.39510242    40000    13937      896    20066.255 1.810596e-20    5551.4067    12537.928            0            0            0 1.2525267e+21 1.2904242e+21 2.8522115e+20 
-     600   0.47339907    40000    13935      877    20069.428 1.8632477e-20    5587.7696    12615.193            0            0            0 1.2525267e+21 1.2904242e+21 2.8522115e+20 
-     700   0.54820721    40000    13934      899    20065.056 1.9298312e-20     5616.554    12681.685            0            0            0 1.2525267e+21 1.2904242e+21 2.8522115e+20 
-     800   0.62372249    40000    13936      886    20050.347 2.0079691e-20    5657.9888    12776.039            0            0            0 1.2525267e+21 1.2904242e+21 2.8522115e+20 
-     900   0.69852766    40000    13933      856    20041.179 2.067163e-20    5679.8687     12828.02            0            0            0 1.2525267e+21 1.2904242e+21 2.8522115e+20 
-    1000    0.7730225    40000    13937      854    20036.758 2.0767103e-20    5680.5378    12831.304            0            0            0 1.2525267e+21 1.2904242e+21 2.8522115e+20 
-Loop time of 0.773054 on 4 procs for 1000 steps with 40000 particles
-Performance: 1293.570 timesteps/s, 51.743 Mparticle-step/s
+     100  0.096630499    40000    13935      894    20104.224 1.4181073e-20    5352.4947     12084.48            0            0            0 1.2525267e+21 1.2904242e+21 2.8522115e+20 
+     200    0.1601266    40000    13935      881    20094.786 1.6169861e-20    5462.5438     12335.34            0            0            0 1.2525267e+21 1.2904242e+21 2.8522115e+20 
+     300   0.21210671    40000    13939      895    20085.756 1.6763851e-20     5492.234    12400.165            0            0            0 1.2525267e+21 1.2904242e+21 2.8522115e+20 
+     400   0.26843771    40000    13935      841    20074.818 1.7549801e-20    5538.8413    12505.939            0            0            0 1.2525267e+21 1.2904242e+21 2.8522115e+20 
+     500   0.32468867    40000    13937      896    20066.255 1.810596e-20    5551.4067    12537.928            0            0            0 1.2525267e+21 1.2904242e+21 2.8522115e+20 
+     600   0.39167467    40000    13935      877    20069.428 1.8632477e-20    5587.7696    12615.193            0            0            0 1.2525267e+21 1.2904242e+21 2.8522115e+20 
+     700   0.46020492    40000    13934      899    20065.056 1.9298312e-20     5616.554    12681.685            0            0            0 1.2525267e+21 1.2904242e+21 2.8522115e+20 
+     800   0.53222145    40000    13936      886    20050.347 2.0079691e-20    5657.9888    12776.039            0            0            0 1.2525267e+21 1.2904242e+21 2.8522115e+20 
+     900   0.59378854    40000    13933      856    20041.179 2.067163e-20    5679.8687     12828.02            0            0            0 1.2525267e+21 1.2904242e+21 2.8522115e+20 
+    1000   0.65428296    40000    13937      854    20036.758 2.0767103e-20    5680.5378    12831.304            0            0            0 1.2525267e+21 1.2904242e+21 2.8522115e+20 
+Loop time of 0.654399 on 4 procs for 1000 steps with 40000 particles
+Performance: 1528.121 timesteps/s, 61.125 Mparticle-step/s
 
 MPI task timing breakdown:
 Section |  min time  |  avg time  |  max time  |%varavg| %total
 ---------------------------------------------------------------
-Move    | 0.17958    | 0.18048    | 0.18125    |   0.1 | 23.35
-Coll    | 0.42835    | 0.42875    | 0.42912    |   0.1 | 55.46
-Sort    | 0.043319   | 0.045008   | 0.046584   |   0.6 |  5.82
-Comm    | 0.092812   | 0.095224   | 0.096899   |   0.5 | 12.32
+Move    | 0.10561    | 0.11291    | 0.11676    |   1.3 | 17.25
+Coll    | 0.31061    | 0.33202    | 0.34711    |   2.4 | 50.74
+Sort    | 0.020945   | 0.02256    | 0.024161   |   1.0 |  3.45
+Comm    | 0.080284   | 0.0827     | 0.084101   |   0.5 | 12.64
 Modify  | 0          | 0          | 0          |   0.0 |  0.00
-Output  | 0.0043995  | 0.0045423  | 0.0048671  |   0.3 |  0.59
-Other   |            | 0.01905    |            |       |  2.46
+Output  | 0.0038469  | 0.0041146  | 0.0044997  |   0.4 |  0.63
+Other   |            | 0.1001     |            |       | 15.30
 
 Particle moves    = 40000000 (40M)
 Cells touched     = 42267743 (42.3M)
@@ -122,7 +123,7 @@ Reactions         = 0 (0K)
 Particles stuck   = 0
 Axisymm bad moves = 0
 
-Particle-moves/CPUsec/proc: 1.29357e+07
+Particle-moves/CPUsec/proc: 1.52812e+07
 Particle-moves/step: 40000
 Cell-touches/particle/step: 1.05669
 Particle comm iterations/step: 1
