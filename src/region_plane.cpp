@@ -16,6 +16,7 @@
 #include "stdlib.h"
 #include "string.h"
 #include "region_plane.h"
+#include "input.h"
 #include "error.h"
 
 using namespace SPARTA_NS;
@@ -27,12 +28,12 @@ RegPlane::RegPlane(SPARTA *sparta, int narg, char **arg) :
 {
   options(narg-8,&arg[8]);
 
-  xp = atof(arg[2]);
-  yp = atof(arg[3]);
-  zp = atof(arg[4]);
-  normal[0] = atof(arg[5]);
-  normal[1] = atof(arg[6]);
-  normal[2] = atof(arg[7]);
+  xp = input->numeric(FLERR,arg[2]);
+  yp = input->numeric(FLERR,arg[3]);
+  zp = input->numeric(FLERR,arg[4]);
+  normal[0] = input->numeric(FLERR,arg[5]);
+  normal[1] = input->numeric(FLERR,arg[6]);
+  normal[2] = input->numeric(FLERR,arg[7]);
 
   // enforce unit normal
 

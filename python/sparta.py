@@ -22,13 +22,28 @@ class sparta:
 
     # load libsparta.so by default
     # if name = "g++", load libsparta_g++.so
+    # the shared library extension is platform-dependent:
+    #   .so on Linux, .dylib on macOS, .dll on Windows
+    # try the native extension first, then fall back to the others
+    # so a library built with any naming convention can still be found
 
-    try:
-      if not name: self.lib = CDLL("libsparta.so",RTLD_GLOBAL)
-      else: self.lib = CDLL("libsparta_%s.so" % name,RTLD_GLOBAL)
-    except:
-      type,value,tb = sys.exc_info()
-      traceback.print_exception(type,value,tb)
+    if sys.platform == "darwin": exts = [".dylib",".so"]
+    elif sys.platform.startswith("win"): exts = [".dll",".so"]
+    else: exts = [".so",".dylib"]
+
+    if not name: stem = "libsparta"
+    else: stem = "libsparta_%s" % name
+
+    self.lib = None
+    for ext in exts:
+      try:
+        self.lib = CDLL(stem + ext,RTLD_GLOBAL)
+        break
+      except:
+        type,value,tb = sys.exc_info()
+        last_exc = (type,value,tb)
+    if self.lib is None:
+      traceback.print_exception(*last_exc)
       raise Exception("Could not load SPARTA dynamic library")
 
     # create an instance of SPARTA
@@ -49,7 +64,7 @@ class sparta:
       # self.spa = self.lib.sparta_open_no_mpi(0,None)
 
   def __del__(self):
-    if self.spa: self.lib.sparta_close(self.spa)
+    if getattr(self,"spa",None): self.lib.sparta_close(self.spa)
 
   def close(self):
     self.lib.sparta_close(self.spa)

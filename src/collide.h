@@ -118,6 +118,7 @@ class Collide : protected Pointers {
 
   int ambiflag;       // 1 if ambipolar option is enabled
   int ambispecies;    // species for ambipolar electrons
+  int *ions;          // 1 if a species is an ambipolar ion, from fix ambipolar
   int index_ionambi;  // 2 custom ambipolar vectors
   int index_velambi;
 
