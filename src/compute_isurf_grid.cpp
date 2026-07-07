@@ -316,9 +316,10 @@ void ComputeISurfGrid::surf_tally(double dtremain,
       vec[k++] += weight;
       break;
     case MFLUX:
-      vec[k] += origmass * fluxscale * oswfrac;
-      if (ip) vec[k] -= imass * fluxscale * iswfrac;
-      if (jp) vec[k] -= jmass * fluxscale * jswfrac;
+      // origmass/imass/jmass already include the weight fractions
+      vec[k] += origmass * fluxscale;
+      if (ip) vec[k] -= imass * fluxscale;
+      if (jp) vec[k] -= jmass * fluxscale;
       k++;
       break;
     case FX:

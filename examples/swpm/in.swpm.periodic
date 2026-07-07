@@ -1,6 +1,12 @@
 ################################################################################
-# 2D Fourier flow with diffuse walls of unequal temperature
-# Verify that Kn_q has a small effect on the conductivity
+# SWPM example: homogeneous argon relaxation in a periodic box
+#
+# Small equilibrium check of the SWPM options with default-style thresholds:
+# with 16 particles per cell neither splitting (np >= Ncmin = 8, equal
+# weights) nor reduction (np <= Ncmax = 32) triggers, so this reduces to
+# plain DSMC with unit stochastic weights: np and the temperature stay
+# constant.  Uncomment the alternative reduce lines to experiment with the
+# heat/stress schemes and weight-based grouping.
 ################################################################################
 
 seed               12137

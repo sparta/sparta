@@ -200,7 +200,7 @@ void ComputeVmomGrid::compute_per_grid()
         vec[k++] += mass*vsq*v[2];
         break;
       case mV4:
-        vec[k++] += mass*v[0]*v[0]*v[0]*v[0];
+        vec[k++] += mass*vsq*vsq;
         break;
       }
     }
@@ -269,8 +269,11 @@ void ComputeVmomGrid::post_process_grid(int index, int nsample,
     {
       int summass = emap[0];
       int mvn = emap[1];
+      double norm;
       for (int icell = lo; icell < hi; icell++) {
-        vec[k] = etally[icell][mvn] / etally[icell][summass];
+        norm = etally[icell][summass];
+        if (norm == 0.0) vec[k] = 0.0;
+        else vec[k] = etally[icell][mvn] / norm;
         k += nstride;
       }
       break;
@@ -350,6 +353,6 @@ bigint ComputeVmomGrid::memory_usage()
 {
   bigint bytes;
   bytes = nglocal * sizeof(double);
-  bytes = ntotal*nglocal * sizeof(double);
+  bytes += ntotal*nglocal * sizeof(double);
   return bytes;
 }

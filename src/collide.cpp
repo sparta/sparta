@@ -101,9 +101,19 @@ Collide::Collide(SPARTA *sparta, int, char **arg) : Pointers(sparta)
 
   // stochastic weighted particle method
   stochastic_weight_flag = 0;
+  index_stochastic_weight = -1;
   max_stochastic_weight = 1.0;   // weights are stored relative to fnum
   reduceflag = 0;
+  reduction_type = ENERGY;
+  group_type = BINARY;
   Ncmin = Ncmax = Ngmin = Ngmax = 0;
+
+  // wtf/pre_wtf must be zero until the collide_modify split keyword sets
+  // them: they scale the collision attempt count (see attempt_collision)
+  // and the split weight transfer even when splitting was never requested
+
+  wtf = 0.0;
+  pre_wtf = 0.0;
 
   // used if near-neighbor model is invoked
 
@@ -190,6 +200,35 @@ void Collide::init()
       error->all(FLERR,"collide_modify stochastic_weight yes requires "
                       "fix stochastic_weight to be declared first");
     }
+
+    // the Kokkos collision styles do not implement the SWPM collision loop;
+    // without this check the setting would be silently ignored
+
+    if (sparta->kokkos)
+      error->all(FLERR,"Stochastic weighting is not yet supported with Kokkos");
+
+    // particle reduction merges particles assuming they all have the same
+    // mass: group moments and the merged survivors are single-species
+
+    if (reduceflag && particle->nspecies > 1)
+      error->all(FLERR,"Stochastic weighting particle reduction requires "
+                 "a single species");
+
+    // particle reduction conserves vibrational energy by assigning the
+    // merged survivors continuous evib values, which is inconsistent with
+    // the quantized levels of the discrete vibrational model
+
+    if (reduceflag && vibstyle == DISCRETE)
+      error->all(FLERR,"Stochastic weighting particle reduction requires "
+                 "vibrate smooth or no");
+
+    // the SWPM collision loop performs no reaction bookkeeping: reactant
+    // deletions would leave stale entries in the collision partner list,
+    // and product particles would be dropped with zero stochastic weight
+
+    if (react)
+      error->all(FLERR,"Stochastic weighting does not yet support "
+                 "gas-phase chemistry");
   }
 
   if (sparta->kokkos && !kokkos_flag)

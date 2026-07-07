@@ -93,8 +93,11 @@ void Collide::collisions_one_stochastic_weighting()
       isw = stochastic_weights[ip];
       max_stochastic_weight = MAX(max_stochastic_weight,isw);
 
-      if (isw != isw) error->all(FLERR,"Particle has NaN weight");
-      if (isw <= 0.0) error->all(FLERR,"Particle has negative or zero weight");
+      // error->one, not error->all: this code executes independently on each
+      // rank, so a collective error here would hang the other MPI ranks
+
+      if (isw != isw) error->one(FLERR,"Particle has NaN weight");
+      if (isw <= 0.0) error->one(FLERR,"Particle has negative or zero weight");
       ip = next[ip];
     }
 
@@ -185,6 +188,7 @@ void Collide::split(Particle::OnePart *&ip, Particle::OnePart *&jp,
   double xk[3],vk[3];
   double xl[3],vl[3];
   double erotk, erotl;
+  double evibk, evibl;
   int ks, ls;
   int kcell, lcell;
 
@@ -226,6 +230,8 @@ void Collide::split(Particle::OnePart *&ip, Particle::OnePart *&jp,
 
     erotk = ip->erot;
     erotl = jp->erot;
+    evibk = ip->evib;
+    evibl = jp->evib;
 
   // particle jp has larger weight
 
@@ -247,6 +253,8 @@ void Collide::split(Particle::OnePart *&ip, Particle::OnePart *&jp,
 
     erotk = jp->erot;
     erotl = ip->erot;
+    evibk = jp->evib;
+    evibl = ip->evib;
   }
 
   // update stochastic weights in custom array (relative to fnum)
@@ -273,7 +281,9 @@ void Collide::split(Particle::OnePart *&ip, Particle::OnePart *&jp,
   if(ksw > 0) {
     int id = MAXSMALLINT*random->uniform();
     Particle::OnePart *particles = particle->particles;
-    int reallocflag = particle->add_particle(id,ks,kcell,xk,vk,erotk,0.0);
+    // split particles are copies of their parent: same velocity, same
+    // internal energies, so all moments of the distribution are unchanged
+    int reallocflag = particle->add_particle(id,ks,kcell,xk,vk,erotk,evibk);
     if (reallocflag) {
       ip = particle->particles + (ip - particles);
       jp = particle->particles + (jp - particles);
@@ -295,7 +305,7 @@ void Collide::split(Particle::OnePart *&ip, Particle::OnePart *&jp,
     if(ksw <= 0) error->one(FLERR,"Bad addition to particle list");
     int id = MAXSMALLINT*random->uniform();
     Particle::OnePart *particles = particle->particles;
-    int reallocflag = particle->add_particle(id,ls,lcell,xl,vl,erotl,0.0);
+    int reallocflag = particle->add_particle(id,ls,lcell,xl,vl,erotl,evibl);
     if (reallocflag) {
       ip = particle->particles + (ip - particles);
       jp = particle->particles + (jp - particles);
@@ -364,53 +374,46 @@ void Collide::group()
       } else if (group_type == WEIGHT) {
 
         // find mean / standard deviation of weight
+        // plist[0..n-1] holds only positive-weight particles (built above)
 
-        n = 0.0;
         swmean = swvar = 0.0;
-        for (int i = 0; i < np; i++) {
-          ipart = &particles[plist[i]];
+        for (int i = 0; i < n; i++) {
           isw = stochastic_weights[plist[i]];
 
           // Incremental variance
 
-          if(isw > 0) {
-            n++;
-            d1 = isw - swmean;
-            swmean += (d1/n);
-            swvar += (n-1.0)/n*d1*d1;
-          }
-          ip = next[ip];
+          d1 = isw - swmean;
+          swmean += d1/(i+1.0);
+          swvar += i/(i+1.0)*d1*d1;
         }
         swstd = sqrt(swvar/n);
 
         // weight limits to separate particles
+        // uLim must be inclusive below so the degenerate case of all-equal
+        // weights (swstd = 0, lLim = uLim = swmean) still classifies every
+        // particle as medium; otherwise no particle is ever reduced
 
         lLim = MAX(swmean-1.25*swstd,0);
         uLim = swmean+2.0*swstd;
 
-        // recreate particle list and omit large weighted particles
+        // reorder plist: small weighted particles first
 
-        // first place all small weighted particles to front
-        int np_small = 0; // index of center particle
-        ip = cinfo[icell].first;
-        for (int i = 0; i < np; i++) {
-          ipart = &particles[plist[i]];
+        np_small = 0;
+        for (int i = 0; i < n; i++) {
           isw = stochastic_weights[plist[i]];
-          if(isw > 0 && isw < lLim) {
-            std::swap(plist[ip],plist[np_small]);
+          if (isw < lLim) {
+            std::swap(plist[i],plist[np_small]);
             np_small++;
           }
-          ip = next[ip];
         }
 
-        // then place all medium weighted particles starting from
-        // .., last index (np_small)
+        // then medium weighted particles, starting at index np_small
+        // particles above uLim stay at the end and are not reduced
 
         np_med = np_small;
-        for (int i = np_small; i < np; i++) {
-          ipart = &particles[plist[i]];
+        for (int i = np_small; i < n; i++) {
           isw = stochastic_weights[plist[i]];
-          if (isw >= lLim && isw < uLim) {
+          if (isw >= lLim && isw <= uLim) {
             std::swap(plist[np_med],plist[i]);
             np_med++;
           }
@@ -473,12 +476,13 @@ void Collide::group_bt(int istart, int iend, int group_size_buffer)
   int np = iend-istart;
   if (np <= Ngmin) return;
 
-  // accumulate group totals: weight, mass, momentum, rotational energy
+  // accumulate group totals: weight, mass, momentum, rotational and
+  // vibrational energy
   // first pass forms the mean velocity used to build central moments below
 
-  double gsum, msum, Erot;
+  double gsum, msum, Erot, Evib;
   double mV[3];
-  gsum = msum = Erot = 0.0;
+  gsum = msum = Erot = Evib = 0.0;
   for (int i = 0; i < 3; i++) mV[i] = 0.0;
 
   int ispecies;
@@ -493,6 +497,7 @@ void Collide::group_bt(int istart, int iend, int group_size_buffer)
     gsum += psw;
     msum += pmsw;
     Erot += psw*ipart->erot;
+    Evib += psw*ipart->evib;
     for (int i = 0; i < 3; i++) mV[i] += pmsw*ipart->v[i];
   }
 
@@ -545,20 +550,26 @@ void Collide::group_bt(int istart, int iend, int group_size_buffer)
 
     // scale values to be consistent with definitions in
     // .. stochastic numerics book
+    // use the mass-weighted mean mass of the group (mbar = msum/gsum) as the
+    // representative mass.  for a single-species group this is exactly the
+    // species mass; using a single particle's mass here instead would make
+    // the result depend on particle ordering.  reduction is restricted to
+    // single-species groups (enforced in Collide::init), so this is exact.
 
-    T *= update->boltz/mass;
+    double mbar = msum/gsum;
+    T *= update->boltz/mbar;
     for (int i = 0; i < 3; i++) {
-      q[i] /= mass;
-      for(int j = 0; j < 3; j++) pij[i][j] /= mass;
+      q[i] /= mbar;
+      for(int j = 0; j < 3; j++) pij[i][j] /= mbar;
     }
 
     // reduce based on type
     if (reduction_type == ENERGY) {
-      reduce_energy(istart, iend, gsum, V, T, Erot);
+      reduce_energy(istart, iend, gsum, V, T, Erot, Evib);
     } else if (reduction_type == HEAT) {
-      reduce_heat(istart, iend, gsum, V, T, Erot, q);
+      reduce_heat(istart, iend, gsum, V, T, Erot, Evib, q);
     } else if (reduction_type == STRESS) {
-      reduce_stress(istart, iend, gsum, V, T, Erot, q, pij);
+      reduce_stress(istart, iend, gsum, V, T, Erot, Evib, q, pij);
     }
 
   // group still too large so divide further
@@ -578,16 +589,18 @@ void Collide::group_bt(int istart, int iend, int group_size_buffer)
     int ierror = MathEigen::jacobi3(Rij,eval,evec);
 
     // Find largest eigenpair
+    // maxeval initialized to -1 so maxevec is always set, even in the
+    // degenerate case of all-zero eigenvalues (all velocities identical)
 
     double maxeval;
     double maxevec[3]; // normal of splitting plane
 
-    maxeval = 0;
+    maxeval = -1.0;
     for (int i = 0; i < 3; i++) {
       if (std::abs(eval[i]) > maxeval) {
         maxeval = std::abs(eval[i]);
         for (int j = 0; j < 3; j++)
-          maxevec[j] = evec[j][i];  
+          maxevec[j] = evec[j][i];
       }
     }
 
@@ -614,6 +627,12 @@ void Collide::group_bt(int istart, int iend, int group_size_buffer)
       if (dist < 0.0) cp++;
       else break; // since sorted, can break early
     }
+
+    // if every particle landed on one side of the plane (e.g. all velocities
+    // identical so all distances are zero), split the group in half instead;
+    // recursing on the unchanged range would never terminate
+
+    if (cp == 0 || cp == np) cp = np/2;
 
     if(cp > Ngmin) group_bt(istart,istart+cp,group_size_buffer);
     if(np-cp > Ngmin) group_bt(istart+cp,iend,group_size_buffer);

@@ -1,33 +1,39 @@
 ################################################################################
-# 2D Fourier flow with diffuse walls of unequal temperature
-# Verify that Kn_q has a small effect on the conductivity
+# SWPM example: 1D heat conduction between diffuse walls
+#
+# Argon between two diffuse walls of unequal temperature (400 K at ylo,
+# 200 K at yhi) on a 1x50x1 grid, with SWPM splitting and energy reduction
+# active.  Exercises the SWPM code together with surface collisions and the
+# weighted boundary tallies of compute boundary (nflux/press/etot use the
+# per-particle stochastic weights).
+#
+# This is a DEMONSTRATION example, not part of the gold-log regression suite:
+# the wall tallies are trajectory-dependent (the walls exchange energy with
+# the gas, so they are not conserved invariants), and a multi-cell trajectory
+# is only bit-reproducible across MPI rank counts on a normally-loaded machine
+# ("global comm/sort yes" is set below for that).  The deterministic
+# regression coverage for the weighted boundary tallies lives in the
+# single-cell in.swpm.boundary; the conservation invariants are checked by
+# verify_swpm.py.  Stats columns printed here:
+#   c_1r        cell-averaged simulation particle count
+#   f_abnd[3][*] time-averaged ylo wall tallies: nflux, press, etot
+#   f_abnd[4][*] time-averaged yhi wall tallies: nflux, press, etot
 ################################################################################
 
 seed               12137
 dimension          3
-
-#############
-# Constants #
-#############
-variable kb        equal 1.380658E-23
-variable pi        equal 3.14159
-
-##################
-# Gas parameters #
-##################
-variable gamma     equal 1.4
 
 #####################
 # Chosen Parameters #
 #####################
 variable T         equal 300.00
 variable p         equal 1000.00
-variable Ma        equal 0.2
 variable ppc       equal 16.0
 
 ################
 # Precalculate #
 ################
+variable kb        equal 1.380658E-23
 variable mass_ref  equal 5.0e-26
 variable R_ref     equal ${kb}/${mass_ref}
 variable RT        equal ${R_ref}*${T}
@@ -51,16 +57,13 @@ variable Lz        equal 0.0001
 
 variable nx        equal 1
 variable ny        equal 50
-variable nz        equal 1 
+variable nz        equal 1
 
 boundary           p s p
 
 create_box         0.0 ${Lx} 0.0 ${Ly} 0.0 ${Lz}
-create_grid        ${nx} ${ny} ${nz} block * * * 
+create_grid        ${nx} ${ny} ${nz} block * * *
 balance_grid       rcb part
-
-#surf_collide       1 diffuse 300 1.0 translate 100.0 0.0 0.0
-#surf_collide       2 diffuse 300 1.0 translate 0.0 0.0 0.0
 
 surf_collide       1 diffuse 400 1.0 translate 0.0 0.0 0.0
 surf_collide       2 diffuse 200 1.0 translate 0.0 0.0 0.0
@@ -80,8 +83,6 @@ fix                fweight stochastic_weight
 collide_modify     stochastic_weight yes
 collide_modify     split 8 1.0
 collide_modify     reduce energy binary 32 4 16
-#collide_modify     reduce heat weight 32 4 16
-#collide_modify     reduce stress binary 96 8 24
 
 variable N         equal ${nx}*${ny}*${nz}*${ppc}
 variable Fnum      equal ${nden}/(${N}/(${Lx}*${Ly}*${Lz}))
@@ -89,19 +90,27 @@ variable Fnum      equal ${nden}/(${N}/(${Lx}*${Ly}*${Lz}))
 global nrho ${nden}
 global fnum ${Fnum}
 
+# make particle ordering (and thus the trajectory) reproducible across MPI
+# ranks, so this multi-cell case can be pinned by a gold log
+global comm/sort yes
+
 create_particles   air n 0
 
 ###########
 # Outputs #
 ###########
 compute 1     grid all all n
-compute 1r reduce ave c_1[*]
+compute 1r    reduce ave c_1[*]
+compute bnd   boundary air nflux press etot
+fix    abnd   ave/time 5 20 100 c_bnd[*] mode vector
 
 #######
 # Run #
 #######
 stats              100
-stats_style        step np nattempt ncoll nbound c_1r
+stats_style        step np nattempt ncoll nbound c_1r &
+                   f_abnd[3][1] f_abnd[3][2] f_abnd[3][3] &
+                   f_abnd[4][1] f_abnd[4][2] f_abnd[4][3]
 
 timestep           1.0e-9
 run                500

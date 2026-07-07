@@ -1,0 +1,164 @@
+SPARTA (24 Sep 2025)
+Running on 4 MPI task(s)
+################################################################################
+# SWPM regression test: weight-based grouping across multiple grid cells
+#
+# Homogeneous argon gas on a 4x4x1 periodic grid.  Ncmin is set above the
+# per-cell particle count so every accepted collision splits (pre_wtf = 1),
+# which quickly produces a broad spread of particle weights.  Reduction uses
+# the weight-based grouping strategy: per cell, the weight mean and standard
+# deviation classify particles into small / medium / large weight classes;
+# small and medium particles are reduced separately (binary-tree subdivision
+# in velocity space) and large-weight particles are left untouched.
+#
+# The multi-cell setup is deliberate: it regression-tests the plist indexing
+# in the weight-grouping preprocessing, which historically corrupted memory
+# when the number of particles owned by a rank exceeded the size of the
+# per-cell particle list (segfault before the fix).
+#
+# Only conserved invariants are printed as stats, so the gold log matches
+# regardless of MPI rank count and particle ordering:
+#   c_gT  global weighted temperature - conserved exactly (energy conservation;
+#         also exercises the weighted compute temp)
+#   c_nr2 cell-averaged weighted number density - conserved exactly (weight
+#         conservation; cells have equal volume so the average tracks the sum)
+#
+# "global comm/sort yes" is also set (see below): it is the SPARTA idiom for
+# making the full particle trajectory reproducible across MPI rank counts, so
+# anyone extending this deck with trajectory-dependent columns gets
+# reproducible output on a normally-loaded machine.  The invariant columns
+# above hold with or without it.
+################################################################################
+
+seed               12137
+dimension          3
+
+variable T         equal 298.15
+variable ppc       equal 30
+variable nden      equal 4.247e22
+variable L         equal 1.0e-5
+
+species            air.species Ar
+mixture            air Ar vstream 0.0 0.0 0.0 temp ${T}
+mixture            air Ar vstream 0.0 0.0 0.0 temp 298.15
+mixture            air Ar frac 1.0
+
+boundary           p p p
+create_box         0.0 ${L} 0.0 ${L} 0.0 ${L}
+create_box         0.0 1e-05 0.0 ${L} 0.0 ${L}
+create_box         0.0 1e-05 0.0 1e-05 0.0 ${L}
+create_box         0.0 1e-05 0.0 1e-05 0.0 1e-05
+Created orthogonal box = (0 0 0) to (1e-05 1e-05 1e-05)
+create_grid        4 4 1
+Created 16 child grid cells
+  CPU time = 0.00103038 secs
+  create/ghost percent = 90.6873 9.31266
+balance_grid       rcb part
+Balance grid migrated 8 cells
+  CPU time = 0.000258806 secs
+  reassign/sort/migrate/ghost percent = 72.0648 0.805236 13.2964 13.8335
+
+variable Fnum      equal ${nden}*${L}*${L}*${L}/(${ppc}*16)
+variable Fnum      equal 4.247e+22*${L}*${L}*${L}/(${ppc}*16)
+variable Fnum      equal 4.247e+22*1e-05*${L}*${L}/(${ppc}*16)
+variable Fnum      equal 4.247e+22*1e-05*1e-05*${L}/(${ppc}*16)
+variable Fnum      equal 4.247e+22*1e-05*1e-05*1e-05/(${ppc}*16)
+variable Fnum      equal 4.247e+22*1e-05*1e-05*1e-05/(30*16)
+global             nrho ${nden}
+global             nrho 4.247e+22
+global             fnum ${Fnum}
+global             fnum 88479.1666666667
+
+# make particle ordering (and thus the trajectory) reproducible across MPI
+# ranks, so this multi-cell case can be pinned by a gold log
+global             comm/sort yes
+
+collide            vss air air.vss
+collide_modify     remain no
+
+# fix stochastic_weight must precede collide_modify stochastic_weight yes
+fix                fweight stochastic_weight
+collide_modify     stochastic_weight yes
+collide_modify     split 1000 1.0
+collide_modify     reduce heat weight 40 6 16
+
+create_particles   air n 0
+Created 480 particles
+  CPU time = 0.000951357 secs
+
+compute gT         temp
+compute n          grid all all n nrho
+compute nr2        reduce ave c_n[2]
+
+stats              50
+stats_style        step c_gT c_nr2
+
+timestep           1.0e-9
+run                500
+Memory usage per proc in Mbytes:
+  particles (ave,min,max) = 1.6875 1.6875 1.6875
+  grid      (ave,min,max) = 1.51379 1.51379 1.51379
+  surf      (ave,min,max) = 0 0 0
+  total     (ave,min,max) = 3.20135 3.20135 3.20135
+Step c_gT c_nr2 
+       0     288.9349    4.247e+22 
+      50     288.9349    4.247e+22 
+     100     288.9349    4.247e+22 
+     150     288.9349    4.247e+22 
+     200     288.9349    4.247e+22 
+     250     288.9349    4.247e+22 
+     300     288.9349    4.247e+22 
+     350     288.9349    4.247e+22 
+     400     288.9349    4.247e+22 
+     450     288.9349    4.247e+22 
+     500     288.9349    4.247e+22 
+Loop time of 0.00681167 on 4 procs for 500 steps with 420 particles
+Performance: 73403.406 timesteps/s, 30.829 Mparticle-step/s
+
+MPI task timing breakdown:
+Section |  min time  |  avg time  |  max time  |%varavg| %total
+---------------------------------------------------------------
+Move    | 0.00069917 | 0.00072484 | 0.00073904 |   0.0 | 10.64
+Coll    | 0.0010636  | 0.0011805  | 0.001259   |   0.2 | 17.33
+Sort    | 7.8499e-05 | 7.9038e-05 | 8.0095e-05 |   0.0 |  1.16
+Comm    | 0.0044068  | 0.0046062  | 0.0047353  |   0.2 | 67.62
+Modify  | 0          | 0          | 0          |   0.0 |  0.00
+Output  | 0.00013675 | 0.00018155 | 0.0003043  |   0.0 |  2.67
+Other   |            | 3.955e-05  |            |       |  0.58
+
+Particle moves    = 225747 (0.226M)
+Cells touched     = 267438 (0.267M)
+Particle comms    = 18135 (18.1K)
+Boundary collides = 0 (0K)
+Boundary exits    = 0 (0K)
+SurfColl checks   = 0 (0K)
+SurfColl occurs   = 0 (0K)
+Surf reactions    = 0 (0K)
+Collide attempts  = 22440 (22.4K)
+Collide occurs    = 4530 (4.53K)
+Reactions         = 0 (0K)
+Particles stuck   = 0
+Axisymm bad moves = 0
+
+Particle-moves/CPUsec/proc: 8.2853e+06
+Particle-moves/step: 451.494
+Cell-touches/particle/step: 1.18468
+Particle comm iterations/step: 1
+Particle fraction communicated: 0.0803333
+Particle fraction colliding with boundary: 0
+Particle fraction exiting boundary: 0
+Surface-checks/particle/step: 0
+Surface-collisions/particle/step: 0
+Surf-reactions/particle/step: 0
+Collision-attempts/particle/step: 0.0994033
+Collisions/particle/step: 0.0200667
+Reactions/particle/step: 0
+
+Particles: 105 ave 111 max 99 min
+Histogram: 2 0 0 0 0 0 0 0 0 2
+Cells:      4 ave 4 max 4 min
+Histogram: 4 0 0 0 0 0 0 0 0 0
+GhostCell: 12 ave 12 max 12 min
+Histogram: 4 0 0 0 0 0 0 0 0 0
+EmptyCell: 0 ave 0 max 0 min
+Histogram: 4 0 0 0 0 0 0 0 0 0
