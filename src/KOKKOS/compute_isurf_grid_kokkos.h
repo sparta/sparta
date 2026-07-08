@@ -274,8 +274,6 @@ void surf_tally_kk(double /*dtremain*/, int isurf, int /*icell*/, int /*reaction
 
   DAT::t_float_1d d_normflux;         // normalization factor for each surf element
 
-  int nsurf_tally_alloc;              // current device tally allocation (nsurf)
-
   t_species_1d d_species;
   DAT::t_int_2d d_s2g;
 
