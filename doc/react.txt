@@ -294,7 +294,14 @@ Ambipolar dissociation reactions must list their reactants and
 products in one of the following orders:
 
 AB + e -> A + e + B
-AB+ + e -> A+ + e + B :pre
+AB+ + e -> A+ + e + B
+AB + C+ -> A + C+ + B
+AB+ + C+ -> A+ + C+ + B :pre
+
+In the last two forms an ambipolar ion C+ acts as an inert third
+body (collision partner).  As with the electron "e", the third body
+must be written as the middle product, so that it maps to the
+unaltered second colliding particle.
 
 Ambipolar ionization reactions with 2 or 3 products must be in one of
 the following orders:
@@ -312,7 +319,14 @@ Ambipolar recombination reactions must be in the following order:
 
 A+ + e -> A
 A + B+ -> AB+
-A+ + B -> AB+ :pre
+A+ + B -> AB+
+A + B -> AB + C+ :pre
+
+In the last form an ambipolar ion C+ acts as the inert third body,
+written as the second product P2 (see the non-ambipolar discussion of
+3rd particles above).  The two reactants and the recombined molecule
+P1 must be neutral; the ion C+ is a spectator whose species selects the
+recombination rate.
 
 A third particle for recombination reactions can be specified in
 the same way as described above for non-ambipolar recombination.
