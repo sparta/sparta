@@ -29,13 +29,13 @@ create_box         0 0.0001 0 0.0001 0 0.0001
 Created orthogonal box = (0 0 0) to (0.0001 0.0001 0.0001)
 create_grid        10 10 10
 Created 1000 child grid cells
-  CPU time = 0.000982588 secs
-  create/ghost percent = 84.5063 15.4937
+  CPU time = 0.0012355 secs
+  create/ghost percent = 81.887 18.113
 
 balance_grid       rcb part
 Balance grid migrated 0 cells
-  CPU time = 0.000161211 secs
-  reassign/sort/migrate/ghost percent = 51.5163 0.720174 10.7151 37.0483
+  CPU time = 0.00025253 secs
+  reassign/sort/migrate/ghost percent = 55.8401 0.563101 11.8026 31.7942
 
 species            ar.species Ar
 mixture            air Ar vstream 0.0 0.0 0.0 temp 273.15
@@ -48,7 +48,7 @@ collide_modify     subcell yes
 
 create_particles   air n 80000 twopass
 Created 80000 particles
-  CPU time = 0.0116392 secs
+  CPU time = 0.018211 secs
 
 stats              100
 compute            temp temp
@@ -63,56 +63,56 @@ Memory usage per proc in Mbytes:
   total     (ave,min,max) = 9.32629 9.32629 9.32629
 Step CPU Np Natt Ncoll c_temp 
        0            0    80000        0        0    272.60494 
-     100   0.58905851    80000    19281    12889    272.60494 
-     200    1.2584509    80000    19550    12888    272.60494 
-     300    1.9221872    80000    19765    12878    272.60494 
-     400    2.5982098    80000    19839    12958    272.60494 
-     500    3.2775418    80000    19937    12900    272.60494 
-     600    3.9848518    80000    20004    12880    272.60494 
-     700    4.7297108    80000    20054    12859    272.60494 
-     800     5.446266    80000    20125    13004    272.60494 
-     900     6.131255    80000    20149    12803    272.60494 
-    1000    6.8809429    80000    20149    12891    272.60494 
-Loop time of 6.88095 on 1 procs for 1000 steps with 80000 particles
-Performance: 145.329 timesteps/s, 11.626 Mparticle-step/s
+     100    1.0009749    80000    19281    12889    272.60494 
+     200    1.9985239    80000    19550    12888    272.60494 
+     300    3.0809479    80000    19765    12878    272.60494 
+     400    4.1361121    80000    19831    12818    272.60494 
+     500    5.2991081    80000    19897    12937    272.60494 
+     600    6.4643879    80000    19960    12881    272.60494 
+     700    7.7609701    80000    20029    12829    272.60494 
+     800    8.8535215    80000    20091    12991    272.60494 
+     900    9.9740985    80000    20129    12790    272.60494 
+    1000    11.013687    80000    20162    12871    272.60494 
+Loop time of 11.0137 on 1 procs for 1000 steps with 80000 particles
+Performance: 90.796 timesteps/s, 7.264 Mparticle-step/s
 
 MPI task timing breakdown:
 Section |  min time  |  avg time  |  max time  |%varavg| %total
 ---------------------------------------------------------------
-Move    | 0.82125    | 0.82125    | 0.82125    |   0.0 | 11.94
-Coll    | 5.7454     | 5.7454     | 5.7454     |   0.0 | 83.50
-Sort    | 0.3073     | 0.3073     | 0.3073     |   0.0 |  4.47
-Comm    | 0.0016497  | 0.0016497  | 0.0016497  |   0.0 |  0.02
+Move    | 1.3688     | 1.3688     | 1.3688     |   0.0 | 12.43
+Coll    | 9.2971     | 9.2971     | 9.2971     |   0.0 | 84.41
+Sort    | 0.34053    | 0.34053    | 0.34053    |   0.0 |  3.09
+Comm    | 0.0012496  | 0.0012496  | 0.0012496  |   0.0 |  0.01
 Modify  | 0          | 0          | 0          |   0.0 |  0.00
-Output  | 0.0031978  | 0.0031978  | 0.0031978  |   0.0 |  0.05
-Other   |            | 0.002185   |            |       |  0.03
+Output  | 0.0044364  | 0.0044364  | 0.0044364  |   0.0 |  0.04
+Other   |            | 0.001654   |            |       |  0.02
 
 Particle moves    = 80000000 (80M)
-Cells touched     = 88212591 (88.2M)
+Cells touched     = 88215216 (88.2M)
 Particle comms    = 0 (0K)
-Boundary collides = 911957 (0.912M)
+Boundary collides = 911609 (0.912M)
 Boundary exits    = 0 (0K)
 SurfColl checks   = 0 (0K)
 SurfColl occurs   = 0 (0K)
 Surf reactions    = 0 (0K)
-Collide attempts  = 19792076 (19.8M)
-Collide occurs    = 12897370 (12.9M)
+Collide attempts  = 19787205 (19.8M)
+Collide occurs    = 12897092 (12.9M)
 Reactions         = 0 (0K)
 Particles stuck   = 0
 Axisymm bad moves = 0
 
-Particle-moves/CPUsec/proc: 1.16263e+07
+Particle-moves/CPUsec/proc: 7.26365e+06
 Particle-moves/step: 80000
-Cell-touches/particle/step: 1.10266
+Cell-touches/particle/step: 1.10269
 Particle comm iterations/step: 1
 Particle fraction communicated: 0
-Particle fraction colliding with boundary: 0.0113995
+Particle fraction colliding with boundary: 0.0113951
 Particle fraction exiting boundary: 0
 Surface-checks/particle/step: 0
 Surface-collisions/particle/step: 0
 Surf-reactions/particle/step: 0
-Collision-attempts/particle/step: 0.247401
-Collisions/particle/step: 0.161217
+Collision-attempts/particle/step: 0.24734
+Collisions/particle/step: 0.161214
 Reactions/particle/step: 0
 
 Particles: 80000 ave 80000 max 80000 min
