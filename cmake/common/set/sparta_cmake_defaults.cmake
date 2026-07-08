@@ -73,9 +73,6 @@ if(SPARTA_ENABLE_TESTING)
   # the non-KOKKOS configurations.
   if(SPARTA_KOKKOS_EXACT)
     list(APPEND SPARTA_DISABLED_TESTS
-        # implicit-surface ablation in 3D errors under KOKKOS (zero collision
-        # cell volume); the 2D case runs bit-for-bit and is enabled
-        "in.ablation.3d"
         # external field fix not KOKKOS-enabled
         "in.bfield"
         "in.bfield.grid"

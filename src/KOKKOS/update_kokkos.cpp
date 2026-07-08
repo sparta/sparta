@@ -329,6 +329,10 @@ void UpdateKokkos::setup()
   }
   hash_kk = grid_kk->hash_kk;
 
+  // device grid/surf graphs are now current; clear any pending change flag so
+  // the run loop does not do a redundant resync on the first step
+  grid->changed = 0;
+
   Update::setup(); // must come after prewrap since computes are called by setup()
 
   // For MPI debugging
@@ -437,6 +441,24 @@ void UpdateKokkos::run(int nsteps)
     if (n_end_of_step) {
       modify->end_of_step();
       timer->stamp(TIME_MODIFY);
+    }
+
+    // if an end-of-step fix changed the grid/surf topology (e.g. fix ablate
+    // regenerated implicit surfaces), the host grid is now authoritative but
+    // the device per-cell surf graphs (d_csurfs/d_csplits/d_csubs) are stale.
+    // Resync them to the device before the next move, mirroring setup().
+    // Safe here: grid_kk_copy from this step's move is no longer in use and is
+    // refreshed at the start of the next move.
+
+    if (grid->changed) {
+      GridKokkos* grid_kk = (GridKokkos*) grid;
+      grid_kk->modify(Host,ALL_MASK);
+      grid_kk->update_hash();
+      if (surf->exist) {
+        ((SurfKokkos*)surf)->modify(Host,ALL_MASK);
+        grid_kk->wrap_kokkos_graphs();
+      }
+      grid->changed = 0;
     }
 
     // all output

@@ -76,6 +76,7 @@ int corners[6][4] = {{0,2,4,6}, {1,3,5,7}, {0,1,4,5}, {2,3,6,7},
 Grid::Grid(SPARTA *sparta) : Pointers(sparta)
 {
   exist = exist_ghost = clumped = 0;
+  changed = 0;
   MPI_Comm_rank(world,&me);
 
   gnames = (char **) memory->smalloc(MAXGROUP*sizeof(char *),"grid:gnames");
@@ -367,6 +368,8 @@ void Grid::add_sub_cell(int icell, int ownflag)
 
 void Grid::notify_changed()
 {
+  changed = 1;
+
   if (modify->n_pergrid) modify->grid_changed();
 
   Compute **compute = modify->compute;
