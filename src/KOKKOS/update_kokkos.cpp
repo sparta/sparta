@@ -391,6 +391,14 @@ void UpdateKokkos::run(int nsteps)
       timer->stamp(TIME_MODIFY);
     }
 
+    // establish surf-tally compute copies for the move kernel here, after
+    //   start-of-step fixes have run.  A fix such as fix emit/surf performs
+    //   its own surf-tally session during start_of_step that reallocates the
+    //   shared dup_array_surf_tally scatter views, so they must be recreated
+    //   now to give the move kernel a live, freshly zeroed scatter view.
+
+    if (tallyflag) setup_surf_tally_copies();
+
     // move particles
 
     if (cellweightflag) particle->pre_weight();
@@ -2093,6 +2101,24 @@ void UpdateKokkos::tally_set(bigint ntimestep)
       blist_active_copy[i].copy(&tmp_compute_boundary_kk);
     }
   }
+
+  // surf-tally compute scatter views (slist_active_copy et al.) are
+  //   (re)established in setup_surf_tally_copies(), which run() calls after
+  //   start-of-step fixes have executed.  Doing it here would be unsafe: a
+  //   start-of-step fix such as fix emit/surf runs its own surf-tally session
+  //   that reallocates each compute's dup_array_surf_tally scatter view,
+  //   freeing the one captured here and leaving the move kernel's functor
+  //   copy pointing at freed memory.  See UpdateKokkos::run().
+}
+
+/* ----------------------------------------------------------------------
+   set up per-compute surf-tally copies used on-device by the move kernel
+   must be called after start-of-step fixes run (see tally_set/run)
+------------------------------------------------------------------------- */
+
+void UpdateKokkos::setup_surf_tally_copies()
+{
+  int i;
 
   // partition surf tally computes into "compute surf" (slist_active_copy) and
   //   "compute isurf/grid" (slist_active_isurf_copy); both tally on-device via

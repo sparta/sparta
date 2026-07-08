@@ -224,6 +224,7 @@ class UpdateKokkos : public Update {
   t_particle_1d d_particles_backup;
 
   void tally_set(bigint);
+  void setup_surf_tally_copies();
 
   // remap x and v components into axisymmetric plane
   // input x at end of linear move (x = xold + dt*v)
