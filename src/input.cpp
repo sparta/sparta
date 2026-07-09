@@ -637,7 +637,6 @@ int Input::expand_args(int narg, char **arg, int mode, char **&earg)
         if (ptr2) {
           *ptr2 = '\0';
           if (strchr(ptr1,'*')) {
-            nmax = 0;
 
             // compute
 
