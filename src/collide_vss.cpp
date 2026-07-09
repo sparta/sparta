@@ -563,7 +563,7 @@ void CollideVSS::EEXCHANGE_NonReactingEDisposal(Particle::OnePart *ip,
                 E_Dispose -= pevib;
               }
             }
-          } // end of vibstyle/vibdof if
+          }
         }
         postcoln.evib += p->evib;
       } // end of vibdof if
@@ -676,8 +676,31 @@ void CollideVSS::EEXCHANGE_ReactingEDisposal(Particle::OnePart *ip,
                 params[kp->ispecies][kp->ispecies].omega)/3;
   }
 
-  // handle each kind of energy disposal for non-reacting reactants
-  // clean up memory for the products
+  // Phase 1: Precompute total remaining DOF across all modes
+  // This is needed for correcting the Larsen-Borgnakke exponent when sampling
+  // from a shared energy pool with multiple competing modes.
+  double total_remaining_dof = 0.0;
+  Particle::OnePart *plist[3] = {ip,jp,kp};
+
+  for (i = 0; i < numspecies; i++) {
+    Particle::OnePart *pp = plist[i];
+    int sp = pp->ispecies;
+    if ((species[sp].rotdof > 0) && (rotstyle != NONE)) {
+      total_remaining_dof += species[sp].rotdof;
+    }
+    if ((species[sp].vibdof > 0) && (vibstyle != NONE)) {
+      if (vibstyle == DISCRETE) {
+        total_remaining_dof += 2.0 * particle->species[sp].nvibmode;
+      } else {
+        total_remaining_dof += species[sp].vibdof;
+      }
+    }
+  }
+
+  double remaining_dof = total_remaining_dof;
+
+  // Phase 2: Handle energy disposal for products with remaining_dof correction
+  // to account for sequential sampling from shared pool (Dirichlet stick-breaking)
 
   double E_Dispose = postcoln.etotal;
 
@@ -693,16 +716,19 @@ void CollideVSS::EEXCHANGE_ReactingEDisposal(Particle::OnePart *ip,
       if (rotstyle == NONE) {
         p->erot = 0.0;
       } else if (rotdof == 2) {
+        double b_rot = (1.5 - aveomega) + 0.5 * (remaining_dof - rotdof);
         Fraction_Rot =
-          1- pow(random->uniform(),(1/(2.5-aveomega)));
+          1.0 - pow(random->uniform(),(1.0/(2.5 - aveomega + 0.5 * (remaining_dof - rotdof))));
         p->erot = Fraction_Rot * E_Dispose;
         E_Dispose -= p->erot;
+        remaining_dof -= rotdof;
 
       } else if (rotdof > 2) {
+        double b_rot = (1.5 - aveomega) + 0.5 * (remaining_dof - rotdof);
         p->erot = E_Dispose *
-          sample_bl(random,0.5*species[sp].rotdof-1.0,
-                    1.5-aveomega);
+          sample_bl(random,0.5*species[sp].rotdof-1.0, b_rot);
         E_Dispose -= p->erot;
+        remaining_dof -= rotdof;
       }
     }
 
@@ -712,6 +738,7 @@ void CollideVSS::EEXCHANGE_ReactingEDisposal(Particle::OnePart *ip,
       if (vibstyle == NONE) {
         p->evib = 0.0;
       } else if (vibdof == 2 && vibstyle == DISCRETE) {
+        double b_vib = (1.5 - aveomega) + 0.5 * (remaining_dof - vibdof);
         max_level = static_cast<int>
           (E_Dispose / (update->boltz * species[sp].vibtemp[0]));
         do {
@@ -719,22 +746,26 @@ void CollideVSS::EEXCHANGE_ReactingEDisposal(Particle::OnePart *ip,
             (random->uniform()*(max_level+AdjustFactor));
           p->evib = (double)
             (ivib * update->boltz * species[sp].vibtemp[0]);
-          State_prob = pow((1.0 - p->evib / E_Dispose),
-                           (1.5 - aveomega));
+          State_prob = pow((1.0 - p->evib / E_Dispose), b_vib);
         } while (State_prob < random->uniform());
         E_Dispose -= p->evib;
+        remaining_dof -= vibdof;
 
       } else if (vibdof == 2 && vibstyle == SMOOTH) {
+        double b_vib = (1.5 - aveomega) + 0.5 * (remaining_dof - vibdof);
         Fraction_Vib =
-          1.0 - pow(random->uniform(),(1.0 / (2.5-aveomega)));
+          1.0 - pow(random->uniform(),(1.0 / (2.5 - aveomega + 0.5 * (remaining_dof - vibdof))));
         p->evib = Fraction_Vib * E_Dispose;
         E_Dispose -= p->evib;
+        remaining_dof -= vibdof;
 
       } else if (vibdof > 2 && vibstyle == SMOOTH) {
+          double b_vib = (1.5 - aveomega) + 0.5 * (remaining_dof - vibdof);
           p->evib = E_Dispose *
-          sample_bl(random,0.5*species[sp].vibdof-1.0,
-                   1.5-aveomega);
+            sample_bl(random,0.5*species[sp].vibdof-1.0, b_vib);
           E_Dispose -= p->evib;
+          remaining_dof -= vibdof;
+
       } else if (vibdof > 2 && vibstyle == DISCRETE) {
           p->evib = 0.0;
 
@@ -743,22 +774,20 @@ void CollideVSS::EEXCHANGE_ReactingEDisposal(Particle::OnePart *ip,
           int pindex = p - particle->particles;
 
           for (int imode = 0; imode < nmode; imode++) {
-            ivib = vibmode[pindex][imode];
-            E_Dispose += ivib * update->boltz *
-            particle->species[sp].vibtemp[imode];
             max_level = static_cast<int>
             (E_Dispose / (update->boltz * species[sp].vibtemp[imode]));
+            double b_vib = (1.5 - aveomega) + 0.5 * (remaining_dof - 2.0);
             do {
               ivib = static_cast<int>
               (random->uniform()*(max_level+AdjustFactor));
               pevib = ivib * update->boltz * species[sp].vibtemp[imode];
-              State_prob = pow((1.0 - pevib / E_Dispose),
-                               (1.5 - aveomega));
+              State_prob = pow((1.0 - pevib / E_Dispose), b_vib);
             } while (State_prob < random->uniform());
 
             vibmode[pindex][imode] = ivib;
             p->evib += pevib;
             E_Dispose -= pevib;
+            remaining_dof -= 2.0;
           }
         }
       }
