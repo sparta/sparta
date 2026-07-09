@@ -56,7 +56,8 @@ class Particle : protected Pointers {
     double vibrel[MAXVIBMODE];
     double vibtemp[MAXVIBMODE];
     int vibdegen[MAXVIBMODE];
-    int nmode;
+    int nmode;              // # of distinct modes (frequencies) listed
+    int ntotal;            // N = total # of oscillators = sum of degeneracies
   };
 
   Species *species;         // list of particle species info
