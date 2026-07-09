@@ -637,6 +637,7 @@ int Input::expand_args(int narg, char **arg, int mode, char **&earg)
         if (ptr2) {
           *ptr2 = '\0';
           if (strchr(ptr1,'*')) {
+            nmax = 0;
 
             // compute
 
@@ -671,7 +672,7 @@ int Input::expand_args(int narg, char **arg, int mode, char **&earg)
                            modify->compute[icompute]->size_per_tally_cols) {
                   nmax = modify->compute[icompute]->size_per_tally_cols;
                   expandflag = 1;
-                }
+                } else expandflag = -1;
               }
 
             // fix
@@ -703,7 +704,7 @@ int Input::expand_args(int narg, char **arg, int mode, char **&earg)
                            modify->fix[ifix]->size_per_surf_cols) {
                   nmax = modify->fix[ifix]->size_per_surf_cols;
                   expandflag = 1;
-                }
+                } else expandflag = -1;
               }
 
             // per-particle custom attribute
@@ -717,7 +718,7 @@ int Input::expand_args(int narg, char **arg, int mode, char **&earg)
                 if (particle->esize[icustom]) {
                   nmax = particle->esize[icustom];
                   expandflag = 1;
-                }
+                } else expandflag = -1;
               }
 
             // per-grid custom attribute
@@ -731,7 +732,7 @@ int Input::expand_args(int narg, char **arg, int mode, char **&earg)
                 if (grid->esize[icustom]) {
                   nmax = grid->esize[icustom];
                   expandflag = 1;
-                }
+                } else expandflag = -1;
               }
 
             // per-surf custom attribute
@@ -745,7 +746,7 @@ int Input::expand_args(int narg, char **arg, int mode, char **&earg)
                 if (surf->esize[icustom]) {
                   nmax = surf->esize[icustom];
                   expandflag = 1;
-                }
+                } else expandflag = -1;
               }
             }
           }
@@ -754,6 +755,13 @@ int Input::expand_args(int narg, char **arg, int mode, char **&earg)
       }
     }
 
+    if (expandflag < 0) {
+      char str[256];
+      sprintf(str,"Cannot use wildcard with %s because it "
+              "does not produce multiple values",arg[iarg]);
+      error->all(FLERR,str);
+    }
+    
     if (expandflag) {
       *ptr2 = '\0';
       bounds(ptr1+1,nmax,nlo,nhi);
