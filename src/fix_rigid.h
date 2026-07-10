@@ -105,6 +105,26 @@ class FixRigid : public Fix {
   double **elemlo;        // per-element swept bounding boxes for this step
   double **elemhi;
   surfint *tmplist;       // work list of body elements overlapping one cell
+
+  // incremental cutcell remap data
+
+  double pbodylo[3];      // bbox around body at end of previous step
+  double pbodyhi[3];
+  int pbodyflag;          // 1 if pbodylo/pbodyhi are set
+
+  int noldinside;         // cells interior to the body before it moved
+  int maxoldinside;
+  int *oldinside;
+
+  int nreg;               // registry of cells whose csurfs lists
+  int maxreg;             //   are allocated by this fix
+  int *regcell;
+  surfint **reglist;
+
+  surfint *newlist;       // work bufs for re-cutting one cell
+  int *newmap;
+  class Cut2d *cut2d;
+  class Cut3d *cut3d;
   double bbodylo[3];      // bounding box around entire body,
   double bbodyhi[3];      //   swept over the current step
 
@@ -117,6 +137,11 @@ class FixRigid : public Fix {
 
   void push_off();              // spring forces from close static surfs
   void grid_rebuild();          // full re-map of all surfs to grid cells
+  void record_oldinside();      // cells interior to body, pre-move
+  int incremental_recut();      // re-cut cells whose overlap changed
+  void registry_replace(int, surfint *);
+  void registry_remove(int);
+  void free_registry();
   void overlay_assign();        // per-step overlay of body surfs into cells
   void overlay_restore();       // undo overlay of previous step
   void body_bbox(int);          // swept bbox of body elements over a step

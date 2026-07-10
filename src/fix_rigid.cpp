@@ -31,6 +31,8 @@
 #include "random_knuth.h"
 #include "random_mars.h"
 #include "geometry.h"
+#include "cut2d.h"
+#include "cut3d.h"
 #include "math_extra.h"
 #include "math_eigen.h"
 #include "memory.h"
@@ -57,7 +59,7 @@ enum{CELLUNKNOWN,CELLOUTSIDE,CELLINSIDE,CELLOVERLAP};
 
 enum{PERIODIC,OUTFLOW,REFLECT,SURFACE,AXISYM};  // same as Domain
 
-enum{OVERLAY,CUTCELL};          // remap modes
+enum{OVERLAY,CUTCELL,INCREMENTAL};          // remap modes
 
 // local box/box overlap test, touching counts as overlap
 
@@ -197,6 +199,8 @@ FixRigid::FixRigid(SPARTA *sparta, int narg, char **arg) :
       if (iarg+2 > narg) error->all(FLERR,"Fix rigid body args not valid");
       if (strcmp(arg[iarg+1],"overlay") == 0) remapmode = OVERLAY;
       else if (strcmp(arg[iarg+1],"cutcell") == 0) remapmode = CUTCELL;
+      else if (strcmp(arg[iarg+1],"incremental") == 0)
+        remapmode = INCREMENTAL;
       else error->all(FLERR,"Fix rigid body args not valid");
       iarg += 2;
     } else if (strcmp(arg[iarg],"pseudo") == 0) {
@@ -288,6 +292,26 @@ FixRigid::FixRigid(SPARTA *sparta, int narg, char **arg) :
   cpage = NULL;
   ndeleted = 0;
 
+  pbodyflag = 0;
+  noldinside = maxoldinside = 0;
+  oldinside = NULL;
+  nreg = maxreg = 0;
+  regcell = NULL;
+  reglist = NULL;
+  newlist = NULL;
+  newmap = NULL;
+  cut2d = NULL;
+  cut3d = NULL;
+
+  // for incremental mode: cutters and work bufs for re-cutting cells
+
+  if (remapmode == INCREMENTAL) {
+    if (dim == 2) cut2d = new Cut2d(sparta,0);
+    else cut3d = new Cut3d(sparta);
+    memory->create(newlist,grid->maxsurfpercell,"fix_rigid:newlist");
+    memory->create(newmap,grid->maxsurfpercell,"fix_rigid:newmap");
+  }
+
   // for overlay mode:
   // exclude body surfs from static assignment of surfs to grid cells,
   //   then perform a full re-map of surfs to grid cells
@@ -332,6 +356,15 @@ FixRigid::~FixRigid()
   memory->sfree(csurfs_saved);
   memory->destroy(irigid);
   delete cpage;
+
+  free_registry();
+  memory->destroy(regcell);
+  memory->sfree(reglist);
+  memory->destroy(oldinside);
+  memory->destroy(newlist);
+  memory->destroy(newmap);
+  delete cut2d;
+  delete cut3d;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -417,6 +450,17 @@ void FixRigid::init()
 
   warnrotate = warntranslate = warnexit = 0;
 
+  // incremental remap assumes it is the only source of moving surfs
+
+  if (remapmode == INCREMENTAL) {
+    int count = 0;
+    for (int ifix = 0; ifix < modify->nfix; ifix++)
+      if (strcmp(modify->fix[ifix]->style,"rigid") == 0) count++;
+    if (count > 1)
+      error->all(FLERR,
+                 "Fix rigid remap incremental requires a single rigid body");
+  }
+
   // each fix rigid defines its own body: no surf can be in two bodies
 
   for (int ifix = 0; ifix < modify->nfix; ifix++) {
@@ -450,6 +494,18 @@ void FixRigid::setup()
   //   when the body's grid cells are not marked INSIDE (overlay mode)
 
   if (particle->exist) ndeleted += remove_inside_particles(0);
+
+  // for incremental remap: grid state is now consistent with the
+  //   body at its current position
+
+  if (remapmode == INCREMENTAL) {
+    body_bbox(0);
+    for (int j = 0; j < 3; j++) {
+      pbodylo[j] = bbodylo[j];
+      pbodyhi[j] = bbodyhi[j];
+    }
+    pbodyflag = 1;
+  }
 }
 
 /* ---------------------------------------------------------------------- */
@@ -831,6 +887,11 @@ void FixRigid::end_of_step()
 
   }
 
+  // for incremental remap: record cells interior to the body
+  //   before its surfs move to their end-of-step positions
+
+  if (remapmode == INCREMENTAL) record_oldinside();
+
   // reset xcm/quat to new xcm/quat calculated in start_of_step()
 
   xcm[0] = xcmnew[0];
@@ -962,6 +1023,32 @@ void FixRigid::end_of_step()
   if (remapmode == CUTCELL) {
     grid_rebuild();
     if (particle->exist) ndeleted += remove_inside_particles(1);
+  }
+
+  // for incremental mode: re-cut only the grid cells near the body
+  //   whose overlapping surfs changed as the body moved
+  // falls back to a full re-map when the change is structural,
+  //   e.g. a cell would become or stop being a split cell
+  // the fallback decision is made per-proc but the full re-map is a
+  //   collective operation, so all procs must agree on it
+
+  else if (remapmode == INCREMENTAL) {
+    int fallmine = incremental_recut();
+    int fallback;
+    MPI_Allreduce(&fallmine,&fallback,1,MPI_INT,MPI_MAX,world);
+
+    if (fallback) {
+      grid_rebuild();
+      if (particle->exist) ndeleted += remove_inside_particles(1);
+    } else {
+      if (particle->exist) ndeleted += remove_inside_particles(0);
+    }
+
+    for (int j = 0; j < 3; j++) {
+      pbodylo[j] = bbodylo[j];
+      pbodyhi[j] = bbodyhi[j];
+    }
+    pbodyflag = 1;
   }
 
   // write body state to output file every outevery steps
@@ -1592,6 +1679,286 @@ void FixRigid::grid_changed()
 {
   nmodified = 0;
   if (cpage) cpage->reset();
+
+  // csurfs lists installed by incremental re-cutting were discarded
+  //   by the grid rebuild, or cell indices changed due to migration
+
+  free_registry();
+}
+
+/* ----------------------------------------------------------------------
+   for incremental remap: record cells interior to the body,
+     i.e. INSIDE cells with no surfs whose center is within the body
+   called before the body surfs move to their end-of-step positions
+------------------------------------------------------------------------- */
+
+void FixRigid::record_oldinside()
+{
+  double ctr[3];
+
+  // bbox around body at its current (pre-move) position
+
+  body_bbox(0);
+
+  Grid::ChildCell *cells = grid->cells;
+  Grid::ChildInfo *cinfo = grid->cinfo;
+  int nglocal = grid->nlocal;
+
+  noldinside = 0;
+
+  for (int icell = 0; icell < nglocal; icell++) {
+    if (cells[icell].nsplit != 1) continue;
+    if (cells[icell].nsurf) continue;
+    if (cinfo[icell].type != CELLINSIDE) continue;
+    if (!box_overlap(cells[icell].lo,cells[icell].hi,bbodylo,bbodyhi))
+      continue;
+
+    ctr[0] = 0.5 * (cells[icell].lo[0] + cells[icell].hi[0]);
+    ctr[1] = 0.5 * (cells[icell].lo[1] + cells[icell].hi[1]);
+    if (dim == 3) ctr[2] = 0.5 * (cells[icell].lo[2] + cells[icell].hi[2]);
+    else ctr[2] = 0.0;
+    if (!inside_body(ctr)) continue;
+
+    if (noldinside == maxoldinside) {
+      maxoldinside += DELTA_MODIFY;
+      memory->grow(oldinside,maxoldinside,"fix_rigid:oldinside");
+    }
+    oldinside[noldinside++] = icell;
+  }
+}
+
+/* ----------------------------------------------------------------------
+   for incremental remap: re-cut only grid cells near the body
+   a cell is re-cut if the set of surfs overlapping it changed,
+     or if it is overlapped by a body surf (whose geometry moved)
+   cells interior to the body at its old or new position are re-typed
+     as INSIDE/OUTSIDE via parity tests, all other cells are untouched
+   ghost cell copies of re-cut cells become stale, which is acceptable:
+     the particle mover only consults surf lists of owned cells
+   return 1 to request a fallback to a full grid re-map if a
+     structural change occurs:
+     a cell would become or stop being a split cell, a cell's surf
+     count exceeds maxsurfpercell, or no previous body position is set
+------------------------------------------------------------------------- */
+
+int FixRigid::incremental_recut()
+{
+  int i,n,icell,nsplitone,xsub,moving;
+  double vol;
+  double xsplit[3],ctr[3],rlo[3],rhi[3];
+  double *vols;
+  double *clo,*chi;
+
+  if (!pbodyflag) return 1;
+
+  Grid::ChildCell *cells = grid->cells;
+  Grid::ChildInfo *cinfo = grid->cinfo;
+  int nglocal = grid->nlocal;
+  int maxsurfpercell = grid->maxsurfpercell;
+
+  int ncorner = 4;
+  if (dim == 3) ncorner = 8;
+
+  // R = rlo/rhi = region containing the body before and after its move
+
+  for (i = 0; i < 3; i++) {
+    rlo[i] = MIN(pbodylo[i],bbodylo[i]);
+    rhi[i] = MAX(pbodyhi[i],bbodyhi[i]);
+  }
+
+  // pass 1: re-cut cells in R whose surf overlap changed
+  //   or which are overlapped by a moved body surf
+  // NOTE: surf lists are compared elementwise, both in cut2d/cut3d
+  //   surf index order; lists built by the rendezvous surf2grid
+  //   algorithm may be ordered differently, causing a one-time
+  //   spurious re-cut of unchanged cells, which is harmless
+
+  for (icell = 0; icell < nglocal; icell++) {
+    if (cells[icell].nsplit <= 0) continue;
+    if (!box_overlap(cells[icell].lo,cells[icell].hi,rlo,rhi)) continue;
+
+    // structural change unsupported: split cells trigger a full re-map
+
+    if (cells[icell].nsplit > 1) return 1;
+
+    // new list of surfs overlapping this cell
+
+    if (dim == 2)
+      n = cut2d->surf2grid(cells[icell].id,cells[icell].lo,cells[icell].hi,
+                           newlist,maxsurfpercell);
+    else
+      n = cut3d->surf2grid(cells[icell].id,cells[icell].lo,cells[icell].hi,
+                           newlist,maxsurfpercell);
+    if (n > maxsurfpercell) return 1;
+
+    // skip cell if surf list is unchanged and contains no moving surf
+
+    moving = 0;
+    for (i = 0; i < n; i++)
+      if (irigid[newlist[i]] >= 0) {
+        moving = 1;
+        break;
+      }
+
+    if (!moving && n == cells[icell].nsurf) {
+      if (n == 0) continue;
+      if (memcmp(newlist,cells[icell].csurfs,n*sizeof(surfint)) == 0)
+        continue;
+    }
+
+    if (n == 0) {
+
+      // cell no longer overlaps any surf
+      // full flow volume, interior/exterior typing via parity test
+
+      registry_remove(icell);
+      cells[icell].nsurf = 0;
+      cells[icell].csurfs = NULL;
+
+      clo = cells[icell].lo;
+      chi = cells[icell].hi;
+      if (dim == 3)
+        vol = (chi[0]-clo[0]) * (chi[1]-clo[1]) * (chi[2]-clo[2]);
+      else vol = (chi[0]-clo[0]) * (chi[1]-clo[1]);
+      cinfo[icell].volume = vol;
+
+      ctr[0] = 0.5 * (clo[0] + chi[0]);
+      ctr[1] = 0.5 * (clo[1] + chi[1]);
+      if (dim == 3) ctr[2] = 0.5 * (clo[2] + chi[2]);
+      else ctr[2] = 0.0;
+
+      if (inside_body(ctr)) cinfo[icell].type = CELLINSIDE;
+      else cinfo[icell].type = CELLOUTSIDE;
+      for (i = 0; i < ncorner; i++)
+        cinfo[icell].corner[i] = cinfo[icell].type;
+
+    } else {
+
+      // install new surf list and re-cut the cell
+
+      surfint *list =
+        (surfint *) memory->smalloc(n*sizeof(surfint),"fix_rigid:recut");
+      memcpy(list,newlist,n*sizeof(surfint));
+      registry_replace(icell,list);
+      cells[icell].nsurf = n;
+      cells[icell].csurfs = list;
+
+      if (dim == 2)
+        nsplitone = cut2d->split(cells[icell].id,
+                                 cells[icell].lo,cells[icell].hi,
+                                 n,list,vols,newmap,
+                                 cinfo[icell].corner,xsub,xsplit);
+      else
+        nsplitone = cut3d->split(cells[icell].id,
+                                 cells[icell].lo,cells[icell].hi,
+                                 n,list,vols,newmap,
+                                 cinfo[icell].corner,xsub,xsplit);
+
+      // cell would become a split cell: fall back to full re-map
+
+      if (nsplitone > 1) return 1;
+
+      cinfo[icell].volume = vols[0];
+      cinfo[icell].type = CELLOVERLAP;
+    }
+  }
+
+  // pass 2: cells the body interior moved away from become OUTSIDE
+  // only cells which still have no surfs, else re-cut above
+
+  for (int m = 0; m < noldinside; m++) {
+    icell = oldinside[m];
+    if (cells[icell].nsurf) continue;
+
+    clo = cells[icell].lo;
+    chi = cells[icell].hi;
+    ctr[0] = 0.5 * (clo[0] + chi[0]);
+    ctr[1] = 0.5 * (clo[1] + chi[1]);
+    if (dim == 3) ctr[2] = 0.5 * (clo[2] + chi[2]);
+    else ctr[2] = 0.0;
+    if (inside_body(ctr)) continue;
+
+    cinfo[icell].type = CELLOUTSIDE;
+    if (dim == 3)
+      cinfo[icell].volume = (chi[0]-clo[0]) * (chi[1]-clo[1]) *
+        (chi[2]-clo[2]);
+    else cinfo[icell].volume = (chi[0]-clo[0]) * (chi[1]-clo[1]);
+    for (i = 0; i < ncorner; i++)
+      cinfo[icell].corner[i] = CELLOUTSIDE;
+  }
+
+  // pass 3: surf-free cells the body interior moved over become INSIDE
+  // catches cells swept over entirely within one step,
+  //   which never overlap a body surf at start- or end-of-step positions
+
+  for (icell = 0; icell < nglocal; icell++) {
+    if (cells[icell].nsplit != 1) continue;
+    if (cells[icell].nsurf) continue;
+    if (cinfo[icell].type == CELLINSIDE) continue;
+    if (!box_overlap(cells[icell].lo,cells[icell].hi,bbodylo,bbodyhi))
+      continue;
+
+    clo = cells[icell].lo;
+    chi = cells[icell].hi;
+    ctr[0] = 0.5 * (clo[0] + chi[0]);
+    ctr[1] = 0.5 * (clo[1] + chi[1]);
+    if (dim == 3) ctr[2] = 0.5 * (clo[2] + chi[2]);
+    else ctr[2] = 0.0;
+    if (!inside_body(ctr)) continue;
+
+    cinfo[icell].type = CELLINSIDE;
+    for (i = 0; i < ncorner; i++)
+      cinfo[icell].corner[i] = CELLINSIDE;
+  }
+
+  return 0;
+}
+
+/* ----------------------------------------------------------------------
+   registry of cells whose csurfs lists are allocated by this fix
+   grid-owned csurfs lists live in page memory and are never freed
+     individually, so lists installed by incremental re-cutting are
+     tracked here and freed when replaced or when the grid changes
+------------------------------------------------------------------------- */
+
+void FixRigid::registry_replace(int icell, surfint *list)
+{
+  for (int i = 0; i < nreg; i++)
+    if (regcell[i] == icell) {
+      memory->sfree(reglist[i]);
+      reglist[i] = list;
+      return;
+    }
+
+  if (nreg == maxreg) {
+    maxreg += DELTA_MODIFY;
+    memory->grow(regcell,maxreg,"fix_rigid:regcell");
+    reglist = (surfint **)
+      memory->srealloc(reglist,maxreg*sizeof(surfint *),
+                       "fix_rigid:reglist");
+  }
+
+  regcell[nreg] = icell;
+  reglist[nreg] = list;
+  nreg++;
+}
+
+void FixRigid::registry_remove(int icell)
+{
+  for (int i = 0; i < nreg; i++)
+    if (regcell[i] == icell) {
+      memory->sfree(reglist[i]);
+      regcell[i] = regcell[nreg-1];
+      reglist[i] = reglist[nreg-1];
+      nreg--;
+      return;
+    }
+}
+
+void FixRigid::free_registry()
+{
+  for (int i = 0; i < nreg; i++) memory->sfree(reglist[i]);
+  nreg = 0;
 }
 
 /* ----------------------------------------------------------------------
