@@ -15,6 +15,8 @@
 #include "mpi.h"
 #include "string.h"
 #include "stdlib.h"
+#include <array>
+#include <map>
 #include "fix_rigid.h"
 #include "update.h"
 #include "domain.h"
@@ -212,6 +214,8 @@ FixRigid::FixRigid(SPARTA *sparta, int narg, char **arg) :
     } else if (strcmp(arg[iarg],"scale") == 0) {
       if (iarg+2 > narg) error->all(FLERR,"Fix rigid body args not valid");
       scale = input->numeric(FLERR,arg[iarg+1]);
+      if (scale <= 0.0)
+        error->all(FLERR,"Fix rigid scale factor must be positive");
       iarg += 2;
     } else if (strcmp(arg[iarg],"outfile") == 0) {
       if (iarg+3 > narg) error->all(FLERR,"Fix rigid body args not valid");
@@ -226,6 +230,9 @@ FixRigid::FixRigid(SPARTA *sparta, int narg, char **arg) :
 
   if (pushboundflag && !pushflag)
     error->all(FLERR,"Fix rigid pushbound requires push keyword");
+
+  if (massbody <= 0.0)
+    error->all(FLERR,"Fix rigid body mass must be positive");
 
   // for 2d, insure all body params are consistent with in-plane motion
 
@@ -371,16 +378,20 @@ void FixRigid::init()
   csurf->addstep(update->ntimestep+1);
 
   // body surfs cannot be transparent or have surface reactions assigned
+  // all body surfs must be in the surf group tallied by the compute
 
   Surf::Line *lines = surf->lines;
   Surf::Tri *tris = surf->tris;
+  int cbit = csurf->surf_groupbit();
 
-  int transparent,isr;
+  int mask,transparent,isr;
   for (int i = 0; i < nsurf; i++) {
     if (dim == 2) {
+      mask = lines[slist[i]].mask;
       transparent = lines[slist[i]].transparent;
       isr = lines[slist[i]].isr;
     } else {
+      mask = tris[slist[i]].mask;
       transparent = tris[slist[i]].transparent;
       isr = tris[slist[i]].isr;
     }
@@ -388,7 +399,28 @@ void FixRigid::init()
       error->all(FLERR,"Fix rigid body surfs cannot be transparent");
     if (isr >= 0)
       error->all(FLERR,"Fix rigid body surfs cannot have surface reactions");
+    if (!(mask & cbit))
+      error->all(FLERR,"Fix rigid compute surf group does not include "
+                 "all body surfs");
   }
+
+  // smallest grid cell edge length, for motion-rate warnings
+
+  Grid::ChildCell *cells = grid->cells;
+  int nglocal = grid->nlocal;
+
+  double mine = BIG;
+  for (int icell = 0; icell < nglocal; icell++) {
+    if (cells[icell].nsplit <= 0) continue;
+    mine = MIN(mine,cells[icell].hi[0]-cells[icell].lo[0]);
+    mine = MIN(mine,cells[icell].hi[1]-cells[icell].lo[1]);
+    if (dim == 3) mine = MIN(mine,cells[icell].hi[2]-cells[icell].lo[2]);
+  }
+  MPI_Allreduce(&mine,&mincellsize,1,MPI_DOUBLE,MPI_MIN,world);
+
+  // re-enable single-shot warnings for this run
+
+  warnrotate = warntranslate = warnexit = 0;
 
   // fix rigid must be defined before fixes which change the grid,
   // so its end_of_step() restores overlaid grid cells before they run
@@ -479,6 +511,30 @@ void FixRigid::start_of_step()
   quatnew[3] = quat[3] + dthalf * wq[3];
   MathExtra::qnormalize(quatnew);
   MathExtra::q_to_exyz(quatnew,ex_space,ey_space,ez_space);
+
+  // warn once per run if body motion in a single step is too large
+  // rotation > 0.1 radian degrades the chord approximation used for
+  //   collisions of particles with rotating surfs
+  // max surf pt displacement > smallest grid cell degrades the
+  //   accuracy of surf assignment to grid cells for cutcell remapping
+
+  if (!warnrotate && MathExtra::len3(omega)*dt > 0.1) {
+    warnrotate = 1;
+    if (comm->me == 0)
+      error->warning(FLERR,"Fix rigid body rotation per timestep exceeds "
+                     "0.1 radian, collision accuracy degrades");
+  }
+
+  if (!warntranslate) {
+    double dispmax =
+      (MathExtra::len3(vcm) + MathExtra::len3(omega)*rmaxbody) * dt;
+    if (dispmax > mincellsize) {
+      warntranslate = 1;
+      if (comm->me == 0)
+        error->warning(FLERR,"Fix rigid body moves more than a grid cell "
+                       "per timestep, cell assignment accuracy degrades");
+    }
+  }
 
   // overlay body surfs onto all grid cells
   //   their swept bbox overlaps at any point during this step
@@ -851,6 +907,21 @@ void FixRigid::end_of_step()
   double *boxhi = domain->boxhi;
   int *bflag = domain->bflag;
 
+  // warn once per run if body is entirely outside the simulation box,
+  //   b/c it no longer interacts with any particles
+
+  if (!warnexit) {
+    if (bbodyhi[0] < boxlo[0] || bbodylo[0] > boxhi[0] ||
+        bbodyhi[1] < boxlo[1] || bbodylo[1] > boxhi[1] ||
+        (dim == 3 &&
+         (bbodyhi[2] < boxlo[2] || bbodylo[2] > boxhi[2]))) {
+      warnexit = 1;
+      if (comm->me == 0)
+        error->warning(FLERR,"Fix rigid body has exited the simulation box "
+                       "and no longer interacts with particles");
+    }
+  }
+
   if (bflag[0] == PERIODIC && bbodylo[0] < boxlo[0]) outflag = 1;
   if (bflag[1] == PERIODIC && bbodyhi[0] > boxhi[0]) outflag = 1;
   if (bflag[2] == PERIODIC && bbodylo[1] < boxlo[1]) outflag = 1;
@@ -1008,13 +1079,17 @@ void FixRigid::setup_body()
   int n = 0;
   if (dim == 2) {
     for (int i = 0; i < nlocal; i++)
-      if (lines[i].mask & groupbit) 
+      if (lines[i].mask & groupbit)
 	slist[n++] = i;
   } else if (dim == 3) {
     for (int i = 0; i < nlocal; i++)
-      if (tris[i].mask & groupbit) 
+      if (tris[i].mask & groupbit)
 	slist[n++] = i;
   }
+
+  // insure body surfs form a closed (watertight) object
+
+  check_watertight();
 
   // tensor = inertia tensor in space frame
 		    
@@ -1042,14 +1117,26 @@ void FixRigid::setup_body()
   ez_space[1] = evectors[1][2];
   ez_space[2] = evectors[2][2];
 
+  // for 2d, insure the principal axis aligned with z is in the 3rd slot
+  // the z axis is a principal axis b/c ixz = iyz = 0 is enforced for 2d
+
   if (dim == 2) {
-      if (fabs(ez_space[0]) > EPSILON || fabs(ez_space[1]) > EPSILON) {
+    if (fabs(ez_space[2]) < 1.0-EPSILON) {
+      if (fabs(ey_space[2]) > 1.0-EPSILON) {
         std::swap(inertia[1],inertia[2]);
         std::swap(ey_space[0],ez_space[0]);
         std::swap(ey_space[1],ez_space[1]);
         std::swap(ey_space[2],ez_space[2]);
-      }
+      } else if (fabs(ex_space[2]) > 1.0-EPSILON) {
+        std::swap(inertia[0],inertia[2]);
+        std::swap(ex_space[0],ez_space[0]);
+        std::swap(ex_space[1],ez_space[1]);
+        std::swap(ex_space[2],ez_space[2]);
+      } else
+        error->all(FLERR,"Fix rigid 2d body inertia tensor has "
+                   "no principal axis along z");
     }
+  }
 
   // if any principal moment < scaled EPSILON, set to 0.0
 
@@ -1060,6 +1147,25 @@ void FixRigid::setup_body()
   if (inertia[0] < EPSILON*max) inertia[0] = 0.0;
   if (inertia[1] < EPSILON*max) inertia[1] = 0.0;
   if (inertia[2] < EPSILON*max) inertia[2] = 0.0;
+
+  // validity checks on principal moments of inertia
+  // for 2d only the moment about the z axis matters
+  // for 3d all must be positive and satisfy the triangle inequality,
+  //   else the moi settings are not those of a physical rigid body
+  // jacobi3() sorted the moments in increasing order
+
+  if (dim == 2) {
+    if (inertia[2] <= 0.0)
+      error->all(FLERR,
+                 "Fix rigid moment of inertia about z axis must be positive");
+  } else {
+    if (inertia[0] <= 0.0 || inertia[1] <= 0.0 || inertia[2] <= 0.0)
+      error->all(FLERR,
+                 "Fix rigid principal moments of inertia must be positive");
+    if (inertia[0] + inertia[1] < (1.0-EPSILON)*inertia[2])
+      error->all(FLERR,"Fix rigid moments of inertia do not satisfy "
+                 "the triangle inequality");
+  }
 
   // enforce 3 evectors as a right-handed coordinate system
   // flip 3rd vector if needed
@@ -1124,6 +1230,13 @@ void FixRigid::setup_body()
   // initial omega, consistent with initial angmom
 
   MathExtra::angmom_to_omega(angmom,ex_space,ey_space,ez_space,inertia,omega);
+
+  // rmaxbody = max distance of any body corner pt from the COM
+
+  rmaxbody = 0.0;
+  for (int i = 0; i < nsurf; i++)
+    for (int j = 0; j < dim; j++)
+      rmaxbody = MAX(rmaxbody,MathExtra::len3(&displace[i][j][0]));
 
   // work arrays for remap of body surfs to grid cells
 
@@ -1647,6 +1760,89 @@ bigint FixRigid::remove_inside_particles(int splitflag)
   bigint nall;
   MPI_Allreduce(&delta,&nall,1,MPI_SPARTA_BIGINT,MPI_SUM,world);
   return nall;
+}
+
+/* ----------------------------------------------------------------------
+   check that the body surfs form one or more closed (watertight) objects
+   2d: each point must appear exactly as often as the 1st endpoint of a
+     line as it does as the 2nd endpoint of a line
+   3d: each edge must be traversed the same number of times in each
+     direction by the tris that share it
+   matching of points is on exact floating point values, the same as
+     the watertight checks applied to all surfs by the Surf class
+   all procs store all surfs, so the check is identical on every proc
+------------------------------------------------------------------------- */
+
+void FixRigid::check_watertight()
+{
+  int unmatched = 0;
+
+  Surf::Line *lines = surf->lines;
+  Surf::Tri *tris = surf->tris;
+
+  if (dim == 2) {
+    std::map<std::array<double,2>,int> count;
+    std::array<double,2> key;
+
+    for (int i = 0; i < nsurf; i++) {
+      Surf::Line *l = &lines[slist[i]];
+      key[0] = l->p1[0]; key[1] = l->p1[1];
+      count[key]++;
+      key[0] = l->p2[0]; key[1] = l->p2[1];
+      count[key]--;
+    }
+
+    for (std::map<std::array<double,2>,int>::iterator it = count.begin();
+         it != count.end(); ++it)
+      if (it->second != 0) unmatched++;
+
+  } else {
+    std::map<std::array<double,6>,int> count;
+    std::array<double,6> key;
+    double *pts[4];
+    double *a,*b;
+    int dir;
+
+    for (int i = 0; i < nsurf; i++) {
+      Surf::Tri *t = &tris[slist[i]];
+      pts[0] = t->p1; pts[1] = t->p2; pts[2] = t->p3; pts[3] = t->p1;
+
+      for (int j = 0; j < 3; j++) {
+        a = pts[j];
+        b = pts[j+1];
+
+        // store edge with endpoints in canonical order
+        // count is +1 if traversed in that order, -1 if reversed
+
+        dir = 1;
+        if (b[0] < a[0] ||
+            (b[0] == a[0] &&
+             (b[1] < a[1] || (b[1] == a[1] && b[2] < a[2])))) {
+          std::swap(a,b);
+          dir = -1;
+        }
+
+        key[0] = a[0]; key[1] = a[1]; key[2] = a[2];
+        key[3] = b[0]; key[4] = b[1]; key[5] = b[2];
+        count[key] += dir;
+      }
+    }
+
+    for (std::map<std::array<double,6>,int>::iterator it = count.begin();
+         it != count.end(); ++it)
+      if (it->second != 0) unmatched++;
+  }
+
+  if (unmatched) {
+    char str[128];
+    if (dim == 2)
+      sprintf(str,"Fix rigid body is not watertight: "
+              "%d unmatched points",unmatched);
+    else
+      sprintf(str,"Fix rigid body is not watertight: "
+              "%d unmatched edges",unmatched);
+    error->all(FLERR,str);
+  }
 }
 
 /* ----------------------------------------------------------------------

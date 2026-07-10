@@ -58,6 +58,11 @@ class ComputeSurf : public Compute {
 
   int force_torque_colcheck();
 
+  // surf group this compute tallies for
+  // used by fix rigid to insure all its body surfs are tallied
+
+  int surf_groupbit() { return groupbit; }
+
  protected:
   int groupbit,imix,nvalue,ngroup,ntotal;
   int maxsurf,combined;

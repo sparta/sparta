@@ -71,6 +71,12 @@ class FixRigid : public Fix {
   int nsurf;     // # of surfs which comprise surface of rigid body
   int *slist;    // list of surf indices for rigid body surfs
 
+  double rmaxbody;        // max distance of any body corner pt from COM
+  double mincellsize;     // smallest edge length of any grid cell
+  int warnrotate;         // 1 after warning about rotation rate
+  int warntranslate;      // 1 after warning about translation rate
+  int warnexit;           // 1 after warning that body exited the box
+
   double massbody;        // total mass of rigid body enclosed by surfs
   double moi[6];          // 6 MOI in space frame
   double inertia[3];      // 3 diagonalized MOI in body frame
@@ -107,6 +113,7 @@ class FixRigid : public Fix {
   void read_infile(char *);
   void write_outfile();
   void setup_body();
+  void check_watertight();
 
   void push_off();              // spring forces from close static surfs
   void grid_rebuild();          // full re-map of all surfs to grid cells
