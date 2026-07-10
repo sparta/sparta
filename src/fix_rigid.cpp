@@ -1038,11 +1038,34 @@ void FixRigid::end_of_step()
 
   // for cutcell mode: full re-map of surfs to grid cells,
   //   including cut/split cells and INSIDE/OUTSIDE cell typing
-  // then remove any particles now inside the moved body
+  // then remove any particles now inside the moved bodies
+  // with multiple cutcell bodies, only the last-defined one performs
+  //   the re-map, after all bodies have moved to their end-of-step
+  //   positions; earlier re-maps would just be discarded
+  // it then removes inside particles for every cutcell body, with
+  //   split-cell particle reassignment done once by the first call
 
   if (remapmode == CUTCELL) {
-    grid_rebuild();
-    if (particle->exist) ndeleted += remove_inside_particles(1);
+    int ilast = -1;
+    for (int ifix = 0; ifix < modify->nfix; ifix++)
+      if (strcmp(modify->fix[ifix]->style,"rigid") == 0 &&
+          ((FixRigid *) modify->fix[ifix])->remapmode == CUTCELL)
+        ilast = ifix;
+
+    if (modify->fix[ilast] == this) {
+      grid_rebuild();
+
+      if (particle->exist) {
+        int splitflag = 1;
+        for (int ifix = 0; ifix < modify->nfix; ifix++) {
+          if (strcmp(modify->fix[ifix]->style,"rigid") != 0) continue;
+          FixRigid *f = (FixRigid *) modify->fix[ifix];
+          if (f->remapmode != CUTCELL) continue;
+          f->ndeleted += f->remove_inside_particles(splitflag);
+          splitflag = 0;
+        }
+      }
+    }
   }
 
   // for incremental mode: re-cut only the grid cells near the body
