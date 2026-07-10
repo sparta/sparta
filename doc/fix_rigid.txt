@@ -39,10 +39,14 @@ zero or more optional keyword/value pairs :l
      {remap} value = {overlay} or {cutcell} or {incremental}
        method used to assign the moving body surfs to grid cells
      {push} values = k cutoff
-       k = spring constant for push-off forces (force/distance units)
+       k = stiffness for push-off forces
+           (force/distance units for pushstyle linear,
+            force/distance^3/2 units for pushstyle hertz)
        cutoff = apply push-off forces below this distance (distance units)
      {pushbound} value = {yes} or {no}
        yes to also apply push-off forces from non-periodic boundaries
+     {pushstyle} value = {linear} or {hertz}
+       force law used for push-off forces
      {outfile} values = filename Nevery
        filename = write body state to this file every Nevery steps
      {pseudo} values = Np pmass frac
@@ -285,15 +289,24 @@ output as the scalar value of this fix.
 The {push} keyword enables push-off forces which repel the body from
 static (non-body) surface elements before it touches them.  If any
 corner point of a body line or triangle comes within {cutoff}
-distance of a static surf element, a linear spring force
+distance of a static surf element, a repulsive force is applied to
+the body at that point, directed along the outward normal of the
+static surf element.  With overlap delta = cutoff - d, where d is the
+distance from the point to the element, the force is
 
-F = k (cutoff - d) :pre
+F = k delta            for pushstyle linear (the default)
+F = k delta^(3/2)      for pushstyle hertz :pre
 
-is applied to the body at that point, directed along the outward
-normal of the static surf element, where d is the distance from the
-point to the element.  The force contributes both force and torque to
-the body.  Each (corner point, static element) pair within the cutoff
-contributes its own spring force, so k is a per-contact stiffness.
+The {linear} law is a simple spring with bounded stiffness; its
+maximum force is k*cutoff.  The {hertz} law is the Hertzian contact
+force for elastic contact of curved bodies, the standard model for
+particulate contact mechanics: both the force and its derivative
+vanish smoothly at the cutoff.  For either law the contact must be
+resolved by the timestep: stiffer k means shorter contacts, and an
+under-resolved contact does not conserve energy.  The force
+contributes both force and torque to the body.  Each (corner point,
+static element) pair within the cutoff contributes its own force, so
+k is a per-contact stiffness.
 The {pushbound} keyword additionally applies the same spring force
 from the (non-periodic) boundaries of the simulation box, to keep the
 body inside the box.  Push-off forces are computed for the
@@ -412,8 +425,9 @@ collide with.
 
 [Default:]
 
-The option defaults are remap = overlay, pushbound = no, scale = 1.0,
-no push-off forces, no outfile, no pseudo particles.
+The option defaults are remap = overlay, pushbound = no,
+pushstyle = linear, scale = 1.0, no push-off forces, no outfile,
+no pseudo particles.
 
 :line
 

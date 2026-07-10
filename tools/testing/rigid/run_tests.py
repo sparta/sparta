@@ -96,22 +96,30 @@ def test_ballistic(exe_cmd):
 
 
 def test_bounce(exe_cmd):
-    rc, out = run_deck(exe_cmd, "in.test.bounce")
-    if rc:
-        return ["run failed with exit code %d" % rc]
-    rows = parse_stats(out)
-    if not rows:
-        return ["no stats output"]
     fails = []
-    # spring engages when body corner is cutoff=0.5 from wall at x=8,
-    # i.e. xcm <= 7.5; no tunneling means xcm never reaches the wall
-    xmax = max(r["f_1[1]"] for r in rows)
-    if xmax > 7.55:
-        fails.append("max xcm = %.6g, tunneled past push-off zone" % xmax)
-    # elastic rebound: final vx = -50 within 1 percent
-    vfinal = rows[-1]["f_1[4]"]
-    if not approx(vfinal, -50.0, rel=0.01):
-        fails.append("final vx = %.6g, expected -50 within 1%%" % vfinal)
+    # both push-off force laws must give an elastic, non-tunneling bounce
+    for pstyle, pk in (("linear", "1.0e-18"), ("hertz", "4.0e-18")):
+        rc, out = run_deck(exe_cmd, "in.test.bounce",
+                           extra=["-var", "pstyle", pstyle,
+                                  "-var", "pk", pk])
+        if rc:
+            fails.append("%s: run failed with exit code %d" % (pstyle, rc))
+            continue
+        rows = parse_stats(out)
+        if not rows:
+            fails.append("%s: no stats output" % pstyle)
+            continue
+        # force engages when body corner is cutoff=0.5 from wall at x=8,
+        # i.e. xcm <= 7.5; no tunneling means xcm never reaches the wall
+        xmax = max(r["f_1[1]"] for r in rows)
+        if xmax > 7.55:
+            fails.append("%s: max xcm = %.6g, tunneled past push-off zone"
+                         % (pstyle, xmax))
+        # elastic rebound: final vx = -50 within 1 percent
+        vfinal = rows[-1]["f_1[4]"]
+        if not approx(vfinal, -50.0, rel=0.01):
+            fails.append("%s: final vx = %.6g, expected -50 within 1%%"
+                         % (pstyle, vfinal))
     return fails
 
 

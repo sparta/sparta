@@ -88,6 +88,7 @@ class FixRigid : public Fix {
 
   int pushflag;           // 1 if push-off forces are enabled
   int pushboundflag;      // 1 to also push off non-periodic boundaries
+  int pushstyle;          // LINEAR or HERTZ force law
   double kpush;           // spring constant for push-off force
   double pushcutoff;      // distance below which push-off is applied
 

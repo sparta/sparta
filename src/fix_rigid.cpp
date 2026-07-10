@@ -61,6 +61,8 @@ enum{PERIODIC,OUTFLOW,REFLECT,SURFACE,AXISYM};  // same as Domain
 
 enum{OVERLAY,CUTCELL,INCREMENTAL};          // remap modes
 
+enum{LINEAR,HERTZ};             // push-off force laws
+
 // local box/box overlap test, touching counts as overlap
 
 static inline int box_overlap(double *alo, double *ahi,
@@ -178,6 +180,8 @@ FixRigid::FixRigid(SPARTA *sparta, int narg, char **arg) :
   remapmode = OVERLAY;
   pushflag = 0;
   pushboundflag = 0;
+  pushstyle = LINEAR;
+  int pushstyleflag = 0;
   double scale = 1.0;
 
   while (iarg < narg) {
@@ -193,6 +197,13 @@ FixRigid::FixRigid(SPARTA *sparta, int narg, char **arg) :
       if (iarg+2 > narg) error->all(FLERR,"Fix rigid body args not valid");
       if (strcmp(arg[iarg+1],"yes") == 0) pushboundflag = 1;
       else if (strcmp(arg[iarg+1],"no") == 0) pushboundflag = 0;
+      else error->all(FLERR,"Fix rigid body args not valid");
+      iarg += 2;
+    } else if (strcmp(arg[iarg],"pushstyle") == 0) {
+      if (iarg+2 > narg) error->all(FLERR,"Fix rigid body args not valid");
+      pushstyleflag = 1;
+      if (strcmp(arg[iarg+1],"linear") == 0) pushstyle = LINEAR;
+      else if (strcmp(arg[iarg+1],"hertz") == 0) pushstyle = HERTZ;
       else error->all(FLERR,"Fix rigid body args not valid");
       iarg += 2;
     } else if (strcmp(arg[iarg],"remap") == 0) {
@@ -227,8 +238,9 @@ FixRigid::FixRigid(SPARTA *sparta, int narg, char **arg) :
     } else error->all(FLERR,"Fix rigid body args not valid");
   }
 
-  if (pushboundflag && !pushflag)
-    error->all(FLERR,"Fix rigid pushbound requires push keyword");
+  if ((pushboundflag || pushstyleflag) && !pushflag)
+    error->all(FLERR,"Fix rigid pushbound and pushstyle "
+               "require push keyword");
 
   if (massbody <= 0.0)
     error->all(FLERR,"Fix rigid body mass must be positive");
@@ -1362,8 +1374,11 @@ void FixRigid::setup_body()
 /* ----------------------------------------------------------------------
    push-off forces on the body from too-close static surfs
    for each body element corner pt within pushcutoff of a static surf,
-     apply a linear spring force F = kpush * (pushcutoff - dist)
-     in the direction of the static surf outward normal
+     apply a repulsive force in the direction of the static surf
+     outward normal, with overlap delta = pushcutoff - dist:
+     linear spring F = kpush * delta, or
+     Hertzian contact F = kpush * delta^3/2 (smooth onset, standard
+     model for elastic contact of spherical particulates)
    if pushboundflag is set, the same spring force is applied by
      non-periodic simulation box boundaries
    forces are added to fcm/torque for the next step's time integration
@@ -1447,7 +1462,8 @@ void FixRigid::push_off()
         if (dsq >= cutsq) continue;
 
         d = sqrt(dsq);
-        scale = kpush * (pushcutoff-d);
+        if (pushstyle == LINEAR) scale = kpush * (pushcutoff-d);
+        else scale = kpush * (pushcutoff-d) * sqrt(pushcutoff-d);
         fone[0] = scale*norm[0];
         fone[1] = scale*norm[1];
         fone[2] = scale*norm[2];
@@ -1493,7 +1509,9 @@ void FixRigid::push_off()
           else d = boxhi[idim] - pts[j][idim];
           if (d >= pushcutoff) continue;
 
-          scale = kpush * (pushcutoff-d) * fsign[iface];
+          if (pushstyle == LINEAR) scale = kpush * (pushcutoff-d);
+          else scale = kpush * (pushcutoff-d) * sqrt(pushcutoff-d);
+          scale *= fsign[iface];
           fone[0] = fone[1] = fone[2] = 0.0;
           fone[idim] = scale;
 
