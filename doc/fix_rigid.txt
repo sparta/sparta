@@ -36,7 +36,7 @@ zero or more optional keyword/value pairs :l
   keyword = {scale} or {remap} or {push} or {pushbound} or {outfile} or {pseudo}
      {scale} value = factor
        factor = multiply all mass-dependent body values by this factor
-     {remap} value = {overlay} or {cutcell}
+     {remap} value = {overlay} or {cutcell} or {incremental}
        method used to assign the moving body surfs to grid cells
      {push} values = k cutoff
        k = spring constant for push-off forces (force/distance units)
@@ -78,9 +78,23 @@ for collisions with moving surface elements.
 
 Group-ID is the ID of the group of surface elements (lines in 2d or
 triangles in 3d) which comprise the rigid body object.  The
-collection of surfs should form a single closed (watertight) object.
-Only a single rigid body can be defined in a simulation, i.e. only
-one fix rigid command can be used, and only one object per fix.
+collection of surfs must form a closed (watertight) object, which is
+checked when the fix is defined: in 2d every point must be the first
+endpoint of exactly as many body lines as it is the second endpoint,
+and in 3d every edge must be traversed the same number of times in
+each direction by the body triangles which share it.
+
+Each fix rigid command defines a single rigid body.  Multiple rigid
+bodies can be simulated by using multiple fix rigid commands, each
+with its own surf group and its own compute; no surf element can
+belong to more than one body.  Bodies interact with each other via
+the push-off forces described below: another body's surfs act as
+push-off sources just as static surfs do, so two bodies with the
+{push} keyword enabled repel each other before contact.  Since each
+body computes its push-off forces from the other bodies' positions in
+fix definition order, the pairwise forces are equal and opposite only
+to within one timestep of body motion, an error consistent with the
+overall accuracy of the explicit time coupling.
 
 Compute-ID is the ID of a "compute surf"_compute_surf.html command
 which tallies the force and torque on individual surface elements due
@@ -245,6 +259,21 @@ are thus exact, at the cost of a full grid re-map every timestep,
 which can be expensive for large grids.  Any particles which end up
 inside the body are deleted.
 
+The {remap incremental} mode produces the same exact cut-cell
+information as {cutcell} at a fraction of the cost.  Each timestep,
+only the grid cells near the body are examined, and a cell is re-cut
+only if the set of surfs overlapping it changed or if it is
+overlapped by a body surf which moved.  Cells the body interior moved
+over or away from are re-marked as INSIDE or OUTSIDE.  All of this
+work is local to each processor.  Whenever the change to a cell would
+be structural - the cell would become or stop being a split cell, or
+its surf count would exceed the "global surfmax"_global.html setting
+- the fix automatically falls back to the same full grid re-map that
+{cutcell} performs on every step.  On a benchmark with 10,000 grid
+cells, {incremental} was about 5x faster than {cutcell} and
+approached the speed of {overlay}.  This mode is restricted to
+simulations with a single rigid body.
+
 In both modes, particles which are inside the body when a run starts
 (e.g. created there by the "create_particles"_create_particles.html
 command, which is unaware of the body in overlay mode) are deleted at
@@ -327,18 +356,33 @@ accumulated on the most recent timestep, which will be applied to the
 body at the start of the next timestep; they include the push-off
 forces, which are also reported separately in values 20-22.
 
+This fix performs several validity checks when it is defined and
+initialized: the body must be watertight (see above), its mass must
+be positive, its principal moments of inertia must be positive and
+(in 3d) satisfy the triangle inequality I1 + I2 >= I3, and the
+compute's surf group must include all body surfs.  During a run, a
+one-time warning is issued if the body rotates by more than 0.1
+radian in a single timestep (which degrades the accuracy of
+moving-surf collisions), if any body surf point moves farther than
+the smallest grid cell in a single timestep (which degrades the
+accuracy of surf-to-cell assignment for the cutcell remap modes), or
+if the body exits the simulation box entirely (after which it no
+longer interacts with any particles).
+
 [Restrictions:]
 
-There can only be a single rigid body in the simulation, defined by a
-single fix rigid command.  The "global rigid"_global.html command
-must be used to enable moving-surf collisions in the particle mover.
+The "global rigid"_global.html command must be used to enable
+moving-surf collisions in the particle mover.  Each fix rigid command
+defines one rigid body; multiple bodies require multiple fixes with
+disjoint surf groups.  The {remap incremental} mode is limited to a
+single rigid body.
 
 Rigid bodies can only be used with explicit, non-distributed surface
 elements.  They cannot be used with axisymmetric domains, or with the
 KOKKOS package's particle mover.  Body surf elements cannot be
 transparent and cannot have surface reactions assigned to them.
 
-The body should be a closed (watertight) object.  The body must stay
+The body must be a closed (watertight) object.  The body must stay
 within the simulation box if the boundaries it would cross are
 periodic; body coordinates are not wrapped across periodic
 boundaries, so an error is generated in that case.  The body may exit
@@ -370,3 +414,10 @@ collide with.
 
 The option defaults are remap = overlay, pushbound = no, scale = 1.0,
 no push-off forces, no outfile, no pseudo particles.
+
+:line
+
+A regression test suite for rigid bodies, with analytic checks of
+ballistic motion, push-off bounces, gas+body momentum conservation,
+overrun robustness, remap-mode consistency, and two-body collisions,
+is available in the tools/testing/rigid directory.

@@ -76,8 +76,10 @@
     bytes = limit extra particle memory to this amount (in MBytes)
   <I>optmove</I> value = yes or no
     yes/no = use optimized particle move if yes, else use regular move
-  <I>rigid</I> value= fixID
-    fixID = ID of a fix rigid command that defines a mobile rigid-body object composed of surface elements 
+  <I>rigid</I> value = <I>yes</I> or fixID or NULL
+    yes = enable mobile rigid-body objects defined by fix rigid commands
+    fixID = ID of a fix rigid command, same as yes with the ID validated
+    NULL = disable mobile rigid-body objects 
 </PRE>
 
 </UL>
@@ -432,15 +434,17 @@ will be used for that specific particle on that timestep. The <I>optmove
 yes</I> option cannot be used when surfaces are defined, the grid is not
 uniform, or when fix adapt is enabled, otherwise an error will result.
 </P>
-<P>The <I>rigid</I> keyword enables a mobile rigid-body object composed of
-surface elements (lines in 2d, triangles in 3d) to be simulated.  The
-fixID argument is the ID of a <A HREF = "fix_rigid.html">fix rigid</A> command which
-defines the set of surfaces in the rigid body.  If fixID is specified
-as NULL, then the motion of the rigid-body object is disabled.  In
-that case the instance of the <A HREF = "fix_rigid.html">fix rigid</A> command
-should also be deleted via the <A HREF = "unfix.html">unfix</A> command.  See
-<A HREF = "Section_howto.html#howto_20">Section 6.20</A> for an overview of rigid
-body surface objects.
+<P>The <I>rigid</I> keyword enables mobile rigid-body objects composed of
+surface elements (lines in 2d, triangles in 3d) to be simulated.
+Each object is defined by a <A HREF = "fix_rigid.html">fix rigid</A> command; all
+defined fix rigid commands become active.  The value can be the word
+<I>yes</I>, or the ID of one <A HREF = "fix_rigid.html">fix rigid</A> command (which is
+validated, but has the same effect as <I>yes</I>).  If the value is NULL,
+then the motion of rigid-body objects is disabled.  In that case any
+instances of the <A HREF = "fix_rigid.html">fix rigid</A> command should also be
+deleted via the <A HREF = "unfix.html">unfix</A> command.  See <A HREF = "Section_howto.html#howto_20">Section
+6.20</A> for an overview of rigid body
+surface objects.
 </P>
 <P><B>Restrictions:</B>
 </P>
