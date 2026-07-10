@@ -97,29 +97,38 @@ def test_ballistic(exe_cmd):
 
 def test_bounce(exe_cmd):
     fails = []
-    # both push-off force laws must give an elastic, non-tunneling bounce
-    for pstyle, pk in (("linear", "1.0e-18"), ("hertz", "4.0e-18")):
+    # elastic cases: both force laws must rebound at -50 within 1%
+    # damped case: DEM spring-dashpot must rebound slower, with a
+    #   coefficient of restitution in a loose band around the analytic
+    #   value for the effective 2-contact linear spring-dashpot
+    cases = (
+        ("linear", "1.0e-18", "0.0", (-50.5, -49.5)),
+        ("hertz", "4.0e-18", "0.0", (-50.5, -49.5)),
+        ("linear-damped", "1.0e-18", "3.0e-21", (-32.5, -17.5)),
+    )
+    for label, pk, pdamp, vband in cases:
+        pstyle = label.split("-")[0]
         rc, out = run_deck(exe_cmd, "in.test.bounce",
                            extra=["-var", "pstyle", pstyle,
-                                  "-var", "pk", pk])
+                                  "-var", "pk", pk,
+                                  "-var", "pdamp", pdamp])
         if rc:
-            fails.append("%s: run failed with exit code %d" % (pstyle, rc))
+            fails.append("%s: run failed with exit code %d" % (label, rc))
             continue
         rows = parse_stats(out)
         if not rows:
-            fails.append("%s: no stats output" % pstyle)
+            fails.append("%s: no stats output" % label)
             continue
         # force engages when body corner is cutoff=0.5 from wall at x=8,
         # i.e. xcm <= 7.5; no tunneling means xcm never reaches the wall
         xmax = max(r["f_1[1]"] for r in rows)
         if xmax > 7.55:
             fails.append("%s: max xcm = %.6g, tunneled past push-off zone"
-                         % (pstyle, xmax))
-        # elastic rebound: final vx = -50 within 1 percent
+                         % (label, xmax))
         vfinal = rows[-1]["f_1[4]"]
-        if not approx(vfinal, -50.0, rel=0.01):
-            fails.append("%s: final vx = %.6g, expected -50 within 1%%"
-                         % (pstyle, vfinal))
+        if not vband[0] <= vfinal <= vband[1]:
+            fails.append("%s: final vx = %.6g, expected within [%g,%g]"
+                         % (label, vfinal, vband[0], vband[1]))
     return fails
 
 

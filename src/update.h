@@ -52,6 +52,10 @@ class Update : protected Pointers {
   int fieldfreq;         // update GFIELD every this many timsteps
 
   int rigidflag;         // 1 if a mobile rigid-body surf object will be used
+  int nfixrigid;              // # of FixRigid instances = # of bodies
+  class FixRigid **fixrigidlist;  // ptrs to each FixRigid instance
+  int *rigidmap;              // which FixRigid each surf belongs to
+                              // = index into fixrigidlist, -1 = static surf
 
   int nmigrate;          // # of particles to migrate to new procs
   int *mlist;            // indices of particles to migrate
@@ -150,10 +154,6 @@ class Update : protected Pointers {
   // enable use of mobile rigid bodies comprised of surfs
 
   char *rigidID;         // "yes" or ID of a fix rigid command
-  int nfixrigid;              // # of FixRigid instances = # of bodies
-  class FixRigid **fixrigidlist;  // ptrs to each FixRigid instance
-  int *rigidmap;              // which FixRigid each surf belongs to
-                              // = index into fixrigidlist, -1 = static surf
 
   // methods
 

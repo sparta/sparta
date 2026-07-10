@@ -181,6 +181,7 @@ FixRigid::FixRigid(SPARTA *sparta, int narg, char **arg) :
   pushflag = 0;
   pushboundflag = 0;
   pushstyle = LINEAR;
+  gammapush = 0.0;
   int pushstyleflag = 0;
   double scale = 1.0;
 
@@ -205,6 +206,13 @@ FixRigid::FixRigid(SPARTA *sparta, int narg, char **arg) :
       if (strcmp(arg[iarg+1],"linear") == 0) pushstyle = LINEAR;
       else if (strcmp(arg[iarg+1],"hertz") == 0) pushstyle = HERTZ;
       else error->all(FLERR,"Fix rigid body args not valid");
+      iarg += 2;
+    } else if (strcmp(arg[iarg],"pushdamp") == 0) {
+      if (iarg+2 > narg) error->all(FLERR,"Fix rigid body args not valid");
+      pushstyleflag = 1;
+      gammapush = input->numeric(FLERR,arg[iarg+1]);
+      if (gammapush < 0.0)
+        error->all(FLERR,"Fix rigid body args not valid");
       iarg += 2;
     } else if (strcmp(arg[iarg],"remap") == 0) {
       if (iarg+2 > narg) error->all(FLERR,"Fix rigid body args not valid");
@@ -239,7 +247,7 @@ FixRigid::FixRigid(SPARTA *sparta, int narg, char **arg) :
   }
 
   if ((pushboundflag || pushstyleflag) && !pushflag)
-    error->all(FLERR,"Fix rigid pushbound and pushstyle "
+    error->all(FLERR,"Fix rigid pushbound, pushstyle, and pushdamp "
                "require push keyword");
 
   if (massbody <= 0.0)
@@ -1379,6 +1387,12 @@ void FixRigid::setup_body()
      linear spring F = kpush * delta, or
      Hertzian contact F = kpush * delta^3/2 (smooth onset, standard
      model for elastic contact of spherical particulates)
+   if gammapush > 0, a dashpot term F -= gammapush * d(delta)/dt is
+     added (the DEM spring-dashpot pair), computed from the normal
+     approach rate of the corner pt relative to the source surface,
+     including the motion of another rigid body as the source
+   the total contact force is clamped at zero, so the dashpot never
+     produces adhesion as a contact ends
    if pushboundflag is set, the same spring force is applied by
      non-periodic simulation box boundaries
    forces are added to fcm/torque for the next step's time integration
@@ -1464,6 +1478,28 @@ void FixRigid::push_off()
         d = sqrt(dsq);
         if (pushstyle == LINEAR) scale = kpush * (pushcutoff-d);
         else scale = kpush * (pushcutoff-d) * sqrt(pushcutoff-d);
+
+        // dashpot: damp by the normal approach rate of the corner pt
+        //   relative to the source surface,
+        //   which moves if it belongs to another rigid body
+
+        if (gammapush > 0.0) {
+          double vpt[3],vsrc[3],rd[3];
+          MathExtra::sub3(pts[j],xcm,rd);
+          MathExtra::cross3(omega,rd,vpt);
+          MathExtra::add3(vcm,vpt,vpt);
+          if (update->rigidflag && update->rigidmap &&
+              update->rigidmap[m] >= 0) {
+            FixRigid *src = update->fixrigidlist[update->rigidmap[m]];
+            MathExtra::sub3(pts[j],src->xcm,rd);
+            MathExtra::cross3(src->omega,rd,vsrc);
+            MathExtra::add3(src->vcm,vsrc,vsrc);
+            MathExtra::sub3(vpt,vsrc,vpt);
+          }
+          scale -= gammapush * MathExtra::dot3(vpt,norm);
+          if (scale < 0.0) scale = 0.0;
+        }
+
         fone[0] = scale*norm[0];
         fone[1] = scale*norm[1];
         fone[2] = scale*norm[2];
@@ -1511,6 +1547,18 @@ void FixRigid::push_off()
 
           if (pushstyle == LINEAR) scale = kpush * (pushcutoff-d);
           else scale = kpush * (pushcutoff-d) * sqrt(pushcutoff-d);
+
+          // dashpot vs the static boundary, face normal = fsign*e_idim
+
+          if (gammapush > 0.0) {
+            double vpt[3],rd[3];
+            MathExtra::sub3(pts[j],xcm,rd);
+            MathExtra::cross3(omega,rd,vpt);
+            MathExtra::add3(vcm,vpt,vpt);
+            scale -= gammapush * fsign[iface] * vpt[idim];
+            if (scale < 0.0) scale = 0.0;
+          }
+
           scale *= fsign[iface];
           fone[0] = fone[1] = fone[2] = 0.0;
           fone[idim] = scale;

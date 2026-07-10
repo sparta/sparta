@@ -91,6 +91,7 @@ class FixRigid : public Fix {
   int pushstyle;          // LINEAR or HERTZ force law
   double kpush;           // spring constant for push-off force
   double pushcutoff;      // distance below which push-off is applied
+  double gammapush;       // dashpot damping coefficient, 0 = elastic
 
   // remap of body surfs to grid cells
 

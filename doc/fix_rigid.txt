@@ -47,6 +47,9 @@ zero or more optional keyword/value pairs :l
        yes to also apply push-off forces from non-periodic boundaries
      {pushstyle} value = {linear} or {hertz}
        force law used for push-off forces
+     {pushdamp} value = gamma
+       gamma = dashpot damping coefficient for push-off contacts
+               (force/velocity units, 0 = elastic)
      {outfile} values = filename Nevery
        filename = write body state to this file every Nevery steps
      {pseudo} values = Np pmass frac
@@ -307,6 +310,19 @@ under-resolved contact does not conserve energy.  The force
 contributes both force and torque to the body.  Each (corner point,
 static element) pair within the cutoff contributes its own force, so
 k is a per-contact stiffness.
+
+The {pushdamp} keyword adds a dashpot term to each contact, forming
+the standard DEM spring-dashpot contact model:
+
+F = k delta^n + gamma d(delta)/dt :pre
+
+where d(delta)/dt is the normal approach rate of the body corner
+point relative to the source surface, including the motion of another
+rigid body when the source is one.  The dashpot removes energy during
+a collision, producing an inelastic bounce with a coefficient of
+restitution controlled by gamma; the total contact force is clamped
+at zero, so the dashpot never produces adhesion as a contact ends.
+With gamma = 0 (the default) contacts are elastic.
 The {pushbound} keyword additionally applies the same spring force
 from the (non-periodic) boundaries of the simulation box, to keep the
 body inside the box.  Push-off forces are computed for the
@@ -426,8 +442,8 @@ collide with.
 [Default:]
 
 The option defaults are remap = overlay, pushbound = no,
-pushstyle = linear, scale = 1.0, no push-off forces, no outfile,
-no pseudo particles.
+pushstyle = linear, pushdamp = 0.0, scale = 1.0, no push-off forces,
+no outfile, no pseudo particles.
 
 :line
 

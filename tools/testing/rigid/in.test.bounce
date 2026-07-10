@@ -31,7 +31,7 @@ fix		    1 rigid body c1 body &
 		    mass 1.0e-22 com 5 5 0 vcom 50 0 0 &
 		    moi 8.3333333e-24 8.3333333e-24 1.6666667e-23 0 0 0 &
                     angmom 0 0 0 &
-		    push ${pk} 0.5 pushstyle ${pstyle}
+		    push ${pk} 0.5 pushstyle ${pstyle} pushdamp ${pdamp}
 
 stats		    50
 stats_style         step f_1[1] f_1[4] f_1[15]
