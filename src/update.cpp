@@ -107,7 +107,10 @@ Update::Update(SPARTA *sparta) : Pointers(sparta)
 
   rigidflag = 0;
   rigidID = NULL;
-  
+  nfixrigid = 0;
+  fixrigidlist = NULL;
+  rigidmap = NULL;
+
   copymode = 0;
 }
 
@@ -120,6 +123,8 @@ Update::~Update()
   delete [] unit_style;
   delete [] fieldID;
   delete [] rigidID;
+  delete [] fixrigidlist;
+  memory->destroy(rigidmap);
   memory->destroy(mlist);
 
   delete [] glist_compute;
@@ -255,12 +260,43 @@ void Update::init()
       error->all(FLERR,"Cannot use global rigid with axisymmetric domain");
     if (sparta->kokkos)
       error->all(FLERR,"Cannot yet use global rigid with KOKKOS");
-    int irigidfix = modify->find_fix(rigidID);
-    if (irigidfix < 0) error->all(FLERR,"Fix ID for global rigid is not found");
-    fixrigid = (FixRigid *) modify->fix[irigidfix];
-    if (strcmp(fixrigid->style,"rigid") != 0)
-      error->all(FLERR,"Fix for global rigid is not a fix rigid command");
-    irigid = fixrigid->irigid;
+
+    // rigidID = ID of a specific fix rigid (validated), or the word "yes"
+
+    if (strcmp(rigidID,"yes") != 0) {
+      int irigidfix = modify->find_fix(rigidID);
+      if (irigidfix < 0)
+        error->all(FLERR,"Fix ID for global rigid is not found");
+      if (strcmp(modify->fix[irigidfix]->style,"rigid") != 0)
+        error->all(FLERR,"Fix for global rigid is not a fix rigid command");
+    }
+
+    // build list of all rigid fixes, one mobile body per fix
+    // rigidmap = map from each surf to the fix which owns it, -1 = static
+
+    delete [] fixrigidlist;
+    memory->destroy(rigidmap);
+
+    nfixrigid = 0;
+    for (int ifix = 0; ifix < modify->nfix; ifix++)
+      if (strcmp(modify->fix[ifix]->style,"rigid") == 0) nfixrigid++;
+    if (!nfixrigid)
+      error->all(FLERR,"Global rigid is set but no fix rigid is defined");
+
+    fixrigidlist = new FixRigid*[nfixrigid];
+    nfixrigid = 0;
+    for (int ifix = 0; ifix < modify->nfix; ifix++)
+      if (strcmp(modify->fix[ifix]->style,"rigid") == 0)
+        fixrigidlist[nfixrigid++] = (FixRigid *) modify->fix[ifix];
+
+    int nslocal = surf->nlocal;
+    memory->create(rigidmap,nslocal,"update:rigidmap");
+    for (int i = 0; i < nslocal; i++) rigidmap[i] = -1;
+    for (int m = 0; m < nfixrigid; m++) {
+      int *irigid = fixrigidlist[m]->irigid;
+      for (int i = 0; i < nslocal; i++)
+        if (irigid[i] >= 0) rigidmap[i] = m;
+    }
   }
 }
 
@@ -822,17 +858,18 @@ template < int DIM, int SURF, int OPT, int RIGID > void Update::move()
               if (DIM > 1) {
                 if (isurf == exclude) {
                   if (!RIGID) continue;
-                  if (irigid[isurf] < 0) continue;
+                  if (rigidmap[isurf] < 0) continue;
                 }
               }
               if (DIM == 3) {
                 tri = &tris[isurf];
-                if (RIGID && irigid[isurf] >= 0) {
+                if (RIGID && rigidmap[isurf] >= 0) {
+                  FixRigid *fr = fixrigidlist[rigidmap[isurf]];
                   hitflag = Geometry::
                     line_tri_moving_intersect(x,v,dt-dtremain,dtsurf,
                                               tri->p1,tri->p2,tri->p3,
-                                              tri->norm,fixrigid->xcm,
-                                              fixrigid->vcm,fixrigid->omega,
+                                              tri->norm,fr->xcm,
+                                              fr->vcm,fr->omega,
                                               xc,nhit,vwallhit,param,side);
                 } else {
                   hitflag = Geometry::
@@ -842,12 +879,13 @@ template < int DIM, int SURF, int OPT, int RIGID > void Update::move()
               }
               if (DIM == 2) {
                 line = &lines[isurf];
-                if (RIGID && irigid[isurf] >= 0) {
+                if (RIGID && rigidmap[isurf] >= 0) {
+                  FixRigid *fr = fixrigidlist[rigidmap[isurf]];
                   hitflag = Geometry::
                     line_line_moving_intersect(x,v,dt-dtremain,dtsurf,
                                                line->p1,line->p2,
-                                               line->norm,fixrigid->xcm,
-                                               fixrigid->vcm,fixrigid->omega,
+                                               line->norm,fr->xcm,
+                                               fr->vcm,fr->omega,
                                                xc,nhit,vwallhit,param,side);
                 } else {
                   hitflag = Geometry::
@@ -942,7 +980,7 @@ template < int DIM, int SURF, int OPT, int RIGID > void Update::move()
                 // wall velocity at hit time and hit point
 
                 if (RIGID) {
-                  if (irigid[isurf] >= 0) {
+                  if (rigidmap[isurf] >= 0) {
                     minmoving = 1;
                     minnorm[0] = nhit[0];
                     minnorm[1] = nhit[1];

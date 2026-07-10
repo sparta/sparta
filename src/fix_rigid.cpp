@@ -94,11 +94,6 @@ FixRigid::FixRigid(SPARTA *sparta, int narg, char **arg) :
   if (surf->implicit || surf->distributed)
     error->all(FLERR,"Fix rigid can only be used with explicit non-distributed surf elements");
 
-  // only a single rigid body is allowed
-
-  for (int ifix = 0; ifix < modify->nfix; ifix++)
-    if (strcmp(modify->fix[ifix]->style,"rigid") == 0)
-      error->all(FLERR,"Only one fix rigid command can be defined");
 
   igroup = surf->find_group(arg[2]);
   if (igroup < 0) error->all(FLERR,"Fix rigid surf group ID does not exist");
@@ -422,6 +417,17 @@ void FixRigid::init()
 
   warnrotate = warntranslate = warnexit = 0;
 
+  // each fix rigid defines its own body: no surf can be in two bodies
+
+  for (int ifix = 0; ifix < modify->nfix; ifix++) {
+    if (modify->fix[ifix] == this) continue;
+    if (strcmp(modify->fix[ifix]->style,"rigid") != 0) continue;
+    FixRigid *other = (FixRigid *) modify->fix[ifix];
+    for (int i = 0; i < nsurf; i++)
+      if (other->irigid[slist[i]] >= 0)
+        error->all(FLERR,"Surf element is in more than one fix rigid body");
+  }
+
   // fix rigid must be defined before fixes which change the grid,
   // so its end_of_step() restores overlaid grid cells before they run
 
@@ -548,8 +554,23 @@ void FixRigid::end_of_step()
 {
   // restore static surf assignment of grid cells overlaid this step
   // must be done before any other operation changes grid or particle data
+  // with multiple bodies, a later-defined fix's overlaid cell lists can
+  //   embed an earlier-defined fix's merged lists, so the restores must
+  //   be performed in reverse order of fix definition
+  // the first-defined rigid fix performs the restores for all of them
+  // overlay_restore() is a no-op for fixes with nothing overlaid
 
-  if (remapmode == OVERLAY) overlay_restore();
+  int ifirst = -1;
+  for (int ifix = 0; ifix < modify->nfix; ifix++)
+    if (strcmp(modify->fix[ifix]->style,"rigid") == 0) {
+      ifirst = ifix;
+      break;
+    }
+
+  if (modify->fix[ifirst] == this)
+    for (int ifix = modify->nfix-1; ifix >= 0; ifix--)
+      if (strcmp(modify->fix[ifix]->style,"rigid") == 0)
+        ((FixRigid *) modify->fix[ifix])->overlay_restore();
 
   // invoke compute surf and extract per-surf force/torque info
   // NOTE: this could access fix ave/surf for f/t from many steps of collisions ?

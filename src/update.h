@@ -148,10 +148,12 @@ class Update : protected Pointers {
   class SurfCollide **dlist_surfcollide;  // list of all dynamic SurfCollides
 
   // enable use of mobile rigid bodies comprised of surfs
-  
-  char *rigidID;         // ID of associated fix rigid commaned defining the object
-  class FixRigid *fixrigid;   // ptr to FixRigid instance
-  int *irigid;                // custom per-surf vector defined by FixRigid
+
+  char *rigidID;         // "yes" or ID of a fix rigid command
+  int nfixrigid;              // # of FixRigid instances = # of bodies
+  class FixRigid **fixrigidlist;  // ptrs to each FixRigid instance
+  int *rigidmap;              // which FixRigid each surf belongs to
+                              // = index into fixrigidlist, -1 = static surf
 
   // methods
 
