@@ -1,0 +1,42 @@
+# TEST: two rigid bodies colliding head-on via push-off springs
+# no particles: deterministic on any number of procs
+# symmetric setup: bodies must rebound with reversed, equal-magnitude
+# velocities and total momentum must remain ~zero
+
+seed	    	    12345
+dimension   	    2
+boundary            r r p
+
+create_box  	    0 10 0 10 -0.5 0.5
+create_grid 	    20 20 1
+
+global		    nrho 1.0 fnum 0.001
+
+species		    air.species N
+mixture		    air N vstream 0 0 0 temp 273.0
+
+read_surf           data.square group body1 trans -1.5 0 0
+read_surf           data.square group body2 trans 1.5 0 0
+surf_collide	    1 specular
+surf_modify         all collide 1
+
+timestep 	    0.0001
+
+compute             c1 surf body1 all fx fy fz tx ty tz com 3.5 5 0
+compute             c2 surf body2 all fx fy fz tx ty tz com 6.5 5 0
+
+global              rigid yes
+
+fix		    1 rigid body1 c1 body &
+		    mass 1.0e-22 com 3.5 5 0 vcom 30 0 0 &
+		    moi 8.3333e-24 8.3333e-24 1.6667e-23 0 0 0 angmom 0 0 0 &
+		    push 1.0e-18 0.4
+
+fix		    2 rigid body2 c2 body &
+		    mass 1.0e-22 com 6.5 5 0 vcom -30 0 0 &
+		    moi 8.3333e-24 8.3333e-24 1.6667e-23 0 0 0 angmom 0 0 0 &
+		    push 1.0e-18 0.4
+
+stats		    100
+stats_style         step f_1[1] f_1[4] f_2[1] f_2[4]
+run 		    800
