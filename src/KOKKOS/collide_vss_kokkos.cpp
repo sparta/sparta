@@ -1879,10 +1879,78 @@ void CollideVSSKokkos::EEXCHANGE_ReactingEDisposal(Particle::OnePart *ip,
                 d_params(kp->ispecies,kp->ispecies).omega)/3.0;
   }
 
-  // handle each kind of energy disposal for non-reacting reactants
-  // clean up memory for the products
+  // Phase 1: Precompute total remaining DOF across all modes
+  // This is needed for correcting the Larsen-Borgnakke exponent when sampling
+  // from a shared energy pool with multiple competing modes.
+  // A discrete vibrational mode holds less energy than a classical 2-DOF
+  // oscillator, so count it by its instantaneous effective DOF
+  //   zeta_m = 2*(theta_m/Tcoll) / (exp(theta_m/Tcoll) - 1)
+  // evaluated at the collision temperature Tcoll of the full energy pool,
+  // found self-consistently from
+  //   E = (2.5-aveomega + sum_rotdof/2 + sum_smoothvibdof/2)*kB*Tcoll
+  //       + sum_m kB*theta_m/(exp(theta_m/Tcoll) - 1)
+  // Counting discrete modes as a static 2 DOF instead overstates the pool
+  // competing with each draw and starves rotation of energy.
 
   double E_Dispose = postcoln.etotal;
+  Particle::OnePart *plist[3] = {ip,jp,kp};
+  double zetavib[3][Particle::MAXVIBMODE] = {};
+
+  double shape_classical = 2.5 - aveomega;
+  int ndiscrete = 0;
+
+  for (i = 0; i < numspecies; i++) {
+    int sp = plist[i]->ispecies;
+    if ((d_species[sp].rotdof > 0) && (rotstyle != NONE))
+      shape_classical += 0.5 * d_species[sp].rotdof;
+    if ((d_species[sp].vibdof > 0) && (vibstyle != NONE)) {
+      if (vibstyle == DISCRETE) ndiscrete += d_species[sp].nvibmode;
+      else shape_classical += 0.5 * d_species[sp].vibdof;
+    }
+  }
+
+  double total_remaining_dof = 2.0*shape_classical - (5.0 - 2.0*aveomega);
+
+  if (ndiscrete && E_Dispose > 0.0) {
+
+    // fixed-point iteration for Tcoll, starting from the all-classical value
+
+    double tcoll = E_Dispose / (boltz * shape_classical);
+    for (int iter = 0; iter < 50; iter++) {
+      double shape = shape_classical;
+      for (i = 0; i < numspecies; i++) {
+        int sp = plist[i]->ispecies;
+        if ((d_species[sp].vibdof > 0) && (vibstyle == DISCRETE)) {
+          for (int imode = 0; imode < d_species[sp].nvibmode; imode++) {
+            double x = d_species[sp].vibtemp[imode] / tcoll;
+            shape += x / (exp(x) - 1.0);
+          }
+        }
+      }
+      double tnew = E_Dispose / (boltz * shape);
+      double delta = fabs(tnew - tcoll);
+      tcoll = tnew;
+      if (delta < 1.0e-6 * tcoll) break;
+    }
+
+    // effective DOF of each discrete mode at Tcoll
+
+    for (i = 0; i < numspecies; i++) {
+      int sp = plist[i]->ispecies;
+      if ((d_species[sp].vibdof > 0) && (vibstyle == DISCRETE)) {
+        for (int imode = 0; imode < d_species[sp].nvibmode; imode++) {
+          double x = d_species[sp].vibtemp[imode] / tcoll;
+          zetavib[i][imode] = 2.0 * x / (exp(x) - 1.0);
+          total_remaining_dof += zetavib[i][imode];
+        }
+      }
+    }
+  }
+
+  double remaining_dof = total_remaining_dof;
+
+  // Phase 2: Handle energy disposal for products with remaining_dof correction
+  // to account for sequential sampling from shared pool (Dirichlet stick-breaking)
 
   for (i = 0; i < numspecies; i++) {
     if (i == 0) p = ip;
@@ -1896,16 +1964,19 @@ void CollideVSSKokkos::EEXCHANGE_ReactingEDisposal(Particle::OnePart *ip,
       if (rotstyle == NONE) {
         p->erot = 0.0 ;
       } else if (rotdof == 2) {
+        double b_rot = (1.5 - aveomega) + 0.5 * (remaining_dof - rotdof);
         Fraction_Rot =
-          1- pow(rand_gen.drand(),(1/(2.5-aveomega)));
+          1.0 - pow(rand_gen.drand(),(1.0/(1.0 + b_rot)));
         p->erot = Fraction_Rot * E_Dispose;
         E_Dispose -= p->erot;
+        remaining_dof -= rotdof;
 
       } else if (rotdof > 2) {
+        double b_rot = (1.5 - aveomega) + 0.5 * (remaining_dof - rotdof);
         p->erot = E_Dispose *
-          sample_bl(rand_gen,0.5*d_species[sp].rotdof-1.0,
-                    1.5-aveomega);
+          sample_bl(rand_gen,0.5*d_species[sp].rotdof-1.0, b_rot);
         E_Dispose -= p->erot;
+        remaining_dof -= rotdof;
       }
     }
 
@@ -1915,6 +1986,7 @@ void CollideVSSKokkos::EEXCHANGE_ReactingEDisposal(Particle::OnePart *ip,
       if (vibstyle == NONE) {
         p->evib = 0.0;
       } else if (vibdof == 2 && vibstyle == DISCRETE) {
+        double b_vib = (1.5 - aveomega) + 0.5 * (remaining_dof - zetavib[i][0]);
         max_level = static_cast<int>
           (E_Dispose / (boltz * d_species[sp].vibtemp[0]));
         do {
@@ -1922,22 +1994,26 @@ void CollideVSSKokkos::EEXCHANGE_ReactingEDisposal(Particle::OnePart *ip,
             (rand_gen.drand()*(max_level+AdjustFactor));
           p->evib = (double)
             (ivib * boltz * d_species[sp].vibtemp[0]);
-          State_prob = pow((1.0 - p->evib / E_Dispose),
-                           (1.5 - aveomega));
+          State_prob = pow((1.0 - p->evib / E_Dispose), b_vib);
         } while (State_prob < rand_gen.drand());
         E_Dispose -= p->evib;
+        remaining_dof -= zetavib[i][0];
 
       } else if (vibdof == 2 && vibstyle == SMOOTH) {
+        double b_vib = (1.5 - aveomega) + 0.5 * (remaining_dof - vibdof);
         Fraction_Vib =
-          1.0 - pow(rand_gen.drand(),(1.0 / (2.5-aveomega)));
+          1.0 - pow(rand_gen.drand(),(1.0 / (1.0 + b_vib)));
         p->evib = Fraction_Vib * E_Dispose;
         E_Dispose -= p->evib;
+        remaining_dof -= vibdof;
 
       } else if (vibdof > 2 && vibstyle == SMOOTH) {
+        double b_vib = (1.5 - aveomega) + 0.5 * (remaining_dof - vibdof);
         p->evib = E_Dispose *
-          sample_bl(rand_gen,0.5*d_species[sp].vibdof-1.0,
-                    1.5-aveomega);
+          sample_bl(rand_gen,0.5*d_species[sp].vibdof-1.0, b_vib);
         E_Dispose -= p->evib;
+        remaining_dof -= vibdof;
+
       } else if (vibdof > 2 && vibstyle == DISCRETE) {
         p->evib = 0.0;
 
@@ -1946,22 +2022,20 @@ void CollideVSSKokkos::EEXCHANGE_ReactingEDisposal(Particle::OnePart *ip,
         int pindex = p - d_particles.data();
 
         for (int imode = 0; imode < nmode; imode++) {
-          ivib = d_vibmode(pindex,imode);
-          E_Dispose += ivib * boltz *
-          d_species[sp].vibtemp[imode];
           max_level = static_cast<int>
           (E_Dispose / (boltz * d_species[sp].vibtemp[imode]));
+          double b_vib = (1.5 - aveomega) + 0.5 * (remaining_dof - zetavib[i][imode]);
           do {
             ivib = static_cast<int>
             (rand_gen.drand()*(max_level+AdjustFactor));
             pevib = ivib * boltz * d_species[sp].vibtemp[imode];
-            State_prob = pow((1.0 - pevib / E_Dispose),
-                             (1.5 - aveomega));
+            State_prob = pow((1.0 - pevib / E_Dispose), b_vib);
           } while (State_prob < rand_gen.drand());
 
           d_vibmode(pindex,imode) = ivib;
           p->evib += pevib;
           E_Dispose -= pevib;
+          remaining_dof -= zetavib[i][imode];
         }
       }
     }
