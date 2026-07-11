@@ -1879,75 +1879,80 @@ void CollideVSSKokkos::EEXCHANGE_ReactingEDisposal(Particle::OnePart *ip,
                 d_params(kp->ispecies,kp->ispecies).omega)/3.0;
   }
 
-  // Phase 1: Precompute total remaining DOF across all modes
-  // This is needed for correcting the Larsen-Borgnakke exponent when sampling
-  // from a shared energy pool with multiple competing modes.
-  // A discrete vibrational mode holds less energy than a classical 2-DOF
-  // oscillator, so count it by its instantaneous effective DOF
-  //   zeta_m = 2*(theta_m/Tcoll) / (exp(theta_m/Tcoll) - 1)
-  // evaluated at the collision temperature Tcoll of the full energy pool,
-  // found self-consistently from
-  //   E = (2.5-aveomega + sum_rotdof/2 + sum_smoothvibdof/2)*kB*Tcoll
-  //       + sum_m kB*theta_m/(exp(theta_m/Tcoll) - 1)
-  // Counting discrete modes as a static 2 DOF instead overstates the pool
-  // competing with each draw and starves rotation of energy.
+  // Phase 1: total effective internal DOF competing for the shared energy pool,
+  // used to correct the Larsen-Borgnakke exponent for sequential sampling
+  // (Dirichlet stick-breaking).  A discrete vibrational mode holds less energy
+  // than a classical 2-DOF oscillator, so it is counted by its instantaneous
+  // effective DOF zeta_m = eff_vib_dof(theta_m,Tcoll), evaluated at the
+  // collision temperature Tcoll of the whole pool, found self-consistently from
+  //   E = (2.5-aveomega + sum_classical_dof/2)*kB*Tcoll
+  //       + sum_m kB*theta_m/(exp(theta_m/Tcoll) - 1).
+  // Counting discrete modes as a static 2 DOF instead overstates the competing
+  // pool and starves rotation of energy.
 
   double E_Dispose = postcoln.etotal;
   Particle::OnePart *plist[3] = {ip,jp,kp};
-  double zetavib[3][Particle::MAXVIBMODE] = {};
 
-  double shape_classical = 2.5 - aveomega;
+  double shape_classical = 2.5 - aveomega;   // translational shape (2.5-omega)
+  double remaining_dof = 0.0;                // effective internal DOF left to draw
   int ndiscrete = 0;
 
   for (i = 0; i < numspecies; i++) {
     int sp = plist[i]->ispecies;
-    if ((d_species[sp].rotdof > 0) && (rotstyle != NONE))
+    if ((d_species[sp].rotdof > 0) && (rotstyle != NONE)) {
       shape_classical += 0.5 * d_species[sp].rotdof;
+      remaining_dof += d_species[sp].rotdof;
+    }
     if ((d_species[sp].vibdof > 0) && (vibstyle != NONE)) {
       if (vibstyle == DISCRETE) ndiscrete += d_species[sp].nvibmode;
-      else shape_classical += 0.5 * d_species[sp].vibdof;
+      else {
+        shape_classical += 0.5 * d_species[sp].vibdof;
+        remaining_dof += d_species[sp].vibdof;
+      }
     }
   }
 
-  double total_remaining_dof = 2.0*shape_classical - (5.0 - 2.0*aveomega);
+  // collision temperature of the pool (classical unless discrete modes present)
+
+  double tcoll = (shape_classical > 0.0) ? E_Dispose/(boltz*shape_classical) : 0.0;
 
   if (ndiscrete && E_Dispose > 0.0) {
 
-    // fixed-point iteration for Tcoll, starting from the all-classical value
+    // flatten the discrete-mode frequencies once, skipping any theta <= 0
+    // (a zero-frequency mode carries no energy and would make x/(exp(x)-1) NaN)
 
-    double tcoll = E_Dispose / (boltz * shape_classical);
-    for (int iter = 0; iter < 50; iter++) {
+    double theta[3*Particle::MAXVIBMODE];
+    int nflat = 0;
+    for (i = 0; i < numspecies; i++) {
+      int sp = plist[i]->ispecies;
+      if ((d_species[sp].vibdof > 0) && (vibstyle == DISCRETE))
+        for (int m = 0; m < d_species[sp].nvibmode; m++)
+          if (d_species[sp].vibtemp[m] > 0.0) theta[nflat++] = d_species[sp].vibtemp[m];
+    }
+
+    // damped fixed-point solve for Tcoll.  The undamped map
+    // T <- E/(kB*shape(T)) is monotone decreasing and can oscillate for stiff
+    // modes, so each update is averaged with the previous iterate (a
+    // contraction).  The loop exits on convergence, else keeps the last
+    // bounded iterate; 1e-4 is well below the statistical noise of the sampler.
+
+    for (int iter = 0; iter < 30; iter++) {
       double shape = shape_classical;
-      for (i = 0; i < numspecies; i++) {
-        int sp = plist[i]->ispecies;
-        if ((d_species[sp].vibdof > 0) && (vibstyle == DISCRETE)) {
-          for (int imode = 0; imode < d_species[sp].nvibmode; imode++) {
-            double x = d_species[sp].vibtemp[imode] / tcoll;
-            shape += x / (exp(x) - 1.0);
-          }
-        }
+      for (int m = 0; m < nflat; m++) {
+        double x = theta[m] / tcoll;
+        shape += x / (exp(x) - 1.0);
       }
       double tnew = E_Dispose / (boltz * shape);
       double delta = fabs(tnew - tcoll);
-      tcoll = tnew;
-      if (delta < 1.0e-6 * tcoll) break;
+      tcoll = 0.5 * (tcoll + tnew);
+      if (delta < 1.0e-4 * tcoll) break;
     }
 
-    // effective DOF of each discrete mode at Tcoll
+    // add each discrete mode's effective DOF at Tcoll to the pool
 
-    for (i = 0; i < numspecies; i++) {
-      int sp = plist[i]->ispecies;
-      if ((d_species[sp].vibdof > 0) && (vibstyle == DISCRETE)) {
-        for (int imode = 0; imode < d_species[sp].nvibmode; imode++) {
-          double x = d_species[sp].vibtemp[imode] / tcoll;
-          zetavib[i][imode] = 2.0 * x / (exp(x) - 1.0);
-          total_remaining_dof += zetavib[i][imode];
-        }
-      }
-    }
+    for (int m = 0; m < nflat; m++)
+      remaining_dof += eff_vib_dof(theta[m],tcoll);
   }
-
-  double remaining_dof = total_remaining_dof;
 
   // Phase 2: Handle energy disposal for products with remaining_dof correction
   // to account for sequential sampling from shared pool (Dirichlet stick-breaking)
@@ -1986,7 +1991,8 @@ void CollideVSSKokkos::EEXCHANGE_ReactingEDisposal(Particle::OnePart *ip,
       if (vibstyle == NONE) {
         p->evib = 0.0;
       } else if (vibdof == 2 && vibstyle == DISCRETE) {
-        double b_vib = (1.5 - aveomega) + 0.5 * (remaining_dof - zetavib[i][0]);
+        double zeta = eff_vib_dof(d_species[sp].vibtemp[0],tcoll);
+        double b_vib = (1.5 - aveomega) + 0.5 * (remaining_dof - zeta);
         max_level = static_cast<int>
           (E_Dispose / (boltz * d_species[sp].vibtemp[0]));
         do {
@@ -1997,7 +2003,7 @@ void CollideVSSKokkos::EEXCHANGE_ReactingEDisposal(Particle::OnePart *ip,
           State_prob = pow((1.0 - p->evib / E_Dispose), b_vib);
         } while (State_prob < rand_gen.drand());
         E_Dispose -= p->evib;
-        remaining_dof -= zetavib[i][0];
+        remaining_dof -= zeta;
 
       } else if (vibdof == 2 && vibstyle == SMOOTH) {
         double b_vib = (1.5 - aveomega) + 0.5 * (remaining_dof - vibdof);
@@ -2022,9 +2028,10 @@ void CollideVSSKokkos::EEXCHANGE_ReactingEDisposal(Particle::OnePart *ip,
         int pindex = p - d_particles.data();
 
         for (int imode = 0; imode < nmode; imode++) {
+          double zeta = eff_vib_dof(d_species[sp].vibtemp[imode],tcoll);
           max_level = static_cast<int>
           (E_Dispose / (boltz * d_species[sp].vibtemp[imode]));
-          double b_vib = (1.5 - aveomega) + 0.5 * (remaining_dof - zetavib[i][imode]);
+          double b_vib = (1.5 - aveomega) + 0.5 * (remaining_dof - zeta);
           do {
             ivib = static_cast<int>
             (rand_gen.drand()*(max_level+AdjustFactor));
@@ -2035,7 +2042,7 @@ void CollideVSSKokkos::EEXCHANGE_ReactingEDisposal(Particle::OnePart *ip,
           d_vibmode(pindex,imode) = ivib;
           p->evib += pevib;
           E_Dispose -= pevib;
-          remaining_dof -= zetavib[i][imode];
+          remaining_dof -= zeta;
         }
       }
     }
@@ -2055,6 +2062,16 @@ void CollideVSSKokkos::EEXCHANGE_ReactingEDisposal(Particle::OnePart *ip,
 
   postcoln.eint = postcoln.erot + postcoln.evib;
   postcoln.etrans = E_Dispose;
+}
+
+/* ---------------------------------------------------------------------- */
+
+KOKKOS_INLINE_FUNCTION
+double CollideVSSKokkos::eff_vib_dof(double theta, double tcoll) const
+{
+  if (theta <= 0.0 || tcoll <= 0.0) return 0.0;
+  double x = theta / tcoll;
+  return 2.0 * x / (exp(x) - 1.0);
 }
 
 /* ---------------------------------------------------------------------- */

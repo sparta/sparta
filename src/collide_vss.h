@@ -96,6 +96,7 @@ class CollideVSS : public Collide {
                                    Particle::OnePart *);
 
   double sample_bl(RanKnuth *, double, double);
+  double eff_vib_dof(double, double);
   double rotrel (int, double);
   double vibrel (int, double);
 
