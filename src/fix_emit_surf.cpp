@@ -113,6 +113,7 @@ FixEmitSurf::FixEmitSurf(SPARTA *sparta, int narg, char **arg) :
   activecell = NULL;
 
   dimension = domain->dimension;
+  axisymmetric = domain->axisymmetric;
 
   // create instance of Cut2d,Cut3d for geometry calculations
 
@@ -731,6 +732,9 @@ void FixEmitSurf::perform_task_onepass()
             rn = random->uniform();
             p1 = &tasks[i].path[0];
             p2 = &tasks[i].path[3];
+            if (domain->axisymmetric && p1[1] != p2[1])
+              rn = (sqrt(p1[1]*p1[1] + rn*(p2[1]*p2[1]-p1[1]*p1[1])) - p1[1]) /
+                (p2[1]-p1[1]);
             x[0] = p1[0] + rn * (p2[0]-p1[0]);
             x[1] = p1[1] + rn * (p2[1]-p1[1]);
             x[2] = 0.0;
@@ -842,6 +846,9 @@ void FixEmitSurf::perform_task_onepass()
           rn = random->uniform();
           p1 = &tasks[i].path[0];
           p2 = &tasks[i].path[3];
+          if (domain->axisymmetric && p1[1] != p2[1])
+            rn = (sqrt(p1[1]*p1[1] + rn*(p2[1]*p2[1]-p1[1]*p1[1])) - p1[1]) /
+              (p2[1]-p1[1]);
           x[0] = p1[0] + rn * (p2[0]-p1[0]);
           x[1] = p1[1] + rn * (p2[1]-p1[1]);
           x[2] = 0.0;
@@ -1041,6 +1048,9 @@ void FixEmitSurf::perform_task_twopass()
             rn = random->uniform();
             p1 = &tasks[i].path[0];
             p2 = &tasks[i].path[3];
+            if (domain->axisymmetric && p1[1] != p2[1])
+              rn = (sqrt(p1[1]*p1[1] + rn*(p2[1]*p2[1]-p1[1]*p1[1])) - p1[1]) /
+                (p2[1]-p1[1]);
             x[0] = p1[0] + rn * (p2[0]-p1[0]);
             x[1] = p1[1] + rn * (p2[1]-p1[1]);
             x[2] = 0.0;
@@ -1142,6 +1152,9 @@ void FixEmitSurf::perform_task_twopass()
           rn = random->uniform();
           p1 = &tasks[i].path[0];
           p2 = &tasks[i].path[3];
+          if (domain->axisymmetric && p1[1] != p2[1])
+            rn = (sqrt(p1[1]*p1[1] + rn*(p2[1]*p2[1]-p1[1]*p1[1])) - p1[1]) /
+              (p2[1]-p1[1]);
           x[0] = p1[0] + rn * (p2[0]-p1[0]);
           x[1] = p1[1] + rn * (p2[1]-p1[1]);
           x[2] = 0.0;

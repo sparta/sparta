@@ -141,6 +141,7 @@ void FixEmitFace::init()
   // copies of class data before invoking parent init() and count_task()
 
   dimension = domain->dimension;
+  axisymmetric = domain->axisymmetric;
   fnum = update->fnum;
   dt = update->dt;
 
@@ -545,7 +546,10 @@ void FixEmitFace::perform_task_onepass()
         nactual = 0;
         for (int m = 0; m < ninsert; m++) {
           x[0] = lo[0] + random->uniform() * (hi[0]-lo[0]);
-          x[1] = lo[1] + random->uniform() * (hi[1]-lo[1]);
+          if (domain->axisymmetric)
+            x[1] = sqrt(lo[1]*lo[1] +
+                        random->uniform() * (hi[1]*hi[1]-lo[1]*lo[1]));
+          else x[1] = lo[1] + random->uniform() * (hi[1]-lo[1]);
           if (dimension == 3) x[2] = lo[2] + random->uniform() * (hi[2]-lo[2]);
           else x[2] = 0.0;
 
@@ -603,7 +607,10 @@ void FixEmitFace::perform_task_onepass()
         scosine = indot / vscale[isp];
 
         x[0] = lo[0] + random->uniform() * (hi[0]-lo[0]);
-        x[1] = lo[1] + random->uniform() * (hi[1]-lo[1]);
+        if (domain->axisymmetric)
+          x[1] = sqrt(lo[1]*lo[1] +
+                      random->uniform() * (hi[1]*hi[1]-lo[1]*lo[1]));
+        else x[1] = lo[1] + random->uniform() * (hi[1]-lo[1]);
         if (dimension == 3) x[2] = lo[2] + random->uniform() * (hi[2]-lo[2]);
         else x[2] = 0.0;
 
@@ -746,7 +753,10 @@ void FixEmitFace::perform_task_twopass()
         nactual = 0;
         for (int m = 0; m < ninsert; m++) {
           x[0] = lo[0] + random->uniform() * (hi[0]-lo[0]);
-          x[1] = lo[1] + random->uniform() * (hi[1]-lo[1]);
+          if (domain->axisymmetric)
+            x[1] = sqrt(lo[1]*lo[1] +
+                        random->uniform() * (hi[1]*hi[1]-lo[1]*lo[1]));
+          else x[1] = lo[1] + random->uniform() * (hi[1]-lo[1]);
           if (dimension == 3) x[2] = lo[2] + random->uniform() * (hi[2]-lo[2]);
           else x[2] = 0.0;
 
@@ -798,7 +808,10 @@ void FixEmitFace::perform_task_twopass()
         scosine = indot / vscale[isp];
 
         x[0] = lo[0] + random->uniform() * (hi[0]-lo[0]);
-        x[1] = lo[1] + random->uniform() * (hi[1]-lo[1]);
+        if (domain->axisymmetric)
+          x[1] = sqrt(lo[1]*lo[1] +
+                      random->uniform() * (hi[1]*hi[1]-lo[1]*lo[1]));
+        else x[1] = lo[1] + random->uniform() * (hi[1]-lo[1]);
         if (dimension == 3) x[2] = lo[2] + random->uniform() * (hi[2]-lo[2]);
         else x[2] = 0.0;
 

@@ -549,9 +549,12 @@ void FixEmitSurfKokkos::operator()(TagFixEmitSurf_perform_task, const int &i, in
 
         double x[3];
         if (dimension == 2) {
-          const double rn = rand_gen.drand();
+          double rn = rand_gen.drand();
           double* p1 = &d_path(i,0);
           double* p2 = &d_path(i,3);
+          if (axisymmetric && p1[1] != p2[1])
+            rn = (sqrt(p1[1]*p1[1] + rn*(p2[1]*p2[1]-p1[1]*p1[1])) - p1[1]) /
+              (p2[1]-p1[1]);
           x[0] = p1[0] + rn * (p2[0]-p1[0]);
           x[1] = p1[1] + rn * (p2[1]-p1[1]);
         } else {
@@ -660,9 +663,12 @@ void FixEmitSurfKokkos::operator()(TagFixEmitSurf_perform_task, const int &i, in
 
       double x[3];
       if (dimension == 2) {
-        const double rn = rand_gen.drand();
+        double rn = rand_gen.drand();
         double* p1 = &d_path(i,0);
         double* p2 = &d_path(i,3);
+        if (axisymmetric && p1[1] != p2[1])
+          rn = (sqrt(p1[1]*p1[1] + rn*(p2[1]*p2[1]-p1[1]*p1[1])) - p1[1]) /
+            (p2[1]-p1[1]);
         x[0] = p1[0] + rn * (p2[0]-p1[0]);
         x[1] = p1[1] + rn * (p2[1]-p1[1]);
       } else {
