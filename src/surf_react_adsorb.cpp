@@ -146,6 +146,10 @@ SurfReactAdsorb::SurfReactAdsorb(SPARTA *sparta, int narg, char **arg) :
     iarg++;
   }
 
+  if (nspecies_surf == 0)
+    error->all(FLERR,"Illegal surf_react adsorb command: "
+               "at least one surface species is required");
+
   // initialize reaction data structs
 
   nlist_gs = maxlist_gs = 0;
