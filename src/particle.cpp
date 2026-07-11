@@ -997,16 +997,29 @@ void Particle::add_species(int narg, char **arg)
       }
 
       int nmode = filevib[j].nmode;
-      if (species[ii].nvibmode != nmode)
+
+      // N (= sum of listed degeneracies) must equal nvibmode = vibdof/2
+      // expand each listed mode into vibdegen independent oscillators of equal
+      // frequency, giving nvibmode oscillators total with an implicit degeneracy
+      // of 1 each; this preserves the invariant nvibmode == vibdof/2 for
+      // downstream code (collide_vss, fix_vibmode, and their Kokkos variants),
+      // so degenerate modes can be listed compactly with degen > 1 instead of
+      // being duplicated
+
+      if (species[ii].nvibmode != filevib[j].ntotal)
         error->all(FLERR,"Mismatch between species vibdof "
                    "and vibration file entry");
 
-      species[ii].nvibmode = nmode;
+      int m = 0;
       for (k = 0; k < nmode; k++) {
-        species[ii].vibtemp[k] = filevib[j].vibtemp[k];
-        species[ii].vibrel[k] = filevib[j].vibrel[k];
-        species[ii].vibdegen[k] = filevib[j].vibdegen[k];
+        for (int d = 0; d < filevib[j].vibdegen[k]; d++) {
+          species[ii].vibtemp[m] = filevib[j].vibtemp[k];
+          species[ii].vibrel[m] = filevib[j].vibrel[k];
+          species[ii].vibdegen[m] = 1;
+          m++;
+        }
       }
+      species[ii].nvibmode = m;
 
       maxvibmode = MAX(maxvibmode,species[ii].nvibmode);
       species[ii].vibdiscrete_read = 1;
@@ -1355,18 +1368,36 @@ void Particle::read_vibration_file()
       error->one(FLERR,"Invalid species ID in vibration file");
     strcpy(vsp->id,words[0]);
 
-    vsp->nmode = atoi(words[1]);
-    if (vsp->nmode < 2 || vsp->nmode > MAXVIBMODE)
+    // N = total number of vibrational oscillators = vibdof/2 from species file
+    // one or more distinct modes (frequencies) follow as (temp,relax,degen)
+    //   triples, with degeneracies that must sum to N; a mode of degeneracy g
+    //   stands for g oscillators of equal frequency, so the number of listed
+    //   modes may be fewer than N when degeneracies exceed 1
+
+    vsp->ntotal = atoi(words[1]);
+    if (vsp->ntotal < 1 || vsp->ntotal > MAXVIBMODE)
       error->one(FLERR,"Invalid N count in vibration file");
-    if (nwords != 2 + 3*vsp->nmode)
-      error->one(FLERR,"Incorrect line format in vibration file");
 
     int j = 2;
-    for (int i = 0; i < vsp->nmode; i++) {
-      vsp->vibtemp[i] = atof(words[j++]);
-      vsp->vibrel[i] = atof(words[j++]);
-      vsp->vibdegen[i] = atoi(words[j++]);
+    int sumdegen = 0;
+    int imode = 0;
+    while (sumdegen < vsp->ntotal) {
+      if (j + 3 > nwords)
+        error->one(FLERR,"Incorrect line format in vibration file");
+      vsp->vibtemp[imode] = atof(words[j++]);
+      vsp->vibrel[imode] = atof(words[j++]);
+      vsp->vibdegen[imode] = atoi(words[j++]);
+      if (vsp->vibdegen[imode] < 1)
+        error->one(FLERR,"Invalid degeneracy in vibration file");
+      sumdegen += vsp->vibdegen[imode];
+      imode++;
     }
+    if (sumdegen != vsp->ntotal)
+      error->one(FLERR,"Vibrational mode degeneracies must sum to N "
+                 "in vibration file");
+    if (j != nwords)
+      error->one(FLERR,"Incorrect line format in vibration file");
+    vsp->nmode = imode;
     nfile++;
   }
 
