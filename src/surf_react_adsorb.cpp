@@ -146,6 +146,10 @@ SurfReactAdsorb::SurfReactAdsorb(SPARTA *sparta, int narg, char **arg) :
     iarg++;
   }
 
+  if (nspecies_surf == 0)
+    error->all(FLERR,"Illegal surf_react adsorb command: "
+               "at least one surface species is required");
+
   // initialize reaction data structs
 
   nlist_gs = maxlist_gs = 0;
@@ -3042,7 +3046,7 @@ void SurfReactAdsorb::PS_react(int isurf, int isc, double *norm)
               cmodels[r->cmodel_ip]->wrapper(p,norm,r->cmodel_ip_flags,
                                              r->cmodel_ip_coeffs);
             else {
-              surf->sc[isc]->wrapper(p,norm,NULL,NULL);
+              surf->sc[isc]->persurf_wrapper(p,norm,isurf);
             }
 
             add_particle_mine(p);
@@ -3067,7 +3071,7 @@ void SurfReactAdsorb::PS_react(int isurf, int isc, double *norm)
               cmodels[r->cmodel_ip]->wrapper(p,norm,r->cmodel_ip_flags,
                                              r->cmodel_ip_coeffs);
             else {
-              surf->sc[isc]->wrapper(p,norm,NULL,NULL);
+              surf->sc[isc]->persurf_wrapper(p,norm,isurf);
             }
 
             add_particle_mine(p);
@@ -3097,7 +3101,7 @@ void SurfReactAdsorb::PS_react(int isurf, int isc, double *norm)
               cmodels[r->cmodel_ip]->wrapper(p,norm,r->cmodel_ip_flags,
                                              r->cmodel_ip_coeffs);
             else {
-              surf->sc[isc]->wrapper(p,norm,NULL,NULL);
+              surf->sc[isc]->persurf_wrapper(p,norm,isurf);
             }
 
             add_particle_mine(p);
