@@ -97,6 +97,7 @@ class CollideVSS : public Collide {
 
   double sample_bl(RanKnuth *, double, double);
   double eff_vib_dof(double, double);
+  double vib_pool_temp(double, int, double *, double);
   double rotrel (int, double);
   double vibrel (int, double);
 

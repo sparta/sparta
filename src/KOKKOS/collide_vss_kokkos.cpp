@@ -1930,26 +1930,10 @@ void CollideVSSKokkos::EEXCHANGE_ReactingEDisposal(Particle::OnePart *ip,
           if (d_species[sp].vibtemp[m] > 0.0) theta[nflat++] = d_species[sp].vibtemp[m];
     }
 
-    // damped fixed-point solve for Tcoll.  The undamped map
-    // T <- E/(kB*shape(T)) is monotone decreasing and can oscillate for stiff
-    // modes, so each update is averaged with the previous iterate (a
-    // contraction).  The loop exits on convergence, else keeps the last
-    // bounded iterate; 1e-4 is well below the statistical noise of the sampler.
+    // solve for the pool collision temperature, then add each discrete mode's
+    // effective DOF at that temperature to the competing pool
 
-    for (int iter = 0; iter < 30; iter++) {
-      double shape = shape_classical;
-      for (int m = 0; m < nflat; m++) {
-        double x = theta[m] / tcoll;
-        shape += x / (exp(x) - 1.0);
-      }
-      double tnew = E_Dispose / (boltz * shape);
-      double delta = fabs(tnew - tcoll);
-      tcoll = 0.5 * (tcoll + tnew);
-      if (delta < 1.0e-4 * tcoll) break;
-    }
-
-    // add each discrete mode's effective DOF at Tcoll to the pool
-
+    tcoll = vib_pool_temp(shape_classical,nflat,theta,E_Dispose);
     for (int m = 0; m < nflat; m++)
       remaining_dof += eff_vib_dof(theta[m],tcoll);
   }
@@ -2072,6 +2056,47 @@ double CollideVSSKokkos::eff_vib_dof(double theta, double tcoll) const
   if (theta <= 0.0 || tcoll <= 0.0) return 0.0;
   double x = theta / tcoll;
   return 2.0 * x / (exp(x) - 1.0);
+}
+
+/* ----------------------------------------------------------------------
+   collision temperature Tcoll of an energy pool E shared by shape_classical
+   translational+classical-internal shape and nmode discrete SHO modes of
+   characteristic temperatures theta[]:
+     E = kB*( shape_classical*Tcoll + sum_m theta_m/(exp(theta_m/Tcoll)-1) )
+   [0, E/(kB*shape_classical)] brackets the single root; solved with a
+   safeguarded Newton iteration (bisection fallback) that converges
+   quadratically in the typical case and cannot overshoot to a nonphysical
+   temperature.  Requires shape_classical > 0 and E > 0 (caller guaranteed).
+------------------------------------------------------------------------- */
+
+KOKKOS_INLINE_FUNCTION
+double CollideVSSKokkos::vib_pool_temp(double shape_classical, int nmode,
+                                       double *theta, double E) const
+{
+  double Thi = E / (boltz * shape_classical);
+  double Tlo = 0.0;
+  double T = Thi;
+
+  for (int iter = 0; iter < 30; iter++) {
+    double f = boltz * shape_classical * T - E;
+    double df = boltz * shape_classical;
+    for (int m = 0; m < nmode; m++) {
+      double x = theta[m] / T;
+      if (x > 200.0) continue;             // frozen mode: exp overflow, ~0 term
+      double ex = exp(x);
+      double den = ex - 1.0;
+      f  += boltz * theta[m] / den;
+      df += boltz * theta[m]*theta[m] * ex / (T*T * den*den);
+    }
+    if (f > 0.0) Thi = T; else Tlo = T;    // keep [Tlo,Thi] bracketing the root
+    double Tnew = T - f/df;                // Newton step
+    if (!(Tnew > Tlo && Tnew < Thi))       // ... but stay inside the bracket
+      Tnew = 0.5 * (Tlo + Thi);
+    double delta = fabs(Tnew - T);
+    T = Tnew;
+    if (delta < 1.0e-4 * T) break;
+  }
+  return T;
 }
 
 /* ---------------------------------------------------------------------- */
