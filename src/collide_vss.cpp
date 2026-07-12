@@ -464,6 +464,16 @@ void CollideVSS::EEXCHANGE_NonReactingEDisposal(Particle::OnePart *ip,
   } else {
     E_Dispose = precoln.etrans;
 
+    // This is pairwise Borgnakke-Larsen relaxation: each internal mode that
+    // relaxes adds back only its OWN energy (E_Dispose += p->erot; sample;
+    // E_Dispose -= p->erot), so it exchanges energy with the translational
+    // pool alone.  No shared multi-mode pool is formed, each exchange
+    // independently satisfies detailed balance, and the exponent is the plain
+    // translational one.  Do NOT add the reacting path's remaining_dof
+    // (Dirichlet stick-breaking) correction here -- that correction exists
+    // only because EEXCHANGE_ReactingEDisposal splits the full collision
+    // energy among all modes at once from a single depleting pool.
+
     for (i = 0; i < 2; i++) {
       if (i == 0) p = ip;
       else p = jp;
