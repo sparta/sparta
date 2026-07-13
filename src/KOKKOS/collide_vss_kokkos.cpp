@@ -8,6 +8,7 @@
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
    certain rights in this software.  This software is distributed under
    the GNU General Public License.
+   Copyright (c) 2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
    See the README file in the top-level SPARTA directory.
 ------------------------------------------------------------------------- */
@@ -473,6 +474,27 @@ void CollideVSSKokkos::collisions()
 /* ----------------------------------------------------------------------
    NTC algorithm for a single group
 ------------------------------------------------------------------------- */
+namespace {
+  struct ReduceLoc{
+    ReduceLoc(DAT::t_int_1d d_nattempt_, DAT::t_int_1d d_active_cells_, DAT::t_int_1d d_sum_, int n):
+      d_nattempt(d_nattempt_),d_active_cells(d_active_cells_),d_sum(d_sum_),last(n-1){}
+    DAT::t_int_1d d_nattempt;
+    DAT::t_int_1d d_active_cells;
+    DAT::t_int_1d d_sum;
+    int last;
+    KOKKOS_INLINE_FUNCTION
+    void operator() (const int i, int &sum, bool is_final) const {
+      if (is_final) {
+        if (d_nattempt(i))
+          d_active_cells(sum) = i;
+        if (i==last)
+          d_sum(0) = sum + (d_nattempt(i) ? 1 : 0);
+      }
+      if (d_nattempt(i))
+        sum += 1;
+    }
+  };
+}
 
 template < int NEARCP, int GASTALLY > void CollideVSSKokkos::collisions_one(COLLIDE_REDUCE &reduce)
 {
@@ -503,8 +525,15 @@ template < int NEARCP, int GASTALLY > void CollideVSSKokkos::collisions_one(COLL
   if (NEARCP) {
     if (int(d_nn_last_partner.extent(0)) < nglocal || int(d_nn_last_partner.extent(1)) < d_plist.extent(1))
       MemKK::realloc_kokkos(d_nn_last_partner,"collide:nn_last_partner",nglocal,d_plist.extent(1));
-    //Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagCollideZeroNN>(0,nglocal),*this);
   }
+  if (d_nattempt.extent(0) < (size_t)nglocal) {
+    d_nattempt = DAT::t_int_1d("d_nattempt",nglocal);
+    d_active_cells = DAT::t_int_1d("d_active_cells",nglocal);
+    num_active_cells = DAT::t_int_1d("num_active_cells",1);
+  }
+  grid_kk_copy.copy(grid_kk);
+  Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagCountAttempts<NEARCP>>(0,nglocal),*this);
+  Kokkos::parallel_scan(nglocal, ReduceLoc(d_nattempt,d_active_cells,num_active_cells,nglocal));
 
   /* ATOMIC_REDUCTION: 1 = use atomics
                        0 = don't need atomics
@@ -537,8 +566,10 @@ template < int NEARCP, int GASTALLY > void CollideVSSKokkos::collisions_one(COLL
       d_plist = {};
       Kokkos::resize(grid_kk->d_plist,nglocal,maxcellcount_extra);
       d_plist = grid_kk->d_plist;
-      if (NEARCP)
+      if (NEARCP) {
         MemKK::realloc_kokkos(d_nn_last_partner,"collide:nn_last_partner",nglocal,maxcellcount_extra);
+        Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagCollideZeroNN>(0,nglocal),*this);
+      }
     }
 
     auto nlocal_extra = particle->nlocal*extra_factor;
@@ -569,13 +600,17 @@ template < int NEARCP, int GASTALLY > void CollideVSSKokkos::collisions_one(COLL
       react_kk_copy.copy(react_kk);
     }
 
+    int n_cells;
+    auto h_num_active_cells = Kokkos::create_mirror_view(num_active_cells);
+    Kokkos::deep_copy(h_num_active_cells,num_active_cells);
+    n_cells = h_num_active_cells(0);
     if (sparta->kokkos->atomic_reduction) {
       if (sparta->kokkos->need_atomics)
-        Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagCollideCollisionsOne<NEARCP,GASTALLY,1> >(0,nglocal),*this);
+        Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagCollideCollisionsOne<NEARCP,GASTALLY,1> >(0,n_cells),*this);
       else
-        Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagCollideCollisionsOne<NEARCP,GASTALLY,0> >(0,nglocal),*this);
+        Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagCollideCollisionsOne<NEARCP,GASTALLY,0> >(0,n_cells),*this);
     } else
-      Kokkos::parallel_reduce(Kokkos::RangePolicy<DeviceType, TagCollideCollisionsOne<NEARCP,GASTALLY,-1> >(0,nglocal),*this,reduce);
+      Kokkos::parallel_reduce(Kokkos::RangePolicy<DeviceType, TagCollideCollisionsOne<NEARCP,GASTALLY,-1> >(0,n_cells),*this,reduce);
 
     Kokkos::deep_copy(h_scalars,d_scalars);
 
@@ -627,8 +662,10 @@ template < int NEARCP, int GASTALLY > void CollideVSSKokkos::collisions_one(COLL
   if (vibstyle == DISCRETE) particle_kk->modify(Device,CUSTOM_MASK);
 
   d_particles = t_particle_1d(); // destroy reference to reduce memory use
+#if DEALLOC
   d_nn_last_partner = {};
   d_plist = {};
+#endif
 }
 
 KOKKOS_INLINE_FUNCTION
@@ -636,6 +673,35 @@ void CollideVSSKokkos::operator()(TagCollideZeroNN, const int &icell) const {
   const int np = grid_kk_copy.obj.d_cellcount[icell];
   for (int i = 0; i < np; i++)
     d_nn_last_partner(icell,i) = 0;
+}
+
+template<int NEARCP>
+KOKKOS_INLINE_FUNCTION
+void CollideVSSKokkos::operator()(TagCountAttempts<NEARCP>, const int icell) const {
+  const int np = grid_kk_copy.obj.d_cellcount[icell];
+  if (!np) {
+    d_nattempt(icell) = 0;
+    return;
+  }
+  const double volume = grid_kk_copy.obj.k_cinfo.view_device()[icell].volume / grid_kk_copy.obj.k_cinfo.view_device()[icell].weight;
+
+  double attempt;
+  if (remainflag) {
+    attempt = 0.5 * np * (np-1) *
+      d_vremax(icell,0,0) * dt * fnum / volume + d_remain(icell,0,0);
+    d_remain(icell,0,0) = attempt - static_cast<int> (attempt);
+  } else {
+    rand_type rand_gen = rand_pool.get_state();
+    attempt = attempt_collision_kokkos(icell,np,volume,rand_gen);
+    rand_pool.free_state(rand_gen);
+  }
+  d_nattempt(icell) = attempt;
+
+  if constexpr(NEARCP) {
+    if (!(attempt < 1.0))
+      for (int i = 0; i < np; i++)
+        d_nn_last_partner(icell,i) = 0;
+  }
 }
 
 template < int NEARCP, int GASTALLY, int ATOMIC_REDUCTION >
@@ -647,34 +713,17 @@ void CollideVSSKokkos::operator()(TagCollideCollisionsOne< NEARCP, GASTALLY, ATO
 
 template < int NEARCP, int GASTALLY, int ATOMIC_REDUCTION >
 KOKKOS_INLINE_FUNCTION
-void CollideVSSKokkos::operator()(TagCollideCollisionsOne< NEARCP, GASTALLY, ATOMIC_REDUCTION >, const int &icell, COLLIDE_REDUCE &reduce) const {
+void CollideVSSKokkos::operator()(TagCollideCollisionsOne< NEARCP, GASTALLY, ATOMIC_REDUCTION >, const int &i, COLLIDE_REDUCE &reduce) const {
   if (d_retry()) return;
 
+  const int icell = d_active_cells(i);
   int np = grid_kk_copy.obj.d_cellcount[icell];
-  if (np <= 1) return;
-
-  if (NEARCP) {
-    for (int i = 0; i < np; i++)
-      d_nn_last_partner(icell,i) = 0;
-  }
-
-  const double volume = grid_kk_copy.obj.k_cinfo.view_device()[icell].volume / grid_kk_copy.obj.k_cinfo.view_device()[icell].weight;
-  if (volume == 0.0) d_error_flag() = 1;
+  int nattempt = d_nattempt(icell);
+  rand_type rand_gen = rand_pool.get_state();
 
   struct State precoln;       // state before collision
   struct State postcoln;      // state after collision
 
-  rand_type rand_gen = rand_pool.get_state();
-
-  // attempt = exact collision attempt count for a pair of groups
-  // nattempt = rounded attempt with RN
-
-  const double attempt = attempt_collision_kokkos(icell,np,volume,rand_gen);
-  const int nattempt = static_cast<int> (attempt);
-  if (!nattempt){
-    rand_pool.free_state(rand_gen);
-    return;
-  }
   if (ATOMIC_REDUCTION == 1)
     Kokkos::atomic_add(&d_nattempt_one(),nattempt);
   else if (ATOMIC_REDUCTION == 0)
@@ -731,6 +780,7 @@ void CollideVSSKokkos::operator()(TagCollideCollisionsOne< NEARCP, GASTALLY, ATO
         //react->recomb_part3 = &particles[plist[k]];
         //react->recomb_species = react->recomb_part3->ispecies;
         //react->recomb_density = np * update->fnum / volume;
+        const double volume = grid_kk_copy.obj.k_cinfo.view_device()[icell].volume / grid_kk_copy.obj.k_cinfo.view_device()[icell].weight;
         recomb_part3 = &d_particles[d_plist(icell,k)];
         recomb_species = recomb_part3->ispecies;
         recomb_density = np * fnum / volume;
