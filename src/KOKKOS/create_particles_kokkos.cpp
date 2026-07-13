@@ -155,6 +155,7 @@ void CreateParticlesKokkos::create_local(bigint np)
   double temp_thermal = particle->mixture[imix]->temp_thermal;
   double temp_rot = particle->mixture[imix]->temp_rot;
   double temp_vib = particle->mixture[imix]->temp_vib;
+  double temp_elec = particle->mixture[imix]->temp_elec;
 
   int npercell,ncreate,isp,ispecies,id,pflag,subcell;
   double x[3],v[3],xcell[3],vstream_var[3];
@@ -423,9 +424,9 @@ void CreateParticlesKokkos::create_local(bigint np)
       // if using per-grid variables or per-grid custom attributes
 
       if (nfix_update_custom)
-        modify->update_custom(particle->nlocal-1,tempscale*temp_thermal,
+        modify->update_custom(inew,tempscale*temp_thermal,
                               tempscale*temp_rot,tempscale*temp_vib,
-                              vstream_update_custom);
+                              tempscale*temp_elec,vstream_update_custom);
     }
   }
 

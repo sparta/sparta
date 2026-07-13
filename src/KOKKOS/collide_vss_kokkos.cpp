@@ -167,6 +167,24 @@ void CollideVSSKokkos::init()
     }
   }
 
+  if (elecstyle == DISCRETE) {
+    index_elecstate = particle->find_custom((char *) "elecstate");
+    index_eelec = particle->find_custom((char *) "eelec");
+
+    if (index_elecstate < 0 || index_eelec < 0) {
+        error->all(FLERR,
+                   "Fix elecmode must be used with discrete electronic modes");
+    }
+
+    // rebuild the flattened electronic-data views if they are stale,
+    // e.g. species read from a restart file without a new species command;
+    // without this the views are zero-length and indexed out of bounds
+
+    ParticleKokkos* particle_kk = (ParticleKokkos*) particle;
+    if ((int)particle_kk->d_nelecstates.extent(0) != particle->nspecies)
+      particle_kk->update_elec_views();
+  }
+
   // reallocate one-cell data structs for one or many groups
 
   oldgroups = ngroups;
@@ -379,6 +397,11 @@ void CollideVSSKokkos::collisions()
     vre_next += vre_every;
   }
 
+  if (elecstyle == DISCRETE &&
+      (grid->maxlocal > (int)d_cumulative_probabilities.extent(0) ||
+       particle->maxelecstate > (int)d_cumulative_probabilities.extent(1)))
+    MemKK::realloc_kokkos(d_cumulative_probabilities,"collide:cumulative_probabilities",grid->maxlocal,particle->maxelecstate);
+
   // copy Update count of gas/gas collision computes active on this timestep
 
   ngas_tally = update->ngas_tally;
@@ -482,11 +505,19 @@ template < int NEARCP, int GASTALLY > void CollideVSSKokkos::collisions_one(COLL
 
   ParticleKokkos* particle_kk = (ParticleKokkos*) particle;
   particle_kk->sync(Device,PARTICLE_MASK|SPECIES_MASK);
-  if (vibstyle == DISCRETE) particle_kk->sync(Device,CUSTOM_MASK);
+  if (vibstyle == DISCRETE || elecstyle == DISCRETE)
+    particle_kk->sync(Device,CUSTOM_MASK);
   d_particles = particle_kk->k_particles.view_device();
   d_species = particle_kk->k_species.view_device();
+  d_nelecstates = particle_kk->d_nelecstates;
+  d_elecstates = particle_kk->d_elecstates;
+  d_elec_default_rels = particle_kk->d_elec_default_rels;
+  d_elec_species_rels = particle_kk->d_elec_species_rels;
+  d_enforce_spin_conservation = particle_kk->d_enforce_spin_conservation;
   d_ewhich = particle_kk->k_ewhich.view_device();
+  k_eivec = particle_kk->k_eivec;
   k_eiarray = particle_kk->k_eiarray;
+  k_edvec = particle_kk->k_edvec;
 
   GridKokkos* grid_kk = (GridKokkos*) grid;
   grid_kk->sync(Device,CINFO_MASK);
@@ -545,7 +576,9 @@ template < int NEARCP, int GASTALLY > void CollideVSSKokkos::collisions_one(COLL
     if (d_particles.extent(0) < nlocal_extra) {
       particle->grow(nlocal_extra - particle->nlocal);
       d_particles = particle_kk->k_particles.view_device();
+      k_eivec = particle_kk->k_eivec;
       k_eiarray = particle_kk->k_eiarray;
+      k_edvec = particle_kk->k_edvec;
     }
   }
 
@@ -608,7 +641,9 @@ template < int NEARCP, int GASTALLY > void CollideVSSKokkos::collisions_one(COLL
       if (d_particles.extent(0) < nlocal_new) {
         particle->grow(nlocal_new - particle->nlocal);
         d_particles = particle_kk->k_particles.view_device();
+        k_eivec = particle_kk->k_eivec;
         k_eiarray = particle_kk->k_eiarray;
+        k_edvec = particle_kk->k_edvec;
       }
     }
   }
@@ -624,7 +659,8 @@ template < int NEARCP, int GASTALLY > void CollideVSSKokkos::collisions_one(COLL
 
   this->modified(Device,ALL_MASK);
   particle_kk->modify(Device,PARTICLE_MASK);
-  if (vibstyle == DISCRETE) particle_kk->modify(Device,CUSTOM_MASK);
+  if (vibstyle == DISCRETE || elecstyle == DISCRETE)
+    particle_kk->modify(Device,CUSTOM_MASK);
 
   d_particles = t_particle_1d(); // destroy reference to reduce memory use
   d_nn_last_partner = {};
@@ -750,7 +786,7 @@ void CollideVSSKokkos::operator()(TagCollideCollisionsOne< NEARCP, GASTALLY, ATO
     int index_kpart;
 
     setup_collision_kokkos(ipart,jpart,precoln,postcoln);
-    const int reactflag = perform_collision_kokkos(ipart,jpart,kpart,precoln,postcoln,rand_gen,
+    const int reactflag = perform_collision_kokkos(icell,ipart,jpart,kpart,precoln,postcoln,rand_gen,
                                                    recomb_part3,recomb_species,recomb_density,index_kpart);
 
     if (ATOMIC_REDUCTION == 1)
@@ -833,10 +869,16 @@ void CollideVSSKokkos::collisions_one_ambipolar(COLLIDE_REDUCE &reduce)
   particle_kk->sync(Device,PARTICLE_MASK|SPECIES_MASK|CUSTOM_MASK);
   d_particles = particle_kk->k_particles.view_device();
   d_species = particle_kk->k_species.view_device();
+  d_nelecstates = particle_kk->d_nelecstates;
+  d_elecstates = particle_kk->d_elecstates;
+  d_elec_default_rels = particle_kk->d_elec_default_rels;
+  d_elec_species_rels = particle_kk->d_elec_species_rels;
+  d_enforce_spin_conservation = particle_kk->d_enforce_spin_conservation;
   d_ewhich = particle_kk->k_ewhich.view_device();
   auto h_ewhich = particle_kk->k_ewhich.view_host();
   k_eivec = particle_kk->k_eivec;
   k_eiarray = particle_kk->k_eiarray;
+  k_edvec = particle_kk->k_edvec;
   k_edarray = particle_kk->k_edarray;
   d_ionambi = k_eivec.view_host()[h_ewhich[index_ionambi]].k_view.view_device();
   d_velambi = k_edarray.view_host()[h_ewhich[index_velambi]].k_view.view_device();
@@ -866,12 +908,17 @@ void CollideVSSKokkos::collisions_one_ambipolar(COLLIDE_REDUCE &reduce)
 
   h_retry() = 1;
 
+  maxcellcount = particle_kk->get_maxcellcount();
+
+  if (d_elist.extent(0) < nglocal || d_elist.extent(1) < maxcellcount) {
+    d_elist = t_particle_2d(); // reduce memory use by deallocating first
+    d_elist = t_particle_2d(Kokkos::view_alloc("collide:elist",Kokkos::WithoutInitializing),nglocal,maxcellcount);
+  }
+
   if (react) {
     double extra_factor = 1.0;
     if (sparta->kokkos->react_retry_flag)
       extra_factor = sparta->kokkos->react_extra;
-
-    maxcellcount = particle_kk->get_maxcellcount();
 
     auto maxelectron_extra = maxcellcount*extra_factor;
     if (d_elist.extent(0) < nglocal || d_elist.extent(1) < maxelectron_extra) {
@@ -901,6 +948,7 @@ void CollideVSSKokkos::collisions_one_ambipolar(COLLIDE_REDUCE &reduce)
       auto h_ewhich = particle_kk->k_ewhich.view_host();
       k_eivec = particle_kk->k_eivec;
       k_eiarray = particle_kk->k_eiarray;
+      k_edvec = particle_kk->k_edvec;
       k_edarray = particle_kk->k_edarray;
       d_ionambi = k_eivec.view_host()[h_ewhich[index_ionambi]].k_view.view_device();
       d_velambi = k_edarray.view_host()[h_ewhich[index_velambi]].k_view.view_device();
@@ -979,6 +1027,7 @@ void CollideVSSKokkos::collisions_one_ambipolar(COLLIDE_REDUCE &reduce)
         auto h_ewhich = particle_kk->k_ewhich.view_host();
         k_eivec = particle_kk->k_eivec;
         k_eiarray = particle_kk->k_eiarray;
+        k_edvec = particle_kk->k_edvec;
         k_edarray = particle_kk->k_edarray;
         d_ionambi = k_eivec.view_host()[h_ewhich[index_ionambi]].k_view.view_device();
         d_velambi = k_edarray.view_host()[h_ewhich[index_velambi]].k_view.view_device();
@@ -1160,7 +1209,7 @@ void CollideVSSKokkos::operator()(TagCollideCollisionsOneAmbipolar< GASTALLY, AT
 
     const int jspecies = jpart->ispecies;
     setup_collision_kokkos(ipart,jpart,precoln,postcoln);
-    const int reactflag = perform_collision_kokkos(ipart,jpart,kpart,precoln,postcoln,rand_gen,
+    const int reactflag = perform_collision_kokkos(icell,ipart,jpart,kpart,precoln,postcoln,rand_gen,
                                                    recomb_part3,recomb_species,recomb_density,index_kpart);
 
     if (ATOMIC_REDUCTION == 1)
@@ -1428,7 +1477,7 @@ void CollideVSSKokkos::setup_collision_kokkos(Particle::OnePart *ip, Particle::O
 
   precoln.ave_rotdof = 0.5 * (d_species[isp].rotdof + d_species[jsp].rotdof);
   precoln.ave_vibdof = 0.5 * (d_species[isp].vibdof + d_species[jsp].vibdof);
-  precoln.ave_dof = (precoln.ave_rotdof  + precoln.ave_vibdof)/2.;
+  precoln.ave_dof = (precoln.ave_rotdof + precoln.ave_vibdof)/2.;
 
   precoln.imass = d_species[isp].mass;
   precoln.jmass = d_species[jsp].mass;
@@ -1436,8 +1485,16 @@ void CollideVSSKokkos::setup_collision_kokkos(Particle::OnePart *ip, Particle::O
   precoln.etrans = 0.5 * d_params(isp,jsp).mr * precoln.vr2;
   precoln.erot = ip->erot + jp->erot;
   precoln.evib = ip->evib + jp->evib;
+  precoln.eelec = 0.0;
+  if (elecstyle == DISCRETE) {
+    auto &d_eelecs = k_edvec.view_device()[d_ewhich[index_eelec]].k_view.view_device();
+    if (d_nelecstates[isp] > 0)
+      precoln.eelec += d_eelecs[ip - d_particles.data()];
+    if (d_nelecstates[jsp] > 0)
+      precoln.eelec += d_eelecs[jp - d_particles.data()];
+  }
 
-  precoln.eint   = precoln.erot + precoln.evib;
+  precoln.eint   = precoln.erot + precoln.evib + precoln.eelec;
   precoln.etotal = precoln.etrans + precoln.eint;
 
   // COM velocity calculated using reactant masses
@@ -1452,6 +1509,7 @@ void CollideVSSKokkos::setup_collision_kokkos(Particle::OnePart *ip, Particle::O
   postcoln.etrans = precoln.etrans;
   postcoln.erot = 0.0;
   postcoln.evib = 0.0;
+  postcoln.eelec = 0.0;
   postcoln.eint = 0.0;
   postcoln.etotal = precoln.etotal;
 }
@@ -1459,7 +1517,8 @@ void CollideVSSKokkos::setup_collision_kokkos(Particle::OnePart *ip, Particle::O
 /* ---------------------------------------------------------------------- */
 
 KOKKOS_INLINE_FUNCTION
-int CollideVSSKokkos::perform_collision_kokkos(Particle::OnePart *&ip,
+int CollideVSSKokkos::perform_collision_kokkos(int icell,
+                                  Particle::OnePart *&ip,
                                   Particle::OnePart *&jp,
                                   Particle::OnePart *&kp,
                                   struct State &precoln, struct State &postcoln, rand_type &rand_gen,
@@ -1476,17 +1535,33 @@ int CollideVSSKokkos::perform_collision_kokkos(Particle::OnePart *&ip,
   // reaction = 1 to N for which reaction occurs
   // reaction is returned to caller
 
+  // effective electronic DoF for the TCE reaction model
+  // read from per-state input (dof), 0.0 if species has no electronic states
+
+  double idof = 0.0, jdof = 0.0;
+  if (react_defined && elecstyle == DISCRETE) {
+    auto& d_estate = k_eivec.view_device()[d_ewhich[index_elecstate]].k_view.view_device();
+    if (d_nelecstates[ip->ispecies] > 0)
+      idof = d_elecstates(ip->ispecies,d_estate[ip - d_particles.data()]).dof;
+    if (d_nelecstates[jp->ispecies] > 0)
+      jdof = d_elecstates(jp->ispecies,d_estate[jp - d_particles.data()]).dof;
+  }
+
   if (react_defined)
     reaction = react_kk_copy.obj.attempt_kk(ip,jp,
                                              precoln.etrans,precoln.erot,
-                                             precoln.evib,postcoln.etotal,kspecies,
-                                             recomb_species,recomb_density,d_species);
+                                             precoln.evib,precoln.eelec,postcoln.etotal,kspecies,
+                                             recomb_species,recomb_density,d_species,idof,jdof);
   else reaction = 0;
 
   // just collision, no reaction
 
   if (!reaction) {
-    if (precoln.ave_dof > 0.0) EEXCHANGE_NonReactingEDisposal(ip,jp,precoln,postcoln,rand_gen);
+    // ave_dof counts only rot/vib DOF, so also call the energy disposal
+    // when either species has electronic states (e.g. two atoms),
+    // else their electronic modes would never relax
+    if (precoln.ave_dof > 0.0 || elec_exchange(ip,jp))
+      EEXCHANGE_NonReactingEDisposal(icell,ip,jp,precoln,postcoln,rand_gen);
     SCATTER_TwoBodyScattering(ip,jp,precoln,postcoln,rand_gen);
     return reaction;
   }
@@ -1518,7 +1593,7 @@ int CollideVSSKokkos::perform_collision_kokkos(Particle::OnePart *&ip,
     }
 
     kp = &d_particles[index_kpart];
-    EEXCHANGE_ReactingEDisposal(ip,jp,kp,precoln,postcoln,rand_gen);
+    EEXCHANGE_ReactingEDisposal(icell,ip,jp,kp,precoln,postcoln,rand_gen);
     SCATTER_ThreeBodyScattering(ip,jp,kp,precoln,postcoln,rand_gen);
 
   // remove 2nd J particle if recombination reaction removed it
@@ -1554,10 +1629,24 @@ int CollideVSSKokkos::perform_collision_kokkos(Particle::OnePart *&ip,
     // ip internal energy is already included in postcoln.etotal
 
     double partial_energy =  postcoln.etotal + p3->erot + p3->evib;
+    if (elecstyle == DISCRETE) {
+      auto &d_eelecs = k_edvec.view_device()[d_ewhich[index_eelec]].k_view.view_device();
+      if (d_nelecstates[p3->ispecies] > 0)
+        partial_energy += d_eelecs[p3 - d_particles.data()];
+    }
+
     ip->erot = 0.0;
     ip->evib = 0.0;
     p3->erot = 0.0;
     p3->evib = 0.0;
+
+    // zero electronic energy like erot/evib above: it is already part of
+    // partial_energy, so setup_collision() must not count it a second time
+
+    if (elecstyle == DISCRETE) {
+      zero_elec(ip);
+      zero_elec(p3);
+    }
 
     // 2nd call to setup_collision() sets new postcoln.etotal
     // then add saved partial_energy to it
@@ -1565,11 +1654,12 @@ int CollideVSSKokkos::perform_collision_kokkos(Particle::OnePart *&ip,
     setup_collision_kokkos(ip,p3,precoln,postcoln);
     postcoln.etotal += partial_energy;
 
-    if (precoln.ave_dof > 0.0) EEXCHANGE_ReactingEDisposal(ip,p3,jp,precoln,postcoln,rand_gen);
+    if (precoln.ave_dof > 0.0 || elec_exchange(ip,p3))
+      EEXCHANGE_ReactingEDisposal(icell,ip,p3,jp,precoln,postcoln,rand_gen);
     SCATTER_TwoBodyScattering(ip,p3,precoln,postcoln,rand_gen);
 
   } else {
-    EEXCHANGE_ReactingEDisposal(ip,jp,kp,precoln,postcoln,rand_gen);
+    EEXCHANGE_ReactingEDisposal(icell,ip,jp,kp,precoln,postcoln,rand_gen);
     SCATTER_TwoBodyScattering(ip,jp,precoln,postcoln,rand_gen);
   }
 
@@ -1639,7 +1729,8 @@ void CollideVSSKokkos::SCATTER_TwoBodyScattering(Particle::OnePart *ip,
 /* ---------------------------------------------------------------------- */
 
 KOKKOS_INLINE_FUNCTION
-void CollideVSSKokkos::EEXCHANGE_NonReactingEDisposal(Particle::OnePart *ip,
+void CollideVSSKokkos::EEXCHANGE_NonReactingEDisposal(int icell,
+                                                      Particle::OnePart *ip,
                                                       Particle::OnePart *jp,
                                                       struct State &precoln, struct State &postcoln,
                                                       rand_type &rand_gen) const
@@ -1647,16 +1738,20 @@ void CollideVSSKokkos::EEXCHANGE_NonReactingEDisposal(Particle::OnePart *ip,
   double State_prob,Fraction_Rot,Fraction_Vib,E_Dispose;
   int i,rotdof,vibdof,max_level,ivib;
 
-  Particle::OnePart *p;
+  Particle::OnePart *p, *p2;
 
   double AdjustFactor = 0.99999999;
   postcoln.erot = 0.0;
   postcoln.evib = 0.0;
+  postcoln.eelec = 0.0;
   double pevib = 0.0;
 
   // handle each kind of energy disposal for non-reacting reactants
+  // enter the disposal loop even if ave_dof (rot/vib) is zero when either
+  // species has electronic states, so those can still relax;
+  // the rot/vib blocks below are skipped naturally via rotdof/vibdof = 0
 
-  if (precoln.ave_dof == 0) {
+  if (precoln.ave_dof == 0 && !elec_exchange(ip,jp)) {
     ip->erot = 0.0;
     jp->erot = 0.0;
     ip->evib = 0.0;
@@ -1666,8 +1761,13 @@ void CollideVSSKokkos::EEXCHANGE_NonReactingEDisposal(Particle::OnePart *ip,
     E_Dispose = precoln.etrans;
 
     for (i = 0; i < 2; i++) {
-      if (i == 0) p = ip;
-      else p = jp;
+      if (i == 0) {
+        p = ip;
+        p2 = jp;
+      } else {
+        p = jp;
+        p2 = ip;
+      }
 
       int sp = p->ispecies;
       rotdof = d_species[sp].rotdof;
@@ -1677,8 +1777,7 @@ void CollideVSSKokkos::EEXCHANGE_NonReactingEDisposal(Particle::OnePart *ip,
         if (relaxflag == VARIABLE) rotn_phi = rotrel(sp,E_Dispose+p->erot);
         if (rotn_phi >= rand_gen.drand()) {
           if (rotstyle == NONE) {
-            p->erot = 0.0 ;
-
+            p->erot = 0.0;
           } else if (rotstyle != NONE && rotdof == 2) {
             E_Dispose += p->erot;
             Fraction_Rot =
@@ -1727,6 +1826,7 @@ void CollideVSSKokkos::EEXCHANGE_NonReactingEDisposal(Particle::OnePart *ip,
               } while (State_prob < rand_gen.drand());
               E_Dispose -= p->evib;
             }
+
           } else if (vibdof > 2) {
             if (vibstyle == SMOOTH) {
               E_Dispose += p->evib;
@@ -1766,13 +1866,190 @@ void CollideVSSKokkos::EEXCHANGE_NonReactingEDisposal(Particle::OnePart *ip,
         }
         postcoln.evib += p->evib;
       } // end of vibdof if
+
+      if (elecstyle == DISCRETE && d_nelecstates[sp] > 0) {
+        auto &d_estates = k_eivec.view_device()[d_ewhich[index_elecstate]].k_view.view_device();
+        double elec_phi = get_elec_phi(p->ispecies, p2->ispecies, d_estates[p - d_particles.data()], E_Dispose);
+        if (elec_phi >= rand_gen.drand()) {
+          relax_electronic_mode(icell, p, p2, E_Dispose, rand_gen, false);
+        }
+      }
     }
+  }
+
+  // compute post-collision internal energies
+
+  postcoln.erot = ip->erot + jp->erot;
+  postcoln.evib = ip->evib + jp->evib;
+  postcoln.eelec = 0.0;
+  if (elecstyle == DISCRETE) {
+    auto &d_eelecs = k_edvec.view_device()[d_ewhich[index_eelec]].k_view.view_device();
+    if (d_nelecstates[ip->ispecies] > 0)
+      postcoln.eelec += d_eelecs[ip - d_particles.data()];
+    if (d_nelecstates[jp->ispecies] > 0)
+      postcoln.eelec += d_eelecs[jp - d_particles.data()];
   }
 
   // compute portion of energy left over for scattering
 
-  postcoln.eint = postcoln.erot + postcoln.evib;
+  postcoln.eint = postcoln.erot + postcoln.evib + postcoln.eelec;
   postcoln.etrans = E_Dispose;
+}
+
+/* ---------------------------------------------------------------------- */
+
+KOKKOS_INLINE_FUNCTION
+void CollideVSSKokkos::relax_electronic_mode(int icell,
+                                             Particle::OnePart *p,
+                                             Particle::OnePart *jp,
+                                             double& E_Dispose,
+                                             rand_type &rand_gen,
+                                             bool reacting) const
+{
+  auto &d_eelecs = k_edvec.view_device()[d_ewhich[index_eelec]].k_view.view_device();
+  E_Dispose += d_eelecs[p - d_particles.data()];
+
+  int ielec = select_elec_state(
+    icell, p, jp, E_Dispose,
+    d_params(p->ispecies,jp->ispecies).omega,
+    d_enforce_spin_conservation(p->ispecies,jp->ispecies) && !reacting,
+    rand_gen, reacting);
+  double eelec = d_elecstates(p->ispecies,ielec).temp*boltz;
+
+  d_eelecs[p - d_particles.data()] = eelec;
+
+  auto &d_estates = k_eivec.view_device()[d_ewhich[index_elecstate]].k_view.view_device();
+  d_estates[p - d_particles.data()] = ielec;
+  E_Dispose -= d_eelecs[p - d_particles.data()];
+}
+
+/* ----------------------------------------------------------------------
+   reset the electronic state/energy of particle p to the ground state
+   skip ambipolar electrons: they live in a separate scratch array (elist),
+   not in d_particles, so they have no custom storage to reset
+------------------------------------------------------------------------- */
+
+KOKKOS_INLINE_FUNCTION
+void CollideVSSKokkos::zero_elec(Particle::OnePart *p) const
+{
+  if (ambiflag && p->ispecies == ambispecies) return;
+  auto &d_estates = k_eivec.view_device()[d_ewhich[index_elecstate]].k_view.view_device();
+  auto &d_eelecs = k_edvec.view_device()[d_ewhich[index_eelec]].k_view.view_device();
+  d_eelecs[p - d_particles.data()] = 0.0;
+  d_estates[p - d_particles.data()] = 0;
+}
+
+/* ----------------------------------------------------------------------
+   return 1 if electronic energy exchange is possible between two particles,
+   i.e. discrete electronic modes are enabled and either species has
+   electronic states defined
+------------------------------------------------------------------------- */
+
+KOKKOS_INLINE_FUNCTION
+int CollideVSSKokkos::elec_exchange(Particle::OnePart *ip, Particle::OnePart *jp) const
+{
+  if (elecstyle != DISCRETE) return 0;
+  if (d_nelecstates[ip->ispecies] > 0 || d_nelecstates[jp->ispecies] > 0)
+    return 1;
+  return 0;
+}
+
+/* ---------------------------------------------------------------------- */
+
+KOKKOS_INLINE_FUNCTION
+double CollideVSSKokkos::get_elec_phi(int ispec1, int ispec2, int ielec, double) const
+{
+  double species_rel = d_elec_species_rels(ispec1,ispec2,ielec);
+
+  if (species_rel >= 0.0)
+    return species_rel;
+  else
+    return d_elec_default_rels(ispec1,ielec);
+}
+
+/* ---------------------------------------------------------------------- */
+
+KOKKOS_INLINE_FUNCTION
+int CollideVSSKokkos::select_elec_state(int icell,Particle::OnePart *p,
+                                        Particle::OnePart *jp,
+                                        double E_Dispose, double omega,
+                                        bool enforce_spin_conservation,
+                                        rand_type &rand_gen,
+                                        bool reacting) const
+{
+  double State_prob;
+  int max_level;
+  auto &d_estates = k_eivec.view_device()[d_ewhich[index_elecstate]].k_view.view_device();
+  // Find the maximum electronic level it can be in, given the current E_dispose
+  max_level = 0;
+  while (max_level < d_nelecstates[p->ispecies] && E_Dispose > d_elecstates(p->ispecies,max_level).temp*boltz) {
+    ++max_level;
+  }
+  --max_level;
+
+  // not enough energy to reach even the ground state: stay in ground state
+  // (guards against max_level == -1 indexing d_state_probability[-1])
+  if (max_level < 0) return 0;
+
+  auto &d_state_probability = d_cumulative_probabilities;
+
+  // Calculate number of total states, including degeneracies
+  for (int state = 0; state <= max_level; ++state) {
+    if (state != 0) {
+      d_state_probability(icell,state) = d_state_probability(icell,state-1);
+    } else {
+      d_state_probability(icell,state) = 0.0;
+    }
+    if (!enforce_spin_conservation ||
+           d_elecstates(p->ispecies,state).spin == d_elecstates(p->ispecies,d_estates[p - d_particles.data()]).spin) {
+      // Note we can use E_Dispose here since the current implementation requires the collision numbers
+      // to be collision invariant (and therefore depend on E_Dispose, the trans + elec energy) but this
+      // algorithm allows that to be relaxed. If other models are needed, the correct data would need passed
+      // in here.
+      if (reacting) {
+        // We are distributing energy after a reaction, so relaxation probability is 100%
+        d_state_probability(icell,state) += d_elecstates(p->ispecies,state).degen;
+      } else {
+        d_state_probability(icell,state) += d_elecstates(p->ispecies,state).degen*get_elec_phi(p->ispecies, jp->ispecies, state, E_Dispose);
+      }
+    }
+  }
+  // if no selectable state has any weight (e.g. every allowed state has a
+  // zero relaxation probability), leave the particle in its current state
+
+  if (d_state_probability(icell,max_level) <= 0.0)
+    return d_estates[p - d_particles.data()];
+
+  // Select a state from the distribution
+  int ielec,ilast;
+  double eelec = 0.0;
+  do {
+    double rand_state = rand_gen.drand()*d_state_probability(icell,max_level);
+    ielec = 0;
+    ilast = -1;
+    // bound by max_level: roundoff can leave rand_state >= 0 after the last
+    // included state, which would index d_elecstates past max_level/nelecstate
+    while (rand_state >= 0 && ielec <= max_level) {
+      if (!enforce_spin_conservation ||
+             d_elecstates(p->ispecies,ielec).spin == d_elecstates(p->ispecies,d_estates[p - d_particles.data()]).spin) {
+        if (reacting) {
+          // We are distributing energy after a reaction, so relaxation probability is 100%
+          rand_state -= d_elecstates(p->ispecies,ielec).degen;
+        } else {
+          rand_state -= d_elecstates(p->ispecies,ielec).degen*get_elec_phi(p->ispecies, jp->ispecies, ielec, E_Dispose);
+        }
+        ilast = ielec;
+      }
+      ++ielec;
+    }
+    // floating-point round-off can leave rand_state non-negative after all
+    // weights are subtracted, so clamp to the last spin-allowed state
+    ielec = ilast;
+    eelec = d_elecstates(p->ispecies,ielec).temp*boltz;
+    State_prob = pow((1.0 - eelec / E_Dispose),
+                     (1.5 - omega));
+  } while (State_prob < rand_gen.drand());
+  return ielec;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -1799,8 +2076,17 @@ void CollideVSSKokkos::SCATTER_ThreeBodyScattering(Particle::OnePart *ip,
 
   double alpha_r = 1.0 / d_params(isp,jsp).alpha;
   double mr = mass_ij * mass_k / (mass_ij + mass_k);
-  postcoln.eint = ip->erot + jp->erot + ip->evib + jp->evib
-                + kp->erot + kp->evib;
+  postcoln.eint = ip->erot + jp->erot + kp->erot
+                + ip->evib + jp->evib + kp->evib;
+  if (elecstyle == DISCRETE) {
+    auto &d_eelecs = k_edvec.view_device()[d_ewhich[index_eelec]].k_view.view_device();
+    if (d_nelecstates[ip->ispecies] > 0)
+      postcoln.eint += d_eelecs[ip - d_particles.data()];
+    if (d_nelecstates[jp->ispecies] > 0)
+      postcoln.eint += d_eelecs[jp - d_particles.data()];
+    if (d_nelecstates[kp->ispecies] > 0)
+      postcoln.eint += d_eelecs[kp - d_particles.data()];
+  }
 
   double cosX = 2.0*pow(rand_gen.drand(), alpha_r) - 1.0;
   double sinX = sqrt(1.0 - cosX*cosX);
@@ -1847,7 +2133,8 @@ void CollideVSSKokkos::SCATTER_ThreeBodyScattering(Particle::OnePart *ip,
 /* ---------------------------------------------------------------------- */
 
 KOKKOS_INLINE_FUNCTION
-void CollideVSSKokkos::EEXCHANGE_ReactingEDisposal(Particle::OnePart *ip,
+void CollideVSSKokkos::EEXCHANGE_ReactingEDisposal(int icell,
+                                                   Particle::OnePart *ip,
                                                    Particle::OnePart *jp,
                                                    Particle::OnePart *kp,
                                                    struct State &precoln, struct State &postcoln,
@@ -1860,11 +2147,20 @@ void CollideVSSKokkos::EEXCHANGE_ReactingEDisposal(Particle::OnePart *ip,
   Particle::OnePart *p;
   double AdjustFactor = 0.99999999;
 
+  // zero electronic state/energy of all products, not just those whose
+  // species has electronic data: the reactant electronic energy is already
+  // part of postcoln.etotal, so leaving a stale eelec on a product whose
+  // (new) species has no electronic data would duplicate that energy
+
   if (!kp) {
     ip->erot = 0.0;
     jp->erot = 0.0;
     ip->evib = 0.0;
     jp->evib = 0.0;
+    if (elecstyle == DISCRETE) {
+      zero_elec(ip);
+      zero_elec(jp);
+    }
     numspecies = 2;
     aveomega = d_params(ip->ispecies,jp->ispecies).omega;
   } else {
@@ -1874,6 +2170,11 @@ void CollideVSSKokkos::EEXCHANGE_ReactingEDisposal(Particle::OnePart *ip,
     ip->evib = 0.0;
     jp->evib = 0.0;
     kp->evib = 0.0;
+    if (elecstyle == DISCRETE) {
+      zero_elec(ip);
+      zero_elec(jp);
+      zero_elec(kp);
+    }
     numspecies = 3;
     aveomega = (d_params(ip->ispecies,ip->ispecies).omega + d_params(jp->ispecies,jp->ispecies).omega +
                 d_params(kp->ispecies,kp->ispecies).omega)/3.0;
@@ -1965,21 +2266,36 @@ void CollideVSSKokkos::EEXCHANGE_ReactingEDisposal(Particle::OnePart *ip,
         }
       }
     }
+    if (elecstyle == DISCRETE && d_nelecstates[sp] > 0)
+      relax_electronic_mode(icell, p, p, E_Dispose, rand_gen, true);
   }
 
   // compute post-collision internal energies
 
   postcoln.erot = ip->erot + jp->erot;
   postcoln.evib = ip->evib + jp->evib;
+  postcoln.eelec = 0.0;
+  if (elecstyle == DISCRETE) {
+    auto &d_eelecs = k_edvec.view_device()[d_ewhich[index_eelec]].k_view.view_device();
+    if (d_nelecstates[ip->ispecies] > 0)
+      postcoln.eelec += d_eelecs[ip - d_particles.data()];
+    if (d_nelecstates[jp->ispecies] > 0)
+      postcoln.eelec += d_eelecs[jp - d_particles.data()];
+  }
 
   if (kp) {
     postcoln.erot += kp->erot;
     postcoln.evib += kp->evib;
+    if (elecstyle == DISCRETE) {
+      auto &d_eelecs = k_edvec.view_device()[d_ewhich[index_eelec]].k_view.view_device();
+      if (d_nelecstates[kp->ispecies] > 0)
+        postcoln.eelec += d_eelecs[kp - d_particles.data()];
+    }
   }
 
   // compute portion of energy left over for scattering
 
-  postcoln.eint = postcoln.erot + postcoln.evib;
+  postcoln.eint = postcoln.erot + postcoln.evib + postcoln.eelec;
   postcoln.etrans = E_Dispose;
 }
 
@@ -2489,6 +2805,27 @@ void CollideVSSKokkos::backup()
     Kokkos::deep_copy(d_velambi_backup,d_velambi);
   }
 
+  // custom per-particle arrays mutated during collisions must also be
+  // backed up, else a react/retry pass re-runs on top of modified values
+
+  ParticleKokkos* particle_kk = (ParticleKokkos*) particle;
+  auto h_ewhich = particle_kk->k_ewhich.view_host();
+
+  if (vibstyle == DISCRETE && index_vibmode >= 0) {
+    auto d_vibmode = particle_kk->k_eiarray.view_host()[h_ewhich[index_vibmode]].k_view.view_device();
+    d_vibmode_backup = decltype(d_vibmode_backup)(Kokkos::view_alloc("collide:vibmode_backup",Kokkos::WithoutInitializing),d_vibmode.extent(0),d_vibmode.extent(1));
+    Kokkos::deep_copy(d_vibmode_backup,d_vibmode);
+  }
+
+  if (elecstyle == DISCRETE) {
+    auto d_eelec = particle_kk->k_edvec.view_host()[h_ewhich[index_eelec]].k_view.view_device();
+    auto d_elecstate = particle_kk->k_eivec.view_host()[h_ewhich[index_elecstate]].k_view.view_device();
+    d_eelec_backup = decltype(d_eelec_backup)(Kokkos::view_alloc("collide:eelec_backup",Kokkos::WithoutInitializing),d_eelec.extent(0));
+    d_elecstate_backup = decltype(d_elecstate_backup)(Kokkos::view_alloc("collide:elecstate_backup",Kokkos::WithoutInitializing),d_elecstate.extent(0));
+    Kokkos::deep_copy(d_eelec_backup,d_eelec);
+    Kokkos::deep_copy(d_elecstate_backup,d_elecstate);
+  }
+
   if (react) {
     ReactBirdKokkos* react_kk = (ReactBirdKokkos*) react;
     react_kk->backup();
@@ -2529,6 +2866,20 @@ void CollideVSSKokkos::restore()
     d_velambi = k_edarray.view_host()[h_ewhich[index_velambi]].k_view.view_device();
   }
 
+  if (vibstyle == DISCRETE && index_vibmode >= 0) {
+    auto h_ewhich = particle_kk->k_ewhich.view_host();
+    Kokkos::deep_copy(particle_kk->k_eiarray.view_host()[h_ewhich[index_vibmode]].k_view.view_device(),d_vibmode_backup);
+    k_eiarray = particle_kk->k_eiarray;
+  }
+
+  if (elecstyle == DISCRETE) {
+    auto h_ewhich = particle_kk->k_ewhich.view_host();
+    Kokkos::deep_copy(particle_kk->k_edvec.view_host()[h_ewhich[index_eelec]].k_view.view_device(),d_eelec_backup);
+    Kokkos::deep_copy(particle_kk->k_eivec.view_host()[h_ewhich[index_elecstate]].k_view.view_device(),d_elecstate_backup);
+    k_eivec = particle_kk->k_eivec;
+    k_edvec = particle_kk->k_edvec;
+  }
+
   if (react) {
     ReactBirdKokkos* react_kk = (ReactBirdKokkos*) react;
     react_kk->restore();
@@ -2557,4 +2908,8 @@ void CollideVSSKokkos::restore()
     d_ionambi_backup = {};
     d_velambi_backup = {};
   }
+
+  d_vibmode_backup = {};
+  d_eelec_backup = {};
+  d_elecstate_backup = {};
 }

@@ -38,7 +38,7 @@ class ReactBirdKokkos : public ReactBird {
   virtual ~ReactBirdKokkos();
   virtual void init();
   virtual int attempt(Particle::OnePart *, Particle::OnePart *,
-                      double, double, double, double &, int &) = 0;
+                      double, double, double, double, double &, int &) = 0;
   double extract_tally(int);
   void backup();
   void restore();

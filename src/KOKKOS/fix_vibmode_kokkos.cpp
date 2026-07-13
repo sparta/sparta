@@ -86,7 +86,7 @@ void FixVibmodeKokkos::pre_update_custom_kokkos()
   d_species = particle_kk->k_species.view_device();
   auto h_ewhich = particle_kk->k_ewhich.view_host();
   auto k_eiarray = particle_kk->k_eiarray;
-  d_vibmode = k_eiarray.view_host()[h_ewhich[vibmodeindex]].k_view.view_device();
+  d_vibmode = k_eiarray.view_host()[h_ewhich[index_vibmode]].k_view.view_device();
 }
 
 /* ----------------------------------------------------------------------
@@ -97,11 +97,10 @@ void FixVibmodeKokkos::pre_update_custom_kokkos()
 
 void FixVibmodeKokkos::update_custom(int index, double temp_thermal,
                                      double temp_rot, double temp_vib,
-                                     double *vstream)
+                                     double temp_elec, double *vstream)
 {
   ParticleKokkos* particle_kk = (ParticleKokkos*) particle;
   particle_kk->sync(Host,PARTICLE_MASK|SPECIES_MASK|CUSTOM_MASK);
-  FixVibmode::update_custom(index, temp_thermal, temp_rot, temp_vib, vstream);
+  FixVibmode::update_custom(index, temp_thermal, temp_rot, temp_vib, temp_elec, vstream);
   particle_kk->modify(Host,PARTICLE_MASK|CUSTOM_MASK);
 }
-

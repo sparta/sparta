@@ -380,6 +380,11 @@ namespace SPARTA_NS {
   typedef tdual_species_1d::t_host t_host_species_1d;
 
   typedef Kokkos::
+    DualView<Particle::ElecState**, DeviceType::array_layout, DeviceType> tdual_elecstate_2d;
+  typedef tdual_elecstate_2d::t_dev t_elecstate_2d;
+  typedef tdual_elecstate_2d::t_host t_host_elecstate_2d;
+
+  typedef Kokkos::
     DualView<Grid::ChildCell*, DeviceType::array_layout, DeviceType> tdual_cell_1d;
   typedef tdual_cell_1d::t_dev t_cell_1d;
   typedef tdual_cell_1d::t_host t_host_cell_1d;
@@ -732,7 +737,7 @@ void buffer_view(BufferView &buf, DualView &view,
                  const size_t n7 = 0) {
 
   buf = BufferView(
-          view.d_view.data(),
+          view.view_device().data(),
           n0,n1,n2,n3,n4,n5,n6,n7);
 
 }

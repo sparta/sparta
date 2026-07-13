@@ -168,6 +168,7 @@ void FixEmitFaceFile::init()
   temp_thermal_mix = particle->mixture[imix]->temp_thermal;
   temp_rot_mix = particle->mixture[imix]->temp_rot;
   temp_vib_mix = particle->mixture[imix]->temp_vib;
+  temp_elec_mix = particle->mixture[imix]->temp_elec;
   vstream_mix = particle->mixture[imix]->vstream;
   vscale_mix = particle->mixture[imix]->vscale;
   fraction_mix = particle->mixture[imix]->fraction;
@@ -346,7 +347,7 @@ void FixEmitFaceFile::create_task(int icell)
 void FixEmitFaceFile::perform_task()
 {
   int pcell,ninsert,nactual,isp,ispecies,id;
-  double temp_thermal,temp_rot,temp_vib;
+  double temp_thermal,temp_rot,temp_vib,temp_elec;
   double indot,scosine,rn,ntarget,vr;
   double beta_un,normalized_distbn_fn,theta,erot,evib;
   double x[3],v[3];
@@ -387,6 +388,7 @@ void FixEmitFaceFile::perform_task()
     temp_thermal = tasks[i].temp_thermal;
     temp_rot = tasks[i].temp_rot;
     temp_vib = tasks[i].temp_vib;
+    temp_elec = tasks[i].temp_elec;
     vscale = tasks[i].vscale;
     vstream = tasks[i].vstream;
 
@@ -436,7 +438,7 @@ void FixEmitFaceFile::perform_task()
 
           if (nfix_update_custom)
             modify->update_custom(particle->nlocal-1,temp_thermal,
-                                 temp_rot,temp_vib,vstream);
+                                 temp_rot,temp_vib,temp_elec,vstream);
         }
 
         nsingle += nactual;
@@ -490,7 +492,7 @@ void FixEmitFaceFile::perform_task()
 
         if (nfix_update_custom)
           modify->update_custom(particle->nlocal-1,temp_thermal,
-                               temp_rot,temp_vib,vstream);
+                               temp_rot,temp_vib,temp_elec,vstream);
       }
 
       nsingle += nactual;
@@ -795,6 +797,7 @@ int FixEmitFaceFile::interpolate(int icell)
   tasks[ntask].temp_thermal = temp_thermal_mix;
   tasks[ntask].temp_rot = temp_rot_mix;
   tasks[ntask].temp_vib = temp_vib_mix;
+  tasks[ntask].temp_elec = temp_elec_mix;
   tasks[ntask].press = 0.0;
   tasks[ntask].vstream[0] = vstream_mix[0];
   tasks[ntask].vstream[1] = vstream_mix[1];
@@ -1240,7 +1243,8 @@ void FixEmitFaceFile::subsonic_grid()
     }
 
     tasks[i].temp_thermal = temp_thermal_cell;
-    tasks[i].temp_rot = tasks[i].temp_vib = temp_thermal_cell;
+    tasks[i].temp_rot = tasks[i].temp_vib = tasks[i].temp_elec =
+      temp_thermal_cell;
   }
 
   // test if any task has invalid thermal temperature for first time

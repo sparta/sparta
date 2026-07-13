@@ -98,7 +98,7 @@ jobs:
           -DKokkos_ENABLE_OPENMP=OFF \
           -DPKG_FFT=ON \
           -DPKG_PYTHON=ON \
-          -DSPARTA_SPA_ARGS='-k on -sf kk' \
+          -DSPARTA_SPA_ARGS='-k on -sf kk -pk kokkos react/retry yes' \
           ../cmake
 
     - name: Build

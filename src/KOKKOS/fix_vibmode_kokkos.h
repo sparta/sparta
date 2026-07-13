@@ -35,10 +35,10 @@ class FixVibmodeKokkos : public FixVibmode {
   FixVibmodeKokkos(class SPARTA *);
   ~FixVibmodeKokkos();
   void pre_update_custom_kokkos();
-  void update_custom(int, double, double, double, double *);
+  void update_custom(int, double, double, double, double, double *);
 
   KOKKOS_INLINE_FUNCTION
-  void update_custom_kokkos(int, double, double, double, const double *) const;
+  void update_custom_kokkos(int, double, double, double, double, const double *) const;
 
  private:
   int boltz;
@@ -69,7 +69,7 @@ class FixVibmodeKokkos : public FixVibmode {
 KOKKOS_INLINE_FUNCTION
 void FixVibmodeKokkos::update_custom_kokkos(int index, double temp_thermal,
                                             double temp_rot, double temp_vib,
-                                            const double *) const
+                                            double temp_elec, const double *) const
 {
   int isp = d_particles[index].ispecies;
   int nmode = d_species[isp].nvibmode;

@@ -43,5 +43,6 @@ void ReactTCEKokkos::init()
   ReactBirdKokkos::init();
 
   vibstyle = collide->vibstyle;
+  elecstyle = collide->elecstyle;
   boltz = update->boltz;
 }

@@ -53,6 +53,8 @@ class ParticleKokkos : public Particle {
   void sort_kokkos();
   void grow(int) override;
   void grow_species() override;
+  void add_species(int, char **) override;
+  void update_elec_views();
   void pre_weight() override;
   void post_weight() override;
   void update_class_variables();
@@ -116,10 +118,15 @@ class ParticleKokkos : public Particle {
   KOKKOS_INLINE_FUNCTION
   void operator()(TagSetIcellFromPlist, const int&) const;
 
-
   tdual_particle_1d k_particles;
   tdual_species_1d k_species;
   DAT::tdual_int_2d k_species2group;
+
+  DAT::t_int_1d d_nelecstates;
+  t_elecstate_2d d_elecstates;
+  DAT::t_float_2d d_elec_default_rels;
+  DAT::t_float_3d d_elec_species_rels;
+  DAT::t_int_2d d_enforce_spin_conservation;
 
   DAT::tdual_int_1d k_ewhich,k_eicol,k_edcol;
 
@@ -175,6 +182,8 @@ class ParticleKokkos : public Particle {
   t_particle_1d d_pswap1;
   t_particle_1d d_pswap2;
 };
+
+/* ---------------------------------------------------------------------- */
 
 KOKKOS_INLINE_FUNCTION
 int ParticleKokkos::add_particle_kokkos(t_particle_1d particles, int index, int id,
@@ -243,7 +252,6 @@ void ParticleKokkos::copy_custom_kokkos(int i, int j) const
         k_edarray.view_device()[m].k_view.view_device()(i,ncol) = k_edarray.view_device()[m].k_view.view_device()(j,ncol);
   }
 }
-
 
 /* ----------------------------------------------------------------------
    generate random rotational energy for a particle
@@ -316,6 +324,8 @@ double ParticleKokkos::evib(int isp, double temp_thermal, rand_type &erandom) co
   return eng;
 }
 
+/* ---------------------------------------------------------------------- */
+
 KOKKOS_INLINE_FUNCTION
 void ParticleKokkos::pack_custom_kokkos(int n, char *buf) const
 {
@@ -357,6 +367,8 @@ void ParticleKokkos::pack_custom_kokkos(int n, char *buf) const
   }
 }
 
+/* ---------------------------------------------------------------------- */
+
 KOKKOS_INLINE_FUNCTION
 void ParticleKokkos::unpack_custom_kokkos(char *buf, int n) const
 {
@@ -397,7 +409,6 @@ void ParticleKokkos::unpack_custom_kokkos(char *buf, int n) const
     }
   }
 }
-
 
 }
 
