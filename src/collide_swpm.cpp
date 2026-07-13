@@ -116,19 +116,11 @@ void Collide::collisions_one_stochastic_weighting()
     if (!nattempt) continue;
     nattempt_one += nattempt;
 
-    // snapshot the pre-split population size so that pair sampling uses a
-    // fixed pool throughout the attempt loop: split fragments are appended
-    // to plist (for the reduction pass in group()) but must not enlarge the
-    // sampling pool, which would bias nattempt and dilute the realized
-    // collision rate for the original particles
-
-    int np_orig = np;
-
     for (int iattempt = 0; iattempt < nattempt; iattempt++) {
 
-      i = np_orig * random->uniform();
-      j = np_orig * random->uniform();
-      while (i == j) j = np_orig * random->uniform();
+      i = np * random->uniform();
+      j = np * random->uniform();
+      while (i == j) j = np * random->uniform();
       ipart = &particles[plist[i]];
       jpart = &particles[plist[j]];
 
@@ -174,9 +166,7 @@ void Collide::collisions_one_stochastic_weighting()
       mpart = NULL; // dummy particle
       setup_collision(ipart,jpart);
       perform_collision(ipart,jpart,mpart);
-      // weight by Gwtf so ncollide_one scales with real molecular collisions,
-      // not raw event count (both partners carry isw == Gwtf after split)
-      ncollide_one += static_cast<int>(isw + 0.5);
+      ncollide_one++;
 
     } // end attempt loop
   } // loop for cells
