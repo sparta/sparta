@@ -102,9 +102,16 @@ void ComputeGridKokkos::compute_per_grid_kokkos()
   invoked_per_grid = update->ntimestep;
 
   ParticleKokkos* particle_kk = (ParticleKokkos*) particle;
-  particle_kk->sync(Device,PARTICLE_MASK|SPECIES_MASK);
+  particle_kk->sync(Device,PARTICLE_MASK|SPECIES_MASK|CUSTOM_MASK);
   d_particles = particle_kk->k_particles.view_device();
   d_species = particle_kk->k_species.view_device();
+
+  stochastic_weight_flag = 0;
+  int sw_custom = particle->find_custom((char *)"stochastic_wt");
+  if (sw_custom >= 0) {
+    stochastic_weight_flag = 1;
+    d_sw = particle_kk->k_edvec.view_host()[particle->ewhich[sw_custom]].k_view.view_device();
+  }
 
   GridKokkos* grid_kk = (GridKokkos*) grid;
   d_cellcount = grid_kk->d_cellcount;
@@ -171,11 +178,12 @@ void ComputeGridKokkos::operator()(TagComputeGrid_compute_per_grid_atomic<NEED_A
   const int icell = d_particles[i].icell;
   if (!(d_cinfo[icell].mask & groupbit)) return;
 
-  const double mass = d_species[ispecies].mass;
+  const double swfrac = stochastic_weight_flag ? d_sw(i) : 1.0;
+  double mass = d_species[ispecies].mass * swfrac;
   double* v = d_particles[i].v;
 
   if (cellmass) a_tally(icell,cellmass) += mass;
-  if (cellcount) a_tally(icell,cellcount) += 1.0;
+  if (cellcount) a_tally(icell,cellcount) += swfrac;
 
   // loop has all possible values particle needs to accumulate
   // subset defined by user values are indexed by accumulate vector
@@ -185,7 +193,7 @@ void ComputeGridKokkos::operator()(TagComputeGrid_compute_per_grid_atomic<NEED_A
   for (int m = 0; m < npergroup; m++) {
     switch (d_unique[m]) {
     case COUNT:
-      a_tally(icell,k++) += 1.0;
+      a_tally(icell,k++) += swfrac;
       break;
     case SIMCOUNT:
       a_tally(icell,k++) += 1.0;
@@ -215,16 +223,16 @@ void ComputeGridKokkos::operator()(TagComputeGrid_compute_per_grid_atomic<NEED_A
       a_tally(icell,k++) += mass * (v[0]*v[0]+v[1]*v[1]+v[2]*v[2]);
       break;
     case ENGROT:
-      a_tally(icell,k++) += d_particles[i].erot;
+      a_tally(icell,k++) += d_particles[i].erot * swfrac;
       break;
     case ENGVIB:
-      a_tally(icell,k++) += d_particles[i].evib;
+      a_tally(icell,k++) += d_particles[i].evib * swfrac;
       break;
     case DOFROT:
-      a_tally(icell,k++) += d_species[ispecies].rotdof;
+      a_tally(icell,k++) += d_species[ispecies].rotdof * swfrac;
       break;
     case DOFVIB:
-      a_tally(icell,k++) += d_species[ispecies].vibdof;
+      a_tally(icell,k++) += d_species[ispecies].vibdof * swfrac;
       break;
     }
   }
@@ -244,11 +252,12 @@ void ComputeGridKokkos::operator()(TagComputeGrid_compute_per_grid, const int &i
     const int igroup = d_s2g(imix,ispecies);
     if (igroup < 0) return;
 
-    const double mass = d_species[ispecies].mass;
+    const double swfrac = stochastic_weight_flag ? d_sw(i) : 1.0;
+    double mass = d_species[ispecies].mass * swfrac;
     double* v = d_particles[i].v;
 
     if (cellmass) d_tally(icell,cellmass) += mass;
-    if (cellcount) d_tally(icell,cellcount) += 1.0;
+    if (cellcount) d_tally(icell,cellcount) += swfrac;
 
     // loop has all possible values particle needs to accumulate
     // subset defined by user values are indexed by accumulate vector
@@ -258,7 +267,7 @@ void ComputeGridKokkos::operator()(TagComputeGrid_compute_per_grid, const int &i
     for (int m = 0; m < npergroup; m++) {
       switch (d_unique[m]) {
       case COUNT:
-        d_tally(icell,k++) += 1.0;
+        d_tally(icell,k++) += swfrac;
         break;
       case SIMCOUNT:
         d_tally(icell,k++) += 1.0;
@@ -288,16 +297,16 @@ void ComputeGridKokkos::operator()(TagComputeGrid_compute_per_grid, const int &i
         d_tally(icell,k++) += mass * (v[0]*v[0]+v[1]*v[1]+v[2]*v[2]);
         break;
       case ENGROT:
-        d_tally(icell,k++) += d_particles[i].erot;
+        d_tally(icell,k++) += d_particles[i].erot * swfrac;
         break;
       case ENGVIB:
-        d_tally(icell,k++) += d_particles[i].evib;
+        d_tally(icell,k++) += d_particles[i].evib * swfrac;
         break;
       case DOFROT:
-        d_tally(icell,k++) += d_species[ispecies].rotdof;
+        d_tally(icell,k++) += d_species[ispecies].rotdof * swfrac;
         break;
       case DOFVIB:
-        d_tally(icell,k++) += d_species[ispecies].vibdof;
+        d_tally(icell,k++) += d_species[ispecies].vibdof * swfrac;
         break;
       }
     }

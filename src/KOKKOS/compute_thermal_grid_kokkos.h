@@ -75,6 +75,9 @@ class ComputeThermalGridKokkos : public ComputeThermalGrid, public KokkosBase {
   DAT::t_int_1d d_cellcount;
   DAT::t_int_2d d_plist;
 
+  Kokkos::View<double*, DeviceType> d_sw;
+  int stochastic_weight_flag;
+
   int nstride,nsample,n,tflag;
   double prefactor;
 };

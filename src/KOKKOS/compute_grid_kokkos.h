@@ -121,6 +121,9 @@ class ComputeGridKokkos : public ComputeGrid, public KokkosBase {
   DAT::tdual_int_1d k_unique;
   DAT::t_int_1d d_unique;
 
+  Kokkos::View<double*, DeviceType> d_sw;
+  int stochastic_weight_flag;
+
   double fnum;
   int count,mass,count_or_mass,cell_count_or_mass;
   int velocity,mvsq,eng,dof,mom,ke;

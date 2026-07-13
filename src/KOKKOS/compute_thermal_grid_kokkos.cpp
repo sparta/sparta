@@ -73,9 +73,16 @@ void ComputeThermalGridKokkos::compute_per_grid_kokkos()
   invoked_per_grid = update->ntimestep;
 
   ParticleKokkos* particle_kk = (ParticleKokkos*) particle;
-  particle_kk->sync(Device,PARTICLE_MASK|SPECIES_MASK);
+  particle_kk->sync(Device,PARTICLE_MASK|SPECIES_MASK|CUSTOM_MASK);
   d_particles = particle_kk->k_particles.view_device();
   d_species = particle_kk->k_species.view_device();
+
+  stochastic_weight_flag = 0;
+  int sw_custom = particle->find_custom((char *)"stochastic_wt");
+  if (sw_custom >= 0) {
+    stochastic_weight_flag = 1;
+    d_sw = particle_kk->k_edvec.view_host()[particle->ewhich[sw_custom]].k_view.view_device();
+  }
 
   GridKokkos* grid_kk = (GridKokkos*) grid;
   d_cellcount = grid_kk->d_cellcount;
@@ -139,14 +146,15 @@ void ComputeThermalGridKokkos::operator()(TagComputeThermalGrid_compute_per_grid
   const int icell = d_particles[i].icell;
   if (!(d_cinfo[icell].mask & groupbit)) return;
 
-  const double mass = d_species[ispecies].mass;
+  const double swfrac = stochastic_weight_flag ? d_sw(i) : 1.0;
+  double mass = d_species[ispecies].mass * swfrac;
   double *v = d_particles[i].v;
 
   // 6 tallies per particle: N, Mass, mVx, mVy, mVz, mV^2
 
   int k = igroup*npergroup;
 
-  a_tally(icell,k++) += 1.0;
+  a_tally(icell,k++) += swfrac;
   a_tally(icell,k++) += mass;
   a_tally(icell,k++) += mass*v[0];
   a_tally(icell,k++) += mass*v[1];
@@ -166,20 +174,17 @@ void ComputeThermalGridKokkos::operator()(TagComputeThermalGrid_compute_per_grid
 
     const int ispecies = d_particles[i].ispecies;
     const int igroup = d_s2g(imix,ispecies);
-  if (igroup < 0) return;
+    if (igroup < 0) return;
 
-    const int icell = d_particles[i].icell;
-
-    const double mass = d_species[ispecies].mass;
+    const double swfrac = stochastic_weight_flag ? d_sw(i) : 1.0;
+    double mass = d_species[ispecies].mass * swfrac;
     double *v = d_particles[i].v;
 
     // 6 tallies per particle: N, Mass, mVx, mVy, mVz, mV^2
 
-
-
     int k = igroup*npergroup;
 
-    d_tally(icell,k++) += 1.0;
+    d_tally(icell,k++) += swfrac;
     d_tally(icell,k++) += mass;
     d_tally(icell,k++) += mass*v[0];
     d_tally(icell,k++) += mass*v[1];
