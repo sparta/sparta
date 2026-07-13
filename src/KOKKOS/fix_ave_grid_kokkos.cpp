@@ -51,8 +51,19 @@ FixAveGridKokkos::FixAveGridKokkos(SPARTA *sparta, int narg, char **arg) :
   datamask_read = EMPTY_MASK;
   datamask_modify = EMPTY_MASK;
 
-  if (flavor == PERGRIDSURF)
-    error->all(FLERR,"Cannot yet use Kokkos with fix ave/grid for grid/surf inputs");
+  // PERGRIDSURF (grid/surf inputs, e.g. compute isurf/grid) runs on the host:
+  // the per-surf tally is produced on-device by the Kokkos compute and brought
+  // to the host by its tallyinfo(), then collated to per-grid by the host base
+  // class.  Skip all Kokkos-specific allocation and leave the host base ctor's
+  // allocations intact; the overridden methods below delegate to FixAveGrid.
+  // Clear kokkos_flag so device consumers of per-grid fix output do not try to
+  // read the (unallocated) device views; they read the host array_grid instead.
+
+  if (flavor == PERGRIDSURF) {
+    kokkos_flag = 0;
+    execution_space = Host;
+    return;
+  }
 
   nglocal = maxgrid = grid->nlocal;
 
@@ -109,6 +120,8 @@ FixAveGridKokkos::~FixAveGridKokkos()
 {
   if (copymode) return;
 
+  if (flavor == PERGRIDSURF) return;
+
   if (nvalues == 1) memoryKK->destroy_kokkos(k_vector_grid,vector_grid);
   else memoryKK->destroy_kokkos(k_array_grid,array_grid);
   memoryKK->destroy_kokkos(k_tally,tally);
@@ -120,6 +133,13 @@ FixAveGridKokkos::~FixAveGridKokkos()
 
 void FixAveGridKokkos::init()
 {
+  // PERGRIDSURF path runs entirely on the host
+
+  if (flavor == PERGRIDSURF) {
+    FixAveGrid::init();
+    return;
+  }
+
   // set indices and check validity of all computes,fixes,variables,custom attributes
 
   for (int m = 0; m < nvalues; m++) {
@@ -160,6 +180,15 @@ void FixAveGridKokkos::end_of_step()
 {
   int j,n;
   //int *itmp;
+
+  // PERGRIDSURF path runs entirely on the host: the Kokkos compute's device
+  // surf tally is brought to the host by its tallyinfo(), then the host base
+  // class collates per-surf tallies to per-grid output
+
+  if (flavor == PERGRIDSURF) {
+    FixAveGrid::end_of_step();
+    return;
+  }
 
   // skip if not step which requires doing something
 
@@ -492,6 +521,15 @@ void FixAveGridKokkos::operator()(TagFixAveGrid_Norm_array_grid, const int &i) c
 
 void FixAveGridKokkos::grow_percell(int nnew)
 {
+  // PERGRIDSURF keeps its per-cell arrays in host memory (managed by the host
+  // base class); reallocating them with Kokkos memory here would make the host
+  // base destructor free a Kokkos-allocated pointer
+
+  if (flavor == PERGRIDSURF) {
+    FixAveGrid::grow_percell(nnew);
+    return;
+  }
+
   if (nglocal+nnew < maxgrid) return;
   maxgrid += DELTAGRID;
   int n = maxgrid;

@@ -37,6 +37,8 @@ namespace SPARTA_NS {
 
 struct TagFixEmitSurf_ninsert{};
 struct TagFixEmitSurf_perform_task{};
+struct TagFixEmitSurf_subsonic_inflow{};
+struct TagFixEmitSurf_subsonic_grid{};
 
 template<int ATOMIC_REDUCTION>
 struct TagFixEmitSurf_insert_particles{};
@@ -59,6 +61,12 @@ class FixEmitSurfKokkos : public FixEmitSurf {
   KOKKOS_INLINE_FUNCTION
   void operator()(TagFixEmitSurf_perform_task, const int&, int&) const;
 
+  KOKKOS_INLINE_FUNCTION
+  void operator()(TagFixEmitSurf_subsonic_inflow, const int&) const;
+
+  KOKKOS_INLINE_FUNCTION
+  void operator()(TagFixEmitSurf_subsonic_grid, const int&) const;
+
   template<int ATOMIC_REDUCTION>
   KOKKOS_INLINE_FUNCTION
   void operator()(TagFixEmitSurf_insert_particles<ATOMIC_REDUCTION>, const int&) const;
@@ -76,6 +84,7 @@ class FixEmitSurfKokkos : public FixEmitSurf {
 
  private:
   int npcurrent,nsurf_tally,nlocal_before,nlocal_surf,region_flag;
+  double boltz,temp_thermal_mix;
 
   KKCopy<ParticleKokkos> particle_kk_copy;
   KKCopy<ComputeSurfKokkos> slist_active_copy[KOKKOS_MAX_SLIST];
@@ -118,19 +127,35 @@ class FixEmitSurfKokkos : public FixEmitSurf {
   DAT::tdual_float_1d k_vscale_mix;
   DAT::tdual_float_1d k_cummulative_mix;
   DAT::tdual_float_2d_lr k_cummulative_custom;
-  DAT::tdual_int_1d k_species;
+  DAT::tdual_int_1d k_mspecies;
 
   DAT::t_float_1d d_vscale_mix;
   DAT::t_float_1d d_cummulative_mix;
   DAT::t_float_2d_lr d_cummulative_custom;
-  DAT::t_int_1d d_species;
+  DAT::t_int_1d d_mspecies;
+
+  DAT::tdual_float_1d k_fraction;        // mixture fraction for each species
+  DAT::t_float_1d d_fraction;
 
   t_line_1d d_lines;
   t_tri_1d d_tris;
 
+  // data structs for subsonic emission
+
+  t_particle_1d d_subsonic_particles;
+  t_species_1d d_species_all;            // all particle species (mass, rotdof)
+  t_cinfo_1d d_cinfo;
+  DAT::t_int_2d d_plist;
+  DAT::t_int_1d d_cellcount;
+  DAT::t_float_scalar d_tempmax;
+
   void create_tasks() override;
   void grow_task() override;
   void realloc_nspecies() override;
+
+  void subsonic_inflow() override;
+  void subsonic_sort() override;
+  void subsonic_grid() override;
 
   ComputeSurfKokkos tmp_compute_surf_kk;
 };

@@ -102,6 +102,8 @@ SurfCollideTD::SurfCollideTD(SPARTA *sparta, int narg, char **arg) :
 
 SurfCollideTD::~SurfCollideTD()
 {
+  if (copy) return;
+
   delete random;
 }
 

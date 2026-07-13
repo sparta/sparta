@@ -165,7 +165,7 @@ class SurfCollideDiffuseKokkos : public SurfCollideDiffuse {
     //   temperature of the particle, e.g. fix vibmode and fix ambipolar
 
     if (ip) {
-      if (!velreset) diffuse(ip,norm,tsurf_local);
+      if (!velreset) diffuse(ip,norm,tsurf_local,acc);
       int i = ip - d_particles.data();
       if (ambi_flag)
         fix_ambi_kk_copy.obj.update_custom_kokkos(i,tsurf_local,tsurf_local,tsurf_local,vstream);
@@ -173,7 +173,7 @@ class SurfCollideDiffuseKokkos : public SurfCollideDiffuse {
         fix_vibmode_kk_copy.obj.update_custom_kokkos(i,tsurf_local,tsurf_local,tsurf_local,vstream);
     }
     if (REACT && jp) {
-      if (!velreset) diffuse(jp,norm,tsurf_local);
+      if (!velreset) diffuse(jp,norm,tsurf_local,acc);
       int j = jp - d_particles.data();
       if (ambi_flag)
         fix_ambi_kk_copy.obj.update_custom_kokkos(j,tsurf_local,tsurf_local,tsurf_local,vstream);
@@ -201,10 +201,31 @@ class SurfCollideDiffuseKokkos : public SurfCollideDiffuse {
     return jp;
   };
 
+ public:
+
+  /* ----------------------------------------------------------------------
+     wrapper on diffuse() to perform a collision for a single particle
+     called on-device by SurfReactAdsorbKokkos GS chemistry
+     flags, coeffs can be NULL; matches SurfCollideDiffuse::wrapper
+  ------------------------------------------------------------------------- */
+
+  KOKKOS_INLINE_FUNCTION
+  void wrapper_kokkos(Particle::OnePart *p, const double *norm,
+                      int *, double *coeffs) const
+  {
+    double twall = tsurf;
+    double acc_local = acc;
+    if (coeffs) {
+      twall = coeffs[0];
+      acc_local = coeffs[1];
+    }
+    diffuse(p,norm,twall,acc_local);
+  }
+
  private:
 
   KOKKOS_INLINE_FUNCTION
-  void diffuse(Particle::OnePart *p, const double *norm, const double twall) const
+  void diffuse(Particle::OnePart *p, const double *norm, const double twall, const double acc) const
   {
     // specular reflection
     // reflect incident v around norm

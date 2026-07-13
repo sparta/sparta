@@ -31,6 +31,7 @@ namespace SPARTA_NS {
 class ComputeISurfGrid : public Compute {
  public:
   ComputeISurfGrid(class SPARTA *, int, char **);
+  ComputeISurfGrid(class SPARTA* sparta) : Compute(sparta) {} // needed for Kokkos
   ~ComputeISurfGrid();
   virtual void init();
   void compute_per_grid();
@@ -73,8 +74,8 @@ class ComputeISurfGrid : public Compute {
   double weight;           // particle weight, based on initial cell
   double *normflux;        // normalization factor for each surf element
 
-  void init_normflux();
-  void grow_tally();
+  virtual void init_normflux();
+  virtual void grow_tally();
 };
 
 }

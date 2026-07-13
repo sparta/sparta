@@ -27,6 +27,9 @@ class Grid : protected Pointers {
  public:
   int exist;            // 1 if grid is defined
   int exist_ghost;      // 1 if ghost cells exist
+  int changed;          // set by notify_changed() when grid/surf topology changes
+                        // (e.g. ablation, adaptation); consumed by KOKKOS to
+                        // resync per-cell surf graphs to device mid-run
   int clumped;          // 1 if grid ownership is clumped, due to RCB
                         // if not, some operations are not allowed
 

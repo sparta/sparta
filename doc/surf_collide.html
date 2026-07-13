@@ -17,7 +17,7 @@
 </PRE>
 <UL><LI>ID = user-assigned name for the surface collision model 
 
-<LI>style = <I>specular</I> or <I>diffuse</I> or <I>cll</I> or <I>adiabatic</I> or <I>impulsive</I> or <I>td</I> or <I>piston</I> or <I>transparent</I> or <I>vanish</I> or <I>specular/kk</I> or <I>diffuse/kk</I> or <I>piston/kk</I> or <I>vanish/kk</I> 
+<LI>style = <I>specular</I> or <I>diffuse</I> or <I>cll</I> or <I>adiabatic</I> or <I>impulsive</I> or <I>td</I> or <I>piston</I> or <I>transparent</I> or <I>vanish</I> or <I>specular/kk</I> or <I>diffuse/kk</I> or <I>cll/kk</I> or <I>adiabatic/kk</I> or <I>impulsive/kk</I> or <I>td/kk</I> or <I>piston/kk</I> or <I>transparent/kk</I> or <I>vanish/kk</I> 
 
 <LI>args = arguments for specific style 
 
@@ -27,15 +27,15 @@
     Tsurf = temperature of surface (temperature units)
             Tsurf can be a variable or custom per-surf attribute (see below)
     acc = accommodation coefficient
-  <I>cll</I> args = Tsurf acc_n acc_t acc_rot acc_vib
+  <I>cll</I> or <I>cll/kk</I> args = Tsurf acc_n acc_t acc_rot acc_vib
     Tsurf = temperature of surface (temperature units)
             Tsurf can be a variable or custom per-surf attribute (see below)
     acc_n = accommodation coefficient in the surface normal direction
     acc_t = accommodation coefficient in the surface tangential direction
     acc_rot = accommodation coefficient for the rotational modes
     acc_vib = accommodation coefficient for the vibrational modes
-  <I>adiabatic</I> args = none
-  <I>impulsive</I> args = Tsurf model param1 param2 var theta_peak pol_pow azi_pow
+  <I>adiabatic</I> or <I>adiabatic/kk</I> args = none
+  <I>impulsive</I> or <I>impulsive/kk</I> args = Tsurf model param1 param2 var theta_peak pol_pow azi_pow
     Tsurf = temperature of surface (temperature units)
             Tsurf can be a variable or custom per-surf attribute (see below)
     model can be <I>softsphere</I> or <I>tempvar</I>
@@ -49,7 +49,7 @@
     theta_peak = peak location of the polar angle distribution
     pol_pow = cosine power represeting the polar angular distribution
     azi_pow = cosine power represeting the azimuthal angular distribution
-  <I>td</I> arg = Tsurf 
+  <I>td</I> or <I>td/kk</I> arg = Tsurf
     Tsurf = temperature of surface (temperature units)
             Tsurf can be a variable or custom per-surf attribute (see below)
   <I>piston</I> or <I>piston/kk</I> args = Vwall

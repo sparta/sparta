@@ -73,28 +73,6 @@ if(SPARTA_ENABLE_TESTING)
   # the non-KOKKOS configurations.
   if(SPARTA_KOKKOS_EXACT)
     list(APPEND SPARTA_DISABLED_TESTS
-        # fix ave/grid for grid/surf inputs not yet supported in KOKKOS
-        "in.ablation.2d"
-        "in.ablation.3d"
-        # surf_collide adiabatic/cll/td/impulsive styles not KOKKOS-enabled
-        "in.beam.adiabatic"
-        "in.beam.cll"
-        "in.beam.impulsive"
-        "in.beam.td"
-        "in.circle.adiabatic"
-        "in.circle.cll"
-        "in.circle.impulsive"
-        "in.circle.td"
-        # surf_react gs/ps styles use a non-KOKKOS-enabled surf_collide method
-        "in.beam.face.gs"
-        "in.beam.face.gs_ps"
-        "in.beam.face.ps"
-        "in.beam.surf.gs"
-        "in.beam.surf.gs_ps"
-        "in.beam.surf.ps"
-        "in.circle.gs"
-        "in.circle.gs_ps"
-        "in.circle.ps"
         # external field fix not KOKKOS-enabled
         "in.bfield"
         "in.bfield.grid"

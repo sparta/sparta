@@ -28,6 +28,7 @@ namespace SPARTA_NS {
 class SurfCollideImpulsive : public SurfCollide {
  public:
   SurfCollideImpulsive(class SPARTA *, int, char **);
+  SurfCollideImpulsive(class SPARTA *sparta) : SurfCollide(sparta) {} // needed for Kokkos
   ~SurfCollideImpulsive();
   void init();
   Particle::OnePart *collide(Particle::OnePart *&, double &,
@@ -35,7 +36,9 @@ class SurfCollideImpulsive : public SurfCollide {
   void wrapper(Particle::OnePart *, double *, int *, double*);
   void flags_and_coeffs(int *, double *);
 
- private:
+  class RanKnuth *kokkos_random() { return random; }
+
+ protected:
   double eng_ratio,eff_mass;      // energy ratio and effective mass
                                   // of the surface for soft-sphere model
   double u0_a, u0_b;              // u0 values for the direct case

@@ -101,6 +101,8 @@ ComputeISurfGrid::ComputeISurfGrid(SPARTA *sparta, int narg, char **arg) :
 
 ComputeISurfGrid::~ComputeISurfGrid()
 {
+  if (copy || copymode) return;
+
   delete [] which;
   memory->destroy(array_surf_tally);
   memory->destroy(tally2surf);

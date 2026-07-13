@@ -126,7 +126,7 @@ void SurfCollideSpecularKokkos::pre_collide()
         sr_kk_global_copy[nglob].copy((SurfReactGlobalKokkos*)(surf->sr[n]));
         sr_kk_global_copy[nglob].obj.pre_react();
         sr_type_list[n] = 0;
-        sr_map[n] = nprob;
+        sr_map[n] = nglob;
         nglob++;
       } else if (strcmp(surf->sr[n]->style,"prob") == 0) {
         sr_kk_prob_copy[nprob].copy((SurfReactProbKokkos*)(surf->sr[n]));
@@ -135,7 +135,7 @@ void SurfCollideSpecularKokkos::pre_collide()
         sr_map[n] = nprob;
         nprob++;
       } else {
-        error->all(FLERR,"Unknown Kokkos surface reaction method");
+        error->all(FLERR,"This Kokkos surf_collide style supports only surf_react global/prob; surf_react adsorb requires surf_collide cll");
       }
     }
 

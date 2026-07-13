@@ -7,13 +7,14 @@
 :line
 
 surf_react adsorb command :h3
+surf_react adsorb/kk command :h3
 
 [Syntax:]
 
 surf_react ID adsorb model infile(s) Nsync type temp n_sites adsp1 adsp2 ... :pre
 
 ID = user-assigned name for the surface reaction model :ulb,l
-style = {adsorb} :l
+style = {adsorb} or {adsorb/kk} :l
 model = {gs} or {ps} or {gs/ps} :l
   gs = gas-surface reactions
   ps = pure-surface reactions
@@ -365,6 +366,29 @@ beginning of the current run.  The next nlist elements are the count
 of each individual reaction that occurred during the current timestep.
 The final nlist elements are the cummulative count of each individual
 reaction since the beginning of the current run.
+
+:line
+
+Styles with a {kk} suffix are functionally the same as the
+corresponding style without the suffix.  They have been optimized to
+run faster, depending on your available hardware, as discussed in the
+"Accelerating SPARTA"_Section_accelerate.html section of the manual.
+The accelerated styles take the same arguments and should produce the
+same results, except for different random number, round-off and
+precision issues.
+
+These accelerated styles are part of the KOKKOS package. They are only
+enabled if SPARTA was built with that package.  See the "Making
+SPARTA"_Section_start.html#start_3 section for more info.
+
+You can specify the accelerated styles explicitly in your input script
+by including their suffix, or you can use the "-suffix command-line
+switch"_Section_start.html#start_7 when you invoke SPARTA, or you can
+use the "suffix"_suffix.html command in your input script.
+
+See the "Accelerating SPARTA"_Section_accelerate.html section of the
+manual for more instructions on how to use the accelerated styles
+effectively.
 
 :line
 

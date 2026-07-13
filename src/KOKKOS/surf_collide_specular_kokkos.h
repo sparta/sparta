@@ -202,6 +202,19 @@ class SurfCollideSpecularKokkos : public SurfCollideSpecular {
 
     return jp;
   };
+
+  /* ----------------------------------------------------------------------
+     wrapper on specular reflection to perform a collision for a single particle
+     called on-device by SurfReactAdsorbKokkos GS chemistry
+     flags, coeffs can be NULL; matches SurfCollideSpecular::wrapper
+  ------------------------------------------------------------------------- */
+
+  KOKKOS_INLINE_FUNCTION
+  void wrapper_kokkos(Particle::OnePart *p, const double *norm,
+                      int *, double *) const
+  {
+    MathExtraKokkos::reflect3(p->v,norm);
+  }
 };
 
 }
