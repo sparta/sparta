@@ -409,7 +409,21 @@ void CollideVSSKokkos::collisions()
 
   COLLIDE_REDUCE reduce;
 
-  if (!ambiflag) {
+  if (stochastic_weight_flag) {
+    if (!nearcp) {
+      if (!ngas_tally) {
+        collisions_one_swpm<0,0>(reduce);
+      } else if (ngas_tally) {
+        collisions_one_swpm<0,1>(reduce);
+      }
+    } else if (nearcp) {
+      if (!ngas_tally) {
+        collisions_one_swpm<1,0>(reduce);
+      } else if (ngas_tally) {
+        collisions_one_swpm<1,1>(reduce);
+      }
+    }
+  } else if (!ambiflag) {
     if (!nearcp) {
       if (!ngas_tally) {
         collisions_one<0,0>(reduce);
@@ -1384,7 +1398,8 @@ double CollideVSSKokkos::attempt_collision_kokkos(int icell, int np, double volu
 KOKKOS_INLINE_FUNCTION
 int CollideVSSKokkos::test_collision_kokkos(int icell, int igroup, int jgroup,
                                      Particle::OnePart *ip, Particle::OnePart *jp,
-                                     struct State &precoln, rand_type &rand_gen) const
+                                     struct State &precoln, rand_type &rand_gen,
+                                     double ijsw) const
 {
   double *vi = ip->v;
   double *vj = jp->v;
@@ -1407,7 +1422,9 @@ int CollideVSSKokkos::test_collision_kokkos(int icell, int igroup, int jgroup,
 
   double vre = vro*d_prefactor(ispecies,jspecies);
   d_vremax(icell,igroup,jgroup) = MAX(vre,d_vremax(icell,igroup,jgroup));
-  if (vre/d_vremax(icell,igroup,jgroup) < rand_gen.drand()) return 0;
+  // ijsw accounts for the SWPM stochastic-weight rejection factor
+  // (MAX(isw,jsw)/max_stochastic_weight); it is 1.0 for non-SWPM collisions
+  if (vre/d_vremax(icell,igroup,jgroup)*ijsw < rand_gen.drand()) return 0;
   precoln.vr2 = vr2;
   return 1;
 }
@@ -2464,6 +2481,12 @@ void CollideVSSKokkos::backup()
     d_velambi_backup = decltype(d_velambi)(Kokkos::view_alloc("collide:velambi_backup",Kokkos::WithoutInitializing),d_velambi.extent(0),d_velambi.extent(1));
   }
 
+  // SWPM: split and particle reduction mutate the stochastic weight custom
+  // array, so it must be backed up to make a retry idempotent
+  if (stochastic_weight_flag) {
+    d_sw_backup = decltype(d_sw)(Kokkos::view_alloc("collide:sw_backup",Kokkos::WithoutInitializing),d_sw.extent(0));
+  }
+
   Kokkos::deep_copy(d_particles_backup,d_particles);
   Kokkos::deep_copy(d_plist_backup,d_plist);
   Kokkos::deep_copy(d_vremax_backup,d_vremax);
@@ -2473,6 +2496,9 @@ void CollideVSSKokkos::backup()
     Kokkos::deep_copy(d_ionambi_backup,d_ionambi);
     Kokkos::deep_copy(d_velambi_backup,d_velambi);
   }
+
+  if (stochastic_weight_flag)
+    Kokkos::deep_copy(d_sw_backup,d_sw);
 
   if (react) {
     ReactBirdKokkos* react_kk = (ReactBirdKokkos*) react;
@@ -2514,6 +2540,12 @@ void CollideVSSKokkos::restore()
     d_velambi = k_edarray.view_host()[h_ewhich[index_velambi]].k_view.view_device();
   }
 
+  if (stochastic_weight_flag) {
+    int index_sw = particle->ewhich[index_stochastic_weight];
+    Kokkos::deep_copy(particle_kk->k_edvec.view_host()[index_sw].k_view.view_device(),d_sw_backup);
+    d_sw = particle_kk->k_edvec.view_host()[index_sw].k_view.view_device();
+  }
+
   if (react) {
     ReactBirdKokkos* react_kk = (ReactBirdKokkos*) react;
     react_kk->restore();
@@ -2542,4 +2574,7 @@ void CollideVSSKokkos::restore()
     d_ionambi_backup = {};
     d_velambi_backup = {};
   }
+
+  if (stochastic_weight_flag)
+    d_sw_backup = {};
 }

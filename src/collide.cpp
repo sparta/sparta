@@ -201,12 +201,6 @@ void Collide::init()
                       "fix stochastic_weight to be declared first");
     }
 
-    // the Kokkos collision styles do not implement the SWPM collision loop;
-    // without this check the setting would be silently ignored
-
-    if (sparta->kokkos)
-      error->all(FLERR,"Stochastic weighting is not yet supported with Kokkos");
-
     // particle reduction merges particles assuming they all have the same
     // mass: group moments and the merged survivors are single-species
 
