@@ -76,6 +76,7 @@ class FixEmitFace : public FixEmit {
   int dimension,nspecies;
   double fnum,dt;
   double *fraction,*cummulative;
+  double *cummulative_weighted;  // SWS
 
                          // ntask = # of tasks is stored by parent class
   Task *tasks;           // list of particle insertion tasks

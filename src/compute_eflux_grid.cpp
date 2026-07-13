@@ -173,6 +173,7 @@ void ComputeEFluxGrid::compute_per_grid()
   int i,j,k,m,ispecies,igroup,icell;
   double mass;
   double *v,*vec;
+  double specwt; // SWS
 
   // zero all accumulators - could do this with memset()
 
@@ -192,6 +193,7 @@ void ComputeEFluxGrid::compute_per_grid()
     if (!(cinfo[icell].mask & groupbit)) continue;
 
     mass = species[ispecies].mass;
+    specwt = species[ispecies].specwt; // SWS
     v = particles[i].v;
 
     vec = tally[icell];
@@ -202,64 +204,64 @@ void ComputeEFluxGrid::compute_per_grid()
 
     k = igroup*npergroup;
 
-    for (m = 0; m < npergroup; m++) {
+    for (m = 0; m < npergroup; m++) {    // SWS
       switch (unique[m]) {
       case MASSSUM:
-        vec[k++] += mass;
+        vec[k++] += mass*specwt;
         break;
       case mVx:
-        vec[k++] += mass*v[0];
+        vec[k++] += mass*v[0]*specwt;
         break;
       case mVy:
-        vec[k++] += mass*v[1];
+        vec[k++] += mass*v[1]*specwt;
         break;
       case mVz:
-        vec[k++] += mass*v[2];
+        vec[k++] += mass*v[2]*specwt;
         break;
       case mVxVx:
-        vec[k++] += mass*v[0]*v[0];
+        vec[k++] += mass*v[0]*v[0]*specwt;
         break;
       case mVyVy:
-        vec[k++] += mass*v[1]*v[1];
+        vec[k++] += mass*v[1]*v[1]*specwt;
         break;
       case mVzVz:
-        vec[k++] += mass*v[2]*v[2];
+        vec[k++] += mass*v[2]*v[2]*specwt;
         break;
       case mVxVy:
-        vec[k++] += mass*v[0]*v[1];
+        vec[k++] += mass*v[0]*v[1]*specwt;
         break;
       case mVyVz:
-        vec[k++] += mass*v[1]*v[2];
+        vec[k++] += mass*v[1]*v[2]*specwt;
         break;
       case mVxVz:
-        vec[k++] += mass*v[0]*v[2];
+        vec[k++] += mass*v[0]*v[2]*specwt;
         break;
       case mVxVxVx:
-        vec[k++] += mass*v[0]*v[0]*v[0];
+        vec[k++] += mass*v[0]*v[0]*v[0]*specwt;
         break;
       case mVyVyVy:
-        vec[k++] += mass*v[1]*v[1]*v[1];
+        vec[k++] += mass*v[1]*v[1]*v[1]*specwt;
         break;
       case mVzVzVz:
-        vec[k++] += mass*v[2]*v[2]*v[2];
+        vec[k++] += mass*v[2]*v[2]*v[2]*specwt;
         break;
       case mVxVyVy:
-        vec[k++] += mass*v[0]*v[1]*v[1];
+        vec[k++] += mass*v[0]*v[1]*v[1]*specwt;
         break;
       case mVxVzVz:
-        vec[k++] += mass*v[0]*v[2]*v[2];
+        vec[k++] += mass*v[0]*v[2]*v[2]*specwt;
         break;
       case mVyVxVx:
-        vec[k++] += mass*v[1]*v[0]*v[0];
+        vec[k++] += mass*v[1]*v[0]*v[0]*specwt;
         break;
       case mVyVzVz:
-        vec[k++] += mass*v[1]*v[2]*v[2];
+        vec[k++] += mass*v[1]*v[2]*v[2]*specwt;
         break;
       case mVzVxVx:
-        vec[k++] += mass*v[2]*v[0]*v[0];
+        vec[k++] += mass*v[2]*v[0]*v[0]*specwt;
         break;
       case mVzVyVy:
-        vec[k++] += mass*v[2]*v[1]*v[1];
+        vec[k++] += mass*v[2]*v[1]*v[1]*specwt;
         break;
       }
     }

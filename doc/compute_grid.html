@@ -27,9 +27,10 @@
 
 <LI>one or more values can be appended 
 
-<LI>value = <I>n</I> or <I>nrho</I> or <I>nfrac</I> or <I>mass</I> or <I>massrho</I> or <I>massfrac</I> or <I>u</I> or <I>v</I> or <I>w</I> or <I>usq</I> or <I>vsq</I> or <I>wsq</I> of <I>ke</I> or <I>temp</I> or <I>erot</I> or <I>trot</I> or <I>evib</I> or <I>tvib</I> or <I>pxrho</I> or <I>pyrho</I> or <I>pzrho</I> or <I>kerho</I> 
+<LI>value = <I>n</I> or <I>sumwi</I> or <I>nrho</I> or <I>nfrac</I> or <I>mass</I> or <I>massrho</I> or <I>massfrac</I> or <I>u</I> or <I>v</I> or <I>w</I> or <I>usq</I> or <I>vsq</I> or <I>wsq</I> of <I>ke</I> or <I>temp</I> or <I>erot</I> or <I>trot</I> or <I>evib</I> or <I>tvib</I> or <I>pxrho</I> or <I>pyrho</I> or <I>pzrho</I> or <I>kerho</I> 
 
 <PRE>  <I>n</I> = particle count
+  <I>sumwi</I> = sum of the particle species weight
   <I>nrho</I> = number density
   <I>nfrac</I> = number fraction
   <I>mass</I> = mass
@@ -100,6 +101,10 @@ then dividing by the number of sampling steps.
 <P>The <I>n</I> value counts the number of particles in each group.  When
 accumulated over multiple sampling steps, this value is normalized by
 the number of sampling steps.
+</P>
+<P>The <I>sumwi</I> value counts the summation of the particles species weights
+in the grid cell. The species weights are defined in the species file
+and used during SWS computations (see <A HREF = "species.html">species</A> command).
 </P>
 <P>The <I>nrho</I> value computes the number density for the grid cell volume
 due to particles in each group:

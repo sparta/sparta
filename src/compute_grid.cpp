@@ -27,14 +27,15 @@ using namespace SPARTA_NS;
 
 // user keywords
 
-enum{NUM,NRHO,NFRAC,MASS,MASSRHO,MASSFRAC,
+// SWS - adding the new output variable: NUMWI
+enum{NUM,NUMWI,NRHO,NFRAC,MASS,MASSRHO,MASSFRAC,
      U,V,W,USQ,VSQ,WSQ,KE,TEMPERATURE,EROT,TROT,EVIB,TVIB,
      PXRHO,PYRHO,PZRHO,KERHO};
 
 // internal accumulators
-
-enum{COUNT,MASSSUM,MVX,MVY,MVZ,MVXSQ,MVYSQ,MVZSQ,MVSQ,
-     ENGROT,ENGVIB,DOFROT,DOFVIB,CELLCOUNT,CELLMASS,LASTSIZE};
+// SWS - add the keyword for the new accumulators: COUNT_WI and CELLCOUNTWI.
+enum{COUNT,COUNT_WI,MASSSUM,MVX,MVY,MVZ,MVXSQ,MVYSQ,MVZSQ,MVSQ,
+     ENGROT,ENGVIB,DOFROT,DOFVIB,CELLCOUNT,CELLMASS,CELLCOUNTWI,LASTSIZE};
 
 // max # of quantities to accumulate for any user value
 
@@ -57,7 +58,7 @@ ComputeGrid::ComputeGrid(SPARTA *sparta, int narg, char **arg) :
 
   nvalue = narg - 4;
   value = new int[nvalue];
-
+  cellcountwi = 0;  // SWS
   tvib_flag = 0;
 
   npergroup = cellmass = cellcount = 0;
@@ -72,18 +73,24 @@ ComputeGrid::ComputeGrid(SPARTA *sparta, int narg, char **arg) :
     if (strcmp(arg[iarg],"n") == 0) {
       value[ivalue] = NUM;
       set_map(ivalue,COUNT);
+    } else if (strcmp(arg[iarg],"sumwi") == 0) {  // SWS - wi summation output
+      value[ivalue] = NUMWI;
+      set_map(ivalue,COUNT_WI);
     } else if (strcmp(arg[iarg],"nrho") == 0) {
       value[ivalue] = NRHO;
-      set_map(ivalue,COUNT);
+      set_map(ivalue,COUNT_WI);  // SWS
+      cellcountwi = 1;
     } else if (strcmp(arg[iarg],"nfrac") == 0) {
       value[ivalue] = NFRAC;
-      set_map(ivalue,COUNT);
-      set_map(ivalue,CELLCOUNT);
+      set_map(ivalue,COUNT_WI);  // SWS
+      set_map(ivalue,CELLCOUNTWI);  // SWS
+      cellcountwi = 1;  // SWS
       cellcount = 1;
     } else if (strcmp(arg[iarg],"mass") == 0) {
       value[ivalue] = MASS;
       set_map(ivalue,MASSSUM);
-      set_map(ivalue,COUNT);
+      set_map(ivalue,COUNT_WI); // SWS
+      cellcountwi = 1;  // SWS
     } else if (strcmp(arg[iarg],"massrho") == 0) {
       value[ivalue] = MASSRHO;
       set_map(ivalue,MASSSUM);
@@ -119,15 +126,18 @@ ComputeGrid::ComputeGrid(SPARTA *sparta, int narg, char **arg) :
     } else if (strcmp(arg[iarg],"ke") == 0) {
       value[ivalue] = KE;
       set_map(ivalue,MVSQ);
-      set_map(ivalue,COUNT);
+      set_map(ivalue,COUNT_WI);  // SWS
+      cellcountwi = 1;  // SWS
     } else if (strcmp(arg[iarg],"temp") == 0) {
       value[ivalue] = TEMPERATURE;
       set_map(ivalue,MVSQ);
-      set_map(ivalue,COUNT);
+      set_map(ivalue,COUNT_WI);  // SWS
+      cellcountwi = 1;  // SWS
     } else if (strcmp(arg[iarg],"erot") == 0) {
       value[ivalue] = EROT;
       set_map(ivalue,ENGROT);
-      set_map(ivalue,COUNT);
+      set_map(ivalue,COUNT_WI);  // SWS
+      cellcountwi = 1;  // SWS
     } else if (strcmp(arg[iarg],"trot") == 0) {
       value[ivalue] = TROT;
       set_map(ivalue,ENGROT);
@@ -135,7 +145,8 @@ ComputeGrid::ComputeGrid(SPARTA *sparta, int narg, char **arg) :
     } else if (strcmp(arg[iarg],"evib") == 0) {
       value[ivalue] = EVIB;
       set_map(ivalue,ENGVIB);
-      set_map(ivalue,COUNT);
+      set_map(ivalue,COUNT_WI);  // SWS
+      cellcountwi = 1;  // SWS
     } else if (strcmp(arg[iarg],"tvib") == 0) {
       value[ivalue] = TVIB;
       set_map(ivalue,ENGVIB);
@@ -225,6 +236,7 @@ void ComputeGrid::compute_per_grid()
   int i,j,k,m,ispecies,igroup,icell;
   double mass;
   double *v,*vec;
+  double specwt;  // SWS
 
   // zero all accumulators - could do this with memset()
 
@@ -248,7 +260,17 @@ void ComputeGrid::compute_per_grid()
     v = particles[i].v;
 
     vec = tally[icell];
-    if (cellmass) vec[cellmass] += mass;
+    // ========================================================================
+    // SWS - Accumulate the number of physical particles: sum of the weight, and 
+    // the corresponding mass: sum of the product mass * weight.
+    // ========================================================================
+    // Baseline code:
+    //~ if (cellmass) vec[cellmass] += mass;
+    //~ if (cellcount) vec[cellcount] += 1.0;
+    // Modified code:
+    specwt = species[ispecies].specwt;
+    if (cellcountwi) vec[cellcountwi] += specwt;
+    if (cellmass) vec[cellmass] += mass*specwt;
     if (cellcount) vec[cellcount] += 1.0;
 
     // loop has all possible values particle needs to accumulate
@@ -261,41 +283,44 @@ void ComputeGrid::compute_per_grid()
       case COUNT:
         vec[k++] += 1.0;
         break;
+      case COUNT_WI:         // SWS
+        vec[k++] += specwt;  // SWS
+        break;               // SWS
       case MASSSUM:
-        vec[k++] += mass;
+        vec[k++] += mass*specwt;  // SWS
         break;
       case MVX:
-        vec[k++] += mass*v[0];
+        vec[k++] += mass*specwt*v[0];  // SWS
         break;
       case MVY:
-        vec[k++] += mass*v[1];
+        vec[k++] += mass*specwt*v[1];  // SWS
         break;
       case MVZ:
-        vec[k++] += mass*v[2];
+        vec[k++] += mass*specwt*v[2];  // SWS
         break;
       case MVXSQ:
-        vec[k++] += mass*v[0]*v[0];
+        vec[k++] += mass*specwt*v[0]*v[0];  // SWS
         break;
       case MVYSQ:
-        vec[k++] += mass*v[1]*v[1];
+        vec[k++] += mass*specwt*v[1]*v[1];  // SWS
         break;
       case MVZSQ:
-        vec[k++] += mass*v[2]*v[2];
+        vec[k++] += mass*specwt*v[2]*v[2];  // SWS
         break;
       case MVSQ:
-        vec[k++] += mass * (v[0]*v[0]+v[1]*v[1]+v[2]*v[2]);
+        vec[k++] += mass*specwt * (v[0]*v[0]+v[1]*v[1]+v[2]*v[2]);  // SWS
         break;
       case ENGROT:
-        vec[k++] += particles[i].erot;
+        vec[k++] += specwt * particles[i].erot;  // SWS
         break;
       case ENGVIB:
-        vec[k++] += particles[i].evib;
+        vec[k++] += specwt * particles[i].evib;  // SWS
         break;
       case DOFROT:
-        vec[k++] += species[ispecies].rotdof;
+        vec[k++] += specwt * species[ispecies].rotdof;  // SWS
         break;
       case DOFVIB:
-        vec[k++] += species[ispecies].vibdof;
+        vec[k++] += specwt * species[ispecies].vibdof;  // SWS
         break;
       }
     }
@@ -366,14 +391,25 @@ void ComputeGrid::post_process_grid(int index, int nsample,
       }
       break;
     }
-
+  case NUMWI:  // SWS
+    {
+      int count_wi = emap[0];
+      for (int icell = lo; icell < hi; icell++) {
+        vec[k] = etally[icell][count_wi] / nsample;
+        k += nstride;
+      }
+      break;
+    }
   case MASS:
     {
       double norm;
       int mass = emap[0];
-      int count = emap[1];
+      int count_wi = emap[1];  // SWS
       for (int icell = lo; icell < hi; icell++) {
-        norm = etally[icell][count];
+        // Baseline code:
+        //~ norm = etally[icell][count];
+        // SWS - modifified code:
+        norm = etally[icell][count_wi];
         if (norm == 0.0) vec[k] = 0.0;
         else vec[k] = etally[icell][mass] / norm;
         k += nstride;
@@ -388,13 +424,13 @@ void ComputeGrid::post_process_grid(int index, int nsample,
       Grid::ChildInfo *cinfo = grid->cinfo;
 
       double norm;
-      int count = emap[0];
+      int count_wi = emap[0]; // SWS
       for (int icell = lo; icell < hi; icell++) {
         norm = cinfo[icell].volume;
         if (norm == 0.0) vec[k] = 0.0;
         else {
-          wt = fnum * cinfo[icell].weight / norm;
-          vec[k] = wt * etally[icell][count] / nsample;
+          wt = fnum * cinfo[icell].weight / norm;     
+          vec[k] = wt * etally[icell][count_wi] / nsample;  // SWS
         }
         k += nstride;
       }
@@ -459,9 +495,9 @@ void ComputeGrid::post_process_grid(int index, int nsample,
     {
       double norm;
       int mvsq = emap[0];
-      int count = emap[1];
+      int count_wi = emap[1];  // SWS
       for (int icell = lo; icell < hi; icell++) {
-        norm = etally[icell][count];
+        norm = etally[icell][count_wi];  // SWS
         if (norm == 0.0) vec[k] = 0.0;
         else vec[k] = eprefactor * etally[icell][mvsq] / norm;
         k += nstride;
@@ -473,9 +509,9 @@ void ComputeGrid::post_process_grid(int index, int nsample,
     {
       double norm;
       int mvsq = emap[0];
-      int count = emap[1];
+      int count_wi = emap[1];  // SWS
       for (int icell = lo; icell < hi; icell++) {
-        norm = etally[icell][count];
+        norm = etally[icell][count_wi];  // SWS
         if (norm == 0.0) vec[k] = 0.0;
         else vec[k] = tprefactor * etally[icell][mvsq] / norm;
         k += nstride;
@@ -488,9 +524,9 @@ void ComputeGrid::post_process_grid(int index, int nsample,
     {
       double norm;
       int eng = emap[0];
-      int count = emap[1];
+      int count_wi = emap[1];  // SWS
       for (int icell = lo; icell < hi; icell++) {
-        norm = etally[icell][count];
+        norm = etally[icell][count_wi];  // SWS
         if (norm == 0.0) vec[k] = 0.0;
         else vec[k] = etally[icell][eng] / norm;
         k += nstride;
@@ -515,7 +551,7 @@ void ComputeGrid::post_process_grid(int index, int nsample,
 
   case PXRHO:
   case PYRHO:
-  case PZRHO:
+  case PZRHO: 
     {
       double wt;
       double fnum = update->fnum;
@@ -535,7 +571,7 @@ void ComputeGrid::post_process_grid(int index, int nsample,
       break;
     }
 
-  case KERHO:
+  case KERHO: 
     {
       double wt;
       double fnum = update->fnum;
@@ -578,7 +614,8 @@ void ComputeGrid::set_map(int ivalue, int name)
   // if name = CELLCOUNT/CELLMASS, just set index to name for now
   // if name is not already in unique, add it and increment npergroup
 
-  if (name == CELLCOUNT || name == CELLMASS) index = name;
+  if (name == CELLCOUNT || name == CELLMASS || name == CELLCOUNTWI) index = name; // SWS
+
   else if (index == npergroup) {
     index = npergroup;
     unique[npergroup++] = name;
@@ -601,6 +638,7 @@ void ComputeGrid::reset_map()
 {
   if (cellcount) cellcount = ntotal++;
   if (cellmass) cellmass = ntotal++;
+  if (cellcountwi) cellcountwi = ntotal++;  // SWS
 
   for (int i = 0; i < ngroup*nvalue; i++) {
     int igroup = i / nvalue;
@@ -608,6 +646,7 @@ void ComputeGrid::reset_map()
     for (int k = 0; k < nmap[ivalue]; k++) {
       if (map[i][k] == CELLCOUNT) map[i][k] = cellcount;
       else if (map[i][k] == CELLMASS) map[i][k] = cellmass;
+      else if (map[i][k] == CELLCOUNTWI) map[i][k] = cellcountwi;  // SWS
       else map[i][k] += igroup*npergroup;
     }
   }

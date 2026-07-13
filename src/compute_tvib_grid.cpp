@@ -271,6 +271,8 @@ void ComputeTvibGrid::compute_per_grid()
 
   int i,j,ispecies,igroup,icell,imode,nmode;
 
+  double specwt;  // SWS
+
   // zero all accumulators - could do this with memset()
 
   for (i = 0; i < nglocal; i++)
@@ -284,6 +286,7 @@ void ComputeTvibGrid::compute_per_grid()
   if (modeflag == 0) {
     for (i = 0; i < nlocal; i++) {
       ispecies = particles[i].ispecies;
+      specwt = species[ispecies].specwt;  // SWS
       if (!species[ispecies].vibdof) continue;
       igroup = s2g[ispecies];
       if (igroup < 0) continue;
@@ -291,8 +294,8 @@ void ComputeTvibGrid::compute_per_grid()
       if (!(cinfo[icell].mask & groupbit)) continue;
 
       j = s2t[ispecies];
-      tally[icell][j] += particles[i].evib;
-      tally[icell][j+1] += 1.0;
+      tally[icell][j] += particles[i].evib * specwt;  // SWS
+      tally[icell][j+1] += 1.0 * specwt;  // SWS
     }
 
   } else if (modeflag >= 1) {
@@ -301,6 +304,7 @@ void ComputeTvibGrid::compute_per_grid()
 
     for (i = 0; i < nlocal; i++) {
       ispecies = particles[i].ispecies;
+      specwt = species[ispecies].specwt;  // SWS
       if (!species[ispecies].vibdof) continue;
       igroup = s2g[ispecies];
       if (igroup < 0) continue;
@@ -314,8 +318,8 @@ void ComputeTvibGrid::compute_per_grid()
         j = s2t_mode[ispecies][imode];
         if (nmode > 1) tally[icell][j] += vibmode[i][imode];
         else tally[icell][j] +=
-               particles[i].evib / (boltz*species[ispecies].vibtemp[0]);
-        tally[icell][j+1] += 1.0;
+               particles[i].evib / (boltz*species[ispecies].vibtemp[0]) * specwt;  // SWS
+        tally[icell][j+1] += 1.0 * specwt;  // SWS
       }
     }
   }
