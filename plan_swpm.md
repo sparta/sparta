@@ -5,11 +5,14 @@
 ### Motivation
 
 The current scheme is all-or-nothing: a group must reach `Ncmax` before any
-reduction fires.  In practice this means cells near the threshold see large
-bursts of particle deletion followed by quiet periods, introducing temporal
-noise in macroscopic quantities.  A gradual scheme applies light reduction
-continuously so the particle count stays closer to a target without large
-discrete jumps.
+reduction fires.  This produces a **sawtooth** in the per-cell particle count:
+the count climbs from post-reduction low to `Ncmax`, triggers a bulk deletion
+that drops it back down, and the cycle repeats.  The sawtooth introduces
+correlated temporal noise in macroscopic quantities (density, temperature,
+heat flux) at a frequency set by the inflow rate and `Ncmax - Ngmin`, which
+can alias into time-averaged statistics and obscure physical signals.  A
+gradual scheme applies light reduction continuously so the particle count stays
+near a target without large discrete jumps.
 
 ### Idea
 
