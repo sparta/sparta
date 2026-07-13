@@ -12,6 +12,12 @@
    See the README file in the top-level SPARTA directory.
 ------------------------------------------------------------------------- */
 
+/* ----------------------------------------------------------------------
+   Optimizations contributed by Matt Bettencourt (NVIDIA) are:
+    Copyright (c) 2025 NVIDIA CORPORATION & AFFILIATES. All rights
+    reserved.
+------------------------------------------------------------------------- */
+
 #ifdef COLLIDE_CLASS
 
 CollideStyle(vss/kk,CollideVSSKokkos)
@@ -52,13 +58,15 @@ struct s_COLLIDE_REDUCE {
 typedef struct s_COLLIDE_REDUCE COLLIDE_REDUCE;
 
 struct TagCollideResetVremax{};
-struct TagCollideZeroNN{};
 
 template < int NEARCP, int GASTALLY, int ATOMIC_REDUCTION >
 struct TagCollideCollisionsOne{};
 
 template < int GASTALLY, int ATOMIC_REDUCTION >
 struct TagCollideCollisionsOneAmbipolar{};
+
+template < int NEARCP >
+struct TagCountAttempts{};
 
 class CollideVSSKokkos : public CollideVSS {
  public:
@@ -97,9 +105,6 @@ class CollideVSSKokkos : public CollideVSS {
   KOKKOS_INLINE_FUNCTION
   void operator()(TagCollideResetVremax, const int&) const;
 
-  KOKKOS_INLINE_FUNCTION
-  void operator()(TagCollideZeroNN, const int&) const;
-
   template < int NEARCP, int GASTALLY, int ATOMIC_REDUCTION >
   KOKKOS_INLINE_FUNCTION
   void operator()(TagCollideCollisionsOne< NEARCP, GASTALLY, ATOMIC_REDUCTION >, const int&) const;
@@ -115,6 +120,10 @@ class CollideVSSKokkos : public CollideVSS {
   template < int GASTALLY, int ATOMIC_REDUCTION >
   KOKKOS_INLINE_FUNCTION
   void operator()(TagCollideCollisionsOneAmbipolar< GASTALLY, ATOMIC_REDUCTION >, const int&, COLLIDE_REDUCE&) const;
+
+  template < int NEARCP >
+  KOKKOS_INLINE_FUNCTION
+  void operator()(TagCountAttempts< NEARCP >, const int) const;
 
   typedef Kokkos::
     DualView<Params**, Kokkos::LayoutRight, DeviceType> tdual_params_2d;
@@ -139,9 +148,12 @@ class CollideVSSKokkos : public CollideVSS {
   KKCopy<GridKokkos> grid_kk_copy;
   KKCopy<ReactTCEKokkos> react_kk_copy;
 
+  DAT::t_int_1d d_nattempt;
+  DAT::t_int_1d d_active_cells;
+  DAT::t_int_scalar d_num_active_cells;
   t_particle_1d d_particles;
   t_species_1d_const d_species;
-  DAT::t_int_2d d_plist;
+  DAT::t_int_2d_lr d_plist;
 
   DAT::t_int_1d d_ewhich;
   tdual_struct_tdual_int_1d_1d k_eivec;
@@ -203,7 +215,7 @@ class CollideVSSKokkos : public CollideVSS {
 
   DAT::t_float_2d d_recomb_ijflag;
 
-  DAT::t_int_2d d_nn_last_partner;
+  DAT::t_int_2d_lr d_nn_last_partner;
 
   template < int NEARCP, int GASTALLY > void collisions_one(COLLIDE_REDUCE&);
   template < int GASTALLY > void collisions_one_ambipolar(COLLIDE_REDUCE&);
@@ -255,10 +267,10 @@ class CollideVSSKokkos : public CollideVSS {
   void restore();
 
   t_particle_1d d_particles_backup;
-  DAT::t_int_2d d_plist_backup;
+  DAT::t_int_2d_lr d_plist_backup;
   DAT::t_float_3d d_vremax_backup;
   DAT::t_float_3d d_remain_backup;
-  DAT::t_int_2d d_nn_last_partner_backup;
+  DAT::t_int_2d_lr d_nn_last_partner_backup;
   DAT::t_int_1d d_ionambi_backup;
   DAT::t_float_2d_lr d_velambi_backup;
   RanKnuth* random_backup;
