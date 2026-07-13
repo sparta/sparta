@@ -52,6 +52,7 @@ Particle::Particle(SPARTA *sparta) : Pointers(sparta)
   MPI_Comm_rank(world,&me);
 
   exist = sorted = 0;
+  weightflag = 0;
   nglobal = 0;
   nlocal = maxlocal = 0;
   particles = NULL;
@@ -151,6 +152,11 @@ void Particle::init()
   // check for errors in custom particle vectors/arrays
 
   error_custom();
+
+  // mirror grid cell-weighting state so stochastic_weights() can enforce
+  // mutual exclusion between SWPM and grid-based particle weighting
+
+  weightflag = (grid->cellweightflag != 0) ? 1 : 0;
 
   // initialize mixtures
 

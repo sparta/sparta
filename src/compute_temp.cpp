@@ -45,13 +45,27 @@ double ComputeTemp::compute_scalar()
   double *v;
   double t = 0.0;
 
+  // accumulate the summed particle weight as well, so the temperature is
+  // normalized by the effective particle count.  with stochastic (SWPM) or
+  // grid-based weighting the weights vary per particle; with no weighting
+  // swfrac == 1 and wsum reduces to the particle count.
+
+  double wsum = 0.0;
+  double *sweights = particle->stochastic_weights();
+  double swfrac = 1.0;
   for (int i = 0; i < nlocal; i++) {
     v = particles[i].v;
+    if (sweights) swfrac = sweights[i];
+    else if (particle->weightflag) swfrac = particles[i].weight;
     t += (v[0]*v[0] + v[1]*v[1] + v[2]*v[2]) *
-      species[particles[i].ispecies].mass;
+      species[particles[i].ispecies].mass * swfrac;
+    wsum += swfrac;
   }
 
-  MPI_Allreduce(&t,&scalar,1,MPI_DOUBLE,MPI_SUM,world);
+  double local[2] = {t,wsum}, all[2];
+  MPI_Allreduce(local,all,2,MPI_DOUBLE,MPI_SUM,world);
+  scalar = all[0];
+  double wglobal = all[1];
 
   bigint n = particle->nlocal;
   MPI_Allreduce(&n,&particle->nglobal,1,MPI_SPARTA_BIGINT,MPI_SUM,world);
@@ -59,7 +73,7 @@ double ComputeTemp::compute_scalar()
 
   // normalize with 3 instead of dim since even 2d has 3 velocity components
 
-  double factor = update->mvv2e / (3.0 * particle->nglobal * update->boltz);
+  double factor = update->mvv2e / (3.0 * wglobal * update->boltz);
   scalar *= factor;
   return scalar;
 }

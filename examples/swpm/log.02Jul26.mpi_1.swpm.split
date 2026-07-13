@@ -1,0 +1,151 @@
+SPARTA (24 Sep 2025)
+Running on 1 MPI task(s)
+################################################################################
+# SWPM regression test: particle splitting
+#
+# Homogeneous argon gas in a single periodic cell.  Ncmin is set above the
+# particle count so every accepted collision runs in the "always split" regime
+# (pre_wtf = 1): each collision transfers weight Gwtf = min(wi,wj)/(1+wtf) to
+# the collision pair and spawns up to two new particles carrying the excess
+# weight.  No reduction is enabled, so np grows monotonically.
+#
+# Regression invariants (captured in the gold log):
+#   c_T   thermal temperature   - conserved exactly by split + elastic collide
+#   c_n[2] weighted number density - conserved exactly (weight conservation)
+#   c_v[*] weighted mean velocity  - conserved exactly (momentum conservation)
+################################################################################
+
+seed               12137
+dimension          3
+
+variable T         equal 298.15
+variable ppc       equal 50
+variable nden      equal 4.247e22
+variable L         equal 1.0e-5
+
+species            air.species Ar
+mixture            air Ar vstream 0.0 0.0 0.0 temp ${T}
+mixture            air Ar vstream 0.0 0.0 0.0 temp 298.15
+mixture            air Ar frac 1.0
+
+boundary           p p p
+create_box         0.0 ${L} 0.0 ${L} 0.0 ${L}
+create_box         0.0 1e-05 0.0 ${L} 0.0 ${L}
+create_box         0.0 1e-05 0.0 1e-05 0.0 ${L}
+create_box         0.0 1e-05 0.0 1e-05 0.0 1e-05
+Created orthogonal box = (0 0 0) to (1e-05 1e-05 1e-05)
+create_grid        1 1 1
+Created 1 child grid cells
+  CPU time = 0.000833418 secs
+  create/ghost percent = 98.1614 1.83857
+balance_grid       rcb part
+Balance grid migrated 0 cells
+  CPU time = 0.000107318 secs
+  reassign/sort/migrate/ghost percent = 85.7638 0.0605677 12.6745 1.50115
+
+variable Fnum      equal ${nden}*${L}*${L}*${L}/${ppc}
+variable Fnum      equal 4.247e+22*${L}*${L}*${L}/${ppc}
+variable Fnum      equal 4.247e+22*1e-05*${L}*${L}/${ppc}
+variable Fnum      equal 4.247e+22*1e-05*1e-05*${L}/${ppc}
+variable Fnum      equal 4.247e+22*1e-05*1e-05*1e-05/${ppc}
+variable Fnum      equal 4.247e+22*1e-05*1e-05*1e-05/50
+global             nrho ${nden}
+global             nrho 4.247e+22
+global             fnum ${Fnum}
+global             fnum 849400
+
+collide            vss air air.vss
+collide_modify     remain no
+
+# fix stochastic_weight must precede collide_modify stochastic_weight yes
+fix                fweight stochastic_weight
+collide_modify     stochastic_weight yes
+collide_modify     split 1000 1.0
+
+create_particles   air n 0
+Created 50 particles
+  CPU time = 0.000945248 secs
+
+compute T          thermal/grid all all temp
+compute n          grid all all n nrho
+compute v          grid all all u v w
+
+compute Tr         reduce ave c_T[*]
+compute nr1        reduce ave c_n[1]
+compute nr2        reduce ave c_n[2]
+compute vr1        reduce ave c_v[1]
+compute vr2        reduce ave c_v[2]
+compute vr3        reduce ave c_v[3]
+
+stats              20
+stats_style        step np nattempt ncoll c_Tr c_nr1 c_nr2 c_vr1 c_vr2 c_vr3
+
+timestep           1.0e-9
+run                200
+Memory usage per proc in Mbytes:
+  particles (ave,min,max) = 1.6875 1.6875 1.6875
+  grid      (ave,min,max) = 1.51379 1.51379 1.51379
+  surf      (ave,min,max) = 0 0 0
+  total     (ave,min,max) = 3.20139 3.20139 3.20139
+Step Np Natt Ncoll c_Tr c_nr1 c_nr2 c_vr1 c_vr2 c_vr3 
+       0       50        0        0    227.95967           50    4.247e+22   0.22666344    4.0267221    54.946452 
+      20       72        1        0    227.95967           72    4.247e+22   0.22666344    4.0267221    54.946452 
+      40      130        5        3    227.95967          130    4.247e+22   0.22666344    4.0267221    54.946452 
+      60      274       22        7    227.95967          274    4.247e+22   0.22666344    4.0267221    54.946452 
+      80      554       91       11    227.95967          554    4.247e+22   0.22666344    4.0267221    54.946452 
+     100     1065      181        6    227.95967         1065    4.247e+22   0.22666344    4.0267221    54.946452 
+     120     1326      263        9    227.95967         1326    4.247e+22   0.22666344    4.0267221    54.946452 
+     140     1648      289       15    227.95967         1648    4.247e+22   0.22666344    4.0267221    54.946452 
+     160     1976      324       24    227.95967         1976    4.247e+22   0.22666344    4.0267221    54.946452 
+     180     2395      477       24    227.95967         2395    4.247e+22   0.22666344    4.0267221    54.946452 
+     200     2910      673       19    227.95967         2910    4.247e+22   0.22666344    4.0267221    54.946452 
+Loop time of 0.0052055 on 1 procs for 200 steps with 2910 particles
+Performance: 38420.916 timesteps/s, 111.805 Mparticle-step/s
+
+MPI task timing breakdown:
+Section |  min time  |  avg time  |  max time  |%varavg| %total
+---------------------------------------------------------------
+Move    | 0.0016622  | 0.0016622  | 0.0016622  |   0.0 | 31.93
+Coll    | 0.0028108  | 0.0028108  | 0.0028108  |   0.0 | 54.00
+Sort    | 0.00024835 | 0.00024835 | 0.00024835 |   0.0 |  4.77
+Comm    | 2.9695e-05 | 2.9695e-05 | 2.9695e-05 |   0.0 |  0.57
+Modify  | 0          | 0          | 0          |   0.0 |  0.00
+Output  | 0.00044368 | 0.00044368 | 0.00044368 |   0.0 |  8.52
+Other   |            | 1.084e-05  |            |       |  0.21
+
+Particle moves    = 216276 (0.216M)
+Cells touched     = 228046 (0.228M)
+Particle comms    = 0 (0K)
+Boundary collides = 0 (0K)
+Boundary exits    = 0 (0K)
+SurfColl checks   = 0 (0K)
+SurfColl occurs   = 0 (0K)
+Surf reactions    = 0 (0K)
+Collide attempts  = 41719 (41.7K)
+Collide occurs    = 2406 (2.41K)
+Reactions         = 0 (0K)
+Particles stuck   = 0
+Axisymm bad moves = 0
+
+Particle-moves/CPUsec/proc: 4.15476e+07
+Particle-moves/step: 1081.38
+Cell-touches/particle/step: 1.05442
+Particle comm iterations/step: 1
+Particle fraction communicated: 0
+Particle fraction colliding with boundary: 0
+Particle fraction exiting boundary: 0
+Surface-checks/particle/step: 0
+Surface-collisions/particle/step: 0
+Surf-reactions/particle/step: 0
+Collision-attempts/particle/step: 0.192897
+Collisions/particle/step: 0.0111247
+Reactions/particle/step: 0
+
+Particles: 2910 ave 2910 max 2910 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+Cells:      1 ave 1 max 1 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+GhostCell: 0 ave 0 max 0 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+EmptyCell: 0 ave 0 max 0 min
+Histogram: 1 0 0 0 0 0 0 0 0 0

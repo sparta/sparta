@@ -60,6 +60,9 @@ struct TagCollideCollisionsOne{};
 template < int GASTALLY, int ATOMIC_REDUCTION >
 struct TagCollideCollisionsOneAmbipolar{};
 
+template < int NEARCP, int GASTALLY, int ATOMIC_REDUCTION >
+struct TagCollideSWPMOne{};
+
 class CollideVSSKokkos : public CollideVSS {
  public:
   typedef COLLIDE_REDUCE value_type;
@@ -85,7 +88,7 @@ class CollideVSSKokkos : public CollideVSS {
   KOKKOS_INLINE_FUNCTION
   double attempt_collision_kokkos(int, int, double, rand_type &) const;
   KOKKOS_INLINE_FUNCTION
-  int test_collision_kokkos(int, int, int, Particle::OnePart *, Particle::OnePart *, struct State &, rand_type &) const;
+  int test_collision_kokkos(int, int, int, Particle::OnePart *, Particle::OnePart *, struct State &, rand_type &, double ijsw = 1.0) const;
   KOKKOS_INLINE_FUNCTION
   void setup_collision_kokkos(Particle::OnePart *, Particle::OnePart *, struct State &, struct State &) const;
   KOKKOS_INLINE_FUNCTION
@@ -115,6 +118,14 @@ class CollideVSSKokkos : public CollideVSS {
   template < int GASTALLY, int ATOMIC_REDUCTION >
   KOKKOS_INLINE_FUNCTION
   void operator()(TagCollideCollisionsOneAmbipolar< GASTALLY, ATOMIC_REDUCTION >, const int&, COLLIDE_REDUCE&) const;
+
+  template < int NEARCP, int GASTALLY, int ATOMIC_REDUCTION >
+  KOKKOS_INLINE_FUNCTION
+  void operator()(TagCollideSWPMOne< NEARCP, GASTALLY, ATOMIC_REDUCTION >, const int&) const;
+
+  template < int NEARCP, int GASTALLY, int ATOMIC_REDUCTION >
+  KOKKOS_INLINE_FUNCTION
+  void operator()(TagCollideSWPMOne< NEARCP, GASTALLY, ATOMIC_REDUCTION >, const int&, COLLIDE_REDUCE&) const;
 
   typedef Kokkos::
     DualView<Params**, Kokkos::LayoutRight, DeviceType> tdual_params_2d;
@@ -207,6 +218,7 @@ class CollideVSSKokkos : public CollideVSS {
 
   template < int NEARCP, int GASTALLY > void collisions_one(COLLIDE_REDUCE&);
   template < int GASTALLY > void collisions_one_ambipolar(COLLIDE_REDUCE&);
+  template < int NEARCP, int GASTALLY > void collisions_one_swpm(COLLIDE_REDUCE&);
 
   // VSS specific
 
@@ -217,6 +229,13 @@ class CollideVSSKokkos : public CollideVSS {
   t_params_2d d_params;
 
   double dt,fnum,boltz;
+  // SWPM Kokkos data
+  Kokkos::View<double*, DeviceType> d_sw;
+  Kokkos::View<double*, DeviceType> d_sw_backup;
+  int index_sw_d;
+  double wtf_d;
+  int Ncmin_d, Ncmax_d, Ngmin_d, Ngmax_d;
+  int reduceflag_d, reduction_type_d;
   int maxcellcount,react_defined;
 
   KOKKOS_INLINE_FUNCTION
@@ -251,6 +270,32 @@ class CollideVSSKokkos : public CollideVSS {
   KOKKOS_INLINE_FUNCTION
   int find_nn(rand_type &, int, int, int) const;
 
+  KOKKOS_INLINE_FUNCTION
+  void split_kokkos(int icell, int &np, Particle::OnePart *&ip, Particle::OnePart *&jp,
+                    double pre_wtf_cell, rand_type &rand_gen) const;
+  KOKKOS_INLINE_FUNCTION
+  void group_swpm_kokkos(int icell, int &np, rand_type &rand_gen) const;
+  KOKKOS_FUNCTION
+  void group_bt_kokkos(int icell, int istart, int iend, int gsb, rand_type &rand_gen) const;
+  KOKKOS_INLINE_FUNCTION
+  void reduce_energy_kokkos(int icell, int istart, int iend, double rho,
+                            double *V, double T, double Erot, double Evib,
+                            rand_type &rand_gen) const;
+  KOKKOS_INLINE_FUNCTION
+  void reduce_heat_kokkos(int icell, int istart, int iend, double rho,
+                          double *V, double T, double Erot, double Evib,
+                          double *q, rand_type &rand_gen) const;
+  KOKKOS_INLINE_FUNCTION
+  void reduce_stress_kokkos(int icell, int istart, int iend, double rho,
+                            double *V, double T, double Erot, double Evib,
+                            double *q, double pij[3][3],
+                            rand_type &rand_gen) const;
+  KOKKOS_INLINE_FUNCTION
+  void reduce_delete_kokkos(int particle_idx) const;
+  KOKKOS_INLINE_FUNCTION
+  static void jacobi3_kokkos(double m[3][3], double eval[3], double evec[3][3]);
+  KOKKOS_INLINE_FUNCTION
+  static void sample_unit_sphere_kokkos(rand_type &rand_gen, double *uvec);
   void backup();
   void restore();
 

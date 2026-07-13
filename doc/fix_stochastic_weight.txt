@@ -1,0 +1,62 @@
+"SPARTA WWW Site"_sws - "SPARTA Documentation"_sd - "SPARTA Commands"_sc :c
+
+:link(sws,https://sparta.github.io)
+:link(sd,Manual.html)
+:link(sc,Section_commands.html#comm)
+
+:line
+
+fix stochastic_weight command :h3
+
+[Syntax:]
+
+fix ID stochastic_weight :pre
+
+ID is documented in "fix"_fix.html command
+stochastic_weight = style name of this fix command :ul
+
+[Examples:]
+
+fix fweight stochastic_weight
+collide_modify stochastic_weight yes :pre
+
+[Description:]
+
+Enable per-particle stochastic weights for use with the stochastic
+weighted particle method (SWPM).  This fix must be defined before SWPM
+is turned on with the "collide_modify stochastic_weight yes"_collide_modify.html
+command; SWPM will flag an error if the fix is not present.
+
+Internally the fix defines a single custom per-particle attribute named
+"stochastic_wt" (a floating-point value per particle) which stores each
+particle's weight {relative to} the global "fnum"_global.html.  A weight
+of 1.0 therefore represents fnum real molecules.  Newly created particles
+(from "create_particles"_create_particles.html,
+"read_particles"_read_particles.html, or particle emission) are assigned
+a weight of 1.0, and particles that already exist when the fix is defined
+are likewise initialized to 1.0.  Weights restored from a
+"restart"_read_restart.html file are preserved.
+
+During SWPM collisions the splitting and reduction stages update the
+stochastic weights of individual particles; see the
+"collide_modify"_collide_modify.html command for details of the method.
+Computes that average per-particle quantities (for example
+"compute thermal/grid"_compute_thermal_grid.html,
+"compute grid"_compute_grid.html, "compute temp"_compute_temp.html, and
+the surface/boundary flux computes) automatically account for these
+weights when the fix is defined.
+
+Stochastic weighting and grid-based particle weighting (the
+"global weight"_global.html command) are mutually exclusive; enabling
+both is an error.
+
+[Restrictions:]
+
+This fix can only be used for SWPM simulations, which are currently
+limited to monatomic, single-species gases.
+
+[Related commands:]
+
+"collide_modify"_collide_modify.html
+
+[Default:] none

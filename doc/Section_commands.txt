@@ -415,6 +415,7 @@ This is indicated by additional letters in parenthesis: k = KOKKOS.
 "halt"_fix_halt.html,
 "move/surf (k)"_fix_move_surf.html,
 "print"_fix_print.html,
+"stochastic_weight"_fix_stochastic_weight.html,
 "surf/temp"_fix_surf_temp.html,
 "temp/global/rescale"_fix_temp_global_rescale.html,
 "temp/rescale (k)"_fix_temp_rescale.html,

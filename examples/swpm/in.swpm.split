@@ -1,0 +1,62 @@
+################################################################################
+# SWPM regression test: particle splitting
+#
+# Homogeneous argon gas in a single periodic cell.  Ncmin is set above the
+# particle count so every accepted collision runs in the "always split" regime
+# (pre_wtf = 1): each collision transfers weight Gwtf = min(wi,wj)/(1+wtf) to
+# the collision pair and spawns up to two new particles carrying the excess
+# weight.  No reduction is enabled, so np grows monotonically.
+#
+# Regression invariants (captured in the gold log):
+#   c_T   thermal temperature   - conserved exactly by split + elastic collide
+#   c_n[2] weighted number density - conserved exactly (weight conservation)
+#   c_v[*] weighted mean velocity  - conserved exactly (momentum conservation)
+################################################################################
+
+seed               12137
+dimension          3
+
+variable T         equal 298.15
+variable ppc       equal 50
+variable nden      equal 4.247e22
+variable L         equal 1.0e-5
+
+species            air.species Ar
+mixture            air Ar vstream 0.0 0.0 0.0 temp ${T}
+mixture            air Ar frac 1.0
+
+boundary           p p p
+create_box         0.0 ${L} 0.0 ${L} 0.0 ${L}
+create_grid        1 1 1
+balance_grid       rcb part
+
+variable Fnum      equal ${nden}*${L}*${L}*${L}/${ppc}
+global             nrho ${nden}
+global             fnum ${Fnum}
+
+collide            vss air air.vss
+collide_modify     remain no
+
+# fix stochastic_weight must precede collide_modify stochastic_weight yes
+fix                fweight stochastic_weight
+collide_modify     stochastic_weight yes
+collide_modify     split 1000 1.0
+
+create_particles   air n 0
+
+compute T          thermal/grid all all temp
+compute n          grid all all n nrho
+compute v          grid all all u v w
+
+compute Tr         reduce ave c_T[*]
+compute nr1        reduce ave c_n[1]
+compute nr2        reduce ave c_n[2]
+compute vr1        reduce ave c_v[1]
+compute vr2        reduce ave c_v[2]
+compute vr3        reduce ave c_v[3]
+
+stats              20
+stats_style        step np nattempt ncoll c_Tr c_nr1 c_nr2 c_vr1 c_vr2 c_vr3
+
+timestep           1.0e-9
+run                200

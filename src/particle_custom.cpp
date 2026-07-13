@@ -40,6 +40,27 @@ int Particle::find_custom(char *name)
 }
 
 /* ----------------------------------------------------------------------
+   return the per-particle stochastic weight array (relative to fnum),
+   registered by fix stochastic_weight, or NULL if SWPM is not in use
+   the pointer is re-fetched on each call since it moves when particles grow
+------------------------------------------------------------------------- */
+
+double *Particle::stochastic_weights()
+{
+  int index = find_custom((char *) "stochastic_wt");
+  if (index < 0) return NULL;
+
+  // stochastic weighting and grid-based particle weighting are mutually
+  // exclusive: their weights would otherwise be applied ambiguously
+
+  if (weightflag)
+    error->all(FLERR,"Stochastic weighting cannot be combined with "
+                     "grid-based particle weighting");
+
+  return edvec[ewhich[index]];
+}
+
+/* ----------------------------------------------------------------------
    error checks on existence of custom vectors/arrays
 ------------------------------------------------------------------------- */
 

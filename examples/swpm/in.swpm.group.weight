@@ -1,0 +1,75 @@
+################################################################################
+# SWPM regression test: weight-based grouping across multiple grid cells
+#
+# Homogeneous argon gas on a 4x4x1 periodic grid.  Ncmin is set above the
+# per-cell particle count so every accepted collision splits (pre_wtf = 1),
+# which quickly produces a broad spread of particle weights.  Reduction uses
+# the weight-based grouping strategy: per cell, the weight mean and standard
+# deviation classify particles into small / medium / large weight classes;
+# small and medium particles are reduced separately (binary-tree subdivision
+# in velocity space) and large-weight particles are left untouched.
+#
+# The multi-cell setup is deliberate: it regression-tests the plist indexing
+# in the weight-grouping preprocessing, which historically corrupted memory
+# when the number of particles owned by a rank exceeded the size of the
+# per-cell particle list (segfault before the fix).
+#
+# Only conserved invariants are printed as stats, so the gold log matches
+# regardless of MPI rank count and particle ordering:
+#   c_gT  global weighted temperature - conserved exactly (energy conservation;
+#         also exercises the weighted compute temp)
+#   c_nr2 cell-averaged weighted number density - conserved exactly (weight
+#         conservation; cells have equal volume so the average tracks the sum)
+#
+# "global comm/sort yes" is also set (see below): it is the SPARTA idiom for
+# making the full particle trajectory reproducible across MPI rank counts, so
+# anyone extending this deck with trajectory-dependent columns gets
+# reproducible output on a normally-loaded machine.  The invariant columns
+# above hold with or without it.
+################################################################################
+
+seed               12137
+dimension          3
+
+variable T         equal 298.15
+variable ppc       equal 30
+variable nden      equal 4.247e22
+variable L         equal 1.0e-5
+
+species            air.species Ar
+mixture            air Ar vstream 0.0 0.0 0.0 temp ${T}
+mixture            air Ar frac 1.0
+
+boundary           p p p
+create_box         0.0 ${L} 0.0 ${L} 0.0 ${L}
+create_grid        4 4 1
+balance_grid       rcb part
+
+variable Fnum      equal ${nden}*${L}*${L}*${L}/(${ppc}*16)
+global             nrho ${nden}
+global             fnum ${Fnum}
+
+# make particle ordering (and thus the trajectory) reproducible across MPI
+# ranks, so this multi-cell case can be pinned by a gold log
+global             comm/sort yes
+
+collide            vss air air.vss
+collide_modify     remain no
+
+# fix stochastic_weight must precede collide_modify stochastic_weight yes
+fix                fweight stochastic_weight
+collide_modify     stochastic_weight yes
+collide_modify     split 1000 1.0
+collide_modify     reduce heat weight 40 6 16
+
+create_particles   air n 0
+
+compute gT         temp
+compute n          grid all all n nrho
+compute nr2        reduce ave c_n[2]
+
+stats              50
+stats_style        step c_gT c_nr2
+
+timestep           1.0e-9
+run                500

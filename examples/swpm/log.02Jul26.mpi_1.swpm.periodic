@@ -1,0 +1,219 @@
+SPARTA (24 Sep 2025)
+Running on 1 MPI task(s)
+################################################################################
+# SWPM example: homogeneous argon relaxation in a periodic box
+#
+# Small equilibrium check of the SWPM options with default-style thresholds:
+# with 16 particles per cell neither splitting (np >= Ncmin = 8, equal
+# weights) nor reduction (np <= Ncmax = 32) triggers, so this reduces to
+# plain DSMC with unit stochastic weights: np and the temperature stay
+# constant.  Uncomment the alternative reduce lines to experiment with the
+# heat/stress schemes and weight-based grouping.
+################################################################################
+
+seed               12137
+dimension          3
+
+#############
+# Constants #
+#############
+variable kb        equal 1.380658E-23
+variable pi        equal 3.14159
+
+##################
+# Gas parameters #
+##################
+variable gamma     equal 1.4
+
+#####################
+# Chosen Parameters #
+#####################
+variable T         equal 298.15
+variable p         equal 1013.250
+variable Ma        equal 0.2
+variable ppc       equal 16.0
+
+################
+# Precalculate #
+################
+variable mass_ref  equal 5.0e-26
+variable R_ref     equal ${kb}/${mass_ref}
+variable R_ref     equal 1.380658e-23/${mass_ref}
+variable R_ref     equal 1.380658e-23/5e-26
+variable RT        equal ${R_ref}*${T}
+variable RT        equal 276.1316*${T}
+variable RT        equal 276.1316*298.15
+variable rho       equal ${p}/${RT}
+variable rho       equal 1013.25/${RT}
+variable rho       equal 1013.25/82328.63654
+variable nden      equal ${rho}/${mass_ref}
+variable nden      equal 0.012307382249768/${mass_ref}
+variable nden      equal 0.012307382249768/5e-26
+
+###########
+# Species #
+###########
+species            air.species Ar
+
+mixture            air Ar vstream 0.0 0.0 0.0 temp ${T}
+mixture            air Ar vstream 0.0 0.0 0.0 temp 298.15
+mixture            air Ar frac 1.0
+
+#####################
+# Boundary/Geometry #
+#####################
+variable Lx        equal 0.0001
+variable Ly        equal 0.0001
+variable Lz        equal 0.0001
+
+variable nx        equal 1
+variable ny        equal 1
+variable nz        equal 1
+
+boundary           p p p
+
+create_box         0.0 ${Lx} 0.0 ${Ly} 0.0 ${Lz}
+create_box         0.0 0.0001 0.0 ${Ly} 0.0 ${Lz}
+create_box         0.0 0.0001 0.0 0.0001 0.0 ${Lz}
+create_box         0.0 0.0001 0.0 0.0001 0.0 0.0001
+Created orthogonal box = (0 0 0) to (0.0001 0.0001 0.0001)
+create_grid        ${nx} ${ny} ${nz} block * * *
+create_grid        1 ${ny} ${nz} block * * *
+create_grid        1 1 ${nz} block * * *
+create_grid        1 1 1 block * * *
+Created 1 child grid cells
+  CPU time = 0.000853464 secs
+  create/ghost percent = 98.0182 1.98181
+balance_grid       rcb part
+Balance grid migrated 0 cells
+  CPU time = 0.000108765 secs
+  reassign/sort/migrate/ghost percent = 85.1266 0.0735531 13.4639 1.33591
+
+
+###########
+# Collide #
+###########
+collide            vss air air.vss
+collide_modify     remain no
+
+# swpm
+# fix stochastic_weight is required before collide_modify stochastic_weight yes
+fix                fweight stochastic_weight
+collide_modify     stochastic_weight yes
+collide_modify     split 8 1.0
+collide_modify     reduce energy binary 32 4 16
+#collide_modify     reduce heat weight 32 4 16
+#collide_modify     reduce stress binary 96 8 24
+
+variable N         equal ${nx}*${ny}*${nz}*${ppc}
+variable N         equal 1*${ny}*${nz}*${ppc}
+variable N         equal 1*1*${nz}*${ppc}
+variable N         equal 1*1*1*${ppc}
+variable N         equal 1*1*1*16
+variable Fnum      equal ${nden}/(${N}/(${Lx}*${Ly}*${Lz}))
+variable Fnum      equal 2.4614764499536e+23/(${N}/(${Lx}*${Ly}*${Lz}))
+variable Fnum      equal 2.4614764499536e+23/(16/(${Lx}*${Ly}*${Lz}))
+variable Fnum      equal 2.4614764499536e+23/(16/(0.0001*${Ly}*${Lz}))
+variable Fnum      equal 2.4614764499536e+23/(16/(0.0001*0.0001*${Lz}))
+variable Fnum      equal 2.4614764499536e+23/(16/(0.0001*0.0001*0.0001))
+
+global nrho ${nden}
+global nrho 2.4614764499536e+23
+global fnum ${Fnum}
+global fnum 15384227812.21
+
+create_particles   air n 0
+Created 16 particles
+  CPU time = 0.000857441 secs
+
+#######
+# Run #
+#######
+compute 1     thermal/grid all all temp
+compute 2     grid all all n
+
+compute 1r reduce ave c_1[*]
+compute 2r reduce ave c_2[*]
+
+stats              50
+stats_style        step np nattempt ncoll nbound c_1r c_2r
+
+timestep           4.0e-9
+run                1000
+Memory usage per proc in Mbytes:
+  particles (ave,min,max) = 1.6875 1.6875 1.6875
+  grid      (ave,min,max) = 1.51379 1.51379 1.51379
+  surf      (ave,min,max) = 0 0 0
+  total     (ave,min,max) = 3.20135 3.20135 3.20135
+Step Np Natt Ncoll Nbound c_1r c_2r 
+       0       16        0        0        0    187.51266           16 
+      50       16        3        3        0    187.51266           16 
+     100       16        3        1        0    187.51266           16 
+     150       16        3        3        0    187.51266           16 
+     200       16        3        2        0    187.51266           16 
+     250       16        3        3        0    187.51266           16 
+     300       16        3        3        0    187.51266           16 
+     350       16        3        1        0    187.51266           16 
+     400       16        3        2        0    187.51266           16 
+     450       16        3        3        0    187.51266           16 
+     500       16        3        2        0    187.51266           16 
+     550       16        3        2        0    187.51266           16 
+     600       16        3        2        0    187.51266           16 
+     650       16        3        2        0    187.51266           16 
+     700       16        3        2        0    187.51266           16 
+     750       16        3        1        0    187.51266           16 
+     800       16        3        2        0    187.51266           16 
+     850       16        3        2        0    187.51266           16 
+     900       16        3        2        0    187.51266           16 
+     950       16        3        2        0    187.51266           16 
+    1000       16        3        0        0    187.51266           16 
+Loop time of 0.00110148 on 1 procs for 1000 steps with 16 particles
+Performance: 907866.115 timesteps/s, 14.526 Mparticle-step/s
+
+MPI task timing breakdown:
+Section |  min time  |  avg time  |  max time  |%varavg| %total
+---------------------------------------------------------------
+Move    | 0.00015748 | 0.00015748 | 0.00015748 |   0.0 | 14.30
+Coll    | 0.00046105 | 0.00046105 | 0.00046105 |   0.0 | 41.86
+Sort    | 6.8258e-05 | 6.8258e-05 | 6.8258e-05 |   0.0 |  6.20
+Comm    | 7.4932e-05 | 7.4932e-05 | 7.4932e-05 |   0.0 |  6.80
+Modify  | 0          | 0          | 0          |   0.0 |  0.00
+Output  | 0.000301   | 0.000301   | 0.000301   |   0.0 | 27.33
+Other   |            | 3.876e-05  |            |       |  3.52
+
+Particle moves    = 16000 (16K)
+Cells touched     = 16294 (16.3K)
+Particle comms    = 0 (0K)
+Boundary collides = 0 (0K)
+Boundary exits    = 0 (0K)
+SurfColl checks   = 0 (0K)
+SurfColl occurs   = 0 (0K)
+Surf reactions    = 0 (0K)
+Collide attempts  = 2967 (2.97K)
+Collide occurs    = 1977 (1.98K)
+Reactions         = 0 (0K)
+Particles stuck   = 0
+Axisymm bad moves = 0
+
+Particle-moves/CPUsec/proc: 1.45259e+07
+Particle-moves/step: 16
+Cell-touches/particle/step: 1.01838
+Particle comm iterations/step: 1
+Particle fraction communicated: 0
+Particle fraction colliding with boundary: 0
+Particle fraction exiting boundary: 0
+Surface-checks/particle/step: 0
+Surface-collisions/particle/step: 0
+Surf-reactions/particle/step: 0
+Collision-attempts/particle/step: 0.185438
+Collisions/particle/step: 0.123563
+Reactions/particle/step: 0
+
+Particles: 16 ave 16 max 16 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+Cells:      1 ave 1 max 1 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+GhostCell: 0 ave 0 max 0 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+EmptyCell: 0 ave 0 max 0 min
+Histogram: 1 0 0 0 0 0 0 0 0 0

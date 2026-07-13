@@ -1,0 +1,61 @@
+################################################################################
+# SWPM regression test: compute vmom/grid velocity moments
+#
+# Homogeneous argon gas in a single periodic cell with SWPM splitting and
+# energy reduction active, sampling the mass-weighted velocity moments
+# provided by the new compute vmom/grid:
+#   v2       <v^2>          second moment (isotropic)
+#   vx3..vz3 <v^3>_x,y,z    third moments per direction
+#   v4       <vx^4>         fourth moment (x components only, see doc)
+#
+# The moments are normalized by the weighted mass sum, so <v^2> is exactly
+# conserved by splitting, elastic collisions and energy reduction, while the
+# odd moments fluctuate around zero.  All columns are deterministic for the
+# fixed seed and captured in the gold log.
+################################################################################
+
+seed               12137
+dimension          3
+
+variable T         equal 298.15
+variable ppc       equal 200
+variable nden      equal 4.247e22
+variable L         equal 1.0e-5
+
+species            air.species Ar
+mixture            air Ar vstream 0.0 0.0 0.0 temp ${T}
+mixture            air Ar frac 1.0
+
+boundary           p p p
+create_box         0.0 ${L} 0.0 ${L} 0.0 ${L}
+create_grid        1 1 1
+balance_grid       rcb part
+
+variable Fnum      equal ${nden}*${L}*${L}*${L}/${ppc}
+global             nrho ${nden}
+global             fnum ${Fnum}
+
+collide            vss air air.vss
+collide_modify     remain no
+
+# fix stochastic_weight must precede collide_modify stochastic_weight yes
+fix                fweight stochastic_weight
+collide_modify     stochastic_weight yes
+collide_modify     split 8 1.0
+collide_modify     reduce energy binary 100 4 16
+
+create_particles   air n 0
+
+compute q          vmom/grid all all v2 vx3 vy3 vz3 v4
+
+compute qr1        reduce ave c_q[1]
+compute qr2        reduce ave c_q[2]
+compute qr3        reduce ave c_q[3]
+compute qr4        reduce ave c_q[4]
+compute qr5        reduce ave c_q[5]
+
+stats              50
+stats_style        step np ncoll c_qr1 c_qr2 c_qr3 c_qr4 c_qr5
+
+timestep           1.0e-9
+run                500
