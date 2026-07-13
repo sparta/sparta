@@ -563,6 +563,17 @@ void Collide::group_bt(int istart, int iend, int group_size_buffer)
       for(int j = 0; j < 3; j++) pij[i][j] /= mbar;
     }
 
+    // --- TEMPORARY: conservation check (mass/number, momentum, energy) ---
+    double pre_n=0.0, pre_p[3]={0,0,0}, pre_e=0.0;
+    for (int pp=istart; pp<iend; pp++) {
+      int idx=plist[pp]; double w=stochastic_weights[idx];
+      if (w<=0.0) continue;
+      double mm=species[particles[idx].ispecies].mass*w;
+      double *vv=particles[idx].v;
+      pre_n+=w; pre_e+=0.5*mm*(vv[0]*vv[0]+vv[1]*vv[1]+vv[2]*vv[2]);
+      for(int d=0;d<3;d++) pre_p[d]+=mm*vv[d];
+    }
+
     // reduce based on type
     if (reduction_type == ENERGY) {
       reduce_energy(istart, iend, gsum, V, T, Erot, Evib);
@@ -571,6 +582,29 @@ void Collide::group_bt(int istart, int iend, int group_size_buffer)
     } else if (reduction_type == STRESS) {
       reduce_stress(istart, iend, gsum, V, T, Erot, Evib, q, pij);
     }
+
+    // --- TEMPORARY: verify conservation after reduction ---
+    double post_n=0.0, post_p[3]={0,0,0}, post_e=0.0;
+    for (int pp=istart; pp<iend; pp++) {
+      int idx=plist[pp]; double w=stochastic_weights[idx];
+      if (w<=0.0) continue;
+      double mm=species[particles[idx].ispecies].mass*w;
+      double *vv=particles[idx].v;
+      post_n+=w; post_e+=0.5*mm*(vv[0]*vv[0]+vv[1]*vv[1]+vv[2]*vv[2]);
+      for(int d=0;d<3;d++) post_p[d]+=mm*vv[d];
+    }
+    double tol=1e-6;
+    double pmag=fabs(pre_p[0])+fabs(pre_p[1])+fabs(pre_p[2])+1e-30;
+    if (fabs(post_n-pre_n)>tol*(fabs(pre_n)+1e-30) ||
+        fabs(post_e-pre_e)>tol*(fabs(pre_e)+1e-30) ||
+        (fabs(post_p[0]-pre_p[0])+fabs(post_p[1]-pre_p[1])+
+         fabs(post_p[2]-pre_p[2]))>tol*pmag)
+      printf("REDUCE[%d] noncons: dN=%.2e dE=%.2e dP=%.2e\n",
+             reduction_type,
+             (post_n-pre_n)/(fabs(pre_n)+1e-30),
+             (post_e-pre_e)/(fabs(pre_e)+1e-30),
+             (fabs(post_p[0]-pre_p[0])+fabs(post_p[1]-pre_p[1])+
+              fabs(post_p[2]-pre_p[2]))/pmag);
 
   // group still too large so divide further
 
