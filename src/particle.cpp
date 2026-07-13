@@ -153,6 +153,11 @@ void Particle::init()
 
   error_custom();
 
+  // mirror grid cell-weighting state so stochastic_weights() can enforce
+  // mutual exclusion between SWPM and grid-based particle weighting
+
+  weightflag = (grid->cellweightflag != 0) ? 1 : 0;
+
   // initialize mixtures
 
   for (int i = 0; i < nmixture; i++) mixture[i]->init();

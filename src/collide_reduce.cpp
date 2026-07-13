@@ -39,6 +39,16 @@ using namespace MathConst;
 #define DELTADELETE 1024
 #define SMALL 1.0e-16
 
+/* sample a uniformly distributed unit vector into uvec[3] */
+static void sample_unit_sphere(RanKnuth *rng, double *uvec)
+{
+  double theta = 2.0 * MY_PI * rng->uniform();
+  double phi = acos(1.0 - 2.0 * rng->uniform());
+  uvec[0] = sin(phi) * cos(theta);
+  uvec[1] = sin(phi) * sin(theta);
+  uvec[2] = cos(phi);
+}
+
 /* ----------------------------------------------------------------------
    flag plist entry idx for deletion: mark its stochastic weight and queue it
 ------------------------------------------------------------------------- */
@@ -77,12 +87,8 @@ void Collide::reduce_energy(int istart, int iend,
 
   // find direction of velocity wrt CoM frame
 
-  double theta = 2.0 * MY_PI * random->uniform();
-  double phi = acos(1.0 - 2.0 * random->uniform());
   double uvec[3];
-  uvec[0] = sin(phi) * cos(theta);
-  uvec[1] = sin(phi) * sin(theta);
-  uvec[2] = cos(phi);
+  sample_unit_sphere(random, uvec);
 
   // set reduced particle velocities
 
@@ -96,10 +102,10 @@ void Collide::reduce_energy(int istart, int iend,
   // each survivor carries weight rho/2, so w_i*erot_i + w_j*erot_j = Erot
   // (and likewise for Evib): internal energy is conserved exactly
 
-  ipart->erot = Erot/(rho*0.5)*0.5;
-  jpart->erot = Erot/(rho*0.5)*0.5;
-  ipart->evib = Evib/(rho*0.5)*0.5;
-  jpart->evib = Evib/(rho*0.5)*0.5;
+  ipart->erot = Erot/rho;
+  jpart->erot = Erot/rho;
+  ipart->evib = Evib/rho;
+  jpart->evib = Evib/rho;
 
   // set reduced particle stochastic weights (relative to fnum)
 
@@ -149,6 +155,10 @@ void Collide::reduce_heat(int istart, int iend,
   double qge;
   if (sqT < SMALL) qge = 0.0;
   else qge = qmag / (rho * pow(sqT,3.0));
+  // analogous to the A^2 > 1/SMALL clamp in reduce_stress: if qge is too
+  // large (strongly-skewed group, e.g. shock cells), itheta blows up and
+  // isw underflows, producing hypervelocity survivors and Inf erot
+  if (qge*qge > 1.0/SMALL) qge = 0.0;
   double itheta = qge + sqrt(1.0 + qge*qge);
   double alpha = sqT*itheta;
   double beta = sqT/itheta;
@@ -159,14 +169,8 @@ void Collide::reduce_heat(int istart, int iend,
   // is not conserved; sample uniformly on the unit sphere
 
   double uvec[3];
-  if (qmag < SMALL) {
-    double theta = 2.0 * MY_PI * random->uniform();
-    double phi = acos(1.0 - 2.0 * random->uniform());
-    uvec[0] = sin(phi) * cos(theta);
-    uvec[1] = sin(phi) * sin(theta);
-    uvec[2] = cos(phi);
-  } else
-    for (int d = 0; d < 3; d++) uvec[d] = q[d]/qmag;
+  if (qmag < SMALL) sample_unit_sphere(random, uvec);
+  else for (int d = 0; d < 3; d++) uvec[d] = q[d]/qmag;
 
   // set reduced particle velocities
 
@@ -217,9 +221,13 @@ void Collide::reduce_stress(int istart, int iend,
   // jacobi3 returns eigenvectors as columns (evec[d][i] = component d of
   // eigenvector i), so compact columns, not rows
 
+  // keep only eigenvalues >= eval_thresh so that pow(eval,3.0) is numerically
+  // representable (eval^3 >= SMALL^2 when eval >= SMALL^(2/3) ~ 2e-11)
+  const double eval_thresh = pow(SMALL, 2.0/3.0);
+
   int nK = 0;
   for (int i = 0; i < 3; i++) {
-    if (fabs(eval[i]) >= SMALL && eval[i] > 0) {
+    if (eval[i] >= eval_thresh) {
       eval[nK] = eval[i];
       for (int d = 0; d < 3; d++) evec[d][nK] = evec[d][i];
       nK++;
@@ -262,8 +270,16 @@ void Collide::reduce_stress(int istart, int iend,
       for (int d = 0; d < 3; d++) evec[d][iK] *= -1.0;
     qli = fabs(qli);
 
-    itheta = sqrt(rho) * qli / (sqrt(nK) * pow(eval[iK],1.5))
-      + sqrt(1.0 + (rho*qli*qli)/(nK*pow(eval[iK],3.0)));
+    // analogous to reduce_heat's "if (sqT < SMALL) qge = 0.0":
+    // if the heat-flux ratio A is too large (near-degenerate eigenvalue or
+    // large heat-flux projection), the formula is numerically unreliable;
+    // fall back to equal-weight split (A=0, itheta=1).
+    // threshold: A^2 > 1/SMALL (A > 1e8) means isw would underflow to ~1e-16
+    double sqE = sqrt(eval[iK]);  // >= sqrt(eval_thresh) by filter above
+    double A = (qli < SMALL) ? 0.0
+             : sqrt(rho) * qli / (sqrt(nK) * sqE * eval[iK]);
+    if (A*A > 1.0/SMALL) A = 0.0;
+    itheta = A + sqrt(1.0 + A*A);
 
     // set reduced particle velocities
 

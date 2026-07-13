@@ -108,8 +108,7 @@ void Collide::collisions_one_stochastic_weighting()
     // nattempt = rounded attempt with RN
     // if no attempts, continue to next grid cell
 
-    if (np >= Ncmin && Ncmin > 0.0) pre_wtf = 0.0;
-    else pre_wtf = 1.0;
+    pre_wtf = (Ncmin > 0 && np < Ncmin) ? 1.0 : 0.0;
 
     attempt = attempt_collision(icell,np,volume);
     nattempt = static_cast<int> (attempt);
@@ -117,11 +116,19 @@ void Collide::collisions_one_stochastic_weighting()
     if (!nattempt) continue;
     nattempt_one += nattempt;
 
+    // snapshot the pre-split population size so that pair sampling uses a
+    // fixed pool throughout the attempt loop: split fragments are appended
+    // to plist (for the reduction pass in group()) but must not enlarge the
+    // sampling pool, which would bias nattempt and dilute the realized
+    // collision rate for the original particles
+
+    int np_orig = np;
+
     for (int iattempt = 0; iattempt < nattempt; iattempt++) {
 
-      i = np * random->uniform();
-      j = np * random->uniform();
-      while (i == j) j = np * random->uniform();
+      i = np_orig * random->uniform();
+      j = np_orig * random->uniform();
+      while (i == j) j = np_orig * random->uniform();
       ipart = &particles[plist[i]];
       jpart = &particles[plist[j]];
 
@@ -167,7 +174,9 @@ void Collide::collisions_one_stochastic_weighting()
       mpart = NULL; // dummy particle
       setup_collision(ipart,jpart);
       perform_collision(ipart,jpart,mpart);
-      ncollide_one++;
+      // weight by Gwtf so ncollide_one scales with real molecular collisions,
+      // not raw event count (both partners carry isw == Gwtf after split)
+      ncollide_one += static_cast<int>(isw + 0.5);
 
     } // end attempt loop
   } // loop for cells
@@ -506,10 +515,14 @@ void Collide::group_bt(int istart, int iend, int group_size_buffer)
   double V[3];
   for (int i = 0; i < 3; i++) V[i] = mV[i]/msum;
 
-  // second pass: accumulate the stress tensor and heat flux directly from
-  // velocity deviations (v - V).  computing these central moments with
-  // nested loops avoids the catastrophic cancellation of the raw-moment
-  // form (e.g. mVV - mV*mV/msum), which could yield negative temperatures.
+  // second pass: accumulate the stress tensor and (at leaf nodes only) the
+  // heat flux directly from velocity deviations (v - V).  computing these
+  // central moments avoids catastrophic cancellation of the raw-moment form.
+  // q is only consumed at leaf reductions (HEAT/STRESS); internal nodes only
+  // need pij for the eigensplit, so skip the dvsq work when subdividing.
+
+  bool is_leaf = (np <= Ngmax+group_size_buffer);
+  bool need_q = is_leaf && (reduction_type != ENERGY);
 
   double pij[3][3], q[3];
   for (int i = 0; i < 3; i++) {
@@ -527,13 +540,16 @@ void Collide::group_bt(int istart, int iend, int group_size_buffer)
 
     double dv[3];
     for (int i = 0; i < 3; i++) dv[i] = ipart->v[i] - V[i];
-    double dvsq = dv[0]*dv[0] + dv[1]*dv[1] + dv[2]*dv[2];
 
-    for (int i = 0; i < 3; i++) {
-      // heat flux: q_i = 1/2 sum w*m*(v_i - V_i)*|v - V|^2
-      q[i] += 0.5*pmsw*dv[i]*dvsq;
-      // stress tensor: P_ij = sum w*m*(v_i - V_i)*(v_j - V_j)
-      for (int j = 0; j < 3; j++) pij[i][j] += pmsw*dv[i]*dv[j];
+    if (need_q) {
+      double dvsq = dv[0]*dv[0] + dv[1]*dv[1] + dv[2]*dv[2];
+      for (int i = 0; i < 3; i++) {
+        q[i] += 0.5*pmsw*dv[i]*dvsq;
+        for (int j = 0; j < 3; j++) pij[i][j] += pmsw*dv[i]*dv[j];
+      }
+    } else {
+      for (int i = 0; i < 3; i++)
+        for (int j = 0; j < 3; j++) pij[i][j] += pmsw*dv[i]*dv[j];
     }
   }
 
@@ -563,17 +579,6 @@ void Collide::group_bt(int istart, int iend, int group_size_buffer)
       for(int j = 0; j < 3; j++) pij[i][j] /= mbar;
     }
 
-    // --- TEMPORARY: conservation check (mass/number, momentum, energy) ---
-    double pre_n=0.0, pre_p[3]={0,0,0}, pre_e=0.0;
-    for (int pp=istart; pp<iend; pp++) {
-      int idx=plist[pp]; double w=stochastic_weights[idx];
-      if (w<=0.0) continue;
-      double mm=species[particles[idx].ispecies].mass*w;
-      double *vv=particles[idx].v;
-      pre_n+=w; pre_e+=0.5*mm*(vv[0]*vv[0]+vv[1]*vv[1]+vv[2]*vv[2]);
-      for(int d=0;d<3;d++) pre_p[d]+=mm*vv[d];
-    }
-
     // reduce based on type
     if (reduction_type == ENERGY) {
       reduce_energy(istart, iend, gsum, V, T, Erot, Evib);
@@ -582,29 +587,6 @@ void Collide::group_bt(int istart, int iend, int group_size_buffer)
     } else if (reduction_type == STRESS) {
       reduce_stress(istart, iend, gsum, V, T, Erot, Evib, q, pij);
     }
-
-    // --- TEMPORARY: verify conservation after reduction ---
-    double post_n=0.0, post_p[3]={0,0,0}, post_e=0.0;
-    for (int pp=istart; pp<iend; pp++) {
-      int idx=plist[pp]; double w=stochastic_weights[idx];
-      if (w<=0.0) continue;
-      double mm=species[particles[idx].ispecies].mass*w;
-      double *vv=particles[idx].v;
-      post_n+=w; post_e+=0.5*mm*(vv[0]*vv[0]+vv[1]*vv[1]+vv[2]*vv[2]);
-      for(int d=0;d<3;d++) post_p[d]+=mm*vv[d];
-    }
-    double tol=1e-6;
-    double pmag=fabs(pre_p[0])+fabs(pre_p[1])+fabs(pre_p[2])+1e-30;
-    if (fabs(post_n-pre_n)>tol*(fabs(pre_n)+1e-30) ||
-        fabs(post_e-pre_e)>tol*(fabs(pre_e)+1e-30) ||
-        (fabs(post_p[0]-pre_p[0])+fabs(post_p[1]-pre_p[1])+
-         fabs(post_p[2]-pre_p[2]))>tol*pmag)
-      printf("REDUCE[%d] noncons: dN=%.2e dE=%.2e dP=%.2e\n",
-             reduction_type,
-             (post_n-pre_n)/(fabs(pre_n)+1e-30),
-             (post_e-pre_e)/(fabs(pre_e)+1e-30),
-             (fabs(post_p[0]-pre_p[0])+fabs(post_p[1]-pre_p[1])+
-              fabs(post_p[2]-pre_p[2]))/pmag);
 
   // group still too large so divide further
 
