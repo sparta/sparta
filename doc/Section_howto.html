@@ -1910,13 +1910,12 @@ the <A HREF = "fix_rigid.html">fix rigid</A> doc page for details of the time
 integration scheme and this one-step lag.
 </P>
 <P>The <I>remap</I> option of <A HREF = "fix_rigid.html">fix rigid</A> selects how the
-moving surfs are assigned to grid cells each step.  The default
-<I>overlay</I> mode simply adds the moving surfs to the collision lists of
-the grid cells they sweep through, without cutting or splitting the
-cells, which is fast but means cells overlapped by the body retain
-their full flow volume.  The <I>cutcell</I> mode re-computes cut and split
-cell info every step, exactly as <A HREF = "fix_move_surf.html">fix move/surf</A>
-does, which is accurate but expensive.
+moving surfs are re-assigned to grid cells each step.  The default
+<I>cutcell</I> mode re-computes cut and split cell info every step, exactly
+as <A HREF = "fix_move_surf.html">fix move/surf</A> does, giving exact flow volumes
+near the body.  The <I>incremental</I> mode produces the same exact result
+but only re-cuts the grid cells near the body that actually changed,
+which is much faster on large grids.
 </P>
 <P>If the object approaches other static (non-moving) surface elements,
 optional push-off spring forces can repel it before contact, via the

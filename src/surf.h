@@ -45,11 +45,6 @@ class Surf : protected Pointers {
   int *bitmask;             // one-bit mask for each group
   int *inversemask;         // inverse mask for each group
 
-  int rigidbits;            // OR of group bits for mobile rigid bodies
-                            // set by fix rigid in overlay remap mode
-                            // surfs in these groups are excluded from
-                            // static assignment of surfs to grid cells
-
   // surf data structs
   // explicit, all: each proc owns all surfs
   //   nlocal = Nsurf, nghost = 0

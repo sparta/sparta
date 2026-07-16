@@ -72,8 +72,6 @@ Surf::Surf(SPARTA *sparta) : Pointers(sparta)
   gnames[0] = new char[n];
   strcpy(gnames[0],"all");
 
-  rigidbits = 0;
-
   nsurf = 0;
 
   nlocal = nghost = nmax = 0;

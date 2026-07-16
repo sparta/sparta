@@ -1,5 +1,5 @@
 SPARTA (24 Sep 2025)
-Running on 4 MPI task(s)
+Running on 1 MPI task(s)
 ################################################################################
 # 2d rigid body square bouncing between a static wall and the box boundary
 #
@@ -17,8 +17,8 @@ create_box  	    0 10 0 10 -0.5 0.5
 Created orthogonal box = (0 0 -0.5) to (10 10 0.5)
 create_grid 	    20 20 1
 Created 400 child grid cells
-  CPU time = 0.00144751 secs
-  create/ghost percent = 77.0098 22.9902
+  CPU time = 0.000771999 secs
+  create/ghost percent = 86.1643 13.8357
 
 global		    nrho 1.0 fnum 0.001
 
@@ -35,10 +35,10 @@ read_surf           data.square group body
   384 0 16 = cells outside/inside/overlapping surfs
   16 = surf cells with 1,2,etc splits
   99 99 = cell-wise and global flow volume
-  CPU time = 0.00090799 secs
-  read/check/sort/surf2grid/ghost/inout/particle percent = 6.4471 17.7811 0.563663 40.3888 34.8193 20.2065 0.550226
-  surf2grid time = 0.000366726 secs
-  map/comm1/comm2/comm3/comm4/split percent = 26.2886 9.99302 11.8873 4.11152 33.5545 6.27935
+  CPU time = 0.000306129 secs
+  read/check/sort/surf2grid/ghost/inout/particle percent = 6.23053 20.8723 1.94704 55.919 15.0312 9.42368 0
+  surf2grid time = 0.000171185 secs
+  map/comm1/comm2/comm3/comm4/split percent = 38.0223 4.5961 18.663 4.039 21.5877 7.66017
 read_surf           data.wall group wall
   4 lines
   8 8.2 xlo xhi
@@ -49,10 +49,10 @@ read_surf           data.wall group wall
   356 0 44 = cells outside/inside/overlapping surfs
   44 = surf cells with 1,2,etc splits
   97.8 97.8 = cell-wise and global flow volume
-  CPU time = 0.000584524 secs
-  read/check/sort/surf2grid/ghost/inout/particle percent = 15.4743 13.1103 1.73492 41.2945 28.386 25.4789 1.29764
-  surf2grid time = 0.000241376 secs
-  map/comm1/comm2/comm3/comm4/split percent = 33.6173 8.6968 18.3278 5.71308 2.50315 17.0062
+  CPU time = 0.000198841 secs
+  read/check/sort/surf2grid/ghost/inout/particle percent = 5.51559 5.03597 2.51799 65.3477 21.5827 10.0719 0
+  surf2grid time = 0.000129938 secs
+  map/comm1/comm2/comm3/comm4/split percent = 49.3578 4.58716 20.7339 5.3211 6.05505 10.0917
 surf_collide	    1 specular
 surf_modify         all collide 1
 
@@ -91,19 +91,19 @@ Step f_1[1] f_1[4] f_1[15] f_1[20] f_1[21]
     3000    6.3763641    50.001605            0            0            0 
     3250    7.1876709   -32.659253            0 -7.5068349e-19            0 
     3500     5.962216   -50.002055            0            0            0 
-Loop time of 0.0392993 on 4 procs for 3500 steps with 0 particles
-Performance: 89060.192 timesteps/s, 0.000 particle-step/s
+Loop time of 0.385439 on 1 procs for 3500 steps with 0 particles
+Performance: 9080.557 timesteps/s, 0.000 particle-step/s
 
 MPI task timing breakdown:
 Section |  min time  |  avg time  |  max time  |%varavg| %total
 ---------------------------------------------------------------
-Move    | 0.00022609 | 0.00024585 | 0.00027411 |   0.0 |  0.63
+Move    | 0.00021362 | 0.00021362 | 0.00021362 |   0.0 |  0.06
 Coll    | 0          | 0          | 0          |   0.0 |  0.00
 Sort    | 0          | 0          | 0          |   0.0 |  0.00
-Comm    | 0.012095   | 0.013784   | 0.015407   |   1.1 | 35.07
-Modify  | 0.023258   | 0.024729   | 0.026012   |   0.7 | 62.92
-Output  | 6.4715e-05 | 0.00020203 | 0.00060421 |   0.0 |  0.51
-Other   |            | 0.0003385  |            |       |  0.86
+Comm    | 0.00042939 | 0.00042939 | 0.00042939 |   0.0 |  0.11
+Modify  | 0.38425    | 0.38425    | 0.38425    |   0.0 | 99.69
+Output  | 0.00015807 | 0.00015807 | 0.00015807 |   0.0 |  0.04
+Other   |            | 0.0003831  |            |       |  0.10
 
 Particle moves    = 0 (0K)
 Cells touched     = 0 (0K)
@@ -134,14 +134,14 @@ Collisions/particle/step: 0
 Reactions/particle/step: 0
 
 Particles: 0 ave 0 max 0 min
-Histogram: 4 0 0 0 0 0 0 0 0 0
-Cells:      100 ave 100 max 100 min
-Histogram: 4 0 0 0 0 0 0 0 0 0
-GhostCell: 300 ave 300 max 300 min
-Histogram: 4 0 0 0 0 0 0 0 0 0
+Histogram: 1 0 0 0 0 0 0 0 0 0
+Cells:      400 ave 400 max 400 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+GhostCell: 0 ave 0 max 0 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
 EmptyCell: 0 ave 0 max 0 min
-Histogram: 4 0 0 0 0 0 0 0 0 0
+Histogram: 1 0 0 0 0 0 0 0 0 0
 Surfs:    8 ave 8 max 8 min
-Histogram: 4 0 0 0 0 0 0 0 0 0
+Histogram: 1 0 0 0 0 0 0 0 0 0
 GhostSurf: 0 ave 0 max 0 min
-Histogram: 4 0 0 0 0 0 0 0 0 0
+Histogram: 1 0 0 0 0 0 0 0 0 0

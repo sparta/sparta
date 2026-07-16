@@ -22,7 +22,6 @@ FixStyle(rigid,FixRigid)
 #define SPARTA_FIX_RIGID_H
 
 #include "fix.h"
-#include "my_page.h"
 
 namespace SPARTA_NS {
 
@@ -95,18 +94,7 @@ class FixRigid : public Fix {
 
   // remap of body surfs to grid cells
 
-  int remapmode;          // OVERLAY or CUTCELL
-
-  int nmodified;          // # of cells with body surfs overlaid this step
-  int maxmodified;        // allocated size of overlay restore lists
-  int *modified;          // indices of cells whose csurfs were overridden
-  int *nsurf_saved;       // saved static nsurf of each modified cell
-  surfint **csurfs_saved; // saved static csurfs ptr of each modified cell
-  MyPage<surfint> *cpage; // storage for merged static+body surf lists
-
-  double **elemlo;        // per-element swept bounding boxes for this step
-  double **elemhi;
-  surfint *tmplist;       // work list of body elements overlapping one cell
+  int remapmode;          // CUTCELL or INCREMENTAL
 
   // incremental cutcell remap data
 
@@ -127,8 +115,8 @@ class FixRigid : public Fix {
   int *newmap;
   class Cut2d *cut2d;
   class Cut3d *cut3d;
-  double bbodylo[3];      // bounding box around entire body,
-  double bbodyhi[3];      //   swept over the current step
+  double bbodylo[3];      // bounding box around entire body
+  double bbodyhi[3];
 
   bigint ndeleted;        // running count of deleted particles
 
@@ -144,11 +132,9 @@ class FixRigid : public Fix {
   void registry_replace(int, surfint *);
   void registry_remove(int);
   void free_registry();
-  void overlay_assign();        // per-step overlay of body surfs into cells
-  void overlay_restore();       // undo overlay of previous step
-  void body_bbox(int);          // swept bbox of body elements over a step
+  void body_bbox();             // bounding box around body at current position
   int inside_body(double *);    // 1 if point is inside rigid body, else 0
-  int inside_any_body(double *); // 1 if inside any cutting-mode body
+  int inside_any_body(double *); // 1 if inside any rigid body
   bigint remove_inside_particles(int);
 };
 

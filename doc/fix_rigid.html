@@ -47,7 +47,7 @@
 <PRE>  keyword = <I>scale</I> or <I>remap</I> or <I>push</I> or <I>pushbound</I> or <I>outfile</I> or <I>pseudo</I>
      <I>scale</I> value = factor
        factor = multiply all mass-dependent body values by this factor
-     <I>remap</I> value = <I>overlay</I> or <I>cutcell</I> or <I>incremental</I>
+     <I>remap</I> value = <I>cutcell</I> or <I>incremental</I>
        method used to assign the moving body surfs to grid cells
      <I>push</I> values = k cutoff
        k = stiffness for push-off forces
@@ -248,35 +248,20 @@ regime of this command (large particulates).
 </P>
 <HR>
 
-<P>The <I>remap</I> keyword selects how the moving body surfs are assigned to
-grid cells, which is also discussed in <A HREF = "Section_howto.html#howto_20">Section
-6.20</A>.
+<P>The <I>remap</I> keyword selects how the moving body surfs are re-assigned
+to grid cells as the body moves, which is also discussed in <A HREF = "Section_howto.html#howto_20">Section
+6.20</A>.  In both modes the body surfs
+participate in the standard cut and split cell machinery, so grid
+cell flow volumes and INSIDE/OUTSIDE cell markings are exact near the
+body; the two modes differ only in cost.
 </P>
-<P>For <I>remap overlay</I> (the default), the body surfs are excluded from
-the static assignment of surfs to grid cells which underlies cut and
-split cells (see <A HREF = "Section_howto.html#howto_8">Section 6.8</A>).  Grid
-cells overlapped by the body retain their full flow volume and are
-not marked INSIDE.  Each timestep the body surfs are overlaid onto
-the surf lists of all grid cells which they sweep through during the
-step, so particles collide with them, but cells are never cut or
-split by the body.  This is inexpensive: no re-computation of cut or
-split cells is performed as the body moves.  The trade-off is that
-the flow volume of cells overlapped by the body is not reduced by the
-body volume, which affects the computed gas-gas collision rate in
-those cells.  The approximation is good when the body is large
-compared to individual grid cells (most overlapped cells are covered
-by the body's interior and see no particles anyway) or when gas-gas
-collision rates near the body surface are not critical.
-</P>
-<P>For <I>remap cutcell</I>, the body surfs participate in the standard cut
-and split cell machinery.  At the end of every timestep, after the
-body surfs move, all surfs are re-assigned to grid cells and cut/split
-cell info including flow volumes and INSIDE/OUTSIDE cell markings is
-re-computed, exactly as is done by the <A HREF = "fix_move_surf.html">fix
-move/surf</A> command.  Cell volumes near the body
-are thus exact, at the cost of a full grid re-map every timestep,
-which can be expensive for large grids.  Any particles which end up
-inside the body are deleted.
+<P>For <I>remap cutcell</I> (the default), at the end of every timestep, after
+the body surfs move, all surfs are re-assigned to grid cells and
+cut/split cell info including flow volumes and INSIDE/OUTSIDE cell
+markings is re-computed, exactly as is done by the <A HREF = "fix_move_surf.html">fix
+move/surf</A> command.  This is exact but performs a
+full grid re-map every timestep, which can be expensive for large
+grids.  Any particles which end up inside the body are deleted.
 </P>
 <P>The <I>remap incremental</I> mode produces the same exact cut-cell
 information as <I>cutcell</I> at a fraction of the cost.  Each timestep,
@@ -289,22 +274,18 @@ be structural - the cell would become or stop being a split cell, or
 its surf count would exceed the <A HREF = "global.html">global surfmax</A> setting
 - the fix automatically falls back to the same full grid re-map that
 <I>cutcell</I> performs on every step.  On a benchmark with 10,000 grid
-cells, <I>incremental</I> was about 5x faster than <I>cutcell</I> and
-approached the speed of <I>overlay</I>.
+cells, <I>incremental</I> was about 5x faster than <I>cutcell</I>.
 </P>
 <P>With multiple rigid bodies, the <I>incremental</I> re-cut is applied only
-if every cutting body (i.e. every body in <I>cutcell</I> or <I>incremental</I>
-mode) uses <I>incremental</I>; the last-defined such body re-cuts the
-cells affected by all of them in a single coordinated pass.  If any
-cutting body uses <I>cutcell</I>, an exact full grid re-map is performed
-instead, which correctly handles all bodies.  (Overlay bodies never
-cut cells and impose no such requirement.)
+if every body uses <I>incremental</I>; the last-defined body then re-cuts
+the cells affected by all of them in a single coordinated pass.  If
+any body uses <I>cutcell</I>, an exact full grid re-map is performed
+instead, which correctly handles all bodies.
 </P>
-<P>In both modes, particles which are inside the body when a run starts
-(e.g. created there by the <A HREF = "create_particles.html">create_particles</A>
-command, which is unaware of the body in overlay mode) are deleted at
-the start of the run.  The cumulative count of deleted particles is
-output as the scalar value of this fix.
+<P>Particles which are inside the body when a run starts are deleted at
+the start of the run.  The cumulative count of particles deleted
+because they were inside a body is output as the scalar value of this
+fix.
 </P>
 <HR>
 
@@ -439,18 +420,13 @@ prevented from being emitted inside the body region during a run
 overlapping the body).
 </P>
 <P>This fix must be defined before any <A HREF = "fix_balance.html">fix balance</A> or
-<A HREF = "fix_adapt.html">fix adapt</A> command, so that it can restore the grid
-cell surf assignments it makes (in overlay mode) before the grid is
-re-balanced or adapted.
+<A HREF = "fix_adapt.html">fix adapt</A> command, so that it re-cuts the grid cells
+for the moved body before the grid is re-balanced or adapted.
 </P>
 <P>If this fix is deleted via the <A HREF = "unfix.html">unfix</A> command, the
-<A HREF = "global.html">global rigid</A> setting should also be set to NULL.  In
-<I>remap overlay</I> mode the body surfs are not re-inserted into the
-static grid assignment when the fix is deleted, so the (now
-stationary) body will no longer interact with particles unless the
-surfs are re-assigned, e.g. by reading them again.  In <I>remap
-cutcell</I> mode the body remains a static object which particles
-collide with.
+<A HREF = "global.html">global rigid</A> setting should also be set to NULL.  The
+body then remains as a static object at its current position which
+particles continue to collide with.
 </P>
 <P><B>Related commands:</B>
 </P>
@@ -459,7 +435,7 @@ collide with.
 </P>
 <P><B>Default:</B>
 </P>
-<P>The option defaults are remap = overlay, pushbound = no,
+<P>The option defaults are remap = cutcell, pushbound = no,
 pushstyle = linear, pushdamp = 0.0, scale = 1.0, no push-off forces,
 no outfile, no pseudo particles.
 </P>

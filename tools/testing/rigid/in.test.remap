@@ -1,8 +1,8 @@
 # TEST: remap mode consistency
 # pseudo-particle-driven body, no real particles: the trajectory is
-# deterministic and must be identical for remap overlay, cutcell, and
+# deterministic and must be identical for remap cutcell and
 # incremental, since the remap method must not alter the dynamics
-# run as: spa_serial -in in.test.remap -var mode overlay   (etc)
+# run as: spa_serial -in in.test.remap -var mode cutcell   (or incremental)
 
 seed	    	    12345
 dimension   	    2

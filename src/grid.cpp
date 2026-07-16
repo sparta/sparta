@@ -1450,8 +1450,8 @@ void Grid::set_inout()
   }
 
   // if no cell overlaps a surf, just mark all cells as OUTSIDE
-  // can occur when all surfs are in mobile rigid bodies (fix rigid),
-  //   which are excluded from static surf assignment to grid cells
+  // can occur when a mobile rigid body (fix rigid) has moved entirely
+  //   outside the domain, so its surfs no longer overlap any grid cell
 
   int overlap_mine = 0;
   for (icell = 0; icell < nlocal; icell++)

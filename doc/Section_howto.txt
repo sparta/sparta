@@ -1899,13 +1899,12 @@ the "fix rigid"_fix_rigid.html doc page for details of the time
 integration scheme and this one-step lag.
 
 The {remap} option of "fix rigid"_fix_rigid.html selects how the
-moving surfs are assigned to grid cells each step.  The default
-{overlay} mode simply adds the moving surfs to the collision lists of
-the grid cells they sweep through, without cutting or splitting the
-cells, which is fast but means cells overlapped by the body retain
-their full flow volume.  The {cutcell} mode re-computes cut and split
-cell info every step, exactly as "fix move/surf"_fix_move_surf.html
-does, which is accurate but expensive.
+moving surfs are re-assigned to grid cells each step.  The default
+{cutcell} mode re-computes cut and split cell info every step, exactly
+as "fix move/surf"_fix_move_surf.html does, giving exact flow volumes
+near the body.  The {incremental} mode produces the same exact result
+but only re-cuts the grid cells near the body that actually changed,
+which is much faster on large grids.
 
 If the object approaches other static (non-moving) surface elements,
 optional push-off spring forces can repel it before contact, via the

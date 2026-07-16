@@ -12,8 +12,10 @@ momentum      gas + body momentum conservation in a periodic box,
               within 1.5% statistical drift
 overrun       body sweeping 40% of a cell per step through resting
               gas: no particles overrun (deletion counter constant)
-remap         overlay / cutcell / incremental remap modes produce
-              identical deterministic trajectories
+remap         cutcell and incremental remap modes produce identical
+              deterministic trajectories
+multiremap    two gas-driven bodies give identical trajectories in
+              cutcell and incremental modes (multi-body incremental)
 twobody       two bodies colliding head-on via push-off: symmetric,
               elastic within 2%
 badmoi        negative: 3d moi violating the triangle inequality

@@ -482,13 +482,6 @@ void Grid::surf2grid_surf_algorithm(int outflag)
     int nsend = 0;
 
     for (isurf = istart; isurf < istop; isurf += idelta) {
-
-      // skip surfs in mobile rigid bodies, e.g. set by fix rigid
-
-      if (dim == 2) {
-        if (lines[isurf].mask & surf->rigidbits) continue;
-      } else if (tris[isurf].mask & surf->rigidbits) continue;
-
       if (dim == 2) surf->bbox_one(&lines[isurf],slo,shi);
       else surf->bbox_one(&tris[isurf],slo,shi);
       id_find_child_uniform_level(level,0,boxlo,boxhi,slo,

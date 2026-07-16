@@ -59,7 +59,7 @@ enum{CELLUNKNOWN,CELLOUTSIDE,CELLINSIDE,CELLOVERLAP};
 
 enum{PERIODIC,OUTFLOW,REFLECT,SURFACE,AXISYM};  // same as Domain
 
-enum{OVERLAY,CUTCELL,INCREMENTAL};          // remap modes
+enum{CUTCELL,INCREMENTAL};          // remap modes
 
 enum{LINEAR,HERTZ};             // push-off force laws
 
@@ -88,7 +88,7 @@ FixRigid::FixRigid(SPARTA *sparta, int narg, char **arg) :
   nevery = 1;
 
   // gridmigrate insures grid_changed() is invoked when grid cells
-  // are rebuilt or migrated, so overlay remap data can be reset
+  // are rebuilt or migrated, so incremental re-cut data can be reset
 
   gridmigrate = 1;
 
@@ -177,7 +177,7 @@ FixRigid::FixRigid(SPARTA *sparta, int narg, char **arg) :
   pseudoflag = 0;
   outfile = NULL;
   outevery = 0;
-  remapmode = OVERLAY;
+  remapmode = CUTCELL;
   pushflag = 0;
   pushboundflag = 0;
   pushstyle = LINEAR;
@@ -216,8 +216,7 @@ FixRigid::FixRigid(SPARTA *sparta, int narg, char **arg) :
       iarg += 2;
     } else if (strcmp(arg[iarg],"remap") == 0) {
       if (iarg+2 > narg) error->all(FLERR,"Fix rigid body args not valid");
-      if (strcmp(arg[iarg+1],"overlay") == 0) remapmode = OVERLAY;
-      else if (strcmp(arg[iarg+1],"cutcell") == 0) remapmode = CUTCELL;
+      if (strcmp(arg[iarg+1],"cutcell") == 0) remapmode = CUTCELL;
       else if (strcmp(arg[iarg+1],"incremental") == 0)
         remapmode = INCREMENTAL;
       else error->all(FLERR,"Fix rigid body args not valid");
@@ -304,12 +303,10 @@ FixRigid::FixRigid(SPARTA *sparta, int narg, char **arg) :
   for (int i = 0; i < nsurf; i++) irigid[slist[i]] = i;
 
   // remap data structs
+  // body surfs are cut/split into grid cells by the normal surf
+  //   pipeline (done at read_surf time), so no special setup is needed
+  //   here beyond the incremental re-cut work buffers below
 
-  nmodified = maxmodified = 0;
-  modified = NULL;
-  nsurf_saved = NULL;
-  csurfs_saved = NULL;
-  cpage = NULL;
   ndeleted = 0;
 
   pbodyflag = 0;
@@ -331,51 +328,19 @@ FixRigid::FixRigid(SPARTA *sparta, int narg, char **arg) :
     memory->create(newlist,grid->maxsurfpercell,"fix_rigid:newlist");
     memory->create(newmap,grid->maxsurfpercell,"fix_rigid:newmap");
   }
-
-  // for overlay mode:
-  // exclude body surfs from static assignment of surfs to grid cells,
-  //   then perform a full re-map of surfs to grid cells
-  // cells overlapped by the body then have full flow volume,
-  //   are not cut or split by body surfs, and are not marked INSIDE
-  // each step, start_of_step() overlays body surfs onto the grid cells
-  //   they sweep through, so particles can collide with them
-
-  if (remapmode == OVERLAY) {
-    int maxchunk = grid->maxsurfpercell + nsurf;
-    cpage = new MyPage<surfint>(maxchunk,MAX(65536,4*maxchunk));
-    if (cpage->errorflag)
-      error->all(FLERR,"Fix rigid could not allocate overlay page");
-
-    surf->rigidbits |= groupbit;
-    grid_rebuild();
-  }
 }
 
 /* ---------------------------------------------------------------------- */
  
 FixRigid::~FixRigid()
 {
-  // restore any overlaid grid cells and static surf assignment flags
-  // NOTE: grid cells are not re-mapped here, so after an unfix the body
-  //   surfs do not interact with particles until the next full re-map
-
-  overlay_restore();
-  surf->rigidbits &= ~groupbit;
-
   delete [] csurfID;
   delete [] infile;
   delete [] outfile;
   delete random;
   memory->destroy(slist);
   memory->destroy(displace);
-  memory->destroy(elemlo);
-  memory->destroy(elemhi);
-  memory->destroy(tmplist);
-  memory->destroy(modified);
-  memory->destroy(nsurf_saved);
-  memory->sfree(csurfs_saved);
   memory->destroy(irigid);
-  delete cpage;
 
   free_registry();
   memory->destroy(regcell);
@@ -499,8 +464,9 @@ void FixRigid::init()
 void FixRigid::setup()
 {
   // delete any particles inside the body
-  // e.g. created by create_particles, which is unaware of the body
-  //   when the body's grid cells are not marked INSIDE (overlay mode)
+  // create_particles marks the body's cells INSIDE via the surf pipeline
+  //   and normally avoids them, but this is a safety net for any that
+  //   end up inside, e.g. via an emit region overlapping the body
 
   if (particle->exist) ndeleted += remove_inside_particles(0);
 
@@ -508,7 +474,7 @@ void FixRigid::setup()
   //   body at its current position
 
   if (remapmode == INCREMENTAL) {
-    body_bbox(0);
+    body_bbox();
     for (int j = 0; j < 3; j++) {
       pbodylo[j] = bbodylo[j];
       pbodyhi[j] = bbodyhi[j];
@@ -606,37 +572,12 @@ void FixRigid::start_of_step()
                        "per timestep, cell assignment accuracy degrades");
     }
   }
-
-  // overlay body surfs onto all grid cells
-  //   their swept bbox overlaps at any point during this step
-
-  if (remapmode == OVERLAY) overlay_assign();
 }
 
 /* ---------------------------------------------------------------------- */
 
 void FixRigid::end_of_step()
 {
-  // restore static surf assignment of grid cells overlaid this step
-  // must be done before any other operation changes grid or particle data
-  // with multiple bodies, a later-defined fix's overlaid cell lists can
-  //   embed an earlier-defined fix's merged lists, so the restores must
-  //   be performed in reverse order of fix definition
-  // the first-defined rigid fix performs the restores for all of them
-  // overlay_restore() is a no-op for fixes with nothing overlaid
-
-  int ifirst = -1;
-  for (int ifix = 0; ifix < modify->nfix; ifix++)
-    if (strcmp(modify->fix[ifix]->style,"rigid") == 0) {
-      ifirst = ifix;
-      break;
-    }
-
-  if (modify->fix[ifirst] == this)
-    for (int ifix = modify->nfix-1; ifix >= 0; ifix--)
-      if (strcmp(modify->fix[ifix]->style,"rigid") == 0)
-        ((FixRigid *) modify->fix[ifix])->overlay_restore();
-
   // invoke compute surf and extract per-surf force/torque info
   // NOTE: this could access fix ave/surf for f/t from many steps of collisions ?
 
@@ -979,7 +920,7 @@ void FixRigid::end_of_step()
 
   // bbox around body elements at their new positions
 
-  body_bbox(0);
+  body_bbox();
 
   // push-off forces from static surfs and domain boundaries
   //   which are within pushcutoff of the body
@@ -1025,72 +966,58 @@ void FixRigid::end_of_step()
   if (outflag)
     error->all(FLERR,"Fix rigid body moved beyond a periodic boundary");
 
-  // for cutcell mode: full re-map of surfs to grid cells,
-  //   including cut/split cells and INSIDE/OUTSIDE cell typing
-  // then remove any particles now inside the moved bodies
-  // with multiple cutcell bodies, only the last-defined one performs
-  //   the re-map, after all bodies have moved to their end-of-step
-  //   positions; earlier re-maps would just be discarded
-  // it then removes inside particles for every cutcell body, with
-  //   split-cell particle reassignment done once by the first call
-
-  // "cutting" bodies are those in cutcell or incremental mode, whose
-  //   surfs cut/split grid cells (unlike overlay bodies)
-  // all cutting bodies are re-mapped together by the last-defined one,
+  // re-map body surfs to grid cells: cut/split cells and INSIDE/OUTSIDE
+  //   cell typing from the new body positions
+  // all bodies are re-mapped together by the last-defined rigid fix,
   //   once per step, after every body has moved to its end-of-step
   //   position; end_of_step runs fixes in definition order, so when the
-  //   last cutting fix runs, all earlier bodies are already moved
-  // if every cutting body is incremental, attempt the cheap incremental
-  //   re-cut of only the affected cells; otherwise (any cutcell body) do
-  //   an exact full grid re-map, which correctly handles all bodies
+  //   last fix runs, all earlier bodies are already moved
+  // if every body is incremental, attempt the cheap incremental re-cut
+  //   of only the affected cells; otherwise (any cutcell body) do an
+  //   exact full grid re-map, which correctly handles all bodies
   // the incremental fallback decision is per-proc but a full re-map is
   //   collective, so all procs must agree via Allreduce
-  // then remove particles inside each cutting body, with split-cell
-  //   particle reassignment done once (only needed after a full re-map)
+  // then remove particles inside each body, with split-cell particle
+  //   reassignment done once (only needed after a full re-map)
 
-  if (remapmode == CUTCELL || remapmode == INCREMENTAL) {
-    int ilast = -1;
-    int all_incremental = 1;
-    for (int ifix = 0; ifix < modify->nfix; ifix++) {
-      if (strcmp(modify->fix[ifix]->style,"rigid") != 0) continue;
-      FixRigid *f = (FixRigid *) modify->fix[ifix];
-      if (f->remapmode != CUTCELL && f->remapmode != INCREMENTAL) continue;
-      ilast = ifix;
-      if (f->remapmode != INCREMENTAL) all_incremental = 0;
+  int ilast = -1;
+  int all_incremental = 1;
+  for (int ifix = 0; ifix < modify->nfix; ifix++) {
+    if (strcmp(modify->fix[ifix]->style,"rigid") != 0) continue;
+    ilast = ifix;
+    if (((FixRigid *) modify->fix[ifix])->remapmode != INCREMENTAL)
+      all_incremental = 0;
+  }
+
+  if (modify->fix[ilast] == this) {
+    int fallback = 1;
+    if (all_incremental) {
+      int fallmine = incremental_recut();
+      MPI_Allreduce(&fallmine,&fallback,1,MPI_INT,MPI_MAX,world);
     }
+    if (fallback) grid_rebuild();
 
-    if (modify->fix[ilast] == this) {
-      int fallback = 1;
-      if (all_incremental) {
-        int fallmine = incremental_recut();
-        MPI_Allreduce(&fallmine,&fallback,1,MPI_INT,MPI_MAX,world);
-      }
-      if (fallback) grid_rebuild();
-
-      if (particle->exist) {
-        int splitflag = fallback;
-        for (int ifix = 0; ifix < modify->nfix; ifix++) {
-          if (strcmp(modify->fix[ifix]->style,"rigid") != 0) continue;
-          FixRigid *f = (FixRigid *) modify->fix[ifix];
-          if (f->remapmode != CUTCELL && f->remapmode != INCREMENTAL)
-            continue;
-          f->ndeleted += f->remove_inside_particles(splitflag);
-          splitflag = 0;
-        }
-      }
-
-      // advance each incremental body's previous-region bookkeeping
-
+    if (particle->exist) {
+      int splitflag = fallback;
       for (int ifix = 0; ifix < modify->nfix; ifix++) {
         if (strcmp(modify->fix[ifix]->style,"rigid") != 0) continue;
         FixRigid *f = (FixRigid *) modify->fix[ifix];
-        if (f->remapmode != INCREMENTAL) continue;
-        for (int j = 0; j < 3; j++) {
-          f->pbodylo[j] = f->bbodylo[j];
-          f->pbodyhi[j] = f->bbodyhi[j];
-        }
-        f->pbodyflag = 1;
+        f->ndeleted += f->remove_inside_particles(splitflag);
+        splitflag = 0;
       }
+    }
+
+    // advance each incremental body's previous-region bookkeeping
+
+    for (int ifix = 0; ifix < modify->nfix; ifix++) {
+      if (strcmp(modify->fix[ifix]->style,"rigid") != 0) continue;
+      FixRigid *f = (FixRigid *) modify->fix[ifix];
+      if (f->remapmode != INCREMENTAL) continue;
+      for (int j = 0; j < 3; j++) {
+        f->pbodylo[j] = f->bbodylo[j];
+        f->pbodyhi[j] = f->bbodyhi[j];
+      }
+      f->pbodyflag = 1;
     }
   }
 
@@ -1389,12 +1316,6 @@ void FixRigid::setup_body()
     for (int j = 0; j < dim; j++)
       rmaxbody = MAX(rmaxbody,MathExtra::len3(&displace[i][j][0]));
 
-  // work arrays for remap of body surfs to grid cells
-
-  memory->create(elemlo,nsurf,3,"fix_rigid:elemlo");
-  memory->create(elemhi,nsurf,3,"fix_rigid:elemhi");
-  memory->create(tmplist,nsurf,"fix_rigid:tmplist");
-
   // zero body force/torque in case accessed via compute_vector() on step 0
 
   fcm[0] = fcm[1] = fcm[2] = 0.0;
@@ -1609,10 +1530,9 @@ void FixRigid::push_off()
 /* ----------------------------------------------------------------------
    full re-map of surfs to grid cells
    same sequence of operations as in FixMoveSurf::end_of_step()
-   for overlay mode: called once at fix creation,
-     body surfs are excluded via Surf::rigidbits
-   for cutcell mode: called every step after body surfs move,
-     body surfs cut/split cells and set INSIDE/OUTSIDE cell typing
+   called every step (cutcell mode) or on incremental-mode fallback,
+     after body surfs move, to cut/split cells and set INSIDE/OUTSIDE
+     cell typing from the new body positions
 ------------------------------------------------------------------------- */
 
 void FixRigid::grid_rebuild()
@@ -1657,118 +1577,12 @@ void FixRigid::grid_rebuild()
 }
 
 /* ----------------------------------------------------------------------
-   overlay body surfs onto grid cells for the current timestep
-   a body surf is added to the csurfs list of every owned or ghost cell
-     which its swept bbox for this step overlaps
-   cells settings are saved so overlay_restore() can undo the overlay
-------------------------------------------------------------------------- */
-
-void FixRigid::overlay_assign()
-{
-  int i,j,icell,isub,nstatic,nmov,isplit;
-  surfint *merged;
-
-  Grid::ChildCell *cells = grid->cells;
-  Grid::SplitInfo *sinfo = grid->sinfo;
-  int ntotal = grid->nlocal + grid->nghost;
-
-  // swept bounding boxes of body elements over this timestep
-
-  body_bbox(1);
-
-  // reset page of merged surf lists and overlay restore lists
-
-  cpage->reset();
-  nmodified = 0;
-
-  // loop over owned + ghost cells
-  // skip sub cells, handled via their split cell
-  // skip empty ghost cells, flagged with nsurf = -1
-
-  for (icell = 0; icell < ntotal; icell++) {
-    if (cells[icell].nsplit <= 0) continue;
-    if (cells[icell].nsurf < 0) continue;
-    if (!box_overlap(cells[icell].lo,cells[icell].hi,bbodylo,bbodyhi))
-      continue;
-
-    // nmov = # of body elements whose swept bbox overlaps this cell
-
-    nmov = 0;
-    for (i = 0; i < nsurf; i++)
-      if (box_overlap(cells[icell].lo,cells[icell].hi,elemlo[i],elemhi[i]))
-        tmplist[nmov++] = (surfint) slist[i];
-    if (!nmov) continue;
-
-    // merged surf list = cell's static surfs + overlaid body elements
-
-    nstatic = cells[icell].nsurf;
-    merged = cpage->get(nstatic+nmov);
-    for (j = 0; j < nstatic; j++) merged[j] = cells[icell].csurfs[j];
-    for (j = 0; j < nmov; j++) merged[nstatic+j] = tmplist[j];
-
-    // save cell settings so they can be restored, then override them
-    // for a split cell, also override its sub cells,
-    //   which share nsurf/csurfs with their split cell
-
-    if (nmodified+cells[icell].nsplit > maxmodified) {
-      maxmodified += DELTA_MODIFY;
-      memory->grow(modified,maxmodified,"fix_rigid:modified");
-      memory->grow(nsurf_saved,maxmodified,"fix_rigid:nsurf_saved");
-      csurfs_saved = (surfint **)
-        memory->srealloc(csurfs_saved,maxmodified*sizeof(surfint *),
-                         "fix_rigid:csurfs_saved");
-    }
-
-    modified[nmodified] = icell;
-    nsurf_saved[nmodified] = cells[icell].nsurf;
-    csurfs_saved[nmodified] = cells[icell].csurfs;
-    nmodified++;
-    cells[icell].nsurf = nstatic + nmov;
-    cells[icell].csurfs = merged;
-
-    if (cells[icell].nsplit > 1) {
-      isplit = cells[icell].isplit;
-      for (j = 0; j < cells[icell].nsplit; j++) {
-        isub = sinfo[isplit].csubs[j];
-        modified[nmodified] = isub;
-        nsurf_saved[nmodified] = cells[isub].nsurf;
-        csurfs_saved[nmodified] = cells[isub].csurfs;
-        nmodified++;
-        cells[isub].nsurf = nstatic + nmov;
-        cells[isub].csurfs = merged;
-      }
-    }
-  }
-}
-
-/* ----------------------------------------------------------------------
-   restore static surf assignment of all grid cells overlaid this step
-------------------------------------------------------------------------- */
-
-void FixRigid::overlay_restore()
-{
-  Grid::ChildCell *cells = grid->cells;
-
-  for (int m = 0; m < nmodified; m++) {
-    int icell = modified[m];
-    cells[icell].nsurf = nsurf_saved[m];
-    cells[icell].csurfs = csurfs_saved[m];
-  }
-  nmodified = 0;
-}
-
-/* ----------------------------------------------------------------------
    grid cells were rebuilt or migrated to other procs
-   any overlaid csurfs lists were discarded by the grid rebuild,
-     so just invalidate the overlay restore records
-   next start_of_step() re-assigns body surfs to grid cells
+   next re-map re-cuts body surfs into the new grid cells
 ------------------------------------------------------------------------- */
 
 void FixRigid::grid_changed()
 {
-  nmodified = 0;
-  if (cpage) cpage->reset();
-
   // csurfs lists installed by incremental re-cutting were discarded
   //   by the grid rebuild, or cell indices changed due to migration
 
@@ -1787,7 +1601,7 @@ void FixRigid::record_oldinside()
 
   // bbox around body at its current (pre-move) position
 
-  body_bbox(0);
+  body_bbox();
 
   Grid::ChildCell *cells = grid->cells;
   Grid::ChildInfo *cinfo = grid->cinfo;
@@ -1894,8 +1708,7 @@ int FixRigid::incremental_recut()
     if (n > maxsurfpercell) return 1;
 
     // skip cell if surf list is unchanged and contains no moving surf
-    // a moving surf belongs to any rigid body (via rigidmap);
-    //   overlay-body surfs are excluded from cut2d/cut3d and never appear
+    // a moving surf belongs to any rigid body (via rigidmap)
 
     moving = 0;
     for (i = 0; i < n; i++)
@@ -2028,18 +1841,13 @@ int FixRigid::incremental_recut()
 }
 
 /* ----------------------------------------------------------------------
-   return 1 if point x is inside any cutting-mode rigid body, else 0
-   overlay bodies are excluded: their cells keep full volume and are
-     never marked INSIDE, so they do not contribute to cell typing
+   return 1 if point x is inside any rigid body, else 0
 ------------------------------------------------------------------------- */
 
 int FixRigid::inside_any_body(double *x)
 {
-  for (int m = 0; m < update->nfixrigid; m++) {
-    FixRigid *f = update->fixrigidlist[m];
-    if (f->remapmode != CUTCELL && f->remapmode != INCREMENTAL) continue;
-    if (f->inside_body(x)) return 1;
-  }
+  for (int m = 0; m < update->nfixrigid; m++)
+    if (update->fixrigidlist[m]->inside_body(x)) return 1;
   return 0;
 }
 
@@ -2091,20 +1899,14 @@ void FixRigid::free_registry()
 }
 
 /* ----------------------------------------------------------------------
-   compute bounding boxes around each body element and around whole body
-   sweepflag = 0: boxes bound elements at their current positions
-   sweepflag = 1: boxes also bound elements at their end-of-step positions
-     computed from xcmnew and current exyz_space (set from quatnew),
-     so only valid after time integration in start_of_step()
-   boxes are inflated by EPSSURF * body extent to avoid round-off misses
+   compute the bounding box around the whole body at its current position
+   box is inflated by EPSSURF * body extent to avoid round-off misses
 ------------------------------------------------------------------------- */
 
-void FixRigid::body_bbox(int sweepflag)
+void FixRigid::body_bbox()
 {
   int i,j,k,index;
   double *pts[3];
-  double delta[3],ptnew[3];
-  double *lo,*hi;
 
   Surf::Line *lines = surf->lines;
   Surf::Tri *tris = surf->tris;
@@ -2125,45 +1927,16 @@ void FixRigid::body_bbox(int sweepflag)
       pts[2] = tris[index].p3;
     }
 
-    lo = elemlo[i];
-    hi = elemhi[i];
-    lo[0] = lo[1] = lo[2] = BIG;
-    hi[0] = hi[1] = hi[2] = -BIG;
-
-    for (j = 0; j < npoint; j++) {
+    for (j = 0; j < npoint; j++)
       for (k = 0; k < 3; k++) {
-        lo[k] = MIN(lo[k],pts[j][k]);
-        hi[k] = MAX(hi[k],pts[j][k]);
+        bbodylo[k] = MIN(bbodylo[k],pts[j][k]);
+        bbodyhi[k] = MAX(bbodyhi[k],pts[j][k]);
       }
-    }
-
-    if (sweepflag) {
-      for (j = 0; j < npoint; j++) {
-        MathExtra::matvec(ex_space,ey_space,ez_space,displace[i][j],delta);
-        if (dim == 2) delta[2] = 0.0;
-        MathExtra::add3(xcmnew,delta,ptnew);
-        for (k = 0; k < 3; k++) {
-          lo[k] = MIN(lo[k],ptnew[k]);
-          hi[k] = MAX(hi[k],ptnew[k]);
-        }
-      }
-    }
-
-    for (k = 0; k < 3; k++) {
-      bbodylo[k] = MIN(bbodylo[k],lo[k]);
-      bbodyhi[k] = MAX(bbodyhi[k],hi[k]);
-    }
   }
 
   double eps = EPSSURF * MAX(bbodyhi[0]-bbodylo[0],bbodyhi[1]-bbodylo[1]);
   eps = EPSSURF * MAX(eps/EPSSURF,bbodyhi[2]-bbodylo[2]);
 
-  for (i = 0; i < nsurf; i++) {
-    for (k = 0; k < 3; k++) {
-      elemlo[i][k] -= eps;
-      elemhi[i][k] += eps;
-    }
-  }
   for (k = 0; k < 3; k++) {
     bbodylo[k] -= eps;
     bbodyhi[k] += eps;
@@ -2236,7 +2009,7 @@ bigint FixRigid::remove_inside_particles(int splitflag)
 
   // bbox around body at its current position
 
-  body_bbox(0);
+  body_bbox();
 
   // flag particles inside the body or in INSIDE cells for deletion
 
