@@ -148,6 +148,7 @@ class FixRigid : public Fix {
   void overlay_restore();       // undo overlay of previous step
   void body_bbox(int);          // swept bbox of body elements over a step
   int inside_body(double *);    // 1 if point is inside rigid body, else 0
+  int inside_any_body(double *); // 1 if inside any cutting-mode body
   bigint remove_inside_particles(int);
 };
 

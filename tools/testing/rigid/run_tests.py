@@ -202,6 +202,37 @@ def test_remap(exe_cmd):
     return fails
 
 
+def test_multiremap(exe_cmd):
+    # two gas-driven bodies: cutcell and incremental must give identical
+    # trajectories, verifying multi-body incremental re-cut
+    results = {}
+    fails = []
+    for mode in ("cutcell", "incremental"):
+        rc, out = run_deck(exe_cmd, "in.test.multiremap",
+                           extra=["-var", "mode", mode])
+        if rc:
+            fails.append("mode %s: run failed with exit code %d" % (mode, rc))
+            continue
+        rows = parse_stats(out)
+        if not rows:
+            fails.append("mode %s: no stats output" % mode)
+            continue
+        last = rows[-1]
+        results[mode] = tuple(last[k] for k in
+                              ("f_1[1]", "f_1[2]", "f_1[15]",
+                               "f_2[1]", "f_2[2]", "f_2[15]"))
+    if fails:
+        return fails
+    labels = ("b1 xcm", "b1 ycm", "b1 omega", "b2 xcm", "b2 ycm", "b2 omega")
+    for i, name in enumerate(labels):
+        if not approx(results["incremental"][i], results["cutcell"][i],
+                      rel=1e-10, abs_=1e-13):
+            fails.append("%s: incremental %.15g differs from cutcell %.15g"
+                         % (name, results["incremental"][i],
+                            results["cutcell"][i]))
+    return fails
+
+
 def test_twobody(exe_cmd):
     rc, out = run_deck(exe_cmd, "in.test.twobody")
     if rc:
@@ -247,6 +278,7 @@ TESTS = [
     ("momentum", test_momentum),
     ("overrun", test_overrun),
     ("remap", test_remap),
+    ("multiremap", test_multiremap),
     ("twobody", test_twobody),
     ("badmoi", test_badmoi),
     ("notwatertight", test_notwatertight),

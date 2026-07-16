@@ -470,17 +470,6 @@ void FixRigid::init()
 
   warnrotate = warntranslate = warnexit = 0;
 
-  // incremental remap assumes it is the only source of moving surfs
-
-  if (remapmode == INCREMENTAL) {
-    int count = 0;
-    for (int ifix = 0; ifix < modify->nfix; ifix++)
-      if (strcmp(modify->fix[ifix]->style,"rigid") == 0) count++;
-    if (count > 1)
-      error->all(FLERR,
-                 "Fix rigid remap incremental requires a single rigid body");
-  }
-
   // each fix rigid defines its own body: no surf can be in two bodies
 
   for (int ifix = 0; ifix < modify->nfix; ifix++) {
@@ -1045,53 +1034,64 @@ void FixRigid::end_of_step()
   // it then removes inside particles for every cutcell body, with
   //   split-cell particle reassignment done once by the first call
 
-  if (remapmode == CUTCELL) {
+  // "cutting" bodies are those in cutcell or incremental mode, whose
+  //   surfs cut/split grid cells (unlike overlay bodies)
+  // all cutting bodies are re-mapped together by the last-defined one,
+  //   once per step, after every body has moved to its end-of-step
+  //   position; end_of_step runs fixes in definition order, so when the
+  //   last cutting fix runs, all earlier bodies are already moved
+  // if every cutting body is incremental, attempt the cheap incremental
+  //   re-cut of only the affected cells; otherwise (any cutcell body) do
+  //   an exact full grid re-map, which correctly handles all bodies
+  // the incremental fallback decision is per-proc but a full re-map is
+  //   collective, so all procs must agree via Allreduce
+  // then remove particles inside each cutting body, with split-cell
+  //   particle reassignment done once (only needed after a full re-map)
+
+  if (remapmode == CUTCELL || remapmode == INCREMENTAL) {
     int ilast = -1;
-    for (int ifix = 0; ifix < modify->nfix; ifix++)
-      if (strcmp(modify->fix[ifix]->style,"rigid") == 0 &&
-          ((FixRigid *) modify->fix[ifix])->remapmode == CUTCELL)
-        ilast = ifix;
+    int all_incremental = 1;
+    for (int ifix = 0; ifix < modify->nfix; ifix++) {
+      if (strcmp(modify->fix[ifix]->style,"rigid") != 0) continue;
+      FixRigid *f = (FixRigid *) modify->fix[ifix];
+      if (f->remapmode != CUTCELL && f->remapmode != INCREMENTAL) continue;
+      ilast = ifix;
+      if (f->remapmode != INCREMENTAL) all_incremental = 0;
+    }
 
     if (modify->fix[ilast] == this) {
-      grid_rebuild();
+      int fallback = 1;
+      if (all_incremental) {
+        int fallmine = incremental_recut();
+        MPI_Allreduce(&fallmine,&fallback,1,MPI_INT,MPI_MAX,world);
+      }
+      if (fallback) grid_rebuild();
 
       if (particle->exist) {
-        int splitflag = 1;
+        int splitflag = fallback;
         for (int ifix = 0; ifix < modify->nfix; ifix++) {
           if (strcmp(modify->fix[ifix]->style,"rigid") != 0) continue;
           FixRigid *f = (FixRigid *) modify->fix[ifix];
-          if (f->remapmode != CUTCELL) continue;
+          if (f->remapmode != CUTCELL && f->remapmode != INCREMENTAL)
+            continue;
           f->ndeleted += f->remove_inside_particles(splitflag);
           splitflag = 0;
         }
       }
+
+      // advance each incremental body's previous-region bookkeeping
+
+      for (int ifix = 0; ifix < modify->nfix; ifix++) {
+        if (strcmp(modify->fix[ifix]->style,"rigid") != 0) continue;
+        FixRigid *f = (FixRigid *) modify->fix[ifix];
+        if (f->remapmode != INCREMENTAL) continue;
+        for (int j = 0; j < 3; j++) {
+          f->pbodylo[j] = f->bbodylo[j];
+          f->pbodyhi[j] = f->bbodyhi[j];
+        }
+        f->pbodyflag = 1;
+      }
     }
-  }
-
-  // for incremental mode: re-cut only the grid cells near the body
-  //   whose overlapping surfs changed as the body moved
-  // falls back to a full re-map when the change is structural,
-  //   e.g. a cell would become or stop being a split cell
-  // the fallback decision is made per-proc but the full re-map is a
-  //   collective operation, so all procs must agree on it
-
-  else if (remapmode == INCREMENTAL) {
-    int fallmine = incremental_recut();
-    int fallback;
-    MPI_Allreduce(&fallmine,&fallback,1,MPI_INT,MPI_MAX,world);
-
-    if (fallback) {
-      grid_rebuild();
-      if (particle->exist) ndeleted += remove_inside_particles(1);
-    } else {
-      if (particle->exist) ndeleted += remove_inside_particles(0);
-    }
-
-    for (int j = 0; j < 3; j++) {
-      pbodylo[j] = bbodylo[j];
-      pbodyhi[j] = bbodyhi[j];
-    }
-    pbodyflag = 1;
   }
 
   // write body state to output file every outevery steps
@@ -1838,25 +1838,38 @@ int FixRigid::incremental_recut()
   double *vols;
   double *clo,*chi;
 
-  if (!pbodyflag) return 1;
-
   Grid::ChildCell *cells = grid->cells;
   Grid::ChildInfo *cinfo = grid->cinfo;
   int nglocal = grid->nlocal;
   int maxsurfpercell = grid->maxsurfpercell;
+  int *rigidmap = update->rigidmap;
 
   int ncorner = 4;
   if (dim == 3) ncorner = 8;
 
-  // R = rlo/rhi = region containing the body before and after its move
+  // gather all incremental bodies; every one must have a previous region
+  // R = rlo/rhi = union over all incremental bodies of the region each
+  //   occupied before and after its move this step
 
-  for (i = 0; i < 3; i++) {
-    rlo[i] = MIN(pbodylo[i],bbodylo[i]);
-    rhi[i] = MAX(pbodyhi[i],bbodyhi[i]);
+  rlo[0] = rlo[1] = rlo[2] = BIG;
+  rhi[0] = rhi[1] = rhi[2] = -BIG;
+  int nincr = 0;
+
+  for (int ifix = 0; ifix < modify->nfix; ifix++) {
+    if (strcmp(modify->fix[ifix]->style,"rigid") != 0) continue;
+    FixRigid *f = (FixRigid *) modify->fix[ifix];
+    if (f->remapmode != INCREMENTAL) continue;
+    if (!f->pbodyflag) return 1;
+    for (i = 0; i < 3; i++) {
+      rlo[i] = MIN(rlo[i],MIN(f->pbodylo[i],f->bbodylo[i]));
+      rhi[i] = MAX(rhi[i],MAX(f->pbodyhi[i],f->bbodyhi[i]));
+    }
+    nincr++;
   }
+  if (!nincr) return 1;
 
   // pass 1: re-cut cells in R whose surf overlap changed
-  //   or which are overlapped by a moved body surf
+  //   or which are overlapped by a moved body surf (from any body)
   // NOTE: surf lists are compared elementwise, both in cut2d/cut3d
   //   surf index order; lists built by the rendezvous surf2grid
   //   algorithm may be ordered differently, causing a one-time
@@ -1881,10 +1894,12 @@ int FixRigid::incremental_recut()
     if (n > maxsurfpercell) return 1;
 
     // skip cell if surf list is unchanged and contains no moving surf
+    // a moving surf belongs to any rigid body (via rigidmap);
+    //   overlay-body surfs are excluded from cut2d/cut3d and never appear
 
     moving = 0;
     for (i = 0; i < n; i++)
-      if (irigid[newlist[i]] >= 0) {
+      if (rigidmap[newlist[i]] >= 0) {
         moving = 1;
         break;
       }
@@ -1916,7 +1931,7 @@ int FixRigid::incremental_recut()
       if (dim == 3) ctr[2] = 0.5 * (clo[2] + chi[2]);
       else ctr[2] = 0.0;
 
-      if (inside_body(ctr)) cinfo[icell].type = CELLINSIDE;
+      if (inside_any_body(ctr)) cinfo[icell].type = CELLINSIDE;
       else cinfo[icell].type = CELLOUTSIDE;
       for (i = 0; i < ncorner; i++)
         cinfo[icell].corner[i] = cinfo[icell].type;
@@ -1952,40 +1967,49 @@ int FixRigid::incremental_recut()
     }
   }
 
-  // pass 2: cells the body interior moved away from become OUTSIDE
-  // only cells which still have no surfs, else re-cut above
+  // pass 2: cells a body interior moved away from become OUTSIDE
+  // process every incremental body's recorded interior cells
+  // only cells which are now surf-free and inside no body,
+  //   which leaves any static (non-body) INSIDE cells untouched
 
-  for (int m = 0; m < noldinside; m++) {
-    icell = oldinside[m];
-    if (cells[icell].nsurf) continue;
+  for (int ifix = 0; ifix < modify->nfix; ifix++) {
+    if (strcmp(modify->fix[ifix]->style,"rigid") != 0) continue;
+    FixRigid *f = (FixRigid *) modify->fix[ifix];
+    if (f->remapmode != INCREMENTAL) continue;
 
-    clo = cells[icell].lo;
-    chi = cells[icell].hi;
-    ctr[0] = 0.5 * (clo[0] + chi[0]);
-    ctr[1] = 0.5 * (clo[1] + chi[1]);
-    if (dim == 3) ctr[2] = 0.5 * (clo[2] + chi[2]);
-    else ctr[2] = 0.0;
-    if (inside_body(ctr)) continue;
+    for (int m = 0; m < f->noldinside; m++) {
+      icell = f->oldinside[m];
+      if (cells[icell].nsurf) continue;
 
-    cinfo[icell].type = CELLOUTSIDE;
-    if (dim == 3)
-      cinfo[icell].volume = (chi[0]-clo[0]) * (chi[1]-clo[1]) *
-        (chi[2]-clo[2]);
-    else cinfo[icell].volume = (chi[0]-clo[0]) * (chi[1]-clo[1]);
-    for (i = 0; i < ncorner; i++)
-      cinfo[icell].corner[i] = CELLOUTSIDE;
+      clo = cells[icell].lo;
+      chi = cells[icell].hi;
+      ctr[0] = 0.5 * (clo[0] + chi[0]);
+      ctr[1] = 0.5 * (clo[1] + chi[1]);
+      if (dim == 3) ctr[2] = 0.5 * (clo[2] + chi[2]);
+      else ctr[2] = 0.0;
+      if (inside_any_body(ctr)) continue;
+
+      cinfo[icell].type = CELLOUTSIDE;
+      if (dim == 3)
+        cinfo[icell].volume = (chi[0]-clo[0]) * (chi[1]-clo[1]) *
+          (chi[2]-clo[2]);
+      else cinfo[icell].volume = (chi[0]-clo[0]) * (chi[1]-clo[1]);
+      for (i = 0; i < ncorner; i++)
+        cinfo[icell].corner[i] = CELLOUTSIDE;
+    }
   }
 
-  // pass 3: surf-free cells the body interior moved over become INSIDE
-  // catches cells swept over entirely within one step,
-  //   which never overlap a body surf at start- or end-of-step positions
+  // pass 3: surf-free cells a body interior moved over become INSIDE
+  // catches cells swept over entirely within one step, which never
+  //   overlap a body surf at start- or end-of-step positions
+  // R covers the swept corridor since it unions old and new positions
+  // guard on type != INSIDE leaves static INSIDE cells untouched
 
   for (icell = 0; icell < nglocal; icell++) {
     if (cells[icell].nsplit != 1) continue;
     if (cells[icell].nsurf) continue;
     if (cinfo[icell].type == CELLINSIDE) continue;
-    if (!box_overlap(cells[icell].lo,cells[icell].hi,bbodylo,bbodyhi))
-      continue;
+    if (!box_overlap(cells[icell].lo,cells[icell].hi,rlo,rhi)) continue;
 
     clo = cells[icell].lo;
     chi = cells[icell].hi;
@@ -1993,13 +2017,29 @@ int FixRigid::incremental_recut()
     ctr[1] = 0.5 * (clo[1] + chi[1]);
     if (dim == 3) ctr[2] = 0.5 * (clo[2] + chi[2]);
     else ctr[2] = 0.0;
-    if (!inside_body(ctr)) continue;
+    if (!inside_any_body(ctr)) continue;
 
     cinfo[icell].type = CELLINSIDE;
     for (i = 0; i < ncorner; i++)
       cinfo[icell].corner[i] = CELLINSIDE;
   }
 
+  return 0;
+}
+
+/* ----------------------------------------------------------------------
+   return 1 if point x is inside any cutting-mode rigid body, else 0
+   overlay bodies are excluded: their cells keep full volume and are
+     never marked INSIDE, so they do not contribute to cell typing
+------------------------------------------------------------------------- */
+
+int FixRigid::inside_any_body(double *x)
+{
+  for (int m = 0; m < update->nfixrigid; m++) {
+    FixRigid *f = update->fixrigidlist[m];
+    if (f->remapmode != CUTCELL && f->remapmode != INCREMENTAL) continue;
+    if (f->inside_body(x)) return 1;
+  }
   return 0;
 }
 
