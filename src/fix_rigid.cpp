@@ -305,9 +305,16 @@ FixRigid::FixRigid(SPARTA *sparta, int narg, char **arg) :
   // remap data structs
   // body surfs are cut/split into grid cells by the normal surf
   //   pipeline (done at read_surf time), so no special setup is needed
-  //   here beyond the incremental re-cut work buffers below
+  //   here beyond the swept-assignment and incremental work buffers
 
   ndeleted = 0;
+
+  // elemlo/elemhi/tmplist are allocated by setup_body() above
+
+  nmodified = maxmodified = 0;
+  modified = NULL;
+  nsurf_saved = NULL;
+  csurfs_saved = NULL;
 
   pbodyflag = 0;
   noldinside = maxoldinside = 0;
@@ -319,6 +326,13 @@ FixRigid::FixRigid(SPARTA *sparta, int narg, char **arg) :
   newmap = NULL;
   cut2d = NULL;
   cut3d = NULL;
+
+  // page for merged csurfs lists built by swept_assign each step
+
+  int maxchunk = grid->maxsurfpercell + nsurf;
+  cpage = new MyPage<surfint>(maxchunk,MAX(65536,4*maxchunk));
+  if (cpage->errorflag)
+    error->all(FLERR,"Fix rigid could not allocate collision-list page");
 
   // for incremental mode: cutters and work bufs for re-cutting cells
 
@@ -341,6 +355,13 @@ FixRigid::~FixRigid()
   memory->destroy(slist);
   memory->destroy(displace);
   memory->destroy(irigid);
+  memory->destroy(elemlo);
+  memory->destroy(elemhi);
+  memory->destroy(tmplist);
+  memory->destroy(modified);
+  memory->destroy(nsurf_saved);
+  memory->sfree(csurfs_saved);
+  delete cpage;
 
   free_registry();
   memory->destroy(regcell);
@@ -474,7 +495,7 @@ void FixRigid::setup()
   //   body at its current position
 
   if (remapmode == INCREMENTAL) {
-    body_bbox();
+    body_bbox(0);
     for (int j = 0; j < 3; j++) {
       pbodylo[j] = bbodylo[j];
       pbodyhi[j] = bbodyhi[j];
@@ -572,12 +593,37 @@ void FixRigid::start_of_step()
                        "per timestep, cell assignment accuracy degrades");
     }
   }
+
+  // augment collision lists of all cells this body sweeps through during
+  //   the step, so particles in the swept path are tested against the
+  //   moving surfs and reflected rather than overtaken and later deleted
+  // must run after xcmnew/quatnew and exyz_space are known above
+  // start_of_step runs fixes in definition order, so earlier bodies have
+  //   already augmented shared cells; swept_assign dedups against them
+
+  swept_assign();
 }
 
 /* ---------------------------------------------------------------------- */
 
 void FixRigid::end_of_step()
 {
+  // undo the swept collision-list augmentation from start_of_step before
+  //   any force summation or grid re-map reads the cells' csurfs lists
+  // all bodies are restored together by the first-defined rigid fix, in
+  //   reverse definition order: a later body may have appended onto an
+  //   earlier body's merged list, so peel them back last-installed-first
+  // end_of_step runs fixes in definition order, so the first fix runs
+  //   before any other fix's end_of_step touches the grid
+
+  int ifirst = -1;
+  for (int ifix = 0; ifix < modify->nfix; ifix++)
+    if (strcmp(modify->fix[ifix]->style,"rigid") == 0) { ifirst = ifix; break; }
+  if (modify->fix[ifirst] == this)
+    for (int ifix = modify->nfix-1; ifix >= 0; ifix--)
+      if (strcmp(modify->fix[ifix]->style,"rigid") == 0)
+        ((FixRigid *) modify->fix[ifix])->swept_restore();
+
   // invoke compute surf and extract per-surf force/torque info
   // NOTE: this could access fix ave/surf for f/t from many steps of collisions ?
 
@@ -920,7 +966,7 @@ void FixRigid::end_of_step()
 
   // bbox around body elements at their new positions
 
-  body_bbox();
+  body_bbox(0);
 
   // push-off forces from static surfs and domain boundaries
   //   which are within pushcutoff of the body
@@ -1316,6 +1362,12 @@ void FixRigid::setup_body()
     for (int j = 0; j < dim; j++)
       rmaxbody = MAX(rmaxbody,MathExtra::len3(&displace[i][j][0]));
 
+  // work arrays for swept collision assignment
+
+  memory->create(elemlo,nsurf,3,"fix_rigid:elemlo");
+  memory->create(elemhi,nsurf,3,"fix_rigid:elemhi");
+  memory->create(tmplist,nsurf,"fix_rigid:tmplist");
+
   // zero body force/torque in case accessed via compute_vector() on step 0
 
   fcm[0] = fcm[1] = fcm[2] = 0.0;
@@ -1577,15 +1629,134 @@ void FixRigid::grid_rebuild()
 }
 
 /* ----------------------------------------------------------------------
+   add this body's surfs to the collision lists (csurfs) of all grid
+     cells they sweep through during this step, so particles anywhere in
+     the swept path are tested against the moving surfs and reflected
+     (rather than overtaken by a fast body and deleted at end-of-step)
+   called each start_of_step, after the end-of-step pose is known
+   for each overlapped cell a merged list = its current csurfs plus this
+     body's swept surfs not already present is installed; the original
+     is saved for swept_restore(); split cells share the merged list
+     with their sub cells, where particles reside
+   cut-cell volumes are not changed: this augments collision lists only
+   with multiple bodies, each fix appends its own surfs in definition
+     order, accumulating (dedup keeps earlier bodies' surfs)
+------------------------------------------------------------------------- */
+
+void FixRigid::swept_assign()
+{
+  int i,j,m,icell,isub,ncur,nmov,isplit,dup;
+  surfint *merged;
+
+  Grid::ChildCell *cells = grid->cells;
+  Grid::SplitInfo *sinfo = grid->sinfo;
+  int ntotal = grid->nlocal + grid->nghost;
+
+  // per-element swept bounding boxes for this step
+
+  body_bbox(1);
+
+  cpage->reset();
+  nmodified = 0;
+
+  // loop over owned + ghost cells
+  // skip sub cells (handled via their split cell) and empty ghosts
+
+  for (icell = 0; icell < ntotal; icell++) {
+    if (cells[icell].nsplit <= 0) continue;
+    if (cells[icell].nsurf < 0) continue;
+    if (!box_overlap(cells[icell].lo,cells[icell].hi,bbodylo,bbodyhi))
+      continue;
+
+    // tmplist = this body's surfs whose swept bbox overlaps the cell
+
+    nmov = 0;
+    for (i = 0; i < nsurf; i++)
+      if (box_overlap(cells[icell].lo,cells[icell].hi,elemlo[i],elemhi[i]))
+        tmplist[nmov++] = (surfint) slist[i];
+    if (!nmov) continue;
+
+    // merged = current csurfs + swept surfs not already present
+    // dedup skips surfs already in csurfs, e.g. body surfs the cut
+    //   pipeline placed at the body's start-of-step position, or
+    //   surfs of an earlier body already appended this step
+
+    ncur = cells[icell].nsurf;
+    merged = cpage->get(ncur+nmov);
+    for (j = 0; j < ncur; j++) merged[j] = cells[icell].csurfs[j];
+    int nmerged = ncur;
+    for (j = 0; j < nmov; j++) {
+      dup = 0;
+      for (m = 0; m < ncur; m++)
+        if (cells[icell].csurfs[m] == tmplist[j]) { dup = 1; break; }
+      if (!dup) merged[nmerged++] = tmplist[j];
+    }
+    if (nmerged == ncur) continue;   // all swept surfs already present
+
+    // save cell settings so they can be restored, then override them
+    // for a split cell, also override its sub cells, which share
+    //   nsurf/csurfs with their split cell
+    // this cell adds 1 entry (itself) plus nsplit sub-cell entries when
+    //   it is a split cell, so reserve 1 + nsplit slots
+
+    if (nmodified+1+cells[icell].nsplit > maxmodified) {
+      maxmodified += DELTA_MODIFY;
+      memory->grow(modified,maxmodified,"fix_rigid:modified");
+      memory->grow(nsurf_saved,maxmodified,"fix_rigid:nsurf_saved");
+      csurfs_saved = (surfint **)
+        memory->srealloc(csurfs_saved,maxmodified*sizeof(surfint *),
+                         "fix_rigid:csurfs_saved");
+    }
+
+    modified[nmodified] = icell;
+    nsurf_saved[nmodified] = cells[icell].nsurf;
+    csurfs_saved[nmodified] = cells[icell].csurfs;
+    nmodified++;
+    cells[icell].nsurf = nmerged;
+    cells[icell].csurfs = merged;
+
+    if (cells[icell].nsplit > 1) {
+      isplit = cells[icell].isplit;
+      for (j = 0; j < cells[icell].nsplit; j++) {
+        isub = sinfo[isplit].csubs[j];
+        modified[nmodified] = isub;
+        nsurf_saved[nmodified] = cells[isub].nsurf;
+        csurfs_saved[nmodified] = cells[isub].csurfs;
+        nmodified++;
+        cells[isub].nsurf = nmerged;
+        cells[isub].csurfs = merged;
+      }
+    }
+  }
+}
+
+/* ----------------------------------------------------------------------
+   restore the csurfs collision lists augmented by swept_assign()
+------------------------------------------------------------------------- */
+
+void FixRigid::swept_restore()
+{
+  Grid::ChildCell *cells = grid->cells;
+
+  for (int m = 0; m < nmodified; m++) {
+    int icell = modified[m];
+    cells[icell].nsurf = nsurf_saved[m];
+    cells[icell].csurfs = csurfs_saved[m];
+  }
+  nmodified = 0;
+}
+
+/* ----------------------------------------------------------------------
    grid cells were rebuilt or migrated to other procs
+   any merged csurfs lists were discarded by the grid rebuild,
+     and any csurfs lists installed by incremental re-cutting too
    next re-map re-cuts body surfs into the new grid cells
 ------------------------------------------------------------------------- */
 
 void FixRigid::grid_changed()
 {
-  // csurfs lists installed by incremental re-cutting were discarded
-  //   by the grid rebuild, or cell indices changed due to migration
-
+  nmodified = 0;
+  if (cpage) cpage->reset();
   free_registry();
 }
 
@@ -1601,7 +1772,7 @@ void FixRigid::record_oldinside()
 
   // bbox around body at its current (pre-move) position
 
-  body_bbox();
+  body_bbox(0);
 
   Grid::ChildCell *cells = grid->cells;
   Grid::ChildInfo *cinfo = grid->cinfo;
@@ -1899,14 +2070,21 @@ void FixRigid::free_registry()
 }
 
 /* ----------------------------------------------------------------------
-   compute the bounding box around the whole body at its current position
-   box is inflated by EPSSURF * body extent to avoid round-off misses
+   compute per-element bounding boxes (elemlo/elemhi) and the whole-body
+     bounding box (bbodylo/bbodyhi)
+   sweepflag = 0: boxes bound elements at their current positions
+   sweepflag = 1: boxes also bound elements at their end-of-step positions
+     (from xcmnew and exyz_space set from quatnew in start_of_step),
+     giving the region each element sweeps through during the step
+   boxes are inflated by EPSSURF * body extent to avoid round-off misses
 ------------------------------------------------------------------------- */
 
-void FixRigid::body_bbox()
+void FixRigid::body_bbox(int sweepflag)
 {
   int i,j,k,index;
   double *pts[3];
+  double delta[3],ptnew[3];
+  double *lo,*hi;
 
   Surf::Line *lines = surf->lines;
   Surf::Tri *tris = surf->tris;
@@ -1927,16 +2105,43 @@ void FixRigid::body_bbox()
       pts[2] = tris[index].p3;
     }
 
+    lo = elemlo[i];
+    hi = elemhi[i];
+    lo[0] = lo[1] = lo[2] = BIG;
+    hi[0] = hi[1] = hi[2] = -BIG;
+
     for (j = 0; j < npoint; j++)
       for (k = 0; k < 3; k++) {
-        bbodylo[k] = MIN(bbodylo[k],pts[j][k]);
-        bbodyhi[k] = MAX(bbodyhi[k],pts[j][k]);
+        lo[k] = MIN(lo[k],pts[j][k]);
+        hi[k] = MAX(hi[k],pts[j][k]);
       }
+
+    if (sweepflag) {
+      for (j = 0; j < npoint; j++) {
+        MathExtra::matvec(ex_space,ey_space,ez_space,displace[i][j],delta);
+        if (dim == 2) delta[2] = 0.0;
+        MathExtra::add3(xcmnew,delta,ptnew);
+        for (k = 0; k < 3; k++) {
+          lo[k] = MIN(lo[k],ptnew[k]);
+          hi[k] = MAX(hi[k],ptnew[k]);
+        }
+      }
+    }
+
+    for (k = 0; k < 3; k++) {
+      bbodylo[k] = MIN(bbodylo[k],lo[k]);
+      bbodyhi[k] = MAX(bbodyhi[k],hi[k]);
+    }
   }
 
   double eps = EPSSURF * MAX(bbodyhi[0]-bbodylo[0],bbodyhi[1]-bbodylo[1]);
   eps = EPSSURF * MAX(eps/EPSSURF,bbodyhi[2]-bbodylo[2]);
 
+  for (i = 0; i < nsurf; i++)
+    for (k = 0; k < 3; k++) {
+      elemlo[i][k] -= eps;
+      elemhi[i][k] += eps;
+    }
   for (k = 0; k < 3; k++) {
     bbodylo[k] -= eps;
     bbodyhi[k] += eps;
@@ -2009,7 +2214,7 @@ bigint FixRigid::remove_inside_particles(int splitflag)
 
   // bbox around body at its current position
 
-  body_bbox();
+  body_bbox(0);
 
   // flag particles inside the body or in INSIDE cells for deletion
 

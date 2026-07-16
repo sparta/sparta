@@ -22,6 +22,7 @@ FixStyle(rigid,FixRigid)
 #define SPARTA_FIX_RIGID_H
 
 #include "fix.h"
+#include "my_page.h"
 
 namespace SPARTA_NS {
 
@@ -96,6 +97,23 @@ class FixRigid : public Fix {
 
   int remapmode;          // CUTCELL or INCREMENTAL
 
+  // swept collision assignment: each step the body surfs are added to
+  //   the collision lists (csurfs) of all cells they sweep through, so
+  //   particles anywhere in the body's swept path are tested against
+  //   the moving surfs and reflected rather than overtaken and deleted
+  // this augments collision lists only; cut-cell volumes are unaffected
+
+  double **elemlo;        // per-element swept bounding boxes for this step
+  double **elemhi;
+  surfint *tmplist;       // work list of body elements overlapping one cell
+
+  int nmodified;          // # of cells augmented this step
+  int maxmodified;        // allocated size of restore lists
+  int *modified;          // indices of cells whose csurfs were augmented
+  int *nsurf_saved;       // saved nsurf of each modified cell
+  surfint **csurfs_saved; // saved csurfs ptr of each modified cell
+  MyPage<surfint> *cpage; // storage for merged csurfs lists
+
   // incremental cutcell remap data
 
   double pbodylo[3];      // bbox around body at end of previous step
@@ -132,7 +150,9 @@ class FixRigid : public Fix {
   void registry_replace(int, surfint *);
   void registry_remove(int);
   void free_registry();
-  void body_bbox();             // bounding box around body at current position
+  void swept_assign();          // add body surfs to swept cells' csurfs
+  void swept_restore();         // undo swept_assign
+  void body_bbox(int);          // bbox of body, current or swept over step
   int inside_body(double *);    // 1 if point is inside rigid body, else 0
   int inside_any_body(double *); // 1 if inside any rigid body
   bigint remove_inside_particles(int);

@@ -167,17 +167,19 @@ def test_overrun(exe_cmd):
         return ["no stats output"]
     fails = []
     # f_1 (scalar) = cumulative particles deleted inside the body
-    # a body sweeping 40% of a cell per step reflects the particles it
-    # overtakes; in cutcell mode a thin layer that lands inside the final
-    # body position is deleted. If the moving-surf collision were broken,
-    # the entire swept volume (~4% of particles here) would tunnel in and
-    # be deleted; a working collision deletes only the thin layer, well
-    # under 2% of the particles. So the deletion count bounds tunneling.
+    # the body sweeps 40% of a grid cell per step through nearly
+    # stationary gas.  swept collision coverage adds the body surfs to
+    # the collision lists of every cell they sweep into during the step,
+    # so no particle is overtaken undetected: every particle in the path
+    # is reflected off the moving surf rather than deleted.  the deletion
+    # count must therefore not grow at all after the initial setup.  any
+    # growth means a particle tunneled into the body and was deleted.
     ndel = rows[-1]["f_1"] - rows[0]["f_1"]
     nptotal = rows[0]["Np"]
-    if ndel > 0.02 * nptotal:
-        fails.append("deleted %g of %g particles (>2%%): moving-surf "
-                     "collision is letting particles tunnel into the body"
+    if ndel != 0:
+        fails.append("deleted %g of %g particles after setup: a particle "
+                     "was overtaken by the moving body instead of being "
+                     "reflected (swept collision coverage failed)"
                      % (ndel, nptotal))
     return fails
 

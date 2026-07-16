@@ -217,19 +217,31 @@ velocities, with dq/dt = 1/2 w q for the quaternion.  This gives the
 position and orientation the body will have at the end of the
 timestep.
 </P>
-<P>The moving surfs are then assigned to all the grid cells they overlap
-at any point during the step, in the manner selected by the <I>remap</I>
-keyword (see below), so that advecting particles can collide with
-them.  Particle collisions with the moving surfs use the exact
-translating and rotating position of each line or triangle during the
-step: a particle can hit a surf which is moving toward or away from
-it, including a surf which sweeps over a slowly-moving particle.
-Each collision is performed in the local rest frame of the moving
-wall: the wall velocity at the point of impact, vwall = vcom + omega
-x r, is subtracted from the particle velocity, the assigned surface
-collision model (<A HREF = "surf_collide.html">surf_collide</A>) is applied using
-the surface normal at the time of the hit, and the wall velocity is
-added back.  All surface collision models thus operate correctly on
+<P>Before particles advect, each body surf is added to the collision
+lists of every grid cell it sweeps through during the step, using the
+union of its start-of-step and end-of-step positions.  This is called
+swept collision coverage: because a fast body advances into cells that
+did not contain it at the start of the step, a particle sitting in the
+body's path would otherwise never be tested against the surf and would
+be overtaken and deleted when the cell is later marked inside the body.
+By covering the swept cells, every particle in the path is instead
+tested against the moving surf and reflected off it.  A body moving
+through stationary gas therefore deletes no particles; it pushes them
+out of its way, imparting momentum to them.  (The swept coverage
+augments the collision lists only; grid cell flow volumes and
+INSIDE/OUTSIDE markings come from the <I>remap</I> keyword below and are
+unaffected.)
+</P>
+<P>Particle collisions with the moving surfs use the exact translating
+and rotating position of each line or triangle during the step: a
+particle can hit a surf which is moving toward or away from it,
+including a surf which sweeps over a slowly-moving or stationary
+particle.  Each collision is performed in the local rest frame of the
+moving wall: the wall velocity at the point of impact, vwall = vcom +
+omega x r, is subtracted from the particle velocity, the assigned
+surface collision model (<A HREF = "surf_collide.html">surf_collide</A>) is applied
+using the surface normal at the time of the hit, and the wall velocity
+is added back.  All surface collision models thus operate correctly on
 the moving body.
 </P>
 <P>At the end of the step, the per-surf force/torque tallies of the
@@ -261,7 +273,10 @@ cut/split cell info including flow volumes and INSIDE/OUTSIDE cell
 markings is re-computed, exactly as is done by the <A HREF = "fix_move_surf.html">fix
 move/surf</A> command.  This is exact but performs a
 full grid re-map every timestep, which can be expensive for large
-grids.  Any particles which end up inside the body are deleted.
+grids.  Any particles found inside the body after the re-map are
+deleted, but with swept collision coverage (see above) particles in
+the body's path are reflected rather than overtaken, so in practice no
+particles are deleted once a run is under way.
 </P>
 <P>The <I>remap incremental</I> mode produces the same exact cut-cell
 information as <I>cutcell</I> at a fraction of the cost.  Each timestep,
@@ -285,7 +300,11 @@ instead, which correctly handles all bodies.
 <P>Particles which are inside the body when a run starts are deleted at
 the start of the run.  The cumulative count of particles deleted
 because they were inside a body is output as the scalar value of this
-fix.
+fix.  Because of swept collision coverage this count normally does not
+grow after the start of a run; growth during a run indicates a
+particle was overtaken by the body, which can happen only if the body
+moves so far in one step that it jumps entirely past a particle (see
+the motion-per-step warnings below).
 </P>
 <HR>
 

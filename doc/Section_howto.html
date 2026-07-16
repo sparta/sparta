@@ -1904,10 +1904,13 @@ moving surface elements.
 <P>Particles collide with the exact translating and rotating position of
 each line or triangle during the timestep, and reflect off the moving
 wall with the assigned <A HREF = "surf_collide.html">surf_collide</A> model applied
-in the local rest frame of the wall.  The force and torque from
-collisions during one step move the body on the following step; see
-the <A HREF = "fix_rigid.html">fix rigid</A> doc page for details of the time
-integration scheme and this one-step lag.
+in the local rest frame of the wall.  Each body surf is added to the
+collision lists of every grid cell it sweeps through during the step,
+so a fast-moving body pushes the particles in its path aside and
+imparts momentum to them rather than overtaking and deleting them.
+The force and torque from collisions during one step move the body on
+the following step; see the <A HREF = "fix_rigid.html">fix rigid</A> doc page for
+details of the time integration scheme and this one-step lag.
 </P>
 <P>The <I>remap</I> option of <A HREF = "fix_rigid.html">fix rigid</A> selects how the
 moving surfs are re-assigned to grid cells each step.  The default
