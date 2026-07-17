@@ -657,6 +657,19 @@ int ComputeSurf::tallyinfo(surfint *&ptr)
 }
 
 /* ----------------------------------------------------------------------
+   check that tallied values are exactly fx,fy,fz,tx,ty,tz for one group
+   used by fix rigid to insure its compute tallies force/torque
+------------------------------------------------------------------------- */
+
+int ComputeSurf::force_torque_colcheck()
+{
+  if (ngroup != 1 || nvalue != 6) return 0;
+  if (which[0] != FX || which[1] != FY || which[2] != FZ) return 0;
+  if (which[3] != TX || which[4] != TY || which[5] != TZ) return 0;
+  return 1;
+}
+
+/* ----------------------------------------------------------------------
    sum tally values to owning surfs via surf->collate()
 ------------------------------------------------------------------------- */
 

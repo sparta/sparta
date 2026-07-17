@@ -152,6 +152,7 @@ int Cut3d::surf2grid_list(cellint id_caller,
   nsurf = 0;
   for (int i = 0; i < nlist; i++) {
     m = list[i];
+
     x1 = tris[m].p1;
     x2 = tris[m].p2;
     x3 = tris[m].p3;

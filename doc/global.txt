@@ -71,8 +71,10 @@ keyword = {fnum} or {nrho} or {vstream} or {temp} or {field} or
     bytes = limit extra particle memory to this amount (in MBytes)
   {optmove} value = yes or no
     yes/no = use optimized particle move if yes, else use regular move
-  {rigid} value= fixID
-    fixID = ID of a fix rigid command that defines a mobile rigid-body object composed of surface elements :pre
+  {rigid} value = {yes} or fixID or NULL
+    yes = enable mobile rigid-body objects defined by fix rigid commands
+    fixID = ID of a fix rigid command, same as yes with the ID validated
+    NULL = disable mobile rigid-body objects :pre
 :ule
 
 [Examples:]
@@ -426,14 +428,18 @@ will be used for that specific particle on that timestep. The {optmove
 yes} option cannot be used when surfaces are defined, the grid is not
 uniform, or when fix adapt is enabled, otherwise an error will result.
 
-The {rigid} keyword enables a mobile rigid-body object composed of
-surface elements (lines in 2d, triangles in 3d) to be simulated.  The
-fixID argument is the ID of a "fix rigid"_fix_rigid.html command which
-defines the set of surfaces in the rigid body.  If fixID is specified
-as NULL, then the motion of the rigid-body object is disabled.  The
-instance o the "fix rigid"_fix_rigid.html command shoud also be
-deleted via the "unfix"_unfix.html command.
- 
+The {rigid} keyword enables mobile rigid-body objects composed of
+surface elements (lines in 2d, triangles in 3d) to be simulated.
+Each object is defined by a "fix rigid"_fix_rigid.html command; all
+defined fix rigid commands become active.  The value can be the word
+{yes}, or the ID of one "fix rigid"_fix_rigid.html command (which is
+validated, but has the same effect as {yes}).  If the value is NULL,
+then the motion of rigid-body objects is disabled.  In that case any
+instances of the "fix rigid"_fix_rigid.html command should also be
+deleted via the "unfix"_unfix.html command.  See "Section
+6.20"_Section_howto.html#howto_20 for an overview of rigid body
+surface objects.
+
 [Restrictions:]
 
 The global surfmax command must be used before surface elements are

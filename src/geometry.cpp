@@ -695,22 +695,148 @@ bool line_line_intersect(double *start, double *stop,
 }
 
 /* ----------------------------------------------------------------------
-   detect intersection between a directed line segment A and moving line segment B
-   intersection is defined as any A pt (including end pts)
-     in common with any B pt (interior,vertex)
-   return TRUE if there is an intersection, else FALSE
-   if TRUE also return:
-     point = pt of intersection
-     param = intersection pt is this fraction along line A (0-1 inclusive)
-     side = side of B that was hit = OUTSIDE,INSIDE,ONSURF2OUT,ONSURF2IN
+   helpers for intersection of a particle path with a moving rigid body
+   the body translates at constant vcm and rotates at constant omega
+     about its center-of-mass over the course of one timestep
+   time T is measured from the start of the step, when the body's
+     line/tri elements are at their stored positions
+   body COM position: xcm(T) = xcm0 + vcm*T
 ------------------------------------------------------------------------- */
 
-bool line_line_moving_intersect(double *start, double *stop,
-				double *v0, double *v1, double *norm,
-				double *point, double &param, int &side)
+/* ----------------------------------------------------------------------
+   map space-frame point PT at time T into the frame where the body
+     is at its start-of-step configuration
+   Y = R(-omega*T) (PT - xcm(T)) + xcm0, exact rotation via quaternion
+------------------------------------------------------------------------- */
+
+static void body_frame_point(double *pt, double t,
+                             double *xcm0, double *vcm, double *omega,
+                             double *y)
 {
-  bool hit = line_line_intersect(start,stop,v0,v1,norm,point,param,side);
-  return hit;
+  double xcmt[3],delta[3],axis[3],q[4];
+  double rot[3][3];
+
+  xcmt[0] = xcm0[0] + vcm[0]*t;
+  xcmt[1] = xcm0[1] + vcm[1]*t;
+  xcmt[2] = xcm0[2] + vcm[2]*t;
+  MathExtra::sub3(pt,xcmt,delta);
+
+  double wmag = MathExtra::len3(omega);
+  double angle = wmag*t;
+
+  if (angle != 0.0) {
+    axis[0] = omega[0]/wmag;
+    axis[1] = omega[1]/wmag;
+    axis[2] = omega[2]/wmag;
+    MathExtra::axisangle_to_quat(axis,-angle,q);
+    MathExtra::quat_to_mat(q,rot);
+    double dnew[3];
+    MathExtra::matvec(rot,delta,dnew);
+    MathExtra::add3(xcm0,dnew,y);
+  } else MathExtra::add3(xcm0,delta,y);
+}
+
+/* ----------------------------------------------------------------------
+   rotate start-of-step body vector VEC into the space frame at time T
+------------------------------------------------------------------------- */
+
+static void space_frame_vector(double *vec, double t, double *omega,
+                               double *result)
+{
+  double axis[3],q[4];
+  double rot[3][3];
+
+  double wmag = MathExtra::len3(omega);
+  double angle = wmag*t;
+
+  if (angle != 0.0) {
+    axis[0] = omega[0]/wmag;
+    axis[1] = omega[1]/wmag;
+    axis[2] = omega[2]/wmag;
+    MathExtra::axisangle_to_quat(axis,angle,q);
+    MathExtra::quat_to_mat(q,rot);
+    MathExtra::matvec(rot,vec,result);
+  } else {
+    result[0] = vec[0];
+    result[1] = vec[1];
+    result[2] = vec[2];
+  }
+}
+
+/* ----------------------------------------------------------------------
+   detect intersection between the path of a moving particle and
+     a line segment which is part of a moving rigid body
+   start = particle position at time T0 (from start of step)
+   v = particle velocity, constant over the path
+   t0,tsub = path extends from time T0 to time T0+TSUB
+   v0,v1,norm = line segment end pts and outward normal at their
+     start-of-step positions
+   xcm0,vcm,omega = body COM at start of step, its velocity,
+     and the body angular velocity
+   method: map the two particle path endpoints into the frame where the
+     body is static at its start-of-step configuration, then use the
+     static line_line_intersect() on the chord through the mapped points
+   exact for a translating body; for a rotating body the mapped path
+     is curved and the chord approximation has relative error
+     O((omega*tsub)^2), negligible for rotation per timestep << 1 radian
+   a nearly stationary particle swept over by an advancing surf IS
+     detected, since the mapped path reflects the relative motion
+   return TRUE if there is an intersection, else FALSE
+   if TRUE also return:
+     point = space-frame pt of intersection on the particle path
+     nhit = outward normal of the line segment at the time of the hit
+     vwall = velocity of the body surface at the hit point
+     param = hit is this fraction of the path from T0 to T0+TSUB
+     side = OUTSIDE,INSIDE,ONSURF2OUT,ONSURF2IN for the
+       particle/body relative motion
+------------------------------------------------------------------------- */
+
+bool line_line_moving_intersect(double *start, double *v,
+                                double t0, double tsub,
+                                double *v0, double *v1, double *norm,
+                                double *xcm0, double *vcm, double *omega,
+                                double *point, double *nhit, double *vwall,
+                                double &param, int &side)
+{
+  double stop[3],y0[3],y1[3],yc[3];
+
+  // map particle path endpoints into body frame
+
+  body_frame_point(start,t0,xcm0,vcm,omega,y0);
+
+  stop[0] = start[0] + v[0]*tsub;
+  stop[1] = start[1] + v[1]*tsub;
+  stop[2] = 0.0;
+  body_frame_point(stop,t0+tsub,xcm0,vcm,omega,y1);
+  y0[2] = y1[2] = 0.0;
+
+  bool hit = line_line_intersect(y0,y1,v0,v1,norm,yc,param,side);
+  if (!hit) return false;
+
+  // thit = time of collision measured from start of step
+  // hit pt is along the particle's straight space-frame path
+
+  double thit = t0 + param*tsub;
+  point[0] = start[0] + v[0]*(param*tsub);
+  point[1] = start[1] + v[1]*(param*tsub);
+  point[2] = 0.0;
+
+  // normal at time of hit
+  // vwall = velocity of body surface at hit point = vcm + omega x r
+
+  space_frame_vector(norm,thit,omega,nhit);
+
+  double xcmt[3],delta[3];
+  xcmt[0] = xcm0[0] + vcm[0]*thit;
+  xcmt[1] = xcm0[1] + vcm[1]*thit;
+  xcmt[2] = xcm0[2] + vcm[2]*thit;
+  MathExtra::sub3(point,xcmt,delta);
+  MathExtra::cross3(omega,delta,vwall);
+  vwall[0] += vcm[0];
+  vwall[1] += vcm[1];
+  vwall[2] += vcm[2];
+
+  return true;
 }
 
 /* ----------------------------------------------------------------------
@@ -1087,28 +1213,67 @@ bool line_tri_intersect(double *start, double *stop,
 }
 
 /* ----------------------------------------------------------------------
-   detect intersection between a directed line segment and a triangle
-   intersection is defined as any line segment pt (including end pts)
-     in common with any triangle pt (interior, edge, vertex)
-   one exception is if both line end pts are in plane of triangle,
-     then is NOT an intersection
-   start,stop = end points of directed line segment, can have zero length
-   v0,v1,v2 = 3 vertices of triangle
-   norm = unit vector normal to triangle plane
-     pointing OUTSIDE via right-hand rule
+   detect intersection between the path of a moving particle and
+     a triangle which is part of a moving rigid body
+   same method and args as line_line_moving_intersect(), for 3d
+   v0,v1,v2,norm = tri corner pts and outward normal at their
+     start-of-step positions
    return TRUE if there is an intersection, else FALSE
    if TRUE also return:
-     point = pt of intersection
-     param = intersection pt is this fraction along line (0-1 inclusive)
-     side = side of B that was hit = OUTSIDE,INSIDE,ONSURF2OUT,ONSURF2IN
+     point = space-frame pt of intersection on the particle path
+     nhit = outward normal of the triangle at the time of the hit
+     vwall = velocity of the body surface at the hit point
+     param = hit is this fraction of the path from T0 to T0+TSUB
+     side = OUTSIDE,INSIDE,ONSURF2OUT,ONSURF2IN for the
+       particle/body relative motion
 ------------------------------------------------------------------------- */
 
-bool line_tri_moving_intersect(double *start, double *stop,
-			       double *v0, double *v1, double *v2, double *norm,
-			       double *point, double &param, int &side)
+bool line_tri_moving_intersect(double *start, double *v,
+                               double t0, double tsub,
+                               double *v0, double *v1, double *v2,
+                               double *norm,
+                               double *xcm0, double *vcm, double *omega,
+                               double *point, double *nhit, double *vwall,
+                               double &param, int &side)
 {
-  bool hit = line_tri_intersect(start,stop,v0,v1,v2,norm,point,param,side);
-  return hit;
+  double stop[3],y0[3],y1[3],yc[3];
+
+  // map particle path endpoints into body frame
+
+  body_frame_point(start,t0,xcm0,vcm,omega,y0);
+
+  stop[0] = start[0] + v[0]*tsub;
+  stop[1] = start[1] + v[1]*tsub;
+  stop[2] = start[2] + v[2]*tsub;
+  body_frame_point(stop,t0+tsub,xcm0,vcm,omega,y1);
+
+  bool hit = line_tri_intersect(y0,y1,v0,v1,v2,norm,yc,param,side);
+  if (!hit) return false;
+
+  // thit = time of collision measured from start of step
+  // hit pt is along the particle's straight space-frame path
+
+  double thit = t0 + param*tsub;
+  point[0] = start[0] + v[0]*(param*tsub);
+  point[1] = start[1] + v[1]*(param*tsub);
+  point[2] = start[2] + v[2]*(param*tsub);
+
+  // normal at time of hit
+  // vwall = velocity of body surface at hit point = vcm + omega x r
+
+  space_frame_vector(norm,thit,omega,nhit);
+
+  double xcmt[3],delta[3];
+  xcmt[0] = xcm0[0] + vcm[0]*thit;
+  xcmt[1] = xcm0[1] + vcm[1]*thit;
+  xcmt[2] = xcm0[2] + vcm[2]*thit;
+  MathExtra::sub3(point,xcmt,delta);
+  MathExtra::cross3(omega,delta,vwall);
+  vwall[0] += vcm[0];
+  vwall[1] += vcm[1];
+  vwall[2] += vcm[2];
+
+  return true;
 }
 
 /* ----------------------------------------------------------------------

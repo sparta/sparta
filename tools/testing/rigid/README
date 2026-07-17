@@ -1,0 +1,44 @@
+Regression tests for SPARTA rigid-body surface objects (fix rigid)
+-------------------------------------------------------------------
+
+run_tests.py runs a set of small input decks and checks the results
+against analytic expectations with tolerances:
+
+ballistic     free body with initial velocity + angular momentum:
+              straight-line COM motion, constant angular velocity
+bounce        body vs static wall via push-off springs: elastic
+              rebound within 1%, no tunneling into the cutoff zone
+momentum      gas + body momentum conservation in a periodic box,
+              within 1.5% statistical drift
+overrun       body sweeping 40% of a cell per step through resting
+              gas: no particles overrun (deletion counter constant)
+remap         cutcell and incremental remap modes produce identical
+              deterministic trajectories
+multiremap    two gas-driven bodies give identical trajectories in
+              cutcell and incremental modes (multi-body incremental)
+twobody       two bodies colliding head-on via push-off: symmetric,
+              elastic within 2%
+pushpair      ASYMMETRIC body-body contact (heavy large body vs light
+              small body, corner-vs-face): total pair momentum
+              conserved to output precision, verifying that contact
+              forces are applied equal-and-opposite to both bodies
+badmoi        negative: 3d moi violating the triangle inequality
+              must be rejected
+notwatertight negative: open body group must be rejected
+
+The ballistic, bounce, remap, twobody, and pushpair tests contain no
+particles and must produce identical results on any number of procs.
+The momentum and overrun tests are statistical and use loose
+tolerances.
+
+Usage:
+
+  python3 run_tests.py --exe ../../../src/spa_serial
+  python3 run_tests.py --exe ../../../src/spa_mpi --mpi "mpirun -np 4"
+
+Passing --dist reruns the subset of tests whose decks support
+distributed surfs (global surfs explicit/distributed): ballistic,
+bounce, momentum, overrun, twobody, pushpair.  Results must match the
+non-distributed runs.
+
+Exit code = number of failed tests.

@@ -1859,11 +1859,69 @@ etc.
 
 6.20 Rigid body surface objects in SPARTA :link(howto_20),h4
 
-Overview of why use this feature
+An object defined by a collection of surface elements (a closed line
+polygon in 2d or a closed surface triangulation in 3d) can be treated
+as a mobile rigid body which interacts with the particles in the
+simulation.  Each timestep, particles which bounce off the object
+impart force and torque to it, which cause the object to translate
+and rotate in response to the flow.  The flow itself is affected by
+the presence and motion of the object.  This can be useful for
+modeling the effect of gas flows on large particulates, e.g. dust
+grains or droplets which are much larger than the gas molecules.
 
-fix rigid
-compute surf
-custom surf ?
-dump surf for viz - individual tris ?
-stats with 12 values for the body
-push-off forces
+Three commands work together to enable this:
+
+The "read_surf"_read_surf.html command reads the object geometry and
+should assign its surface elements to a "group"_group.html, which
+identifies the rigid body. :ulb,l
+
+A "compute surf"_compute_surf.html command tallies the force and
+torque exerted on each surface element of the body by particle
+collisions.  It must tally exactly the 6 values fx fy fz tx ty tz for
+a single mixture group and use its {com} keyword, e.g.
+
+compute csurf surf all all fx fy fz tx ty tz com 5 5 0 :pre
+
+A "fix rigid"_fix_rigid.html command defines the body's mass,
+center-of-mass, moments of inertia, and initial velocities, and time
+integrates its motion using the force/torque tallied by the compute.
+The "global rigid"_global.html command must also be set with the ID
+of the fix, so the particle mover checks for collisions with the
+moving surface elements. :l
+:ule
+
+Particles collide with the exact translating and rotating position of
+each line or triangle during the timestep, and reflect off the moving
+wall with the assigned "surf_collide"_surf_collide.html model applied
+in the local rest frame of the wall.  Each body surf is added to the
+collision lists of every grid cell it sweeps through during the step,
+so a fast-moving body pushes the particles in its path aside and
+imparts momentum to them rather than overtaking and deleting them.
+The force and torque from collisions during one step move the body on
+the following step; see the "fix rigid"_fix_rigid.html doc page for
+details of the time integration scheme and this one-step lag.
+
+The {remap} option of "fix rigid"_fix_rigid.html selects how the
+moving surfs are re-assigned to grid cells each step.  The default
+{incremental} mode re-cuts only the grid cells near the body that
+actually changed, which is fast on large grids, and falls back
+automatically to a full re-map when a structural change (e.g. a split
+cell) occurs.  The {cutcell} mode re-computes cut and split cell info
+for the whole grid every step, exactly as "fix
+move/surf"_fix_move_surf.html does; both modes give the same exact
+flow volumes near the body.  Rigid bodies work with both
+non-distributed and distributed explicit surfs, in either remap mode;
+with distributed surfs each processor keeps a replicated copy of only
+the compact body elements.
+
+If the object approaches other static (non-moving) surface elements,
+optional push-off spring forces can repel it before contact, via the
+{push} and {pushbound} options of "fix rigid"_fix_rigid.html.
+
+The state of the body (position, velocities, orientation, forces) is
+available as a 22-value global vector computed by the fix, for
+printing with "stats_style"_stats_style.html.  The moving surface
+elements themselves can be visualized with the "dump
+image"_dump_image.html command or output by "dump surf"_dump.html,
+since their coordinates are updated every timestep.  See the
+examples/rigid directory for example input scripts.

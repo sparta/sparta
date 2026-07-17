@@ -43,6 +43,33 @@ class ComputeSurf : public Compute {
   void reallocate();
   bigint memory_usage();
 
+  // reset center-of-mass for torque tallies
+  // used by fix rigid to keep COM current as a rigid body moves
+
+  void set_com(const double *newcom)
+  {
+    com[0] = newcom[0];
+    com[1] = newcom[1];
+    com[2] = newcom[2];
+  }
+
+  // check values are exactly fx,fy,fz,tx,ty,tz for a single group
+  // used by fix rigid to insure its compute tallies force/torque
+
+  int force_torque_colcheck();
+
+  // surf group this compute tallies for
+  // used by fix rigid to insure all its body surfs are tallied
+
+  int surf_groupbit() { return groupbit; }
+
+  // raw per-tally values, rows correspond to tallyinfo() surf IDs
+  // values are fully normalized at tally time, so summing rows local
+  //   to each proc + one Allreduce equals the collated result
+  // used by fix rigid to sum body force/torque without a collate
+
+  double **tally_array() { return array_surf_tally; }
+
  protected:
   int groupbit,imix,nvalue,ngroup,ntotal;
   int maxsurf,combined;

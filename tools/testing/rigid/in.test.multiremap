@@ -1,0 +1,48 @@
+# TEST: multi-body remap-mode consistency
+# two rigid bodies driven by a drifting gas in a periodic box
+# remap cutcell and remap incremental must give identical body
+# trajectories, since incremental reproduces the exact cut-cell result
+# run as: -var mode cutcell   (or incremental)
+
+seed	    	    12345
+
+variable            dist index 0
+if "${dist} == 1" then "global surfs explicit/distributed"
+dimension   	    2
+global              comm/sort yes
+
+boundary            p p p
+
+create_box  	    0 10 0 10 -0.5 0.5
+create_grid 	    20 20 1
+balance_grid        rcb cell
+
+global		    nrho 1.0 fnum 0.001
+
+species		    air.species N
+mixture		    air N vstream 150.0 40.0 0 temp 273.0
+
+read_surf           data.square group b1 trans -2.0 -1.5 0
+read_surf           data.square group b2 trans 2.0 1.5 0
+surf_collide	    1 specular
+surf_modify         all collide 1
+
+timestep 	    0.0001
+
+compute             c1 surf b1 all fx fy fz tx ty tz com 3.0 3.5 0
+compute             c2 surf b2 all fx fy fz tx ty tz com 7.0 6.5 0
+
+global              rigid yes
+
+fix		    1 rigid b1 c1 body mass 1.0e-22 com 3.0 3.5 0 &
+                    vcom 0 0 0 moi 1.7e-23 1.7e-23 3.4e-23 0 0 0 &
+                    angmom 0 0 0 remap ${mode}
+fix		    2 rigid b2 c2 body mass 1.0e-22 com 7.0 6.5 0 &
+                    vcom 0 0 0 moi 1.7e-23 1.7e-23 3.4e-23 0 0 0 &
+                    angmom 0 0 0 remap ${mode}
+
+create_particles    air n 20000
+
+stats		    250
+stats_style         step np f_1[1] f_1[2] f_1[15] f_2[1] f_2[2] f_2[15]
+run 		    1500

@@ -110,6 +110,7 @@ int Cut2d::surf2grid_list(cellint id_caller,
   nsurf = 0;
   for (int i = 0; i < nlist; i++) {
     m = list[i];
+
     x1 = lines[m].p1;
     x2 = lines[m].p2;
 

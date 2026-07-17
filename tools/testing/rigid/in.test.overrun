@@ -1,0 +1,40 @@
+# TEST: fast body sweeping through nearly stationary gas
+# body moves 40% of a grid cell per step: every overrun particle must
+# be caught by the moving-surf collision detection, so the cumulative
+# count of particles deleted inside the body (fix scalar) must not
+# grow after the initial setup deletion
+
+seed	    	    12345
+
+variable            dist index 0
+if "${dist} == 1" then "global surfs explicit/distributed"
+dimension   	    2
+boundary            p p p
+
+create_box  	    0 10 0 10 -0.5 0.5
+create_grid 	    20 20 1
+
+global		    nrho 1.0 fnum 0.001
+
+species		    air.species N
+mixture		    air N vstream 0 0 0 temp 273.0
+
+read_surf           data.square group body
+surf_collide	    1 specular
+surf_modify         all collide 1
+
+timestep 	    0.0001
+
+compute             c1 surf body all fx fy fz tx ty tz com 5 5 0
+
+global              rigid yes
+
+fix		    1 rigid body c1 body &
+		    mass 1.0e-15 com 5 5 0 vcom 2000 0 0 &
+		    moi 1.7e-16 1.7e-16 3.4e-16 0 0 0 angmom 0 0 0
+
+create_particles    air n 20000
+
+stats		    2
+stats_style         step np f_1[1] f_1[4] f_1
+run 		    20
