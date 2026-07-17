@@ -63,6 +63,7 @@ enum{PERIODIC,OUTFLOW,REFLECT,SURFACE,AXISYM};  // same as Domain
 enum{CUTCELL,INCREMENTAL};          // remap modes
 
 enum{LINEAR,HERTZ};             // push-off force laws
+enum{EULER,RICHARDSON};         // quaternion rotation update schemes
 
 // local box/box overlap test, touching counts as overlap
 
@@ -183,12 +184,12 @@ FixRigid::FixRigid(SPARTA *sparta, int narg, char **arg) :
   outfile = NULL;
   outevery = 0;
   remapmode = INCREMENTAL;
+  rotstyle = EULER;
   pushflag = 0;
   pushboundflag = 0;
   pushstyle = LINEAR;
   gammapush = 0.0;
   int pushstyleflag = 0;
-  int remapuserflag = 0;
   double scale = 1.0;
 
   while (iarg < narg) {
@@ -222,10 +223,15 @@ FixRigid::FixRigid(SPARTA *sparta, int narg, char **arg) :
       iarg += 2;
     } else if (strcmp(arg[iarg],"remap") == 0) {
       if (iarg+2 > narg) error->all(FLERR,"Fix rigid body args not valid");
-      remapuserflag = 1;
       if (strcmp(arg[iarg+1],"cutcell") == 0) remapmode = CUTCELL;
       else if (strcmp(arg[iarg+1],"incremental") == 0)
         remapmode = INCREMENTAL;
+      else error->all(FLERR,"Fix rigid body args not valid");
+      iarg += 2;
+    } else if (strcmp(arg[iarg],"rotate") == 0) {
+      if (iarg+2 > narg) error->all(FLERR,"Fix rigid body args not valid");
+      if (strcmp(arg[iarg+1],"euler") == 0) rotstyle = EULER;
+      else if (strcmp(arg[iarg+1],"richardson") == 0) rotstyle = RICHARDSON;
       else error->all(FLERR,"Fix rigid body args not valid");
       iarg += 2;
     } else if (strcmp(arg[iarg],"pseudo") == 0) {
@@ -256,18 +262,19 @@ FixRigid::FixRigid(SPARTA *sparta, int narg, char **arg) :
     error->all(FLERR,"Fix rigid pushbound, pushstyle, and pushdamp "
                "require push keyword");
 
-  // distributed surfs: incremental re-cut and pseudo mode operate on
-  //   locally stored surfs and are not yet supported
-  // when the user did not choose a remap mode, default to cutcell
+  // distributed surfs: pseudo mode reads the full surf list locally
+  //   and is not supported
+  // incremental re-cut IS supported: it never redistributes surfs, so
+  //   the local copies of body surfs (ensure_local_copies) persist,
+  //   and Cut2d/Cut3d::surf2grid scans the local surf list, which
+  //   holds the static surfs of every cell in the re-cut region plus
+  //   all body surfs; ghost copies of re-cut cells go stale, which is
+  //   acceptable for the same reason as with non-distributed surfs
+  //   (the mover consults owned cells' lists; swept assignment
+  //   re-covers ghost cells' collision lists every step)
 
-  if (surf->distributed) {
-    if (remapuserflag && remapmode == INCREMENTAL)
-      error->all(FLERR,"Fix rigid remap incremental requires "
-                 "non-distributed surfs");
-    remapmode = CUTCELL;
-    if (pseudoflag)
-      error->all(FLERR,"Fix rigid pseudo requires non-distributed surfs");
-  }
+  if (surf->distributed && pseudoflag)
+    error->all(FLERR,"Fix rigid pseudo requires non-distributed surfs");
 
   if (massbody <= 0.0)
     error->all(FLERR,"Fix rigid body mass must be positive");
@@ -364,6 +371,17 @@ FixRigid::FixRigid(SPARTA *sparta, int narg, char **arg) :
   pushstampcur = 0;
   ftbuf_mine = ftbuf_all = NULL;
   tqpush[0] = tqpush[1] = tqpush[2] = 0.0;
+  lbliststale = 0;
+
+  swstamp = NULL;
+  swhead = NULL;
+  maxswcell = 0;
+  swcur = 0;
+  swcells = NULL;
+  nswcell = maxswcells = 0;
+  entnext = NULL;
+  entelem = NULL;
+  nent = maxent = 0;
 
   // for incremental mode: cutters and work bufs for re-cutting cells
 
@@ -448,6 +466,11 @@ FixRigid::~FixRigid()
   memory->destroy(pushstamp);
   memory->destroy(ftbuf_mine);
   memory->destroy(ftbuf_all);
+  memory->destroy(swstamp);
+  memory->destroy(swhead);
+  memory->destroy(swcells);
+  memory->destroy(entnext);
+  memory->destroy(entelem);
 }
 
 /* ---------------------------------------------------------------------- */
@@ -692,15 +715,29 @@ void FixRigid::start_of_step()
 
   // update quaternion by full step using new omega in spatial frame
   // use dq/dt = 1/2 omega q
-  // store as qusatnew so have start/stop orientation for this timestep
-  
-  double wq[4];
-  MathExtra::vecquat(omega,quat,wq);
-  quatnew[0] = quat[0] + dthalf * wq[0];
-  quatnew[1] = quat[1] + dthalf * wq[1];
-  quatnew[2] = quat[2] + dthalf * wq[2];
-  quatnew[3] = quat[3] + dthalf * wq[3];
-  MathExtra::qnormalize(quatnew);
+  // store as quatnew so have start/stop orientation for this timestep
+  // rotate euler (default): single explicit update, consistent with
+  //   the overall first-order gas-body coupling
+  // rotate richardson: LAMMPS-style Richardson iteration, higher-order
+  //   in the rotation and re-evaluates omega at the half step from the
+  //   (constant over the step) angular momentum; useful for
+  //   rotation-dominated bodies
+
+  if (rotstyle == RICHARDSON) {
+    quatnew[0] = quat[0];
+    quatnew[1] = quat[1];
+    quatnew[2] = quat[2];
+    quatnew[3] = quat[3];
+    MathExtra::richardson(quatnew,angmom,omega,inertia,dthalf);
+  } else {
+    double wq[4];
+    MathExtra::vecquat(omega,quat,wq);
+    quatnew[0] = quat[0] + dthalf * wq[0];
+    quatnew[1] = quat[1] + dthalf * wq[1];
+    quatnew[2] = quat[2] + dthalf * wq[2];
+    quatnew[3] = quat[3] + dthalf * wq[3];
+    MathExtra::qnormalize(quatnew);
+  }
   MathExtra::q_to_exyz(quatnew,ex_space,ey_space,ez_space);
 
   // warn once per run if body motion in a single step is too large
@@ -758,25 +795,18 @@ void FixRigid::end_of_step()
     flist[nb-1]->swept_restore();
 
     // sum per-surf force/torque to each body's fcm/torque
-    // array_surf rows are surfs each proc owns:
-    //   non-distributed: proc owns every Pth surf,
-    //     row M of array = surf with local index me + M*nprocs
-    //   distributed: row M of array = owned surf mylines/mytris[M]
-    // sum rows for owned surfs of each body, single Allreduce for all
-
-    Surf::Line *lines = surf->lines;
-    Surf::Tri *tris = surf->tris;
-    Surf::Line *mylines = surf->mylines;
-    Surf::Tri *mytris = surf->mytris;
-    int distributed = surf->distributed;
-    int nslocal = surf->nlocal;
-    int nown = surf->nown;
-    int me = comm->me;
-    int nprocs = comm->nprocs;
+    // read the compute's RAW local tally rows: values are fully
+    //   normalized at tally time, and each row's surf ID maps to a
+    //   body element via the body's ID table, so a local sum plus the
+    //   single fused Allreduce below is exactly the collated result
+    // this avoids Surf::collate_array entirely, whose reduce path is
+    //   an Allreduce over ALL global surfs per compute per step, and
+    //   avoids any scan over the surf list: cost is O(local tallies)
+    // identical for non-distributed and distributed surfs
 
     for (int i = 0; i < 6*nb; i++) ftbuf_mine[i] = 0.0;
 
-    int mask;
+    surfint *t2s;
     for (int m = 0; m < nb; m++) {
       FixRigid *f = flist[m];
       if (f->pseudoflag) continue;
@@ -786,27 +816,14 @@ void FixRigid::end_of_step()
         cs->compute_per_surf();
         cs->invoked_flag |= INVOKED_PER_SURF;
       }
-      cs->post_process_surf();
-      double **array = cs->array_surf;
+
+      int ntally = cs->tallyinfo(t2s);
+      double **tally = cs->tally_array();
 
       double *ft = &ftbuf_mine[6*m];
-      int gbit = f->groupbit;
-
-      if (!distributed) {
-        int row = 0;
-        for (int i = me; i < nslocal; i += nprocs, row++) {
-          if (dim == 2) mask = lines[i].mask;
-          else mask = tris[i].mask;
-          if (!(mask & gbit)) continue;
-          for (int j = 0; j < 6; j++) ft[j] += array[row][j];
-        }
-      } else {
-        for (int i = 0; i < nown; i++) {
-          if (dim == 2) mask = mylines[i].mask;
-          else mask = mytris[i].mask;
-          if (!(mask & gbit)) continue;
-          for (int j = 0; j < 6; j++) ft[j] += array[i][j];
-        }
+      for (int i = 0; i < ntally; i++) {
+        if (f->body_elem(t2s[i]) < 0) continue;
+        for (int j = 0; j < 6; j++) ft[j] += tally[i][j];
       }
 
       // insure the compute tallies on the next step
@@ -2296,6 +2313,10 @@ void FixRigid::grid_rebuild()
 
   grid->notify_changed();
 
+  // the re-map rebuilt cells and ghosts: invalidate the cell-bin index
+
+  update->rigid_bins_clear();
+
   // distributed surfs: the re-map rebuilt the local surf arrays from
   //   the owned copies, so local body-surf copies and the per-surf
   //   rigidmap must be re-established for every body
@@ -2303,7 +2324,10 @@ void FixRigid::grid_rebuild()
   if (surf->distributed) {
     FixRigid **flist = update->fixrigidlist;
     int nb = update->nfixrigid;
-    for (int m = 0; m < nb; m++) flist[m]->ensure_local_copies();
+    for (int m = 0; m < nb; m++) {
+      flist[m]->ensure_local_copies();
+      flist[m]->lbliststale = 0;
+    }
     update->build_rigidmap();
   }
 }
@@ -2332,6 +2356,22 @@ void FixRigid::swept_assign_all()
   FixRigid **flist = update->fixrigidlist;
   int nb = update->nfixrigid;
 
+  // distributed surfs: a balance or adapt since the last step rebuilt
+  //   the local surf arrays; re-locate (and if needed re-append) every
+  //   body's local surf copies and rebuild the per-surf rigidmap
+
+  if (surf->distributed) {
+    int stale = 0;
+    for (m = 0; m < nb; m++) if (flist[m]->lbliststale) stale = 1;
+    if (stale) {
+      for (m = 0; m < nb; m++) {
+        flist[m]->ensure_local_copies();
+        flist[m]->lbliststale = 0;
+      }
+      update->build_rigidmap();
+    }
+  }
+
   Grid::ChildCell *cells = grid->cells;
   Grid::SplitInfo *sinfo = grid->sinfo;
   int ntotal = grid->nlocal + grid->nghost;
@@ -2343,25 +2383,35 @@ void FixRigid::swept_assign_all()
   cpage->reset();
   nmodified = 0;
 
-  // single pass over owned + ghost cells
-  // skip sub cells (handled via their split cell) and empty ghosts
+  // phase 1: gather (cell, swept element) entries per body, visiting
+  //   only the candidate cells near each body from the box->cell
+  //   index, so cost scales with the bodies' swept regions and not
+  //   with the number of cells this proc owns
+  // entries for one cell are chained; a per-cell stamp detects the
+  //   first touch of a cell this step
 
-  for (icell = 0; icell < ntotal; icell++) {
-    if (cells[icell].nsplit <= 0) continue;
-    if (cells[icell].nsurf < 0) continue;
+  if (ntotal > maxswcell) {
+    int oldmax = maxswcell;
+    maxswcell = ntotal;
+    memory->grow(swstamp,maxswcell,"fix_rigid:swstamp");
+    memory->grow(swhead,maxswcell,"fix_rigid:swhead");
+    for (i = oldmax; i < maxswcell; i++) swstamp[i] = 0;
+  }
+  swcur++;
+  nswcell = 0;
+  nent = 0;
 
-    // merged = current csurfs + all bodies' swept surfs not already
-    //   present, built lazily on the first appended surf
-    // dedup vs current csurfs skips body surfs the cut pipeline placed
-    //   at a body's start-of-step position
+  int ncand,icand;
+  int *cand;
 
-    ncur = cells[icell].nsurf;
-    cur = cells[icell].csurfs;
-    merged = NULL;
-    nmerged = ncur;
+  for (m = 0; m < nb; m++) {
+    f = flist[m];
+    ncand = update->rigid_cell_box(f->bbodylo,f->bbodyhi,&cand);
 
-    for (m = 0; m < nb; m++) {
-      f = flist[m];
+    for (icand = 0; icand < ncand; icand++) {
+      icell = cand[icand];
+      if (cells[icell].nsplit <= 0) continue;
+      if (cells[icell].nsurf < 0) continue;
       if (!box_overlap(cells[icell].lo,cells[icell].hi,
                        f->bbodylo,f->bbodyhi)) continue;
 
@@ -2369,23 +2419,55 @@ void FixRigid::swept_assign_all()
         if (!box_overlap(cells[icell].lo,cells[icell].hi,
                          f->elemlo[i],f->elemhi[i])) continue;
 
+        if (swstamp[icell] != swcur) {
+          swstamp[icell] = swcur;
+          swhead[icell] = -1;
+          if (nswcell == maxswcells) {
+            maxswcells += DELTA_MODIFY;
+            memory->grow(swcells,maxswcells,"fix_rigid:swcells");
+          }
+          swcells[nswcell++] = icell;
+        }
+
         // lblist = local surf index of the element on this proc;
         // for distributed surfs ensure_local_copies() guarantees it
 
-        surfint selem = (surfint) f->lblist[i];
-        dup = 0;
-        for (j = 0; j < ncur; j++)
-          if (cur[j] == selem) { dup = 1; break; }
-        if (dup) continue;
-        if (!merged) {
-          merged = cpage->vget();
-          for (j = 0; j < ncur; j++) merged[j] = cur[j];
+        if (nent == maxent) {
+          maxent += DELTA_MODIFY;
+          memory->grow(entnext,maxent,"fix_rigid:entnext");
+          memory->grow(entelem,maxent,"fix_rigid:entelem");
         }
-        merged[nmerged++] = selem;
+        entelem[nent] = (surfint) f->lblist[i];
+        entnext[nent] = swhead[icell];
+        swhead[icell] = nent++;
       }
     }
+  }
 
-    if (!merged) continue;
+  // phase 2: for each touched cell, install a merged list =
+  //   current csurfs + chained swept elements not already present
+  // dedup vs current csurfs skips body surfs the cut pipeline placed
+  //   at a body's start-of-step position; chained entries are unique
+  //   among themselves (bodies are disjoint, one entry per element)
+
+  for (int ic = 0; ic < nswcell; ic++) {
+    icell = swcells[ic];
+
+    ncur = cells[icell].nsurf;
+    cur = cells[icell].csurfs;
+    merged = cpage->vget();
+    for (j = 0; j < ncur; j++) merged[j] = cur[j];
+    nmerged = ncur;
+
+    for (int e = swhead[icell]; e >= 0; e = entnext[e]) {
+      surfint selem = entelem[e];
+      dup = 0;
+      for (j = 0; j < ncur; j++)
+        if (cur[j] == selem) { dup = 1; break; }
+      if (!dup) merged[nmerged++] = selem;
+    }
+
+    if (nmerged == ncur) continue;   // all swept surfs already present
     cpage->vgot(nmerged);
 
     // save cell settings so they can be restored, then override them
@@ -2453,6 +2535,13 @@ void FixRigid::grid_changed()
   nmodified = 0;
   if (cpage) cpage->reset();
   free_registry();
+  update->rigid_bins_clear();
+
+  // distributed surfs: cell migration rebuilt the local surf arrays,
+  //   so this fix's local body-surf copies must be re-located before
+  //   the next swept assignment
+
+  lbliststale = 1;
 }
 
 /* ----------------------------------------------------------------------
@@ -2464,6 +2553,7 @@ void FixRigid::grid_changed()
 void FixRigid::record_oldinside()
 {
   double ctr[3];
+  int icell;
 
   // bbox around body at its current (pre-move) position
 
@@ -2475,7 +2565,15 @@ void FixRigid::record_oldinside()
 
   noldinside = 0;
 
-  for (int icell = 0; icell < nglocal; icell++) {
+  // candidate cells near the body from the box->cell index,
+  //   restricted to owned cells
+
+  int *cand;
+  int ncand = update->rigid_cell_box(bbodylo,bbodyhi,&cand);
+
+  for (int ic = 0; ic < ncand; ic++) {
+    icell = cand[ic];
+    if (icell >= nglocal) continue;
     if (cells[icell].nsplit != 1) continue;
     if (cells[icell].nsurf) continue;
     if (cinfo[icell].type != CELLINSIDE) continue;
@@ -2550,11 +2648,16 @@ int FixRigid::incremental_recut()
   }
   if (!nincr) return 1;
 
-  // collect cells overlapping R in one pass over the local grid;
+  // collect the owned cells overlapping R from the box->cell index;
   //   the re-cut and re-type passes below iterate only this list
 
+  int *cand;
+  int ncand = update->rigid_cell_box(rlo,rhi,&cand);
+
   nrcand = 0;
-  for (icell = 0; icell < nglocal; icell++) {
+  for (int ic = 0; ic < ncand; ic++) {
+    icell = cand[ic];
+    if (icell >= nglocal) continue;
     if (cells[icell].nsplit <= 0) continue;
     if (!box_overlap(cells[icell].lo,cells[icell].hi,rlo,rhi)) continue;
     if (nrcand == maxrcand) {

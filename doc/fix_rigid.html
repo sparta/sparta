@@ -44,11 +44,13 @@
 </PRE>
 <LI>zero or more optional keyword/value pairs 
 
-<PRE>  keyword = <I>scale</I> or <I>remap</I> or <I>push</I> or <I>pushbound</I> or <I>outfile</I> or <I>pseudo</I>
+<PRE>  keyword = <I>scale</I> or <I>remap</I> or <I>rotate</I> or <I>push</I> or <I>pushbound</I> or <I>outfile</I> or <I>pseudo</I>
      <I>scale</I> value = factor
        factor = multiply all mass-dependent body values by this factor
      <I>remap</I> value = <I>cutcell</I> or <I>incremental</I>
        method used to assign the moving body surfs to grid cells
+     <I>rotate</I> value = <I>euler</I> or <I>richardson</I>
+       scheme used to update the body orientation quaternion each step
      <I>push</I> values = k cutoff
        k = stiffness for push-off forces
            (force/distance units for pushstyle linear,
@@ -108,12 +110,12 @@ bodies can be simulated by using multiple fix rigid commands, each
 with its own surf group and its own compute; no surf element can
 belong to more than one body.  Bodies interact with each other via
 the push-off forces described below: another body's surfs act as
-push-off sources just as static surfs do, so two bodies with the
-<I>push</I> keyword enabled repel each other before contact.  Since each
-body computes its push-off forces from the other bodies' positions in
-fix definition order, the pairwise forces are equal and opposite only
-to within one timestep of body motion, an error consistent with the
-overall accuracy of the explicit time coupling.
+push-off sources just as static surfs do, so a body with the <I>push</I>
+keyword enabled is repelled by other bodies before contact.  All
+push-off forces are computed once per step after every body has moved
+to its end-of-step position, and each body-body contact force is
+applied equal-and-opposite to both bodies at the contact point, so
+body-body interactions conserve linear and angular momentum exactly.
 </P>
 <P>Compute-ID is the ID of a <A HREF = "compute_surf.html">compute surf</A> command
 which tallies the force and torque on individual surface elements due
@@ -311,6 +313,17 @@ the motion-per-step warnings below).
 </P>
 <HR>
 
+<P>The <I>rotate</I> keyword selects the scheme used to advance the body
+orientation quaternion each step.  The default <I>euler</I> update is a
+single explicit step of dq/dt = 1/2 w q, consistent in order with the
+overall explicit gas-body coupling.  The <I>richardson</I> option uses the
+Richardson iteration employed by LAMMPS rigid-body fixes: it
+re-evaluates the angular velocity at the half step from the angular
+momentum (constant over the step) and combines full- and half-step
+quaternion updates for a higher-order rotation, which can help for
+rapidly rotating bodies.  Both schemes conserve angular momentum
+exactly; they differ only in the orientation accuracy per step.
+</P>
 <P>The <I>push</I> keyword enables push-off forces which repel the body from
 static (non-body) surface elements, and from other rigid bodies,
 before it touches them.  If any corner point of a body line or
@@ -441,9 +454,8 @@ explicit/distributed); implicit surfs are not supported.  With
 distributed surfs each processor stores only a replicated copy of the
 (compact) body elements plus the static surfs it owns, so the total
 surf collection can be much larger than any one processor's memory.
-With distributed surfs the <I>remap</I> mode is always <I>cutcell</I>
-(<I>incremental</I> requires non-distributed surfs, as does the <I>pseudo</I>
-debug option).  Rigid bodies cannot be used with axisymmetric
+Both <I>remap</I> modes work with distributed surfs; the <I>pseudo</I> debug
+option requires non-distributed surfs.  Rigid bodies cannot be used with axisymmetric
 domains, or with the KOKKOS package's particle mover.  Body surf
 elements cannot be transparent and cannot have surface reactions
 assigned to them.
@@ -477,9 +489,9 @@ particles continue to collide with.
 </P>
 <P><B>Default:</B>
 </P>
-<P>The option defaults are remap = incremental (cutcell for distributed
-surfs), pushbound = no, pushstyle = linear, pushdamp = 0.0,
-scale = 1.0, no push-off forces, no outfile, no pseudo particles.
+<P>The option defaults are remap = incremental, rotate = euler,
+pushbound = no, pushstyle = linear, pushdamp = 0.0, scale = 1.0,
+no push-off forces, no outfile, no pseudo particles.
 </P>
 <HR>
 

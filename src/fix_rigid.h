@@ -104,6 +104,7 @@ class FixRigid : public Fix {
   // distributed surfs: where this proc stores copies of body elements
 
   int *lblist;            // local surf index of each element, -1 if none
+  int lbliststale;        // 1 if grid/surf changes invalidated lblist
   int nolist;             // # of body elements this proc owns
   int *olist_own;         // owned-array index of each
   int *olist_elem;        // element index of each
@@ -150,6 +151,7 @@ class FixRigid : public Fix {
   // remap of body surfs to grid cells
 
   int remapmode;          // CUTCELL or INCREMENTAL
+  int rotstyle;           // EULER or RICHARDSON quaternion update
 
   // swept collision assignment: each step every body's surfs are added
   //   to the collision lists (csurfs) of all cells they sweep through,
@@ -168,6 +170,19 @@ class FixRigid : public Fix {
   int *nsurf_saved;       // saved nsurf of each modified cell
   surfint **csurfs_saved; // saved csurfs ptr of each modified cell
   MyPage<surfint> *cpage; // storage for merged csurfs lists
+
+  // per-cell accumulation of (cell, swept element) entries across
+  //   bodies, so the cell pass visits only candidate cells
+
+  int *swstamp;           // per-cell visit stamp
+  int *swhead;            // head of per-cell entry chain, per stamp
+  int maxswcell;          // allocated length of swstamp/swhead
+  int swcur;              // current stamp
+  int *swcells;           // cells touched this step
+  int nswcell,maxswcells;
+  int *entnext;           // entry chains: next index and element's
+  surfint *entelem;       //   local surf index
+  int nent,maxent;
 
   // incremental cutcell remap data
 

@@ -1921,9 +1921,9 @@ cell) occurs.  The <I>cutcell</I> mode re-computes cut and split cell info
 for the whole grid every step, exactly as <A HREF = "fix_move_surf.html">fix
 move/surf</A> does; both modes give the same exact
 flow volumes near the body.  Rigid bodies work with both
-non-distributed and distributed explicit surfs; with distributed
-surfs each processor keeps a replicated copy of only the compact body
-elements, and the <I>cutcell</I> mode is used.
+non-distributed and distributed explicit surfs, in either remap mode;
+with distributed surfs each processor keeps a replicated copy of only
+the compact body elements.
 </P>
 <P>If the object approaches other static (non-moving) surface elements,
 optional push-off spring forces can repel it before contact, via the

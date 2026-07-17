@@ -63,6 +63,13 @@ class ComputeSurf : public Compute {
 
   int surf_groupbit() { return groupbit; }
 
+  // raw per-tally values, rows correspond to tallyinfo() surf IDs
+  // values are fully normalized at tally time, so summing rows local
+  //   to each proc + one Allreduce equals the collated result
+  // used by fix rigid to sum body force/torque without a collate
+
+  double **tally_array() { return array_surf_tally; }
+
  protected:
   int groupbit,imix,nvalue,ngroup,ntotal;
   int maxsurf,combined;

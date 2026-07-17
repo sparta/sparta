@@ -326,11 +326,12 @@ TESTS = [
 ]
 
 # tests whose decks support -var dist 1 (global surfs explicit/distributed)
-# remap/multiremap are excluded: incremental re-cut requires
-# non-distributed surfs
+# multiremap verifies the incremental re-cut against the full rebuild
+# in distributed mode; the single-body remap deck is pseudo-driven and
+# pseudo requires non-distributed surfs
 
 DIST_TESTS = {"ballistic", "bounce", "momentum", "overrun",
-              "twobody", "pushpair"}
+              "multiremap", "twobody", "pushpair"}
 
 
 def main():

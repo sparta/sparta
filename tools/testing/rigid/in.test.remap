@@ -5,6 +5,9 @@
 # run as: spa_serial -in in.test.remap -var mode cutcell   (or incremental)
 
 seed	    	    12345
+
+variable            dist index 0
+if "${dist} == 1" then "global surfs explicit/distributed"
 dimension   	    2
 
 create_box  	    0 10 0 10 -0.5 0.5
