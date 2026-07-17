@@ -1914,11 +1914,16 @@ details of the time integration scheme and this one-step lag.
 </P>
 <P>The <I>remap</I> option of <A HREF = "fix_rigid.html">fix rigid</A> selects how the
 moving surfs are re-assigned to grid cells each step.  The default
-<I>cutcell</I> mode re-computes cut and split cell info every step, exactly
-as <A HREF = "fix_move_surf.html">fix move/surf</A> does, giving exact flow volumes
-near the body.  The <I>incremental</I> mode produces the same exact result
-but only re-cuts the grid cells near the body that actually changed,
-which is much faster on large grids.
+<I>incremental</I> mode re-cuts only the grid cells near the body that
+actually changed, which is fast on large grids, and falls back
+automatically to a full re-map when a structural change (e.g. a split
+cell) occurs.  The <I>cutcell</I> mode re-computes cut and split cell info
+for the whole grid every step, exactly as <A HREF = "fix_move_surf.html">fix
+move/surf</A> does; both modes give the same exact
+flow volumes near the body.  Rigid bodies work with both
+non-distributed and distributed explicit surfs; with distributed
+surfs each processor keeps a replicated copy of only the compact body
+elements, and the <I>cutcell</I> mode is used.
 </P>
 <P>If the object approaches other static (non-moving) surface elements,
 optional push-off spring forces can repel it before contact, via the

@@ -57,6 +57,8 @@ class Update : protected Pointers {
   int *rigidmap;              // which FixRigid each surf belongs to
                               // = index into fixrigidlist, -1 = static surf
 
+  void build_rigidmap();      // rebuild rigidmap from current surfs
+
   int nmigrate;          // # of particles to migrate to new procs
   int *mlist;            // indices of particles to migrate
 

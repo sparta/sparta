@@ -272,10 +272,8 @@ void Update::init()
     }
 
     // build list of all rigid fixes, one mobile body per fix
-    // rigidmap = map from each surf to the fix which owns it, -1 = static
 
     delete [] fixrigidlist;
-    memory->destroy(rigidmap);
 
     nfixrigid = 0;
     for (int ifix = 0; ifix < modify->nfix; ifix++)
@@ -289,13 +287,58 @@ void Update::init()
       if (strcmp(modify->fix[ifix]->style,"rigid") == 0)
         fixrigidlist[nfixrigid++] = (FixRigid *) modify->fix[ifix];
 
-    int nslocal = surf->nlocal;
-    memory->create(rigidmap,nslocal,"update:rigidmap");
-    for (int i = 0; i < nslocal; i++) rigidmap[i] = -1;
+    build_rigidmap();
+  }
+}
+
+/* ----------------------------------------------------------------------
+   rigidmap = map from each local surf to the rigid fix which owns it,
+     -1 = static surf
+   used by the move loop to dispatch moving-surf collision tests
+   called from init(), and by FixRigid after a full grid re-map with
+     distributed surfs, which rebuilds the local surf arrays
+------------------------------------------------------------------------- */
+
+void Update::build_rigidmap()
+{
+  if (!rigidflag || !nfixrigid) return;
+
+  memory->destroy(rigidmap);
+  int nslocal = surf->nlocal;
+  memory->create(rigidmap,nslocal,"update:rigidmap");
+  for (int i = 0; i < nslocal; i++) rigidmap[i] = -1;
+
+  if (!surf->distributed) {
+
+    // map via each fix's per-surf irigid flags
+    // a fix's irigid may be shorter than nslocal if surfs were
+    //   appended after the fix was defined; appended surfs are
+    //   static, and FixRigid::init() (which runs after Update::init())
+    //   grows irigid or errors out if the change is not allowed
+
     for (int m = 0; m < nfixrigid; m++) {
       int *irigid = fixrigidlist[m]->irigid;
-      for (int i = 0; i < nslocal; i++)
+      int nmap = MIN(nslocal,fixrigidlist[m]->nsurfall);
+      for (int i = 0; i < nmap; i++)
         if (irigid[i] >= 0) rigidmap[i] = m;
+    }
+
+  } else {
+
+    // distributed: the local surf list changes as the grid is re-cut,
+    //   so map by global surf ID via each fix's body element table
+
+    Surf::Line *lines = surf->lines;
+    Surf::Tri *tris = surf->tris;
+    int dim = domain->dimension;
+
+    for (int i = 0; i < nslocal; i++) {
+      surfint id = (dim == 2) ? lines[i].id : tris[i].id;
+      for (int m = 0; m < nfixrigid; m++)
+        if (fixrigidlist[m]->body_elem(id) >= 0) {
+          rigidmap[i] = m;
+          break;
+        }
     }
   }
 }

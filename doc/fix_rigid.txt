@@ -255,29 +255,32 @@ participate in the standard cut and split cell machinery, so grid
 cell flow volumes and INSIDE/OUTSIDE cell markings are exact near the
 body; the two modes differ only in cost.
 
-For {remap cutcell} (the default), at the end of every timestep, after
-the body surfs move, all surfs are re-assigned to grid cells and
-cut/split cell info including flow volumes and INSIDE/OUTSIDE cell
-markings is re-computed, exactly as is done by the "fix
-move/surf"_fix_move_surf.html command.  This is exact but performs a
-full grid re-map every timestep, which can be expensive for large
-grids.  Any particles found inside the body after the re-map are
-deleted, but with swept collision coverage (see above) particles in
-the body's path are reflected rather than overtaken, so in practice no
-particles are deleted once a run is under way.
-
-The {remap incremental} mode produces the same exact cut-cell
-information as {cutcell} at a fraction of the cost.  Each timestep,
-only the grid cells near the body are examined, and a cell is re-cut
+The {remap incremental} mode (the default) re-cuts only the grid
+cells near the body.  Each timestep a single pass collects the cells
+overlapping the region the bodies moved through, and a cell is re-cut
 only if the set of surfs overlapping it changed or if it is
 overlapped by a body surf which moved.  Cells the body interior moved
 over or away from are re-marked as INSIDE or OUTSIDE.  All of this
 work is local to each processor.  Whenever the change to a cell would
 be structural - the cell would become or stop being a split cell, or
 its surf count would exceed the "global surfmax"_global.html setting
-- the fix automatically falls back to the same full grid re-map that
+- the fix automatically falls back to the full grid re-map that
 {cutcell} performs on every step.  On a benchmark with 10,000 grid
 cells, {incremental} was about 5x faster than {cutcell}.
+
+For {remap cutcell}, at the end of every timestep, after the body
+surfs move, all surfs are re-assigned to grid cells and cut/split
+cell info including flow volumes and INSIDE/OUTSIDE cell markings is
+re-computed, exactly as is done by the "fix
+move/surf"_fix_move_surf.html command.  This produces the same cut
+cells as {incremental} but performs a full grid re-map every
+timestep, which can be expensive for large grids; it is chiefly
+useful as a reference for validating {incremental}, and is the mode
+used automatically with distributed surfs (see Restrictions below).
+Any particles found inside the body after the re-map are deleted, but
+with swept collision coverage (see above) particles in the body's
+path are reflected rather than overtaken, so in practice no particles
+are deleted once a run is under way.
 
 With multiple rigid bodies, the {incremental} re-cut is applied only
 if every body uses {incremental}; the last-defined body then re-cuts
@@ -297,12 +300,20 @@ the motion-per-step warnings below).
 :line
 
 The {push} keyword enables push-off forces which repel the body from
-static (non-body) surface elements before it touches them.  If any
-corner point of a body line or triangle comes within {cutoff}
-distance of a static surf element, a repulsive force is applied to
-the body at that point, directed along the outward normal of the
-static surf element.  With overlap delta = cutoff - d, where d is the
-distance from the point to the element, the force is
+static (non-body) surface elements, and from other rigid bodies,
+before it touches them.  If any corner point of a body line or
+triangle comes within {cutoff} distance of a source surf element, a
+repulsive force is applied to the body at that point, directed along
+the outward normal of the source element.  When the source element
+belongs to another rigid body, the reaction force is applied
+equal-and-opposite to that body at the same contact point, so
+body-body contacts conserve linear and angular momentum exactly;
+reaction forces are applied even to bodies which do not use the
+{push} keyword themselves.  Static surf elements are binned once per
+run, so the per-step cost scales with the number of nearby elements,
+not the total number of static surfs.  With overlap delta =
+cutoff - d, where d is the distance from the point to the element,
+the force is
 
 F = k delta            for pushstyle linear (the default)
 F = k delta^(3/2)      for pushstyle hertz :pre
@@ -412,10 +423,22 @@ moving-surf collisions in the particle mover.  Each fix rigid command
 defines one rigid body; multiple bodies require multiple fixes with
 disjoint surf groups.
 
-Rigid bodies can only be used with explicit, non-distributed surface
-elements.  They cannot be used with axisymmetric domains, or with the
-KOKKOS package's particle mover.  Body surf elements cannot be
-transparent and cannot have surface reactions assigned to them.
+Rigid bodies can be used with explicit surface elements, both
+non-distributed and distributed ("global surfs"_global.html
+explicit/distributed); implicit surfs are not supported.  With
+distributed surfs each processor stores only a replicated copy of the
+(compact) body elements plus the static surfs it owns, so the total
+surf collection can be much larger than any one processor's memory.
+With distributed surfs the {remap} mode is always {cutcell}
+({incremental} requires non-distributed surfs, as does the {pseudo}
+debug option).  Rigid bodies cannot be used with axisymmetric
+domains, or with the KOKKOS package's particle mover.  Body surf
+elements cannot be transparent and cannot have surface reactions
+assigned to them.
+
+Surfs cannot be removed, nor the body's surf group changed, after a
+fix rigid command is defined; surfs may be appended (they become
+static surfs).
 
 The body must be a closed (watertight) object.  The body must stay
 within the simulation box if the boundaries it would cross are
@@ -442,13 +465,14 @@ particles continue to collide with.
 
 [Default:]
 
-The option defaults are remap = cutcell, pushbound = no,
-pushstyle = linear, pushdamp = 0.0, scale = 1.0, no push-off forces,
-no outfile, no pseudo particles.
+The option defaults are remap = incremental (cutcell for distributed
+surfs), pushbound = no, pushstyle = linear, pushdamp = 0.0,
+scale = 1.0, no push-off forces, no outfile, no pseudo particles.
 
 :line
 
 A regression test suite for rigid bodies, with analytic checks of
 ballistic motion, push-off bounces, gas+body momentum conservation,
-overrun robustness, remap-mode consistency, and two-body collisions,
-is available in the tools/testing/rigid directory.
+overrun robustness, remap-mode consistency, symmetric and asymmetric
+two-body collisions, and distributed-surf runs, is available in the
+tools/testing/rigid directory.

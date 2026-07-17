@@ -87,10 +87,7 @@ namespace MathExtra {
                                 double *quat);
   inline void quat_to_mat(const double *quat, double mat[3][3]);
 
-  void richardson(double *q, double *m, double *w, double *moments, double dtq);
-
   void angmom_to_omega(double *m, double *ex, double *ey, double *ez, double *idiag, double *w);
-  void mq_to_omega(double *m, double *q, double *moments, double *w);
   void exyz_to_q(double *ex, double *ey, double *ez, double *q);
   void q_to_exyz(double *q, double *ex, double *ey, double *ez);
 

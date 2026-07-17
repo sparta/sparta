@@ -23,6 +23,7 @@ FixStyle(rigid,FixRigid)
 
 #include "fix.h"
 #include "my_page.h"
+#include <map>
 
 namespace SPARTA_NS {
 
@@ -40,6 +41,19 @@ class FixRigid : public Fix {
   int *irigid;            // per-surf flags, indexed by local surf index:
                           // -1 = static surf,
                           // else index into body's list of surfs
+                          // non-distributed surfs only, else NULL
+  int nsurfall;           // length of irigid = surf->nlocal when allocated
+                          // Update::init() clamps its scan to this length
+
+  // body_elem() = element index of a global surf ID, -1 if not in body
+  // used by Update::build_rigidmap() for distributed surfs
+
+  int body_elem(surfint id)
+  {
+    std::map<surfint,int>::iterator it = idmap.find(id);
+    if (it == idmap.end()) return -1;
+    return it->second;
+  }
 
   FixRigid(class SPARTA *, int, char **);
   virtual ~FixRigid();
@@ -69,7 +83,30 @@ class FixRigid : public Fix {
   class RanKnuth *random;   // RNG for pseudo particles
 
   int nsurf;     // # of surfs which comprise surface of rigid body
-  int *slist;    // list of surf indices for rigid body surfs
+  int *slist;    // list of local surf indices for rigid body surfs
+                 //   non-distributed surfs only, else NULL
+
+  // replicated body geometry, the authoritative source for all body
+  //   computations (bbox, inside tests, watertight, contacts)
+  // for distributed surfs it is gathered from the owned copies at
+  //   setup and regenerated from the body pose each step
+
+  double ***bodypt;       // bodypt[i][j] = corner pt j of element i
+  double **bodynorm;      // outward normal of element i
+  surfint *sids;          // global surf ID of each element
+  int *bodymask;          // per-element group mask
+  int *bodytype;          // per-element surf type
+  int *bodytrans;         // per-element transparent flag
+  int *bodyisc;           // per-element collision model index
+  int *bodyisr;           // per-element reaction model index
+  std::map<surfint,int> idmap;   // global surf ID -> element index
+
+  // distributed surfs: where this proc stores copies of body elements
+
+  int *lblist;            // local surf index of each element, -1 if none
+  int nolist;             // # of body elements this proc owns
+  int *olist_own;         // owned-array index of each
+  int *olist_elem;        // element index of each
 
   double rmaxbody;        // max distance of any body corner pt from COM
   double mincellsize;     // smallest edge length of any grid cell
@@ -77,6 +114,7 @@ class FixRigid : public Fix {
   int warntranslate;      // 1 after warning about translation rate
   int warnexit;           // 1 after warning that body exited the box
 
+  double tqpush[3];       // torque from push-off contacts this step
   double massbody;        // total mass of rigid body enclosed by surfs
   double moi[6];          // 6 MOI in space frame
   double inertia[3];      // 3 diagonalized MOI in body frame
@@ -93,19 +131,36 @@ class FixRigid : public Fix {
   double pushcutoff;      // distance below which push-off is applied
   double gammapush;       // dashpot damping coefficient, 0 = elastic
 
+  // bins over static surfs for push-off candidate pruning
+  // built once per run in setup(), static surfs never move during a run
+
+  int pushnbin[3];        // # of bins in each dim
+  double pushbinlo[3];    // bin grid origin
+  double pushbininv[3];   // inverse bin edge lengths
+  int *pushbinstart;      // CSR offsets into pushbinlist per bin
+  int *pushbinlist;       // static surf indices, binned by surf bbox
+  int *pushstamp;         // per-surf visit stamp to dedup multi-bin surfs
+  int pushstampcur;
+
+  // work buffers for the fused force/torque Allreduce over all bodies
+
+  double *ftbuf_mine;
+  double *ftbuf_all;
+
   // remap of body surfs to grid cells
 
   int remapmode;          // CUTCELL or INCREMENTAL
 
-  // swept collision assignment: each step the body surfs are added to
-  //   the collision lists (csurfs) of all cells they sweep through, so
-  //   particles anywhere in the body's swept path are tested against
+  // swept collision assignment: each step every body's surfs are added
+  //   to the collision lists (csurfs) of all cells they sweep through,
+  //   so particles anywhere in a body's swept path are tested against
   //   the moving surfs and reflected rather than overtaken and deleted
   // this augments collision lists only; cut-cell volumes are unaffected
+  // the single pass over grid cells for ALL bodies is performed by the
+  //   last-defined rigid fix, which owns the save/restore bookkeeping
 
-  double **elemlo;        // per-element swept bounding boxes for this step
-  double **elemhi;
-  surfint *tmplist;       // work list of body elements overlapping one cell
+  double **elemlo;        // per-element bounding boxes: swept boxes for
+  double **elemhi;        //   this step, or current boxes after commit
 
   int nmodified;          // # of cells augmented this step
   int maxmodified;        // allocated size of restore lists
@@ -129,6 +184,10 @@ class FixRigid : public Fix {
   int *regcell;
   surfint **reglist;
 
+  int nrcand;             // work list of cells overlapping the
+  int maxrcand;           //   incremental re-cut region this step
+  int *rcand;
+
   surfint *newlist;       // work bufs for re-cutting one cell
   int *newmap;
   class Cut2d *cut2d;
@@ -136,26 +195,36 @@ class FixRigid : public Fix {
   double bbodylo[3];      // bounding box around entire body
   double bbodyhi[3];
 
-  bigint ndeleted;        // running count of deleted particles
+  bigint ndeleted;        // per-proc count of deleted particles
+  bigint ndeleted_all;    // cached global sum for compute_scalar()
+  bigint ndelvalid;       // timestep the cached sum is valid for
 
   void read_infile(char *);
   void write_outfile();
   void setup_body();
   void check_watertight();
 
-  void push_off();              // spring forces from close static surfs
+  void push_off();              // spring forces on this body, with
+                                //   equal-opposite reactions on others
+  void push_contact(double *, double *, double *, double *,
+                    class FixRigid *);  // corner contacts vs one source elem
+  void push_bins();             // bin static surfs for candidate pruning
+  void gather_body();           // build replicated body element table
+  void ensure_local_copies();   // distributed: local copies of body surfs
+  void update_surf_copies();    // write bodypt/bodynorm into Surf storage
   void grid_rebuild();          // full re-map of all surfs to grid cells
   void record_oldinside();      // cells interior to body, pre-move
   int incremental_recut();      // re-cut cells whose overlap changed
   void registry_replace(int, surfint *);
   void registry_remove(int);
   void free_registry();
-  void swept_assign();          // add body surfs to swept cells' csurfs
-  void swept_restore();         // undo swept_assign
+  void swept_assign_all();      // add all bodies' surfs to swept cells
+  void swept_restore();         // undo swept_assign_all
   void body_bbox(int);          // bbox of body, current or swept over step
   int inside_body(double *);    // 1 if point is inside rigid body, else 0
   int inside_any_body(double *); // 1 if inside any rigid body
-  bigint remove_inside_particles(int);
+  bigint remove_inside_particles(int);  // per-body, used at setup
+  void remove_inside_all(int);  // fused pass over all bodies, per step
 };
 
 }

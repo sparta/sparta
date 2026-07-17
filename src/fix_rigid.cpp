@@ -17,6 +17,7 @@
 #include "stdlib.h"
 #include <array>
 #include <map>
+#include <algorithm>
 #include "fix_rigid.h"
 #include "update.h"
 #include "domain.h"
@@ -95,8 +96,12 @@ FixRigid::FixRigid(SPARTA *sparta, int narg, char **arg) :
   if (!surf->exist) error->all(FLERR,"Fix rigid requires surf elements exist");
   if (domain->axisymmetric)
     error->all(FLERR,"Fix rigid cannot be used with axisymmetric domains");
-  if (surf->implicit || surf->distributed)
-    error->all(FLERR,"Fix rigid can only be used with explicit non-distributed surf elements");
+  if (surf->implicit)
+    error->all(FLERR,"Fix rigid cannot be used with implicit surfs");
+
+  // for distributed surfs, each proc owns a subset of the surfs;
+  // the fix gathers a replicated copy of its (compact) body elements
+  //   in gather_body() and maintains local Surf copies of them
 
 
   igroup = surf->find_group(arg[2]);
@@ -177,12 +182,13 @@ FixRigid::FixRigid(SPARTA *sparta, int narg, char **arg) :
   pseudoflag = 0;
   outfile = NULL;
   outevery = 0;
-  remapmode = CUTCELL;
+  remapmode = INCREMENTAL;
   pushflag = 0;
   pushboundflag = 0;
   pushstyle = LINEAR;
   gammapush = 0.0;
   int pushstyleflag = 0;
+  int remapuserflag = 0;
   double scale = 1.0;
 
   while (iarg < narg) {
@@ -216,6 +222,7 @@ FixRigid::FixRigid(SPARTA *sparta, int narg, char **arg) :
       iarg += 2;
     } else if (strcmp(arg[iarg],"remap") == 0) {
       if (iarg+2 > narg) error->all(FLERR,"Fix rigid body args not valid");
+      remapuserflag = 1;
       if (strcmp(arg[iarg+1],"cutcell") == 0) remapmode = CUTCELL;
       else if (strcmp(arg[iarg+1],"incremental") == 0)
         remapmode = INCREMENTAL;
@@ -248,6 +255,19 @@ FixRigid::FixRigid(SPARTA *sparta, int narg, char **arg) :
   if ((pushboundflag || pushstyleflag) && !pushflag)
     error->all(FLERR,"Fix rigid pushbound, pushstyle, and pushdamp "
                "require push keyword");
+
+  // distributed surfs: incremental re-cut and pseudo mode operate on
+  //   locally stored surfs and are not yet supported
+  // when the user did not choose a remap mode, default to cutcell
+
+  if (surf->distributed) {
+    if (remapuserflag && remapmode == INCREMENTAL)
+      error->all(FLERR,"Fix rigid remap incremental requires "
+                 "non-distributed surfs");
+    remapmode = CUTCELL;
+    if (pseudoflag)
+      error->all(FLERR,"Fix rigid pseudo requires non-distributed surfs");
+  }
 
   if (massbody <= 0.0)
     error->all(FLERR,"Fix rigid body mass must be positive");
@@ -293,14 +313,20 @@ FixRigid::FixRigid(SPARTA *sparta, int narg, char **arg) :
 
   // irigid = per-surf flags, indexed by local surf index
   // -1 for static surfs, else index into slist of body surfs
-  // accessed by Update::move() to detect moving surfs
-  // every proc stores all surfs (non-distributed), so length = nlocal
+  // used by Update::build_rigidmap() to detect moving surfs
+  // non-distributed only: every proc stores all surfs, length = nlocal
+  // for distributed surfs the local surf list changes as the body
+  //   moves, so build_rigidmap() maps by global surf ID instead
 
-  int nslocal = surf->nlocal;
-  memory->create(irigid,nslocal,"fix_rigid:irigid");
+  irigid = NULL;
+  nsurfall = surf->nlocal;
 
-  for (int i = 0; i < nslocal; i++) irigid[i] = -1;
-  for (int i = 0; i < nsurf; i++) irigid[slist[i]] = i;
+  if (!surf->distributed) {
+    int nslocal = surf->nlocal;
+    memory->create(irigid,nslocal,"fix_rigid:irigid");
+    for (int i = 0; i < nslocal; i++) irigid[i] = -1;
+    for (int i = 0; i < nsurf; i++) irigid[slist[i]] = i;
+  }
 
   // remap data structs
   // body surfs are cut/split into grid cells by the normal surf
@@ -308,13 +334,16 @@ FixRigid::FixRigid(SPARTA *sparta, int narg, char **arg) :
   //   here beyond the swept-assignment and incremental work buffers
 
   ndeleted = 0;
+  ndeleted_all = 0;
+  ndelvalid = -1;
 
-  // elemlo/elemhi/tmplist are allocated by setup_body() above
+  // elemlo/elemhi are allocated by setup_body() above
 
   nmodified = maxmodified = 0;
   modified = NULL;
   nsurf_saved = NULL;
   csurfs_saved = NULL;
+  cpage = NULL;             // allocated in setup(), needs all bodies' sizes
 
   pbodyflag = 0;
   noldinside = maxoldinside = 0;
@@ -322,17 +351,19 @@ FixRigid::FixRigid(SPARTA *sparta, int narg, char **arg) :
   nreg = maxreg = 0;
   regcell = NULL;
   reglist = NULL;
+  nrcand = maxrcand = 0;
+  rcand = NULL;
   newlist = NULL;
   newmap = NULL;
   cut2d = NULL;
   cut3d = NULL;
 
-  // page for merged csurfs lists built by swept_assign each step
-
-  int maxchunk = grid->maxsurfpercell + nsurf;
-  cpage = new MyPage<surfint>(maxchunk,MAX(65536,4*maxchunk));
-  if (cpage->errorflag)
-    error->all(FLERR,"Fix rigid could not allocate collision-list page");
+  pushbinstart = NULL;
+  pushbinlist = NULL;
+  pushstamp = NULL;
+  pushstampcur = 0;
+  ftbuf_mine = ftbuf_all = NULL;
+  tqpush[0] = tqpush[1] = tqpush[2] = 0.0;
 
   // for incremental mode: cutters and work bufs for re-cutting cells
 
@@ -357,20 +388,66 @@ FixRigid::~FixRigid()
   memory->destroy(irigid);
   memory->destroy(elemlo);
   memory->destroy(elemhi);
-  memory->destroy(tmplist);
+  memory->destroy(bodypt);
+  memory->destroy(bodynorm);
+  memory->destroy(sids);
+  memory->destroy(bodymask);
+  memory->destroy(bodytype);
+  memory->destroy(bodytrans);
+  memory->destroy(bodyisc);
+  memory->destroy(bodyisr);
+  memory->destroy(lblist);
+  memory->destroy(olist_own);
+  memory->destroy(olist_elem);
   memory->destroy(modified);
   memory->destroy(nsurf_saved);
   memory->sfree(csurfs_saved);
   delete cpage;
 
+  // registry csurfs lists may still be installed in live grid cells,
+  //   e.g. this fix is unfixed between runs after incremental re-cuts
+  // copy each such list into grid-owned page storage before freeing it,
+  //   preserving pointer sharing between a split cell and its sub cells,
+  //   so no cell is ever left pointing at freed memory
+  // Modify is destroyed before Grid at program teardown, so grid is valid
+
+  if (nreg) {
+    std::map<surfint *,surfint *> replaced;
+    Grid::ChildCell *cells = grid->cells;
+    int ntotal = grid->nlocal + grid->nghost;
+
+    for (int i = 0; i < nreg; i++) replaced[reglist[i]] = NULL;
+
+    for (int icell = 0; icell < ntotal; icell++) {
+      if (cells[icell].nsurf <= 0) continue;
+      std::map<surfint *,surfint *>::iterator it =
+        replaced.find(cells[icell].csurfs);
+      if (it == replaced.end()) continue;
+      if (it->second == NULL) {
+        surfint *copy = grid->csurfs->get(cells[icell].nsurf);
+        memcpy(copy,cells[icell].csurfs,
+               cells[icell].nsurf*sizeof(surfint));
+        it->second = copy;
+      }
+      cells[icell].csurfs = it->second;
+    }
+  }
+
   free_registry();
   memory->destroy(regcell);
   memory->sfree(reglist);
   memory->destroy(oldinside);
+  memory->destroy(rcand);
   memory->destroy(newlist);
   memory->destroy(newmap);
   delete cut2d;
   delete cut3d;
+
+  memory->destroy(pushbinstart);
+  memory->destroy(pushbinlist);
+  memory->destroy(pushstamp);
+  memory->destroy(ftbuf_mine);
+  memory->destroy(ftbuf_all);
 }
 
 /* ---------------------------------------------------------------------- */
@@ -413,27 +490,17 @@ void FixRigid::init()
 
   // body surfs cannot be transparent or have surface reactions assigned
   // all body surfs must be in the surf group tallied by the compute
+  // attributes come from the replicated body table, valid for both
+  //   non-distributed and distributed surfs
 
-  Surf::Line *lines = surf->lines;
-  Surf::Tri *tris = surf->tris;
   int cbit = csurf->surf_groupbit();
 
-  int mask,transparent,isr;
   for (int i = 0; i < nsurf; i++) {
-    if (dim == 2) {
-      mask = lines[slist[i]].mask;
-      transparent = lines[slist[i]].transparent;
-      isr = lines[slist[i]].isr;
-    } else {
-      mask = tris[slist[i]].mask;
-      transparent = tris[slist[i]].transparent;
-      isr = tris[slist[i]].isr;
-    }
-    if (transparent)
+    if (bodytrans[i])
       error->all(FLERR,"Fix rigid body surfs cannot be transparent");
-    if (isr >= 0)
+    if (bodyisr[i] >= 0)
       error->all(FLERR,"Fix rigid body surfs cannot have surface reactions");
-    if (!(mask & cbit))
+    if (!(bodymask[i] & cbit))
       error->all(FLERR,"Fix rigid compute surf group does not include "
                  "all body surfs");
   }
@@ -456,15 +523,42 @@ void FixRigid::init()
 
   warnrotate = warntranslate = warnexit = 0;
 
+  // surfs cannot change once a fix rigid is defined:
+  //   removal invalidates the body element table; a change to the
+  //   body group invalidates the body definition
+  // surfs appended after the fix was defined are allowed: grow irigid
+  //   and flag them static
+  // Update::init() clamps its rigidmap scan to nsurfall, so it is
+  //   correct even though it runs before this method
+
+  if (surf->count_group(igroup) != nsurf)
+    error->all(FLERR,"Fix rigid body surf group was changed "
+               "after fix rigid was defined");
+
+  if (!surf->distributed) {
+    if (surf->nlocal < nsurfall)
+      error->all(FLERR,"Surfs were removed after fix rigid was defined");
+    if (surf->nlocal > nsurfall) {
+      memory->grow(irigid,surf->nlocal,"fix_rigid:irigid");
+      for (int i = nsurfall; i < surf->nlocal; i++) irigid[i] = -1;
+      nsurfall = surf->nlocal;
+    }
+  }
+
   // each fix rigid defines its own body: no surf can be in two bodies
+  // each fix rigid must have its own compute: the fix resets the
+  //   compute's COM to its own body COM every step, so a shared compute
+  //   would tally torques about the wrong body's COM
 
   for (int ifix = 0; ifix < modify->nfix; ifix++) {
     if (modify->fix[ifix] == this) continue;
     if (strcmp(modify->fix[ifix]->style,"rigid") != 0) continue;
     FixRigid *other = (FixRigid *) modify->fix[ifix];
     for (int i = 0; i < nsurf; i++)
-      if (other->irigid[slist[i]] >= 0)
+      if (other->body_elem(sids[i]) >= 0)
         error->all(FLERR,"Surf element is in more than one fix rigid body");
+    if (strcmp(other->csurfID,csurfID) == 0)
+      error->all(FLERR,"Two fix rigid commands cannot use the same compute");
   }
 
   // fix rigid must be defined before fixes which change the grid,
@@ -484,6 +578,45 @@ void FixRigid::init()
 
 void FixRigid::setup()
 {
+  FixRigid **flist = update->fixrigidlist;
+  int nb = update->nfixrigid;
+
+  // work buffer for the fused force/torque Allreduce over all bodies
+  // the # of rigid fixes can change between runs, so (re)allocate
+
+  memory->destroy(ftbuf_mine);
+  memory->destroy(ftbuf_all);
+  memory->create(ftbuf_mine,6*nb,"fix_rigid:ftbuf_mine");
+  memory->create(ftbuf_all,6*nb,"fix_rigid:ftbuf_all");
+
+  // page for merged csurfs lists built by swept_assign_all each step
+  // owned by the last-defined rigid fix, which performs the single
+  //   cell pass for all bodies; a merged list can hold one cell's
+  //   current surfs plus the swept surfs of every body
+
+  delete cpage;
+  cpage = NULL;
+  if (flist[nb-1] == this) {
+    int nsurftotal = 0;
+    for (int m = 0; m < nb; m++) nsurftotal += flist[m]->nsurf;
+    int maxchunk = grid->maxsurfpercell + nsurftotal;
+    cpage = new MyPage<surfint>(maxchunk,MAX(65536,4*maxchunk));
+    if (cpage->errorflag)
+      error->all(FLERR,"Fix rigid could not allocate collision-list page");
+  }
+
+  // distributed surfs: insure local copies of body surfs exist and
+  //   rigidmap covers them, before the first step's swept assignment
+
+  if (surf->distributed) {
+    ensure_local_copies();
+    update->build_rigidmap();
+  }
+
+  // bin static surfs for push-off candidate pruning
+
+  if (pushflag) push_bins();
+
   // delete any particles inside the body
   // create_particles marks the body's cells INSIDE via the surf pipeline
   //   and normally avoids them, but this is a safety net for any that
@@ -594,85 +727,105 @@ void FixRigid::start_of_step()
     }
   }
 
-  // augment collision lists of all cells this body sweeps through during
-  //   the step, so particles in the swept path are tested against the
+  // augment collision lists of all cells any body sweeps through during
+  //   the step, so particles in the swept paths are tested against the
   //   moving surfs and reflected rather than overtaken and later deleted
-  // must run after xcmnew/quatnew and exyz_space are known above
-  // start_of_step runs fixes in definition order, so earlier bodies have
-  //   already augmented shared cells; swept_assign dedups against them
+  // one pass over grid cells for all bodies, by the last-defined fix:
+  //   start_of_step runs fixes in definition order, so when the last
+  //   fix runs every body's end-of-step pose is known
 
-  swept_assign();
+  if (update->fixrigidlist[update->nfixrigid-1] == this) swept_assign_all();
 }
 
 /* ---------------------------------------------------------------------- */
 
 void FixRigid::end_of_step()
 {
-  // undo the swept collision-list augmentation from start_of_step before
-  //   any force summation or grid re-map reads the cells' csurfs lists
-  // all bodies are restored together by the first-defined rigid fix, in
-  //   reverse definition order: a later body may have appended onto an
-  //   earlier body's merged list, so peel them back last-installed-first
+  FixRigid **flist = update->fixrigidlist;
+  int nb = update->nfixrigid;
+
+  // the first-defined rigid fix coordinates two all-body operations,
+  //   before any fix reads per-cell surf lists or per-surf tallies:
+  // (1) undo the swept collision-list augmentation from start_of_step;
+  //     the last-defined fix installed it and owns the bookkeeping
+  // (2) sum per-surf force/torque tallies to fcm/torque of every body,
+  //     fused into a single Allreduce of 6 values per body
   // end_of_step runs fixes in definition order, so the first fix runs
   //   before any other fix's end_of_step touches the grid
 
-  int ifirst = -1;
-  for (int ifix = 0; ifix < modify->nfix; ifix++)
-    if (strcmp(modify->fix[ifix]->style,"rigid") == 0) { ifirst = ifix; break; }
-  if (modify->fix[ifirst] == this)
-    for (int ifix = modify->nfix-1; ifix >= 0; ifix--)
-      if (strcmp(modify->fix[ifix]->style,"rigid") == 0)
-        ((FixRigid *) modify->fix[ifix])->swept_restore();
+  if (flist[0] == this) {
 
-  // invoke compute surf and extract per-surf force/torque info
-  // NOTE: this could access fix ave/surf for f/t from many steps of collisions ?
+    flist[nb-1]->swept_restore();
 
-  if (!pseudoflag) {
-
-    if (!(csurf->invoked_flag & INVOKED_PER_SURF)) {
-      csurf->compute_per_surf();
-      csurf->invoked_flag |= INVOKED_PER_SURF;
-    }
-
-    csurf->post_process_surf();
-    double **array = csurf->array_surf;
-
-    // sum per-surf force/torque to body fcm/torque
-    // array rows are surfs each proc owns:
-    //   for explicit non-distributed surfs, proc owns every Pth surf,
-    //   row M of array = surf with local index me + M*nprocs
-    // sum rows for owned surfs in body group, then Allreduce for all procs
+    // sum per-surf force/torque to each body's fcm/torque
+    // array_surf rows are surfs each proc owns:
+    //   non-distributed: proc owns every Pth surf,
+    //     row M of array = surf with local index me + M*nprocs
+    //   distributed: row M of array = owned surf mylines/mytris[M]
+    // sum rows for owned surfs of each body, single Allreduce for all
 
     Surf::Line *lines = surf->lines;
     Surf::Tri *tris = surf->tris;
+    Surf::Line *mylines = surf->mylines;
+    Surf::Tri *mytris = surf->mytris;
+    int distributed = surf->distributed;
     int nslocal = surf->nlocal;
+    int nown = surf->nown;
     int me = comm->me;
     int nprocs = comm->nprocs;
 
-    double ft_mine[6],ft_all[6];
-    for (int i = 0; i < 6; i++) ft_mine[i] = 0.0;
+    for (int i = 0; i < 6*nb; i++) ftbuf_mine[i] = 0.0;
 
     int mask;
-    int m = 0;
-    for (int i = me; i < nslocal; i += nprocs, m++) {
-      if (dim == 2) mask = lines[i].mask;
-      else mask = tris[i].mask;
-      if (!(mask & groupbit)) continue;
-      for (int j = 0; j < 6; j++) ft_mine[j] += array[m][j];
+    for (int m = 0; m < nb; m++) {
+      FixRigid *f = flist[m];
+      if (f->pseudoflag) continue;
+
+      ComputeSurf *cs = f->csurf;
+      if (!(cs->invoked_flag & INVOKED_PER_SURF)) {
+        cs->compute_per_surf();
+        cs->invoked_flag |= INVOKED_PER_SURF;
+      }
+      cs->post_process_surf();
+      double **array = cs->array_surf;
+
+      double *ft = &ftbuf_mine[6*m];
+      int gbit = f->groupbit;
+
+      if (!distributed) {
+        int row = 0;
+        for (int i = me; i < nslocal; i += nprocs, row++) {
+          if (dim == 2) mask = lines[i].mask;
+          else mask = tris[i].mask;
+          if (!(mask & gbit)) continue;
+          for (int j = 0; j < 6; j++) ft[j] += array[row][j];
+        }
+      } else {
+        for (int i = 0; i < nown; i++) {
+          if (dim == 2) mask = mylines[i].mask;
+          else mask = mytris[i].mask;
+          if (!(mask & gbit)) continue;
+          for (int j = 0; j < 6; j++) ft[j] += array[i][j];
+        }
+      }
+
+      // insure the compute tallies on the next step
+
+      cs->addstep(update->ntimestep+1);
     }
 
-    MPI_Allreduce(ft_mine,ft_all,6,MPI_DOUBLE,MPI_SUM,world);
+    MPI_Allreduce(ftbuf_mine,ftbuf_all,6*nb,MPI_DOUBLE,MPI_SUM,world);
 
-    fcm[0] = ft_all[0];
-    fcm[1] = ft_all[1];
-    fcm[2] = ft_all[2];
-    torque[0] = ft_all[3];
-    torque[1] = ft_all[4];
-    torque[2] = ft_all[5];
-
-    // insure the compute tallies on the next step
-
-    csurf->addstep(update->ntimestep+1);
+    for (int m = 0; m < nb; m++) {
+      FixRigid *f = flist[m];
+      if (f->pseudoflag) continue;
+      f->fcm[0] = ftbuf_all[6*m];
+      f->fcm[1] = ftbuf_all[6*m+1];
+      f->fcm[2] = ftbuf_all[6*m+2];
+      f->torque[0] = ftbuf_all[6*m+3];
+      f->torque[1] = ftbuf_all[6*m+4];
+      f->torque[2] = ftbuf_all[6*m+5];
+    }
   }
 
   // bounce N pseudo (fictitious) particles off object, see how it moves
@@ -915,66 +1068,47 @@ void FixRigid::end_of_step()
     // what about quat for 2d rotations ?
   }
 
-  // update Surf class properties of lines and tris in body
-  // line and tri positions and orientations
-  // set via Line/Tri end/corner points and norm
+  // regenerate the replicated body geometry from the new pose:
+  //   corner pts from displace rotated to the space frame + new COM,
+  //   normals recomputed from the corner pts
+  // then write it into the Surf copies the mover and cut pipeline read
   // matvec() converts displace vector from body frame to space frame
 
-  Surf::Line *lines = surf->lines;
-  Surf::Tri *tris = surf->tris;
-  int index;
-  
-  if (dim == 2) {
-    double z[3],delta[3];
+  {
+    double z[3],delta[3],delta12[3],delta13[3];
     z[0] = 0.0; z[1] = 0.0; z[2] = 1.0;
-    
-    for (int i = 0; i < nsurf; i++) {
-      index = slist[i];
-
-      MathExtra::matvec(ex_space,ey_space,ez_space,displace[i][0],delta);
-      delta[2] = 0.0;
-      MathExtra::add3(xcm,delta,lines[index].p1);
-      MathExtra::matvec(ex_space,ey_space,ez_space,displace[i][1],delta);
-      delta[2] = 0.0;
-      MathExtra::add3(xcm,delta,lines[index].p2);
-
-      MathExtra::sub3(lines[index].p2,lines[index].p1,delta);
-      MathExtra::cross3(z,delta,lines[index].norm);
-      MathExtra::norm3(lines[index].norm);
-      lines[index].norm[2] = 0.0;
-    }
-
-  } else if (dim == 3) {
-    double delta[3],delta12[3],delta13[3];
 
     for (int i = 0; i < nsurf; i++) {
-      index = slist[i];
+      for (int j = 0; j < dim; j++) {
+        MathExtra::matvec(ex_space,ey_space,ez_space,displace[i][j],delta);
+        if (dim == 2) delta[2] = 0.0;
+        MathExtra::add3(xcm,delta,bodypt[i][j]);
+      }
 
-      MathExtra::matvec(ex_space,ey_space,ez_space,displace[i][0],delta);
-      MathExtra::add3(xcm,delta,tris[index].p1);
-      MathExtra::matvec(ex_space,ey_space,ez_space,displace[i][1],delta);
-      MathExtra::add3(xcm,delta,tris[index].p2);
-      MathExtra::matvec(ex_space,ey_space,ez_space,displace[i][2],delta);
-      MathExtra::add3(xcm,delta,tris[index].p3);
-
-      MathExtra::sub3(tris[index].p2,tris[index].p1,delta12);
-      MathExtra::sub3(tris[index].p3,tris[index].p1,delta13);
-      MathExtra::cross3(delta12,delta13,tris[index].norm);
-      MathExtra::norm3(tris[index].norm);
+      if (dim == 2) {
+        MathExtra::sub3(bodypt[i][1],bodypt[i][0],delta);
+        MathExtra::cross3(z,delta,bodynorm[i]);
+        MathExtra::norm3(bodynorm[i]);
+        bodynorm[i][2] = 0.0;
+      } else {
+        MathExtra::sub3(bodypt[i][1],bodypt[i][0],delta12);
+        MathExtra::sub3(bodypt[i][2],bodypt[i][0],delta13);
+        MathExtra::cross3(delta12,delta13,bodynorm[i]);
+        MathExtra::norm3(bodynorm[i]);
+      }
     }
   }
+
+  update_surf_copies();
 
   // bbox around body elements at their new positions
 
   body_bbox(0);
 
-  // push-off forces from static surfs and domain boundaries
-  //   which are within pushcutoff of the body
-  // computed for the end-of-step geometry, so they are part of the
-  //   force/torque applied in the next step's time integration
-
-  fpush[0] = fpush[1] = fpush[2] = 0.0;
-  if (pushflag) push_off();
+  // push-off forces are computed for all bodies at once by the
+  //   last-defined fix in its end_of_step below, after every body has
+  //   committed its end-of-step geometry, so that body-body contact
+  //   forces can be applied equal-and-opposite to both bodies
 
   // error if body now extends beyond a periodic boundary,
   //   b/c body coords are not wrapped across periodic boundaries
@@ -1012,30 +1146,80 @@ void FixRigid::end_of_step()
   if (outflag)
     error->all(FLERR,"Fix rigid body moved beyond a periodic boundary");
 
-  // re-map body surfs to grid cells: cut/split cells and INSIDE/OUTSIDE
-  //   cell typing from the new body positions
-  // all bodies are re-mapped together by the last-defined rigid fix,
-  //   once per step, after every body has moved to its end-of-step
-  //   position; end_of_step runs fixes in definition order, so when the
-  //   last fix runs, all earlier bodies are already moved
-  // if every body is incremental, attempt the cheap incremental re-cut
-  //   of only the affected cells; otherwise (any cutcell body) do an
-  //   exact full grid re-map, which correctly handles all bodies
-  // the incremental fallback decision is per-proc but a full re-map is
-  //   collective, so all procs must agree via Allreduce
-  // then remove particles inside each body, with split-cell particle
-  //   reassignment done once (only needed after a full re-map)
+  // the last-defined rigid fix coordinates the all-body end-of-step
+  //   work, after every body has moved to its end-of-step position;
+  //   end_of_step runs fixes in definition order, so when the last fix
+  //   runs, all earlier bodies are already moved:
+  // (1) push-off forces for all bodies; body-body contact forces are
+  //     applied equal-and-opposite to both bodies of a contact, so
+  //     body-body interactions conserve momentum; reactions are applied
+  //     even to bodies without the push keyword
+  // (2) re-map body surfs to grid cells: cut/split cells and
+  //     INSIDE/OUTSIDE typing from the new body positions; if every
+  //     body is incremental, attempt the cheap incremental re-cut of
+  //     only the affected cells, else do an exact full grid re-map;
+  //     the fallback decision is per-proc but a full re-map is
+  //     collective, so all procs must agree via Allreduce
+  // (3) remove particles inside any body in one fused pass over
+  //     particles, with split-cell reassignment only after a full
+  //     re-map; no reduction here, deletion counts stay per-proc and
+  //     are reduced lazily by compute_scalar()
 
-  int ilast = -1;
-  int all_incremental = 1;
-  for (int ifix = 0; ifix < modify->nfix; ifix++) {
-    if (strcmp(modify->fix[ifix]->style,"rigid") != 0) continue;
-    ilast = ifix;
-    if (((FixRigid *) modify->fix[ifix])->remapmode != INCREMENTAL)
-      all_incremental = 0;
-  }
+  if (flist[nb-1] == this) {
 
-  if (modify->fix[ilast] == this) {
+    int anypush = 0;
+    for (int m = 0; m < nb; m++) {
+      FixRigid *f = flist[m];
+      f->fpush[0] = f->fpush[1] = f->fpush[2] = 0.0;
+      f->tqpush[0] = f->tqpush[1] = f->tqpush[2] = 0.0;
+      if (f->pushflag) anypush = 1;
+    }
+    if (anypush) {
+      for (int m = 0; m < nb; m++)
+        if (flist[m]->pushflag) flist[m]->push_off();
+
+      // for distributed surfs the static-contact contributions are
+      //   disjoint per-proc partial sums (each proc handles the static
+      //   surfs it owns): merge with one Allreduce for all bodies
+      // for non-distributed surfs every proc computed identical totals
+
+      if (surf->distributed) {
+        for (int m = 0; m < nb; m++) {
+          FixRigid *f = flist[m];
+          ftbuf_mine[6*m]   = f->fpush[0];
+          ftbuf_mine[6*m+1] = f->fpush[1];
+          ftbuf_mine[6*m+2] = f->fpush[2];
+          ftbuf_mine[6*m+3] = f->tqpush[0];
+          ftbuf_mine[6*m+4] = f->tqpush[1];
+          ftbuf_mine[6*m+5] = f->tqpush[2];
+        }
+        MPI_Allreduce(ftbuf_mine,ftbuf_all,6*nb,MPI_DOUBLE,MPI_SUM,world);
+        for (int m = 0; m < nb; m++) {
+          FixRigid *f = flist[m];
+          f->fpush[0] = ftbuf_all[6*m];
+          f->fpush[1] = ftbuf_all[6*m+1];
+          f->fpush[2] = ftbuf_all[6*m+2];
+          f->tqpush[0] = ftbuf_all[6*m+3];
+          f->tqpush[1] = ftbuf_all[6*m+4];
+          f->tqpush[2] = ftbuf_all[6*m+5];
+        }
+      }
+
+      for (int m = 0; m < nb; m++) {
+        FixRigid *f = flist[m];
+        f->fcm[0] += f->fpush[0];
+        f->fcm[1] += f->fpush[1];
+        f->fcm[2] += f->fpush[2];
+        f->torque[0] += f->tqpush[0];
+        f->torque[1] += f->tqpush[1];
+        f->torque[2] += f->tqpush[2];
+      }
+    }
+
+    int all_incremental = 1;
+    for (int m = 0; m < nb; m++)
+      if (flist[m]->remapmode != INCREMENTAL) all_incremental = 0;
+
     int fallback = 1;
     if (all_incremental) {
       int fallmine = incremental_recut();
@@ -1043,21 +1227,12 @@ void FixRigid::end_of_step()
     }
     if (fallback) grid_rebuild();
 
-    if (particle->exist) {
-      int splitflag = fallback;
-      for (int ifix = 0; ifix < modify->nfix; ifix++) {
-        if (strcmp(modify->fix[ifix]->style,"rigid") != 0) continue;
-        FixRigid *f = (FixRigid *) modify->fix[ifix];
-        f->ndeleted += f->remove_inside_particles(splitflag);
-        splitflag = 0;
-      }
-    }
+    if (particle->exist) remove_inside_all(fallback);
 
     // advance each incremental body's previous-region bookkeeping
 
-    for (int ifix = 0; ifix < modify->nfix; ifix++) {
-      if (strcmp(modify->fix[ifix]->style,"rigid") != 0) continue;
-      FixRigid *f = (FixRigid *) modify->fix[ifix];
+    for (int m = 0; m < nb; m++) {
+      FixRigid *f = flist[m];
       if (f->remapmode != INCREMENTAL) continue;
       for (int j = 0; j < 3; j++) {
         f->pbodylo[j] = f->bbodylo[j];
@@ -1178,38 +1353,361 @@ void FixRigid::read_infile(char *filename)
 }
 
 /* ----------------------------------------------------------------------
-   one-time initialization of rigid body attributes
+   build the replicated table of body elements: geometry + attributes
+   every proc stores every body element, the authoritative source for
+     all body computations; bodies are compact so this is small even
+     when the full surf collection is distributed
+   non-distributed surfs: filled directly from the local surf arrays,
+     which hold all surfs on every proc
+   distributed surfs: each proc contributes the body elements it owns,
+     gathered to all procs and sorted by surf ID so every proc builds
+     the identical table
 ------------------------------------------------------------------------- */
 
-void FixRigid::setup_body()
+// per-element record exchanged between procs for distributed surfs
+
+struct BodyElemRecord {
+  double pts[9];
+  surfint id;
+  int type,mask,trans,isc,isr;
+};
+
+static bool body_record_cmp(const BodyElemRecord &a, const BodyElemRecord &b)
 {
+  return a.id < b.id;
+}
+
+void FixRigid::gather_body()
+{
+  int i,j,k;
+
   // nsurf = # of lines/tris in rigid body
-  // NOTE: add check that group is a closed object ?
 
   bigint bnsurf = surf->count_group(igroup);
   if (bnsurf > MAXSMALLINT) error->all(FLERR,"Too many surfs in rigid body");
   nsurf = bnsurf;
   if (nsurf == 0) error->all(FLERR,"Fix rigid body has no surface elements");
-  //if (check) error->all(FLERR,"Fix rigid surfs are an invalid object);
 
-  // slist = list of surf indices in surf group
-
-  memory->create(slist,nsurf,"fix_rigid:slist");
+  memory->create(bodypt,nsurf,dim,3,"fix_rigid:bodypt");
+  memory->create(bodynorm,nsurf,3,"fix_rigid:bodynorm");
+  memory->create(sids,nsurf,"fix_rigid:sids");
+  memory->create(bodymask,nsurf,"fix_rigid:bodymask");
+  memory->create(bodytype,nsurf,"fix_rigid:bodytype");
+  memory->create(bodytrans,nsurf,"fix_rigid:bodytrans");
+  memory->create(bodyisc,nsurf,"fix_rigid:bodyisc");
+  memory->create(bodyisr,nsurf,"fix_rigid:bodyisr");
+  memory->create(lblist,nsurf,"fix_rigid:lblist");
 
   Surf::Line *lines = surf->lines;
   Surf::Tri *tris = surf->tris;
-  int nlocal = surf->nlocal;
 
-  int n = 0;
-  if (dim == 2) {
-    for (int i = 0; i < nlocal; i++)
-      if (lines[i].mask & groupbit)
-	slist[n++] = i;
-  } else if (dim == 3) {
-    for (int i = 0; i < nlocal; i++)
-      if (tris[i].mask & groupbit)
-	slist[n++] = i;
+  if (!surf->distributed) {
+
+    // slist = list of local surf indices in the body group
+
+    memory->create(slist,nsurf,"fix_rigid:slist");
+
+    int nlocal = surf->nlocal;
+    int n = 0;
+
+    for (i = 0; i < nlocal; i++) {
+      int mask = (dim == 2) ? lines[i].mask : tris[i].mask;
+      if (!(mask & groupbit)) continue;
+      slist[n] = i;
+      if (dim == 2) {
+        sids[n] = lines[i].id;
+        bodymask[n] = lines[i].mask;
+        bodytype[n] = lines[i].type;
+        bodytrans[n] = lines[i].transparent;
+        bodyisc[n] = lines[i].isc;
+        bodyisr[n] = lines[i].isr;
+        memcpy(bodypt[n][0],lines[i].p1,3*sizeof(double));
+        memcpy(bodypt[n][1],lines[i].p2,3*sizeof(double));
+        memcpy(bodynorm[n],lines[i].norm,3*sizeof(double));
+      } else {
+        sids[n] = tris[i].id;
+        bodymask[n] = tris[i].mask;
+        bodytype[n] = tris[i].type;
+        bodytrans[n] = tris[i].transparent;
+        bodyisc[n] = tris[i].isc;
+        bodyisr[n] = tris[i].isr;
+        memcpy(bodypt[n][0],tris[i].p1,3*sizeof(double));
+        memcpy(bodypt[n][1],tris[i].p2,3*sizeof(double));
+        memcpy(bodypt[n][2],tris[i].p3,3*sizeof(double));
+        memcpy(bodynorm[n],tris[i].norm,3*sizeof(double));
+      }
+      n++;
+    }
+
+  } else {
+
+    // pack the body elements this proc owns, gather to all procs,
+    //   sort by surf ID so the table is identical everywhere
+
+    slist = NULL;
+
+    Surf::Line *mylines = surf->mylines;
+    Surf::Tri *mytris = surf->mytris;
+    int nown = surf->nown;
+
+    int nmine = 0;
+    for (i = 0; i < nown; i++) {
+      int mask = (dim == 2) ? mylines[i].mask : mytris[i].mask;
+      if (mask & groupbit) nmine++;
+    }
+
+    BodyElemRecord *mine = new BodyElemRecord[MAX(nmine,1)];
+
+    int n = 0;
+    for (i = 0; i < nown; i++) {
+      int mask = (dim == 2) ? mylines[i].mask : mytris[i].mask;
+      if (!(mask & groupbit)) continue;
+      BodyElemRecord &r = mine[n++];
+      if (dim == 2) {
+        r.id = mylines[i].id;
+        r.type = mylines[i].type;
+        r.mask = mylines[i].mask;
+        r.trans = mylines[i].transparent;
+        r.isc = mylines[i].isc;
+        r.isr = mylines[i].isr;
+        memcpy(&r.pts[0],mylines[i].p1,3*sizeof(double));
+        memcpy(&r.pts[3],mylines[i].p2,3*sizeof(double));
+      } else {
+        r.id = mytris[i].id;
+        r.type = mytris[i].type;
+        r.mask = mytris[i].mask;
+        r.trans = mytris[i].transparent;
+        r.isc = mytris[i].isc;
+        r.isr = mytris[i].isr;
+        memcpy(&r.pts[0],mytris[i].p1,3*sizeof(double));
+        memcpy(&r.pts[3],mytris[i].p2,3*sizeof(double));
+        memcpy(&r.pts[6],mytris[i].p3,3*sizeof(double));
+      }
+    }
+
+    int nprocs = comm->nprocs;
+    int *counts = new int[nprocs];
+    int *displs = new int[nprocs];
+    int nbytes = nmine * (int) sizeof(BodyElemRecord);
+    MPI_Allgather(&nbytes,1,MPI_INT,counts,1,MPI_INT,world);
+    displs[0] = 0;
+    for (i = 1; i < nprocs; i++) displs[i] = displs[i-1] + counts[i-1];
+    bigint btotal = (bigint) displs[nprocs-1] + counts[nprocs-1];
+    if (btotal != (bigint) nsurf * sizeof(BodyElemRecord))
+      error->all(FLERR,"Fix rigid body element gather is inconsistent");
+
+    BodyElemRecord *all = new BodyElemRecord[nsurf];
+    MPI_Allgatherv(mine,nbytes,MPI_BYTE,all,counts,displs,MPI_BYTE,world);
+    std::sort(all,all+nsurf,body_record_cmp);
+
+    double d12[3],d13[3];
+    double z[3] = {0.0,0.0,1.0};
+
+    for (i = 0; i < nsurf; i++) {
+      BodyElemRecord &r = all[i];
+      sids[i] = r.id;
+      bodymask[i] = r.mask;
+      bodytype[i] = r.type;
+      bodytrans[i] = r.trans;
+      bodyisc[i] = r.isc;
+      bodyisr[i] = r.isr;
+      memcpy(bodypt[i][0],&r.pts[0],3*sizeof(double));
+      memcpy(bodypt[i][1],&r.pts[3],3*sizeof(double));
+      if (dim == 3) memcpy(bodypt[i][2],&r.pts[6],3*sizeof(double));
+
+      // recompute the outward normal the same way Surf does
+
+      if (dim == 2) {
+        MathExtra::sub3(bodypt[i][1],bodypt[i][0],d12);
+        MathExtra::cross3(z,d12,bodynorm[i]);
+        MathExtra::norm3(bodynorm[i]);
+        bodynorm[i][2] = 0.0;
+      } else {
+        MathExtra::sub3(bodypt[i][1],bodypt[i][0],d12);
+        MathExtra::sub3(bodypt[i][2],bodypt[i][0],d13);
+        MathExtra::cross3(d12,d13,bodynorm[i]);
+        MathExtra::norm3(bodynorm[i]);
+      }
+    }
+
+    delete [] mine;
+    delete [] all;
+    delete [] counts;
+    delete [] displs;
   }
+
+  // idmap = global surf ID -> body element index
+
+  idmap.clear();
+  for (i = 0; i < nsurf; i++) idmap[sids[i]] = i;
+
+  // lblist = local surf index of each body element on this proc
+  // olist = owned-array index of the body elements this proc owns
+
+  for (i = 0; i < nsurf; i++) lblist[i] = -1;
+  int nslocal = surf->nlocal;
+  for (i = 0; i < nslocal; i++) {
+    surfint id = (dim == 2) ? lines[i].id : tris[i].id;
+    k = body_elem(id);
+    if (k >= 0) lblist[k] = i;
+  }
+
+  nolist = 0;
+  olist_own = olist_elem = NULL;
+  if (surf->distributed) {
+    Surf::Line *mylines = surf->mylines;
+    Surf::Tri *mytris = surf->mytris;
+    int nown = surf->nown;
+    memory->create(olist_own,nsurf,"fix_rigid:olist_own");
+    memory->create(olist_elem,nsurf,"fix_rigid:olist_elem");
+    for (i = 0; i < nown; i++) {
+      surfint id = (dim == 2) ? mylines[i].id : mytris[i].id;
+      k = body_elem(id);
+      if (k < 0) continue;
+      olist_own[nolist] = i;
+      olist_elem[nolist] = k;
+      nolist++;
+    }
+  }
+}
+
+/* ----------------------------------------------------------------------
+   distributed surfs: insure this proc's local surf arrays contain a
+     copy of every body element, at its current position
+   the swept collision lists and the particle mover reference body
+     surfs by local index, and a fast body can sweep into cells on a
+     proc whose local arrays do not yet hold its surfs
+   called at setup and after every full grid re-map, which rebuilds
+     the local arrays from the owned copies
+   refreshes lblist; caller is responsible for update->build_rigidmap()
+------------------------------------------------------------------------- */
+
+void FixRigid::ensure_local_copies()
+{
+  int i,k;
+
+  if (!surf->distributed) return;
+
+  Surf::Line *lines = surf->lines;
+  Surf::Tri *tris = surf->tris;
+  int nslocal = surf->nlocal;
+
+  for (i = 0; i < nsurf; i++) lblist[i] = -1;
+  for (i = 0; i < nslocal; i++) {
+    surfint id = (dim == 2) ? lines[i].id : tris[i].id;
+    k = body_elem(id);
+    if (k >= 0) lblist[k] = i;
+  }
+
+  for (k = 0; k < nsurf; k++) {
+    if (lblist[k] >= 0) continue;
+    if (dim == 2) {
+      Surf::Line line;
+      memset(&line,0,sizeof(Surf::Line));
+      line.id = sids[k];
+      line.type = bodytype[k];
+      line.mask = bodymask[k];
+      line.transparent = bodytrans[k];
+      line.isc = bodyisc[k];
+      line.isr = bodyisr[k];
+      memcpy(line.p1,bodypt[k][0],3*sizeof(double));
+      memcpy(line.p2,bodypt[k][1],3*sizeof(double));
+      memcpy(line.norm,bodynorm[k],3*sizeof(double));
+      surf->add_line_copy(1,&line);
+    } else {
+      Surf::Tri tri;
+      memset(&tri,0,sizeof(Surf::Tri));
+      tri.id = sids[k];
+      tri.type = bodytype[k];
+      tri.mask = bodymask[k];
+      tri.transparent = bodytrans[k];
+      tri.isc = bodyisc[k];
+      tri.isr = bodyisr[k];
+      memcpy(tri.p1,bodypt[k][0],3*sizeof(double));
+      memcpy(tri.p2,bodypt[k][1],3*sizeof(double));
+      memcpy(tri.p3,bodypt[k][2],3*sizeof(double));
+      memcpy(tri.norm,bodynorm[k],3*sizeof(double));
+      surf->add_tri_copy(1,&tri);
+    }
+    lblist[k] = surf->nlocal - 1;
+  }
+}
+
+/* ----------------------------------------------------------------------
+   write the current replicated body geometry (bodypt/bodynorm) into
+     the Surf storage the particle mover and cut pipeline read:
+   non-distributed: the local copies every proc stores (via slist)
+   distributed: this proc's local copies (via lblist) and owned copies
+     (via olist), so a later re-map redistributes current coords
+------------------------------------------------------------------------- */
+
+void FixRigid::update_surf_copies()
+{
+  int i,index;
+
+  Surf::Line *lines = surf->lines;
+  Surf::Tri *tris = surf->tris;
+
+  if (!surf->distributed) {
+    for (i = 0; i < nsurf; i++) {
+      index = slist[i];
+      if (dim == 2) {
+        memcpy(lines[index].p1,bodypt[i][0],3*sizeof(double));
+        memcpy(lines[index].p2,bodypt[i][1],3*sizeof(double));
+        memcpy(lines[index].norm,bodynorm[i],3*sizeof(double));
+      } else {
+        memcpy(tris[index].p1,bodypt[i][0],3*sizeof(double));
+        memcpy(tris[index].p2,bodypt[i][1],3*sizeof(double));
+        memcpy(tris[index].p3,bodypt[i][2],3*sizeof(double));
+        memcpy(tris[index].norm,bodynorm[i],3*sizeof(double));
+      }
+    }
+    return;
+  }
+
+  for (i = 0; i < nsurf; i++) {
+    index = lblist[i];
+    if (index < 0) continue;
+    if (dim == 2) {
+      memcpy(lines[index].p1,bodypt[i][0],3*sizeof(double));
+      memcpy(lines[index].p2,bodypt[i][1],3*sizeof(double));
+      memcpy(lines[index].norm,bodynorm[i],3*sizeof(double));
+    } else {
+      memcpy(tris[index].p1,bodypt[i][0],3*sizeof(double));
+      memcpy(tris[index].p2,bodypt[i][1],3*sizeof(double));
+      memcpy(tris[index].p3,bodypt[i][2],3*sizeof(double));
+      memcpy(tris[index].norm,bodynorm[i],3*sizeof(double));
+    }
+  }
+
+  Surf::Line *mylines = surf->mylines;
+  Surf::Tri *mytris = surf->mytris;
+
+  for (int m = 0; m < nolist; m++) {
+    int iown = olist_own[m];
+    i = olist_elem[m];
+    if (dim == 2) {
+      memcpy(mylines[iown].p1,bodypt[i][0],3*sizeof(double));
+      memcpy(mylines[iown].p2,bodypt[i][1],3*sizeof(double));
+      memcpy(mylines[iown].norm,bodynorm[i],3*sizeof(double));
+    } else {
+      memcpy(mytris[iown].p1,bodypt[i][0],3*sizeof(double));
+      memcpy(mytris[iown].p2,bodypt[i][1],3*sizeof(double));
+      memcpy(mytris[iown].p3,bodypt[i][2],3*sizeof(double));
+      memcpy(mytris[iown].norm,bodynorm[i],3*sizeof(double));
+    }
+  }
+}
+
+/* ----------------------------------------------------------------------
+   one-time initialization of rigid body attributes
+------------------------------------------------------------------------- */
+
+void FixRigid::setup_body()
+{
+  // build the replicated body element table: geometry + attributes
+
+  gather_body();
 
   // insure body surfs form a closed (watertight) object
 
@@ -1305,51 +1803,21 @@ void FixRigid::setup_body()
   // set displacement for each end/corner point in each line/tri
   // delta = vector from COM to end/corner point in space frame
   // displace = delta rotated to be in basis of principal axes, i.e. in body frame
-  
+  // corner pts come from the replicated body geometry built by gather_body()
+
   double delta[3];
-  int index;
-  
-  if (dim == 2) {
-    memory->create(displace,nsurf,2,3,"fix_rigid:displace");
-    
-    for (int i = 0; i < nsurf; i++) {
-      index = slist[i];
 
-      delta[0] = lines[index].p1[0] - xcm[0];
-      delta[1] = lines[index].p1[1] - xcm[1];
-      delta[2] = 0.0;
+  memory->create(displace,nsurf,dim,3,"fix_rigid:displace");
+
+  for (int i = 0; i < nsurf; i++)
+    for (int j = 0; j < dim; j++) {
+      delta[0] = bodypt[i][j][0] - xcm[0];
+      delta[1] = bodypt[i][j][1] - xcm[1];
+      if (dim == 3) delta[2] = bodypt[i][j][2] - xcm[2];
+      else delta[2] = 0.0;
       MathExtra::transpose_matvec(ex_space,ey_space,ez_space,
-				  delta,&displace[i][0][0]);
-      delta[0] = lines[index].p2[0] - xcm[0];
-      delta[1] = lines[index].p2[1] - xcm[1];
-      delta[2] = 0.0;
-      MathExtra::transpose_matvec(ex_space,ey_space,ez_space,
-				  delta,&displace[i][1][0]);
+                                  delta,&displace[i][j][0]);
     }
-    
-  } else if (dim == 3) {
-    memory->create(displace,nsurf,3,3,"fix_rigid:displace");
-
-    for (int i = 0; i < nsurf; i++) {
-      index = slist[i];
-
-      delta[0] = tris[index].p1[0] - xcm[0];
-      delta[1] = tris[index].p1[1] - xcm[1];
-      delta[2] = tris[index].p1[2] - xcm[2];
-      MathExtra::transpose_matvec(ex_space,ey_space,ez_space,
-				  delta,&displace[i][0][0]);
-      delta[0] = tris[index].p2[0] - xcm[0];
-      delta[1] = tris[index].p2[1] - xcm[1];
-      delta[2] = tris[index].p2[2] - xcm[2];
-      MathExtra::transpose_matvec(ex_space,ey_space,ez_space,
-				  delta,&displace[i][1][0]);
-      delta[0] = tris[index].p3[0] - xcm[0];
-      delta[1] = tris[index].p3[1] - xcm[1];
-      delta[2] = tris[index].p3[2] - xcm[2];
-      MathExtra::transpose_matvec(ex_space,ey_space,ez_space,
-				  delta,&displace[i][2][0]);
-    }
-  }
 
   // initial omega, consistent with initial angmom
 
@@ -1362,11 +1830,11 @@ void FixRigid::setup_body()
     for (int j = 0; j < dim; j++)
       rmaxbody = MAX(rmaxbody,MathExtra::len3(&displace[i][j][0]));
 
-  // work arrays for swept collision assignment
+  // per-element bbox arrays for swept collision assignment
+  //   and push-off candidate pruning
 
   memory->create(elemlo,nsurf,3,"fix_rigid:elemlo");
   memory->create(elemhi,nsurf,3,"fix_rigid:elemhi");
-  memory->create(tmplist,nsurf,"fix_rigid:tmplist");
 
   // zero body force/torque in case accessed via compute_vector() on step 0
 
@@ -1376,43 +1844,269 @@ void FixRigid::setup_body()
 }
 
 /* ----------------------------------------------------------------------
-   push-off forces on the body from too-close static surfs
-   for each body element corner pt within pushcutoff of a static surf,
-     apply a repulsive force in the direction of the static surf
-     outward normal, with overlap delta = pushcutoff - dist:
+   bin static surfs for push-off candidate pruning
+   built once per run in setup(); static surfs never move during a run
+   each static surf is added to every bin its bbox overlaps (CSR layout);
+     a query gathers the bins overlapping the pushcutoff-inflated body
+     bbox and dedups multi-bin surfs with a visit stamp
+   bin edge lengths are at least pushcutoff, at most 64 bins per dim
+------------------------------------------------------------------------- */
+
+void FixRigid::push_bins()
+{
+  int i,k,m,ibx,iby,ibz;
+  int blo[3],bhi[3];
+
+  // non-distributed: bin the static surfs of the local arrays, which
+  //   hold all surfs on every proc (identical bins everywhere)
+  // distributed: bin the static surfs this proc OWNS; each surf is
+  //   binned on exactly one proc, so per-proc push contributions are
+  //   disjoint partial sums
+  // static = surf not in any rigid body
+
+  int distributed = surf->distributed;
+
+  Surf::Line *lines;
+  Surf::Tri *tris;
+  int nslocal;
+  if (!distributed) {
+    lines = surf->lines;
+    tris = surf->tris;
+    nslocal = surf->nlocal;
+  } else {
+    lines = surf->mylines;
+    tris = surf->mytris;
+    nslocal = surf->nown;
+  }
+
+  FixRigid **flist = update->fixrigidlist;
+  int nb = update->nfixrigid;
+  int *rigidmap = update->rigidmap;
+
+  double *boxlo = domain->boxlo;
+  double *boxhi = domain->boxhi;
+
+  for (k = 0; k < 3; k++) {
+    pushbinlo[k] = boxlo[k];
+    double len = boxhi[k] - boxlo[k];
+    int n = (int) (len/pushcutoff);
+    n = MAX(n,1);
+    n = MIN(n,64);
+    if (dim == 2 && k == 2) n = 1;
+    pushnbin[k] = n;
+    pushbininv[k] = n/len;
+  }
+  int nbins = pushnbin[0]*pushnbin[1]*pushnbin[2];
+
+  memory->destroy(pushbinstart);
+  memory->destroy(pushbinlist);
+  memory->destroy(pushstamp);
+  memory->create(pushbinstart,nbins+1,"fix_rigid:pushbinstart");
+  memory->create(pushstamp,nslocal,"fix_rigid:pushstamp");
+  for (i = 0; i < nslocal; i++) pushstamp[i] = 0;
+  pushstampcur = 0;
+
+  // two passes: count entries per bin, then fill
+
+  double slo[3],shi[3];
+
+  for (int pass = 0; pass < 2; pass++) {
+    if (pass == 0)
+      for (i = 0; i <= nbins; i++) pushbinstart[i] = 0;
+
+    for (m = 0; m < nslocal; m++) {
+
+      // skip surfs belonging to any rigid body
+
+      if (!distributed) {
+        if (rigidmap[m] >= 0) continue;
+      } else {
+        surfint id = (dim == 2) ? lines[m].id : tris[m].id;
+        int inbody = 0;
+        for (k = 0; k < nb; k++)
+          if (flist[k]->body_elem(id) >= 0) { inbody = 1; break; }
+        if (inbody) continue;
+      }
+
+      if (dim == 2) {
+        for (k = 0; k < 2; k++) {
+          slo[k] = MIN(lines[m].p1[k],lines[m].p2[k]);
+          shi[k] = MAX(lines[m].p1[k],lines[m].p2[k]);
+        }
+        slo[2] = shi[2] = 0.0;
+      } else {
+        for (k = 0; k < 3; k++) {
+          slo[k] = MIN(tris[m].p1[k],MIN(tris[m].p2[k],tris[m].p3[k]));
+          shi[k] = MAX(tris[m].p1[k],MAX(tris[m].p2[k],tris[m].p3[k]));
+        }
+      }
+
+      for (k = 0; k < 3; k++) {
+        blo[k] = (int) ((slo[k]-pushbinlo[k]) * pushbininv[k]);
+        bhi[k] = (int) ((shi[k]-pushbinlo[k]) * pushbininv[k]);
+        blo[k] = MAX(0,MIN(blo[k],pushnbin[k]-1));
+        bhi[k] = MAX(0,MIN(bhi[k],pushnbin[k]-1));
+      }
+
+      for (ibz = blo[2]; ibz <= bhi[2]; ibz++)
+        for (iby = blo[1]; iby <= bhi[1]; iby++)
+          for (ibx = blo[0]; ibx <= bhi[0]; ibx++) {
+            int ibin = (ibz*pushnbin[1] + iby)*pushnbin[0] + ibx;
+            if (pass == 0) pushbinstart[ibin+1]++;
+            else pushbinlist[pushbinstart[ibin]++] = m;
+          }
+    }
+
+    if (pass == 0) {
+      for (i = 0; i < nbins; i++) pushbinstart[i+1] += pushbinstart[i];
+      memory->create(pushbinlist,pushbinstart[nbins],
+                     "fix_rigid:pushbinlist");
+    } else {
+      // filling advanced the starts by one bin: shift them back
+      for (i = nbins; i > 0; i--) pushbinstart[i] = pushbinstart[i-1];
+      pushbinstart[0] = 0;
+    }
+  }
+}
+
+/* ----------------------------------------------------------------------
+   contact forces between all corner pts of this body and one source
+     element with corner pts p1,p2 (p3 for 3d) and outward normal norm
+   for each body corner pt within pushcutoff of the element, apply a
+     repulsive force along the element outward normal, with overlap
+     delta = pushcutoff - dist:
      linear spring F = kpush * delta, or
      Hertzian contact F = kpush * delta^3/2 (smooth onset, standard
      model for elastic contact of spherical particulates)
    if gammapush > 0, a dashpot term F -= gammapush * d(delta)/dt is
      added (the DEM spring-dashpot pair), computed from the normal
-     approach rate of the corner pt relative to the source surface,
-     including the motion of another rigid body as the source
-   the total contact force is clamped at zero, so the dashpot never
+     approach rate of the corner pt relative to the source surface;
+     the total contact force is clamped at zero, so the dashpot never
      produces adhesion as a contact ends
-   if pushboundflag is set, the same spring force is applied by
-     non-periodic simulation box boundaries
-   forces are added to fcm/torque for the next step's time integration
-     and accumulated in fpush for diagnostic output
+   src = the rigid body the element belongs to, or NULL if static
+   if src is set, the reaction force -F is applied to src at the same
+     contact point, so body-body contacts conserve momentum exactly
+------------------------------------------------------------------------- */
+
+void FixRigid::push_contact(double *p1, double *p2, double *p3,
+                            double *norm, FixRigid *src)
+{
+  int i,j;
+  double dsq,d,scale;
+  double **pts;
+  double fone[3],rdelta[3],tq[3];
+
+  int npoint = dim;     // 2 corner pts per line, 3 per tri
+  double cutsq = pushcutoff*pushcutoff;
+
+  for (i = 0; i < nsurf; i++) {
+    pts = bodypt[i];
+
+    for (j = 0; j < npoint; j++) {
+      if (dim == 2)
+        dsq = Geometry::distsq_point_line(pts[j],p1,p2);
+      else
+        dsq = Geometry::distsq_point_tri(pts[j],p1,p2,p3,norm);
+      if (dsq >= cutsq) continue;
+
+      d = sqrt(dsq);
+      if (pushstyle == LINEAR) scale = kpush * (pushcutoff-d);
+      else scale = kpush * (pushcutoff-d) * sqrt(pushcutoff-d);
+
+      // dashpot: damp by the normal approach rate of the corner pt
+      //   relative to the source surface,
+      //   which moves if it belongs to another rigid body
+
+      if (gammapush > 0.0) {
+        double vpt[3],vsrc[3],rd[3];
+        MathExtra::sub3(pts[j],xcm,rd);
+        MathExtra::cross3(omega,rd,vpt);
+        MathExtra::add3(vcm,vpt,vpt);
+        if (src) {
+          MathExtra::sub3(pts[j],src->xcm,rd);
+          MathExtra::cross3(src->omega,rd,vsrc);
+          MathExtra::add3(src->vcm,vsrc,vsrc);
+          MathExtra::sub3(vpt,vsrc,vpt);
+        }
+        scale -= gammapush * MathExtra::dot3(vpt,norm);
+        if (scale < 0.0) scale = 0.0;
+      }
+
+      fone[0] = scale*norm[0];
+      fone[1] = scale*norm[1];
+      fone[2] = scale*norm[2];
+
+      fpush[0] += fone[0];
+      fpush[1] += fone[1];
+      fpush[2] += fone[2];
+      MathExtra::sub3(pts[j],xcm,rdelta);
+      MathExtra::cross3(rdelta,fone,tq);
+      tqpush[0] += tq[0];
+      tqpush[1] += tq[1];
+      tqpush[2] += tq[2];
+
+      // equal-and-opposite reaction on the source body,
+      //   applied at the same contact point
+
+      if (src) {
+        src->fpush[0] -= fone[0];
+        src->fpush[1] -= fone[1];
+        src->fpush[2] -= fone[2];
+        MathExtra::sub3(pts[j],src->xcm,rdelta);
+        MathExtra::cross3(rdelta,fone,tq);
+        src->tqpush[0] -= tq[0];
+        src->tqpush[1] -= tq[1];
+        src->tqpush[2] -= tq[2];
+      }
+    }
+  }
+}
+
+/* ----------------------------------------------------------------------
+   push-off forces on the body from too-close static surfs, other
+     rigid bodies, and (if pushboundflag) non-periodic box boundaries
+   called by the last-defined rigid fix for each body with the push
+     keyword, after all bodies have committed end-of-step geometry
+   static surf candidates come from the bins built by push_bins();
+     other bodies are pruned by a body-body bbox test, then per element
+   forces accumulate in fpush/torque; the caller adds fpush into fcm
+     for the next step's time integration
    computed identically on every proc: all surfs are stored everywhere,
      so no communication is needed and all procs stay in sync
    NOTE: a corner pt shared by adjacent body elements contributes once
-     per element, and a corner close to several static elements
+     per element, and a corner close to several source elements
      interacts with each of them, so kpush is a per-contact stiffness
 ------------------------------------------------------------------------- */
 
 void FixRigid::push_off()
 {
-  int i,j,m,index;
-  double dsq,d,scale;
-  double *pts[3],*norm;
+  int i,j,m,e;
+  double d,scale;
+  double **pts;
   double fone[3],rdelta[3],tq[3];
+  int blo[3],bhi[3];
 
-  Surf::Line *lines = surf->lines;
-  Surf::Tri *tris = surf->tris;
-  int nslocal = surf->nlocal;
+  // static surf sources:
+  //   non-distributed: local surf arrays hold all surfs on every proc,
+  //     every proc computes the identical full contribution
+  //   distributed: each proc's bins hold only the static surfs it OWNS,
+  //     so contributions are disjoint partial sums, merged by the
+  //     coordinating fix with an Allreduce
+  // pair and boundary contributions are identical on every proc, so
+  //   for distributed surfs only proc 0 computes them before the merge
+
+  int distributed = surf->distributed;
+  Surf::Line *lines;
+  Surf::Tri *tris;
+  if (!distributed) {
+    lines = surf->lines;
+    tris = surf->tris;
+  } else {
+    lines = surf->mylines;
+    tris = surf->mytris;
+  }
 
   int npoint = dim;     // 2 corner pts per line, 3 per tri
-  double cutsq = pushcutoff*pushcutoff;
 
   // cutlo/cuthi = bbox around body inflated by pushcutoff
   // requires body_bbox() was called for current body position
@@ -1423,98 +2117,83 @@ void FixRigid::push_off()
     cuthi[j] = bbodyhi[j] + pushcutoff;
   }
 
-  // loop over static surfs whose bbox overlaps the inflated body bbox
+  // static surf candidates: bins overlapping the inflated body bbox
+  // stamp dedups surfs binned into more than one of the bins
 
-  for (m = 0; m < nslocal; m++) {
-    if (irigid[m] >= 0) continue;
+  for (j = 0; j < 3; j++) {
+    blo[j] = (int) ((cutlo[j]-pushbinlo[j]) * pushbininv[j]);
+    bhi[j] = (int) ((cuthi[j]-pushbinlo[j]) * pushbininv[j]);
+    blo[j] = MAX(0,MIN(blo[j],pushnbin[j]-1));
+    bhi[j] = MAX(0,MIN(bhi[j],pushnbin[j]-1));
+  }
 
-    if (dim == 2) {
-      if (MAX(lines[m].p1[0],lines[m].p2[0]) < cutlo[0]) continue;
-      if (MIN(lines[m].p1[0],lines[m].p2[0]) > cuthi[0]) continue;
-      if (MAX(lines[m].p1[1],lines[m].p2[1]) < cutlo[1]) continue;
-      if (MIN(lines[m].p1[1],lines[m].p2[1]) > cuthi[1]) continue;
-      norm = lines[m].norm;
-    } else {
-      if (MAX(tris[m].p1[0],MAX(tris[m].p2[0],tris[m].p3[0])) < cutlo[0])
-        continue;
-      if (MIN(tris[m].p1[0],MIN(tris[m].p2[0],tris[m].p3[0])) > cuthi[0])
-        continue;
-      if (MAX(tris[m].p1[1],MAX(tris[m].p2[1],tris[m].p3[1])) < cutlo[1])
-        continue;
-      if (MIN(tris[m].p1[1],MIN(tris[m].p2[1],tris[m].p3[1])) > cuthi[1])
-        continue;
-      if (MAX(tris[m].p1[2],MAX(tris[m].p2[2],tris[m].p3[2])) < cutlo[2])
-        continue;
-      if (MIN(tris[m].p1[2],MIN(tris[m].p2[2],tris[m].p3[2])) > cuthi[2])
-        continue;
-      norm = tris[m].norm;
-    }
+  pushstampcur++;
 
-    // spring force on each body corner pt within pushcutoff
+  for (int ibz = blo[2]; ibz <= bhi[2]; ibz++)
+    for (int iby = blo[1]; iby <= bhi[1]; iby++)
+      for (int ibx = blo[0]; ibx <= bhi[0]; ibx++) {
+        int ibin = (ibz*pushnbin[1] + iby)*pushnbin[0] + ibx;
+        for (i = pushbinstart[ibin]; i < pushbinstart[ibin+1]; i++) {
+          m = pushbinlist[i];
+          if (pushstamp[m] == pushstampcur) continue;
+          pushstamp[m] = pushstampcur;
 
-    for (i = 0; i < nsurf; i++) {
-      index = slist[i];
-      if (dim == 2) {
-        pts[0] = lines[index].p1;
-        pts[1] = lines[index].p2;
-      } else {
-        pts[0] = tris[index].p1;
-        pts[1] = tris[index].p2;
-        pts[2] = tris[index].p3;
+          if (dim == 2) {
+            if (MAX(lines[m].p1[0],lines[m].p2[0]) < cutlo[0]) continue;
+            if (MIN(lines[m].p1[0],lines[m].p2[0]) > cuthi[0]) continue;
+            if (MAX(lines[m].p1[1],lines[m].p2[1]) < cutlo[1]) continue;
+            if (MIN(lines[m].p1[1],lines[m].p2[1]) > cuthi[1]) continue;
+            push_contact(lines[m].p1,lines[m].p2,NULL,lines[m].norm,NULL);
+          } else {
+            if (MAX(tris[m].p1[0],MAX(tris[m].p2[0],tris[m].p3[0])) <
+                cutlo[0]) continue;
+            if (MIN(tris[m].p1[0],MIN(tris[m].p2[0],tris[m].p3[0])) >
+                cuthi[0]) continue;
+            if (MAX(tris[m].p1[1],MAX(tris[m].p2[1],tris[m].p3[1])) <
+                cutlo[1]) continue;
+            if (MIN(tris[m].p1[1],MIN(tris[m].p2[1],tris[m].p3[1])) >
+                cuthi[1]) continue;
+            if (MAX(tris[m].p1[2],MAX(tris[m].p2[2],tris[m].p3[2])) <
+                cutlo[2]) continue;
+            if (MIN(tris[m].p1[2],MIN(tris[m].p2[2],tris[m].p3[2])) >
+                cuthi[2]) continue;
+            push_contact(tris[m].p1,tris[m].p2,tris[m].p3,
+                         tris[m].norm,NULL);
+          }
+        }
       }
 
-      for (j = 0; j < npoint; j++) {
+  // other rigid bodies: body-body bbox prefilter, then per-element
+  //   bbox tests using the current-position element boxes set by
+  //   body_bbox(0) when each body committed its end-of-step geometry
+  // element geometry from the source body's replicated bodypt/bodynorm
+  // each contact applies equal-and-opposite forces to both bodies
+
+  if (!distributed || comm->me == 0) {
+    FixRigid **flist = update->fixrigidlist;
+    int nb = update->nfixrigid;
+
+    for (int mb = 0; mb < nb; mb++) {
+      FixRigid *g = flist[mb];
+      if (g == this) continue;
+      if (!box_overlap(cutlo,cuthi,g->bbodylo,g->bbodyhi)) continue;
+
+      for (e = 0; e < g->nsurf; e++) {
+        if (!box_overlap(cutlo,cuthi,g->elemlo[e],g->elemhi[e])) continue;
         if (dim == 2)
-          dsq = Geometry::distsq_point_line(pts[j],lines[m].p1,lines[m].p2);
+          push_contact(g->bodypt[e][0],g->bodypt[e][1],NULL,
+                       g->bodynorm[e],g);
         else
-          dsq = Geometry::distsq_point_tri(pts[j],tris[m].p1,tris[m].p2,
-                                           tris[m].p3,tris[m].norm);
-        if (dsq >= cutsq) continue;
-
-        d = sqrt(dsq);
-        if (pushstyle == LINEAR) scale = kpush * (pushcutoff-d);
-        else scale = kpush * (pushcutoff-d) * sqrt(pushcutoff-d);
-
-        // dashpot: damp by the normal approach rate of the corner pt
-        //   relative to the source surface,
-        //   which moves if it belongs to another rigid body
-
-        if (gammapush > 0.0) {
-          double vpt[3],vsrc[3],rd[3];
-          MathExtra::sub3(pts[j],xcm,rd);
-          MathExtra::cross3(omega,rd,vpt);
-          MathExtra::add3(vcm,vpt,vpt);
-          if (update->rigidflag && update->rigidmap &&
-              update->rigidmap[m] >= 0) {
-            FixRigid *src = update->fixrigidlist[update->rigidmap[m]];
-            MathExtra::sub3(pts[j],src->xcm,rd);
-            MathExtra::cross3(src->omega,rd,vsrc);
-            MathExtra::add3(src->vcm,vsrc,vsrc);
-            MathExtra::sub3(vpt,vsrc,vpt);
-          }
-          scale -= gammapush * MathExtra::dot3(vpt,norm);
-          if (scale < 0.0) scale = 0.0;
-        }
-
-        fone[0] = scale*norm[0];
-        fone[1] = scale*norm[1];
-        fone[2] = scale*norm[2];
-
-        fpush[0] += fone[0];
-        fpush[1] += fone[1];
-        fpush[2] += fone[2];
-        MathExtra::sub3(pts[j],xcm,rdelta);
-        MathExtra::cross3(rdelta,fone,tq);
-        torque[0] += tq[0];
-        torque[1] += tq[1];
-        torque[2] += tq[2];
+          push_contact(g->bodypt[e][0],g->bodypt[e][1],g->bodypt[e][2],
+                       g->bodynorm[e],g);
       }
     }
   }
 
   // spring force from non-periodic simulation box boundaries
+  // corner pts from the replicated body geometry
 
-  if (pushboundflag) {
+  if (pushboundflag && (!distributed || comm->me == 0)) {
     double *boxlo = domain->boxlo;
     double *boxhi = domain->boxhi;
     int *bflag = domain->bflag;
@@ -1523,15 +2202,7 @@ void FixRigid::push_off()
     double fsign[6] = {1.0,-1.0,1.0,-1.0,1.0,-1.0};
 
     for (i = 0; i < nsurf; i++) {
-      index = slist[i];
-      if (dim == 2) {
-        pts[0] = lines[index].p1;
-        pts[1] = lines[index].p2;
-      } else {
-        pts[0] = tris[index].p1;
-        pts[1] = tris[index].p2;
-        pts[2] = tris[index].p3;
-      }
+      pts = bodypt[i];
 
       for (j = 0; j < npoint; j++) {
         for (int iface = 0; iface < nface; iface++) {
@@ -1564,19 +2235,17 @@ void FixRigid::push_off()
           fpush[2] += fone[2];
           MathExtra::sub3(pts[j],xcm,rdelta);
           MathExtra::cross3(rdelta,fone,tq);
-          torque[0] += tq[0];
-          torque[1] += tq[1];
-          torque[2] += tq[2];
+          tqpush[0] += tq[0];
+          tqpush[1] += tq[1];
+          tqpush[2] += tq[2];
         }
       }
     }
   }
 
-  // add push-off force to body force for next step's integration
-
-  fcm[0] += fpush[0];
-  fcm[1] += fpush[1];
-  fcm[2] += fpush[2];
+  // fpush/tqpush are merged into fcm/torque by the coordinating fix
+  //   after all bodies' push-off forces, including reactions from
+  //   other bodies' contacts, have been accumulated
 }
 
 /* ----------------------------------------------------------------------
@@ -1626,72 +2295,98 @@ void FixRigid::grid_rebuild()
   // notify all classes that store per-grid data that grid may have changed
 
   grid->notify_changed();
+
+  // distributed surfs: the re-map rebuilt the local surf arrays from
+  //   the owned copies, so local body-surf copies and the per-surf
+  //   rigidmap must be re-established for every body
+
+  if (surf->distributed) {
+    FixRigid **flist = update->fixrigidlist;
+    int nb = update->nfixrigid;
+    for (int m = 0; m < nb; m++) flist[m]->ensure_local_copies();
+    update->build_rigidmap();
+  }
 }
 
 /* ----------------------------------------------------------------------
-   add this body's surfs to the collision lists (csurfs) of all grid
+   add every body's surfs to the collision lists (csurfs) of all grid
      cells they sweep through during this step, so particles anywhere in
-     the swept path are tested against the moving surfs and reflected
-     (rather than overtaken by a fast body and deleted at end-of-step)
-   called each start_of_step, after the end-of-step pose is known
-   for each overlapped cell a merged list = its current csurfs plus this
-     body's swept surfs not already present is installed; the original
-     is saved for swept_restore(); split cells share the merged list
-     with their sub cells, where particles reside
+     a body's swept path are tested against the moving surfs and
+     reflected (rather than overtaken by a fast body and deleted)
+   called each start_of_step by the last-defined rigid fix, after the
+     end-of-step pose of every body is known; a single pass over the
+     grid cells handles all bodies
+   for each overlapped cell a merged list = its current csurfs plus all
+     swept surfs not already present is installed; the original is
+     saved for swept_restore(); split cells share the merged list with
+     their sub cells, where particles reside
    cut-cell volumes are not changed: this augments collision lists only
-   with multiple bodies, each fix appends its own surfs in definition
-     order, accumulating (dedup keeps earlier bodies' surfs)
 ------------------------------------------------------------------------- */
 
-void FixRigid::swept_assign()
+void FixRigid::swept_assign_all()
 {
-  int i,j,m,icell,isub,ncur,nmov,isplit,dup;
-  surfint *merged;
+  int i,j,m,icell,isub,ncur,isplit,dup,nmerged;
+  surfint *merged,*cur;
+  FixRigid *f;
+
+  FixRigid **flist = update->fixrigidlist;
+  int nb = update->nfixrigid;
 
   Grid::ChildCell *cells = grid->cells;
   Grid::SplitInfo *sinfo = grid->sinfo;
   int ntotal = grid->nlocal + grid->nghost;
 
-  // per-element swept bounding boxes for this step
+  // per-element swept bounding boxes of every body for this step
 
-  body_bbox(1);
+  for (m = 0; m < nb; m++) flist[m]->body_bbox(1);
 
   cpage->reset();
   nmodified = 0;
 
-  // loop over owned + ghost cells
+  // single pass over owned + ghost cells
   // skip sub cells (handled via their split cell) and empty ghosts
 
   for (icell = 0; icell < ntotal; icell++) {
     if (cells[icell].nsplit <= 0) continue;
     if (cells[icell].nsurf < 0) continue;
-    if (!box_overlap(cells[icell].lo,cells[icell].hi,bbodylo,bbodyhi))
-      continue;
 
-    // tmplist = this body's surfs whose swept bbox overlaps the cell
-
-    nmov = 0;
-    for (i = 0; i < nsurf; i++)
-      if (box_overlap(cells[icell].lo,cells[icell].hi,elemlo[i],elemhi[i]))
-        tmplist[nmov++] = (surfint) slist[i];
-    if (!nmov) continue;
-
-    // merged = current csurfs + swept surfs not already present
-    // dedup skips surfs already in csurfs, e.g. body surfs the cut
-    //   pipeline placed at the body's start-of-step position, or
-    //   surfs of an earlier body already appended this step
+    // merged = current csurfs + all bodies' swept surfs not already
+    //   present, built lazily on the first appended surf
+    // dedup vs current csurfs skips body surfs the cut pipeline placed
+    //   at a body's start-of-step position
 
     ncur = cells[icell].nsurf;
-    merged = cpage->get(ncur+nmov);
-    for (j = 0; j < ncur; j++) merged[j] = cells[icell].csurfs[j];
-    int nmerged = ncur;
-    for (j = 0; j < nmov; j++) {
-      dup = 0;
-      for (m = 0; m < ncur; m++)
-        if (cells[icell].csurfs[m] == tmplist[j]) { dup = 1; break; }
-      if (!dup) merged[nmerged++] = tmplist[j];
+    cur = cells[icell].csurfs;
+    merged = NULL;
+    nmerged = ncur;
+
+    for (m = 0; m < nb; m++) {
+      f = flist[m];
+      if (!box_overlap(cells[icell].lo,cells[icell].hi,
+                       f->bbodylo,f->bbodyhi)) continue;
+
+      for (i = 0; i < f->nsurf; i++) {
+        if (!box_overlap(cells[icell].lo,cells[icell].hi,
+                         f->elemlo[i],f->elemhi[i])) continue;
+
+        // lblist = local surf index of the element on this proc;
+        // for distributed surfs ensure_local_copies() guarantees it
+
+        surfint selem = (surfint) f->lblist[i];
+        dup = 0;
+        for (j = 0; j < ncur; j++)
+          if (cur[j] == selem) { dup = 1; break; }
+        if (dup) continue;
+        if (!merged) {
+          merged = cpage->vget();
+          for (j = 0; j < ncur; j++) merged[j] = cur[j];
+        }
+        merged[nmerged++] = selem;
+      }
     }
-    if (nmerged == ncur) continue;   // all swept surfs already present
+
+    if (!merged) continue;
+    cpage->vgot(nmerged);
 
     // save cell settings so they can be restored, then override them
     // for a split cell, also override its sub cells, which share
@@ -1840,9 +2535,11 @@ int FixRigid::incremental_recut()
   rhi[0] = rhi[1] = rhi[2] = -BIG;
   int nincr = 0;
 
-  for (int ifix = 0; ifix < modify->nfix; ifix++) {
-    if (strcmp(modify->fix[ifix]->style,"rigid") != 0) continue;
-    FixRigid *f = (FixRigid *) modify->fix[ifix];
+  FixRigid **flist = update->fixrigidlist;
+  int nb = update->nfixrigid;
+
+  for (int m = 0; m < nb; m++) {
+    FixRigid *f = flist[m];
     if (f->remapmode != INCREMENTAL) continue;
     if (!f->pbodyflag) return 1;
     for (i = 0; i < 3; i++) {
@@ -1853,6 +2550,20 @@ int FixRigid::incremental_recut()
   }
   if (!nincr) return 1;
 
+  // collect cells overlapping R in one pass over the local grid;
+  //   the re-cut and re-type passes below iterate only this list
+
+  nrcand = 0;
+  for (icell = 0; icell < nglocal; icell++) {
+    if (cells[icell].nsplit <= 0) continue;
+    if (!box_overlap(cells[icell].lo,cells[icell].hi,rlo,rhi)) continue;
+    if (nrcand == maxrcand) {
+      maxrcand += DELTA_MODIFY;
+      memory->grow(rcand,maxrcand,"fix_rigid:rcand");
+    }
+    rcand[nrcand++] = icell;
+  }
+
   // pass 1: re-cut cells in R whose surf overlap changed
   //   or which are overlapped by a moved body surf (from any body)
   // NOTE: surf lists are compared elementwise, both in cut2d/cut3d
@@ -1860,9 +2571,8 @@ int FixRigid::incremental_recut()
   //   algorithm may be ordered differently, causing a one-time
   //   spurious re-cut of unchanged cells, which is harmless
 
-  for (icell = 0; icell < nglocal; icell++) {
-    if (cells[icell].nsplit <= 0) continue;
-    if (!box_overlap(cells[icell].lo,cells[icell].hi,rlo,rhi)) continue;
+  for (int ic = 0; ic < nrcand; ic++) {
+    icell = rcand[ic];
 
     // structural change unsupported: split cells trigger a full re-map
 
@@ -1956,9 +2666,8 @@ int FixRigid::incremental_recut()
   // only cells which are now surf-free and inside no body,
   //   which leaves any static (non-body) INSIDE cells untouched
 
-  for (int ifix = 0; ifix < modify->nfix; ifix++) {
-    if (strcmp(modify->fix[ifix]->style,"rigid") != 0) continue;
-    FixRigid *f = (FixRigid *) modify->fix[ifix];
+  for (int mb = 0; mb < nb; mb++) {
+    FixRigid *f = flist[mb];
     if (f->remapmode != INCREMENTAL) continue;
 
     for (int m = 0; m < f->noldinside; m++) {
@@ -1989,11 +2698,11 @@ int FixRigid::incremental_recut()
   // R covers the swept corridor since it unions old and new positions
   // guard on type != INSIDE leaves static INSIDE cells untouched
 
-  for (icell = 0; icell < nglocal; icell++) {
+  for (int ic = 0; ic < nrcand; ic++) {
+    icell = rcand[ic];
     if (cells[icell].nsplit != 1) continue;
     if (cells[icell].nsurf) continue;
     if (cinfo[icell].type == CELLINSIDE) continue;
-    if (!box_overlap(cells[icell].lo,cells[icell].hi,rlo,rhi)) continue;
 
     clo = cells[icell].lo;
     chi = cells[icell].hi;
@@ -2081,13 +2790,10 @@ void FixRigid::free_registry()
 
 void FixRigid::body_bbox(int sweepflag)
 {
-  int i,j,k,index;
-  double *pts[3];
+  int i,j,k;
+  double **pts;
   double delta[3],ptnew[3];
   double *lo,*hi;
-
-  Surf::Line *lines = surf->lines;
-  Surf::Tri *tris = surf->tris;
 
   int npoint = dim;     // 2 points per line, 3 per tri
 
@@ -2095,15 +2801,7 @@ void FixRigid::body_bbox(int sweepflag)
   bbodyhi[0] = bbodyhi[1] = bbodyhi[2] = -BIG;
 
   for (i = 0; i < nsurf; i++) {
-    index = slist[i];
-    if (dim == 2) {
-      pts[0] = lines[index].p1;
-      pts[1] = lines[index].p2;
-    } else {
-      pts[0] = tris[index].p1;
-      pts[1] = tris[index].p2;
-      pts[2] = tris[index].p3;
-    }
+    pts = bodypt[i];
 
     lo = elemlo[i];
     hi = elemhi[i];
@@ -2159,12 +2857,9 @@ void FixRigid::body_bbox(int sweepflag)
 
 int FixRigid::inside_body(double *x)
 {
-  int index,hitflag,side;
+  int hitflag,side;
   double param;
   double xout[3],xc[3];
-
-  Surf::Line *lines = surf->lines;
-  Surf::Tri *tris = surf->tris;
 
   double dmax = MAX(bbodyhi[0]-bbodylo[0],bbodyhi[1]-bbodylo[1]);
   dmax = MAX(dmax,bbodyhi[2]-bbodylo[2]);
@@ -2176,15 +2871,14 @@ int FixRigid::inside_body(double *x)
 
   int count = 0;
   for (int i = 0; i < nsurf; i++) {
-    index = slist[i];
     if (dim == 2)
       hitflag = Geometry::
-        line_line_intersect(x,xout,lines[index].p1,lines[index].p2,
-                            lines[index].norm,xc,param,side);
+        line_line_intersect(x,xout,bodypt[i][0],bodypt[i][1],
+                            bodynorm[i],xc,param,side);
     else
       hitflag = Geometry::
-        line_tri_intersect(x,xout,tris[index].p1,tris[index].p2,
-                           tris[index].p3,tris[index].norm,xc,param,side);
+        line_tri_intersect(x,xout,bodypt[i][0],bodypt[i][1],
+                           bodypt[i][2],bodynorm[i],xc,param,side);
     if (hitflag) count++;
   }
 
@@ -2192,11 +2886,13 @@ int FixRigid::inside_body(double *x)
 }
 
 /* ----------------------------------------------------------------------
-   remove particles which are inside the body
-   also remove all particles in INSIDE cells (cutcell mode)
+   remove particles which are inside this body
+   also remove all particles in INSIDE cells
+   used at setup; each step uses the fused remove_inside_all() instead
    splitflag = 1 if called after a grid rebuild,
      to first reassign particles in split cells to their sub cells
-   return # of particles deleted across all procs
+   return # of particles deleted by this proc; counts are summed
+     across procs lazily by compute_scalar()
 ------------------------------------------------------------------------- */
 
 bigint FixRigid::remove_inside_particles(int splitflag)
@@ -2251,10 +2947,83 @@ bigint FixRigid::remove_inside_particles(int splitflag)
 
   int nlocal_old = particle->nlocal;
   if (delflag) particle->compress_rebalance();
-  bigint delta = nlocal_old - particle->nlocal;
-  bigint nall;
-  MPI_Allreduce(&delta,&nall,1,MPI_SPARTA_BIGINT,MPI_SUM,world);
-  return nall;
+  return nlocal_old - particle->nlocal;
+}
+
+/* ----------------------------------------------------------------------
+   remove particles inside any rigid body, in one pass over particles
+   called each step by the last-defined rigid fix, after the grid
+     re-map; every body's bbodylo/bbodyhi is current (set when each
+     body committed its end-of-step geometry)
+   also removes all particles in INSIDE cells
+   splitflag = 1 if called after a full grid rebuild,
+     to first reassign particles in split cells to their sub cells
+   deletions increment the owning body's per-proc ndeleted count with
+     no communication; compute_scalar() reduces the counts on demand
+------------------------------------------------------------------------- */
+
+void FixRigid::remove_inside_all(int splitflag)
+{
+  int m;
+  double *x;
+
+  FixRigid **flist = update->fixrigidlist;
+  int nb = update->nfixrigid;
+
+  // reassign particles in split cells to sub cell owner
+  // requires sorted particles, done by grid_rebuild()
+
+  if (splitflag && grid->nsplitlocal) {
+    Grid::ChildCell *cells = grid->cells;
+    int nglocal = grid->nlocal;
+    for (int icell = 0; icell < nglocal; icell++)
+      if (cells[icell].nsplit > 1)
+        grid->assign_split_cell_particles(icell);
+  }
+
+  // flag particles inside any body or in INSIDE cells for deletion
+  // attribute each deletion to the body containing the particle;
+  //   a particle in an INSIDE cell claimed by no body (e.g. inside
+  //   static closed geometry) is attributed to this fix
+
+  Grid::ChildInfo *cinfo = grid->cinfo;
+  Particle::OnePart *particles = particle->particles;
+  int nplocal = particle->nlocal;
+
+  int icell;
+  int delflag = 0;
+
+  for (int i = 0; i < nplocal; i++) {
+    icell = particles[i].icell;
+    if (icell < 0) continue;
+
+    x = particles[i].x;
+    int inside = (cinfo[icell].type == CELLINSIDE);
+
+    int owner = -1;
+    for (m = 0; m < nb; m++) {
+      FixRigid *f = flist[m];
+      if (x[0] < f->bbodylo[0] || x[0] > f->bbodyhi[0]) continue;
+      if (x[1] < f->bbodylo[1] || x[1] > f->bbodyhi[1]) continue;
+      if (dim == 3 &&
+          (x[2] < f->bbodylo[2] || x[2] > f->bbodyhi[2])) continue;
+      if (f->inside_body(x)) {
+        owner = m;
+        break;
+      }
+    }
+
+    if (owner < 0 && !inside) continue;
+
+    particles[i].icell = -1;
+    delflag = 1;
+    if (owner >= 0) flist[owner]->ndeleted++;
+    else ndeleted++;
+  }
+
+  // compress out deleted particles, once for all bodies
+
+  if (delflag) particle->compress_rebalance();
 }
 
 /* ----------------------------------------------------------------------
@@ -2272,18 +3041,14 @@ void FixRigid::check_watertight()
 {
   int unmatched = 0;
 
-  Surf::Line *lines = surf->lines;
-  Surf::Tri *tris = surf->tris;
-
   if (dim == 2) {
     std::map<std::array<double,2>,int> count;
     std::array<double,2> key;
 
     for (int i = 0; i < nsurf; i++) {
-      Surf::Line *l = &lines[slist[i]];
-      key[0] = l->p1[0]; key[1] = l->p1[1];
+      key[0] = bodypt[i][0][0]; key[1] = bodypt[i][0][1];
       count[key]++;
-      key[0] = l->p2[0]; key[1] = l->p2[1];
+      key[0] = bodypt[i][1][0]; key[1] = bodypt[i][1][1];
       count[key]--;
     }
 
@@ -2299,8 +3064,8 @@ void FixRigid::check_watertight()
     int dir;
 
     for (int i = 0; i < nsurf; i++) {
-      Surf::Tri *t = &tris[slist[i]];
-      pts[0] = t->p1; pts[1] = t->p2; pts[2] = t->p3; pts[3] = t->p1;
+      pts[0] = bodypt[i][0]; pts[1] = bodypt[i][1];
+      pts[2] = bodypt[i][2]; pts[3] = bodypt[i][0];
 
       for (int j = 0; j < 3; j++) {
         a = pts[j];
@@ -2346,7 +3111,16 @@ void FixRigid::check_watertight()
 
 double FixRigid::compute_scalar()
 {
-  return (double) ndeleted;
+  // ndeleted is a per-proc count, summed across procs on demand
+  //   rather than with a collective every step
+  // cached per timestep: repeated outputs on one step reduce once
+  // like all fix scalar outputs, must be accessed on all procs
+
+  if (ndelvalid != update->ntimestep) {
+    MPI_Allreduce(&ndeleted,&ndeleted_all,1,MPI_SPARTA_BIGINT,MPI_SUM,world);
+    ndelvalid = update->ntimestep;
+  }
+  return (double) ndeleted_all;
 }
 
 /* ----------------------------------------------------------------------

@@ -4,6 +4,9 @@
 # velocities and total momentum must remain ~zero
 
 seed	    	    12345
+
+variable            dist index 0
+if "${dist} == 1" then "global surfs explicit/distributed"
 dimension   	    2
 boundary            r r p
 

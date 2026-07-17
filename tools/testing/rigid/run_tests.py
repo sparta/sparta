@@ -240,6 +240,39 @@ def test_multiremap(exe_cmd):
     return fails
 
 
+def test_pushpair(exe_cmd):
+    # ASYMMETRIC body-body contact: heavy large body overtakes a light
+    # small one, corner-vs-face contact. Total momentum of the pair must
+    # be conserved (contact forces are equal-and-opposite on both
+    # bodies); tolerance is set by the 8-digit stats output, not physics
+    rc, out = run_deck(exe_cmd, "in.test.pushpair")
+    if rc:
+        return ["run failed with exit code %d" % rc]
+    rows = parse_stats(out)
+    if not rows:
+        return ["no stats output"]
+    m1, m2 = 4.0e-22, 1.0e-22
+    px0 = m1 * rows[0]["f_1[4]"] + m2 * rows[0]["f_2[4]"]
+    py0 = m1 * rows[0]["f_1[5]"] + m2 * rows[0]["f_2[5]"]
+    fails = []
+    for r in rows:
+        px = m1 * r["f_1[4]"] + m2 * r["f_2[4]"]
+        py = m1 * r["f_1[5]"] + m2 * r["f_2[5]"]
+        if not approx(px, px0, rel=1e-6):
+            fails.append("step %d: px = %.10e vs initial %.10e, body-body "
+                         "contact violates momentum conservation"
+                         % (int(r["Step"]), px, px0))
+        if abs(py - py0) > 1e-6 * abs(px0):
+            fails.append("step %d: py = %.3e drifted from %.3e"
+                         % (int(r["Step"]), py, py0))
+    # the collision must actually have happened
+    if rows[-1]["f_2[4]"] < 20.0:
+        fails.append("final body2 vx = %.6g, no significant collision "
+                     "occurred; test geometry is broken"
+                     % rows[-1]["f_2[4]"])
+    return fails
+
+
 def test_twobody(exe_cmd):
     rc, out = run_deck(exe_cmd, "in.test.twobody")
     if rc:
@@ -287,12 +320,21 @@ TESTS = [
     ("remap", test_remap),
     ("multiremap", test_multiremap),
     ("twobody", test_twobody),
+    ("pushpair", test_pushpair),
     ("badmoi", test_badmoi),
     ("notwatertight", test_notwatertight),
 ]
 
+# tests whose decks support -var dist 1 (global surfs explicit/distributed)
+# remap/multiremap are excluded: incremental re-cut requires
+# non-distributed surfs
+
+DIST_TESTS = {"ballistic", "bounce", "momentum", "overrun",
+              "twobody", "pushpair"}
+
 
 def main():
+    global run_deck
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--exe", required=True,
                         help="path to SPARTA executable")
@@ -300,6 +342,9 @@ def main():
                         help='MPI launcher prefix, e.g. "mpirun -np 4"')
     parser.add_argument("--tests", default="",
                         help="comma-separated subset of tests to run")
+    parser.add_argument("--dist", action="store_true",
+                        help="run with distributed surfs "
+                             "(global surfs explicit/distributed)")
     args = parser.parse_args()
 
     exe_cmd = shlex.split(args.mpi) + [os.path.abspath(args.exe)]
@@ -307,6 +352,19 @@ def main():
     subset = None
     if args.tests:
         subset = set(args.tests.split(","))
+
+    if args.dist:
+        if subset is None:
+            subset = set(DIST_TESTS)
+        else:
+            subset &= DIST_TESTS
+        base_run_deck = run_deck
+
+        def dist_run_deck(exe_cmd, deck, extra=None, expect_error=False):
+            extra = (extra or []) + ["-var", "dist", "1"]
+            return base_run_deck(exe_cmd, deck, extra, expect_error)
+
+        run_deck = dist_run_deck
 
     nfail = 0
     for name, func in TESTS:

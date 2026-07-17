@@ -153,58 +153,6 @@ int mldivide4(const double m[4][4], const double *v, double *ans)
 }
 
 /* ----------------------------------------------------------------------
-   Richardson iteration to update quaternion from angular momentum
-   return new normalized quaternion q
-   also returns updated omega at 1/2 step
-------------------------------------------------------------------------- */
-
-void richardson(double *q, double *m, double *w, double *moments, double dtq)
-{
-  // full update from dq/dt = 1/2 w q
-
-  double wq[4];
-  MathExtra::vecquat(w,q,wq);
-
-  double qfull[4];
-  qfull[0] = q[0] + dtq * wq[0];
-  qfull[1] = q[1] + dtq * wq[1];
-  qfull[2] = q[2] + dtq * wq[2];
-  qfull[3] = q[3] + dtq * wq[3];
-  MathExtra::qnormalize(qfull);
-
-  // 1st half update from dq/dt = 1/2 w q
-
-  double qhalf[4];
-  qhalf[0] = q[0] + 0.5*dtq * wq[0];
-  qhalf[1] = q[1] + 0.5*dtq * wq[1];
-  qhalf[2] = q[2] + 0.5*dtq * wq[2];
-  qhalf[3] = q[3] + 0.5*dtq * wq[3];
-  MathExtra::qnormalize(qhalf);
-
-  // re-compute omega at 1/2 step from m at 1/2 step and q at 1/2 step
-  // recompute wq
-
-  MathExtra::mq_to_omega(m,qhalf,moments,w);
-  MathExtra::vecquat(w,qhalf,wq);
-
-  // 2nd half update from dq/dt = 1/2 w q
-
-  qhalf[0] += 0.5*dtq * wq[0];
-  qhalf[1] += 0.5*dtq * wq[1];
-  qhalf[2] += 0.5*dtq * wq[2];
-  qhalf[3] += 0.5*dtq * wq[3];
-  MathExtra::qnormalize(qhalf);
-
-  // corrected Richardson update
-
-  q[0] = 2.0*qhalf[0] - qfull[0];
-  q[1] = 2.0*qhalf[1] - qfull[1];
-  q[2] = 2.0*qhalf[2] - qfull[2];
-  q[3] = 2.0*qhalf[3] - qfull[3];
-  MathExtra::qnormalize(q);
-}
-
-/* ----------------------------------------------------------------------
    compute omega from angular momentum, both in space frame
    only know Idiag so need to do M = Iw in body frame
    ex,ey,ez are column vectors of rotation matrix P
@@ -230,30 +178,6 @@ void angmom_to_omega(double *m, double *ex, double *ey, double *ez,
   w[0] = wbody[0]*ex[0] + wbody[1]*ey[0] + wbody[2]*ez[0];
   w[1] = wbody[0]*ex[1] + wbody[1]*ey[1] + wbody[2]*ez[1];
   w[2] = wbody[0]*ex[2] + wbody[1]*ey[2] + wbody[2]*ez[2];
-}
-
-/* ----------------------------------------------------------------------
-   compute omega from angular momentum, both in space frame
-   w = omega = angular velocity in space frame
-   wbody = angular velocity in body frame
-   project space-frame angular momentum onto body axes
-     and divide by principal moments
-------------------------------------------------------------------------- */
-
-void mq_to_omega(double *m, double *q, double *moments, double *w)
-{
-  double wbody[3];
-  double rot[3][3];
-
-  MathExtra::quat_to_mat(q,rot);
-  MathExtra::transpose_matvec(rot,m,wbody);
-  if (moments[0] == 0.0) wbody[0] = 0.0;
-  else wbody[0] /= moments[0];
-  if (moments[1] == 0.0) wbody[1] = 0.0;
-  else wbody[1] /= moments[1];
-  if (moments[2] == 0.0) wbody[2] = 0.0;
-  else wbody[2] /= moments[2];
-  MathExtra::matvec(rot,wbody,w);
 }
 
 /* ----------------------------------------------------------------------

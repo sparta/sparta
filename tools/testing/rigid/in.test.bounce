@@ -5,6 +5,9 @@
 # run as: -var pstyle linear -var pk 1.0e-18   (or hertz / 4.0e-18)
 
 seed	    	    12345
+
+variable            dist index 0
+if "${dist} == 1" then "global surfs explicit/distributed"
 dimension   	    2
 boundary            r r p
 
