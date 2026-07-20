@@ -2802,6 +2802,7 @@ void SurfReactAdsorb::readfile_ps(char *fname)
         model = DIFFUSE;
         nflags = 0;
         ncoeffs = 2;
+        sc = new SurfCollideDiffuse(sparta,nwords,words);
       } else if (strcmp(words[1],"adiabatic") == 0) {
         model = ADIABATIC;
         nflags = ncoeffs = 0;

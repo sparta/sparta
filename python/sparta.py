@@ -53,6 +53,9 @@ class sparta:
 
     if cmdargs:
       cmdargs.insert(0,"sparta.py")
+      # ctypes c_char_p requires bytes, so encode any str arguments (Python 3)
+      cmdargs = [arg.encode('utf-8') if isinstance(arg,str) else arg
+                 for arg in cmdargs]
       narg = len(cmdargs)
       cargs = (c_char_p*narg)(*cmdargs)
       self.spa = c_void_p()
