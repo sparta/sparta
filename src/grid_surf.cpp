@@ -1895,13 +1895,7 @@ int Grid::point_outside_surfs_implicit(int icell, double *x)
 
   push_reference_outside_surfs(icell,x,displace);
 
-  // return nonzero: a valid in-flow reference point X was always found
-  // unlike the explicit variant, there is no "not found" (return 0) case:
-  //   an implicit surf exists in a cell only where the surface truly cuts it,
-  //   so the cell always has a flow region and csurfs[0] yields a usable X
-  // value is unused beyond being nonzero (callers test only truthiness)
-
-  return -1;
+  return 1; // implicit surfs always have a valid flow region
 }
 
 /* ----------------------------------------------------------------------
