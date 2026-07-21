@@ -186,7 +186,7 @@ void FixEmitFace::init()
 
   double *vstream = particle->mixture[imix]->vstream;
 
-  if (domain->axisymmetric && faces[YHI] && vstream[1] != 0.0)
+  if (axisymmetric && faces[YHI] && vstream[1] != 0.0)
     error->all(FLERR,"Cannot use fix emit on axisymmetric yhi "
                "if streaming velocity has a y-component");
 
@@ -402,7 +402,7 @@ void FixEmitFace::create_task(int icell)
       if (dimension == 3)
         area = (cells[icell].hi[1]-cells[icell].lo[1]) *
           (cells[icell].hi[2]-cells[icell].lo[2]);
-      else if (domain->axisymmetric)
+      else if (axisymmetric)
         area = (cells[icell].hi[1]*cells[icell].hi[1] -
                 cells[icell].lo[1]*cells[icell].lo[1])*MY_PI;
       else area = cells[icell].hi[1]-cells[icell].lo[1];
@@ -410,7 +410,7 @@ void FixEmitFace::create_task(int icell)
       if (dimension == 3)
         area = (cells[icell].hi[0]-cells[icell].lo[0]) *
           (cells[icell].hi[2]-cells[icell].lo[2]);
-      else if (domain->axisymmetric)
+      else if (axisymmetric)
         area = 2.0*MY_PI*cells[icell].hi[1] *
           (cells[icell].hi[0]-cells[icell].lo[0]);
       else area = cells[icell].hi[0]-cells[icell].lo[0];

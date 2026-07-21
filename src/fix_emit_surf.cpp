@@ -118,7 +118,7 @@ FixEmitSurf::FixEmitSurf(SPARTA *sparta, int narg, char **arg) :
   // create instance of Cut2d,Cut3d for geometry calculations
 
   if (dimension == 3) cut3d = new Cut3d(sparta);
-  else cut2d = new Cut2d(sparta,domain->axisymmetric);
+  else cut2d = new Cut2d(sparta,axisymmetric);
 }
 
 /* ---------------------------------------------------------------------- */
@@ -503,7 +503,7 @@ void FixEmitSurf::create_task(int icell)
       // axisymmetric "area" of line segment = surf area of truncated cone
       // PI (y1+y2) sqrt( (y1-y2)^2 + (x1-x2)^2) )
 
-      if (domain->axisymmetric) {
+      if (axisymmetric) {
         double sqrtarg = (path[1]-path[4])*(path[1]-path[4]) +
           (path[0]-path[3])*(path[0]-path[3]);
         area = MY_PI * (path[1]+path[4]) * sqrt(sqrtarg);
