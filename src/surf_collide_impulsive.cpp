@@ -378,7 +378,7 @@ void SurfCollideImpulsive::impulsive(Particle::OnePart *p, double *norm)
 
       if (sparta->collide->vibstyle == SMOOTH) {
         p->evib = evib_val;
-      } else if (vibdof==2) {
+      } else if (vibdof == 2) {
         int ivib =  evib_val / (update->boltz*vibtemp[0]);
         p->evib = ivib * update->boltz * vibtemp[0];
       } else {
