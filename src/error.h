@@ -17,10 +17,14 @@
 
 #include "pointers.h"
 
+#include <string>
+
 namespace SPARTA_NS {
 
 class Error : protected Pointers {
  public:
+  enum { ERROR_NONE = 0, ERROR_NORMAL = 1, ERROR_ABORT = 2 };
+
   Error(class SPARTA *);
 
   void universe_all(const char *, int, const char *);
@@ -31,6 +35,16 @@ class Error : protected Pointers {
   void warning(const char *, int, const char *, int = 1);
   void message(const char *, int, const char *, int = 1);
   void done();
+
+  // last error message handling for the library interface
+
+  void set_last_error(const char *msg, int type = ERROR_NORMAL);
+  const char *get_last_error() const { return last_error_message.c_str(); }
+  int get_last_error_type() const { return last_error_type; }
+
+ private:
+  std::string last_error_message;
+  int last_error_type = ERROR_NONE;
 };
 
 }
