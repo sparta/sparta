@@ -173,7 +173,24 @@ void FixAveHistoWeight::calculate_weights()
         compute->compute_per_grid();
         compute->invoked_flag |= INVOKED_PER_GRID;
       }
-      if (j == 0) {
+      if (compute->post_process_grid_flag) {
+        // a post-process per-grid compute (e.g. compute grid) fills vector_grid
+        // on demand via post_process_grid() and never allocates array_grid.
+        // copy the requested column into a private buffer so the subsequent
+        // binning of the value (which may post-process the same compute into
+        // vector_grid) cannot overwrite the weights.
+        compute->post_process_grid(j,1,NULL,NULL,NULL,1);
+        if (grid->maxlocal > maxvectorwt) {
+          memory->destroy(vectorwt);
+          maxvectorwt = grid->maxlocal;
+          memory->create(vectorwt,maxvectorwt,"ave/histo/weight:vectorwt");
+        }
+        double *cvec = compute->vector_grid;
+        int nglocal = grid->nlocal;
+        for (int k = 0; k < nglocal; k++) vectorwt[k] = cvec[k];
+        weights = vectorwt;
+        stridewt = 1;
+      } else if (j == 0) {
         weights = compute->vector_grid;
         stridewt = 1;
       } else if (compute->array_grid) {

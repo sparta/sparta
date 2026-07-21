@@ -447,6 +447,87 @@ void Particle::sort()
 }
 
 /* ----------------------------------------------------------------------
+   reorder particle list so particles in the same grid cell are
+     stored contiguously in memory, which can improve cache performance
+   requires particles already be sorted, i.e. sort() just invoked,
+     so the per-cell linked list (cinfo.first/count, next) is up to date
+   invoked from Update::run() every reorder_period timesteps,
+     as set by the global particle/reorder command
+   reordering is done in place, one permutation cycle at a time
+------------------------------------------------------------------------- */
+
+void Particle::reorder()
+{
+  int icell,ip,m;
+  int nbytes = sizeof(OnePart);
+
+  if (nlocal == 0) return;
+
+  Grid::ChildInfo *cinfo = grid->cinfo;
+  int nglocal = grid->nlocal;
+
+  // order[m] = current index of the particle that belongs at new index m
+  // walk the per-cell linked list built by sort() so that particles in
+  //   the same grid cell end up contiguous in memory
+
+  int *order;
+  memory->create(order,nlocal,"particle:order");
+
+  m = 0;
+  for (icell = 0; icell < nglocal; icell++) {
+    ip = cinfo[icell].first;
+    while (ip >= 0) {
+      order[m++] = ip;
+      ip = next[ip];
+    }
+  }
+
+  // if custom per-particle data exists, use index nlocal as scratch space
+  //   so copy_custom() can save and restore a particle's custom data
+
+  if (ncustom) grow(1);
+
+  // apply the permutation to the particle list (and custom data) in place
+  // each disjoint cycle is rotated using a single saved particle
+  // order[i] is reset to i as each particle is placed in its final location
+
+  OnePart copy;
+  for (int i = 0; i < nlocal; i++) {
+    if (order[i] == i) continue;
+    memcpy(&copy,&particles[i],nbytes);
+    if (ncustom) copy_custom(nlocal,i);
+    int dst = i;
+    int src = order[i];
+    while (src != i) {
+      memcpy(&particles[dst],&particles[src],nbytes);
+      if (ncustom) copy_custom(dst,src);
+      order[dst] = dst;
+      dst = src;
+      src = order[src];
+    }
+    memcpy(&particles[dst],&copy,nbytes);
+    if (ncustom) copy_custom(dst,nlocal);
+    order[dst] = dst;
+  }
+
+  memory->destroy(order);
+
+  // rebuild per-cell linked list, now contiguous in memory by grid cell
+
+  m = 0;
+  for (icell = 0; icell < nglocal; icell++) {
+    if (cinfo[icell].count == 0) {
+      cinfo[icell].first = -1;
+      continue;
+    }
+    cinfo[icell].first = m;
+    int last = m + cinfo[icell].count;
+    for (; m < last-1; m++) next[m] = m+1;
+    next[m++] = -1;
+  }
+}
+
+/* ----------------------------------------------------------------------
    reallocate next list if necessary
    called before partial sort by FixEmit classes in subsonic case
 ------------------------------------------------------------------------- */
