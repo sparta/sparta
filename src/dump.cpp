@@ -302,31 +302,17 @@ void Dump::write()
   // ping each proc in my cluster, receive its data, write data to file
   // else wait for ping from fileproc, send my data to fileproc
 
-  int tmp,nlines,nchars;
+  int tmp,nchars;
   MPI_Status status;
   MPI_Request request;
 
   // comm and output buf of doubles
+  // gather_and_write() is a reusable helper so derived dumps that manage
+  // their own output (e.g. the VTK styles) can reuse the gather protocol
 
   if (buffer_flag == 0 || binary) {
-    if (filewriter) {
-      for (int iproc = 0; iproc < nclusterprocs; iproc++) {
-        if (iproc) {
-          MPI_Irecv(buf,maxbuf*size_one,MPI_DOUBLE,me+iproc,0,world,&request);
-          MPI_Send(&tmp,0,MPI_INT,me+iproc,0,world);
-          MPI_Wait(&request,&status);
-          MPI_Get_count(&status,MPI_DOUBLE,&nlines);
-          nlines /= size_one;
-        } else nlines = nme;
-
-        write_data(nlines,buf);
-      }
-      if (flush_flag) fflush(fp);
-
-    } else {
-      MPI_Recv(&tmp,0,MPI_INT,fileproc,0,world,&status);
-      MPI_Rsend(buf,nme*size_one,MPI_DOUBLE,fileproc,0,world);
-    }
+    gather_and_write();
+    if (filewriter && flush_flag && fp) fflush(fp);
 
   // comm and output sbuf = one big string of formatted values per proc
 
@@ -342,7 +328,7 @@ void Dump::write()
 
         write_data(nchars,(double *) sbuf);
       }
-      if (flush_flag) fflush(fp);
+      if (flush_flag && fp) fflush(fp);
 
     } else {
       MPI_Recv(&tmp,0,MPI_INT,fileproc,0,world,&status);
@@ -351,13 +337,41 @@ void Dump::write()
   }
 
   // if file per timestep, close file if I am filewriter
+  // guard on fp: derived dumps that manage their own files leave fp == NULL
 
-  if (multifile) {
-    if (compressed) {
-      if (filewriter) pclose(fp);
-    } else {
-      if (filewriter) fclose(fp);
+  if (multifile && filewriter && fp) {
+    if (compressed) pclose(fp);
+    else fclose(fp);
+  }
+}
+
+/* ----------------------------------------------------------------------
+   gather each cluster proc's packed buffer of doubles to the filewriter,
+   which writes each chunk via write_data(); non-writers send to fileproc.
+   factored out of write() so derived dumps can reuse the gather protocol.
+------------------------------------------------------------------------- */
+
+void Dump::gather_and_write()
+{
+  int tmp,nlines;
+  MPI_Status status;
+  MPI_Request request;
+
+  if (filewriter) {
+    for (int iproc = 0; iproc < nclusterprocs; iproc++) {
+      if (iproc) {
+        MPI_Irecv(buf,maxbuf*size_one,MPI_DOUBLE,me+iproc,0,world,&request);
+        MPI_Send(&tmp,0,MPI_INT,me+iproc,0,world);
+        MPI_Wait(&request,&status);
+        MPI_Get_count(&status,MPI_DOUBLE,&nlines);
+        nlines /= size_one;
+      } else nlines = nme;
+
+      write_data(nlines,buf);
     }
+  } else {
+    MPI_Recv(&tmp,0,MPI_INT,fileproc,0,world,&status);
+    MPI_Rsend(buf,nme*size_one,MPI_DOUBLE,fileproc,0,world);
   }
 }
 
