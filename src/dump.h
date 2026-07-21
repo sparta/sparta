@@ -52,6 +52,7 @@ class Dump : protected Pointers {
   int filewriter;            // 1 if this proc writes a file, else 0
   int fileproc;              // ID of proc in my cluster who writes to file
   char *multiname;           // filename with % converted to cluster ID
+  char *filelast;            // name of most recently opened dump file
   MPI_Comm clustercomm;      // MPI communicator within my cluster of procs
 
   int header_flag;           // 0 = item, 2 = xyz

@@ -70,6 +70,7 @@ Image::Image(SPARTA *sparta, int nmap_caller) : Pointers(sparta)
   persp = 0.0;
   shiny = 1.0;
   ssao = NO;
+  fsaa = NO;
 
   up[0] = 0.0;
   up[1] = 0.0;
@@ -83,6 +84,7 @@ Image::Image(SPARTA *sparta, int nmap_caller) : Pointers(sparta)
 
   boxcolor = color2rgb("yellow");
   background[0] = background[1] = background[2] = 0;
+  background2[0] = background2[1] = background2[2] = -1;
 
   // define nmap colormaps, all with default settings
 
@@ -291,13 +293,35 @@ void Image::clear()
   int blue = background[2];
 
   int ix,iy;
-  for (iy = 0; iy < height; iy ++)
-    for (ix = 0; ix < width; ix ++) {
-      imageBuffer[iy * width * 3 + ix * 3 + 0] = red;
-      imageBuffer[iy * width * 3 + ix * 3 + 1] = green;
-      imageBuffer[iy * width * 3 + ix * 3 + 2] = blue;
-      depthBuffer[iy * width + ix] = -1;
+
+  if (background2[0] < 0) {
+    for (iy = 0; iy < height; iy ++)
+      for (ix = 0; ix < width; ix ++) {
+        imageBuffer[iy * width * 3 + ix * 3 + 0] = red;
+        imageBuffer[iy * width * 3 + ix * 3 + 1] = green;
+        imageBuffer[iy * width * 3 + ix * 3 + 2] = blue;
+        depthBuffer[iy * width + ix] = -1;
+      }
+
+  // vertical gradient from background at bottom to background2 at top
+
+  } else {
+    for (iy = 0; iy < height; iy ++) {
+      double fraction = (double) iy / (double) height;
+      red = static_cast<int>
+        (fraction*background2[0] + (1.0-fraction)*background[0]);
+      green = static_cast<int>
+        (fraction*background2[1] + (1.0-fraction)*background[1]);
+      blue = static_cast<int>
+        (fraction*background2[2] + (1.0-fraction)*background[2]);
+      for (ix = 0; ix < width; ix ++) {
+        imageBuffer[iy * width * 3 + ix * 3 + 0] = red;
+        imageBuffer[iy * width * 3 + ix * 3 + 1] = green;
+        imageBuffer[iy * width * 3 + ix * 3 + 2] = blue;
+        depthBuffer[iy * width + ix] = -1;
+      }
     }
+  }
 }
 
 /* ----------------------------------------------------------------------
@@ -385,6 +409,29 @@ void Image::merge()
     writeBuffer = rgbcopy;
   } else {
     writeBuffer = imageBuffer;
+  }
+
+  // scale down image for anti-aliasing
+  // can be done in place with simple averaging
+
+  if (fsaa) {
+    for (int h = 0; h < height; h += 2) {
+      for (int w = 0; w < width; w += 2) {
+        int idx1 = 3*width*h + 3*w;
+        int idx2 = 3*width*h + 3*(w+1);
+        int idx3 = 3*width*(h+1) + 3*w;
+        int idx4 = 3*width*(h+1) + 3*(w+1);
+
+        int out = 3*(width/2)*(h/2) + 3*(w/2);
+        for (int i = 0; i < 3; ++i) {
+          writeBuffer[out+i] = (unsigned char)
+            (0.25*((int)(unsigned char)writeBuffer[idx1+i]
+                   +(int)(unsigned char)writeBuffer[idx2+i]
+                   +(int)(unsigned char)writeBuffer[idx3+i]
+                   +(int)(unsigned char)writeBuffer[idx4+i]));
+        }
+      }
+    }
   }
 }
 
@@ -1090,11 +1137,17 @@ void Image::write_JPG(FILE *fp)
   struct jpeg_error_mgr jerr;
   JSAMPROW row_pointer;
 
+  // with FSAA the image was rendered at 2x and downsampled in merge()
+
+  const int aafactor = fsaa ? 2 : 1;
+  const int outwidth = width/aafactor;
+  const int outheight = height/aafactor;
+
   cinfo.err = jpeg_std_error(&jerr);
   jpeg_create_compress(&cinfo);
   jpeg_stdio_dest(&cinfo,fp);
-  cinfo.image_width = width;
-  cinfo.image_height = height;
+  cinfo.image_width = outwidth;
+  cinfo.image_height = outheight;
   cinfo.input_components = 3;
   cinfo.in_color_space = JCS_RGB;
 
@@ -1104,7 +1157,8 @@ void Image::write_JPG(FILE *fp)
 
   while (cinfo.next_scanline < cinfo.image_height) {
     row_pointer = (JSAMPROW)
-      &writeBuffer[(cinfo.image_height - 1 - cinfo.next_scanline) * 3 * width];
+      &writeBuffer[(cinfo.image_height - 1 - cinfo.next_scanline) *
+                   3 * outwidth];
     jpeg_write_scanlines(&cinfo,&row_pointer,1);
   }
 
@@ -1140,9 +1194,15 @@ void Image::write_PNG(FILE *fp)
     return;
   }
 
+  // with FSAA the image was rendered at 2x and downsampled in merge()
+
+  const int aafactor = fsaa ? 2 : 1;
+  const int outwidth = width/aafactor;
+  const int outheight = height/aafactor;
+
   png_init_io(png_ptr, fp);
   png_set_compression_level(png_ptr,Z_BEST_COMPRESSION);
-  png_set_IHDR(png_ptr,info_ptr,width,height,8,PNG_COLOR_TYPE_RGB,
+  png_set_IHDR(png_ptr,info_ptr,outwidth,outheight,8,PNG_COLOR_TYPE_RGB,
     PNG_INTERLACE_NONE,PNG_COMPRESSION_TYPE_DEFAULT,PNG_FILTER_TYPE_DEFAULT);
 
   png_text text_ptr[2];
@@ -1162,9 +1222,9 @@ void Image::write_PNG(FILE *fp)
   png_set_text(png_ptr,info_ptr,text_ptr,1);
   png_write_info(png_ptr,info_ptr);
 
-  png_bytep row_pointers[height];
-  for (int i=0; i < height; ++i)
-    row_pointers[i] = (png_bytep) &writeBuffer[(height-i-1)*3*width];
+  png_bytep row_pointers[outheight];
+  for (int i=0; i < outheight; ++i)
+    row_pointers[i] = (png_bytep) &writeBuffer[(outheight-i-1)*3*outwidth];
 
   png_write_image(png_ptr, row_pointers);
   png_write_end(png_ptr, info_ptr);
@@ -1181,11 +1241,17 @@ void Image::write_PNG(FILE *)
 
 void Image::write_PPM(FILE *fp)
 {
-  fprintf(fp,"P6\n%d %d\n255\n",width,height);
+  // with FSAA the image was rendered at 2x and downsampled in merge()
+
+  const int aafactor = fsaa ? 2 : 1;
+  const int outwidth = width/aafactor;
+  const int outheight = height/aafactor;
+
+  fprintf(fp,"P6\n%d %d\n255\n",outwidth,outheight);
 
   int y;
-  for (y = height-1; y >= 0; y--)
-    fwrite(&writeBuffer[y*width*3],3,width,fp);
+  for (y = outheight-1; y >= 0; y--)
+    fwrite(&writeBuffer[y*outwidth*3],3,outwidth,fp);
 }
 
 /* ----------------------------------------------------------------------

@@ -21,7 +21,7 @@ file = name of file to write image to :l
 color = particle attribute that determines color of each particle :l
 diameter = particle attribute that determines size of each particle :l
 zero or more keyword/value pairs may be appended :l
-keyword = {particle} or {pdiam} or {grid} or {gridx} or {gridy} or {gridz} or {surf} or {size} or {view} or {center} or {up} or {zoom} or {persp} or {box} or {gline} or {sline} or {axes} or {shiny} or {ssao} :l
+keyword = {particle} or {pdiam} or {grid} or {gridx} or {gridy} or {gridz} or {surf} or {size} or {view} or {center} or {up} or {zoom} or {persp} or {box} or {subbox} or {gline} or {sline} or {axes} or {shiny} or {ssao} or {fsaa} :l
   {particle} = yes/no = do or do not draw particles
   {pdiam} value = number = numeric value for particle diameter (distance units)
   {grid} values = color
@@ -61,6 +61,9 @@ keyword = {particle} or {pdiam} or {grid} or {gridx} or {gridy} or {gridz} or {s
   {box} values = yes/no diam = draw outline of simulation box
     yes/no = do or do not draw simulation box lines
     diam = diameter of box lines as fraction of shortest box length
+  {subbox} values = yes/no diam = draw outline of processor sub-boxes
+    yes/no = do or do not draw processor sub-box lines
+    diam = diameter of sub-box lines as fraction of shortest box length
   {gline} values = yes/no diam = draw outline of each grid cell
     yes/no = do or do not draw grid cell outlines
     diam = diameter of grid outlines as fraction of shortest box length
@@ -76,7 +79,9 @@ keyword = {particle} or {pdiam} or {grid} or {gridx} or {gridy} or {gridz} or {s
   {ssao} value = yes/no seed dfactor = SSAO depth shading
     yes/no = turn depth shading on/off
     seed = random # seed (positive integer)
-    dfactor = strength of shading from 0.0 to 1.0 :pre
+    dfactor = strength of shading from 0.0 to 1.0
+  {fsaa} value = yes/no = full scene anti-aliasing
+    yes/no = do or do not anti-alias the image :pre
 :ule
 
 [Examples:]
@@ -484,6 +489,17 @@ fraction of the shortest box length in x,y,z (for 3d) or x,y (for 2d).
 The color of the box boundaries can be set with the "dump_modify
 boxcolor"_dump_modify.html command.
 
+The {subbox} keyword determines how the boundaries of each
+processor's sub-domain are rendered as thin cylinders in the image,
+in the same manner as the {box} keyword.  Sub-domain boundaries can
+only be drawn if a recursive coordinate bisectioning (RCB) balance
+has assigned a sub-box to each processor, via the
+"balance_grid rcb"_balance_grid.html or "fix balance rcb"_fix_balance.html
+commands; otherwise this keyword is ignored.  This can be used to
+visualize the parallel load balance of a simulation.  The color of
+the sub-box boundaries can be set with the "dump_modify
+subboxcolor"_dump_modify.html command.
+
 The {gline} keyword determines how the outlines of grid cells are
 rendered as thin cylinders in the image.  If the {gridx} or {gridy} or
 {gridz} keywords are specified to draw a plane(s) of grid cells, then
@@ -533,6 +549,14 @@ which is perceived as depth.  The calculation of this effect can
 increase the cost of computing the image by roughly 2x.  The strength
 of the effect can be scaled by the {dfactor} parameter.  If {no} is
 set, no depth shading is performed.
+
+The {fsaa} keyword turns on/off full scene anti-aliasing (FSAA).  If
+{yes} is set, the image is rendered internally at twice the requested
+size and then scaled back down by averaging, which smooths jagged
+edges of rendered objects.  This increases the cost of computing the
+image by roughly 4x.  The written image has the size requested by the
+{size} keyword, regardless of this setting.  If {no} is set, no
+anti-aliasing is performed.
 
 :line
 
@@ -668,8 +692,10 @@ up = 0 1 0 (for 2d)
 zoom = 1.0
 persp = 0.0
 box = yes 0.02
+subbox = no 0.02
 gline = no 0.0
 sline = no 0.0
 axes = no 0.0 0.0
 shiny = 1.0
-ssao = no :ul
+ssao = no
+fsaa = no :ul
