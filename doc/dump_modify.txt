@@ -39,9 +39,11 @@ keyword = {append} or {binary} or {buffer} or {every} or {fileper} or {first} or
     value = numeric value to compare to
     these 3 args can be replaced by the word "none" to turn off thresholding :pre
 these keywords apply only to the (image} and {movie} "styles"_dump_image.html :l
-keyword = {bcolor} or {bdiam} or {backcolor} or {bitrate} or {boxcolor} or {cmap} or {color} or {framerate} or {gcolor} or {glinecolor} or {pcolor} or {pdiam} or {scolor} or {slinecolor} :l
+keyword = {backcolor} or {backcolor2} or {bitrate} or {boxcolor} or {cmap} or {color} or {framerate} or {gcolor} or {glinecolor} or {gridgroup} or {lights} or {pcolor} or {pdiam} or {scolor} or {slinecolor} or {subboxcolor} or {surfgroup} :l
   {backcolor} arg = color
     color = name of color for background
+  {backcolor2} arg = color
+    color = name of second color for background gradient, or {none}
   {bitrate} arg = rate
     rate = target bitrate for movie in kbps
   {boxcolor} arg = color
@@ -79,6 +81,11 @@ keyword = {bcolor} or {bdiam} or {backcolor} or {bitrate} or {boxcolor} or {cmap
     color = name of color for grid cell outlines
   {gridgroup} arg = group-ID
     group-ID = name of a user-defined grid group, see the "group"_group.html command
+  {lights} args = ambient key fill back
+    ambient = intensity of ambient light from 0.0 to 1.0
+    key = intensity of key light from 0.0 to 1.0
+    fill = intensity of fill light from 0.0 to 1.0
+    back = intensity of back light from 0.0 to 1.0
   {pcolor} args = type color
     type = particle type or range of types or proc ID or range of IDs (see below)
     color = name of color or color1/color2/...
@@ -90,6 +97,8 @@ keyword = {bcolor} or {bdiam} or {backcolor} or {bitrate} or {boxcolor} or {cmap
     color = name of color for surf one option
   {slinecolor} arg = color
     color = name of color for surface element outlines
+  {subboxcolor} arg = color
+    color = name of color for processor sub-box lines
   {surfgroup} arg = group-ID
     group-ID = name of a user-defined surf group, see the "group"_group.html command :pre
 :ule
@@ -314,6 +323,17 @@ below) or a color name defined by the dump_modify color option.
 
 :line
 
+The {backcolor2} keyword can be used with the "dump
+image"_dump_image.html command to set a second background color.  If
+set to a color name, the background of the images becomes a vertical
+gradient from the {backcolor} color at the bottom of the image to the
+{backcolor2} color at the top.  If set to {none}, the gradient is
+turned off and the uniform {backcolor} color is used.  The color name
+can be any of the 140 pre-defined colors (see below) or a color name
+defined by the dump_modify color option.
+
+:line
+
 The {bitrate} keyword can be used with the "dump
 movie"_dump_image.html command to define the size of the resulting
 movie file and its quality via setting how many kbits per second are
@@ -524,6 +544,15 @@ group-ID argument can be any valid grid group name, as defined by the
 
 :line
 
+The {lights} keyword can be used with the "dump
+image"_dump_image.html command to adjust the lighting of the rendered
+scene.  The scene is illuminated by an ambient light, a key light, a
+fill light, and a back light, whose grayscale intensities are set by
+the four arguments, each a value from 0.0 (off) to 1.0 (brightest).
+The default lighting is ambient 0.0, key 0.9, fill 0.45, back 0.9.
+
+:line
+
 The {pcolor} keyword can be used one or more times with the "dump
 image"_dump_image.html command, only when its particle color setting is
 {type} or {procs}, to set the color that particles will be drawn in
@@ -613,6 +642,15 @@ option.
 
 :line
 
+The {subboxcolor} keyword can be used with the "dump
+image"_dump_image.html command to set the color of the processor
+sub-box boundaries drawn in each image.  See the "dump image subbox"
+command for how to specify that sub-box boundaries be drawn.  The
+color name can be any of the 140 pre-defined colors (see below) or a
+color name defined by the dump_modify color option.
+
+:line
+
 The {surfgroup} keyword can be used with the "dump
 image"_dump_image.html command to only draw a subset of the surface
 elements in the simulation.  By default all the surface elements are
@@ -634,7 +672,10 @@ The option defaults are
 append = no
 buffer = yes for all dump styles except {image} and {movie}
 backcolor = black
+backcolor2 = none
 boxcolor = yellow
+subboxcolor = yellow
+lights = 0.0 0.9 0.45 0.9
 cmap = mode min max cf 0.0 2 min blue max red, for all modes
 color = 140 color names are pre-defined as listed below
 every = whatever it was set to via the "dump"_dump.html command

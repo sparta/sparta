@@ -46,6 +46,10 @@ class Timer : protected Pointers {
   // get remaining time in seconds. 0.0 if inactive, negative if expired
   double get_timeout_remain();
 
+  // CPU utilization in percent since the previous call
+  // used by the library interface, e.g. for a GUI progress display
+  double cpu_usage();
+
   // print timeout message
   void print_timeout(FILE *);
 
@@ -63,6 +67,8 @@ class Timer : protected Pointers {
  private:
   double previous_time;
   double timeout_start;
+  double last_cpu_secs;     // process CPU time at last cpu_usage() call
+  double last_cpu_wall;     // wall time at last cpu_usage() call
   double _timeout;      // max allowed wall time in seconds. infinity if negative
   double _s_timeout;    // copy of timeout for restoring after a forced timeout
   int _checkfreq;       // frequency of timeout checking

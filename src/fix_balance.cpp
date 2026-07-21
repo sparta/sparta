@@ -264,6 +264,17 @@ void FixBalance::end_of_step()
     }
 
     rcb->compute(nbalance,x,wt,eligible,rcbflip);
+
+    // store this proc's RCB sub-box for the dump image subbox keyword
+
+    update->rcbflag = 1;
+    update->rcblo[0] = rcb->lo[0];
+    update->rcblo[1] = rcb->lo[1];
+    update->rcblo[2] = rcb->lo[2];
+    update->rcbhi[0] = rcb->hi[0];
+    update->rcbhi[1] = rcb->hi[1];
+    update->rcbhi[2] = rcb->hi[2];
+
     rcb->invert();
 
     nbalance = 0;

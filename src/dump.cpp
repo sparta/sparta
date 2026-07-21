@@ -60,6 +60,8 @@ Dump::Dump(SPARTA *sparta, int, char **arg) : Pointers(sparta)
   filename = new char[n];
   strcpy(filename,arg[4]);
 
+  filelast = NULL;
+
   first_flag = 0;
   flush_flag = 1;
 
@@ -132,6 +134,7 @@ Dump::~Dump()
   delete [] style;
   delete [] filename;
   delete [] multiname;
+  delete [] filelast;
 
   delete [] format;
   delete [] format_default;
@@ -435,6 +438,12 @@ void Dump::openfile()
 
     if (fp == NULL) error->one(FLERR,"Cannot open dump file");
   } else fp = NULL;
+
+  // remember name of the opened file, e.g. for a GUI to display
+
+  delete [] filelast;
+  filelast = new char[strlen(filecurrent) + 1];
+  strcpy(filelast,filecurrent);
 
   // delete string with timestep replaced
 

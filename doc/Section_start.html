@@ -1397,9 +1397,14 @@ since multiple processors cannot all read from stdin.
 </P>
 <PRE>-help 
 </PRE>
-<P>Print a list of options compiled into this executable for each SPARTA
-style (fix, compute, collide, etc).  SPARTA will print the info and
-immediately exit if this switch is used.
+<P>Print a detailed report about this executable and immediately exit.
+The report includes a banner (the SPARTA version, the git commit and
+branch it was built from, the build date, the compiler and C++
+standard, and the target operating system and architecture), the build
+configuration (serial vs. MPI, the KOKKOS accelerator, and PNG, JPEG,
+FFmpeg and gzip support), the list of command-line switches, and the
+list of options (fix, compute, collide, etc.) compiled into this
+executable.
 </P>
 <PRE>-kokkos on/off keyword/value ... 
 </PRE>
