@@ -1855,14 +1855,14 @@ int ColorMap::reset(int narg, char **arg)
       if (!islower(arg[n][0])) {
         mentry[i].lo = NUMERIC;
         mentry[i].lvalue = atof(arg[n]);
-      } else if (strcmp(arg[n],"min") == 0) mentry[i].single = MINVALUE;
-      else if (strcmp(arg[n],"max") == 0) mentry[i].single = MAXVALUE;
+      } else if (strcmp(arg[n],"min") == 0) mentry[i].lo = MINVALUE;
+      else if (strcmp(arg[n],"max") == 0) mentry[i].lo = MAXVALUE;
       else return 1;
       if (!islower(arg[n+1][0])) {
         mentry[i].hi = NUMERIC;
         mentry[i].hvalue = atof(arg[n+1]);
-      } else if (strcmp(arg[n+1],"min") == 0) mentry[i].single = MINVALUE;
-      else if (strcmp(arg[n+1],"max") == 0) mentry[i].single = MAXVALUE;
+      } else if (strcmp(arg[n+1],"min") == 0) mentry[i].hi = MINVALUE;
+      else if (strcmp(arg[n+1],"max") == 0) mentry[i].hi = MAXVALUE;
       else return 1;
       mentry[i].color = image->color2rgb(arg[n+2]);
       n += 3;
