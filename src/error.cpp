@@ -15,8 +15,10 @@
 #include "mpi.h"
 #include "stdlib.h"
 #include "stdio.h"
+#include "string.h"
 #include "error.h"
 #include "spaexception.h"
+#include "input.h"
 #include "universe.h"
 #include "output.h"
 #include "memory.h"
@@ -47,6 +49,16 @@ static std::string fmt_error(const char *str, const char *file, int line)
   msg += ")";
   return msg;
 }
+
+// the input-script line being processed when the error occurred, so the
+// message can echo it as "Last command: ..." (matches the LAMMPS behavior)
+
+static std::string last_command(Input *input)
+{
+  if (input && input->line && strlen(input->line)) return input->line;
+  return "(unknown)";
+}
+
 
 /* ---------------------------------------------------------------------- */
 
@@ -110,14 +122,23 @@ void Error::all(const char *file, int line, const char *str)
   int me;
   MPI_Comm_rank(world,&me);
 
+  std::string lastcmd = last_command(input);
+
   if (me == 0) {
-    if (screen) fprintf(screen,"ERROR: %s (%s:%d)\n",str,file,line);
-    if (logfile) fprintf(logfile,"ERROR: %s (%s:%d)\n",str,file,line);
-    if (screen) fflush(screen);
-    if (logfile) fflush(logfile);
+    if (screen) {
+      fprintf(screen,"ERROR: %s (%s:%d)\n",str,file,line);
+      fprintf(screen,"Last command: %s\n",lastcmd.c_str());
+      fflush(screen);
+    }
+    if (logfile) {
+      fprintf(logfile,"ERROR: %s (%s:%d)\n",str,file,line);
+      fprintf(logfile,"Last command: %s\n",lastcmd.c_str());
+      fflush(logfile);
+    }
   }
 
   std::string msg = fmt_error(str,file,line);
+  msg += "\nLast command: " + lastcmd;
   set_last_error(msg.c_str(),ERROR_NORMAL);
   throw SpartaException(msg);
 }
@@ -134,18 +155,24 @@ void Error::one(const char *file, int line, const char *str)
 {
   int me;
   MPI_Comm_rank(world,&me);
+
+  std::string lastcmd = last_command(input);
+
   if (screen) {
     fprintf(screen,"ERROR on proc %d: %s (%s:%d)\n",
             me,str,file,line);
+    fprintf(screen,"Last command: %s\n",lastcmd.c_str());
     fflush(screen);
   }
   if (universe->nworlds > 1) {
     fprintf(universe->uscreen,"ERROR on proc %d: %s (%s:%d)\n",
             universe->me,str,file,line);
+    fprintf(universe->uscreen,"Last command: %s\n",lastcmd.c_str());
     fflush(universe->uscreen);
   }
 
   std::string msg = fmt_error(str,file,line);
+  msg += "\nLast command: " + lastcmd;
   set_last_error(msg.c_str(),ERROR_ABORT);
   throw SpartaAbortException(msg,world);
 }
