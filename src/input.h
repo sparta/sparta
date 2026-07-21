@@ -25,6 +25,8 @@ class Input : protected Pointers {
   int narg;                    // # of command args
   char **arg;                  // parsed args for command
   class Variable *variable;    // defined variables
+  int line_num;                // line number of current command,
+                               // maintained for the library interface
 
   Input(class SPARTA *, int, char **);
   ~Input();
@@ -112,7 +114,6 @@ class Input : protected Pointers {
   void undump();
   void unfix();
   void units();
-  void weight();
 };
 
 }

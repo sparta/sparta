@@ -59,6 +59,7 @@ Input::Input(SPARTA *sparta, int argc, char **argv) : Pointers(sparta)
   line = copy = work = NULL;
   narg = maxarg = 0;
   arg = NULL;
+  line_num = 0;
 
   echo_screen = 0;
   echo_log = 1;
@@ -218,6 +219,7 @@ void Input::file()
 
     if (n > maxline) reallocate(line,maxline,n);
     MPI_Bcast(line,n,MPI_CHAR,0,world);
+    line_num++;
 
     // echo the command unless scanning for label
 
