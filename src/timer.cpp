@@ -31,11 +31,18 @@ using namespace SPARTA_NS;
 Timer::Timer(SPARTA *sparta) : Pointers(sparta)
 {
   memory->create(array,TIME_N,"array");
+  // zero the timers at construction: init() only runs at the start of a run,
+  // but commands such as "balance_grid rcb time" read the array before any run
+  // and would otherwise use uninitialized values (garbage cell weights, and a
+  // missed "no time history" warning) -- benign in a fresh process where the
+  // heap is zeroed, but not when SPARTA is embedded in a long-lived process.
+  for (int i = 0; i < TIME_N; i++) array[i] = 0.0;
   _timeout = -1.0;
   _s_timeout = -1.0;
   _checkfreq = 10;
   _nextcheck = -1;
-
+  last_cpu_secs = -1.0;
+  last_cpu_wall = -1.0;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -139,8 +146,6 @@ bool Timer::_check_timeout()
   // broadcast time to ensure all ranks act the same.
   MPI_Bcast(&walltime, 1, MPI_DOUBLE, 0, world);
 
-  printf("%g %g\n",walltime,_timeout);
-
   if (walltime < _timeout) {
     _nextcheck += _checkfreq;
     return false;
@@ -158,4 +163,40 @@ double Timer::get_timeout_remain()
   // never report a negative remaining time.
   if (remain < 0.0) remain = 0.0;
   return (_timeout < 0.0) ? 0.0 : remain;
+}
+
+/* ----------------------------------------------------------------------
+   return CPU utilization in percent since the previous call
+   first call returns 0.0 and initializes the reference point
+------------------------------------------------------------------------- */
+
+#if defined(_WIN32)
+#include <ctime>
+#else
+#include <sys/resource.h>
+#include <sys/time.h>
+#endif
+
+double Timer::cpu_usage()
+{
+  double cpu_secs;
+
+#if defined(_WIN32)
+  cpu_secs = (double) clock() / CLOCKS_PER_SEC;
+#else
+  struct rusage ru;
+  getrusage(RUSAGE_SELF,&ru);
+  cpu_secs = (double) ru.ru_utime.tv_sec + 1.0e-6*ru.ru_utime.tv_usec +
+    (double) ru.ru_stime.tv_sec + 1.0e-6*ru.ru_stime.tv_usec;
+#endif
+
+  double wall = MPI_Wtime();
+
+  double percent = 0.0;
+  if (last_cpu_wall >= 0.0 && wall > last_cpu_wall)
+    percent = 100.0*(cpu_secs-last_cpu_secs)/(wall-last_cpu_wall);
+
+  last_cpu_secs = cpu_secs;
+  last_cpu_wall = wall;
+  return percent;
 }

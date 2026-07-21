@@ -74,6 +74,10 @@ Update::Update(SPARTA *sparta) : Pointers(sparta)
   beginstep = endstep = 0;
   first_update = 0;
 
+  rcbflag = 0;
+  rcblo[0] = rcblo[1] = rcblo[2] = 0.0;
+  rcbhi[0] = rcbhi[1] = rcbhi[2] = 0.0;
+
   time = 0.0;
   time_last_update = 0;
 

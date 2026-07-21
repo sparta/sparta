@@ -90,7 +90,9 @@ class Update : protected Pointers {
 
   class RanMars *ranmaster;   // master random number generator
 
-  double rcblo[3],rcbhi[3];    // debug info from RCB for dump image
+  int rcbflag;                 // 1 if per-proc RCB sub-boxes are valid
+  double rcblo[3],rcbhi[3];    // most recent RCB sub-box of this proc,
+                               // e.g. for the dump image subbox keyword
 
   // hooks to computes doing on-surface collision/reaction tallying
   // public b/c accessed

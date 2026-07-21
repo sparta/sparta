@@ -1,0 +1,128 @@
+"SPARTA WWW Site"_sws - "SPARTA Documentation"_sd - "SPARTA Commands"_sc :c
+
+:link(sws,https://sparta.github.io)
+:link(sd,Manual.html)
+:link(sc,Section_commands.html#comm)
+
+:line
+
+dump particle/vtk command :h3
+dump grid/vtk command :h3
+dump surf/vtk command :h3
+
+[Syntax:]
+
+dump ID particle/vtk mix-ID N file args :pre
+dump ID grid/vtk group-ID N file args :pre
+dump ID surf/vtk group-ID N file args :pre
+
+ID = user-assigned name for the dump :ulb,l
+particle/vtk or grid/vtk or surf/vtk = style of dump :l
+mix-ID = mixture ID for particle/vtk (which particles to dump) :l
+group-ID = grid or surface group ID for grid/vtk or surf/vtk :l
+N = dump every this many timesteps :l
+file = name of file to write dump info to :l
+args = list of attributes, same as for the corresponding "dump"_dump.html style :l,ule
+
+[Examples:]
+
+dump 1 particle/vtk 100 dump.*.vtu all x y z vx vy vz :pre
+dump 2 grid/vtk 100 tmp.grid.*.vtu all id proc vol :pre
+dump 3 surf/vtk 100 tmp.surf.%.*.vtp all id type :pre
+
+[Description:]
+
+These dump styles are the VTK-format analogs of the "dump
+particle"_dump.html, "dump grid"_dump.html, and "dump surf"_dump.html
+styles.  They periodically write a snapshot of geometry and per-element
+data in a native VTK file format that can be visualized directly in
+ParaView or VisIt, without the offline conversion done by the scripts
+in the tools/paraview directory.
+
+They are part of the VTK package and require SPARTA to be built with an
+external VTK library.  See the "Section
+2.2"_Section_packages.html#VTK doc page for how to build SPARTA with
+the VTK package.
+
+The geometry written for each style is:
+
+particle/vtk = each selected particle is written as a VTK vertex (point) :ulb,l
+grid/vtk = each owned in-group grid cell is written as a VTK voxel (3d) \
+  or pixel (2d) in an unstructured grid :l
+surf/vtk = each owned in-group surface element is written as a VTK \
+  triangle (3d) or line (2d) :l,ule
+
+The list of attributes {args} is identical to the corresponding "dump
+particle"_dump.html, "dump grid"_dump.html, or "dump surf"_dump.html
+command, including {c_ID}, {f_ID}, {v_name}, and custom-attribute
+keywords.  Each requested attribute is written as a named VTK data
+array: point data for particle/vtk, cell data for grid/vtk and
+surf/vtk.
+
+For dump particle/vtk the {x}, {y}, and {z} attributes are required;
+they define the point coordinates.  Consecutive {vx vy vz} and {xs ys
+zs} attributes are grouped into 3-component VTK vector arrays.
+
+For dump grid/vtk and dump surf/vtk the element geometry (cell corner
+coordinates or element vertices) is generated automatically from the
+grid/surf data structures, so it does not need to be listed as an
+attribute.
+
+[File formats and names:]
+
+The output file format is selected by the filename extension:
+
+.vtk = legacy VTK format (single file, ASCII or binary) :ulb,l
+.vtp = XML PolyData (particle/vtk and surf/vtk only) :l
+.vtu = XML UnstructuredGrid :l,ule
+
+Because VTK writes one file per snapshot, the filename must contain a
+"*" wildcard, which is replaced with the timestep (see "dump"_dump.html
+for "*" and padding rules).
+
+If the filename also contains a "%" character, each processor writes
+its own piece file (with "%" replaced by the processor or cluster ID)
+and processor 0 writes a parallel summary file (.pvtp for .vtp pieces,
+.pvtu for .vtu pieces).  This requires the XML formats; the legacy
+.vtk format does not support "%".  Grid cells are volumetric, so dump
+grid/vtk supports only the .vtu / .pvtu (and legacy .vtk) formats, not
+.vtp.
+
+[Dump modify options:]
+
+The "dump_modify"_dump_modify.html {binary} keyword is specific to
+these styles:
+
+dump_modify ID binary yes :pre
+
+writes the VTK data in binary (yes) or ASCII (no, the default) form.
+
+For dump particle/vtk the "dump_modify"_dump_modify.html {region} and
+{thresh} keywords are also supported, exactly as for "dump
+particle"_dump.html, to restrict which particles are written.
+
+[Restrictions:]
+
+These styles are part of the VTK package.  They are only enabled if
+SPARTA was built with that package and an external VTK library.  See
+the "Section 2.2"_Section_packages.html#VTK doc page for details.  The
+VTK package must be built with CMake.
+
+For dump grid/vtk, split grid cells (cells cut by a surface into
+multiple sub-cells) are written as multiple VTK cells that share the
+same bounding box, since each sub-cell occupies the same box as its
+parent.  These coincident voxels/pixels overlap in a viewer; use the
+per-cell data (e.g. vol or a per-sub-cell compute) to distinguish
+them, or restrict the dump to a grid group that excludes split cells.
+
+Dump particle/vtk and dump surf/vtk do not support string attributes.
+Dump grid/vtk writes the {idstr} attribute as a VTK string array.
+
+[Related commands:]
+
+"dump"_dump.html, "dump_modify"_dump_modify.html, "dump
+image"_dump_image.html
+
+[Default:]
+
+binary no (ASCII).

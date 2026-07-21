@@ -30,7 +30,7 @@ class DumpSurf : public Dump {
   DumpSurf(class SPARTA *, int, char **);
   ~DumpSurf();
 
- private:
+ protected:                  // protected (not private) so DumpSurfVTK can reuse
   int nevery;                // dump frequency to check Fix against
   int groupbit;              // mask for surface group
 

@@ -46,6 +46,9 @@ class DumpImage : public DumpParticle {
   int zoomvar,perspvar;            // index to zoom,persp vars
   int boxflag,axesflag;            // 0/1 for draw box and axes
   double boxdiam,axeslen,axesdiam; // params for drawing box and axes
+  int subboxflag;                  // 0/1 for draw per-proc RCB sub-boxes
+  double subboxdiam;               // params for drawing sub-boxes
+  double *subboxcolor;
   double *boxcolor;                // colors for drawing box/grid/surf lines
 
   int viewflag;                    // overall view is static or dynamic

@@ -6,6 +6,12 @@ on:
   pull_request:
     branches: [ master ]
 
+# Run JavaScript actions on Node 24 to silence the Node 20 deprecation
+# warning. upload-artifact has no Node 24 release yet, so this runtime
+# override is used instead of only bumping action versions.
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 # Define jobs: mpi, mpi-stubs, mpi-kokkos-exact, and bigbig
 # Each jobs runs on ubuntu-22.04 and uses the cmake build system. All jobs
 # enable the FFT package (PKG_FFT). All jobs except for bigbig run ctest.
@@ -19,8 +25,27 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
+    # Make the apt download cache writable so actions/cache can restore .deb
+    # files into it before "apt install" runs. libvtk9-dev pulls in a large
+    # dependency tree; caching the debs avoids re-downloading them each run.
+    - name: Prepare apt cache
+      run: sudo chmod -R a+rwx /var/cache/apt/archives
+
+    - name: Cache apt packages
+      uses: actions/cache@v4
+      with:
+        path: /var/cache/apt/archives
+        key: apt-archives-${{ runner.os }}-vtk
+
     - name: Install Dependencies
-      run: sudo apt install openmpi-bin libopenmpi-dev
+      env:
+        DEBIAN_FRONTEND: noninteractive
+      run: |
+        # Keep downloaded .deb files so actions/cache can save them for reuse.
+        echo 'Binary::apt::APT::Keep-Downloaded-Packages "true";' \
+          | sudo tee /etc/apt/apt.conf.d/99keep-debs
+        sudo apt-get update
+        sudo apt-get install -y openmpi-bin libopenmpi-dev libvtk9-dev
 
     - name: Configure
       run: |
@@ -30,6 +55,8 @@ jobs:
           -DSPARTA_ENABLE_TESTING=ON \
           -DPKG_FFT=ON \
           -DPKG_PYTHON=ON \
+          -DPKG_VTK=ON \
+          -DBUILD_VTK=ON \
           ../cmake
 
     - name: Build

@@ -55,7 +55,8 @@ ext = external library: you will need to download and install it on your machine
 
 Package, Description, Doc page, Example, Library
 "FFT"_#FFT, fast Fourier transforms, "compute_style compute/fft/grid"_compute_fft_grid.html, fft, int or ext
-"KOKKOS"_#KOKKOS, Kokkos-enabled styles, "Section 5.3"_Section_howto.html#acc_3, "Benchmarks"_https://sparta.github.io/bench.html, - :tb(ea=c,ca1=l)
+"KOKKOS"_#KOKKOS, Kokkos-enabled styles, "Section 5.3"_Section_howto.html#acc_3, "Benchmarks"_https://sparta.github.io/bench.html, -
+"VTK"_#VTK, native VTK-format dump output, "dump particle/vtk"_dump_vtk.html, -, ext :tb(ea=c,ca1=l)
 
 :line
 
@@ -212,3 +213,46 @@ the "Accelerating SPARTA"_Section_accelerate.html#acc_3 section
 "Section 2.6 -pk kokkos"_Section_start.html#start_7
 "package kokkos"_package.html
 "Benchmarks page"_https://sparta.github.io/bench.html of web site :ul
+
+:line
+
+VTK package :link(VTK),h4
+
+[Contents:]
+
+Dump styles that write native VTK files (legacy .vtk, XML .vtp/.vtu,
+and their parallel .pvtp/.pvtu variants) for direct visualization of
+SPARTA data in ParaView or VisIt. The package adds three dump styles:
+"particle/vtk", "grid/vtk", and "surf/vtk", which write particles as
+points, grid cells as voxels/pixels, and surface elements as
+triangles/lines, respectively, with requested per-particle, per-grid,
+or per-surf attributes attached as data arrays.
+
+This package requires the external "VTK library"_https://vtk.org from
+Kitware (version 9 or later recommended). It is distinct from the
+"tools/paraview" Python converters, which post-process existing SPARTA
+dump files rather than writing VTK directly.
+
+IMPORTANT NOTE: The VTK package must be built using CMake. GNU Makefile
+builds are not supported.
+
+[Install or un-install with CMake:]
+
+Set VTK_ROOT in your environment (or pass -DVTK_ROOT=/path) so CMake
+can locate your VTK install, then enable both the package and its TPL:
+
+cd build
+cmake -C /path/to/sparta/cmake/presets/machine.cmake \
+  -DPKG_VTK=ON -DBUILD_VTK=ON /path/to/sparta/cmake
+make :pre
+
+To uninstall (disable) the VTK package:
+
+cmake -C /path/to/sparta/cmake/presets/machine.cmake \
+  -DPKG_VTK=OFF -DBUILD_VTK=OFF /path/to/sparta/cmake
+make :pre
+
+[Supporting info:]
+
+src/VTK: filenames -> commands
+"dump particle/vtk, dump grid/vtk, dump surf/vtk"_dump_vtk.html :ul

@@ -141,6 +141,13 @@ double CollideVSS::attempt_collision(int icell, int np, double volume)
 
   double nattempt;
 
+  // MCF scheme: attempt count is a Poisson variate whose mean is the
+  //   majorant collision frequency x timestep, remain is not used
+
+  if (mcflag)
+    return random->poisson(0.5 * np * (np-1) *
+                           vremax[icell][0][0] * dt * fnum / volume);
+
   if (remainflag) {
     nattempt = 0.5 * np * (np-1) *
       vremax[icell][0][0] * dt * fnum / volume + remain[icell][0][0];
@@ -171,6 +178,11 @@ double CollideVSS::attempt_collision(int icell, int igroup, int jgroup,
  //else npairs = 0.5 * ngroup[igroup] * (ngroup[jgroup]);
 
  nattempt = npairs * vremax[icell][igroup][jgroup] * dt * fnum / volume;
+
+ // MCF scheme: attempt count is a Poisson variate whose mean is the
+ //   majorant collision frequency x timestep, remain is not used
+
+ if (mcflag) return random->poisson(nattempt);
 
  if (remainflag) {
    nattempt += remain[icell][igroup][jgroup];
