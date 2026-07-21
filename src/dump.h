@@ -93,6 +93,7 @@ class Dump : protected Pointers {
   char **vformat;            // format string for each field
 
   int convert_string(int, double *);
+  void gather_and_write();
 
   virtual void init_style() = 0;
   virtual void openfile();

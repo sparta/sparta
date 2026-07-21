@@ -247,6 +247,7 @@ Commands that do this include
 "stats_style"_stats_style.html for screen output
 "dump"_dump.html for snapshots of particle, grid, and surface info
 "dump image"_dump.html for on-the-fly images of the simulation
+"dump vtk"_dump_vtk.html for native VTK-format snapshots (VTK package)
 
 (4) Run a simulation
 
@@ -332,6 +333,7 @@ section"_#cmd_4 lists many of the same commands, grouped by category.
 "dump image"_dump_image.html,
 "dump_modify"_dump_modify.html,
 "dump movie"_dump_image.html,
+"dump vtk"_dump_vtk.html,
 "echo"_echo.html,
 "fix"_fix.html,
 "global"_global.html,

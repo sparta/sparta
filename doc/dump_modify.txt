@@ -15,8 +15,9 @@ dump_modify dump-ID keyword values ... :pre
 dump-ID = ID of dump to modify :ulb,l
 one or more keyword/value pairs may be appended :l
 these keywords apply to various dump styles :l
-keyword = {append} or {buffer} or {every} or {fileper} or {first} or {flush} or {format} or {nfile} or {pad} or {region} or {thresh} :l
+keyword = {append} or {binary} or {buffer} or {every} or {fileper} or {first} or {flush} or {format} or {nfile} or {pad} or {region} or {thresh} :l
   {append} arg = {yes} or {no}
+  {binary} arg = {yes} or {no}
   {buffer} arg = {yes} or {no}
   {every} arg = N
     N = dump every this many timesteps
@@ -125,6 +126,16 @@ dump_modify command is used after the "dump"_dump.html command, but
 before the first command that causes dump snapshots to be output,
 e.g. a "run"_run.html command.  Once the dump file has been opened,
 this keyword has no further effect.
+
+:line
+
+The {binary} keyword applies only to the "dump particle/vtk, dump grid/vtk, and
+dump surf/vtk"_dump_vtk.html styles of the VTK package.  If specified as {yes},
+the VTK data is written in compact binary form; if {no} (the default), it is
+written as ASCII which is human-readable but typically requires larger file
+sizes than binary. This is a per-dump setting because the VTK styles select
+their file format from the filename extension, which would otherwise conflict
+with SPARTA's usual ".bin" binary-file convention.
 
 :line
 
