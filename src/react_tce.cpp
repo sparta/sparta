@@ -253,7 +253,7 @@ double ReactTCE::bird_Evib(int nmode, double Tvib,
   // Comutes f for Newton's search method outlined in newtonTvib()
 
   double f = -Evib;
-  double kb = 1.38064852e-23;
+  double kb = update->boltz;
 
   for (int i = 0; i < nmode; i++) {
     const double vti = vibtemp[i];
@@ -270,7 +270,7 @@ double ReactTCE::bird_dEvib(int nmode, double Tvib, double vibtemp[])
   // Comutes df for Newton's search method
 
   double df = 0.0;
-  double kb = 1.38064852e-23;
+  double kb = update->boltz;
 
   for (int i = 0; i < nmode; i++) {
     const double vti = vibtemp[i];

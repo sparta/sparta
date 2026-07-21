@@ -244,6 +244,10 @@ class CollideVSSKokkos : public CollideVSS {
   KOKKOS_INLINE_FUNCTION
   double sample_bl(rand_type &, double, double) const;
   KOKKOS_INLINE_FUNCTION
+  double eff_vib_dof(double, double) const;
+  KOKKOS_INLINE_FUNCTION
+  double vib_pool_temp(double, int, double *, double) const;
+  KOKKOS_INLINE_FUNCTION
   double rotrel (int, double) const;
   KOKKOS_INLINE_FUNCTION
   double vibrel (int, double) const;

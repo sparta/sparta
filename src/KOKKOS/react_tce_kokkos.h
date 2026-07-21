@@ -46,7 +46,7 @@ double bird_Evib(const int& nmode, const double& Tvib,
   // Comutes f for Newton's search method outlined in newtonTvib()
 
   double f = -Evib;
-  const double kb = 1.38064852e-23;
+  const double kb = boltz;
 
   for (int i = 0; i < nmode; i++) {
     const double vti = vibtemp[i];
@@ -64,7 +64,7 @@ double bird_dEvib(const int& nmode, const double& Tvib, const double vibtemp[]) 
   // Comutes df for Newton's search method
 
   double df = 0.0;
-  const double kb = 1.38064852e-23;
+  const double kb = boltz;
 
   for (int i = 0; i < nmode; i++) {
     const double vti = vibtemp[i];
