@@ -546,7 +546,7 @@ void FixEmitFace::perform_task_onepass()
         nactual = 0;
         for (int m = 0; m < ninsert; m++) {
           x[0] = lo[0] + random->uniform() * (hi[0]-lo[0]);
-          if (domain->axisymmetric)
+          if (axisymmetric)
             x[1] = sqrt(lo[1]*lo[1] +
                         random->uniform() * (hi[1]*hi[1]-lo[1]*lo[1]));
           else x[1] = lo[1] + random->uniform() * (hi[1]-lo[1]);
@@ -607,7 +607,7 @@ void FixEmitFace::perform_task_onepass()
         scosine = indot / vscale[isp];
 
         x[0] = lo[0] + random->uniform() * (hi[0]-lo[0]);
-        if (domain->axisymmetric)
+        if (axisymmetric)
           x[1] = sqrt(lo[1]*lo[1] +
                       random->uniform() * (hi[1]*hi[1]-lo[1]*lo[1]));
         else x[1] = lo[1] + random->uniform() * (hi[1]-lo[1]);
@@ -753,7 +753,7 @@ void FixEmitFace::perform_task_twopass()
         nactual = 0;
         for (int m = 0; m < ninsert; m++) {
           x[0] = lo[0] + random->uniform() * (hi[0]-lo[0]);
-          if (domain->axisymmetric)
+          if (axisymmetric)
             x[1] = sqrt(lo[1]*lo[1] +
                         random->uniform() * (hi[1]*hi[1]-lo[1]*lo[1]));
           else x[1] = lo[1] + random->uniform() * (hi[1]-lo[1]);
@@ -808,7 +808,7 @@ void FixEmitFace::perform_task_twopass()
         scosine = indot / vscale[isp];
 
         x[0] = lo[0] + random->uniform() * (hi[0]-lo[0]);
-        if (domain->axisymmetric)
+        if (axisymmetric)
           x[1] = sqrt(lo[1]*lo[1] +
                       random->uniform() * (hi[1]*hi[1]-lo[1]*lo[1]));
         else x[1] = lo[1] + random->uniform() * (hi[1]-lo[1]);
