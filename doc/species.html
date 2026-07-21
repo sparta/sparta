@@ -138,7 +138,7 @@ allowed in the file.  Comment lines start with a "#" character.  All
 other lines must have the following format with values separated by
 whitespace:
 </P>
-<PRE>species-ID N temp1 relax1 degen1 temp2 relax2 degen2 ...
+<PRE>species-ID N temp1 relax1 degen1 temp2 relax2 degen2 ... 
 </PRE>
 <P>The species-ID is a string that will be matched against the requested
 species-ID, as described above.  N is the total number of vibrational
@@ -150,7 +150,7 @@ values:
 </P>
 <UL><LI>tempI = vibrational temperature of mode I (temperature units)
 <LI>relaxI = inverse vibrational relaxation number of mode I (unitless)
-<LI>degenI = degeneracy of mode I (integer >= 1, unitless)
+<LI>degenI = degeneracy of mode I (integer >= 1, unitless) 
 </UL>
 <P>The degeneracy degenI is the number of independent oscillators of equal
 frequency that make up mode I.  For example, the doubly-degenerate
@@ -162,7 +162,7 @@ g separate modes each with degeneracy 1.  For example, these two CO2
 entries (vibdof = 8, so N = 4) are equivalent:
 </P>
 <PRE>CO2 4 1918.6 0.05 1 3382.0 0.05 1 959.0 0.05 2
-CO2 4 1918.6 0.05 1 3382.0 0.05 1 959.0 0.05 1 959.0 0.05 1
+CO2 4 1918.6 0.05 1 3382.0 0.05 1 959.0 0.05 1 959.0 0.05 1 
 </PRE>
 <P>These quantities are used during collisions if vibrational energy is
 modeled in discrete levels.

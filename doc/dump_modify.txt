@@ -129,13 +129,13 @@ this keyword has no further effect.
 
 :line
 
-The {binary} keyword applies only to the "dump particle/vtk, dump
-grid/vtk, and dump surf/vtk"_dump_vtk.html styles of the VTK package.
-If specified as {yes}, the VTK data is written in binary form; if {no}
-(the default), it is written as ASCII.  This is a per-dump setting
-because the VTK styles select their file format from the filename
-extension, which would otherwise conflict with SPARTA's usual ".bin"
-binary-file convention.
+The {binary} keyword applies only to the "dump particle/vtk, dump grid/vtk, and
+dump surf/vtk"_dump_vtk.html styles of the VTK package.  If specified as {yes},
+the VTK data is written in compact binary form; if {no} (the default), it is
+written as ASCII which is human-readable but typically requires larger file
+sizes than binary. This is a per-dump setting because the VTK styles select
+their file format from the filename extension, which would otherwise conflict
+with SPARTA's usual ".bin" binary-file convention.
 
 :line
 

@@ -125,4 +125,4 @@ image"_dump_image.html
 
 [Default:]
 
-Binary output is off (ASCII).
+binary no (ASCII).
