@@ -65,6 +65,7 @@ class SPARTA {
   void destroy();
 
   void print_styles();
+  void print_help();
 };
 
 }

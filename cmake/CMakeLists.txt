@@ -26,6 +26,32 @@ if(PKG_KOKKOS AND (CMAKE_CXX_STANDARD LESS 20))
 endif()
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF CACHE BOOL "Use compiler extensions")
+
+# C++11 is guaranteed above, so use std::unordered_map for the grid/surf
+# hashes instead of the pre-C++11 TR1 fallback, which no longer exists in
+# some standard libraries (e.g. libc++ on macOS)
+add_compile_definitions(SPARTA_UNORDERED_MAP)
+
+# Optional git provenance: stamp the build with the commit hash and branch so
+# `sparta -help` and the library's extract_global("git_commit"/"git_branch")
+# can report it.  Entirely optional -- a plain (non-git, e.g. tarball) build
+# simply skips this and the source falls back to "(unknown)"/"".
+find_package(Git QUIET)
+if(Git_FOUND)
+  execute_process(COMMAND ${GIT_EXECUTABLE} describe --always --dirty --abbrev=10
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/..
+    OUTPUT_VARIABLE SPARTA_GIT_COMMIT OUTPUT_STRIP_TRAILING_WHITESPACE
+    ERROR_QUIET RESULT_VARIABLE _sparta_git_rc)
+  execute_process(COMMAND ${GIT_EXECUTABLE} rev-parse --abbrev-ref HEAD
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/..
+    OUTPUT_VARIABLE SPARTA_GIT_BRANCH OUTPUT_STRIP_TRAILING_WHITESPACE
+    ERROR_QUIET)
+  if(_sparta_git_rc EQUAL 0 AND SPARTA_GIT_COMMIT)
+    add_compile_definitions(
+      SPARTA_GIT_COMMIT="${SPARTA_GIT_COMMIT}"
+      SPARTA_GIT_BRANCH="${SPARTA_GIT_BRANCH}")
+  endif()
+endif()
 # ugly hacks for MSVC which by default always reports an old C++ standard in the __cplusplus macro
 # and prints lots of pointless warnings about "unsafe" functions
 if(MSVC)
