@@ -113,7 +113,7 @@ FixAblate::FixAblate(SPARTA *sparta, int narg, char **arg) :
     which = VARIABLE;
 
     int n = strlen(arg[5]);
-    char *idsource = new char[n];
+    idsource = new char[n];
     strcpy(idsource,&arg[5][2]);
 
   } else if (strcmp(arg[5],"random") == 0) {
