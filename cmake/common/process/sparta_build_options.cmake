@@ -55,14 +55,6 @@ list(APPEND TARGET_SPARTA_BUILD_TPLS ${TARGET_SPARTA_BUILD_MPI})
 
 # ################### BEGIN PROCESS FFT TPL/PKG ####################
 
-if((NOT PKG_FFT) AND (NOT (FFT_KOKKOS STREQUAL "OFF")))
-  message(FATAL_ERROR  "Setting FFT_KOKKOS library requires PKG_FFT: ON.")
-endif()
-
-if((NOT PKG_FFT) AND (NOT (FFT STREQUAL "OFF")))
-  message(FATAL_ERROR  "Setting FFT library requires PKG_FFT: ON.")
-endif()
-
 if(PKG_FFT)
 
   if(FFT STREQUAL "OFF")
