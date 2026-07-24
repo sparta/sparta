@@ -34,6 +34,7 @@
 #include "modify.h"
 #include "fix.h"
 #include "fix_ambipolar.h"
+#include "fix_ambipolar_kokkos.h"
 
 using namespace SPARTA_NS;
 using namespace MathConst;
@@ -278,6 +279,8 @@ void CollideVSSKokkos::init()
       if (strcmp(modify->fix[ifix]->style,"ambipolar") == 0) break;
     FixAmbipolar *afix = (FixAmbipolar *) modify->fix[ifix];
     ambispecies = afix->especies;
+    FixAmbipolarKokkos *afix_kk = (FixAmbipolarKokkos *) afix;
+    d_ions = afix_kk->d_ions;
   }
 
   // if ambipolar and multiple groups in mixture, ambispecies must be its own group
@@ -1433,19 +1436,24 @@ void CollideVSSKokkos::collisions_one_ambipolar(COLLIDE_REDUCE &reduce)
 
   h_retry() = 1;
 
+  // the elist of split-off ambipolar electrons must be allocated whether
+  // or not reactions are defined: ambipolar collisions create a temporary
+  // electron for every ambipolar ion on every timestep.  Only the extra
+  // sizing for reaction-created particles/deletions is react-specific.
+
+  double extra_factor = 1.0;
+  if (react && sparta->kokkos->react_retry_flag)
+    extra_factor = sparta->kokkos->react_extra;
+
+  maxcellcount = particle_kk->get_maxcellcount();
+
+  auto maxelectron_extra = maxcellcount*extra_factor;
+  if (d_elist.extent(0) < nglocal || d_elist.extent(1) < maxelectron_extra) {
+    d_elist = t_particle_2d(); // reduce memory use by deallocating first
+    d_elist = t_particle_2d(Kokkos::view_alloc("collide:elist",Kokkos::WithoutInitializing),nglocal,maxelectron_extra);
+  }
+
   if (react) {
-    double extra_factor = 1.0;
-    if (sparta->kokkos->react_retry_flag)
-      extra_factor = sparta->kokkos->react_extra;
-
-    maxcellcount = particle_kk->get_maxcellcount();
-
-    auto maxelectron_extra = maxcellcount*extra_factor;
-    if (d_elist.extent(0) < nglocal || d_elist.extent(1) < maxelectron_extra) {
-      d_elist = t_particle_2d(); // reduce memory use by deallocating first
-      d_elist = t_particle_2d(Kokkos::view_alloc("collide:elist",Kokkos::WithoutInitializing),nglocal,maxelectron_extra);
-    }
-
     auto maxdelete_extra = maxdelete*extra_factor;
     if (d_dellist.extent(0) < maxdelete_extra) {
       memoryKK->destroy_kokkos(k_dellist,dellist);
@@ -1930,6 +1938,13 @@ double CollideVSSKokkos::attempt_collision_kokkos(int icell, int np, double volu
 {
  double nattempt;
 
+ // MCF scheme: attempt count is a Poisson variate whose mean is the
+ //   majorant collision frequency x timestep, remain is not used
+
+ if (mcflag)
+   return poisson_kokkos(0.5 * np * (np-1) *
+                         d_vremax(icell,0,0) * dt * fnum / volume, rand_gen);
+
  if (remainflag) {
    nattempt = 0.5 * np * (np-1) *
      d_vremax(icell,0,0) * dt * fnum / volume + d_remain(icell,0,0);
@@ -1943,6 +1958,35 @@ double CollideVSSKokkos::attempt_collision_kokkos(int icell, int np, double volu
  //nattempt = 10;
 
   return nattempt;
+}
+
+/* ----------------------------------------------------------------------
+   Poisson RN with specified mean, on device
+   returned as a double with an exact integer value
+   Knuth multiplication method for small mean,
+   else normal approximation with continuity correction
+   mirrors RanKnuth::poisson() used by the non-Kokkos path
+------------------------------------------------------------------------- */
+
+KOKKOS_INLINE_FUNCTION
+double CollideVSSKokkos::poisson_kokkos(double mean, rand_type &rand_gen) const
+{
+  if (mean <= 0.0) return 0.0;
+
+  if (mean < 30.0) {
+    double L = exp(-mean);
+    double p = 1.0;
+    int k = 0;
+    do {
+      k++;
+      p *= rand_gen.drand();
+    } while (p > L);
+    return (double) (k-1);
+  }
+
+  double value = floor(mean + sqrt(mean)*rand_gen.normal() + 0.5);
+  if (value < 0.0) return 0.0;
+  return value;
 }
 
 /* ----------------------------------------------------------------------
@@ -2232,6 +2276,16 @@ void CollideVSSKokkos::EEXCHANGE_NonReactingEDisposal(Particle::OnePart *ip,
   } else {
     E_Dispose = precoln.etrans;
 
+    // This is pairwise Borgnakke-Larsen relaxation: each internal mode that
+    // relaxes adds back only its OWN energy (E_Dispose += p->erot; sample;
+    // E_Dispose -= p->erot), so it exchanges energy with the translational
+    // pool alone.  No shared multi-mode pool is formed, each exchange
+    // independently satisfies detailed balance, and the exponent is the plain
+    // translational one.  Do NOT add the reacting path's remaining_dof
+    // (Dirichlet stick-breaking) correction here -- that correction exists
+    // only because EEXCHANGE_ReactingEDisposal splits the full collision
+    // energy among all modes at once from a single depleting pool.
+
     for (i = 0; i < 2; i++) {
       if (i == 0) p = ip;
       else p = jp;
@@ -2446,10 +2500,67 @@ void CollideVSSKokkos::EEXCHANGE_ReactingEDisposal(Particle::OnePart *ip,
                 d_params(kp->ispecies,kp->ispecies).omega)/3.0;
   }
 
-  // handle each kind of energy disposal for non-reacting reactants
-  // clean up memory for the products
+  // Phase 1: total effective internal DOF competing for the shared energy pool,
+  // used to correct the Larsen-Borgnakke exponent for sequential sampling
+  // (Dirichlet stick-breaking).  A discrete vibrational mode holds less energy
+  // than a classical 2-DOF oscillator, so it is counted by its instantaneous
+  // effective DOF zeta_m = eff_vib_dof(theta_m,Tcoll), evaluated at the
+  // collision temperature Tcoll of the whole pool, found self-consistently from
+  //   E = (2.5-aveomega + sum_classical_dof/2)*kB*Tcoll
+  //       + sum_m kB*theta_m/(exp(theta_m/Tcoll) - 1).
+  // Counting discrete modes as a static 2 DOF instead overstates the competing
+  // pool and starves rotation of energy.
 
   double E_Dispose = postcoln.etotal;
+  Particle::OnePart *plist[3] = {ip,jp,kp};
+
+  double shape_classical = 2.5 - aveomega;   // translational shape (2.5-omega)
+  double remaining_dof = 0.0;                // effective internal DOF left to draw
+  int ndiscrete = 0;
+
+  for (i = 0; i < numspecies; i++) {
+    int sp = plist[i]->ispecies;
+    if ((d_species[sp].rotdof > 0) && (rotstyle != NONE)) {
+      shape_classical += 0.5 * d_species[sp].rotdof;
+      remaining_dof += d_species[sp].rotdof;
+    }
+    if ((d_species[sp].vibdof > 0) && (vibstyle != NONE)) {
+      if (vibstyle == DISCRETE) ndiscrete += d_species[sp].nvibmode;
+      else {
+        shape_classical += 0.5 * d_species[sp].vibdof;
+        remaining_dof += d_species[sp].vibdof;
+      }
+    }
+  }
+
+  // collision temperature of the pool (classical unless discrete modes present)
+
+  double tcoll = (shape_classical > 0.0) ? E_Dispose/(boltz*shape_classical) : 0.0;
+
+  if (ndiscrete && E_Dispose > 0.0) {
+
+    // flatten the discrete-mode frequencies once, skipping any theta <= 0
+    // (a zero-frequency mode carries no energy and would make x/(exp(x)-1) NaN)
+
+    double theta[3*Particle::MAXVIBMODE];
+    int nflat = 0;
+    for (i = 0; i < numspecies; i++) {
+      int sp = plist[i]->ispecies;
+      if ((d_species[sp].vibdof > 0) && (vibstyle == DISCRETE))
+        for (int m = 0; m < d_species[sp].nvibmode; m++)
+          if (d_species[sp].vibtemp[m] > 0.0) theta[nflat++] = d_species[sp].vibtemp[m];
+    }
+
+    // solve for the pool collision temperature, then add each discrete mode's
+    // effective DOF at that temperature to the competing pool
+
+    tcoll = vib_pool_temp(shape_classical,nflat,theta,E_Dispose);
+    for (int m = 0; m < nflat; m++)
+      remaining_dof += eff_vib_dof(theta[m],tcoll);
+  }
+
+  // Phase 2: Handle energy disposal for products with remaining_dof correction
+  // to account for sequential sampling from shared pool (Dirichlet stick-breaking)
 
   for (i = 0; i < numspecies; i++) {
     if (i == 0) p = ip;
@@ -2463,16 +2574,19 @@ void CollideVSSKokkos::EEXCHANGE_ReactingEDisposal(Particle::OnePart *ip,
       if (rotstyle == NONE) {
         p->erot = 0.0 ;
       } else if (rotdof == 2) {
+        double b_rot = (1.5 - aveomega) + 0.5 * (remaining_dof - rotdof);
         Fraction_Rot =
-          1- pow(rand_gen.drand(),(1/(2.5-aveomega)));
+          1.0 - pow(rand_gen.drand(),(1.0/(1.0 + b_rot)));
         p->erot = Fraction_Rot * E_Dispose;
         E_Dispose -= p->erot;
+        remaining_dof -= rotdof;
 
       } else if (rotdof > 2) {
+        double b_rot = (1.5 - aveomega) + 0.5 * (remaining_dof - rotdof);
         p->erot = E_Dispose *
-          sample_bl(rand_gen,0.5*d_species[sp].rotdof-1.0,
-                    1.5-aveomega);
+          sample_bl(rand_gen,0.5*d_species[sp].rotdof-1.0, b_rot);
         E_Dispose -= p->erot;
+        remaining_dof -= rotdof;
       }
     }
 
@@ -2482,6 +2596,8 @@ void CollideVSSKokkos::EEXCHANGE_ReactingEDisposal(Particle::OnePart *ip,
       if (vibstyle == NONE) {
         p->evib = 0.0;
       } else if (vibdof == 2 && vibstyle == DISCRETE) {
+        double zeta = eff_vib_dof(d_species[sp].vibtemp[0],tcoll);
+        double b_vib = (1.5 - aveomega) + 0.5 * (remaining_dof - zeta);
         max_level = static_cast<int>
           (E_Dispose / (boltz * d_species[sp].vibtemp[0]));
         do {
@@ -2489,22 +2605,26 @@ void CollideVSSKokkos::EEXCHANGE_ReactingEDisposal(Particle::OnePart *ip,
             (rand_gen.drand()*(max_level+AdjustFactor));
           p->evib = (double)
             (ivib * boltz * d_species[sp].vibtemp[0]);
-          State_prob = pow((1.0 - p->evib / E_Dispose),
-                           (1.5 - aveomega));
+          State_prob = pow((1.0 - p->evib / E_Dispose), b_vib);
         } while (State_prob < rand_gen.drand());
         E_Dispose -= p->evib;
+        remaining_dof -= zeta;
 
       } else if (vibdof == 2 && vibstyle == SMOOTH) {
+        double b_vib = (1.5 - aveomega) + 0.5 * (remaining_dof - vibdof);
         Fraction_Vib =
-          1.0 - pow(rand_gen.drand(),(1.0 / (2.5-aveomega)));
+          1.0 - pow(rand_gen.drand(),(1.0 / (1.0 + b_vib)));
         p->evib = Fraction_Vib * E_Dispose;
         E_Dispose -= p->evib;
+        remaining_dof -= vibdof;
 
       } else if (vibdof > 2 && vibstyle == SMOOTH) {
+        double b_vib = (1.5 - aveomega) + 0.5 * (remaining_dof - vibdof);
         p->evib = E_Dispose *
-          sample_bl(rand_gen,0.5*d_species[sp].vibdof-1.0,
-                    1.5-aveomega);
+          sample_bl(rand_gen,0.5*d_species[sp].vibdof-1.0, b_vib);
         E_Dispose -= p->evib;
+        remaining_dof -= vibdof;
+
       } else if (vibdof > 2 && vibstyle == DISCRETE) {
         p->evib = 0.0;
 
@@ -2513,22 +2633,21 @@ void CollideVSSKokkos::EEXCHANGE_ReactingEDisposal(Particle::OnePart *ip,
         int pindex = p - d_particles.data();
 
         for (int imode = 0; imode < nmode; imode++) {
-          ivib = d_vibmode(pindex,imode);
-          E_Dispose += ivib * boltz *
-          d_species[sp].vibtemp[imode];
+          double zeta = eff_vib_dof(d_species[sp].vibtemp[imode],tcoll);
           max_level = static_cast<int>
           (E_Dispose / (boltz * d_species[sp].vibtemp[imode]));
+          double b_vib = (1.5 - aveomega) + 0.5 * (remaining_dof - zeta);
           do {
             ivib = static_cast<int>
             (rand_gen.drand()*(max_level+AdjustFactor));
             pevib = ivib * boltz * d_species[sp].vibtemp[imode];
-            State_prob = pow((1.0 - pevib / E_Dispose),
-                             (1.5 - aveomega));
+            State_prob = pow((1.0 - pevib / E_Dispose), b_vib);
           } while (State_prob < rand_gen.drand());
 
           d_vibmode(pindex,imode) = ivib;
           p->evib += pevib;
           E_Dispose -= pevib;
+          remaining_dof -= zeta;
         }
       }
     }
@@ -2548,6 +2667,57 @@ void CollideVSSKokkos::EEXCHANGE_ReactingEDisposal(Particle::OnePart *ip,
 
   postcoln.eint = postcoln.erot + postcoln.evib;
   postcoln.etrans = E_Dispose;
+}
+
+/* ---------------------------------------------------------------------- */
+
+KOKKOS_INLINE_FUNCTION
+double CollideVSSKokkos::eff_vib_dof(double theta, double tcoll) const
+{
+  if (theta <= 0.0 || tcoll <= 0.0) return 0.0;
+  double x = theta / tcoll;
+  return 2.0 * x / (exp(x) - 1.0);
+}
+
+/* ----------------------------------------------------------------------
+   collision temperature Tcoll of an energy pool E shared by shape_classical
+   translational+classical-internal shape and nmode discrete SHO modes of
+   characteristic temperatures theta[]:
+     E = kB*( shape_classical*Tcoll + sum_m theta_m/(exp(theta_m/Tcoll)-1) )
+   [0, E/(kB*shape_classical)] brackets the single root; solved with a
+   safeguarded Newton iteration (bisection fallback) that converges
+   quadratically in the typical case and cannot overshoot to a nonphysical
+   temperature.  Requires shape_classical > 0 and E > 0 (caller guaranteed).
+------------------------------------------------------------------------- */
+
+KOKKOS_INLINE_FUNCTION
+double CollideVSSKokkos::vib_pool_temp(double shape_classical, int nmode,
+                                       double *theta, double E) const
+{
+  double Thi = E / (boltz * shape_classical);
+  double Tlo = 0.0;
+  double T = Thi;
+
+  for (int iter = 0; iter < 30; iter++) {
+    double f = boltz * shape_classical * T - E;
+    double df = boltz * shape_classical;
+    for (int m = 0; m < nmode; m++) {
+      double x = theta[m] / T;
+      if (x > 200.0) continue;             // frozen mode: exp overflow, ~0 term
+      double ex = exp(x);
+      double den = ex - 1.0;
+      f  += boltz * theta[m] / den;
+      df += boltz * theta[m]*theta[m] * ex / (T*T * den*den);
+    }
+    if (f > 0.0) Thi = T; else Tlo = T;    // keep [Tlo,Thi] bracketing the root
+    double Tnew = T - f/df;                // Newton step
+    if (!(Tnew > Tlo && Tnew < Thi))       // ... but stay inside the bracket
+      Tnew = 0.5 * (Tlo + Thi);
+    double delta = fabs(Tnew - T);
+    T = Tnew;
+    if (delta < 1.0e-4 * T) break;
+  }
+  return T;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -2738,9 +2908,20 @@ void CollideVSSKokkos::ambi_reset_kokkos(int i, int j, int jsp, int index_kpart,
 
   if (kp) {
     int k = index_kpart;
-    d_ionambi[k] = 0;
-    if (jsp != e) return;
 
+    // no electron reactant: I/J order is not canonical if an ion is the
+    // third body (e.g. AB + C+ -> A + C+ + B), so sync each product's
+    // ion flag to its post-reaction species
+    // also correct for all-neutral dissociation, where flags stay 0
+
+    if (jsp != e) {
+      d_ionambi[i] = d_ions[ip->ispecies];
+      d_ionambi[j] = d_ions[jp->ispecies];
+      d_ionambi[k] = d_ions[kp->ispecies];
+      return;
+    }
+
+    d_ionambi[k] = 0;
     if (d_ionambi[i]) {                // nothing to change
     } else if (kp->ispecies == e) {
       d_ionambi[i] = 1;                // 1st reactant is now 1st product ion
@@ -2763,7 +2944,8 @@ void CollideVSSKokkos::ambi_reset_kokkos(int i, int j, int jsp, int index_kpart,
   // ambi reaction if J reactant is electron
 
   } else if (!jp) {
-    if (jsp == e) d_ionambi[i] = 0;   // 1st reactant is now 1st product neutral
+    if (jsp == e) d_ionambi[i] = 0;   // R: A+ + e -> A, 1st product neutral
+    else d_ionambi[i] = d_ions[ip->ispecies];  // sync product to its species
   }
 }
 

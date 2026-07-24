@@ -40,6 +40,7 @@ class SurfCollide : protected Pointers {
   virtual Particle::OnePart *collide(Particle::OnePart *&, double &,
                                      int, double *, int, int &) = 0;
   virtual void wrapper(Particle::OnePart *, double *, int *, double *) {}
+  void persurf_wrapper(Particle::OnePart *, double *, int);
   virtual void flags_and_coeffs(int *, double *) {}
 
   virtual void dynamic();

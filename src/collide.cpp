@@ -92,10 +92,12 @@ Collide::Collide(SPARTA *sparta, int, char **arg) : Pointers(sparta)
   vibstyle = NONE;
   nearcp = 0;
   nearlimit = 10;
+  mcflag = 0;
 
   recomb_ijflag = NULL;
 
   ambiflag = 0;
+  ions = NULL;
   maxelectron = 0;
   elist = NULL;
 
@@ -328,6 +330,7 @@ void Collide::init()
       if (strcmp(modify->fix[ifix]->style,"ambipolar") == 0) break;
     FixAmbipolar *afix = (FixAmbipolar *) modify->fix[ifix];
     ambispecies = afix->especies;
+    ions = afix->ions;
   }
 
   // if ambipolar and multiple groups in mixture, ambispecies must be its own group
@@ -2051,8 +2054,8 @@ template < int GASTALLY > void Collide::collisions_group_ambipolar()
    reactants i,j and isp/jsp will always be in order listed below
    products ip,jp,kp will always be in order listed below
    logic must be valid for all ambipolar AND non-ambipolar reactions
-   check for 3 versions of 2 -> 3: dissociation or ionization
-     all have J product = electron
+   check for versions of 2 -> 3: dissociation or ionization
+     reactions with an electron have J reactant = electron
      D: AB + e -> A + e + B
         if I reactant = neutral and K product not electron:
         set K product = neutral
@@ -2062,7 +2065,10 @@ template < int GASTALLY > void Collide::collisions_group_ambipolar()
      I: A + e -> A+ + e + e
         if I reactant = neutral and K product = electron:
         set I product = ion
-     all other 2 -> 3 cases, set K product = neutral
+     D: AB + C+ -> A + C+ + B (ambipolar ion C+ as third body)
+        no electron involved, so I/J reactant order is not canonical:
+        sync I/J/K product ion flags to their post-reaction species
+     all other 2 -> 3 cases (no electron), sync ion flags to species
    check for 4 versions of 2 -> 2: ionization or exchange
      I: A + B -> AB+ + e
         if J product = electron:
@@ -2077,10 +2083,12 @@ template < int GASTALLY > void Collide::collisions_group_ambipolar()
         if J reactant = ion:
         nothing to change for products
      all other 2 -> 2 cases, no changes
-   check for one version of 2 -> 1: recombination
+   check for versions of 2 -> 1: recombination
      R: A+ + e -> A
         if ej = elec, set I product to neutral
-     all other 2 -> 1 cases, no changes
+     R: A + B + C+ -> AB + C+ (ambipolar ion C+ as inert third body)
+        third body is a spectator (recomb_part3), not modified here
+     all other 2 -> 1 cases (no electron), sync I product flag to its species
    WARNING:
      do not index by I,J if could be e, since may be negative I,J index
      do not access ionambi if could be e, since e may be in elist
@@ -2097,9 +2105,20 @@ void Collide::ambi_reset(int i, int j, int jsp,
 
   if (kp) {
     int k = particle->nlocal-1;
-    ionambi[k] = 0;
-    if (jsp != e) return;
 
+    // no electron reactant: I/J order is not canonical if an ion is the
+    // third body (e.g. AB + C+ -> A + C+ + B), so sync each product's
+    // ion flag to its post-reaction species
+    // also correct for all-neutral dissociation, where flags stay 0
+
+    if (jsp != e) {
+      ionambi[i] = ions[ip->ispecies];
+      ionambi[j] = ions[jp->ispecies];
+      ionambi[k] = ions[kp->ispecies];
+      return;
+    }
+
+    ionambi[k] = 0;
     if (ionambi[i]) {                // nothing to change
     } else if (kp->ispecies == e) {
       ionambi[i] = 1;                // 1st reactant is now 1st product ion
@@ -2122,7 +2141,8 @@ void Collide::ambi_reset(int i, int j, int jsp,
   // ambi reaction if J reactant is electron
 
   } else if (!jp) {
-    if (jsp == e) ionambi[i] = 0;   // 1st reactant is now 1st product neutral
+    if (jsp == e) ionambi[i] = 0;   // R: A+ + e -> A, 1st product neutral
+    else ionambi[i] = ions[ip->ispecies];  // sync surviving product to species
   }
 }
 
@@ -2182,6 +2202,12 @@ void Collide::modify_params(int narg, char **arg)
       if (iarg+2 > narg) error->all(FLERR,"Illegal collide_modify command");
       if (strcmp(arg[iarg+1],"yes") == 0) subcellflag = 1;
       else if (strcmp(arg[iarg+1],"no") == 0) subcellflag = 0;
+      else error->all(FLERR,"Illegal collide_modify command");
+      iarg += 2;
+    } else if (strcmp(arg[iarg],"scheme") == 0) {
+      if (iarg+2 > narg) error->all(FLERR,"Illegal collide_modify command");
+      if (strcmp(arg[iarg+1],"ntc") == 0) mcflag = 0;
+      else if (strcmp(arg[iarg+1],"mcf") == 0) mcflag = 1;
       else error->all(FLERR,"Illegal collide_modify command");
       iarg += 2;
 
