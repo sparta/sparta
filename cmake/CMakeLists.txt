@@ -77,6 +77,37 @@ set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/Modules)
 set(SPARTA_CMAKE_COMMON_DIR ${SPARTA_CMAKE_DIR}/common)
 # ######### END   SET COMMON DIRS ##########
 
+# ######### BEGIN CHECK BUILD DIRECTORY ##########
+# Refuse to generate into the SPARTA source tree.
+#
+# The usual source == binary test is not sufficient here, because the CMake
+# source directory is sparta/cmake rather than the repo root.  Running
+# "cmake /path/to/sparta/cmake" from sparta/src therefore looks like a
+# normal out-of-source build to CMake, and the generated Makefile silently
+# overwrites the hand-written src/Makefile used by the gnumake build.
+# Check the directories that hold files CMake would clobber.
+get_filename_component(SPARTA_REAL_BINARY_DIR ${CMAKE_BINARY_DIR} REALPATH)
+get_filename_component(SPARTA_REAL_CMAKE_DIR ${SPARTA_CMAKE_DIR} REALPATH)
+get_filename_component(SPARTA_REAL_SRC_DIR ${SPARTA_SRC_DIR} REALPATH)
+get_filename_component(SPARTA_REAL_ROOT_DIR ${SPARTA_CMAKE_DIR}/.. REALPATH)
+
+foreach(dir ${SPARTA_REAL_CMAKE_DIR} ${SPARTA_REAL_SRC_DIR}
+             ${SPARTA_REAL_ROOT_DIR})
+  if(SPARTA_REAL_BINARY_DIR STREQUAL dir)
+    message(
+      FATAL_ERROR
+        "Refusing to build in ${SPARTA_REAL_BINARY_DIR}, which is part of the "
+        "SPARTA source tree. Generating here would overwrite files tracked in "
+        "git, such as src/Makefile. Create a separate build directory "
+        "instead:\n"
+        "  mkdir build && cd build\n"
+        "  cmake ${SPARTA_REAL_CMAKE_DIR}\n"
+        "Remove the CMakeCache.txt and CMakeFiles/ that this run left behind, "
+        "and restore any overwritten file with git checkout.")
+  endif()
+endforeach()
+# ######### END   CHECK BUILD DIRECTORY ##########
+
 # ######### BEGIN SET CMAKE DEFAULTS ##########
 include(${SPARTA_CMAKE_COMMON_DIR}/set/sparta_cmake_defaults.cmake)
 # ######### END   SET CMAKE DEFAULTS ##########
