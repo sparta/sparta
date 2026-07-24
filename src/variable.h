@@ -17,6 +17,7 @@
 
 #include "stdio.h"
 #include "pointers.h"
+#include <string>
 
 namespace SPARTA_NS {
 
@@ -51,6 +52,12 @@ class Variable : protected Pointers {
 
   int int_between_brackets(char *&, int, const char * = "variable");
   double evaluate_boolean(char *);
+
+  // accessors for the library interface
+
+  int nvar_active() const { return nvar; }
+  const char *name(int i) const { return names[i]; }
+  std::string get_info(int);
 
  protected:
   int me;

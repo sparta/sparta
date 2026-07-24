@@ -85,6 +85,8 @@ class CollideVSSKokkos : public CollideVSS {
   KOKKOS_INLINE_FUNCTION
   double attempt_collision_kokkos(int, int, double, rand_type &) const;
   KOKKOS_INLINE_FUNCTION
+  double poisson_kokkos(double, rand_type &) const;
+  KOKKOS_INLINE_FUNCTION
   int test_collision_kokkos(int, int, int, Particle::OnePart *, Particle::OnePart *, struct State &, rand_type &) const;
   KOKKOS_INLINE_FUNCTION
   void setup_collision_kokkos(Particle::OnePart *, Particle::OnePart *, struct State &, struct State &) const;
@@ -241,6 +243,10 @@ class CollideVSSKokkos : public CollideVSS {
 
   KOKKOS_INLINE_FUNCTION
   double sample_bl(rand_type &, double, double) const;
+  KOKKOS_INLINE_FUNCTION
+  double eff_vib_dof(double, double) const;
+  KOKKOS_INLINE_FUNCTION
+  double vib_pool_temp(double, int, double *, double) const;
   KOKKOS_INLINE_FUNCTION
   double rotrel (int, double) const;
   KOKKOS_INLINE_FUNCTION

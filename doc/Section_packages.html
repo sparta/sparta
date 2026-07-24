@@ -59,7 +59,8 @@ and use the package:
 <DIV ALIGN=center><TABLE  BORDER=1 >
 <TR ALIGN="center"><TD  ALIGN ="left">Package</TD><TD > Description</TD><TD > Doc page</TD><TD > Example</TD><TD > Library</TD></TR>
 <TR ALIGN="center"><TD  ALIGN ="left"><A HREF = "#FFT">FFT</A></TD><TD > fast Fourier transforms</TD><TD > <A HREF = "compute_fft_grid.html">compute_style compute/fft/grid</A></TD><TD > fft</TD><TD > int or ext</TD></TR>
-<TR ALIGN="center"><TD  ALIGN ="left"><A HREF = "#KOKKOS">KOKKOS</A></TD><TD > Kokkos-enabled styles</TD><TD > <A HREF = "Section_howto.html#acc_3">Section 5.3</A></TD><TD > <A HREF = "https://sparta.github.io/bench.html">Benchmarks</A></TD><TD > - 
+<TR ALIGN="center"><TD  ALIGN ="left"><A HREF = "#KOKKOS">KOKKOS</A></TD><TD > Kokkos-enabled styles</TD><TD > <A HREF = "Section_howto.html#acc_3">Section 5.3</A></TD><TD > <A HREF = "https://sparta.github.io/bench.html">Benchmarks</A></TD><TD > -</TD></TR>
+<TR ALIGN="center"><TD  ALIGN ="left"><A HREF = "#VTK">VTK</A></TD><TD > native VTK-format dump output</TD><TD > <A HREF = "dump_vtk.html">dump particle/vtk</A></TD><TD > -</TD><TD > ext 
 </TD></TR></TABLE></DIV>
 
 <HR>
@@ -210,5 +211,46 @@ make
 <LI><A HREF = "Section_start.html#start_7">Section 2.6 -pk kokkos</A>
 <LI><A HREF = "package.html">package kokkos</A>
 <LI><A HREF = "https://sparta.github.io/bench.html">Benchmarks page</A> of web site 
+</UL>
+<HR>
+
+<A NAME = "VTK"></A><H4>VTK package 
+</H4>
+<P><B>Contents:</B>
+</P>
+<P>Dump styles that write native VTK files (legacy .vtk, XML .vtp/.vtu,
+and their parallel .pvtp/.pvtu variants) for direct visualization of
+SPARTA data in ParaView or VisIt. The package adds three dump styles:
+"particle/vtk", "grid/vtk", and "surf/vtk", which write particles as
+points, grid cells as voxels/pixels, and surface elements as
+triangles/lines, respectively, with requested per-particle, per-grid,
+or per-surf attributes attached as data arrays.
+</P>
+<P>This package requires the external <A HREF = "https://vtk.org">VTK library</A> from
+Kitware (version 9 or later recommended). It is distinct from the
+"tools/paraview" Python converters, which post-process existing SPARTA
+dump files rather than writing VTK directly.
+</P>
+<P>IMPORTANT NOTE: The VTK package must be built using CMake. GNU Makefile
+builds are not supported.
+</P>
+<P><B>Install or un-install with CMake:</B>
+</P>
+<P>Set VTK_ROOT in your environment (or pass -DVTK_ROOT=/path) so CMake
+can locate your VTK install, then enable both the package and its TPL:
+</P>
+<PRE>cd build
+cmake -C /path/to/sparta/cmake/presets/machine.cmake   -DPKG_VTK=ON -DBUILD_VTK=ON /path/to/sparta/cmake
+make 
+</PRE>
+<P>To uninstall (disable) the VTK package:
+</P>
+<PRE>cmake -C /path/to/sparta/cmake/presets/machine.cmake   -DPKG_VTK=OFF -DBUILD_VTK=OFF /path/to/sparta/cmake
+make 
+</PRE>
+<P><B>Supporting info:</B>
+</P>
+<UL><LI>src/VTK: filenames -> commands
+<LI><A HREF = "dump_vtk.html">dump particle/vtk, dump grid/vtk, dump surf/vtk</A> 
 </UL>
 </HTML>

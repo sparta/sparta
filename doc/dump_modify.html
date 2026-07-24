@@ -21,9 +21,10 @@
 
 <LI>these keywords apply to various dump styles 
 
-<LI>keyword = <I>append</I> or <I>buffer</I> or <I>every</I> or <I>fileper</I> or <I>first</I> or <I>flush</I> or <I>format</I> or <I>nfile</I> or <I>pad</I> or <I>region</I> or <I>thresh</I> 
+<LI>keyword = <I>append</I> or <I>binary</I> or <I>buffer</I> or <I>every</I> or <I>fileper</I> or <I>first</I> or <I>flush</I> or <I>format</I> or <I>nfile</I> or <I>pad</I> or <I>region</I> or <I>thresh</I> 
 
 <PRE>  <I>append</I> arg = <I>yes</I> or <I>no</I>
+  <I>binary</I> arg = <I>yes</I> or <I>no</I>
   <I>buffer</I> arg = <I>yes</I> or <I>no</I>
   <I>every</I> arg = N
     N = dump every this many timesteps
@@ -47,10 +48,12 @@
 </PRE>
 <LI>these keywords apply only to the (image</I> and <I>movie</I> <A HREF = "dump_image.html">styles</A> 
 
-<LI>keyword = <I>bcolor</I> or <I>bdiam</I> or <I>backcolor</I> or <I>bitrate</I> or <I>boxcolor</I> or <I>cmap</I> or <I>color</I> or <I>framerate</I> or <I>gcolor</I> or <I>glinecolor</I> or <I>pcolor</I> or <I>pdiam</I> or <I>scolor</I> or <I>slinecolor</I> 
+<LI>keyword = <I>backcolor</I> or <I>backcolor2</I> or <I>bitrate</I> or <I>boxcolor</I> or <I>cmap</I> or <I>color</I> or <I>framerate</I> or <I>gcolor</I> or <I>glinecolor</I> or <I>gridgroup</I> or <I>lights</I> or <I>pcolor</I> or <I>pdiam</I> or <I>scolor</I> or <I>slinecolor</I> or <I>subboxcolor</I> or <I>surfgroup</I> 
 
 <PRE>  <I>backcolor</I> arg = color
     color = name of color for background
+  <I>backcolor2</I> arg = color
+    color = name of second color for background gradient, or <I>none</I>
   <I>bitrate</I> arg = rate
     rate = target bitrate for movie in kbps
   <I>boxcolor</I> arg = color
@@ -88,6 +91,11 @@
     color = name of color for grid cell outlines
   <I>gridgroup</I> arg = group-ID
     group-ID = name of a user-defined grid group, see the <A HREF = "group.html">group</A> command
+  <I>lights</I> args = ambient key fill back
+    ambient = intensity of ambient light from 0.0 to 1.0
+    key = intensity of key light from 0.0 to 1.0
+    fill = intensity of fill light from 0.0 to 1.0
+    back = intensity of back light from 0.0 to 1.0
   <I>pcolor</I> args = type color
     type = particle type or range of types or proc ID or range of IDs (see below)
     color = name of color or color1/color2/...
@@ -99,6 +107,8 @@
     color = name of color for surf one option
   <I>slinecolor</I> arg = color
     color = name of color for surface element outlines
+  <I>subboxcolor</I> arg = color
+    color = name of color for processor sub-box lines
   <I>surfgroup</I> arg = group-ID
     group-ID = name of a user-defined surf group, see the <A HREF = "group.html">group</A> command 
 </PRE>
@@ -137,6 +147,16 @@ dump_modify command is used after the <A HREF = "dump.html">dump</A> command, bu
 before the first command that causes dump snapshots to be output,
 e.g. a <A HREF = "run.html">run</A> command.  Once the dump file has been opened,
 this keyword has no further effect.
+</P>
+<HR>
+
+<P>The <I>binary</I> keyword applies only to the <A HREF = "dump_vtk.html">dump particle/vtk, dump grid/vtk, and
+dump surf/vtk</A> styles of the VTK package.  If specified as <I>yes</I>,
+the VTK data is written in compact binary form; if <I>no</I> (the default), it is
+written as ASCII which is human-readable but typically requires larger file
+sizes than binary. This is a per-dump setting because the VTK styles select
+their file format from the filename extension, which would otherwise conflict
+with SPARTA's usual ".bin" binary-file convention.
 </P>
 <HR>
 
@@ -313,6 +333,17 @@ movie</A> style.  The descriptions give details.
 image</A> command to set the background color of the
 images.  The color name can be any of the 140 pre-defined colors (see
 below) or a color name defined by the dump_modify color option.
+</P>
+<HR>
+
+<P>The <I>backcolor2</I> keyword can be used with the <A HREF = "dump_image.html">dump
+image</A> command to set a second background color.  If
+set to a color name, the background of the images becomes a vertical
+gradient from the <I>backcolor</I> color at the bottom of the image to the
+<I>backcolor2</I> color at the top.  If set to <I>none</I>, the gradient is
+turned off and the uniform <I>backcolor</I> color is used.  The color name
+can be any of the 140 pre-defined colors (see below) or a color name
+defined by the dump_modify color option.
 </P>
 <HR>
 
@@ -526,6 +557,15 @@ group-ID argument can be any valid grid group name, as defined by the
 </P>
 <HR>
 
+<P>The <I>lights</I> keyword can be used with the <A HREF = "dump_image.html">dump
+image</A> command to adjust the lighting of the rendered
+scene.  The scene is illuminated by an ambient light, a key light, a
+fill light, and a back light, whose grayscale intensities are set by
+the four arguments, each a value from 0.0 (off) to 1.0 (brightest).
+The default lighting is ambient 0.0, key 0.9, fill 0.45, back 0.9.
+</P>
+<HR>
+
 <P>The <I>pcolor</I> keyword can be used one or more times with the <A HREF = "dump_image.html">dump
 image</A> command, only when its particle color setting is
 <I>type</I> or <I>procs</I>, to set the color that particles will be drawn in
@@ -615,6 +655,15 @@ option.
 </P>
 <HR>
 
+<P>The <I>subboxcolor</I> keyword can be used with the <A HREF = "dump_image.html">dump
+image</A> command to set the color of the processor
+sub-box boundaries drawn in each image.  See the "dump image subbox"
+command for how to specify that sub-box boundaries be drawn.  The
+color name can be any of the 140 pre-defined colors (see below) or a
+color name defined by the dump_modify color option.
+</P>
+<HR>
+
 <P>The <I>surfgroup</I> keyword can be used with the <A HREF = "dump_image.html">dump
 image</A> command to only draw a subset of the surface
 elements in the simulation.  By default all the surface elements are
@@ -636,7 +685,10 @@ defined by the <A HREF = "group.html">group surf</A> command.
 <UL><LI>append = no
 <LI>buffer = yes for all dump styles except <I>image</I> and <I>movie</I>
 <LI>backcolor = black
+<LI>backcolor2 = none
 <LI>boxcolor = yellow
+<LI>subboxcolor = yellow
+<LI>lights = 0.0 0.9 0.45 0.9
 <LI>cmap = mode min max cf 0.0 2 min blue max red, for all modes
 <LI>color = 140 color names are pre-defined as listed below
 <LI>every = whatever it was set to via the <A HREF = "dump.html">dump</A> command

@@ -1,0 +1,34 @@
+SPARTA VTK dump examples
+========================
+
+These example scripts exercise the dump styles in the VTK package,
+which write native VTK files (readable directly by ParaView or VisIt):
+
+  in.vtk      2d flow around a circle (particles, grid cells, surf lines)
+  in.vtk.3d   3d flow around a sphere (grid voxels, surf triangles)
+
+They require SPARTA to be built with the VTK package and an external
+VTK library (see doc/Section_packages.html #VTK and doc/dump_vtk.html).
+If SPARTA was built without the VTK package, the "particle/vtk",
+"grid/vtk", and "surf/vtk" dump styles are unavailable and these
+scripts will stop with an "Unrecognized dump style" error.
+
+Run (serial or parallel):
+
+  spa_vtk -in in.vtk
+  mpirun -np 4 spa_vtk -in in.vtk
+
+Each run writes a series of per-timestep files:
+
+  tmp.particle.*.vtu   particle points with id/type/velocity point data
+  tmp.grid.*.vtu       grid cells (pixels in 2d, voxels in 3d) with cell data
+  tmp.surf.*.vtp       surface elements (lines in 2d, triangles in 3d)
+
+For a parallel run, add a '%' to the file name (e.g. tmp.grid.%.*.vtu)
+to write one piece file per processor plus a .pvtu/.pvtp summary file;
+open the summary file in ParaView to load the full domain.
+
+Open any of the .vtu/.vtp/.pvtu/.pvtp files in ParaView.  Color the
+grid cells by "proc" to see the domain decomposition, or by "vol" to
+see the flow volume; color particles by "type"; use the velocity "v"
+vector for glyphs.

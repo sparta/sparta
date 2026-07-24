@@ -489,7 +489,7 @@ internal SPARTA operations.  Note that SPARTA classes are defined
 within a SPARTA namespace (SPARTA_NS) if you use them from another C++
 application.
 </P>
-<P>Library.cpp contains these 4 functions:
+<P>Library.cpp provides these core functions:
 </P>
 <PRE>void sparta_open(int, char **, MPI_Comm, void **);
 void sparta_close(void *);
@@ -526,15 +526,30 @@ interleaving the sparta_command() calls with other calls to extract
 information from SPARTA, perform its own operations, or call another
 code's library.
 </P>
-<P>Other useful functions are also included in library.cpp. For example:
-</P>
-<PRE>void *sparta_extract_global(void *, char *)
-void *sparta_extract_compute(void *, char *, int, int)
-void *sparta_extract_variable(void *, char *, char *) 
-</PRE>
-<P>This can extract various global quantities from SPARTA as well as
-values calculated by a compute or variable.  See the library.cpp file
-and its associated header file library.h for details.
+<P>Beyond these, library.cpp provides many additional functions so a
+driver program can run SPARTA, read its output, handle errors, and
+introspect its build.  Briefly, these include: functions to execute a
+multi-line command string (sparta_commands_string) and to query or
+interrupt a run (sparta_is_running, sparta_force_timeout); functions to
+read thermodynamic output, both live (sparta_get_thermo) and from a
+cached snapshot of the most recent output that can be read while a run
+is in progress (sparta_last_thermo); error-handling functions that let
+a driver recover from an error instead of aborting the process, when
+SPARTA is built with exceptions (sparta_has_error,
+sparta_get_last_error_message); data-extraction functions for global
+quantities and settings such as box bounds, units, the version, the
+git commit and branch, and per-surface counts (sparta_extract_global,
+sparta_extract_setting) and for per-particle, per-grid, per-surface or
+global data produced by a compute or fix (sparta_extract_compute,
+sparta_extract_fix, sparta_extract_variable); introspection functions
+to enumerate the styles compiled into the executable (sparta_style_count,
+sparta_style_name) and the currently defined computes, fixes, dumps,
+regions, variables, mixtures and surface collision/reaction models
+(sparta_id_count, sparta_id_name); and build-configuration queries
+(sparta_version, sparta_config_has_package, sparta_config_accelerator,
+and the sparta_config_has_*_support functions for MPI, PNG, JPEG,
+FFmpeg and gzip support).  See the library.cpp file and its associated
+header file library.h for the full list and exact signatures.
 </P>
 <P>Other functions may be added to the library interface as needed to
 allow reading from or writing to internal SPARTA data structures. 

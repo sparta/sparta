@@ -266,7 +266,9 @@ void CreateParticlesKokkos::create_local(bigint np)
       // generate random position X for new particle
 
       x[0] = lo[0] + random->uniform() * (hi[0]-lo[0]);
-      x[1] = lo[1] + random->uniform() * (hi[1]-lo[1]);
+      if (domain->axisymmetric)
+        x[1] = sqrt(lo[1]*lo[1] + random->uniform() * (hi[1]*hi[1]-lo[1]*lo[1]));
+      else x[1] = lo[1] + random->uniform() * (hi[1]-lo[1]);
       x[2] = lo[2] + random->uniform() * (hi[2]-lo[2]);
       if (dimension == 2) x[2] = 0.0;
 
@@ -288,7 +290,10 @@ void CreateParticlesKokkos::create_local(bigint np)
           nattempt++;
 
           x[0] = lo[0] + random->uniform() * (hi[0]-lo[0]);
-          x[1] = lo[1] + random->uniform() * (hi[1]-lo[1]);
+          if (domain->axisymmetric)
+            x[1] = sqrt(lo[1]*lo[1] +
+                        random->uniform() * (hi[1]*hi[1]-lo[1]*lo[1]));
+          else x[1] = lo[1] + random->uniform() * (hi[1]-lo[1]);
           x[2] = lo[2] + random->uniform() * (hi[2]-lo[2]);
           if (dimension == 2) x[2] = 0.0;
         }

@@ -32,7 +32,7 @@ class DumpGrid : public Dump {
   void reset_grid_count();
   bigint memory_usage();
 
- private:
+ protected:                  // protected (not private) so DumpGridVTK can reuse
   int nevery;                // dump frequency to check Fix against
   int groupbit;              // mask for grid group
 

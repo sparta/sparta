@@ -447,6 +447,87 @@ void Particle::sort()
 }
 
 /* ----------------------------------------------------------------------
+   reorder particle list so particles in the same grid cell are
+     stored contiguously in memory, which can improve cache performance
+   requires particles already be sorted, i.e. sort() just invoked,
+     so the per-cell linked list (cinfo.first/count, next) is up to date
+   invoked from Update::run() every reorder_period timesteps,
+     as set by the global particle/reorder command
+   reordering is done in place, one permutation cycle at a time
+------------------------------------------------------------------------- */
+
+void Particle::reorder()
+{
+  int icell,ip,m;
+  int nbytes = sizeof(OnePart);
+
+  if (nlocal == 0) return;
+
+  Grid::ChildInfo *cinfo = grid->cinfo;
+  int nglocal = grid->nlocal;
+
+  // order[m] = current index of the particle that belongs at new index m
+  // walk the per-cell linked list built by sort() so that particles in
+  //   the same grid cell end up contiguous in memory
+
+  int *order;
+  memory->create(order,nlocal,"particle:order");
+
+  m = 0;
+  for (icell = 0; icell < nglocal; icell++) {
+    ip = cinfo[icell].first;
+    while (ip >= 0) {
+      order[m++] = ip;
+      ip = next[ip];
+    }
+  }
+
+  // if custom per-particle data exists, use index nlocal as scratch space
+  //   so copy_custom() can save and restore a particle's custom data
+
+  if (ncustom) grow(1);
+
+  // apply the permutation to the particle list (and custom data) in place
+  // each disjoint cycle is rotated using a single saved particle
+  // order[i] is reset to i as each particle is placed in its final location
+
+  OnePart copy;
+  for (int i = 0; i < nlocal; i++) {
+    if (order[i] == i) continue;
+    memcpy(&copy,&particles[i],nbytes);
+    if (ncustom) copy_custom(nlocal,i);
+    int dst = i;
+    int src = order[i];
+    while (src != i) {
+      memcpy(&particles[dst],&particles[src],nbytes);
+      if (ncustom) copy_custom(dst,src);
+      order[dst] = dst;
+      dst = src;
+      src = order[src];
+    }
+    memcpy(&particles[dst],&copy,nbytes);
+    if (ncustom) copy_custom(dst,nlocal);
+    order[dst] = dst;
+  }
+
+  memory->destroy(order);
+
+  // rebuild per-cell linked list, now contiguous in memory by grid cell
+
+  m = 0;
+  for (icell = 0; icell < nglocal; icell++) {
+    if (cinfo[icell].count == 0) {
+      cinfo[icell].first = -1;
+      continue;
+    }
+    cinfo[icell].first = m;
+    int last = m + cinfo[icell].count;
+    for (; m < last-1; m++) next[m] = m+1;
+    next[m++] = -1;
+  }
+}
+
+/* ----------------------------------------------------------------------
    reallocate next list if necessary
    called before partial sort by FixEmit classes in subsonic case
 ------------------------------------------------------------------------- */
@@ -916,16 +997,29 @@ void Particle::add_species(int narg, char **arg)
       }
 
       int nmode = filevib[j].nmode;
-      if (species[ii].nvibmode != nmode)
+
+      // N (= sum of listed degeneracies) must equal nvibmode = vibdof/2
+      // expand each listed mode into vibdegen independent oscillators of equal
+      // frequency, giving nvibmode oscillators total with an implicit degeneracy
+      // of 1 each; this preserves the invariant nvibmode == vibdof/2 for
+      // downstream code (collide_vss, fix_vibmode, and their Kokkos variants),
+      // so degenerate modes can be listed compactly with degen > 1 instead of
+      // being duplicated
+
+      if (species[ii].nvibmode != filevib[j].ntotal)
         error->all(FLERR,"Mismatch between species vibdof "
                    "and vibration file entry");
 
-      species[ii].nvibmode = nmode;
+      int m = 0;
       for (k = 0; k < nmode; k++) {
-        species[ii].vibtemp[k] = filevib[j].vibtemp[k];
-        species[ii].vibrel[k] = filevib[j].vibrel[k];
-        species[ii].vibdegen[k] = filevib[j].vibdegen[k];
+        for (int d = 0; d < filevib[j].vibdegen[k]; d++) {
+          species[ii].vibtemp[m] = filevib[j].vibtemp[k];
+          species[ii].vibrel[m] = filevib[j].vibrel[k];
+          species[ii].vibdegen[m] = 1;
+          m++;
+        }
       }
+      species[ii].nvibmode = m;
 
       maxvibmode = MAX(maxvibmode,species[ii].nvibmode);
       species[ii].vibdiscrete_read = 1;
@@ -1036,9 +1130,13 @@ double Particle::erot(int isp, double temp_thermal, RanKnuth *erandom)
     eng = -log(erandom->uniform()) * update->boltz * temp_thermal;
   } else {
     a = 0.5*particle->species[isp].rotdof-1.0;
+    // sample E/kT from the equilibrium distribution x^a * exp(-x)
+    // candidate range must cover the high-energy tail: the mode is at
+    // x = a, the mean is a+1, the std dev is sqrt(a+1); use mean + ~9 std
+    // devs so the cut-off scales with rotdof rather than a fixed 10 kT
+    double xmax = a + 1.0 + 9.0*sqrt(a+1.0);
     while (1) {
-      // energy cut-off at 10 kT
-      erm = 10.0*erandom->uniform();
+      erm = xmax*erandom->uniform();
       b = pow(erm/a,a) * exp(a-erm);
       if (b > erandom->uniform()) break;
     }
@@ -1077,9 +1175,14 @@ double Particle::evib(int isp, double temp_thermal, RanKnuth *erandom)
       eng = -log(erandom->uniform()) * update->boltz * temp_thermal;
     else if (species[isp].vibdof > 2) {
       a = 0.5*particle->species[isp].vibdof-1.;
+      // sample E/kT from the equilibrium distribution x^a * exp(-x)
+      // candidate range must cover the high-energy tail: the mode is at
+      // x = a, the mean is a+1, the std dev is sqrt(a+1); use mean + ~9 std
+      // devs so the cut-off scales with vibdof (a fixed 10 kT cut-off is
+      // below the mean for molecules with many vibrational modes)
+      double xmax = a + 1.0 + 9.0*sqrt(a+1.0);
       while (1) {
-        // energy cut-off at 10 kT
-        erm = 10.0*erandom->uniform();
+        erm = xmax*erandom->uniform();
         b = pow(erm/a,a) * exp(a-erm);
         if (b > erandom->uniform()) break;
       }
@@ -1274,18 +1377,36 @@ void Particle::read_vibration_file()
       error->one(FLERR,"Invalid species ID in vibration file");
     strcpy(vsp->id,words[0]);
 
-    vsp->nmode = atoi(words[1]);
-    if (vsp->nmode < 2 || vsp->nmode > MAXVIBMODE)
+    // N = total number of vibrational oscillators = vibdof/2 from species file
+    // one or more distinct modes (frequencies) follow as (temp,relax,degen)
+    //   triples, with degeneracies that must sum to N; a mode of degeneracy g
+    //   stands for g oscillators of equal frequency, so the number of listed
+    //   modes may be fewer than N when degeneracies exceed 1
+
+    vsp->ntotal = atoi(words[1]);
+    if (vsp->ntotal < 1 || vsp->ntotal > MAXVIBMODE)
       error->one(FLERR,"Invalid N count in vibration file");
-    if (nwords != 2 + 3*vsp->nmode)
-      error->one(FLERR,"Incorrect line format in vibration file");
 
     int j = 2;
-    for (int i = 0; i < vsp->nmode; i++) {
-      vsp->vibtemp[i] = atof(words[j++]);
-      vsp->vibrel[i] = atof(words[j++]);
-      vsp->vibdegen[i] = atoi(words[j++]);
+    int sumdegen = 0;
+    int imode = 0;
+    while (sumdegen < vsp->ntotal) {
+      if (j + 3 > nwords)
+        error->one(FLERR,"Incorrect line format in vibration file");
+      vsp->vibtemp[imode] = atof(words[j++]);
+      vsp->vibrel[imode] = atof(words[j++]);
+      vsp->vibdegen[imode] = atoi(words[j++]);
+      if (vsp->vibdegen[imode] < 1)
+        error->one(FLERR,"Invalid degeneracy in vibration file");
+      sumdegen += vsp->vibdegen[imode];
+      imode++;
     }
+    if (sumdegen != vsp->ntotal)
+      error->one(FLERR,"Vibrational mode degeneracies must sum to N "
+                 "in vibration file");
+    if (j != nwords)
+      error->one(FLERR,"Incorrect line format in vibration file");
+    vsp->nmode = imode;
     nfile++;
   }
 

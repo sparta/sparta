@@ -489,6 +489,7 @@ class Grid : protected Pointers {
 
   int point_outside_surfs_implicit(int, double *);
   int point_outside_surfs_explicit(int, double *);
+  void push_reference_outside_surfs(int, double *, double);
 
   void surf2grid_stats();
   void flow_stats();

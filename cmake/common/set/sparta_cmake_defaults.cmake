@@ -98,6 +98,9 @@ if(SPARTA_ENABLE_TESTING)
         # external field fix not KOKKOS-enabled
         "in.bfield"
         "in.bfield.grid"
+        # VTK dump styles have no KOKKOS variant
+        "in.vtk"
+        "in.vtk.3d"
     )
   endif()
 
