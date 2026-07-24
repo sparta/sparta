@@ -170,6 +170,13 @@ void FixAveGridKokkos::end_of_step()
   // could do this with memset()
 
   copymode = 1;
+
+  // grid cell migration (load balance / grid adaptation) reorders the
+  // per-cell tally and output on the host; pull those changes onto the
+  // device before accumulating so the running tally is not corrupted
+
+  pergrid_sync(Device);
+
   if (ave == ONE && irepeat == 0)
     Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagFixAveGrid_Zero_tally>(0,nglocal),*this);
 
@@ -338,6 +345,12 @@ void FixAveGridKokkos::end_of_step()
     }
   }
 
+  // the tally array was accumulated on the device this step
+  // mark it modified so the host copy is refreshed if grid cells later
+  // migrate (the migration hooks pack/unpack the host tally)
+
+  k_tally.modify_device();
+
   // done if irepeat < nrepeat
   // else reset irepeat and nvalid
 
@@ -400,10 +413,15 @@ void FixAveGridKokkos::end_of_step()
     GridKokkos* grid_kk = (GridKokkos*) grid;
     grid_kk->sync(Device,CINFO_MASK);
     d_cinfo = grid_kk->k_cinfo.view_device();
-    if (nvalues == 1)
+    if (nvalues == 1) {
       Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagFixAveGrid_Zero_group_vector>(0,nglocal),*this);
-    else
+      k_vector_grid.modify_device();
+      k_vector_grid.sync_host();
+    } else {
       Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagFixAveGrid_Zero_group_array>(0,nglocal),*this);
+      k_array_grid.modify_device();
+      k_array_grid.sync_host();
+    }
   }
 
   // reset nsample if ave = ONE
@@ -496,17 +514,100 @@ void FixAveGridKokkos::grow_percell(int nnew)
   maxgrid += DELTAGRID;
   int n = maxgrid;
 
+  // resize with the device as the source of truth, then refresh the host
+  // so both copies hold valid data and no dangling modify flag remains
+  // (this is called from the grid migration hooks, which then edit the host)
+
+  pergrid_sync(Device);
+
   if (nvalues == 1) {
     memoryKK->grow_kokkos(k_vector_grid,vector_grid,n,"ave/grid:vector_grid");
     d_vector_grid = k_vector_grid.view_device();
-    k_vector_grid.sync_host();
   } else {
     memoryKK->grow_kokkos(k_array_grid,array_grid,n,nvalues,"ave/grid:array_grid");
     d_array_grid = k_array_grid.view_device();
-    k_array_grid.sync_host();
   }
 
   memoryKK->grow_kokkos(k_tally,tally,n,ntotal,"ave/grid:tally");
   d_tally = k_tally.view_device();
+
+  pergrid_sync(Host);
+}
+
+/* ----------------------------------------------------------------------
+   grid cell migration hooks (load balance / grid adaptation)
+   the base class packs/unpacks/copies the per-cell tally and output using
+   the host arrays, so bring the host up to date before it reads and mark
+   the host modified after it writes; the device is refreshed lazily in
+   end_of_step().  Without this the accumulated tally is only correct on the
+   device and grid migration silently corrupts the averaged output when UVM
+   is disabled.
+------------------------------------------------------------------------- */
+
+int FixAveGridKokkos::pack_grid_one(int icell, char *buf, int memflag)
+{
+  pergrid_sync(Host);
+  return FixAveGrid::pack_grid_one(icell,buf,memflag);
+}
+
+/* ---------------------------------------------------------------------- */
+
+int FixAveGridKokkos::unpack_grid_one(int icell, char *buf)
+{
+  pergrid_sync(Host);
+  int n = FixAveGrid::unpack_grid_one(icell,buf);
+  pergrid_modify(Host);
+  return n;
+}
+
+/* ---------------------------------------------------------------------- */
+
+void FixAveGridKokkos::copy_grid_one(int icell, int jcell)
+{
+  pergrid_sync(Host);
+  FixAveGrid::copy_grid_one(icell,jcell);
+  pergrid_modify(Host);
+}
+
+/* ---------------------------------------------------------------------- */
+
+void FixAveGridKokkos::add_grid_one()
+{
+  pergrid_sync(Host);
+  FixAveGrid::add_grid_one();
+  pergrid_modify(Host);
+}
+
+/* ----------------------------------------------------------------------
+   sync/modify the per-grid dual views: the tally array plus whichever
+   output array (vector_grid or array_grid) is in use
+------------------------------------------------------------------------- */
+
+void FixAveGridKokkos::pergrid_sync(ExecutionSpace space)
+{
+  if (space == Device) {
+    if (nvalues == 1) k_vector_grid.sync_device();
+    else k_array_grid.sync_device();
+    k_tally.sync_device();
+  } else {
+    if (nvalues == 1) k_vector_grid.sync_host();
+    else k_array_grid.sync_host();
+    k_tally.sync_host();
+  }
+}
+
+/* ---------------------------------------------------------------------- */
+
+void FixAveGridKokkos::pergrid_modify(ExecutionSpace space)
+{
+  if (space == Device) {
+    if (nvalues == 1) k_vector_grid.modify_device();
+    else k_array_grid.modify_device();
+    k_tally.modify_device();
+  } else {
+    if (nvalues == 1) k_vector_grid.modify_host();
+    else k_array_grid.modify_host();
+    k_tally.modify_host();
+  }
 }
 
