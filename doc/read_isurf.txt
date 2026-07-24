@@ -293,6 +293,17 @@ created by the marching cubes or marching squares algorithms.
 
 The default for the {push} keyword is {yes}.
 
+Note that {push yes} re-normalizes the corner point values as they are
+read, snapping fully interior/exterior corners to 0 or 255.  This is
+appropriate for a freshly generated geometry file, but it means a
+read_isurf is not an exact inverse of a "write_isurf"_write_isurf.html.
+When you use the write_isurf then read_isurf sequence to save and
+restore a partially ablated (mid-run) surface state, as described on
+the "write_isurf"_write_isurf.html doc page, use {push no} so the
+corner point values are restored exactly as written.  Also use
+{precision double} in that case (see below), so partially decremented
+corner point values are not truncated to integers.
+
 The {read} keyword specifies how the input file of grid corner point
 values is read.  If the value is {serial}, which is the default, then
 only a single proc reads the file, a chunk of values at at time.  They
