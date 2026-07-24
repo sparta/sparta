@@ -133,8 +133,12 @@ species-ID N temp1 relax1 degen1 temp2 relax2 degen2 ... :pre
 
 The species-ID is a string that will be matched against the requested
 species-ID, as described above.  N is the total number of vibrational
-oscillators, which must be either 2,3,4 and must match the corresponding
-vibdof value = 4,6,8 (divided by two) used in the species file.
+oscillators, which must be 1,2,3,4 and must match the corresponding
+vibdof value = 2,4,6,8 (divided by two) used in the species file.  A
+vibration file entry is required for every species with vibdof > 2 and is
+optional for a diatomic species (vibdof = 2, N = 1); when present it
+overrides that species' vibrational temperature and relaxation from the
+species file.
 
 One or more distinct vibrational modes then follow, each listed as 3
 values:

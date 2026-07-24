@@ -12,11 +12,13 @@ on:
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
-# Define jobs: mpi, mpi-stubs-fft, mpi-stubs-kokkos-exact-fft, and bigbig
-# Each jobs runs on ubuntu-22.04 and uses the cmake build system
-# All jobs except for bigbig run ctest. The mpi-stubs-kokkos-exact-fft job runs
-# the regression tests under KOKKOS ("-k on -sf kk") using the Serial backend
-# and SPARTA_KOKKOS_EXACT so results match the non-KOKKOS gold-standard logs.
+# Define jobs: mpi, mpi-stubs, mpi-kokkos-exact, and bigbig
+# Each jobs runs on ubuntu-22.04 and uses the cmake build system. All jobs
+# enable the FFT package (PKG_FFT). All jobs except for bigbig run ctest.
+# The mpi-kokkos-exact job runs the regression tests under KOKKOS
+# ("-k on -sf kk") using the Serial backend and SPARTA_KOKKOS_EXACT so results
+# match the non-KOKKOS gold-standard logs. It uses a real MPI build so the
+# tests run with both 1 and 4 MPI ranks.
 jobs:
   mpi:
     runs-on: ubuntu-22.04
@@ -51,6 +53,7 @@ jobs:
         cd build
         cmake -C ../cmake/presets/mpi.cmake \
           -DSPARTA_ENABLE_TESTING=ON \
+          -DPKG_FFT=ON \
           -DPKG_PYTHON=ON \
           -DPKG_VTK=ON \
           -DBUILD_VTK=ON \
@@ -72,7 +75,7 @@ jobs:
       with:
         name: 'mpi-Artifacts'
         path: 'build/examples/'
-  mpi-stubs-fft:
+  mpi-stubs:
     runs-on: ubuntu-22.04
     steps:
     - uses: actions/checkout@v4
@@ -101,26 +104,30 @@ jobs:
     #- uses: actions/upload-artifact@v4
     #  if: '!cancelled()'
     #  with:
-    #    name: 'mpi-stubs-fft-Artifacts'
+    #    name: 'mpi-stubs-Artifacts'
     #    path: 'build/examples/'
-  mpi-stubs-kokkos-exact-fft:
+  mpi-kokkos-exact:
     runs-on: ubuntu-22.04
     steps:
     - uses: actions/checkout@v4
+
+    - name: Install Dependencies
+      run: sudo apt install openmpi-bin libopenmpi-dev
 
     - name: Configure
       # Build the KOKKOS package with the Serial backend and SPARTA_KOKKOS_EXACT
       # so that KOKKOS reproduces the non-KOKKOS results exactly. This allows the
       # KOKKOS build to be regression tested against the existing (non-KOKKOS)
       # gold-standard log files. SPARTA_SPA_ARGS passes the KOKKOS command-line
-      # args ("-k on -sf kk") to the sparta binary for every test.
+      # args ("-k on -sf kk") to the sparta binary for every test. A real MPI
+      # build (kokkos_mpi_only preset) is used so the regression tests run with
+      # both 1 and 4 MPI ranks.
       run: |
         mkdir build
         cd build
-        cmake -C ../cmake/presets/serial.cmake \
+        cmake -C ../cmake/presets/kokkos_mpi_only.cmake \
           -DSPARTA_ENABLE_TESTING=ON \
           -DSPARTA_KOKKOS_EXACT=ON \
-          -DPKG_KOKKOS=ON \
           -DKokkos_ENABLE_SERIAL=ON \
           -DKokkos_ENABLE_OPENMP=OFF \
           -DPKG_FFT=ON \
@@ -138,12 +145,6 @@ jobs:
         sudo rm /bin/sh
         sudo ln -s /bin/bash /bin/sh
         ctest --output-on-failure -j4
-
-    - uses: actions/upload-artifact@v4
-      if: always()
-      with:
-        name: 'mpi-stubs-kokkos-exact-fft-Artifacts'
-        path: 'build/examples/'
   bigbig:
     runs-on: ubuntu-22.04
     steps:

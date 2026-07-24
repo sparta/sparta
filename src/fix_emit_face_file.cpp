@@ -402,7 +402,10 @@ void FixEmitFaceFile::perform_task()
         nactual = 0;
         for (int m = 0; m < ninsert; m++) {
           x[0] = lo[0] + random->uniform() * (hi[0]-lo[0]);
-          x[1] = lo[1] + random->uniform() * (hi[1]-lo[1]);
+          if (domain->axisymmetric)
+            x[1] = sqrt(lo[1]*lo[1] +
+                        random->uniform() * (hi[1]*hi[1]-lo[1]*lo[1]));
+          else x[1] = lo[1] + random->uniform() * (hi[1]-lo[1]);
           if (dimension == 3) x[2] = lo[2] + random->uniform() * (hi[2]-lo[2]);
           else x[2] = 0.0;
 
@@ -456,7 +459,10 @@ void FixEmitFaceFile::perform_task()
         scosine = indot / vscale[isp];
 
         x[0] = lo[0] + random->uniform() * (hi[0]-lo[0]);
-        x[1] = lo[1] + random->uniform() * (hi[1]-lo[1]);
+        if (domain->axisymmetric)
+          x[1] = sqrt(lo[1]*lo[1] +
+                      random->uniform() * (hi[1]*hi[1]-lo[1]*lo[1]));
+        else x[1] = lo[1] + random->uniform() * (hi[1]-lo[1]);
         if (dimension == 3) x[2] = lo[2] + random->uniform() * (hi[2]-lo[2]);
         else x[2] = 0.0;
 
