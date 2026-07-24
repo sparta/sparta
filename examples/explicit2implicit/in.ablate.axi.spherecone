@@ -1,0 +1,64 @@
+################################################################################
+# 2d axisymmetric ablation of the issue-#598 10-degree sphere-cone.
+#
+# Convert the explicit sphere-cone to implicit surfaces (inout mode), then let
+# incident-particle flux recede the surface.  fix ablate re-runs marching
+# squares and the watertight check every ablation step, so this exercises
+# surface recession where the body closes on the y=0 symmetry axis: the nose
+# stagnation region (highest flux) ablates back fastest, right on the axis.
+#
+# The ablation "scale" here is chosen to make recession visible over a short
+# run; it is not a calibrated physical recession rate.
+#
+#  - The "comm/sort" option to the "global" command is used to match MPI runs.
+#  - The "twopass" option is used to match Kokkos runs.
+################################################################################
+
+seed			12345
+dimension		2
+global                  gridcut 0.0 comm/sort yes
+boundary		o ar p
+
+create_box		-0.01 0.05 0.0 0.03 -0.5 0.5
+create_grid		120 60 1
+balance_grid		rcb cell
+
+global			nrho 1.e20 fnum 2.e12
+global                  surfs explicit/distributed
+
+species			../ablation/air.species N O
+mixture			air N O vstream 3472.0 0.0 0.0 temp 300.0
+
+read_surf               data.spherecone
+surf_collide		1 diffuse 1000.0 1.0
+surf_modify		all collide 1
+
+# ablation driver: number flux of incident particles per surf, averaged
+# over each ablation interval and fed to fix ablate
+
+compute                 COMP isurf/grid all all n
+fix                     FIX ave/grid all 1 20 20 c_COMP[*]
+fix                     fablate ablate all 20 20.0 f_FIX
+
+# explicit -> implicit (inout mode is watertight for sharp axis features)
+
+create_isurf            all fablate 39.5 inout
+
+write_surf              sc.ablate.start.surf
+
+fix                     in emit/face air xlo twopass
+create_particles        air n 0 twopass
+collide			vss air ../ablation/air.vss
+
+# error out immediately if recession ever breaks watertightness / the grid
+
+fix                     gcheck grid/check 1 error
+
+timestep		1.e-7
+
+stats			50
+stats_style		step cpu np nscoll nscheck f_fablate
+
+run			500
+
+write_surf              sc.ablate.end.surf

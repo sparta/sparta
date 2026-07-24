@@ -1,0 +1,179 @@
+SPARTA (24 Sep 2025)
+Running on 4 MPI task(s)
+################################################################################
+# 2d axisymmetric ablation of the issue-#598 10-degree sphere-cone.
+#
+# Convert the explicit sphere-cone to implicit surfaces (inout mode), then let
+# incident-particle flux recede the surface.  fix ablate re-runs marching
+# squares and the watertight check every ablation step, so this exercises
+# surface recession where the body closes on the y=0 symmetry axis: the nose
+# stagnation region (highest flux) ablates back fastest, right on the axis.
+#
+# The ablation "scale" here is chosen to make recession visible over a short
+# run; it is not a calibrated physical recession rate.
+#
+#  - The "comm/sort" option to the "global" command is used to match MPI runs.
+#  - The "twopass" option is used to match Kokkos runs.
+################################################################################
+
+seed			12345
+dimension		2
+global                  gridcut 0.0 comm/sort yes
+boundary		o ar p
+
+create_box		-0.01 0.05 0.0 0.03 -0.5 0.5
+Created orthogonal box = (-0.01 0 -0.5) to (0.05 0.03 0.5)
+create_grid		120 60 1
+WARNING: Could not acquire nearby ghost cells b/c grid partition is not clumped (../grid.cpp:473)
+Created 7200 child grid cells
+  CPU time = 0.00106061 secs
+  create/ghost percent = 93.7335 6.26648
+balance_grid		rcb cell
+Balance grid migrated 5400 cells
+  CPU time = 0.00180584 secs
+  reassign/sort/migrate/ghost percent = 35.9868 0.626357 34.7065 28.6804
+
+global			nrho 1.e20 fnum 2.e12
+global                  surfs explicit/distributed
+
+species			../ablation/air.species N O
+mixture			air N O vstream 3472.0 0.0 0.0 temp 300.0
+
+read_surf               data.spherecone
+  120 lines
+  0 0.03 xlo xhi
+  0 0.0212747 ylo yhi
+  0 0 zlo zhi
+  0.000443304 min line length
+  145 0 = cells overlapping surfs, overlap cells with unmarked corner pts
+  5120 1935 145 = cells outside/inside/overlapping surfs
+  145 = surf cells with 1,2,etc splits
+  0.00014093 0.00014093 = cell-wise and global flow volume
+  CPU time = 0.00135142 secs
+  read/check/sort/surf2grid/ghost/inout/particle percent = 7.01463 6.27178 2.80971 65.4715 18.4324 10.3618 0.0980451
+  surf2grid time = 0.000884794 secs
+  map/comm1/comm2/comm3/comm4/split percent = 35.9045 4.53032 24.53 3.33343 16.2801 5.51857
+surf_collide		1 diffuse 1000.0 1.0
+surf_modify		all collide 1
+
+# ablation driver: number flux of incident particles per surf, averaged
+# over each ablation interval and fed to fix ablate
+
+compute                 COMP isurf/grid all all n
+fix                     FIX ave/grid all 1 20 20 c_COMP[*]
+fix                     fablate ablate all 20 20.0 f_FIX
+
+# explicit -> implicit (inout mode is watertight for sharp axis features)
+
+create_isurf            all fablate 39.5 inout
+  7200 0 0 = cells outside/inside/overlapping surfs
+  0 = surf cells with 1,2,etc splits
+  0.000169646 0.000169646 = cell-wise and global flow volume
+  -0.000422549 0.0304225 xlo xhi
+  0 0.0214225 ylo yhi
+  0 0 zlo zhi
+  0.000109532 min line length
+  146 = cells with surfs
+  146 = total surfs in all grid cells
+  1 = max surfs in one grid cell
+  0.219064 = min surf-size/cell-size ratio
+  146 0 = cells overlapping surfs, overlap cells with unmarked corner pts
+  5077 1977 146 = cells outside/inside/overlapping surfs
+  146 = surf cells with 1,2,etc splits
+  0.000139763 0.000139763 = cell-wise and global flow volume
+
+write_surf              sc.ablate.start.surf
+  surf elements = 146
+  CPU time = 0.000357483 secs
+
+fix                     in emit/face air xlo twopass
+create_particles        air n 0 twopass
+Created 6988 particles
+  CPU time = 0.00134993 secs
+collide			vss air ../ablation/air.vss
+
+# error out immediately if recession ever breaks watertightness / the grid
+
+fix                     gcheck grid/check 1 error
+
+timestep		1.e-7
+
+stats			50
+stats_style		step cpu np nscoll nscheck f_fablate
+
+run			500
+Memory usage per proc in Mbytes:
+  particles (ave,min,max) = 1.5625 1.5625 1.5625
+  grid      (ave,min,max) = 1.51379 1.51379 1.51379
+  surf      (ave,min,max) = 0.00362015 0 0.00654602
+  total     (ave,min,max) = 3.30651 3.30289 3.30943
+Step CPU Np Nscoll Nscheck f_fablate 
+       0            0     6988        0        0       530400 
+      50  0.011898771     6997       32      198       514425 
+     100  0.026085942     8023       31      196       493510 
+     150  0.039752109     9103       28      209       480595 
+     200  0.055547016     9996       16      197       459550 
+     250  0.071149994    10858       45      244       445345 
+     300  0.088143444    11724       27      203       423760 
+     350   0.10546276    12571       28      190       408960 
+     400   0.12294843    13352       27      224       388465 
+     450   0.14100272    14044       25      187       374930 
+     500     0.160033    14684       26      214       355040 
+Loop time of 0.160107 on 4 procs for 500 steps with 14684 particles
+Performance: 3122.906 timesteps/s, 45.857 Mparticle-step/s
+
+MPI task timing breakdown:
+Section |  min time  |  avg time  |  max time  |%varavg| %total
+---------------------------------------------------------------
+Move    | 0.036181   | 0.066037   | 0.090379   |   8.9 | 41.25
+Coll    | 0.0054072  | 0.0093885  | 0.013109   |   3.3 |  5.86
+Sort    | 0.0022926  | 0.0033581  | 0.004547   |   1.6 |  2.10
+Comm    | 0.004646   | 0.0064553  | 0.0078055  |   1.6 |  4.03
+Modify  | 0.025321   | 0.029687   | 0.036203   |   2.5 | 18.54
+Output  | 0.0003531  | 0.00059668 | 0.00094884 |   0.0 |  0.37
+Other   |            | 0.04458    |            |       | 27.85
+
+Particle moves    = 5379569 (5.38M)
+Cells touched     = 8485875 (8.49M)
+Particle comms    = 59910 (59.9K)
+Boundary collides = 12921 (12.9K)
+Boundary exits    = 16886 (16.9K)
+SurfColl checks   = 90127 (90.1K)
+SurfColl occurs   = 12645 (12.6K)
+Surf reactions    = 0 (0K)
+Collide attempts  = 20368 (20.4K)
+Collide occurs    = 17072 (17.1K)
+Reactions         = 0 (0K)
+Particles stuck   = 0
+Axisymm bad moves = 0
+
+Particle-moves/CPUsec/proc: 8.39994e+06
+Particle-moves/step: 10759.1
+Cell-touches/particle/step: 1.57743
+Particle comm iterations/step: 2.04
+Particle fraction communicated: 0.0111366
+Particle fraction colliding with boundary: 0.00240187
+Particle fraction exiting boundary: 0.00313891
+Surface-checks/particle/step: 0.0167536
+Surface-collisions/particle/step: 0.00235056
+Surf-reactions/particle/step: 0
+Collision-attempts/particle/step: 0.00378618
+Collisions/particle/step: 0.00317349
+Reactions/particle/step: 0
+
+Particles: 3671 ave 5161 max 1982 min
+Histogram: 1 0 0 0 1 0 0 1 0 1
+Cells:      1800 ave 1800 max 1800 min
+Histogram: 4 0 0 0 0 0 0 0 0 0
+GhostCell: 90 ave 120 max 60 min
+Histogram: 2 0 0 0 0 0 0 0 0 2
+EmptyCell: 90 ave 120 max 60 min
+Histogram: 2 0 0 0 0 0 0 0 0 2
+Surfs:    34 ave 64 max 0 min
+Histogram: 1 0 0 1 0 0 0 0 1 1
+GhostSurf: 0 ave 0 max 0 min
+Histogram: 4 0 0 0 0 0 0 0 0 0
+
+write_surf              sc.ablate.end.surf
+  surf elements = 136
+  CPU time = 0.000293424 secs

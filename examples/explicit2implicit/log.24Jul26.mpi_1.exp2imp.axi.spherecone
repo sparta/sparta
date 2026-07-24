@@ -1,0 +1,157 @@
+SPARTA (24 Sep 2025)
+Running on 1 MPI task(s)
+################################################################################
+# 2d axisymmetric: convert a 10-degree half-angle sphere-cone (the geometry
+# from SPARTA issue #598: 1.905 cm nose radius, 3 cm length) from explicit
+# to implicit surfaces via create_isurf, then run a short axisymmetric flow.
+#
+# The body is a solid of revolution that closes on the y=0 symmetry axis at
+# the nose tip and at the base, so it exercises create_isurf where sharp
+# features meet the axis.  The flat base face lies on a grid line, which used
+# to make create_isurf emit a non-watertight surface there; that is fixed (see
+# epsilon_adjust / epsilon_adjust_multiv in fix_ablate).  All three corner
+# modes ("ave", "inout", "multi") produce a watertight body here.
+#
+#  - The "comm/sort" option to the "global" command is used to match MPI runs.
+#  - The "twopass" option is used to match Kokkos runs.
+################################################################################
+
+seed			12345
+dimension		2
+global                  gridcut 0.0 comm/sort yes
+boundary		o ar p
+
+create_box		-0.01 0.05 0.0 0.03 -0.5 0.5
+Created orthogonal box = (-0.01 0 -0.5) to (0.05 0.03 0.5)
+create_grid		120 60 1
+Created 7200 child grid cells
+  CPU time = 0.00182515 secs
+  create/ghost percent = 54.1157 45.8843
+balance_grid		rcb cell
+Balance grid migrated 0 cells
+  CPU time = 0.00133601 secs
+  reassign/sort/migrate/ghost percent = 47.4281 3.57601 8.49722 40.4987
+
+global			nrho 1.e20 fnum 2.e12
+global                  surfs explicit/distributed
+
+species			../ablation/air.species N O
+mixture			air N O vstream 3472.0 0.0 0.0 temp 300.0
+
+read_surf               data.spherecone
+  120 lines
+  0 0.03 xlo xhi
+  0 0.0212747 ylo yhi
+  0 0 zlo zhi
+  0.000443304 min line length
+  145 0 = cells overlapping surfs, overlap cells with unmarked corner pts
+  5120 1935 145 = cells outside/inside/overlapping surfs
+  145 = surf cells with 1,2,etc splits
+  0.00014093 0.00014093 = cell-wise and global flow volume
+  CPU time = 0.0025614 secs
+  read/check/sort/surf2grid/ghost/inout/particle percent = 3.0894 3.02038 5.6149 67.7104 20.5649 15.4576 0.0110096
+  surf2grid time = 0.00173433 secs
+  map/comm1/comm2/comm3/comm4/split percent = 36.038 2.38876 30.0098 6.86627 10.1191 6.95229
+surf_collide		1 diffuse 1000.0 1.0
+surf_modify		all collide 1
+
+# convert explicit surfs to implicit surfs
+
+fix		        fablate ablate all 0 0.2 random 0
+create_isurf            all fablate 39.5 ave
+  7200 0 0 = cells outside/inside/overlapping surfs
+  0 = surf cells with 1,2,etc splits
+  0.000169646 0.000169646 = cell-wise and global flow volume
+  2.32018e-10 0.0301373 xlo xhi
+  0 0.0213432 ylo yhi
+  0 0 zlo zhi
+  3.35093e-09 min line length
+  146 = cells with surfs
+  146 = total surfs in all grid cells
+  1 = max surfs in one grid cell
+  6.70186e-06 = min surf-size/cell-size ratio
+  146 0 = cells overlapping surfs, overlap cells with unmarked corner pts
+  5119 1935 146 = cells outside/inside/overlapping surfs
+  146 = surf cells with 1,2,etc splits
+  0.000140894 0.000140894 = cell-wise and global flow volume
+
+fix                     in emit/face air xlo twopass
+create_particles        air n 0 twopass
+WARNING: Created unexpected # of particles: 7042 versus 7044 (../create_particles.cpp:445)
+Created 7042 particles
+  CPU time = 0.00145729 secs
+collide			vss air ../ablation/air.vss
+
+fix                     gcheck grid/check 1 error
+
+timestep		1.e-7
+
+stats			20
+stats_style		step cpu np nscoll nscheck
+run			100
+Memory usage per proc in Mbytes:
+  particles (ave,min,max) = 1.5625 1.5625 1.5625
+  grid      (ave,min,max) = 1.51379 1.51379 1.51379
+  surf      (ave,min,max) = 0.0144806 0.0144806 0.0144806
+  total     (ave,min,max) = 3.09077 3.09077 3.09077
+Step CPU Np Nscoll Nscheck 
+       0            0     7042        0        0 
+      20  0.013462575     7029       29      266 
+      40  0.024343353     7064       20      234 
+      60   0.03467772     7133       31      281 
+      80  0.045672492     7571       28      302 
+     100   0.05743555     8064       26      299 
+Loop time of 0.0575204 on 1 procs for 100 steps with 8064 particles
+Performance: 1738.513 timesteps/s, 14.019 Mparticle-step/s
+
+MPI task timing breakdown:
+Section |  min time  |  avg time  |  max time  |%varavg| %total
+---------------------------------------------------------------
+Move    | 0.040076   | 0.040076   | 0.040076   |   0.0 | 69.67
+Coll    | 0.0059     | 0.0059     | 0.0059     |   0.0 | 10.26
+Sort    | 0.0032481  | 0.0032481  | 0.0032481  |   0.0 |  5.65
+Comm    | 0.00015601 | 0.00015601 | 0.00015601 |   0.0 |  0.27
+Modify  | 0.0076588  | 0.0076588  | 0.0076588  |   0.0 | 13.31
+Output  | 0.0003067  | 0.0003067  | 0.0003067  |   0.0 |  0.53
+Other   |            | 0.0001752  |            |       |  0.30
+
+Particle moves    = 730187 (0.73M)
+Cells touched     = 1220997 (1.22M)
+Particle comms    = 0 (0K)
+Boundary collides = 1068 (1.07K)
+Boundary exits    = 3882 (3.88K)
+SurfColl checks   = 26733 (26.7K)
+SurfColl occurs   = 2569 (2.57K)
+Surf reactions    = 0 (0K)
+Collide attempts  = 362 (0.362K)
+Collide occurs    = 298 (0.298K)
+Reactions         = 0 (0K)
+Particles stuck   = 0
+Axisymm bad moves = 0
+
+Particle-moves/CPUsec/proc: 1.26944e+07
+Particle-moves/step: 7301.87
+Cell-touches/particle/step: 1.67217
+Particle comm iterations/step: 1
+Particle fraction communicated: 0
+Particle fraction colliding with boundary: 0.00146264
+Particle fraction exiting boundary: 0.00531645
+Surface-checks/particle/step: 0.0366112
+Surface-collisions/particle/step: 0.00351828
+Surf-reactions/particle/step: 0
+Collision-attempts/particle/step: 0.000495763
+Collisions/particle/step: 0.000408115
+Reactions/particle/step: 0
+
+Particles: 8064 ave 8064 max 8064 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+Cells:      7200 ave 7200 max 7200 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+GhostCell: 0 ave 0 max 0 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+EmptyCell: 0 ave 0 max 0 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+Surfs:    146 ave 146 max 146 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+GhostSurf: 0 ave 0 max 0 min
+Histogram: 1 0 0 0 0 0 0 0 0 0

@@ -484,6 +484,18 @@ void FixAblate::epsilon_adjust_multiv()
             mvalues[icell][i][j] = thresh;
       }
 
+      // a directional value exactly equal to thresh places a Marching
+      // Squares/Cubes vertex exactly on a grid corner point.  When a surface
+      // feature is grid-aligned this makes neighboring cells emit coincident
+      // vertices, giving a non-watertight surface and inconsistent inside/
+      // outside cell marking (e.g. create_isurf multi mode of a body whose
+      // flat face lies on a grid line).  Nudge exactly-on-threshold values
+      // just to the outside so the vertex is placed off the grid corner.
+
+      for (int j = 0; j < nmultiv; j++)
+        if (mvalues[icell][i][j] == thresh)
+          mvalues[icell][i][j] = thresh - EPSILON;
+
     } // end corner
   } // end cells
 }
