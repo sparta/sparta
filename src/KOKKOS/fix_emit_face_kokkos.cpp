@@ -406,12 +406,14 @@ void FixEmitFaceKokkos::operator()(TagFixEmitFace_ninsert, const int &i) const
       d_ninsert(i * nspecies + isp) = ninsert;
     }
   } else {
-    if (np == 0) {
+    if (np == 0.0) {
       auto ntarget = prefactor*d_tasks(i).ntarget + rand_gen.drand();
       ninsert = static_cast<int> (ntarget);
     } else {
       ninsert = npertask;
       if (i >= nthresh) ninsert++;
+      if (npremain_pertask > 0.0)
+        ninsert += static_cast<int> (npremain_pertask + rand_gen.drand());
     }
     d_ninsert(i) = ninsert;
   }

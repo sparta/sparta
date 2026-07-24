@@ -555,7 +555,7 @@ void SurfReactAdsorb::init()
       int m = 0;
       for (int isurf = me; isurf < nslocal; isurf += nprocs) {
 	isr = lines[isurf].isr;
-	if (surf->sr[isr] == this) {
+	if (isr >= 0 && surf->sr[isr] == this) {
 	  area[m] = surf->line_size(&lines[isurf]);
 	  weight[m] = 1.0;
 	}
@@ -566,7 +566,7 @@ void SurfReactAdsorb::init()
       int m = 0;
       for (int isurf = me; isurf < nslocal; isurf += nprocs) {
 	isr = tris[isurf].isr;
-	if (surf->sr[isr] == this) {
+	if (isr >= 0 && surf->sr[isr] == this) {
 	  area[m] = surf->tri_size(&tris[isurf],tmp);
 	  weight[m] = 1.0;
 	}
@@ -578,7 +578,7 @@ void SurfReactAdsorb::init()
     if (domain->dimension == 2) {
       for (int isurf = 0; isurf < nsown; isurf++) {
 	isr = mylines[isurf].isr;
-	if (surf->sr[isr] != this) continue;
+	if (isr < 0 || surf->sr[isr] != this) continue;
 	area[isurf] = surf->line_size(&mylines[isurf]);
 	weight[isurf] = 1.0;
       }
@@ -586,7 +586,7 @@ void SurfReactAdsorb::init()
       double tmp;
       for (int isurf = 0; isurf < nsown; isurf++) {
 	isr = mytris[isurf].isr;
-	if (surf->sr[isr] != this) continue;
+	if (isr < 0 || surf->sr[isr] != this) continue;
 	area[isurf] = surf->tri_size(&mytris[isurf],tmp);
 	weight[isurf] = 1.0;
       }

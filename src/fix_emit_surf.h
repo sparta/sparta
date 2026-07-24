@@ -67,7 +67,8 @@ class FixEmitSurf : public FixEmit {
   double psubsonic,tsubsonic,nsubsonic;
   double tprefactor,soundspeed_mixture;
 
-  int npmode,np;    // npmode = FLOW,CONSTANT,VARIABLE
+  int npmode;       // npmode = FLOW,CONSTANT,VARIABLE
+  double np;        // # of particles to insert per step (CONSTANT mode)
   int npvar;
   char *npstr;
 

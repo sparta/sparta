@@ -231,18 +231,26 @@ void FixEmitFace::grid_changed()
   create_tasks();
 
   // if Np > 0, nper = # of insertions per task
-  // set nthresh so as to achieve exactly Np insertions
-  // tasks > tasks_with_no_extra need to insert 1 extra particle
+  // integer part of Np is distributed deterministically:
+  //   set nthresh so as to achieve exactly npint insertions
+  //   tasks > tasks_with_no_extra need to insert 1 extra particle
+  // fractional part of Np is spread stochastically across all tasks:
+  //   each task inserts npremain_pertask + random extra particle on average
   // NOTE: currently setting same # of insertions per task
   //       could instead weight by cell face area
 
-  if (np > 0) {
+  if (np > 0.0) {
     int all,nupto,tasks_with_no_extra;
+    int npint = static_cast<int> (np);
     MPI_Allreduce(&ntask,&all,1,MPI_INT,MPI_SUM,world);
     if (all) {
-      npertask = np / all;
-      tasks_with_no_extra = all - (np % all);
-    } else npertask = tasks_with_no_extra = 0;
+      npertask = npint / all;
+      tasks_with_no_extra = all - (npint % all);
+      npremain_pertask = (np - npint) / all;
+    } else {
+      npertask = tasks_with_no_extra = 0;
+      npremain_pertask = 0.0;
+    }
 
     MPI_Scan(&ntask,&nupto,1,MPI_INT,MPI_SUM,world);
     if (tasks_with_no_extra < nupto-ntask) nthresh = 0;
@@ -590,12 +598,14 @@ void FixEmitFace::perform_task_onepass()
       }
 
     } else {
-      if (np == 0) {
+      if (np == 0.0) {
         ntarget = prefactor*tasks[i].ntarget + random->uniform();
         ninsert = static_cast<int> (ntarget);
       } else {
         ninsert = npertask;
         if (i >= nthresh) ninsert++;
+        if (npremain_pertask > 0.0)
+          ninsert += static_cast<int> (npremain_pertask + random->uniform());
       }
 
       nactual = 0;
@@ -714,12 +724,14 @@ void FixEmitFace::perform_task_twopass()
         ninsert_values[i][isp] = ninsert;
       }
     } else {
-      if (np == 0) {
+      if (np == 0.0) {
         ntarget = prefactor*tasks[i].ntarget + random->uniform();
         ninsert = static_cast<int> (ntarget);
       } else {
         ninsert = npertask;
         if (i >= nthresh) ninsert++;
+        if (npremain_pertask > 0.0)
+          ninsert += static_cast<int> (npremain_pertask + random->uniform());
       }
       ninsert_values[i][0] = ninsert;
     }
@@ -1173,8 +1185,8 @@ int FixEmitFace::option(int narg, char **arg)
 {
   if (strcmp(arg[0],"n") == 0) {
     if (2 > narg) error->all(FLERR,"Illegal fix emit/face command");
-    np = atoi(arg[1]);
-    if (np <= 0) error->all(FLERR,"Illegal fix emit/face command");
+    np = atof(arg[1]);
+    if (np <= 0.0) error->all(FLERR,"Illegal fix emit/face command");
     return 2;
   }
 

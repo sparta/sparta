@@ -53,6 +53,12 @@ enum{NOFIELD,CFIELD,PFIELD,GFIELD};             // several files
 #define MAXSTUCK 20
 #define EPSPARAM 1.0e-7
 
+// max value (bytes) for global_mem_limit = 2000 MiB = 2097152000
+// kept safely below MAXSMALLINT (INT_MAX = 2147483647) so that the buffer-size
+// arithmetic in restart I/O (e.g. "max_size += 128") cannot overflow a 32-bit int
+
+#define MEMLIMIT_MAX (2000*1024*1024)
+
 // either set ID or PROC/INDEX, set other to -1
 
 //#define MOVE_DEBUG 1              // un-comment to debug one particle
@@ -1697,7 +1703,7 @@ void Update::global(int narg, char **arg)
       iarg += 2;
 
     } else if (strcmp(arg[iarg],"field") == 0) {
-      if (iarg+1 > narg) error->all(FLERR,"Illegal global command");
+      if (iarg+2 > narg) error->all(FLERR,"Illegal global command");
       if (strcmp(arg[iarg+1],"none") == 0) {
         fstyle = NOFIELD;
         iarg += 2;
@@ -1814,7 +1820,7 @@ void Update::global(int narg, char **arg)
         double factor = input->numeric(FLERR,arg[iarg+1]);
         bigint global_mem_limit_big = static_cast<bigint> (factor * 1024*1024);
         if (global_mem_limit_big < 0) error->all(FLERR,"Illegal global command");
-        if (global_mem_limit_big > MAXSMALLINT)
+        if (global_mem_limit_big > MEMLIMIT_MAX)
           error->all(FLERR,"Global mem/limit setting cannot exceed 2GB");
         global_mem_limit = global_mem_limit_big;
       }
@@ -1885,8 +1891,10 @@ void Update::set_mem_limit_grid(int gnlocal)
 
   bigint global_mem_limit_big = static_cast<bigint> (gnlocal*sizeof(Grid::ChildCell));
 
-  if (global_mem_limit_big > MAXSMALLINT)
-    error->one(FLERR,"Global mem/limit setting cannot exceed 2GB");
+  // cap at 2 GB rather than erroring out so large grids can still be handled
+
+  if (global_mem_limit_big > MEMLIMIT_MAX)
+    global_mem_limit_big = MEMLIMIT_MAX;
 
   global_mem_limit = global_mem_limit_big;
 }

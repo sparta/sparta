@@ -126,6 +126,12 @@ of emitted particles is set to its fraction of the total emission area
 that results in a fractional value, then an extra particle is emitted
 depending on the value of a random number, as explained above.
 
+{Np} may be set to a non-integer value, e.g. 12.5 or 0.5.  Since the
+per-surface-element target is rounded stochastically, this allows for
+an emission rate of less than one particle per timestep, which is
+useful when a low inflow rate is desired through a specific group of
+surface elements without changing the global {fnum} setting.
+
 The {Np} value can be also be specified as an equal-style
 "variable"_variable.html.  If the value is a variable, it should be
 specified as v_name, where name is the variable name.  In this case,

@@ -188,6 +188,15 @@ void WriteISurf::collect_values()
   int ix,iy,iz,index;
   double **array_grid = ablate->array_grid;
 
+  // a multivalue fix ablate (multiple yes / create_isurf multi) stores its
+  // corner state in mvalues, not cvalues, so array_grid is NULL.  isurf files
+  // are single-valued, so error cleanly instead of dereferencing NULL below.
+
+  if (array_grid == NULL)
+    error->all(FLERR,"Write_isurf does not support a multivalue fix ablate "
+               "(multiple yes); its corner state cannot be written to an "
+               "isurf file");
+
   for (int icell = 0; icell < nglocal; icell++) {
     if (!(cinfo[icell].mask & groupbit)) continue;
     if (cells[icell].nsplit <= 0) continue;
