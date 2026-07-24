@@ -41,7 +41,9 @@ fix		    in emit/surf air all mflow ${mtarget} 10.0 window 100 perspecies no two
 variable            avgmass equal "0.5*(2.325e-26+2.65e-26)"
 variable            mrate   equal "f_in[2]*0.001*v_avgmass/(step*0.0001+1.0e-30)"
 
-fix                 1 balance 10 1.0 rcb part
+# the time-averaging window keeps per-task state between steps; that state is
+# reset whenever tasks are rebuilt, so dynamic load balancing (fix balance) is
+# intentionally not used here
 
 stats		    100
 stats_style	    step cpu np f_in[1] f_in[2] v_mrate
