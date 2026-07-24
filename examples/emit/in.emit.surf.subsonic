@@ -1,0 +1,47 @@
+################################################################################
+# particles emitted from a circle with a subsonic pressure boundary condition,
+# using the optional time-averaging window to damp statistical fluctuations
+#
+# Note:
+#  - The "comm/sort” option to the “global” command is used to match MPI runs.
+#  - The “twopass” option is used to match Kokkos runs.
+# The "comm/sort" and "twopass" options should not be used for production runs.
+#
+# The {window} value applies a moving average to the cell streaming velocity used
+# by the subsonic boundary condition (Sun & Boyd 2005): vstream = a*vnew+(1-a)*vold
+# with a = 1/(window+1). window 0 (the default) reproduces the instantaneous
+# behavior exactly; larger window gives heavier smoothing.
+################################################################################
+
+seed	    	    12345
+dimension   	    2
+global              gridcut 0.0 comm/sort yes
+
+boundary	    o r p
+
+create_box  	    0 10 0 10 -0.5 0.5
+create_grid 	    10 10 1
+balance_grid        rcb cell
+
+global		    nrho 1.0 fnum 0.001
+
+species		    air.species N O
+mixture		    air N O vstream 10.0 0 0 temp 10.0
+
+read_surf           data.circle
+surf_collide	    1 diffuse 300.0 0.0
+surf_modify         all collide 1
+
+collide             vss air air.vss
+
+# the time-averaging window keeps per-task EMA state between steps; that state
+# is reset whenever tasks are rebuilt, so dynamic load balancing (fix balance)
+# is intentionally not used here
+
+fix		    in emit/surf air all subsonic 1.380649e-22 10.0 window 100 twopass
+
+stats		    100
+stats_style	    step cpu np f_in[1] f_in[2]
+
+timestep 	    0.0001
+run 		    1000
