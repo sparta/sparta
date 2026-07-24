@@ -57,6 +57,9 @@ struct TagCollideZeroNN{};
 template < int NEARCP, int GASTALLY, int ATOMIC_REDUCTION >
 struct TagCollideCollisionsOne{};
 
+template < int DIM, int GASTALLY, int ATOMIC_REDUCTION >
+struct TagCollideCollisionsOneSubcell{};
+
 template < int GASTALLY, int ATOMIC_REDUCTION >
 struct TagCollideCollisionsOneAmbipolar{};
 
@@ -109,6 +112,14 @@ class CollideVSSKokkos : public CollideVSS {
   template < int NEARCP, int GASTALLY, int ATOMIC_REDUCTION >
   KOKKOS_INLINE_FUNCTION
   void operator()(TagCollideCollisionsOne< NEARCP, GASTALLY, ATOMIC_REDUCTION >, const int&, COLLIDE_REDUCE&) const;
+
+  template < int DIM, int GASTALLY, int ATOMIC_REDUCTION >
+  KOKKOS_INLINE_FUNCTION
+  void operator()(TagCollideCollisionsOneSubcell< DIM, GASTALLY, ATOMIC_REDUCTION >, const int&) const;
+
+  template < int DIM, int GASTALLY, int ATOMIC_REDUCTION >
+  KOKKOS_INLINE_FUNCTION
+  void operator()(TagCollideCollisionsOneSubcell< DIM, GASTALLY, ATOMIC_REDUCTION >, const int&, COLLIDE_REDUCE&) const;
 
   template < int GASTALLY, int ATOMIC_REDUCTION >
   KOKKOS_INLINE_FUNCTION
@@ -208,7 +219,27 @@ class CollideVSSKokkos : public CollideVSS {
   DAT::t_int_2d d_nn_last_partner;
 
   template < int NEARCP, int GASTALLY > void collisions_one(COLLIDE_REDUCE&);
+  template < int DIM, int GASTALLY > void collisions_one_subcell(COLLIDE_REDUCE&);
   template < int GASTALLY > void collisions_one_ambipolar(COLLIDE_REDUCE&);
+
+  // transient subcell method, per-cell scratch indexed by (icell,index)
+  // subcell_id/next indexed by particle; count/first/ring indexed by subcell
+
+  DAT::t_int_2d d_subcell_id;
+  DAT::t_int_2d d_subcell_count;
+  DAT::t_int_2d d_subcell_first;
+  DAT::t_int_2d d_subcell_next;
+  DAT::t_int_2d d_subcell_ring;
+
+  template < int DIM >
+  KOKKOS_INLINE_FUNCTION
+  void rebin_subcell(int, int, int, const double *, const double *) const;
+
+  template < int DIM >
+  KOKKOS_INLINE_FUNCTION
+  int find_nn_subcell(rand_type &, int, int, int, int, int) const;
+
+  void grow_subcell_views(int, int);
 
   // VSS specific
 
