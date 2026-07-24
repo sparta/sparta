@@ -326,6 +326,16 @@ void FixAblate::store_corners(int nx_caller, int ny_caller, int nz_caller,
     mvalues = NULL; // likely not needed
   }
 
+  // a multivalue fix stores corner state in mvalues and leaves array_grid
+  //   (= cvalues) NULL, so it cannot expose the per-grid corner array that
+  //   per_grid_flag advertises.  Turn the flag off so generic per-grid
+  //   consumers (compute reduce, dump grid, fix ave/grid, ...) reject it
+  //   cleanly at setup instead of dereferencing NULL array_grid at run time.
+  //   The scalar output (f_ID) is unaffected.
+
+  if (multi_val_flag) per_grid_flag = 0;
+  else per_grid_flag = 1;
+
   nx = nx_caller;
   ny = ny_caller;
   nz = nz_caller;
