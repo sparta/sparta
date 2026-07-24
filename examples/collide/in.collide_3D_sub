@@ -9,7 +9,8 @@
 # mean free path lambda ~ 2.4e-6 m, mean collision time tau ~ 6e-9 s
 # grid cells are 1e-5 m ~ 4x lambda, coarser than the lambda/3 rule,
 #   which is the regime where near-neighbor partner selection
-#   (collide_modify nearcp or subcell) reduces the mean collision separation
+#   (collide_modify partners nearcp or subcell) reduces the mean
+#   collision separation
 #
 # Notes:
 #  - the "comm/sort" option to the "global" command is used to match MPI runs
@@ -35,7 +36,7 @@ global             nrho 5.65634E23
 global             fnum 7.07043E6
 
 collide            vss air ar.vss
-collide_modify     subcell yes
+collide_modify     partners subcell
 
 create_particles   air n 80000 twopass
 

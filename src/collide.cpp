@@ -169,8 +169,11 @@ void Collide::init()
     error->all(FLERR,"Ambipolar collision model does not yet support "
                "subcell collisions");
 
+  // the partners keyword cannot set both flags, this guards against
+  //   a derived class or package setting them directly
+
   if (nearcp && subcellflag)
-    error->all(FLERR,"Cannot use both nearcp and subcell collisions");
+    error->all(FLERR,"Cannot use both nearcp and subcell collision partners");
 
   // require mixture to contain all species
 
@@ -2197,6 +2200,29 @@ void Collide::modify_params(int narg, char **arg)
       else if (strcmp(arg[iarg+1],"yes") == 0) ambiflag = 1;
       else error->all(FLERR,"Illegal collide_modify command");
       iarg += 2;
+    } else if (strcmp(arg[iarg],"partners") == 0) {
+      if (iarg+2 > narg) error->all(FLERR,"Illegal collide_modify command");
+      if (strcmp(arg[iarg+1],"random") == 0) {
+        nearcp = 0;
+        subcellflag = 0;
+        iarg += 2;
+      } else if (strcmp(arg[iarg+1],"nearcp") == 0) {
+        if (iarg+3 > narg) error->all(FLERR,"Illegal collide_modify command");
+        nearcp = 1;
+        subcellflag = 0;
+        nearlimit = atoi(arg[iarg+2]);
+        if (nearlimit <= 0) error->all(FLERR,"Illegal collide_modify command");
+        iarg += 3;
+      } else if (strcmp(arg[iarg+1],"subcell") == 0) {
+        nearcp = 0;
+        subcellflag = 1;
+        iarg += 2;
+      } else error->all(FLERR,"Illegal collide_modify command");
+
+    // nearcp is deprecated, superseded by the partners keyword
+    // nearcp yes Nlimit = partners nearcp Nlimit
+    // nearcp no Nlimit  = partners random
+
     } else if (strcmp(arg[iarg],"nearcp") == 0) {
       if (iarg+3 > narg) error->all(FLERR,"Illegal collide_modify command");
       if (strcmp(arg[iarg+1],"yes") == 0) nearcp = 1;
@@ -2205,13 +2231,8 @@ void Collide::modify_params(int narg, char **arg)
       nearlimit = atoi(arg[iarg+2]);
       if (nearcp && nearlimit <= 0)
         error->all(FLERR,"Illegal collide_modify command");
+      subcellflag = 0;
       iarg += 3;
-    } else if (strcmp(arg[iarg],"subcell") == 0) {
-      if (iarg+2 > narg) error->all(FLERR,"Illegal collide_modify command");
-      if (strcmp(arg[iarg+1],"yes") == 0) subcellflag = 1;
-      else if (strcmp(arg[iarg+1],"no") == 0) subcellflag = 0;
-      else error->all(FLERR,"Illegal collide_modify command");
-      iarg += 2;
     } else if (strcmp(arg[iarg],"scheme") == 0) {
       if (iarg+2 > narg) error->all(FLERR,"Illegal collide_modify command");
       if (strcmp(arg[iarg+1],"ntc") == 0) mcflag = 0;

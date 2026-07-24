@@ -138,7 +138,7 @@ void CollideVSSKokkos::init()
                "subcell collisions");
 
   if (nearcp && subcellflag)
-    error->all(FLERR,"Cannot use both nearcp and subcell collisions");
+    error->all(FLERR,"Cannot use both nearcp and subcell collision partners");
 
   // require mixture to contain all species
 

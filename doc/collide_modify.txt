@@ -13,16 +13,18 @@ collide_modify command :h3
 collide_modify keyword values ...  :pre
 
 one or more keyword/value pairs may be listed :ulb,l
-keywords = {vremax} or {remain} or {scheme} or {ambipolar} or {nearcp} or {subcell} or {rotate} or {vibrate} :l
+keywords = {vremax} or {remain} or {scheme} or {partners} or {ambipolar} or {rotate} or {vibrate} :l
   {vremax} values = Nevery startflag
     Nevery = zero vremax every this many timesteps
     startflag = {yes} or {no} = zero vremax at start of every run
   {remain} value = {yes} or {no} = hold remaining fraction of collisions over to next timestep
   {scheme} value = {ntc} or {mcf} = scheme used to compute the number of attempted collisions
-  {nearcp} values = choice Nlimit
-    choice = {yes} or {no} to turn on/off near collision partners
-    Nlimit = max # of attempts made to find a collision partner
-  {subcell} value = {yes} or {no} = turn on/off transient subcell collision partner selection
+  {partners} values = style plus optional arg = method used to select collision partners
+    style = {random} or {nearcp} or {subcell}
+      {random} = select partners randomly from all particles in the grid cell
+      {nearcp} arg = Nlimit
+        Nlimit = max # of attempts made to find a near collision partner
+      {subcell} = select partners via the transient adaptive subcell method
   {ambipolar} value = {no} or {yes}
   {rotate} value = {no} or {smooth}
   {vibrate} value = {no} or {smooth} or {discrete} :pre
@@ -33,6 +35,8 @@ keywords = {vremax} or {remain} or {scheme} or {ambipolar} or {nearcp} or {subce
 collide_modify vremax 1000 yes
 collide_modify vremax 0 no remain no
 collide_modify scheme mcf
+collide_modify partners nearcp 10
+collide_modify partners subcell
 collide_modify ambipolar yes :pre
 
 [Description:]
@@ -98,19 +102,25 @@ large relative to the local mean collision time.  See
 When {mcf} is specified, the {remain} keyword setting has no effect,
 since no fractional attempt count is computed.
 
-The {nearcp} keyword stands for "near collision partner" and affects
-how collision partners are selected.  If {no} is specified, which is
-the default, then collision partner pairs are selected randomly from
-all particles in the grid cell.  In this case the {Nlimit} parameter
-is ignored, though it must still be specfied.  
+The {partners} keyword selects the method used to choose which pairs
+of particles within a grid cell collide with each other.  The three
+styles are mutually exclusive; the last {partners} setting specified is
+the one used.  Note that this is independent of the {scheme} keyword
+above, which sets how many collisions are attempted in the cell, not
+which particles are paired.  Any {partners} style can be combined with
+either {scheme} setting.
 
-If {yes} is specified, then up to {Nlimit} collision partners are
-considered for each collision.  The first partner I is chosen randomly
-from all particles in the grid cell.  A distance R that particle I
-moves in that timestep is calculated, based on its velocity.  {Nlimit}
-possible collision partners J are examined, starting at a random J.
-If one of them is within a distance R of particle I, it is immediately
-selected as the collision partner.  If none of the {Nlimit} particles
+If {random} is specified, which is the default, then collision partner
+pairs are selected randomly from all particles in the grid cell.
+
+If {nearcp} is specified, which stands for "near collision partner",
+then up to {Nlimit} collision partners are considered for each
+collision.  The first partner I is chosen randomly from all particles
+in the grid cell.  A distance R that particle I moves in that timestep
+is calculated, based on its velocity.  {Nlimit} possible collision
+partners J are examined, starting at a random J.  If one of them is
+within a distance R of particle I, it is immediately selected as the
+collision partner.  If none of the {Nlimit} particles
 are within a distance R, the closest J particle to I is selected.  An
 exception to these rules is that a particle J is not considered for a
 collision if the I,J pair were the most recent collision partners (in
@@ -119,33 +129,27 @@ this near-neighbor algorithm are described in "(Gallis11)"_#Gallis11.
 Note that choosing {Nlimit} judiciously will avoid costly searches
 when there are large numbers of particles in some or all grid cells.
 
-The {subcell} keyword enables the transient adaptive subcell method of
-Bird "(Bird09)"_#Bird09 for selecting collision partners, which is an
-alternative to the {nearcp} option.  If {no} is specified, which is the
-default, the subcell method is not used, and collision partners are
-selected randomly from all particles in the grid cell, or by the
-near-neighbor algorithm if the {nearcp} keyword is set to {yes}.
-
-If {yes} is specified, then each timestep the particles in a grid cell
-are binned into a transient grid of subcells within the cell, with Nsub
-subcells in each dimension.  Nsub is chosen as the largest integer such
-that the number of subcells does not exceed the number of particles N
-in the cell, i.e. Nsub = floor(N^(1/3)) in 3d and floor(N^(1/2)) in 2d,
-so that each subcell contains approximately one particle on average.
-The first collision
-partner I is chosen randomly from all particles in the grid cell.  If
-another particle is in the same subcell as particle I, the partner J
-is chosen randomly from the particles in that subcell.  Otherwise
+If {subcell} is specified, the transient adaptive subcell method of
+Bird "(Bird09)"_#Bird09 is used.  Each timestep the particles in a grid
+cell are binned into a transient grid of subcells within the cell, with
+Nsub subcells in each dimension.  Nsub is chosen as the largest integer
+such that the number of subcells does not exceed the number of
+particles N in the cell, i.e. Nsub = floor(N^(1/3)) in 3d and
+floor(N^(1/2)) in 2d, so that each subcell contains approximately one
+particle on average.  The first collision partner I is chosen randomly
+from all particles in the grid cell.  If another particle is in the
+same subcell as particle I, the partner J is chosen randomly from the
+particles in that subcell.  Otherwise
 expanding shells of subcells around particle I's subcell are searched
 until candidate partners are found, and J is chosen randomly from the
-particles in that shell.  As with the {nearcp} option, a particle J is
+particles in that shell.  As with the {nearcp} style, a particle J is
 not selected if the I,J pair were the most recent collision partners
 (in the current timestep) for each other; a different or more distant
 particle is selected instead, unless no other candidate exists.  The
 subcell binning is discarded after each cell is processed, so the
 memory overhead of the method is negligible.
 
-Like the {nearcp} option, the {subcell} method reduces the mean
+Like the {nearcp} style, the {subcell} method reduces the mean
 separation distance between colliding particles, which reduces the
 spatial discretization error associated with the grid cell size.  This
 can allow accurate simulations with grid cells comparable to the local
@@ -155,10 +159,17 @@ cost of selecting a partner does not depend on a user-chosen search
 limit as with {nearcp}; for cells with many particles the subcell
 method is typically faster than {nearcp} with a large {Nlimit}.
 
-The {subcell} and {nearcp} options are mutually exclusive.  The
-{subcell} option does not yet support the ambipolar approximation or
-mixtures with multiple collision groups.  It is supported by the
-KOKKOS package.
+The {subcell} style does not yet support the ambipolar approximation or
+mixtures with multiple collision groups.  It is supported by the KOKKOS
+package.
+
+For backward compatibility the older {nearcp} keyword is still
+recognized, but it is deprecated and may be removed in a future
+release.  It takes the form "collide_modify nearcp choice Nlimit",
+where {choice} is {yes} or {no}.  "nearcp yes Nlimit" is equivalent to
+"partners nearcp Nlimit", and "nearcp no Nlimit" is equivalent to
+"partners random", in which case {Nlimit} is ignored though it must
+still be specified.  New input scripts should use {partners}.
 
 If the {ambipolar} keyword is set to {yes}, then collisions within a
 grid cell with use the ambipolar approximation.  This requires use of
