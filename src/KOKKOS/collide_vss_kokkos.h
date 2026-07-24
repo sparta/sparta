@@ -148,6 +148,7 @@ class CollideVSSKokkos : public CollideVSS {
   tdual_struct_tdual_int_2d_1d k_eiarray;
   tdual_struct_tdual_float_2d_1d k_edarray;
   DAT::t_int_1d d_ionambi;
+  DAT::t_int_1d d_ions;
   DAT::t_float_2d_lr d_velambi;
   t_particle_2d d_elist;
 
@@ -240,6 +241,10 @@ class CollideVSSKokkos : public CollideVSS {
 
   KOKKOS_INLINE_FUNCTION
   double sample_bl(rand_type &, double, double) const;
+  KOKKOS_INLINE_FUNCTION
+  double eff_vib_dof(double, double) const;
+  KOKKOS_INLINE_FUNCTION
+  double vib_pool_temp(double, int, double *, double) const;
   KOKKOS_INLINE_FUNCTION
   double rotrel (int, double) const;
   KOKKOS_INLINE_FUNCTION
