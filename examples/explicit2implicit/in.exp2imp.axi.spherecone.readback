@@ -1,0 +1,48 @@
+################################################################################
+# 2d axisymmetric: write_isurf / read_isurf round trip for the issue-#598
+# 10-degree sphere-cone.
+#
+# Stage 1 (this file) converts the explicit sphere-cone to implicit surfaces
+# and writes the grid corner point values with write_isurf.  Stage 2
+# (in.exp2imp.axi.spherecone.readback2) reads them back with read_isurf and
+# reproduces the identical body.
+#
+# Two things are required for an exact round trip:
+#   - the read_isurf "precision" must match the write_isurf "precision".
+#     write_isurf defaults to double, read_isurf defaults to int.
+#   - read_isurf must use "push no".  create_isurf stores corner values
+#     without the push-to-0/255 step, so pushing on read would alter them.
+#
+#  - The "comm/sort" option to the "global" command is used to match MPI runs.
+################################################################################
+
+seed			12345
+dimension		2
+global                  gridcut 0.0 comm/sort yes
+boundary		o ar p
+
+create_box		-0.01 0.05 0.0 0.03 -0.5 0.5
+create_grid		120 60 1
+balance_grid		rcb cell
+
+global			nrho 1.e20 fnum 2.e12
+global                  surfs explicit/distributed
+
+species			../ablation/air.species N O
+mixture			air N O vstream 3472.0 0.0 0.0 temp 300.0
+
+read_surf               data.spherecone
+surf_collide		1 diffuse 1000.0 1.0
+surf_modify		all collide 1
+
+# convert explicit surfs to implicit surfs, then write the corner values
+# nevery = 1 so the fix ablate instance is not deleted before write_isurf
+
+fix		        fablate ablate all 1 0.2 random 0
+create_isurf            all fablate 39.5 ave
+
+write_isurf             all 120 60 1 sc.corners.dat fablate precision double
+
+stats			1
+stats_style		step cpu np
+run			0

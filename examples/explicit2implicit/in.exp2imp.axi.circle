@@ -1,0 +1,54 @@
+################################################################################
+# 2d axisymmetric flow: convert an explicit half-circle (a sphere of
+# revolution) that closes on the y=0 symmetry axis into implicit surfaces
+# via create_isurf, then run a short axisymmetric flow.
+#
+# Exercises create_isurf / fix ablate in an axisymmetric domain and the
+# behavior of the reconstructed surface where the body meets the axis (y=0).
+#
+# Note:
+#  - The "comm/sort" option to the "global" command is used to match MPI runs.
+#  - The "twopass" option is used to match Kokkos runs.
+################################################################################
+
+seed			12345
+dimension		2
+global                  gridcut 0.0 comm/sort yes
+
+boundary		o ar p
+
+create_box		-0.25 0.25 0.0 0.25 -0.5 0.5
+create_grid		50 25 1
+balance_grid		rcb cell
+
+global			nrho 1.e20 fnum 1.e17
+global                  surfs explicit/distributed
+
+species			air.species N2
+mixture			air N2 vstream 3472.0 0.0 0.0 temp 300.0
+
+# upper half of a circle of radius 0.15 centered at the origin
+# -> touches the symmetry axis at (-0.15,0) and (0.15,0)
+# clip discards the (invalid) y<0 portion
+
+read_surf               ../axi/data.circle origin 5 5 0 &
+                        trans -5 -5 0 scale 0.05 0.05 1 clip
+
+surf_collide		1 diffuse 300.0 0.0
+surf_modify		all collide 1
+
+# convert explicit surfs to implicit surfs
+
+fix		        fablate ablate all 0 0.2 random 0
+create_isurf            all fablate 39.5 ave
+
+fix                     in emit/face air xlo twopass
+create_particles        air n 0 twopass
+
+collide			vss air air.vss
+
+timestep		1.e-6
+
+stats			5
+stats_style		step cpu np nattempt ncoll nscoll nscheck
+run			20

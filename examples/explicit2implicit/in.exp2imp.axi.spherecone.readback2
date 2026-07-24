@@ -1,0 +1,47 @@
+################################################################################
+# 2d axisymmetric: stage 2 of the write_isurf / read_isurf round trip.
+# Run in.exp2imp.axi.spherecone.readback first to create sc.corners.dat.
+#
+# read_isurf reads the corner point values back and rebuilds the sphere-cone.
+# The body touches the y=0 symmetry axis at the nose and the base, which is
+# allowed because the grid block starts on the axis.
+#
+# "precision double" matches the write_isurf precision, and "push no" matches
+# how create_isurf stored the values; together they reproduce the flow volume
+# of stage 1 exactly.
+#
+#  - The "comm/sort" option to the "global" command is used to match MPI runs.
+#  - The "twopass" option is used to match Kokkos runs.
+################################################################################
+
+seed			12345
+dimension		2
+global                  gridcut 0.0 comm/sort yes
+boundary		o ar p
+
+create_box		-0.01 0.05 0.0 0.03 -0.5 0.5
+create_grid		120 60 1
+balance_grid		rcb cell
+
+global			nrho 1.e20 fnum 2.e12
+global                  surfs implicit
+
+species			../ablation/air.species N O
+mixture			air N O vstream 3472.0 0.0 0.0 temp 300.0
+
+fix		        fablate ablate all 0 0.2 random 0
+read_isurf              all 120 60 1 sc.corners.dat 39.5 fablate &
+                        precision double push no
+
+surf_collide		1 diffuse 1000.0 1.0
+surf_modify		all collide 1
+
+fix                     in emit/face air xlo twopass
+create_particles        air n 0 twopass
+collide			vss air ../ablation/air.vss
+
+timestep		1.e-7
+
+stats			20
+stats_style		step cpu np nscoll nscheck
+run			100

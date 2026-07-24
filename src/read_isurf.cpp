@@ -75,8 +75,6 @@ void ReadISurf::command(int narg, char **arg)
     error->all(FLERR,"Cannot read_isurf unless global surfs implicit is set");
   if (surf->exist)
     error->all(FLERR,"Cannot read_isurf when surfs already exist");
-  if (domain->axisymmetric)
-    error->all(FLERR,"Cannot read_isurf for axisymmetric domains");
 
   if (particle->exist)
     if (me == 0) error->warning(FLERR,"Using read_isurf when particles exist");
@@ -333,6 +331,13 @@ void ReadISurf::assign_corners(int n, bigint offset, uint8_t *ibuf, double *dbuf
   int pix,piy,piz;
   bigint pointindex,cellindex;
 
+  // axisflag = 1 if the piy = 0 face of the grid block is the symmetry axis
+  // create_box requires boxlo[1] = 0.0 for an axisymmetric domain, so the
+  // axis is the y = 0 plane.  A grid block that starts above the axis is
+  // still subject to the strict zero-boundary requirement.
+
+  int axisflag = domain->axisymmetric && corner[1] == domain->boxlo[1];
+
   for (int i = 0; i < n; i++) {
     pointindex = offset + i;
     pix = pointindex % (nx+1);
@@ -340,11 +345,17 @@ void ReadISurf::assign_corners(int n, bigint offset, uint8_t *ibuf, double *dbuf
     piz = pointindex / ((nx+1)*(ny+1));
 
     // check that a boundary value is 0
+    // exception: if the grid block starts on the symmetry axis of an
+    //   axisymmetric domain (y = 0), material is allowed to touch the
+    //   piy = 0 boundary.  A body of revolution legitimately closes on the
+    //   axis there, and the resulting surface end points lie on the box
+    //   boundary, which the watertight check already allows.
 
     zeroflag = 0;
     if ((precision == INT && ibuf[i]) ||
         (precision == DOUBLE && dbuf[i] != 0.0)) {
-      if (pix == 0 || piy == 0) zeroflag = 1;
+      if (pix == 0) zeroflag = 1;
+      if (piy == 0 && !axisflag) zeroflag = 1;
       if (pix == nx || piy == ny) zeroflag = 1;
       if (dim == 3 && (piz == 0 || piz == nz)) zeroflag = 1;
       if (zeroflag) error->all(FLERR,"Grid boundary value != 0");

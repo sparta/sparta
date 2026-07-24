@@ -130,8 +130,6 @@ void CreateISurf::command(int narg, char **arg)
     error->all(FLERR,"Create_isurf Cannot have pre-existing implicit surfaces");
   if (!surf->distributed)
     error->all(FLERR,"Create_isurf requires distributed explicit surfaces");
-  if (domain->axisymmetric)
-    error->all(FLERR,"Cannot create_isurf for axisymmetric domains");
 
   if (narg < 4) error->all(FLERR,"Illegal create_isurf command");
 

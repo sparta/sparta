@@ -1144,22 +1144,34 @@ void FixAblate::sync()
 
 void FixAblate::epsilon_adjust()
 {
-  if (mindist == 0.0) return;
-
   int i,icell;
 
   Grid::ChildCell *cells = grid->cells;
   Grid::ChildInfo *cinfo = grid->cinfo;
 
+  // a corner value exactly equal to thresh makes Marching Squares/Cubes place
+  // a vertex exactly on a grid corner point.  When a surface feature is
+  // grid-aligned this makes neighboring cells emit coincident vertices there,
+  // producing a non-watertight surface (e.g. create_isurf of a body whose flat
+  // face lies on a grid line).  Removing exactly-on-threshold values is a hard
+  // numerical requirement and is always enforced.  The wider EPSILON band,
+  // which also suppresses tiny surface elements, is only applied when the user
+  // requests it via mindist > 0 so as not to change existing results.
+
   for (icell = 0; icell < nglocal; icell++) {
     if (!(cinfo[icell].mask & groupbit)) continue;
     if (cells[icell].nsplit <= 0) continue;
 
-    for (i = 0; i < ncorner; i++)
-      if (cvalues[icell][i] >= thresh && cvalues[icell][i] < thresh + EPSILON)
+    for (i = 0; i < ncorner; i++) {
+      if (mindist > 0.0) {
+        if (cvalues[icell][i] >= thresh && cvalues[icell][i] < thresh + EPSILON)
+          cvalues[icell][i] = thresh - EPSILON;
+        else if (cvalues[icell][i] < thresh && cvalues[icell][i] > thresh - EPSILON)
+          cvalues[icell][i] = thresh - EPSILON;
+      } else if (cvalues[icell][i] == thresh) {
         cvalues[icell][i] = thresh - EPSILON;
-      else if (cvalues[icell][i] < thresh && cvalues[icell][i] > thresh - EPSILON)
-        cvalues[icell][i] = thresh - EPSILON;
+      }
+    }
   }
 }
 
