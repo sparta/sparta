@@ -246,6 +246,40 @@ void ReadISurf::create_hash(int count)
        if it owns the grid cell, makes copy of the corner pt
 ------------------------------------------------------------------------- */
 
+/* ----------------------------------------------------------------------
+   verify an open isurf corner point file matches the requested grid
+     extent and precision, based on its total size
+   fp is positioned just past the dim-int header on entry;
+     restore that position before returning so the caller can keep reading
+   only called by proc 0
+   isurf files store no precision/format marker, so a wrong precision
+     keyword silently reinterprets the byte stream and otherwise fails
+     later with a confusing error; this gives a clear diagnostic instead
+------------------------------------------------------------------------- */
+
+void ReadISurf::check_file_size(FILE *fp, char *gridfile)
+{
+  bigint ncval = (bigint) (nx+1) * (ny+1);
+  if (dim == 3) ncval *= (nz+1);
+  int vbytes = (precision == DOUBLE) ? sizeof(double) : sizeof(uint8_t);
+  bigint expected = (bigint) dim*sizeof(int) + ncval*vbytes;
+
+  fseek(fp,0,SEEK_END);
+  bigint fsize = (bigint) ftell(fp);
+  fseek(fp,(long) dim*sizeof(int),SEEK_SET);
+
+  if (fsize != expected) {
+    char str[256];
+    snprintf(str,256,"Read_isurf file %s size (" BIGINT_FORMAT " bytes) does "
+             "not match grid extent and precision (" BIGINT_FORMAT
+             " bytes expected); check the precision keyword",
+             gridfile,fsize,expected);
+    error->one(FLERR,str);
+  }
+}
+
+/* ---------------------------------------------------------------------- */
+
 void ReadISurf::read_corners_serial(char *gridfile)
 {
   int nchunk,tmp;
@@ -270,6 +304,13 @@ void ReadISurf::read_corners_serial(char *gridfile)
       error->one(FLERR,str);
     }
     tmp = fread(nxyz,sizeof(int),dim,fp);
+
+    // sanity check the file size against the grid extent and precision
+    // isurf files carry no precision marker, so a wrong precision keyword
+    // would otherwise reinterpret the byte stream and fail later with a
+    // misleading error (e.g. "Grid boundary value != 0")
+
+    check_file_size(fp,gridfile);
   }
 
   MPI_Bcast(nxyz,dim,MPI_INT,0,world);
@@ -512,6 +553,11 @@ void ReadISurf::read_corners_parallel(char *gridfile)
       error->one(FLERR,str);
     }
     tmp = fread(nxyz,sizeof(int),dim,fp);
+
+    // sanity check the file size against the grid extent and precision
+    // (see note in read_corners_serial)
+
+    check_file_size(fp,gridfile);
   }
 
   MPI_Bcast(nxyz,dim,MPI_INT,0,world);
