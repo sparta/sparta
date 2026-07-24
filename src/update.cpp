@@ -1703,7 +1703,7 @@ void Update::global(int narg, char **arg)
       iarg += 2;
 
     } else if (strcmp(arg[iarg],"field") == 0) {
-      if (iarg+1 > narg) error->all(FLERR,"Illegal global command");
+      if (iarg+2 > narg) error->all(FLERR,"Illegal global command");
       if (strcmp(arg[iarg+1],"none") == 0) {
         fstyle = NOFIELD;
         iarg += 2;
