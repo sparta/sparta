@@ -20,7 +20,7 @@ kinds of machines.
 <P>Currently the only option is to use the KOKKOS accelerator
 packages provided with SPARTA that
 contains code optimized for certain kinds of hardware, including
-multi-core CPUs, GPUs, and Intel Xeon Phi coprocessors.
+multi-core CPUs and GPUs.
 </P>
 <UL><LI>5.1 <A HREF = "#acc_1">Measuring performance</A> 
 
@@ -92,9 +92,9 @@ the standard non-accelerated versions.
 An overview of packages is give in <A HREF = "Section_packages.html">Section
 packages</A>.
 </P>
-<P>SPARTA currently has acceleration support for three kinds of hardware,
-via the KOKKOS package: Many-core CPUs, NVIDIA GPUs, and Intel Xeon
-Phi.
+<P>SPARTA currently has acceleration support for different kinds of hardware
+via the KOKKOS package: many-core CPUs, NVIDIA GPUs, AMD GPUs, and
+Intel GPUs.
 </P>
 <P>Whether you will see speedup for your hardware may depend on the size
 problem you are running and what commands (accelerated and
@@ -160,8 +160,8 @@ hardware platforms.
 <P>Here is a brief summary of what the KOKKOS package provides.
 </P>
 <LI>Styles with a "kk" suffix are part of the KOKKOS package, and can be
-run using OpenMP on multicore CPUs, on an NVIDIA GPU, or on an Intel
-Xeon Phi in "native" mode.  The speed-up depends on a variety of
+run using OpenMP on multicore CPUs, on an NVIDIA GPU, on an AMD GPU,
+or on an Intel GPU.  The speed-up depends on a variety of
 factors, as discussed on the KOKKOS accelerator page. 
 
 
@@ -182,7 +182,7 @@ factors, as discussed on the KOKKOS accelerator page.
 <P>Kokkos is a templated C++ library that provides abstractions to allow
 a single implementation of an application kernel (e.g. a collision
 style) to run efficiently on different kinds of hardware, such as
-GPUs, Intel Xeon Phis, or many-core CPUs. Kokkos maps the C++ kernel
+GPUs or many-core CPUs. Kokkos maps the C++ kernel
 onto different backend languages such as CUDA, OpenMP, or Pthreads.
 The Kokkos library also provides data abstractions to adjust (at
 compile time) the memory layout of data structures like 2d and 3d
@@ -202,41 +202,69 @@ contributions of various styles by others, including Dan Ibanez
 information on developing using Kokkos abstractions see the Kokkos
 programmers' guide at /lib/kokkos/doc/Kokkos_PG.pdf.
 </P>
-<P>The KOKKOS package currently provides support for 3 modes of execution
-(per MPI task). These are Serial (MPI-only for CPUs and Intel Phi),
-OpenMP (threading for many-core CPUs and Intel Phi), and CUDA (for
-NVIDIA GPUs). You choose the mode at build time to produce an
-executable compatible with specific hardware.
+<P>The KOKKOS package supports multiple execution backends (per MPI task):
+Serial (MPI-only for CPUs), OpenMP (threading for many-core CPUs),
+CUDA (NVIDIA GPUs), HIP (AMD GPUs), and SYCL (Intel GPUs
+and other SYCL-capable devices). You choose the backend at build time
+to produce an executable compatible with specific hardware.
 </P>
-<P>NOTE: Kokkos support within SPARTA must be built with a C++17
+<P>NOTE: The KOKKOS package must be built using CMake. GNU Makefile builds
+are not supported for the KOKKOS package.
+</P>
+<P>NOTE: Kokkos support within SPARTA must be built with a C++20
 compatible compiler. For a list of compilers that have been tested with
 the Kokkos library, see the Kokkos <A HREF = "https://github.com/kokkos/kokkos/blob/master/README.md">README</A>.
 </P>
 <P><B>Building SPARTA with the KOKKOS package with CMake:</B>
 </P>
-<P>To build with the KOKKOS package, start with the provided preset files
-in /cmake/presets/. You may need to set -D Kokkos_ARCH_<I>TYPE</I>=ON
-to match your specific hardware. For example:
+<P>To build with the KOKKOS package, start with one of the provided preset
+files in /cmake/presets/. Preset files encode all the settings needed
+for a particular hardware target. The available KOKKOS presets are:
+</P>
+<LI>kokkos_mpi_only.cmake - Serial backend (MPI-only, no threading) 
+
+<LI>kokkos_omp.cmake      - OpenMP backend (multi-core CPUs) 
+
+<LI>kokkos_cuda.cmake     - CUDA backend (NVIDIA Hopper GPUs, generic OpenMPI/MPICH) 
+
+<LI>kokkos_hip.cmake      - HIP backend for AMD MI250X GPUs 
+
+<LI>elcapitan_kokkos.cmake - HIP backend for AMD MI300A APU (Cray MPICH) 
+
+<LI>kokkos_sycl.cmake     - SYCL backend for Intel Ponte Vecchio GPUs 
+</UL>
+<P>You may need to override -D Kokkos_ARCH_<I>TYPE</I>=ON to match your
+specific hardware. For example:
 </P>
 <UL><LI>for Sandy Bridge CPUs, set -D Kokkos_ARCH_SNB=ON
-<LI>for Broadwell CPUs, set -D Kokkos_ARCH_BWD=ON
+<LI>for Broadwell CPUs, set -D Kokkos_ARCH_BDW=ON
 <LI>for K80 GPUs, set -D Kokkos_ARCH_KEPLER37=ON
-<LI>for P100 GPUs and Power8 CPUs, set -D Kokkos_ARCH_PASCAL60=ON, -D Kokkos_ARCH_POWER8=ON 
+<LI>for V100 GPUs and Power9 CPUs, set -D Kokkos_ARCH_VOLTA70=ON -D Kokkos_ARCH_POWER9=ON
+<LI>for A100 GPUs, set -D Kokkos_ARCH_AMPERE80=ON
+<LI>for H100 GPUs, set -D Kokkos_ARCH_HOPPER90=ON 
 </UL>
-<P>See the <B>Advanced Kokkos Options</B> section below for a listing of all
-Kokkos architecture options.
+<P>See the <B>Advanced Kokkos Options</B> section below for a complete listing
+of all Kokkos architecture options.
+</P>
+<P>NOTE: If you are migrating from GNU Makefile builds, see the table of
+preset files above and pick the one that matches your hardware. The
+Kokkos KOKKOS_DEVICES and KOKKOS_ARCH Makefile variables map to CMake
+options as follows: KOKKOS_DEVICES=OpenMP becomes
+-DKokkos_ENABLE_OPENMP=ON, KOKKOS_DEVICES=Cuda becomes
+-DKokkos_ENABLE_CUDA=ON, KOKKOS_ARCH=Volta70 becomes
+-DKokkos_ARCH_VOLTA70=ON, etc.
 </P>
 <P><B>Compile for CPU-only (MPI only, no threading):</B>
 </P>
-<P>Use a C++17 compatible compiler and set Kokkos architicture variable in as described above.  Then do the
-following:
+<P>Use a C++20 compatible compiler. Then do the following:
 </P>
-<P>using CMake:
-</P>
-<PRE>cd build
-cmake -C /path/to/sparta/cmake/presets/kokkos_mpi_only.cmake
-make 
+<PRE>mkdir build
+cd build
+cmake -C /path/to/sparta/cmake/presets/kokkos_mpi_only.cmake /path/to/sparta/cmake
+make -j 4 
 </PRE>
+<P>The resulting executable will be named spa_kokkos_mpi_only.
+</P>
 <P><B>Compile for CPU-only (MPI plus OpenMP threading):</B>
 </P>
 <P>NOTE: To build with Kokkos support for OpenMP threading, your compiler
@@ -244,31 +272,108 @@ must support the OpenMP interface. You should have one or more
 multi-core CPUs so that multiple threads can be launched by each MPI
 task running on a CPU.
 </P>
-<P>Use a C++17 compatible compiler and set Kokkos architecture variable in
-as described above.  Then do the
-following:
-</P>
-<P>using CMake:
-</P>
-<PRE>cd build
-cmake -C /path/to/sparta/cmake/presets/kokkos_omp.cmake
-make 
+<PRE>mkdir build
+cd build
+cmake -C /path/to/sparta/cmake/presets/kokkos_omp.cmake /path/to/sparta/cmake
+make -j 4 
 </PRE>
-<P><B>Compile for CPUs and GPUs (with OpenMPI or MPICH):</B>
+<P>The resulting executable will be named spa_kokkos_omp.
+</P>
+<P>To select a specific CPU architecture (e.g. Haswell), add:
+</P>
+<PRE>cmake -C /path/to/sparta/cmake/presets/kokkos_omp.cmake -DKokkos_ARCH_HSW=ON /path/to/sparta/cmake 
+</PRE>
+<P><B>Compile for NVIDIA GPUs using CUDA (with OpenMPI or MPICH):</B>
 </P>
 <P>NOTE: To build with Kokkos support for NVIDIA GPUs, NVIDIA CUDA
 software version 11.0 or later must be installed on your system.
 </P>
-<P>Use a C++17 compatible compiler and set Kokkos architecture variable in
-for both GPU and CPU as described
-above.  Then do the following:
+<P>The kokkos_cuda.cmake preset defaults to NVIDIA Hopper (H100) GPUs.
+To target a different GPU, override the architecture flag. Common NVIDIA
+GPU models and their Kokkos arch flags are:
 </P>
-<P>using CMake:
+<UL><LI>V100 (Volta)           ->  -DKokkos_ARCH_VOLTA70=ON
+<LI>A100 (Ampere)          ->  -DKokkos_ARCH_AMPERE80=ON
+<LI>H100/H200 (Hopper)     ->  -DKokkos_ARCH_HOPPER90=ON (default in kokkos_cuda.cmake)
+<LI>L40S/RTX 4090 (Ada)    ->  -DKokkos_ARCH_ADA89=ON
+<LI>GB200 (Blackwell)      ->  -DKokkos_ARCH_BLACKWELL100=ON 
+</UL>
+<P>Build for the default Hopper (H100) GPU:
 </P>
-<PRE>cd build
-cmake -C /path/to/sparta/cmake/presets/kokkos_cuda.cmake
-make 
+<PRE>mkdir build
+cd build
+cmake -C /path/to/sparta/cmake/presets/kokkos_cuda.cmake /path/to/sparta/cmake
+make -j 4 
 </PRE>
+<P>Build for A100 GPUs (override the default Hopper arch):
+</P>
+<PRE>mkdir build
+cd build
+cmake -C /path/to/sparta/cmake/presets/kokkos_cuda.cmake   -DKokkos_ARCH_HOPPER90=OFF -DKokkos_ARCH_AMPERE80=ON   /path/to/sparta/cmake
+make -j 4 
+</PRE>
+<P>Build for V100 GPUs:
+</P>
+<PRE>mkdir build
+cd build
+cmake -C /path/to/sparta/cmake/presets/kokkos_cuda.cmake   -DKokkos_ARCH_HOPPER90=OFF -DKokkos_ARCH_VOLTA70=ON   /path/to/sparta/cmake
+make -j 4 
+</PRE>
+<P>The resulting executable will be named spa_kokkos_cuda.
+</P>
+<P><B>Compile for AMD GPUs using HIP:</B>
+</P>
+<P>NOTE: To build with Kokkos support for AMD GPUs, ROCm software version
+5.2 or later must be installed on your system.
+</P>
+<P>The kokkos_hip.cmake preset targets AMD MI250X GPUs (GFX90A). Common AMD
+GPU models and their Kokkos arch flags are:
+</P>
+<UL><LI>MI250X/MI250/MI210      ->  -DKokkos_ARCH_VEGA90A=ON (default in kokkos_hip.cmake)
+<LI>MI300X/MI300A           ->  -DKokkos_ARCH_AMD_GFX942=ON
+<LI>RX 7900 XTX (RDNA3)    ->  -DKokkos_ARCH_AMD_GFX1100=ON 
+</UL>
+<P>Build for the default MI250X GPU:
+</P>
+<PRE>mkdir build
+cd build
+cmake -C /path/to/sparta/cmake/presets/kokkos_hip.cmake /path/to/sparta/cmake
+make -j 4 
+</PRE>
+<P>Build for MI300X GPUs (override the default MI250X arch):
+</P>
+<PRE>mkdir build
+cd build
+cmake -C /path/to/sparta/cmake/presets/kokkos_hip.cmake   -DKokkos_ARCH_VEGA90A=OFF -DKokkos_ARCH_AMD_GFX942=ON   /path/to/sparta/cmake
+make -j 4 
+</PRE>
+<P>For AMD MI300A APU systems using Cray MPICH (e.g. El Capitan):
+</P>
+<PRE>mkdir build
+cd build
+cmake -C /path/to/sparta/cmake/presets/elcapitan_kokkos.cmake /path/to/sparta/cmake
+make -j 4 
+</PRE>
+<P>The resulting executable will be named spa_kokkos_hip or
+spa_elcapitan_kokkos respectively.
+</P>
+<P><B>Compile for Intel GPUs using SYCL:</B>
+</P>
+<P>NOTE: To build with Kokkos support for Intel GPUs via SYCL, Intel's
+oneAPI toolkit (version 2024.0 or later) must be installed on your system.
+Use the icpx compiler from the Intel oneAPI toolkit. The GPU architecture
+is detected automatically at runtime; no arch flag override is needed.
+</P>
+<P>The kokkos_sycl.cmake preset targets Intel Ponte Vecchio (PVC) GPUs and
+uses Intel MKL for FFTs:
+</P>
+<PRE>mkdir build
+cd build
+cmake -C /path/to/sparta/cmake/presets/kokkos_sycl.cmake /path/to/sparta/cmake
+make -j 4 
+</PRE>
+<P>The resulting executable will be named spa_kokkos_sycl.
+</P>
 <P><B>Running SPARTA with the KOKKOS package:</B>
 </P>
 <P>All Kokkos operations occur within the context of an individual MPI
@@ -364,50 +469,6 @@ performance with OpenMP 4.0 or better set OMP_PROC_BIND=spread and
 OMP_PLACES=threads.  For binding threads with the KOKKOS pthreads
 option, compile SPARTA the KOKKOS HWLOC=yes option as described below.
 </P>
-<P><B>Running on Knight's Landing (KNL) Intel Xeon Phi:</B>
-</P>
-<P>Here is a quick overview of how to use the KOKKOS package for the
-Intel Knight's Landing (KNL) Xeon Phi:
-</P>
-<P>KNL Intel Phi chips have 68 physical cores. Typically 1 to 4 cores are
-reserved for the OS, and only 64 or 66 cores are used. Each core has 4
-hyperthreads, so there are effectively N = 256 (4*64) or N = 264
-(4*66) cores to run on. The product of MPI tasks * OpenMP threads/task
-should not exceed this limit, otherwise performance will suffer. Note
-that with the KOKKOS package you do not need to specify how many KNLs
-there are per node; each KNL is simply treated as running some number
-of MPI tasks.
-</P>
-<P>Examples of mpirun commands that follow these rules are shown below.
-</P>
-<PRE>Intel KNL node with 64 cores (256 threads/node via 4x hardware threading):
-mpirun -np 64 spa_kokkos_phi -k on t 4 -sf kk -in in.collide      # 1 node, 64 MPI tasks/node, 4 threads/task
-mpirun -np 66 spa_kokkos_phi -k on t 4 -sf kk -in in.collide      # 1 node, 66 MPI tasks/node, 4 threads/task
-mpirun -np 32 spa_kokkos_phi -k on t 8 -sf kk -in in.collide      # 1 node, 32 MPI tasks/node, 8 threads/task
-mpirun -np 512 -ppn 64 spa_kokkos_phi -k on t 4 -sf kk -in in.collide  # 8 nodes, 64 MPI tasks/node, 4 threads/task 
-</PRE>
-<P>The -np setting of the mpirun command sets the number of MPI
-tasks/node. The "-k on t Nt" command-line switch sets the number of
-threads/task as Nt. The product of these two values should be N, i.e.
-256 or 264.
-</P>
-<P>NOTE: The default for the <A HREF = "package.html">package kokkos</A> command is to
-use "threaded" communication. However, when running on KNL, it will
-typically be faster to use "classic" non-threaded communication.  Use
-the "-pk kokkos" <A HREF = "Section_start.html#start_7">command-line switch</A> to
-change the default <A HREF = "package.html">package kokkos</A> options. See its doc
-page for details and default settings. Experimenting with its options
-can provide a speed-up for specific calculations. For example:
-</P>
-<PRE>mpirun -np 64 spa_kokkos_phi -k on t 4 -sf kk -pk kokkos comm classic -in in.collide      # non-threaded comm 
-</PRE>
-<P>NOTE: MPI tasks and threads should be bound to cores as described
-above for CPUs.
-</P>
-<P>NOTE: To build with Kokkos support for Intel Xeon Phi coprocessors
-such as Knight's Corner (KNC), your system must be configured to use
-them in "native" mode, not "offload" mode.
-</P>
 <P><B>Running on GPUs:</B>
 </P>
 <P>Use the "-k" <A HREF = "Section_commands.html#start_7">command-line switch</A> to
@@ -426,6 +487,8 @@ number of MPI tasks/node should not exceed N.
 <P>Here are examples of how to use the KOKKOS package for GPUs, assuming
 one or more nodes, each with two GPUs.
 </P>
+<P><B>NVIDIA GPUs (CUDA):</B>
+</P>
 <PRE>mpirun -np 2 spa_kokkos_cuda -k on g 2 -sf kk -in in.collide          # 1 node,   2 MPI tasks/node, 2 GPUs/node
 mpirun -np 32 -ppn 2 spa_kokkos_cuda -k on g 2 -sf kk -in in.collide  # 16 nodes, 2 MPI tasks/node, 2 GPUs/node (32 GPUs total) 
 </PRE>
@@ -436,7 +499,22 @@ settings. For example:
 </P>
 <PRE>mpirun -np 2 spa_kokkos_cuda -k on g 2 -sf kk -pk kokkos gpu/aware off -in in.collide      # set gpu/aware MPI support off 
 </PRE>
-<P>NOTE: Using OpenMP threading and CUDA together is currently not
+<P><B>AMD GPUs (HIP):</B>
+</P>
+<PRE>mpirun -np 2 spa_kokkos_hip -k on g 2 -sf kk -in in.collide          # 1 node,   2 MPI tasks/node, 2 GPUs/node
+mpirun -np 16 -ppn 8 spa_kokkos_hip -k on g 8 -sf kk -in in.collide  # 2 nodes,  8 MPI tasks/node, 8 GPUs/node 
+</PRE>
+<P>For Cray MPICH systems (e.g. El Capitan), set the GTL (GPU Transfer
+Library) environment variable before running:
+</P>
+<PRE>export MPICH_GPU_SUPPORT_ENABLED=1
+mpirun -np 8 spa_elcapitan_kokkos -k on g 8 -sf kk -in in.collide 
+</PRE>
+<P><B>Intel GPUs (SYCL):</B>
+</P>
+<PRE>mpirun -np 4 spa_kokkos_sycl -k on g 4 -sf kk -in in.collide          # 1 node, 4 MPI tasks/node, 4 GPUs/node 
+</PRE>
+<P>NOTE: Using OpenMP threading and CUDA/HIP/SYCL together is currently not
 possible with the SPARTA KOKKOS package.
 </P>
 <P>NOTE: For good performance of the KOKKOS package on GPUs, you must
@@ -526,8 +604,6 @@ means an NVIDIA GPU running CUDA will be used.
 <TR><TD >ICX </TD><TD > HOST </TD><TD > Intel Ice Lake Xeon Server CPUs (AVX512) </TD></TR>
 <TR><TD >SKL </TD><TD > HOST </TD><TD > Intel Skylake Client CPUs </TD></TR>
 <TR><TD >SKX </TD><TD > HOST </TD><TD > Intel Skylake Xeon Server CPUs (AVX512) </TD></TR>
-<TR><TD >KNC </TD><TD > HOST </TD><TD > Intel Knights Corner Xeon Phi </TD></TR>
-<TR><TD >KNL </TD><TD > HOST </TD><TD > Intel Knights Landing Xeon Phi </TD></TR>
 <TR><TD >SPR </TD><TD > HOST </TD><TD > Intel Sapphire Rapids Xeon Server CPUs (AVX512) </TD></TR>
 <TR><TD >POWER8 </TD><TD > HOST </TD><TD > IBM POWER8 CPUs </TD></TR>
 <TR><TD >POWER9 </TD><TD > HOST </TD><TD > IBM POWER9 CPUs </TD></TR>

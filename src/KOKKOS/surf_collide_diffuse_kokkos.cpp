@@ -211,8 +211,12 @@ void SurfCollideDiffuseKokkos::dynamic()
 
     if (surf->estatus[tindex_custom] == 0) surf->spread_custom(tindex_custom);
 
-    h_edvec_local[tindex_custom].k_view.sync_device();
-    d_t_persurf = h_edvec_local[tindex_custom].k_view.view_device();
+    // edvec_local is indexed by the per-type slot ewhich[tindex_custom],
+    //  not by the global custom index tindex_custom (see Surf::add_custom)
+
+    int ewhich = surf->ewhich[tindex_custom];
+    h_edvec_local[ewhich].k_view.sync_device();
+    d_t_persurf = h_edvec_local[ewhich].k_view.view_device();
   }
 }
 

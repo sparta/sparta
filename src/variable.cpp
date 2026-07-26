@@ -994,6 +994,47 @@ int Variable::find(char *name)
 }
 
 /* ----------------------------------------------------------------------
+   return a human-readable one-line description of variable i:
+   its name, style, and definition string(s).
+   used by the library interface (sparta_variable_info) for GUI display;
+   mirrors LAMMPS Info::get_variable_info / Variable::get_info
+------------------------------------------------------------------------- */
+
+std::string Variable::get_info(int i)
+{
+  static const char *varstyles[] = {
+    "index","loop","world","universe","uloop","string","getenv",
+    "file","format","equal","particle","grid","surf","internal","python"};
+  const int nstyles = sizeof(varstyles)/sizeof(varstyles[0]);
+
+  char buf[256];
+
+  if (i < 0 || i >= nvar) {
+    snprintf(buf,sizeof(buf),"Variable[%3d]: (unknown)\n",i);
+    return std::string(buf);
+  }
+
+  const char *vstyle =
+    (style[i] >= 0 && style[i] < nstyles) ? varstyles[style[i]] : "(unknown)";
+  std::string sname = std::string(names[i]) + ",";
+  std::string sstyle = std::string(vstyle) + ",";
+  snprintf(buf,sizeof(buf),"Variable[%3d]: %-16s  style = %-16s  def =",
+           i,sname.c_str(),sstyle.c_str());
+  std::string text(buf);
+
+  if (style[i] == INTERNAL) {
+    snprintf(buf,sizeof(buf)," %.8g\n",dvalue[i]);
+    text += buf;
+    return text;
+  }
+
+  for (int j = 0; j < num[i]; ++j)
+    if (data[i][j]) { text += ' '; text += data[i][j]; }
+  text += "\n";
+  return text;
+}
+
+/* ----------------------------------------------------------------------
    called by python command in input script
    simply pass input script line args to Python class
 ------------------------------------------------------------------------- */

@@ -30,6 +30,18 @@ n_sites = # of available adsorption sites per unit area (3D) or length (2D) :l
 adsp1,adsp2,... = list of species that can adsorb on surface :l
 :ule
 
+The reaction file(s) read by this command can also include the optional
+per-reaction keywords {kisliuk} and {energy}, which modify how the
+reaction rate constant is computed.  See the discussion of the reaction
+file format below for details.
+
+{kisliuk} = scale the adsorption rate constant by the Kisliuk
+  precursor-mediated sticking factor (only for adsorption reactions: AA,
+  DA, LH1, LH3, CD) :ulb,l
+{energy} = scale the rate constant by an incident-energy and
+  angle-dependent factor (only for CI) :l
+:ule
+
 [Examples:]
 
 surf_react adsorb gs gs_react.surf nsync 10 surf 1000 6.022e18 O CO

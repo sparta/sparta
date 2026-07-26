@@ -409,7 +409,7 @@ SPARTA::SPARTA(int narg, char **arg, MPI_Comm communicator)
   // if helpflag set, print help and exit
 
   if (helpflag) {
-    if (universe->me == 0) print_styles();
+    if (universe->me == 0) print_help();
     error->done();
   }
 }
@@ -575,6 +575,171 @@ void SPARTA::destroy()
   delete react;
   delete output;
   delete timer;
+}
+
+/* ----------------------------------------------------------------------
+   optional build-time provenance defines (guarded; absence is harmless)
+   the build system may -D these; if it does not, fall back to "(unknown)"
+   so a plain (non-git, e.g. tarball) build still compiles and prints
+   sensibly.  Keeping the fallbacks here makes -help self-contained.
+------------------------------------------------------------------------- */
+
+#ifndef SPARTA_GIT_COMMIT
+#define SPARTA_GIT_COMMIT "(unknown)"
+#endif
+#ifndef SPARTA_GIT_BRANCH
+#define SPARTA_GIT_BRANCH "(unknown)"
+#endif
+
+/* return a short descriptor of the compiler used to build SPARTA */
+
+static const char *compiler_info()
+{
+#if defined(__INTEL_LLVM_COMPILER)
+  return "Intel LLVM C++";
+#elif defined(__clang__)
+  return "Clang C++ " __clang_version__;
+#elif defined(__GNUC__)
+  return "GNU C++ " __VERSION__;
+#elif defined(_MSC_VER)
+  return "Microsoft Visual C++";
+#else
+  return "(unknown compiler)";
+#endif
+}
+
+/* return the C++ language standard the build was compiled against */
+
+static const char *cxx_standard()
+{
+#if __cplusplus >= 202302L
+  return "C++23";
+#elif __cplusplus >= 202002L
+  return "C++20";
+#elif __cplusplus >= 201703L
+  return "C++17";
+#elif __cplusplus >= 201402L
+  return "C++14";
+#elif __cplusplus >= 201103L
+  return "C++11";
+#else
+  return "(pre-C++11)";
+#endif
+}
+
+/* return the operating system SPARTA was built for */
+
+static const char *os_info()
+{
+#if defined(__linux__)
+  return "Linux";
+#elif defined(__APPLE__)
+  return "macOS";
+#elif defined(_WIN32)
+  return "Windows";
+#elif defined(__unix__)
+  return "Unix";
+#else
+  return "(unknown OS)";
+#endif
+}
+
+/* return the CPU architecture SPARTA was built for */
+
+static const char *arch_info()
+{
+#if defined(__x86_64__) || defined(_M_X64)
+  return "x86_64";
+#elif defined(__aarch64__) || defined(_M_ARM64)
+  return "arm64";
+#elif defined(__i386__) || defined(_M_IX86)
+  return "i386";
+#elif defined(__powerpc64__)
+  return "ppc64";
+#else
+  return "(unknown arch)";
+#endif
+}
+
+/* ----------------------------------------------------------------------
+   print a LAMMPS-style -help report: build/version provenance, the
+   configuration (parallelism, accelerators, image/movie I/O support),
+   the command-line switches, and the styles included in this executable.
+   Deliberately self-contained (no dependence on the library API or the
+   GUI) so it can be maintained as a standalone upstream feature.
+------------------------------------------------------------------------- */
+
+void SPARTA::print_help()
+{
+  // build/version provenance banner
+
+  printf("\nSPARTA (%s)\n",universe->version);
+  printf("Git info:     %s / %s\n",SPARTA_GIT_BRANCH,SPARTA_GIT_COMMIT);
+  printf("Compiled:     %s %s\n",__DATE__,__TIME__);
+  printf("Compiler:     %s (%s)\n",compiler_info(),cxx_standard());
+  printf("OS / arch:    %s / %s (%d-bit integers)\n",
+         os_info(),arch_info(),(int)(8*sizeof(bigint)));
+
+  // configuration: parallelism, accelerators, image/movie support
+
+#ifdef SPARTA_PNG
+  const char *have_png = "yes";
+#else
+  const char *have_png = "no";
+#endif
+#ifdef SPARTA_JPEG
+  const char *have_jpeg = "yes";
+#else
+  const char *have_jpeg = "no";
+#endif
+#ifdef SPARTA_FFMPEG
+  const char *have_ffmpeg = "yes";
+#else
+  const char *have_ffmpeg = "no";
+#endif
+#ifdef SPARTA_GZIP
+  const char *have_gzip = "yes";
+#else
+  const char *have_gzip = "no";
+#endif
+
+  printf("\nConfiguration:\n");
+#ifdef MPI_STUBS
+  printf("  Parallelism:  serial (MPI STUBS)\n");
+#else
+  printf("  Parallelism:  MPI\n");
+#endif
+#ifdef SPARTA_KOKKOS
+  printf("  Accelerator:  KOKKOS\n");
+#else
+  printf("  Accelerator:  none\n");
+#endif
+  printf("  PNG images:   %s\n",have_png);
+  printf("  JPEG images:  %s\n",have_jpeg);
+  printf("  FFmpeg movie: %s\n",have_ffmpeg);
+  printf("  gzip files:   %s\n",have_gzip);
+
+  // command-line switches
+
+  printf("\nUsage: sparta [command-line switches] < input_script\n");
+  printf("       sparta [command-line switches] -in input_script\n\n");
+  printf("Command-line switches:\n");
+  printf("  -e  or -echo none/screen/log/both : how to echo the input script\n");
+  printf("  -h  or -help                      : print this help message and exit\n");
+  printf("  -i  or -in <file>                 : read input from <file> (default: stdin)\n");
+  printf("  -k  or -kokkos on/off ...         : enable/configure the KOKKOS package\n");
+  printf("  -l  or -log <file>/none           : write log to <file> (default: log.sparta)\n");
+  printf("  -p  or -partition <n1> <n2> ...   : split procs into multiple partitions\n");
+  printf("  -pk or -package <style> ...       : invoke a package command at startup\n");
+  printf("  -pl or -plog <file>/none          : per-partition log file base name\n");
+  printf("  -ps or -pscreen <file>/none       : per-partition screen file base name\n");
+  printf("  -sc or -screen <file>/none        : write screen output to <file>\n");
+  printf("  -sf or -suffix <style>            : append a style suffix (e.g. kk)\n");
+  printf("  -v  or -var <name> <value> ...    : set an index-style variable\n");
+
+  // styles compiled into this executable
+
+  print_styles();
 }
 
 /* ----------------------------------------------------------------------

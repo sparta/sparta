@@ -17,12 +17,13 @@
 </PRE>
 <UL><LI>one or more keyword/value pairs may be listed 
 
-<LI>keywords = <I>vremax</I> or <I>remain</I> or <I>ambipolar</I> or <I>nearcp</I> or <I>rotate</I> or <I>vibrate</I> 
+<LI>keywords = <I>vremax</I> or <I>remain</I> or <I>scheme</I> or <I>ambipolar</I> or <I>nearcp</I> or <I>rotate</I> or <I>vibrate</I> 
 
 <PRE>  <I>vremax</I> values = Nevery startflag
     Nevery = zero vremax every this many timesteps
     startflag = <I>yes</I> or <I>no</I> = zero vremax at start of every run
   <I>remain</I> value = <I>yes</I> or <I>no</I> = hold remaining fraction of collisions over to next timestep
+  <I>scheme</I> value = <I>ntc</I> or <I>mcf</I> = scheme used to compute the number of attempted collisions
   <I>nearcp</I> values = choice Nlimit
     choice = <I>yes</I> or <I>no</I> to turn on/off near collision partners
     Nlimit = max # of attempts made to find a collision partner
@@ -36,6 +37,7 @@
 </P>
 <PRE>collide_modify vremax 1000 yes
 collide_modify vremax 0 no remain no
+collide_modify scheme mcf
 collide_modify ambipolar yes 
 </PRE>
 <P><B>Description:</B>
@@ -77,6 +79,29 @@ to the computed collision count for that step.  If the value is set to
 <I>no</I>, then no carry-over is made.  Instead, in this example, 7
 attempts are made and an 8th attempt is made conditionally with a
 probability of 0.3, using a random number.
+</P>
+<P>The <I>scheme</I> keyword selects the numerical scheme used to compute the
+number of collisions attempted in each grid cell (for each pair of
+collision groups) each timestep.  For <I>ntc</I>, which is the default,
+Bird's no-time-counter scheme is used (<A HREF = "#Bird94">(Bird94)</A>): the
+attempt count is the integer part of the expected number of attempts
+Nattempt = 1/2 * N * (N-1) * Fnum * Vremax * dt / Vcell, with the
+fractional part treated as described above for the <I>remain</I> keyword.
+For <I>mcf</I>, the majorant collision frequency scheme of Ivanov and
+Rogasinsky is used (<A HREF = "#Ivanov88">(Ivanov88)</A>): collision events in a
+cell are treated as a Poisson process whose rate is the majorant
+(upper-bound) collision frequency Nattempt/dt, so the attempt count is
+drawn each timestep as a Poisson random variate whose mean is the same
+Nattempt expression.  Both schemes select candidate collision pairs
+and accept or reject them in exactly the same way; they differ only in
+the statistics of the attempt count.  The two schemes produce the same
+mean collision frequency, but MCF also reproduces the exponential
+distribution of time between collisions exactly, which can make it
+more accurate when cells contain few particles or the timestep is
+large relative to the local mean collision time.  See
+<A HREF = "#Pikus19">(Pikus19)</A> for a comparison of the two schemes in SPARTA.
+When <I>mcf</I> is specified, the <I>remain</I> keyword setting has no effect,
+since no fractional attempt count is computed.
 </P>
 <P>The <I>nearcp</I> keyword stands for "near collision partner" and affects
 how collision partners are selected.  If <I>no</I> is specified, which is
@@ -151,11 +176,16 @@ the per-particle mode values.
 </P>
 <P><B>Default:</B>
 </P>
-<P>The option defaults are vremax = (0,yes), remain = yes, ambipolar no,
-nearcp no, rotate smooth, and vibrate = no.
+<P>The option defaults are vremax = (0,yes), remain = yes, scheme = ntc,
+ambipolar no, nearcp no, rotate smooth, and vibrate = no.
 </P>
 <HR>
 
+<A NAME = "Bird94"></A>
+
+<P><B>(Bird94)</B> G. A. Bird, Molecular Gas Dynamics and the Direct
+Simulation of Gas Flows, Clarendon Press, Oxford (1994).
+</P>
 <A NAME = "Gallis11"></A>
 
 <P><B>(Gallis11)</B> M. A. Gallis, J. R. Torczynski, "Effect of
@@ -163,5 +193,18 @@ Collision-Partner Selection Schemes on the Accuracy and Efficiency of
 the Direct Simulation Monte Carlo Method," International Journal for
 Numerical Methods in Fluids, 67(8):1057-1072. DOI:10.1002/fld.2409
 (2011).
+</P>
+<A NAME = "Ivanov88"></A>
+
+<P><B>(Ivanov88)</B> M. S. Ivanov, S. V. Rogasinsky, "Analysis of numerical
+techniques of the direct simulation Monte Carlo method in the rarefied
+gas dynamics," Soviet Journal of Numerical Analysis and Mathematical
+Modelling, 3(6):453-465 (1988).
+</P>
+<A NAME = "Pikus19"></A>
+
+<P><B>(Pikus19)</B> A. Pikus, I. B. Sebastiao, S. Jaiswal, M. A. Gallis,
+A. A. Alexeenko, "DSMC-SPARTA implementation of majorant collision
+frequency scheme," AIP Conference Proceedings, 2132, 070026 (2019).
 </P>
 </HTML>

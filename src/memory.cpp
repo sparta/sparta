@@ -42,8 +42,16 @@ void *Memory::smalloc(bigint nbytes, const char *name, int align)
   void *ptr;
 
   if (align) {
+#if defined(_WIN32)
+    // MinGW/MSVCRT has no posix_memalign, and memory from _aligned_malloc()
+    // must be released with _aligned_free() rather than the free() used
+    // throughout SPARTA. Alignment here is only a performance hint, so fall
+    // back to plain malloc() (still safe to free() normally) on Windows.
+    ptr = malloc(nbytes);
+#else
     int retval = posix_memalign(&ptr, align, nbytes);
     if (retval) ptr = NULL;
+#endif
   } else {
     ptr = malloc(nbytes);
   }
@@ -76,6 +84,8 @@ void *Memory::srealloc(void *ptr, bigint nbytes, const char *name, int align)
       ptr = smalloc(nbytes, name, align);
 #if defined(__APPLE__)
       memcpy(ptr, optr, MIN(nbytes,malloc_size(optr)));
+#elif defined(_WIN32)
+      memcpy(ptr, optr, MIN(nbytes,_msize(optr)));
 #else
       memcpy(ptr, optr, MIN(nbytes,malloc_usable_size(optr)));
 #endif

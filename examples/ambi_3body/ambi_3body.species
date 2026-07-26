@@ -1,0 +1,17 @@
+# Species data for ambipolar third-body test (subset of air.species)
+
+# ID
+# Molwt (amu)
+# Molmass (kg)
+# Rotational dof
+# RotRel
+# Vibrational dof
+# VibRel
+# VibTemp (K)
+# species wt
+# charge
+
+O2  32.00    5.31E-26  2    0.2   2    5.58659E-5    2256.0    1.0      0.0
+O   16.00    2.65E-26  0    0.0   0    0.0           0.0       1.0      0.0
+O2+ 32.00    5.31E-26  2    0.2   2    5.58659E-5    2256.0    1.0      1.0
+e   0.001  9.10938188E-31 0 0.0   0    0.0           0.0       1.0     -1.0

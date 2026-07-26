@@ -73,7 +73,7 @@ class FixEmitSurf : public FixEmit {
 
   // copies of data from other classes
 
-  int dimension,nspecies;
+  int dimension,axisymmetric,nspecies;
   double fnum,dt;
   double nrho,temp_thermal,temp_rot,temp_vib;
   double *fraction,*cummulative;

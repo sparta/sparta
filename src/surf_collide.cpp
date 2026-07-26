@@ -100,6 +100,27 @@ void SurfCollide::tally_update()
   ntotal += nsingle;
 }
 
+/* ----------------------------------------------------------------------
+   wrapper() variant that first resolves this instance's per-surf
+   temperature for local surf index isurf (VARSURF/CUSTOM modes), mirroring
+   the per-surf lookup each style's collide() performs. Then invokes the
+   style's wrapper() with NULL coeffs so it reflects using the just-set
+   tsurf. Called by SurfReactAdsorb for PS reaction products whose scatter
+   model is NOMODEL ('none'): without this the wrapper reuses a stale tsurf
+   (whatever face collided last), emitting products at the wrong temperature.
+------------------------------------------------------------------------- */
+
+void SurfCollide::persurf_wrapper(Particle::OnePart *p, double *norm,
+                                  int isurf)
+{
+  if (persurf_temperature) {
+    tsurf = t_persurf[isurf];
+    if (tsurf <= 0.0) error->one(FLERR,"Surf_collide tsurf <= 0.0");
+  }
+
+  wrapper(p,norm,NULL,NULL);
+}
+
 /* ---------------------------------------------------------------------- */
 
 void SurfCollide::parse_tsurf(char *str)
@@ -230,7 +251,11 @@ void SurfCollide::dynamic()
     //   surfs are distributed and load balance/adaptation took place
 
     if (surf->estatus[tindex_custom] == 0) surf->spread_custom(tindex_custom);
-    t_persurf = surf->edvec_local[tindex_custom];
+
+    // edvec_local is indexed by the per-type slot ewhich[tindex_custom],
+    //  not by the global custom index tindex_custom (see Surf::add_custom)
+
+    t_persurf = surf->edvec_local[surf->ewhich[tindex_custom]];
   }
 }
 

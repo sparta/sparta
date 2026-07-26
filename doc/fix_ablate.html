@@ -321,6 +321,15 @@ an overview of SPARTA output options.
 </P>
 <P>This fix can only be used in simulations that define implicit surfaces.
 </P>
+<P>All surface elements must be assigned to the same surface collision
+model and (optionally) the same surface reaction model via the
+<A HREF = "surf_modify.html">surf_modify</A> command.  This is because each ablation
+operation discards and re-creates all the implicit surface elements,
+and this fix re-assigns the same pair of models to all the new
+elements.  Assigning different models to different groups of surface
+elements is not yet supported with ablation; an error is generated if
+that is the case.
+</P>
 <P><B>Related commands:</B>
 </P>
 <P><A HREF = "read_isurf.html">read isurf</A>

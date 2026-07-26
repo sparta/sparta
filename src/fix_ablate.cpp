@@ -201,6 +201,7 @@ FixAblate::FixAblate(SPARTA *sparta, int narg, char **arg) :
   ndelete = 0;
 
   storeflag = multi_val_flag = 0;
+  isc_default = isr_default = 0;
   array_grid = cvalues = NULL;
   mvalues = NULL;
   tvalues = NULL;
@@ -451,6 +452,55 @@ void FixAblate::init()
 
   nglocal = grid->nlocal;
   grow_percell(0);
+
+  // determine default collision/reaction model indices from existing surfaces
+  // these values were set by surf_modify and are used during each ablation step
+  //   to correctly re-assign models to newly created implicit surfaces
+  // implicit surfs are distributed, so allreduce the values to procs
+  //   which own no surfs now, since ablation may create surfs in their cells
+  // error if surfs are not all assigned to the same models, e.g. by
+  //   surf_modify with multiple surf groups, since create_surfs() can only
+  //   re-assign one collision/reaction model to all new surfs
+
+  int isc_local = -1;
+  int isr_local = -1;
+  int flag = 0;
+
+  int nslocal = surf->nlocal;
+
+  if (nslocal > 0) {
+    if (dim == 2) {
+      Surf::Line *lines = surf->lines;
+      isc_local = lines[0].isc;
+      isr_local = lines[0].isr;
+      for (int i = 1; i < nslocal; i++)
+        if (lines[i].isc != isc_local || lines[i].isr != isr_local) flag = 1;
+    } else {
+      Surf::Tri *tris = surf->tris;
+      isc_local = tris[0].isc;
+      isr_local = tris[0].isr;
+      for (int i = 1; i < nslocal; i++)
+        if (tris[i].isc != isc_local || tris[i].isr != isr_local) flag = 1;
+    }
+  }
+
+  int local_vals[2],global_vals[2];
+  local_vals[0] = isc_local;
+  local_vals[1] = isr_local;
+  MPI_Allreduce(local_vals,global_vals,2,MPI_INT,MPI_MAX,world);
+  isc_default = global_vals[0];
+  isr_default = global_vals[1];
+
+  if (nslocal > 0 && (isc_local != isc_default || isr_local != isr_default))
+    flag = 1;
+
+  int allflag;
+  MPI_Allreduce(&flag,&allflag,1,MPI_INT,MPI_MAX,world);
+  if (allflag)
+    error->all(FLERR,"Fix ablate requires all surfs be assigned "
+               "to the same surface collision and reaction models");
+
+  if (isc_default < 0) isc_default = 0;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -588,9 +638,9 @@ void FixAblate::create_surfs(int outflag)
   // assign surf collision/reaction models to newly created surfs
   // this assignment can be made in input script via surf_modify
   //   after implicit surfs are created
-  // for active ablation, must be re-assigned at every ablation atep
-  // for now just assume all surfs are assigned to first collide/react model
-  // NOTE: need a more flexible way to do this
+  // for active ablation, must be re-assigned at every ablation step
+  // use isc_default/isr_default which were set during init() by reading
+  //   the values surf_modify assigned to existing surfaces
 
   int nslocal = surf->nlocal;
 
@@ -598,18 +648,18 @@ void FixAblate::create_surfs(int outflag)
     Surf::Line *lines = surf->lines;
     if (surf->nsc)
       for (int i = 0; i < nslocal; i++)
-        lines[i].isc = 0;
-    if (surf->nsr)
+        lines[i].isc = isc_default;
+    if (surf->nsr && isr_default >= 0)
       for (int i = 0; i < nslocal; i++)
-        lines[i].isr = 0;
+        lines[i].isr = isr_default;
   } else {
     Surf::Tri *tris = surf->tris;
     if (surf->nsc)
       for (int i = 0; i < nslocal; i++)
-        tris[i].isc = 0;
-    if (surf->nsr)
+        tris[i].isc = isc_default;
+    if (surf->nsr && isr_default >= 0)
       for (int i = 0; i < nslocal; i++)
-        tris[i].isr = 0;
+        tris[i].isr = isr_default;
   }
 
   // watertight check can be done before surfs are mapped to grid cells

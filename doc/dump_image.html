@@ -33,7 +33,7 @@
 
 <LI>zero or more keyword/value pairs may be appended 
 
-<LI>keyword = <I>particle</I> or <I>pdiam</I> or <I>grid</I> or <I>gridx</I> or <I>gridy</I> or <I>gridz</I> or <I>surf</I> or <I>size</I> or <I>view</I> or <I>center</I> or <I>up</I> or <I>zoom</I> or <I>persp</I> or <I>box</I> or <I>gline</I> or <I>sline</I> or <I>axes</I> or <I>shiny</I> or <I>ssao</I> 
+<LI>keyword = <I>particle</I> or <I>pdiam</I> or <I>grid</I> or <I>gridx</I> or <I>gridy</I> or <I>gridz</I> or <I>surf</I> or <I>size</I> or <I>view</I> or <I>center</I> or <I>up</I> or <I>zoom</I> or <I>persp</I> or <I>box</I> or <I>subbox</I> or <I>gline</I> or <I>sline</I> or <I>axes</I> or <I>shiny</I> or <I>ssao</I> or <I>fsaa</I> 
 
 <PRE>  <I>particle</I> = yes/no = do or do not draw particles
   <I>pdiam</I> value = number = numeric value for particle diameter (distance units)
@@ -74,6 +74,9 @@
   <I>box</I> values = yes/no diam = draw outline of simulation box
     yes/no = do or do not draw simulation box lines
     diam = diameter of box lines as fraction of shortest box length
+  <I>subbox</I> values = yes/no diam = draw outline of processor sub-boxes
+    yes/no = do or do not draw processor sub-box lines
+    diam = diameter of sub-box lines as fraction of shortest box length
   <I>gline</I> values = yes/no diam = draw outline of each grid cell
     yes/no = do or do not draw grid cell outlines
     diam = diameter of grid outlines as fraction of shortest box length
@@ -89,7 +92,9 @@
   <I>ssao</I> value = yes/no seed dfactor = SSAO depth shading
     yes/no = turn depth shading on/off
     seed = random # seed (positive integer)
-    dfactor = strength of shading from 0.0 to 1.0 
+    dfactor = strength of shading from 0.0 to 1.0
+  <I>fsaa</I> value = yes/no = full scene anti-aliasing
+    yes/no = do or do not anti-alias the image 
 </PRE>
 
 </UL>
@@ -500,6 +505,17 @@ fraction of the shortest box length in x,y,z (for 3d) or x,y (for 2d).
 The color of the box boundaries can be set with the <A HREF = "dump_modify.html">dump_modify
 boxcolor</A> command.
 </P>
+<P>The <I>subbox</I> keyword determines how the boundaries of each
+processor's sub-domain are rendered as thin cylinders in the image,
+in the same manner as the <I>box</I> keyword.  Sub-domain boundaries can
+only be drawn if a recursive coordinate bisectioning (RCB) balance
+has assigned a sub-box to each processor, via the
+<A HREF = "balance_grid.html">balance_grid rcb</A> or <A HREF = "fix_balance.html">fix balance rcb</A>
+commands; otherwise this keyword is ignored.  This can be used to
+visualize the parallel load balance of a simulation.  The color of
+the sub-box boundaries can be set with the <A HREF = "dump_modify.html">dump_modify
+subboxcolor</A> command.
+</P>
 <P>The <I>gline</I> keyword determines how the outlines of grid cells are
 rendered as thin cylinders in the image.  If the <I>gridx</I> or <I>gridy</I> or
 <I>gridz</I> keywords are specified to draw a plane(s) of grid cells, then
@@ -549,6 +565,14 @@ which is perceived as depth.  The calculation of this effect can
 increase the cost of computing the image by roughly 2x.  The strength
 of the effect can be scaled by the <I>dfactor</I> parameter.  If <I>no</I> is
 set, no depth shading is performed.
+</P>
+<P>The <I>fsaa</I> keyword turns on/off full scene anti-aliasing (FSAA).  If
+<I>yes</I> is set, the image is rendered internally at twice the requested
+size and then scaled back down by averaging, which smooths jagged
+edges of rendered objects.  This increases the cost of computing the
+image by roughly 4x.  The written image has the size requested by the
+<I>size</I> keyword, regardless of this setting.  If <I>no</I> is set, no
+anti-aliasing is performed.
 </P>
 <HR>
 
@@ -684,10 +708,12 @@ mp4).
 <LI>zoom = 1.0
 <LI>persp = 0.0
 <LI>box = yes 0.02
+<LI>subbox = no 0.02
 <LI>gline = no 0.0
 <LI>sline = no 0.0
 <LI>axes = no 0.0 0.0
 <LI>shiny = 1.0
-<LI>ssao = no 
+<LI>ssao = no
+<LI>fsaa = no 
 </UL>
 </HTML>

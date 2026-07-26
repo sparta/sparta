@@ -56,7 +56,7 @@ Custom::~Custom()
 
   for (int i = 0; i < naction; i++) {
     int action = actions[i].action;
-    if (action == FILESTYLE) {
+    if (action == FILESTYLE || action == FILECOARSE) {
       delete [] actions[i].fname;
       delete [] actions[i].cindex_file;
       delete [] actions[i].ctype_file;
@@ -431,9 +431,9 @@ bigint Custom::process_actions(int narg, char **arg, int external)
       // # of coarse files and filestyle
 
       int numfile = input->inumeric(FLERR,arg[iarg+1]);
-      int filestyle;
       if (strcmp(arg[iarg+2],"text") == 0) filestyle = TEXT;
       else if (strcmp(arg[iarg+2],"binary") == 0) filestyle = BINARY;
+      else error->all(FLERR,"Illegal custom command");
 
       // file name
       // if numfile > 1, fname must have "%" wildcard char
@@ -650,6 +650,9 @@ bigint Custom::process_actions()
       // assign grid cell attributes from ave of neighbor coarse point values
 
       count += coarse_tree_neighbor_assign(1,colcount,cindex,ctype,csize,ccol);
+
+      memory->destroy(xyz_coarse);
+      memory->destroy(values_coarse);
 
       // for mode = GRID
       //   set estatus of all changed custom vecs/arrays to 0
@@ -963,8 +966,10 @@ bigint Custom::set_surf(int groupbit, Region *region,
   int flag;
   double point[3];
 
+  int m = 0;
+
   bigint count = 0;
-  for (int i = start ; i < stop; i += skip) {
+  for (int i = start ; i < stop; i += skip, m++) {
     flag = 1;
     if (dim == 2) {
       if (!(lines[i].mask & groupbit)) flag = 0;
@@ -974,7 +979,7 @@ bigint Custom::set_surf(int groupbit, Region *region,
     if (flag && region) {
       if (dim == 2) {
 	point[0] = 0.5 * (lines[i].p1[0] + lines[i].p2[0]);
-	point[1] = 0.5 * (lines[i].p1[0] + lines[i].p2[0]);
+	point[1] = 0.5 * (lines[i].p1[1] + lines[i].p2[1]);
 	point[2] = 0.0;
       } else {
 	point[0] = MathConst::THIRD *
@@ -988,7 +993,8 @@ bigint Custom::set_surf(int groupbit, Region *region,
     }
     if (!flag) continue;
 
-    choose[count++] = 1;
+    choose[m] = 1;
+    count++;
   }
 
   // set custom values via scalar or vector
@@ -1309,7 +1315,7 @@ void Custom::read_coarse_files(char *fname, int numfile, int colcount)
 {
   // binary files not yet supported
 
-  if (mode == BINARY) error->all(FLERR,"Custom file/coarse binary files not yet supported");
+  if (filestyle == BINARY) error->all(FLERR,"Custom file/coarse binary files not yet supported");
 
   // setup
 
@@ -1377,7 +1383,7 @@ void Custom::read_coarse_files(char *fname, int numfile, int colcount)
       eof = fgets(line,MAXLINE,fp);
       if (eof == NULL) error->one(FLERR,"Unexpected end of custom coarse file");
 
-      if (i == 0) {
+      if (i == ncoarse_me) {
         int nwords = input->count_words(line);
         if (nwords != colcount + 1 + domain->dimension)
           error->one(FLERR,"Incorrect line format in custom coarse file");
@@ -1620,7 +1626,7 @@ bigint Custom::coarse_tree_neighbor_assign(int external, int colcount,
           else iarray[j][i][ccol[j]-1] /= ncount;
         } else if (ctype[j] == DOUBLE) {
           if (csize[j] == 0) dvec[j][i] /= ncount;
-          else darray[j][i][ccol[j]-1] /- ncount;
+          else darray[j][i][ccol[j]-1] /= ncount;
         }
       }
     }
@@ -1893,7 +1899,7 @@ void KDTree::find_within_cutoff(double *x, int inode, double cutsq,
   else dz = 0.0;
   double distsq = dx*dx + dy*dy + dz*dz;
 
-  if (distsq < cutsq) {
+  if (distsq <= cutsq) {
     if (ncount == MAXTIE)
       error->one(FLERR,"KDTree cutoff induces too may ties");
     plist[ncount] = ipoint;

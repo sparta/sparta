@@ -146,18 +146,26 @@ SurfReactAdsorb::SurfReactAdsorb(SPARTA *sparta, int narg, char **arg) :
     iarg++;
   }
 
+  if (nspecies_surf == 0)
+    error->all(FLERR,"Illegal surf_react adsorb command: "
+               "at least one surface species is required");
+
   // initialize reaction data structs
 
   nlist_gs = maxlist_gs = 0;
   rlist_gs = NULL;
   reactions_gs = NULL;
   indices_gs = NULL;
+  prob_value = NULL;
 
   nlist_ps = maxlist_ps = 0;
   rlist_ps = NULL;
   reactions_ps_list = NULL;
   nactive_ps = 0;
   n_PS_react = 0;
+  nu_react = NULL;
+  nu_tau = NULL;
+  rxn_occur = NULL;
 
   // initialize PS added particle data structs
 
@@ -254,6 +262,7 @@ SurfReactAdsorb::~SurfReactAdsorb()
     memory->destroy(rlist_gs);
     memory->destroy(reactions_gs);
     memory->destroy(indices_gs);
+    memory->destroy(prob_value);
   }
 
   // PS chemistry
@@ -289,6 +298,9 @@ SurfReactAdsorb::~SurfReactAdsorb()
     }
     memory->destroy(rlist_ps);
     memory->destroy(reactions_ps_list);
+    memory->destroy(nu_react);
+    memory->destroy(nu_tau);
+    memory->destroy(rxn_occur);
 
     // added PS particles
 
@@ -543,9 +555,10 @@ void SurfReactAdsorb::init()
       int m = 0;
       for (int isurf = me; isurf < nslocal; isurf += nprocs) {
 	isr = lines[isurf].isr;
-	if (surf->sr[isr] != this) continue;
-	area[m] = surf->line_size(&lines[isurf]);
-	weight[m] = 1.0;
+	if (surf->sr[isr] == this) {
+	  area[m] = surf->line_size(&lines[isurf]);
+	  weight[m] = 1.0;
+	}
 	m++;
       }
     } else {
@@ -553,9 +566,10 @@ void SurfReactAdsorb::init()
       int m = 0;
       for (int isurf = me; isurf < nslocal; isurf += nprocs) {
 	isr = tris[isurf].isr;
-	if (surf->sr[isr] != this) continue;
-	area[m] = surf->tri_size(&tris[isurf],tmp);
-	weight[m] = 1.0;
+	if (surf->sr[isr] == this) {
+	  area[m] = surf->tri_size(&tris[isurf],tmp);
+	  weight[m] = 1.0;
+	}
 	m++;
       }
     }
@@ -651,7 +665,7 @@ int SurfReactAdsorb::react(Particle::OnePart *&ip, int isurf, double *norm,
   Particle::Species *species = particle->species;
 
   OneReaction_GS *r;
-  double prob_value[n], sum_prob = 0.0;
+  double sum_prob = 0.0;
   double scatter_prob = 0.0, correction = 1.0;
   //int check_ads = 0, ads_index = -1;
 
@@ -1581,6 +1595,15 @@ void SurfReactAdsorb::init_reactions_gs()
     reactions_gs[i].list[reactions_gs[i].n++] = m;
   }
 
+  // allocate reusable scratch buffer for per-reaction probabilities in react()
+  // size = max # of possible reactions for any single species
+
+  int maxn = 0;
+  for (int i = 0; i < nspecies; i++) maxn = MAX(maxn,reactions_gs[i].n);
+  memory->destroy(prob_value);
+  prob_value = NULL;
+  if (maxn) memory->create(prob_value,maxn,"surf_adsorb:prob_value");
+
   // check that summed reaction probabilities for each species <= 1.0
 
 //  double sum;
@@ -2340,6 +2363,21 @@ void SurfReactAdsorb::init_reactions_ps()
 
   memory->destroy(reactions_ps_list);
   memory->create(reactions_ps_list,nactive_ps,"surf_adsorb:reactions_ps_list");
+
+  // allocate reusable scratch buffers used in PS_react()
+
+  memory->destroy(nu_react);
+  memory->destroy(nu_tau);
+  memory->destroy(rxn_occur);
+  nu_react = NULL;
+  nu_tau = NULL;
+  rxn_occur = NULL;
+  if (nactive_ps) {
+    memory->create(nu_react,nactive_ps,"surf_adsorb:nu_react");
+    memory->create(nu_tau,nactive_ps,"surf_adsorb:nu_tau");
+    memory->create(rxn_occur,nactive_ps,"surf_adsorb:rxn_occur");
+  }
+
   int n = 0;
 
   for (int m = 0; m < nlist_ps; m++) {
@@ -2764,6 +2802,7 @@ void SurfReactAdsorb::readfile_ps(char *fname)
         model = DIFFUSE;
         nflags = 0;
         ncoeffs = 2;
+        sc = new SurfCollideDiffuse(sparta,nwords,words);
       } else if (strcmp(words[1],"adiabatic") == 0) {
         model = ADIABATIC;
         nflags = ncoeffs = 0;
@@ -2852,9 +2891,7 @@ void SurfReactAdsorb::PS_react(int isurf, int isc, double *norm)
   int pid;
   Particle::OnePart *p;
 
-  double nu_react[nactive_ps];
   OneReaction_PS *r;
-  int rxn_occur[nactive_ps];
 
   for (int i = 0; i < nactive_ps; i++) {
     r = &rlist_ps[reactions_ps_list[i]];
@@ -2872,7 +2909,6 @@ void SurfReactAdsorb::PS_react(int isurf, int isc, double *norm)
 
   while (1) {
     long int sum_nu_tau = 0;
-    long int nu_tau[nactive_ps];
 
     for (int i = 0; i < nactive_ps; i++) {
       nu_react[i] = 0.0;
@@ -2947,7 +2983,7 @@ void SurfReactAdsorb::PS_react(int isurf, int isc, double *norm)
         tally_single[ireaction]++;
         if (ncompute_tally)
           for (m = 0; m < ncompute_tally; m++)
-            clist_active[m]->surf_tally(0.0,isurf,-1,ireaction,NULL,NULL,NULL);
+            clist_active[m]->surf_tally(0.0,isurf,-1,ireaction+1,NULL,NULL,NULL);
 
         // update tau
 
@@ -3011,7 +3047,7 @@ void SurfReactAdsorb::PS_react(int isurf, int isc, double *norm)
               cmodels[r->cmodel_ip]->wrapper(p,norm,r->cmodel_ip_flags,
                                              r->cmodel_ip_coeffs);
             else {
-              surf->sc[isc]->wrapper(p,norm,NULL,NULL);
+              surf->sc[isc]->persurf_wrapper(p,norm,isurf);
             }
 
             add_particle_mine(p);
@@ -3036,7 +3072,7 @@ void SurfReactAdsorb::PS_react(int isurf, int isc, double *norm)
               cmodels[r->cmodel_ip]->wrapper(p,norm,r->cmodel_ip_flags,
                                              r->cmodel_ip_coeffs);
             else {
-              surf->sc[isc]->wrapper(p,norm,NULL,NULL);
+              surf->sc[isc]->persurf_wrapper(p,norm,isurf);
             }
 
             add_particle_mine(p);
@@ -3066,7 +3102,7 @@ void SurfReactAdsorb::PS_react(int isurf, int isc, double *norm)
               cmodels[r->cmodel_ip]->wrapper(p,norm,r->cmodel_ip_flags,
                                              r->cmodel_ip_coeffs);
             else {
-              surf->sc[isc]->wrapper(p,norm,NULL,NULL);
+              surf->sc[isc]->persurf_wrapper(p,norm,isurf);
             }
 
             add_particle_mine(p);

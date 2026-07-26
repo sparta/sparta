@@ -24,6 +24,19 @@
 
 using namespace SPARTA_NS;
 
+// Kokkos may be initialized at most once per process and, once finalized, can
+// never be initialized again. When SPARTA is embedded as a library (a host
+// application reusing one process across many open/close cycles) Kokkos must be
+// initialized on first use and finalized once at process exit -- not in the
+// KokkosSPARTA destructor. These file-scope helpers track that lifetime.
+
+static int kokkos_initialized_nthreads = 0;
+
+static void sparta_kokkos_atexit()
+{
+  if (Kokkos::is_initialized() && !Kokkos::is_finalized()) Kokkos::finalize();
+}
+
 /* ---------------------------------------------------------------------- */
 
 KokkosSPARTA::KokkosSPARTA(SPARTA *sparta, int narg, char **arg) : Pointers(sparta)
@@ -144,7 +157,22 @@ KokkosSPARTA::KokkosSPARTA(SPARTA *sparta, int narg, char **arg) : Pointers(spar
   args.set_num_threads(nthreads);
   args.set_device_id(device);
 
-  Kokkos::initialize(args);
+  // Initialize Kokkos only once per process (it can be initialized at most
+  // once), and register a one-time handler to finalize it at process exit.
+  // On any later re-open the requested thread count cannot be changed, so keep
+  // the count Kokkos was actually initialized with -- otherwise the atomics
+  // decision below would be made for the wrong number of threads.
+  if (!Kokkos::is_initialized()) {
+    Kokkos::initialize(args);
+    kokkos_initialized_nthreads = nthreads;
+    atexit(sparta_kokkos_atexit);
+  } else {
+    if (nthreads != kokkos_initialized_nthreads && me == 0)
+      error->warning(FLERR,"Kokkos is already initialized in this process; "
+                     "ignoring the new thread count. Restart to change the "
+                     "number of threads.");
+    nthreads = kokkos_initialized_nthreads;
+  }
 
   // default settings for package kokkos command
 
@@ -180,9 +208,10 @@ KokkosSPARTA::KokkosSPARTA(SPARTA *sparta, int narg, char **arg) : Pointers(spar
 
 KokkosSPARTA::~KokkosSPARTA()
 {
-  // finalize Kokkos
-
-  Kokkos::finalize();
+  // Kokkos is finalized once at process exit (see sparta_kokkos_atexit,
+  // registered in the constructor), not here, so a library embedder can
+  // destroy and re-create SPARTA in the same process without tripping over
+  // Kokkos's initialize-at-most-once restriction.
 }
 
 /* ----------------------------------------------------------------------

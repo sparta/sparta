@@ -33,9 +33,17 @@ class Image : protected Pointers {
   int ssao;                     // SSAO on or off
   int seed;                     // RN seed for SSAO
   double ssaoint;               // strength of shading from 0 to 1
+  int fsaa;                     // full scene anti-aliasing on or off
   double *boxcolor;             // color to draw box outline with
   double *gridcolor;            // color to draw grid lines with
   int background[3];            // RGB values of background
+  int background2[3];           // RGB values of second background color
+                                // for a gradient (off if < 0)
+
+  double ambientColor[3];       // light color settings
+  double keyLightColor[3];      //   adjustable via dump_modify lights
+  double fillLightColor[3];
+  double backLightColor[3];
 
   Image(class SPARTA *, int);
   ~Image();
@@ -85,19 +93,15 @@ class Image : protected Pointers {
   // constant view params
 
   double FOV;
-  double ambientColor[3];
 
   double keyLightTheta;
   double keyLightPhi;
-  double keyLightColor[3];
 
   double fillLightTheta;
   double fillLightPhi;
-  double fillLightColor[3];
 
   double backLightTheta;
   double backLightPhi;
-  double backLightColor[3];
 
   double specularHardness;
   double specularIntensity;

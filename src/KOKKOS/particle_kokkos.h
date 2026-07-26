@@ -262,9 +262,12 @@ double ParticleKokkos::erot(int isp, double temp_thermal, rand_type &erandom) co
    eng = -log(erandom.drand()) * boltz * temp_thermal;
  else {
    a = 0.5*d_species[isp].rotdof-1.0;
+   // candidate range must cover the tail of x^a*exp(-x) (mode a, mean a+1,
+   // std dev sqrt(a+1)); scale the cut-off with dof rather than fixing it
+   // at 10 kT, which is below the mean for large dof
+   double xmax = a + 1.0 + 9.0*sqrt(a+1.0);
    while (1) {
-     // energy cut-off at 10 kT
-     erm = 10.0*erandom.drand();
+     erm = xmax*erandom.drand();
      b = pow(erm/a,a) * exp(a-erm);
      if (b > erandom.drand()) break;
    }
@@ -297,9 +300,12 @@ double ParticleKokkos::evib(int isp, double temp_thermal, rand_type &erandom) co
       eng = -log(erandom.drand()) * boltz * temp_thermal;
     else if (d_species[isp].vibdof > 2) {
       a = 0.5*d_species[isp].vibdof-1.;
+      // candidate range must cover the tail of x^a*exp(-x) (mode a, mean a+1,
+      // std dev sqrt(a+1)); scale the cut-off with dof rather than fixing it
+      // at 10 kT, which is below the mean for large dof
+      double xmax = a + 1.0 + 9.0*sqrt(a+1.0);
       while (1) {
-        // energy cut-off at 10 kT
-        erm = 10.0*erandom.drand();
+        erm = xmax*erandom.drand();
         b = pow(erm/a,a) * exp(a-erm);
         if (b > erandom.drand()) break;
       }

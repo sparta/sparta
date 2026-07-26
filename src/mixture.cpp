@@ -26,6 +26,7 @@
 using namespace SPARTA_NS;
 
 #define DELTA 8
+#define SMALL 1.0e-6
 
 /* ---------------------------------------------------------------------- */
 
@@ -287,7 +288,10 @@ int Mixture::init_fraction(int *fflag, double *fuser, double *f, double *c)
     else nimplicit++;
   }
 
-  if (sum > 1.0) return 1;
+  // use a small tolerance so that fractions which sum to 1.0 are not
+  // rejected due to order-dependent floating-point roundoff in the sum above
+
+  if (sum > 1.0 + SMALL) return 1;
 
   // fraction for each unset species = equal portion of unset remainder
   // cummulative = cummulative fraction across species

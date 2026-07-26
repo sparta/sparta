@@ -23,6 +23,7 @@
 #include "input.h"
 #include "modify.h"
 #include "output.h"
+#include "stats.h"
 #include "finish.h"
 #include "timer.h"
 #include "error.h"
@@ -38,6 +39,13 @@ Run::Run(SPARTA *sparta) : Pointers(sparta) {}
 void Run::command(int narg, char **arg)
 {
   if (narg < 1) error->all(FLERR,"Illegal run command");
+
+  // restore timeout in case a previous run was interrupted
+  // by force_timeout() via the library interface,
+  // and invalidate the stats cache of the previous run
+
+  timer->reset_timeout();
+  output->stats->reset_cache();
 
   if (!grid->exist)
     error->all(FLERR,"Run command before grid is defined");

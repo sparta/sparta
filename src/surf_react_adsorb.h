@@ -143,6 +143,7 @@ class SurfReactAdsorb : public SurfReact {
 
   ReactionI_GS *reactions_gs;    // reactions for all species
   int *indices_gs;               // master list of indices
+  double *prob_value;            // scratch per-reaction probabilities (GS react)
 
  // PS (on-surf) reaction model
 
@@ -180,6 +181,9 @@ class SurfReactAdsorb : public SurfReact {
 
   int nactive_ps;
   int *reactions_ps_list;
+  double *nu_react;              // scratch per-reaction rates (PS react)
+  long int *nu_tau;             // scratch per-reaction counts (PS react)
+  int *rxn_occur;               // scratch per-reaction flags (PS react)
   // SGK check
   int n_PS_react;
 

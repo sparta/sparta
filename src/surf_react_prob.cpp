@@ -33,6 +33,7 @@ enum{SIMPLE};
 #define MAXCOEFF 2
 
 #define MAXLINE 1024
+#define SMALL 1.0e-6              // roundoff tolerance for summed-probability check
 #define DELTALIST 16
 
 /* ---------------------------------------------------------------------- */
@@ -283,7 +284,11 @@ void SurfReactProb::init_reactions()
     sum = 0.0;
     for (int j = 0; j < reactions[i].n; j++)
       sum += rlist[reactions[i].list[j]].coeff[0];
-    if (sum > 1.0)
+
+    // tolerate order-dependent roundoff in the running sum so that
+    // probabilities specified to total 1.0 are not falsely rejected
+
+    if (sum > 1.0 + SMALL)
       error->all(FLERR,"Surface reaction probability for a species > 1.0");
   }
 }

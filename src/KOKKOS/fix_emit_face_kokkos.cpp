@@ -453,7 +453,10 @@ void FixEmitFaceKokkos::operator()(TagFixEmitFace_perform_task, const int &i, in
         auto cand = start + m;
         double x[3];
         x[0] = lo[0] + rand_gen.drand() * (hi[0]-lo[0]);
-        x[1] = lo[1] + rand_gen.drand() * (hi[1]-lo[1]);
+        if (axisymmetric)
+          x[1] = sqrt(lo[1]*lo[1] +
+                      rand_gen.drand() * (hi[1]*hi[1]-lo[1]*lo[1]));
+        else x[1] = lo[1] + rand_gen.drand() * (hi[1]-lo[1]);
         if (dimension == 3) x[2] = lo[2] + rand_gen.drand() * (hi[2]-lo[2]);
         else x[2] = 0.0;
 
@@ -511,7 +514,10 @@ void FixEmitFaceKokkos::operator()(TagFixEmitFace_perform_task, const int &i, in
 
       double x[3];
       x[0] = lo[0] + rand_gen.drand() * (hi[0]-lo[0]);
-      x[1] = lo[1] + rand_gen.drand() * (hi[1]-lo[1]);
+      if (axisymmetric)
+        x[1] = sqrt(lo[1]*lo[1] +
+                    rand_gen.drand() * (hi[1]*hi[1]-lo[1]*lo[1]));
+      else x[1] = lo[1] + rand_gen.drand() * (hi[1]-lo[1]);
       if (dimension == 3) x[2] = lo[2] + rand_gen.drand() * (hi[2]-lo[2]);
       else x[2] = 0.0;
 

@@ -46,8 +46,8 @@ surf_modify 		all collide 1 react adsorb_test_ps2
 ########################## BEAM ############################################################
 # Beam at multiple points so that different processors handle the surface collisions
 
-region              circle2 cylinder z  6 -10 1 -INF INF
-region              circle3 cylinder z -6 -10 1 -INF INF
+region              circle2 cylinder z  6 -10 1 INF INF
+region              circle3 cylinder z -6 -10 1 INF INF
 
 fix                 in2 emit/face/file air zhi data.beam beam_area_2 nevery 100 region circle2
 fix                 in3 emit/face/file air zhi data.beam beam_area_3 nevery 100 region circle3

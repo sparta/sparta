@@ -53,7 +53,7 @@ class Custom : protected Pointers {
   int naction;
   Action *actions;
 
-  int ncoarse;
+  int ncoarse, filestyle;
   double **xyz_coarse;
   double **values_coarse;
 

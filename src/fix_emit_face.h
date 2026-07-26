@@ -73,7 +73,7 @@ class FixEmitFace : public FixEmit {
 
   // copies of data from other classes
 
-  int dimension,nspecies;
+  int dimension,axisymmetric,nspecies;
   double fnum,dt;
   double *fraction,*cummulative;
 

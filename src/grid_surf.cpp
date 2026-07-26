@@ -1888,7 +1888,89 @@ int Grid::point_outside_surfs_implicit(int icell, double *x)
     x[2] += displace*tris[isurf].norm[2];
   }
 
-  return -1;      // should never be reached
+  // robustness pass: X was pushed off only the first surf (csurfs[0]) in the
+  //  cell, so for acute/spiky surface features it can land inside a
+  //  neighboring surf; push it back outside every surf in the cell
+  //  (no-op when X is already outside all of them)
+
+  push_reference_outside_surfs(icell,x,displace);
+
+  return 1; // implicit surfs always have a valid flow region
+}
+
+/* ----------------------------------------------------------------------
+   ensure reference point X (already in or near cell ICELL) is in the flow,
+     i.e. outside every non-transparent surf in the cell, not just the single
+     surf it was pushed off of by the caller
+   X is initially set by point_outside_surfs_explicit/implicit() by displacing
+     the centroid of one surf in the cell by DISPLACE along that surf's
+     outward normal
+   for acute (spiky) surface features, where two neighboring surfs meet at a
+     dihedral angle < 90 degrees, that single push can leave X slightly INSIDE
+     a neighboring surf, i.e. still inside the surface rather than in the flow
+   outside_surfs() then uses X as an in-flow reference point and can misclassify
+     particles as being in the flow when they are not, placing particles inside
+     the surface (manifests as fix grid/check errors on interior cells)
+   fix: iteratively push X back to be at least DISPLACE outside every surf in
+     the cell whose face X has intruded behind, until none remain (or a max
+     iteration count is reached for pathological geometry)
+   only surfs whose nearest feature to X lies within a few DISPLACE can
+     constrain X, so far-away surfs never spuriously move it
+   this is a no-op when X is already outside all surfs in the cell, so it does
+     not change the reference point for the common (non-spiky) case
+------------------------------------------------------------------------- */
+
+void Grid::push_reference_outside_surfs(int icell, double *x, double displace)
+{
+  int dim = domain->dimension;
+  int nsurf = cells[icell].nsurf;
+  surfint *csurfs = cells[icell].csurfs;
+
+  double band = 10.0*displace;
+  double band2 = band*band;
+  double sdist,d2,push;
+
+  if (dim == 2) {
+    Surf::Line *lines = surf->lines;
+    for (int iter = 0; iter < 50; iter++) {
+      int moved = 0;
+      for (int i = 0; i < nsurf; i++) {
+        Surf::Line *ln = &lines[csurfs[i]];
+        if (ln->transparent) continue;
+        d2 = Geometry::distsq_point_line(x,ln->p1,ln->p2);
+        if (d2 > band2) continue;
+        sdist = (x[0]-ln->p1[0])*ln->norm[0] + (x[1]-ln->p1[1])*ln->norm[1];
+        if (sdist < displace) {
+          push = displace - sdist;
+          x[0] += push*ln->norm[0];
+          x[1] += push*ln->norm[1];
+          moved = 1;
+        }
+      }
+      if (!moved) break;
+    }
+  } else {
+    Surf::Tri *tris = surf->tris;
+    for (int iter = 0; iter < 50; iter++) {
+      int moved = 0;
+      for (int i = 0; i < nsurf; i++) {
+        Surf::Tri *tr = &tris[csurfs[i]];
+        if (tr->transparent) continue;
+        d2 = Geometry::distsq_point_tri(x,tr->p1,tr->p2,tr->p3,tr->norm);
+        if (d2 > band2) continue;
+        sdist = (x[0]-tr->p1[0])*tr->norm[0] + (x[1]-tr->p1[1])*tr->norm[1] +
+                (x[2]-tr->p1[2])*tr->norm[2];
+        if (sdist < displace) {
+          push = displace - sdist;
+          x[0] += push*tr->norm[0];
+          x[1] += push*tr->norm[1];
+          x[2] += push*tr->norm[2];
+          moved = 1;
+        }
+      }
+      if (!moved) break;
+    }
+  }
 }
 
 /* ----------------------------------------------------------------------
@@ -2014,6 +2096,12 @@ int Grid::point_outside_surfs_explicit(int icell, double *x)
       setflag = 1;
     }
   }
+
+  // robustness pass: ensure reference point X is truly in the flow
+  //  (outside every surf in the cell), not just outside the one surf it
+  //  was pushed off of; see push_reference_outside_surfs()
+
+  if (setflag) push_reference_outside_surfs(icell,x,displace);
 
   // if setflag equal to 0
   //  unable to find a point in flow volume, all surfs invoked "continue"

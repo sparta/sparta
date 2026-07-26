@@ -467,6 +467,24 @@ void ReactBird::ambi_check()
         else if (ions[r->reactants[0]] == 1 && r->reactants[1] == especies &&
                  ions[r->products[0]] == 1 && r->products[1] == especies &&
                  ions[r->products[2]] == 0) flag = 0;
+
+        // ambipolar ion as inert third body, dissociating species is neutral
+        // D: AB + C+ -> A + C+ + B
+        //   third body C+ is conserved as middle product (products[1])
+        //   so it maps to the surviving J particle in react attempt()
+
+        else if (ions[r->reactants[0]] == 0 && ions[r->reactants[1]] == 1 &&
+                 ions[r->products[0]] == 0 &&
+                 r->products[1] == r->reactants[1] &&
+                 ions[r->products[2]] == 0) flag = 0;
+
+        // ambipolar ion as inert third body, dissociating species is an ion
+        // D: AB+ + C+ -> A+ + C+ + B
+
+        else if (ions[r->reactants[0]] == 1 && ions[r->reactants[1]] == 1 &&
+                 ions[r->products[0]] == 1 &&
+                 r->products[1] == r->reactants[1] &&
+                 ions[r->products[2]] == 0) flag = 0;
       }
     }
 
@@ -520,6 +538,17 @@ void ReactBird::ambi_check()
             ions[r->products[0]] == 1) flag = 0;
         else if (ions[r->reactants[0]] == 1 && ions[r->reactants[1]] == 0 &&
             ions[r->products[0]] == 1) flag = 0;
+      }
+
+      // ambipolar ion as inert third body
+      // R: A + B + C+ -> AB + C+
+      //   third body C+ is the 2nd product (products[1]), used only to
+      //   select the recombination rate; it is not a colliding particle
+      //   reactants and recombined molecule (products[0]) are not electrons
+
+      else if (r->nreactant == 2 && r->nproduct == 2) {
+        if (r->reactants[0] != especies && r->reactants[1] != especies &&
+            r->products[0] != especies && ions[r->products[1]] == 1) flag = 0;
       }
     }
 

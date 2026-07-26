@@ -1,8 +1,16 @@
 if(PKG_MPI_STUBS)
   # ######### BEGIN TARGET_SPARTA_BUILD_MPI_STUBS ##########
-  set(CMAKE_CXX_COMPILER "g++")
-  set(CMAKE_CXX_FLAGS "-O -fPIC")
-  set(CMAKE_AR "ar")
+  # Force the plain host compiler/archiver for the trivial MPI stubs when
+  # building natively (e.g. so a Kokkos/CUDA wrapper compiler is not used for
+  # them). Do NOT do this when cross-compiling: the stubs must be built with
+  # the same cross toolchain as the rest of SPARTA, otherwise they produce
+  # host-format objects that the target linker cannot use and the MPI_* symbols
+  # go missing from libsparta (e.g. the MinGW64 Windows DLL link).
+  if(NOT CMAKE_CROSSCOMPILING)
+    set(CMAKE_CXX_COMPILER "g++")
+    set(CMAKE_CXX_FLAGS "-O -fPIC")
+    set(CMAKE_AR "ar")
+  endif()
 
   # message(VERBOSE "${CMAKE_CURRENT_SOURCE_DIR}:
   # CMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}")
