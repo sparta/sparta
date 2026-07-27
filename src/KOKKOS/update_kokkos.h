@@ -8,6 +8,7 @@
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
    certain rights in this software.  This software is distributed under
    the GNU General Public License.
+   Copyright (c) 2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
    See the README file in the top-level SPARTA directory.
 ------------------------------------------------------------------------- */
@@ -71,6 +72,10 @@ typedef struct s_UPDATE_REDUCE UPDATE_REDUCE;
 
 template<int DIM, int SURF, int REACT, int OPT, int ATOMIC_REDUCTION>
 struct TagUpdateMove{};
+template<int DIM, int SURF, int REACT, int OPT, int ATOMIC_REDUCTION>
+struct TagUpdateMoveIndirect{};
+template<int DIM>
+struct TagUpdateMoveFirstPass{};
 
 class UpdateKokkos : public Update {
  public:
@@ -96,7 +101,23 @@ class UpdateKokkos : public Update {
   KOKKOS_INLINE_FUNCTION
   void operator()(TagUpdateMove<DIM,SURF,REACT,OPT,ATOMIC_REDUCTION>, const int&, UPDATE_REDUCE&) const;
 
+  template<int DIM, int SURF, int REACT, int OPT, int ATOMIC_REDUCTION>
+  KOKKOS_INLINE_FUNCTION
+  void operator()(TagUpdateMoveIndirect<DIM,SURF,REACT,OPT,ATOMIC_REDUCTION>,
+        const typename Kokkos::TeamPolicy<DeviceType, TagUpdateMove<DIM,SURF,REACT,OPT,ATOMIC_REDUCTION>>::member_type &team, UPDATE_REDUCE&) const;
+
+  template<int DIM, int SURF, int REACT, int OPT, int ATOMIC_REDUCTION>
+  KOKKOS_INLINE_FUNCTION
+  void moveOne(const int&, UPDATE_REDUCE&) const;
+
+  template<int DIM>
+  KOKKOS_INLINE_FUNCTION
+  void operator()(TagUpdateMoveFirstPass<DIM>, const int) const;
+
  private:
+  DAT::t_int_1d not_updated_cnt;
+  HAT::t_int_1d h_not_updated_cnt;
+  DAT::t_int_1d not_updated;
 
   double dt;
   int field_active[3];

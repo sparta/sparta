@@ -169,7 +169,7 @@ class GridKokkos : public Grid {
   Kokkos::Crs<int, DeviceType, void, int> d_csubs;
 
   DAT::t_int_1d d_cellcount;
-  DAT::t_int_2d d_plist;
+  DAT::t_int_2d_lr d_plist;
 
   // hash for all cell IDs (owned,ghost,parent).  The _d postfix refers to the
   // fact that this hash lives on "device"
