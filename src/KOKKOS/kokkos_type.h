@@ -732,7 +732,7 @@ void buffer_view(BufferView &buf, DualView &view,
                  const size_t n7 = 0) {
 
   buf = BufferView(
-          view.d_view.data(),
+          view.view_device().data(),
           n0,n1,n2,n3,n4,n5,n6,n7);
 
 }

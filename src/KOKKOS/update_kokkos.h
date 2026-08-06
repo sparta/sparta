@@ -12,6 +12,12 @@
    See the README file in the top-level SPARTA directory.
 ------------------------------------------------------------------------- */
 
+/* ----------------------------------------------------------------------
+   Optimizations contributed by Matt Bettencourt (NVIDIA) are:
+    Copyright (c) 2025 NVIDIA CORPORATION & AFFILIATES. All rights
+    reserved.
+------------------------------------------------------------------------- */
+
 #ifndef SPARTA_UPDATE_KOKKOS_H
 #define SPARTA_UPDATE_KOKKOS_H
 
@@ -71,6 +77,10 @@ typedef struct s_UPDATE_REDUCE UPDATE_REDUCE;
 
 template<int DIM, int SURF, int REACT, int OPT, int ATOMIC_REDUCTION>
 struct TagUpdateMove{};
+template<int DIM, int SURF, int REACT, int OPT, int ATOMIC_REDUCTION>
+struct TagUpdateMoveIndirect{};
+template<int DIM>
+struct TagUpdateMoveFirstPass{};
 
 class UpdateKokkos : public Update {
  public:
@@ -96,8 +106,23 @@ class UpdateKokkos : public Update {
   KOKKOS_INLINE_FUNCTION
   void operator()(TagUpdateMove<DIM,SURF,REACT,OPT,ATOMIC_REDUCTION>, const int&, UPDATE_REDUCE&) const;
 
- private:
+  template<int DIM, int SURF, int REACT, int OPT, int ATOMIC_REDUCTION>
+  KOKKOS_INLINE_FUNCTION
+  void operator()(TagUpdateMoveIndirect<DIM,SURF,REACT,OPT,ATOMIC_REDUCTION>,
+        const typename Kokkos::TeamPolicy<DeviceType, TagUpdateMove<DIM,SURF,REACT,OPT,ATOMIC_REDUCTION>>::member_type &team, UPDATE_REDUCE&) const;
 
+  template<int DIM, int SURF, int REACT, int OPT, int ATOMIC_REDUCTION>
+  KOKKOS_INLINE_FUNCTION
+  void moveOne(const int&, UPDATE_REDUCE&) const;
+
+  template<int DIM>
+  KOKKOS_INLINE_FUNCTION
+  void operator()(TagUpdateMoveFirstPass<DIM>, const int) const;
+
+ private:
+  DAT::t_int_scalar d_not_updated_cnt;
+  HAT::t_int_scalar h_not_updated_cnt;
+  DAT::t_int_1d d_not_updated;
   double dt;
   int field_active[3];
 
