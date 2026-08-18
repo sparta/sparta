@@ -65,21 +65,6 @@ if(SPARTA_ENABLE_TESTING)
       "in.custom.cube.set.restart" # Failing
       "in.custom.step.read.restart" # Failing
       "in.custom.step.set.restart" # Failing
-      # The two stages of the write_isurf/read_isurf round trip. Stage 1
-      # writes a corner point file into the shared suite run directory under
-      # a fixed name, which would race with itself when ctest runs the mpi_1
-      # and mpi_4 copies of the test concurrently, and stage 2 consumes that
-      # file so it cannot run standalone. They are kept as a documented
-      # example pair; create_isurf itself is covered by the two
-      # in.exp2imp.axi.* tests above.
-      "in.exp2imp.axi.spherecone.readback"
-      "in.exp2imp.axi.spherecone.readback2"
-      # Ablation driven by particle flux over 500 steps. The surface geometry
-      # is deterministic, but the incident flux that drives it is stochastic
-      # and amplifies last-bit floating point differences between platforms,
-      # so a gold standard log for it is not portable (compare in.axi above).
-      # Kept as a runnable example.
-      "in.ablate.axi.spherecone"
   )
 
   # When running the KOKKOS regression tests (SPARTA_KOKKOS_EXACT, run with
@@ -89,7 +74,6 @@ if(SPARTA_ENABLE_TESTING)
   if(SPARTA_KOKKOS_EXACT)
     list(APPEND SPARTA_DISABLED_TESTS
         # fix ave/grid for grid/surf inputs not yet supported in KOKKOS
-        # (in.ablate.axi.spherecone also uses it, but is disabled above)
         "in.ablation.2d"
         "in.ablation.3d"
         # surf_collide adiabatic/cll/td/impulsive styles not KOKKOS-enabled

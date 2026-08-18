@@ -150,8 +150,8 @@ class FixAblate : public Fix {
   void mark_corners_3d(int);
   int find_ninter();
 
-  void epsilon_adjust(int);
-  void epsilon_adjust_multiv(int);
+  void epsilon_adjust();
+  void epsilon_adjust_multiv();
   void push_lohi();
   void comm_neigh_corners(int);
   int walk_to_neigh(int, int, int, int);

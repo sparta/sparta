@@ -428,11 +428,9 @@ void FixAblate::store_corners(int nx_caller, int ny_caller, int nz_caller,
   if (pushflag && !multi_val_flag) push_lohi();
 
   // check for consistency
-  // initflag = 1: this is the initial creation of the corner point values,
-  //   where exactly-on-threshold values must be removed unconditionally
 
-  if (multi_val_flag) epsilon_adjust_multiv(1);
-  else epsilon_adjust(1);
+  if (multi_val_flag) epsilon_adjust_multiv();
+  else epsilon_adjust();
 
   // create marching squares/cubes classes, now that have group & threshold
 
@@ -658,11 +656,9 @@ void FixAblate::end_of_step()
 
   // sync shared corner point values
   // adjust individual corner point values too close to threshold
-  // initflag = 0: mid-ablation, keep the historical mindist-gated behavior
-  //   so an ongoing ablation run is unchanged
 
-  if (multi_val_flag) epsilon_adjust_multiv(0);
-  else epsilon_adjust(0);
+  if (multi_val_flag) epsilon_adjust_multiv();
+  else epsilon_adjust();
 
   // re-create implicit surfs
 
@@ -1287,41 +1283,24 @@ void FixAblate::sync()
      via epsilon method or isosurface stuffing method
 ------------------------------------------------------------------------- */
 
-void FixAblate::epsilon_adjust(int initflag)
+void FixAblate::epsilon_adjust()
 {
-  if (mindist == 0.0 && !initflag) return;
+  if (mindist == 0.0) return;
 
   int i,icell;
 
   Grid::ChildCell *cells = grid->cells;
   Grid::ChildInfo *cinfo = grid->cinfo;
 
-  // a corner value exactly equal to thresh makes Marching Squares/Cubes place
-  // a vertex exactly on a grid corner point.  When a surface feature is
-  // grid-aligned this makes neighboring cells emit coincident vertices there,
-  // producing a non-watertight surface (e.g. create_isurf of a body whose flat
-  // face lies on a grid line).  Removing exactly-on-threshold values is a hard
-  // numerical requirement, so it is enforced unconditionally when the corner
-  // point values are first created (initflag = 1).  It is deliberately not
-  // applied to the mid-ablation update, where nudging a corner point that
-  // happens to land on the threshold would perturb an ongoing ablation run.
-  // The wider EPSILON band, which also suppresses tiny surface elements, is
-  // applied only when the user requests it via mindist > 0.
-
   for (icell = 0; icell < nglocal; icell++) {
     if (!(cinfo[icell].mask & groupbit)) continue;
     if (cells[icell].nsplit <= 0) continue;
 
-    for (i = 0; i < ncorner; i++) {
-      if (mindist > 0.0) {
-        if (cvalues[icell][i] >= thresh && cvalues[icell][i] < thresh + EPSILON)
-          cvalues[icell][i] = thresh - EPSILON;
-        else if (cvalues[icell][i] < thresh && cvalues[icell][i] > thresh - EPSILON)
-          cvalues[icell][i] = thresh - EPSILON;
-      } else if (cvalues[icell][i] == thresh) {
+    for (i = 0; i < ncorner; i++)
+      if (cvalues[icell][i] >= thresh && cvalues[icell][i] < thresh + EPSILON)
         cvalues[icell][i] = thresh - EPSILON;
-      }
-    }
+      else if (cvalues[icell][i] < thresh && cvalues[icell][i] > thresh - EPSILON)
+        cvalues[icell][i] = thresh - EPSILON;
   }
 }
 
