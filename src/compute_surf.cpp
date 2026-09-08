@@ -711,6 +711,11 @@ void ComputeSurf::grow_tally()
 
 void ComputeSurf::reallocate()
 {
+  // surf arrays may have been rebuilt or grown: refresh cached ptrs
+  // and re-size the per-surf normalization factors
+
+  lines = surf->lines;
+  tris = surf->tris;
   init_normflux();
 }
 

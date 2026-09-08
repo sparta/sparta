@@ -95,6 +95,34 @@ def test_ballistic(exe_cmd):
     return fails
 
 
+def test_force(exe_cmd):
+    # constant external force on the COM: the semi-implicit Euler
+    # trajectory is x_n = x0 + n*v0*dt + a*dt^2*n*(n+1)/2, v_n = v0 + n*a*dt
+    fx = 1.0e-21
+    rc, out = run_deck(exe_cmd, "in.test.ballistic",
+                       extra=["-var", "fx", repr(fx)])
+    if rc:
+        return ["run failed with exit code %d" % rc]
+    rows = parse_stats(out)
+    if not rows:
+        return ["no stats output"]
+    last = rows[-1]
+    fails = []
+    a = fx / 1.0e-22
+    dt = 1.0e-4
+    n = 1000
+    xexp = 3.0 + n * 12.0 * dt + a * dt * dt * n * (n + 1) / 2.0
+    vexp = 12.0 + n * a * dt
+    if not approx(last["f_1[1]"], xexp, rel=1e-7):
+        fails.append("xcm = %.12g, expected %.12g" % (last["f_1[1]"], xexp))
+    if not approx(last["f_1[4]"], vexp, rel=1e-7):
+        fails.append("vx = %.12g, expected %.12g" % (last["f_1[4]"], vexp))
+    if not approx(last["f_1[2]"], 4.7, rel=1e-7):
+        fails.append("ycm = %.12g, expected 4.7 (force is x only)"
+                     % last["f_1[2]"])
+    return fails
+
+
 def test_bounce(exe_cmd):
     fails = []
     # elastic cases: both force laws must rebound at -50 within 1%
@@ -184,12 +212,12 @@ def test_overrun(exe_cmd):
     return fails
 
 
-def test_remap(exe_cmd):
+def compare_remap_modes(exe_cmd, deck, keys, labels):
+    """Run deck in both remap modes, require identical final values."""
     results = {}
     fails = []
     for mode in ("cutcell", "incremental"):
-        rc, out = run_deck(exe_cmd, "in.test.remap",
-                           extra=["-var", "mode", mode])
+        rc, out = run_deck(exe_cmd, deck, extra=["-var", "mode", mode])
         if rc:
             fails.append("mode %s: run failed with exit code %d" % (mode, rc))
             continue
@@ -197,15 +225,70 @@ def test_remap(exe_cmd):
         if not rows:
             fails.append("mode %s: no stats output" % mode)
             continue
-        last = rows[-1]
-        results[mode] = (last["f_1[1]"], last["f_1[2]"], last["f_1[15]"])
+        results[mode] = rows
+    if fails:
+        return fails, results
+    last_c = results["cutcell"][-1]
+    last_i = results["incremental"][-1]
+    for key, name in zip(keys, labels):
+        if not approx(last_i[key], last_c[key], rel=1e-10, abs_=1e-13):
+            fails.append("%s: incremental %.15g differs from cutcell %.15g"
+                         % (name, last_i[key], last_c[key]))
+    return fails, results
+
+
+def test_remap(exe_cmd):
+    # one gas-driven body: cutcell and incremental must give identical
+    # trajectories, verifying the incremental re-cut against the full
+    # rebuild; the body must actually have moved
+    fails, results = compare_remap_modes(
+        exe_cmd, "in.test.remap",
+        ("f_1[1]", "f_1[2]", "f_1[15]"), ("xcm", "ycm", "omega"))
     if fails:
         return fails
-    ref = results["cutcell"]
-    for i, name in enumerate(("xcm", "ycm", "omega")):
-        if not approx(results["incremental"][i], ref[i], rel=1e-10, abs_=1e-13):
-            fails.append("incremental: %s = %.15g differs from cutcell %.15g"
-                         % (name, results["incremental"][i], ref[i]))
+    if abs(results["cutcell"][-1]["f_1[1]"] - 5.0) < 0.01:
+        fails.append("body barely moved (xcm = %.6g), test is too weak"
+                     % results["cutcell"][-1]["f_1[1]"])
+    return fails
+
+
+def test_staticdist(exe_cmd):
+    # body next to a 200-segment static circle: the incremental re-cut
+    # must handle cells holding many static surfs; with --dist on several
+    # procs most static surfs are ghost surfs on any one proc, exercising
+    # the mover's ghost-cell collision tests and the local body copies
+    fails, results = compare_remap_modes(
+        exe_cmd, "in.test.staticdist",
+        ("f_1[1]", "f_1[2]", "f_1[15]"), ("xcm", "ycm", "omega"))
+    if fails:
+        return fails
+    for mode in ("cutcell", "incremental"):
+        ndel = results[mode][-1]["f_1"] - results[mode][0]["f_1"]
+        if ndel != 0:
+            fails.append("mode %s: %g particles deleted inside the body "
+                         "during the run" % (mode, ndel))
+    return fails
+
+
+def test_splitcell(exe_cmd):
+    # body sweeping alongside a diagonal wall that creates split cells:
+    # particles entering swept split cells must be reflected, not
+    # overrun, so the deletion count must not grow; both remap modes
+    # must agree (incremental falls back to a full re-map near split
+    # cells, which must not change the result)
+    fails, results = compare_remap_modes(
+        exe_cmd, "in.test.splitcell",
+        ("f_1[1]", "f_1[2]"), ("xcm", "ycm"))
+    if fails:
+        return fails
+    for mode in ("cutcell", "incremental"):
+        ndel = results[mode][-1]["f_1"] - results[mode][0]["f_1"]
+        if ndel != 0:
+            fails.append("mode %s: %g particles overrun by the body in "
+                         "split cells" % (mode, ndel))
+        if results[mode][-1]["Nscoll"] == 0:
+            fails.append("mode %s: no surface collisions, test geometry "
+                         "is broken" % mode)
     return fails
 
 
@@ -314,11 +397,14 @@ def test_notwatertight(exe_cmd):
 
 TESTS = [
     ("ballistic", test_ballistic),
+    ("force", test_force),
     ("bounce", test_bounce),
     ("momentum", test_momentum),
     ("overrun", test_overrun),
     ("remap", test_remap),
     ("multiremap", test_multiremap),
+    ("staticdist", test_staticdist),
+    ("splitcell", test_splitcell),
     ("twobody", test_twobody),
     ("pushpair", test_pushpair),
     ("badmoi", test_badmoi),
@@ -326,12 +412,14 @@ TESTS = [
 ]
 
 # tests whose decks support -var dist 1 (global surfs explicit/distributed)
-# multiremap verifies the incremental re-cut against the full rebuild
-# in distributed mode; the single-body remap deck is pseudo-driven and
-# pseudo requires non-distributed surfs
+# remap, multiremap, staticdist, and splitcell verify the incremental
+# re-cut against the full rebuild in distributed mode; staticdist is the
+# one whose static surfs are not local on every proc when run on
+# several procs
 
-DIST_TESTS = {"ballistic", "bounce", "momentum", "overrun",
-              "multiremap", "twobody", "pushpair"}
+DIST_TESTS = {"ballistic", "force", "bounce", "momentum", "overrun",
+              "remap", "multiremap", "staticdist", "splitcell",
+              "twobody", "pushpair"}
 
 
 def main():

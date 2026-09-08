@@ -1962,9 +1962,9 @@ compute csurf surf all all fx fy fz tx ty tz com 5 5 0 :pre
 A "fix rigid"_fix_rigid.html command defines the body's mass,
 center-of-mass, moments of inertia, and initial velocities, and time
 integrates its motion using the force/torque tallied by the compute.
-The "global rigid"_global.html command must also be set with the ID
-of the fix, so the particle mover checks for collisions with the
-moving surface elements. :l
+The "global rigid"_global.html command must also be set to {yes}, so
+the particle mover checks for collisions with the moving surface
+elements. :l
 :ule
 
 Particles collide with the exact translating and rotating position of
@@ -1981,9 +1981,9 @@ details of the time integration scheme and this one-step lag.
 The {remap} option of "fix rigid"_fix_rigid.html selects how the
 moving surfs are re-assigned to grid cells each step.  The default
 {incremental} mode re-cuts only the grid cells near the body that
-actually changed, which is fast on large grids, and falls back
-automatically to a full re-map when a structural change (e.g. a split
-cell) occurs.  The {cutcell} mode re-computes cut and split cell info
+actually changed, at a cost independent of the grid size and total
+surf count, and falls back automatically to a full re-map when a
+structural change (e.g. a split cell) occurs.  The {cutcell} mode re-computes cut and split cell info
 for the whole grid every step, exactly as "fix
 move/surf"_fix_move_surf.html does; both modes give the same exact
 flow volumes near the body.  Rigid bodies work with both
@@ -1991,9 +1991,11 @@ non-distributed and distributed explicit surfs, in either remap mode;
 with distributed surfs each processor keeps a replicated copy of only
 the compact body elements.
 
-If the object approaches other static (non-moving) surface elements,
-optional push-off spring forces can repel it before contact, via the
-{push} and {pushbound} options of "fix rigid"_fix_rigid.html.
+If the object approaches other static (non-moving) surface elements
+or other rigid bodies, optional push-off contact forces can repel it
+before contact, via the {push} and {pushbound} options of "fix
+rigid"_fix_rigid.html.  A constant external force such as gravity
+can be applied with its {force} option.
 
 The state of the body (position, velocities, orientation, forces) is
 available as a 22-value global vector computed by the fix, for

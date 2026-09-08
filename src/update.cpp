@@ -117,7 +117,6 @@ Update::Update(SPARTA *sparta) : Pointers(sparta)
   mem_limit_grid_flag = 0;
 
   rigidflag = 0;
-  rigidID = NULL;
   nfixrigid = 0;
   fixrigidlist = NULL;
   rigidmap = NULL;
@@ -142,7 +141,6 @@ Update::~Update()
 
   delete [] unit_style;
   delete [] fieldID;
-  delete [] rigidID;
   delete [] fixrigidlist;
   memory->destroy(rigidmap);
   memory->destroy(rigid_binstart);
@@ -292,16 +290,6 @@ void Update::init()
       error->all(FLERR,"Cannot use global rigid with axisymmetric domain");
     if (sparta->kokkos)
       error->all(FLERR,"Cannot yet use global rigid with KOKKOS");
-
-    // rigidID = ID of a specific fix rigid (validated), or the word "yes"
-
-    if (strcmp(rigidID,"yes") != 0) {
-      int irigidfix = modify->find_fix(rigidID);
-      if (irigidfix < 0)
-        error->all(FLERR,"Fix ID for global rigid is not found");
-      if (strcmp(modify->fix[irigidfix]->style,"rigid") != 0)
-        error->all(FLERR,"Fix for global rigid is not a fix rigid command");
-    }
 
     // build list of all rigid fixes, one mobile body per fix
 
@@ -458,11 +446,13 @@ int Update::rigid_cell_box(double *blo, double *bhi, int **list)
 }
 
 /* ----------------------------------------------------------------------
-   rigidmap = map from each local surf to the rigid fix which owns it,
-     -1 = static surf
+   rigidmap = map from each local or ghost surf to the rigid fix which
+     owns it, -1 = static surf
    used by the move loop to dispatch moving-surf collision tests
-   called from init(), and by FixRigid after a full grid re-map with
-     distributed surfs, which rebuilds the local surf arrays
+   covers ghost surfs too: the mover advects particles thru ghost cells
+     and tests collisions with the surfs stored for those cells
+   called from init(), and by FixRigid whenever the local/ghost surf
+     arrays change (setup, full grid re-map, balance or adapt)
 ------------------------------------------------------------------------- */
 
 void Update::build_rigidmap()
@@ -471,8 +461,9 @@ void Update::build_rigidmap()
 
   memory->destroy(rigidmap);
   int nslocal = surf->nlocal;
-  memory->create(rigidmap,nslocal,"update:rigidmap");
-  for (int i = 0; i < nslocal; i++) rigidmap[i] = -1;
+  int nstotal = surf->nlocal + surf->nghost;
+  memory->create(rigidmap,MAX(nstotal,1),"update:rigidmap");
+  for (int i = 0; i < nstotal; i++) rigidmap[i] = -1;
 
   if (!surf->distributed) {
 
@@ -493,12 +484,14 @@ void Update::build_rigidmap()
 
     // distributed: the local surf list changes as the grid is re-cut,
     //   so map by global surf ID via each fix's body element table
+    // FixRigid::ensure_local_copies() keeps every body element in the
+    //   local range, so ghost entries are always static
 
     Surf::Line *lines = surf->lines;
     Surf::Tri *tris = surf->tris;
     int dim = domain->dimension;
 
-    for (int i = 0; i < nslocal; i++) {
+    for (int i = 0; i < nstotal; i++) {
       surfint id = (dim == 2) ? lines[i].id : tris[i].id;
       for (int m = 0; m < nfixrigid; m++)
         if (fixrigidlist[m]->body_elem(id) >= 0) {
@@ -2528,13 +2521,9 @@ void Update::global(int narg, char **arg)
 
     } else if (strcmp(arg[iarg],"rigid") == 0) {
       if (iarg+2 > narg) error->all(FLERR,"Illegal global command");
-      delete [] rigidID;
-      if (strcmp(arg[iarg+1],"NULL") != 0) {
-        rigidflag = 1;
-        int n = strlen(arg[iarg+1]) + 1;
-        rigidID = new char[n];
-        strcpy(rigidID,arg[iarg+1]);
-      } else rigidflag = 0;
+      if (strcmp(arg[iarg+1],"yes") == 0) rigidflag = 1;
+      else if (strcmp(arg[iarg+1],"no") == 0) rigidflag = 0;
+      else error->all(FLERR,"Illegal global command");
       iarg += 2;
 
     } else error->all(FLERR,"Illegal global command");

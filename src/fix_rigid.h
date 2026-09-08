@@ -77,10 +77,7 @@ class FixRigid : public Fix {
   int dim;
   int massflag,comflag,vcomflag,moiflag,angmomflag;
 
-  int pseudoflag;
-  int nparticle_user;
-  double pmass_user,frac_user;
-  class RanKnuth *random;   // RNG for pseudo particles
+  double fext[3];         // constant external force on the COM
 
   int nsurf;     // # of surfs which comprise surface of rigid body
   int *slist;    // list of local surf indices for rigid body surfs
@@ -101,10 +98,16 @@ class FixRigid : public Fix {
   int *bodyisr;           // per-element reaction model index
   std::map<surfint,int> idmap;   // global surf ID -> element index
 
-  // distributed surfs: where this proc stores copies of body elements
+  // where this proc stores copies of body elements in the Surf arrays
+  // non-distributed: lblist = slist, one copy per element
+  // distributed: ensure_local_copies() guarantees at least one copy of
+  //   every element in the local (non-ghost) range; if the surf comm
+  //   left duplicates, every copy is tracked so all are kept current
 
-  int *lblist;            // local surf index of each element, -1 if none
-  int lbliststale;        // 1 if grid/surf changes invalidated lblist
+  int *lblist;            // local surf index of each element
+  int ncopy,maxcopy;      // all local copies of body elements
+  int *copy_index;        //   local surf index of each copy
+  int *copy_elem;         //   element index of each copy
   int nolist;             // # of body elements this proc owns
   int *olist_own;         // owned-array index of each
   int *olist_elem;        // element index of each
@@ -114,6 +117,7 @@ class FixRigid : public Fix {
   int warnrotate;         // 1 after warning about rotation rate
   int warntranslate;      // 1 after warning about translation rate
   int warnexit;           // 1 after warning that body exited the box
+  int warnfallback;       // 1 after warning about incremental fallback
 
   double tqpush[3];       // torque from push-off contacts this step
   double massbody;        // total mass of rigid body enclosed by surfs
@@ -194,10 +198,8 @@ class FixRigid : public Fix {
   int maxoldinside;
   int *oldinside;
 
-  int nreg;               // registry of cells whose csurfs lists
-  int maxreg;             //   are allocated by this fix
-  int *regcell;
-  surfint **reglist;
+  std::map<int,surfint *> registry;   // cells whose csurfs lists are
+                                      //   allocated by this fix
 
   int nrcand;             // work list of cells overlapping the
   int maxrcand;           //   incremental re-cut region this step
@@ -205,10 +207,13 @@ class FixRigid : public Fix {
 
   surfint *newlist;       // work bufs for re-cutting one cell
   int *newmap;
+  surfint *reclist;       // candidate surfs for re-cutting one cell
+  int maxreclist;
   class Cut2d *cut2d;
   class Cut3d *cut3d;
   double bbodylo[3];      // bounding box around entire body
   double bbodyhi[3];
+  double bboxeps;         // inflation applied to bbodylo/bbodyhi
 
   bigint ndeleted;        // per-proc count of deleted particles
   bigint ndeleted_all;    // cached global sum for compute_scalar()
@@ -233,6 +238,7 @@ class FixRigid : public Fix {
   void registry_replace(int, surfint *);
   void registry_remove(int);
   void free_registry();
+  void copy_registry_to_grid(); // move registry lists into grid pages
   void swept_assign_all();      // add all bodies' surfs to swept cells
   void swept_restore();         // undo swept_assign_all
   void body_bbox(int);          // bbox of body, current or swept over step
@@ -240,6 +246,7 @@ class FixRigid : public Fix {
   int inside_any_body(double *); // 1 if inside any rigid body
   bigint remove_inside_particles(int);  // per-body, used at setup
   void remove_inside_all(int);  // fused pass over all bodies, per step
+  void surfs_changed();         // notify per-surf computes of new surfs
 };
 
 }

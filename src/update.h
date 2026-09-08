@@ -56,6 +56,8 @@ class Update : protected Pointers {
   class FixRigid **fixrigidlist;  // ptrs to each FixRigid instance
   int *rigidmap;              // which FixRigid each surf belongs to
                               // = index into fixrigidlist, -1 = static surf
+                              // length = surf->nlocal + surf->nghost, since
+                              //   the mover tests surfs of ghost cells too
 
   void build_rigidmap();      // rebuild rigidmap from current surfs
 
@@ -193,10 +195,6 @@ class Update : protected Pointers {
   class Compute **slist_compute;  // list of all gas/surf Computes
   class Compute **blist_compute;  // list of all gas/boundary Computes
   class SurfCollide **dlist_surfcollide;  // list of all dynamic SurfCollides
-
-  // enable use of mobile rigid bodies comprised of surfs
-
-  char *rigidID;         // "yes" or ID of a fix rigid command
 
   // methods
 

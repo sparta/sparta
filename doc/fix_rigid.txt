@@ -33,9 +33,7 @@ dstyle = {body} or {infile}, followed by args :l
   {infile} args = filename
     filename = name of file containing all rigid body attributes on a single line :pre
 zero or more optional keyword/value pairs :l
-  keyword = {scale} or {remap} or {rotate} or {push} or {pushbound} or {outfile} or {pseudo}
-     {scale} value = factor
-       factor = multiply all mass-dependent body values by this factor
+  keyword = {remap} or {rotate} or {push} or {pushbound} or {pushstyle} or {pushdamp} or {force} or {outfile}
      {remap} value = {cutcell} or {incremental}
        method used to assign the moving body surfs to grid cells
      {rotate} value = {euler} or {richardson}
@@ -52,21 +50,20 @@ zero or more optional keyword/value pairs :l
      {pushdamp} value = gamma
        gamma = dashpot damping coefficient for push-off contacts
                (force/velocity units, 0 = elastic)
+     {force} values = fx fy fz
+       fx,fy,fz = constant external force on the body COM (force units)
      {outfile} values = filename Nevery
-       filename = write body state to this file every Nevery steps
-     {pseudo} values = Np pmass frac
-       Np = number of pseudo particles to bounce off object each timestep
-       pmass = mass of each pseudo particle
-       frac = fraction of object bounding box to aim at (0.1 = bottom 10%, 1.0 = entire bounding box) :pre
+       filename = write body state to this file every Nevery steps :pre
 :ule
 
 [Examples:]
 
 compute csurf surf all all fx fy fz tx ty tz com 5 5 0
-global rigid 1
+global rigid yes
 fix 1 rigid all csurf body mass 1.0 com 5 5 0 vcom 0 0 0 moi 1 1 2 -1 0 0 angmom 0 0 0
 fix 1 rigid all csurf infile square.rigid outfile square.state 1000
-fix 1 rigid all csurf infile square.rigid push 1.0e-18 0.5 pushbound yes :pre
+fix 1 rigid all csurf infile square.rigid push 1.0e-18 0.5 pushbound yes
+fix 1 rigid all csurf infile square.rigid force 0 -9.8e-22 0 :pre
 
 [Description:]
 
@@ -82,8 +79,8 @@ large particulates.  See "Section 6.20"_Section_howto.html#howto_20
 for an overview of using rigid body objects in SPARTA.
 
 Use of this fix requires the "global rigid"_global.html command to be
-set with the ID of this fix, so that the particle move code checks
-for collisions with moving surface elements.
+set to {yes}, so that the particle move code checks for collisions
+with moving surface elements.
 
 Group-ID is the ID of the group of surface elements (lines in 2d or
 triangles in 3d) which comprise the rigid body object.  The
@@ -201,11 +198,11 @@ Each timestep, the following operations are performed.  At the start
 of the step, the equations of motion of the body are time integrated
 via a semi-implicit (symplectic) Euler scheme: the COM velocity and
 angular momentum are first updated by the force and torque
-accumulated during the previous step, then the COM position and
-quaternion are advanced by a full timestep using the updated
-velocities, with dq/dt = 1/2 w q for the quaternion.  This gives the
-position and orientation the body will have at the end of the
-timestep.
+accumulated during the previous step (plus any constant external
+force from the {force} keyword), then the COM position and quaternion
+are advanced by a full timestep using the updated velocities.  This
+gives the position and orientation the body will have at the end of
+the timestep.
 
 Before particles advect, each body surf is added to the collision
 lists of every grid cell it sweeps through during the step, using the
@@ -261,14 +258,20 @@ The {remap incremental} mode (the default) re-cuts only the grid
 cells near the body.  Each timestep a single pass collects the cells
 overlapping the region the bodies moved through, and a cell is re-cut
 only if the set of surfs overlapping it changed or if it is
-overlapped by a body surf which moved.  Cells the body interior moved
-over or away from are re-marked as INSIDE or OUTSIDE.  All of this
-work is local to each processor.  Whenever the change to a cell would
-be structural - the cell would become or stop being a split cell, or
-its surf count would exceed the "global surfmax"_global.html setting
-- the fix automatically falls back to the full grid re-map that
-{cutcell} performs on every step.  On a benchmark with 10,000 grid
-cells, {incremental} was about 5x faster than {cutcell}.
+overlapped by a body surf which moved.  Re-cutting a cell only
+considers the static surfs already assigned to the cell plus the body
+surfs, so the cost per step depends on the number of grid cells and
+surfs near the bodies, not on the size of the grid or the total
+number of surfs.  Cells the body interior moved over or away from are
+re-marked as INSIDE or OUTSIDE.  All of this work is local to each
+processor.  Whenever the change to a cell would be structural - the
+cell would become or stop being a split cell, or its surf count would
+exceed the "global surfmax"_global.html setting - the fix
+automatically falls back to the full grid re-map that {cutcell}
+performs on every step, and issues a one-time warning saying why.  A
+body whose path is always near a split cell (e.g. a thin static wall
+crossing grid cells) therefore falls back on every step and runs at
+the cost of {cutcell}.
 
 For {remap cutcell}, at the end of every timestep, after the body
 surfs move, all surfs are re-assigned to grid cells and cut/split
@@ -302,15 +305,18 @@ the motion-per-step warnings below).
 :line
 
 The {rotate} keyword selects the scheme used to advance the body
-orientation quaternion each step.  The default {euler} update is a
-single explicit step of dq/dt = 1/2 w q, consistent in order with the
-overall explicit gas-body coupling.  The {richardson} option uses the
-Richardson iteration employed by LAMMPS rigid-body fixes: it
-re-evaluates the angular velocity at the half step from the angular
-momentum (constant over the step) and combines full- and half-step
-quaternion updates for a higher-order rotation, which can help for
-rapidly rotating bodies.  Both schemes conserve angular momentum
-exactly; they differ only in the orientation accuracy per step.
+orientation quaternion each step.  The default {euler} update holds
+the angular velocity fixed over the step and applies the exact
+rotation by angle |w|*dt about w, which is precisely the motion the
+moving-surf collision tests assume during the step, so the geometry
+installed at the end of the step is the one particles were reflected
+from.  The {richardson} option uses the Richardson iteration employed
+by LAMMPS rigid-body fixes: it re-evaluates the angular velocity at
+the half step from the angular momentum (constant over the step) and
+combines full- and half-step quaternion updates, which better
+follows the precession of an asymmetric body.  Both schemes conserve
+angular momentum exactly; they differ only in the orientation
+accuracy per step.
 
 The {push} keyword enables push-off forces which repel the body from
 static (non-body) surface elements, and from other rigid bodies,
@@ -361,25 +367,17 @@ end-of-step geometry and are included in the force and torque which
 move the body on the following step.  The total push-off force is
 included in the global vector output of this fix (see below).
 
-The {scale} keyword multiplies all the mass-dependent body values
-(mass, moi, angmom) by the specified factor, whether they were
-defined by the {body} keywords or read from an {infile}.  This is a
-convenience option for adjusting the inertia of a body, e.g. to
-verify that a heavier body responds more slowly to the same flow.
+The {force} keyword applies a constant external force to the COM of
+the body every timestep, in addition to the forces from particle
+collisions and push-off contacts.  For example, a body of mass M in a
+gravitational field g pointing in -y would use {force} 0 -M*g 0.  For
+2d systems, fz must be zero.
 
 The {outfile} keyword writes the current state of the rigid body
 (same 16 parameters as the {infile} format, with the moments of
 inertia given in the space frame for the current body orientation) to
 the specified file every Nevery timesteps.  The file is overwritten
 each time, so it always contains the most recent state.
-
-The {pseudo} keyword is a debugging option.  Instead of using
-force/torque from real particle collisions, each timestep Np
-fictitious particles of mass pmass moving in the +x direction are
-bounced off the object from random positions on the lower {frac}
-portion of its bounding box, and the resulting force/torque moves the
-body.  This can be used to exercise the rigid body time integration
-without creating any real particles.
 
 :line
 
@@ -439,11 +437,11 @@ disjoint surf groups.
 Rigid bodies can be used with explicit surface elements, both
 non-distributed and distributed ("global surfs"_global.html
 explicit/distributed); implicit surfs are not supported.  With
-distributed surfs each processor stores only a replicated copy of the
-(compact) body elements plus the static surfs it owns, so the total
-surf collection can be much larger than any one processor's memory.
-Both {remap} modes work with distributed surfs; the {pseudo} debug
-option requires non-distributed surfs.  Rigid bodies cannot be used with axisymmetric
+distributed surfs each processor stores a replicated copy of the
+(compact) body elements plus the static surfs which overlap its own
+and ghost grid cells, so the total surf collection can be much larger
+than any one processor's memory.  Both {remap} modes work with
+distributed surfs.  Rigid bodies cannot be used with axisymmetric
 domains, or with the KOKKOS package's particle mover.  Body surf
 elements cannot be transparent and cannot have surface reactions
 assigned to them.
@@ -466,7 +464,7 @@ This fix must be defined before any "fix balance"_fix_balance.html or
 for the moved body before the grid is re-balanced or adapted.
 
 If this fix is deleted via the "unfix"_unfix.html command, the
-"global rigid"_global.html setting should also be set to NULL.  The
+"global rigid"_global.html setting should also be set to {no}.  The
 body then remains as a static object at its current position which
 particles continue to collide with.
 
@@ -478,13 +476,14 @@ particles continue to collide with.
 [Default:]
 
 The option defaults are remap = incremental, rotate = euler,
-pushbound = no, pushstyle = linear, pushdamp = 0.0, scale = 1.0,
-no push-off forces, no outfile, no pseudo particles.
+pushbound = no, pushstyle = linear, pushdamp = 0.0, force = 0 0 0,
+no push-off forces, no outfile.
 
 :line
 
 A regression test suite for rigid bodies, with analytic checks of
-ballistic motion, push-off bounces, gas+body momentum conservation,
-overrun robustness, remap-mode consistency, symmetric and asymmetric
-two-body collisions, and distributed-surf runs, is available in the
-tools/testing/rigid directory.
+ballistic motion under external force, push-off bounces, gas+body
+momentum conservation, overrun robustness, remap-mode consistency
+with and without large static geometry and split cells, symmetric
+and asymmetric two-body collisions, and distributed-surf runs, is
+available in the tools/testing/rigid directory.

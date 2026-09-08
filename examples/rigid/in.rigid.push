@@ -28,7 +28,7 @@ timestep 	    0.0001
 
 compute             csurf surf body all fx fy fz tx ty tz com 5 5 0
 
-global              rigid 1
+global              rigid yes
 
 # push = spring constant and cutoff distance for push-off forces
 # pushbound yes also applies push-off from non-periodic box boundaries

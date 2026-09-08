@@ -1,5 +1,5 @@
-SPARTA (24 Sep 2025)
-Running on 1 MPI task(s)
+SPARTA (27 Aug 2026)
+Running on 4 MPI task(s)
 ################################################################################
 # 2d rigid body square bouncing between a static wall and the box boundary
 #
@@ -17,8 +17,8 @@ create_box  	    0 10 0 10 -0.5 0.5
 Created orthogonal box = (0 0 -0.5) to (10 10 0.5)
 create_grid 	    20 20 1
 Created 400 child grid cells
-  CPU time = 0.000863075 secs
-  create/ghost percent = 87.5967 12.4033
+  CPU time = 0.00115319 secs
+  create/ghost percent = 78.6002 21.3998
 
 global		    nrho 1.0 fnum 0.001
 
@@ -35,10 +35,10 @@ read_surf           data.square group body
   384 0 16 = cells outside/inside/overlapping surfs
   16 = surf cells with 1,2,etc splits
   99 99 = cell-wise and global flow volume
-  CPU time = 0.000668049 secs
-  read/check/sort/surf2grid/ghost/inout/particle percent = 36.5096 17.666 1.96288 36.6524 7.20914 2.99786 0
-  surf2grid time = 0.000244856 secs
-  map/comm1/comm2/comm3/comm4/split percent = 40.0195 7.01071 17.1373 3.21324 21.2269 6.52386
+  CPU time = 0.000638336 secs
+  read/check/sort/surf2grid/ghost/inout/particle percent = 6.46509 18.8092 0.595768 56.3662 17.7637 15.1998 0.156344
+  surf2grid time = 0.000359806 secs
+  map/comm1/comm2/comm3/comm4/split percent = 32.95 10.0685 8.91953 4.8201 34.4077 4.04496
 read_surf           data.wall group wall
   4 lines
   8 8.2 xlo xhi
@@ -49,10 +49,10 @@ read_surf           data.wall group wall
   356 0 44 = cells outside/inside/overlapping surfs
   44 = surf cells with 1,2,etc splits
   97.8 97.8 = cell-wise and global flow volume
-  CPU time = 0.000491858 secs
-  read/check/sort/surf2grid/ghost/inout/particle percent = 50.2181 4.84731 1.45419 32.1377 11.3427 3.87785 0
-  surf2grid time = 0.000158072 secs
-  map/comm1/comm2/comm3/comm4/split percent = 52.4887 8.29563 15.083 5.12821 4.37406 10.1056
+  CPU time = 0.000415161 secs
+  read/check/sort/surf2grid/ghost/inout/particle percent = 16.0042 9.24605 0.914344 46.1161 27.7194 22.5539 0.229068
+  surf2grid time = 0.000191456 secs
+  map/comm1/comm2/comm3/comm4/split percent = 50.4032 9.36821 16.7281 7.78769 2.76669 5.97004
 surf_collide	    1 specular
 surf_modify         all collide 1
 
@@ -60,7 +60,7 @@ timestep 	    0.0001
 
 compute             csurf surf body all fx fy fz tx ty tz com 5 5 0
 
-global              rigid 1
+global              rigid yes
 
 # push = spring constant and cutoff distance for push-off forces
 # pushbound yes also applies push-off from non-periodic box boundaries
@@ -74,6 +74,7 @@ Memory usage per proc in Mbytes:
   particles (ave,min,max) = 0 0 0
   grid      (ave,min,max) = 1.51379 1.51379 1.51379
   surf      (ave,min,max) = 0.000823975 0.000823975 0.000823975
+  modify    (ave,min,max) = 0 0 0
   total     (ave,min,max) = 1.51462 1.51462 1.51462
 Step f_1[1] f_1[4] f_1[15] f_1[20] f_1[21] 
        0            5           50            0            0            0 
@@ -91,19 +92,20 @@ Step f_1[1] f_1[4] f_1[15] f_1[20] f_1[21]
     3000    6.3763641    50.001605            0            0            0 
     3250    7.1876709   -32.659253            0 -7.5068349e-19            0 
     3500     5.962216   -50.002055            0            0            0 
-Loop time of 0.0186751 on 1 procs for 3500 steps with 0 particles
-Performance: 187415.440 timesteps/s, 0.000 particle-step/s
+Loop time of 0.0291285 on 4 procs for 3500 steps with 0 particles
+Performance: 120157.263 timesteps/s, 0.000 particle-step/s
 
 MPI task timing breakdown:
 Section |  min time  |  avg time  |  max time  |%varavg| %total
 ---------------------------------------------------------------
-Move    | 0.00017357 | 0.00017357 | 0.00017357 |   0.0 |  0.93
+Move    | 0.00017491 | 0.00019133 | 0.00021147 |   0.0 |  0.66
 Coll    | 0          | 0          | 0          |   0.0 |  0.00
 Sort    | 0          | 0          | 0          |   0.0 |  0.00
-Comm    | 0.00024891 | 0.00024891 | 0.00024891 |   0.0 |  1.33
-Modify  | 0.017956   | 0.017956   | 0.017956   |   0.0 | 96.15
-Output  | 7.2241e-05 | 7.2241e-05 | 7.2241e-05 |   0.0 |  0.39
-Other   |            | 0.0002244  |            |       |  1.20
+Comm    | 0.0092219  | 0.0099843  | 0.010696   |   0.5 | 34.28
+Modify  | 0.018006   | 0.018655   | 0.019439   |   0.4 | 64.04
+Output  | 5.4688e-05 | 7.2959e-05 | 0.00011242 |   0.0 |  0.25
+MPI Sync| 1.096e-06  | 1.5037e-06 | 2.278e-06  |   0.0 |  0.01
+Other   |            | 0.0002233  |            |       |  0.77
 
 Particle moves    = 0 (0K)
 Cells touched     = 0 (0K)
@@ -134,14 +136,14 @@ Collisions/particle/step: 0
 Reactions/particle/step: 0
 
 Particles: 0 ave 0 max 0 min
-Histogram: 1 0 0 0 0 0 0 0 0 0
-Cells:      400 ave 400 max 400 min
-Histogram: 1 0 0 0 0 0 0 0 0 0
-GhostCell: 0 ave 0 max 0 min
-Histogram: 1 0 0 0 0 0 0 0 0 0
+Histogram: 4 0 0 0 0 0 0 0 0 0
+Cells:      100 ave 100 max 100 min
+Histogram: 4 0 0 0 0 0 0 0 0 0
+GhostCell: 300 ave 300 max 300 min
+Histogram: 4 0 0 0 0 0 0 0 0 0
 EmptyCell: 0 ave 0 max 0 min
-Histogram: 1 0 0 0 0 0 0 0 0 0
+Histogram: 4 0 0 0 0 0 0 0 0 0
 Surfs:    8 ave 8 max 8 min
-Histogram: 1 0 0 0 0 0 0 0 0 0
+Histogram: 4 0 0 0 0 0 0 0 0 0
 GhostSurf: 0 ave 0 max 0 min
-Histogram: 1 0 0 0 0 0 0 0 0 0
+Histogram: 4 0 0 0 0 0 0 0 0 0

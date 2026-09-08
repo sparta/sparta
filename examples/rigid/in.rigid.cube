@@ -46,7 +46,7 @@ timestep 	    0.0001
 
 compute             csurf surf cube all fx fy fz tx ty tz com 5 5 5
 
-global              rigid 1
+global              rigid yes
 
 fix		    1 rigid cube csurf body &
                     mass 3.0e-21 com 5 5 5 vcom 0 0 0 &
