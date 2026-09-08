@@ -71,9 +71,11 @@ void Grid::collate_vector_implicit(int n, cellint *ids,
   int *proclist;
   memory->create(proclist,nsend,"grid:proclist");
   double *in_rvous;
+  if ((bigint) 2*nsend > MAXSMALLINT)
+    error->one(FLERR,"Grid collate buffer exceeds 2 GB");
   memory->create(in_rvous,2*nsend,"grid:in_rvous");
 
-  int m = 0;
+  bigint m = 0;
   nsend = 0;
   for (i = 0; i < n; i++) {
     icell = (*hash)[ids[i]];
