@@ -97,6 +97,8 @@ FixRigid::FixRigid(SPARTA *sparta, int narg, char **arg) :
   gridmigrate = 1;
 
   if (!surf->exist) error->all(FLERR,"Fix rigid requires surf elements exist");
+  if (sparta->kokkos)
+    error->all(FLERR,"Cannot yet use fix rigid with KOKKOS");
   if (domain->axisymmetric)
     error->all(FLERR,"Fix rigid cannot be used with axisymmetric domains");
   if (surf->implicit)

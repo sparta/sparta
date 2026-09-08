@@ -288,8 +288,6 @@ void Update::init()
   if (rigidflag) {
     if (domain->axisymmetric)
       error->all(FLERR,"Cannot use global rigid with axisymmetric domain");
-    if (sparta->kokkos)
-      error->all(FLERR,"Cannot yet use global rigid with KOKKOS");
 
     // build list of all rigid fixes, one mobile body per fix
 
@@ -2521,7 +2519,11 @@ void Update::global(int narg, char **arg)
 
     } else if (strcmp(arg[iarg],"rigid") == 0) {
       if (iarg+2 > narg) error->all(FLERR,"Illegal global command");
-      if (strcmp(arg[iarg+1],"yes") == 0) rigidflag = 1;
+      if (strcmp(arg[iarg+1],"yes") == 0) {
+        if (sparta->kokkos)
+          error->all(FLERR,"Cannot yet use global rigid with KOKKOS");
+        rigidflag = 1;
+      }
       else if (strcmp(arg[iarg+1],"no") == 0) rigidflag = 0;
       else error->all(FLERR,"Illegal global command");
       iarg += 2;
