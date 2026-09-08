@@ -2475,7 +2475,6 @@ void Update::global(int narg, char **arg)
       // reallocate paged data structs for variable-length cell info
       grid->allocate_surf_arrays();
       iarg += 2;
-      
     } else if (strcmp(arg[iarg],"gridcut") == 0) {
       if (iarg+2 > narg) error->all(FLERR,"Illegal global command");
       grid->cutoff = input->numeric(FLERR,arg[iarg+1]);
@@ -2491,7 +2490,6 @@ void Update::global(int narg, char **arg)
       if (strcmp(arg[iarg+1],"cell") == 0) grid->weight(1,&arg[iarg+2]);
       else error->all(FLERR,"Illegal weight command");
       iarg += 3;
-      
     } else if (strcmp(arg[iarg],"comm/sort") == 0) {
       if (iarg+2 > narg) error->all(FLERR,"Illegal global command");
       if (strcmp(arg[iarg+1],"yes") == 0) comm->commsortflag = 1;
@@ -2532,13 +2530,13 @@ void Update::global(int narg, char **arg)
       if (iarg+2 > narg) error->all(FLERR,"Illegal global command");
       delete [] rigidID;
       if (strcmp(arg[iarg+1],"NULL") != 0) {
-	rigidflag = 1;
-	int n = strlen(arg[iarg+1]) + 1;
-	rigidID = new char[n];
-	strcpy(rigidID,arg[iarg+1]);
+        rigidflag = 1;
+        int n = strlen(arg[iarg+1]) + 1;
+        rigidID = new char[n];
+        strcpy(rigidID,arg[iarg+1]);
       } else rigidflag = 0;
       iarg += 2;
-      
+
     } else error->all(FLERR,"Illegal global command");
   }
 }
