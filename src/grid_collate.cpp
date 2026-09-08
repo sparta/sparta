@@ -81,6 +81,7 @@ void Grid::collate_vector_implicit(int n, cellint *ids,
       proclist[nsend] = cells[icell].proc;
       in_rvous[m++] = ubuf(ids[i]).d;
       in_rvous[m++] = in[i];
+      nsend++;
     }
   }
 
