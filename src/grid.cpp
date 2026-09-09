@@ -1671,9 +1671,14 @@ void Grid::set_inout()
     return;
   }
 
-  // if no cell overlaps a surf, just mark all cells as OUTSIDE
+  // if no cell overlaps a surf, the flood fill below has no OVERLAP cell
+  //   to seed from, so handle that case here
   // can occur when a mobile rigid body (fix rigid) has moved entirely
   //   outside the domain, so its surfs no longer overlap any grid cell
+  // every cell is then OUTSIDE, unless the surfs enclose the entire
+  //   domain, in which case every cell would be INSIDE instead
+  // the surf bounding box distinguishes the two: surfs which do not span
+  //   the box in every dimension cannot enclose it
 
   int overlap_mine = 0;
   for (icell = 0; icell < nlocal; icell++)
@@ -1682,7 +1687,56 @@ void Grid::set_inout()
   MPI_Allreduce(&overlap_mine,&overlap_any,1,MPI_INT,MPI_MAX,world);
 
   if (!overlap_any) {
-    for (icell = 0; icell < nlocal; icell++) cinfo[icell].type = OUTSIDE;
+
+    // bounding box around all surfs, computed here rather than taken
+    //   from Surf::bblo/bbhi, which are not updated as a body moves
+    // distributed surfs: each surf is owned by exactly one proc,
+    //   else every proc stores every surf
+
+    double slo[3],shi[3],slo_all[3],shi_all[3];
+    slo[0] = slo[1] = slo[2] = BIG;
+    shi[0] = shi[1] = shi[2] = -BIG;
+
+    int dim = domain->dimension;
+    int distributed = surf->distributed && !surf->implicit;
+    Surf::Line *lines = distributed ? surf->mylines : surf->lines;
+    Surf::Tri *tris = distributed ? surf->mytris : surf->tris;
+    int nsurfme = distributed ? surf->nown : surf->nlocal;
+
+    for (int i = 0; i < nsurfme; i++) {
+      for (int j = 0; j < 3; j++) {
+        if (dim == 2) {
+          slo[j] = MIN(slo[j],MIN(lines[i].p1[j],lines[i].p2[j]));
+          shi[j] = MAX(shi[j],MAX(lines[i].p1[j],lines[i].p2[j]));
+        } else {
+          slo[j] = MIN(slo[j],MIN(tris[i].p1[j],MIN(tris[i].p2[j],
+                                                    tris[i].p3[j])));
+          shi[j] = MAX(shi[j],MAX(tris[i].p1[j],MAX(tris[i].p2[j],
+                                                    tris[i].p3[j])));
+        }
+      }
+    }
+
+    MPI_Allreduce(slo,slo_all,3,MPI_DOUBLE,MPI_MIN,world);
+    MPI_Allreduce(shi,shi_all,3,MPI_DOUBLE,MPI_MAX,world);
+
+    double *boxlo = domain->boxlo;
+    double *boxhi = domain->boxhi;
+
+    int spans = 1;
+    for (int j = 0; j < dim; j++)
+      if (slo_all[j] > boxlo[j] || shi_all[j] < boxhi[j]) spans = 0;
+
+    if (spans)
+      error->all(FLERR,"Cannot mark grid cells as inside/outside surfs "
+                 "because no cell overlaps a surf and the surfs may "
+                 "enclose the entire simulation box");
+
+    int nc = (dim == 3) ? 8 : 4;
+    for (icell = 0; icell < nlocal; icell++) {
+      cinfo[icell].type = OUTSIDE;
+      for (int j = 0; j < nc; j++) cinfo[icell].corner[j] = OUTSIDE;
+    }
     return;
   }
 

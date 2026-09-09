@@ -219,6 +219,7 @@ class FixRigid : public Fix {
   int *newmap;
   surfint *reclist;       // candidate surfs for re-cutting one cell
   int maxreclist;
+  int maxnewlist;         // allocated length of newlist/newmap
   class Cut2d *cut2d;
   class Cut3d *cut3d;
   double bbodylo[3];      // bounding box around entire body

@@ -131,18 +131,30 @@ FixRigid::FixRigid(SPARTA *sparta, int narg, char **arg) :
     if (iarg+22 > narg) error->all(FLERR,"Fix rigid body args not valid");
     massflag = comflag = vcomflag = moiflag = angmomflag = 0;
     int jarg = iarg+1;
+
+    // NVALUE = # of args each keyword consumes, including the keyword
+    // a keyword must not read past the 22 args this style is defined to
+    //   take, which the check above showed are present
+
+#define BODY_ARGS(nvalue)                                               \
+    if (jarg+(nvalue) > iarg+22)                                        \
+      error->all(FLERR,"Fix rigid body args not valid");
+
     while (jarg < iarg+22) {
       if (strcmp(arg[jarg],"mass") == 0) {
+        BODY_ARGS(2);
 	massflag = 1;
 	massbody = input->numeric(FLERR,arg[jarg+1]);
 	jarg += 2;
       } else if (strcmp(arg[jarg],"com") == 0) {
+        BODY_ARGS(4);
 	comflag = 1;
 	xcm[0] = input->numeric(FLERR,arg[jarg+1]);
 	xcm[1] = input->numeric(FLERR,arg[jarg+2]);
 	xcm[2] = input->numeric(FLERR,arg[jarg+3]);
 	jarg += 4;
       } else if (strcmp(arg[jarg],"moi") == 0) {
+        BODY_ARGS(7);
 	moiflag = 1;
 	moi[0] = input->numeric(FLERR,arg[jarg+1]);
 	moi[1] = input->numeric(FLERR,arg[jarg+2]);
@@ -152,12 +164,14 @@ FixRigid::FixRigid(SPARTA *sparta, int narg, char **arg) :
 	moi[5] = input->numeric(FLERR,arg[jarg+6]);
 	jarg += 7;
       } else if (strcmp(arg[jarg],"vcom") == 0) {
+        BODY_ARGS(4);
 	vcomflag = 1;
 	vcm[0] = input->numeric(FLERR,arg[jarg+1]);
 	vcm[1] = input->numeric(FLERR,arg[jarg+2]);
 	vcm[2] = input->numeric(FLERR,arg[jarg+3]);
 	jarg += 4;
       } else if (strcmp(arg[jarg],"angmom") == 0) {
+        BODY_ARGS(4);
 	angmomflag = 1;
 	angmom[0] = input->numeric(FLERR,arg[jarg+1]);
 	angmom[1] = input->numeric(FLERR,arg[jarg+2]);
@@ -167,6 +181,8 @@ FixRigid::FixRigid(SPARTA *sparta, int narg, char **arg) :
 	error->all(FLERR,"Fix rigid body keyword not recognized");
 
     }
+
+#undef BODY_ARGS
     if (!massflag || !comflag || !moiflag || !vcomflag || !angmomflag)
       error->all(FLERR,"Fix rigid body args not valid");
     iarg += 22;
@@ -323,6 +339,7 @@ FixRigid::FixRigid(SPARTA *sparta, int narg, char **arg) :
   newmap = NULL;
   reclist = NULL;
   maxreclist = 0;
+  maxnewlist = 0;
   cut2d = NULL;
   cut3d = NULL;
 
@@ -346,11 +363,12 @@ FixRigid::FixRigid(SPARTA *sparta, int narg, char **arg) :
 
   // for incremental mode: cutters and work bufs for re-cutting cells
 
+  // work bufs are sized per run in setup(), since global surfmax can be
+  //   changed between runs, after this fix is defined
+
   if (remapmode == INCREMENTAL) {
     if (dim == 2) cut2d = new Cut2d(sparta,0);
     else cut3d = new Cut3d(sparta);
-    memory->create(newlist,grid->maxsurfpercell,"fix_rigid:newlist");
-    memory->create(newmap,grid->maxsurfpercell,"fix_rigid:newmap");
   }
 }
 
@@ -584,10 +602,22 @@ void FixRigid::setup()
     surfs_changed();
   }
 
-  // candidate buffer for incremental re-cutting of one cell:
-  //   the cell's current static surfs plus every element of every body
+  // work bufs for incremental re-cutting of one cell, sized for the
+  //   current global surfmax, which can change between runs:
+  // newlist/newmap = the cell's new surf list and its split map, both
+  //   capped at maxsurfpercell by the cut routines
+  // reclist = candidate surfs, the cell's current static surfs plus
+  //   every element of every body
 
   if (remapmode == INCREMENTAL) {
+    if (grid->maxsurfpercell > maxnewlist) {
+      maxnewlist = grid->maxsurfpercell;
+      memory->destroy(newlist);
+      memory->destroy(newmap);
+      memory->create(newlist,maxnewlist,"fix_rigid:newlist");
+      memory->create(newmap,maxnewlist,"fix_rigid:newmap");
+    }
+
     int nsurftotal = 0;
     for (int m = 0; m < nb; m++) nsurftotal += flist[m]->nsurf;
     int n = grid->maxsurfpercell + nsurftotal;
