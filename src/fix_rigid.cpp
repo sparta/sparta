@@ -364,6 +364,8 @@ FixRigid::FixRigid(SPARTA *sparta, int narg, char **arg) :
   ftbuf_mine = ftbuf_all = NULL;
   tqpush[0] = tqpush[1] = tqpush[2] = 0.0;
   warnfallback = 0;
+  warndelete = 0;
+  ndelrun = 0;
 
   swstamp = NULL;
   swhead = NULL;
@@ -522,6 +524,8 @@ void FixRigid::init()
   // re-enable single-shot warnings for this run
 
   warnrotate = warntranslate = warnexit = warnfallback = 0;
+  warndelete = 0;
+  ndelrun = 0;
 
   // surfs cannot change once a fix rigid is defined:
   //   removal invalidates the body element table; a change to the
@@ -3124,13 +3128,43 @@ void FixRigid::remove_inside_all(int splitflag)
 
     particles[i].icell = -1;
     delflag = 1;
-    if (owner >= 0) flist[owner]->ndeleted++;
-    else ndeleted++;
+    if (owner >= 0) {
+      flist[owner]->ndeleted++;
+      flist[owner]->ndelrun++;
+    } else {
+      ndeleted++;
+      ndelrun++;
+    }
   }
 
   // compress out deleted particles, once for all bodies
 
   if (delflag) particle->compress_rebalance();
+
+  // warn once per run if any particle was deleted after the setup pass
+  // with swept collision coverage a particle in the body's path is
+  //   reflected, so this should not happen; if it does, either the body
+  //   moves so far in one step that it jumps past a particle, or its
+  //   surfs coincide with grid cell boundaries, which makes the cut
+  //   cells degenerate until the body moves off the alignment
+  // checked once, on the last step of the run, to avoid a collective
+  //   on every step
+
+  if (!warndelete && update->ntimestep == update->laststep) {
+    bigint mine = 0;
+    for (m = 0; m < nb; m++) mine += flist[m]->ndelrun;
+    bigint all;
+    MPI_Allreduce(&mine,&all,1,MPI_SPARTA_BIGINT,MPI_SUM,world);
+    for (m = 0; m < nb; m++) flist[m]->warndelete = 1;
+    if (all && comm->me == 0) {
+      char str[256];
+      snprintf(str,sizeof(str),BIGINT_FORMAT " particles were deleted inside "
+               "a rigid body during this run.  The body may be moving too "
+               "far per timestep, or its surfs may lie exactly on grid cell "
+               "boundaries",all);
+      error->warning(FLERR,str);
+    }
+  }
 }
 
 /* ----------------------------------------------------------------------

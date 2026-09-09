@@ -318,10 +318,20 @@ instead, which correctly handles all bodies.
 the start of the run.  The cumulative count of particles deleted
 because they were inside a body is output as the scalar value of this
 fix.  Because of swept collision coverage this count normally does not
-grow after the start of a run; growth during a run indicates a
-particle was overtaken by the body, which can happen only if the body
-moves so far in one step that it jumps entirely past a particle (see
-the motion-per-step warnings below).
+grow after the start of a run, and a warning is issued at the end of a
+run in which it did.  There are two causes.  The body may be moving so
+far in one step that it jumps entirely past a particle (see the
+motion-per-step warnings below).  Or the body's surfaces may lie
+exactly on grid cell boundaries, which makes the cut cells degenerate:
+a face which coincides with a cell face is ambiguous both to the cut
+routines and to the moving-surf collision test, whose path endpoints,
+unlike those of a static surf, are not snapped to the cell face.
+Particles then pass through the body and are deleted as interior, and
+the force on the body reads low, until it moves off the alignment.  A
+static surface in the same position does not have this problem, since
+it is cut into the grid once.  If a body starts out aligned this way,
+offset it by a fraction of a cell: with a grid of spacing 0.05, a body
+face at x = 1.0 is degenerate and one at x = 1.017 is not.
 </P>
 <HR>
 

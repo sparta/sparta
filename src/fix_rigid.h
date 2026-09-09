@@ -137,6 +137,8 @@ class FixRigid : public Fix {
   int warntranslate;      // 1 after warning about translation rate
   int warnexit;           // 1 after warning that body exited the box
   int warnfallback;       // 1 after warning about incremental fallback
+  int warndelete;         // 1 after warning about deletions during a run
+  bigint ndelrun;         // per-proc deletions since this run started
 
   double tqpush[3];       // torque from push-off contacts this step
   double massbody;        // total mass of rigid body enclosed by surfs
