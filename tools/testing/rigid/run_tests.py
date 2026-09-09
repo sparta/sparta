@@ -274,15 +274,34 @@ def test_momentum(exe_cmd):
         return ["no stats output"]
     mass_body = 1.0e-22
 
-    def total_px(r):
+    dt = 1.0e-4                      # timestep of the deck
+
+    def gas_plus_body(r):
         return MASS_N * FNUM * r["c_r"] + mass_body * r["f_1[4]"]
+
+    # compute surf tallies the momentum the gas gave up on a step and fix
+    # rigid applies it to the body on the next one, so one step's impulse
+    # dt*fcm is always in flight.  Including it makes the invariant exact
+    # rather than accurate to the statistical size of one step's transfer.
+
+    def total_px(r):
+        return gas_plus_body(r) + dt * r["f_1[7]"]
 
     p0 = total_px(rows[0])
     fails = []
     for r in rows:
-        if not approx(total_px(r), p0, rel=0.015):
-            fails.append("step %d: total px = %.6g vs initial %.6g "
-                         "(> 1.5%% drift)" % (int(r["Step"]), total_px(r), p0))
+        if not approx(total_px(r), p0, rel=1.0e-11):
+            fails.append("step %d: lag-corrected total px = %.15g vs initial "
+                         "%.15g" % (int(r["Step"]), total_px(r), p0))
+            break
+
+    # the uncorrected sum should drift by roughly one step's transfer and
+    # no more: a bounded offset, not a leak
+    raw = [abs(gas_plus_body(r) - gas_plus_body(rows[0])) for r in rows]
+    if max(raw) > 0.05 * abs(gas_plus_body(rows[0])):
+        fails.append("uncorrected momentum drifted by %.3g, far more than "
+                     "one step's impulse; this looks like a leak"
+                     % (max(raw) / abs(gas_plus_body(rows[0]))))
     # body must have absorbed a significant momentum fraction by the end
     pbody = mass_body * rows[-1]["f_1[4]"]
     if pbody < 0.25 * p0:

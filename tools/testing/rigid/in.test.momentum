@@ -3,6 +3,12 @@
 # total x momentum = m_N * fnum * sum(vx) + M * vcm_x must be conserved
 # to statistical noise as the gas pushes the body
 
+# the exactly conserved quantity is not the bare sum of gas and body
+# momentum: compute surf tallies the momentum the gas gave up during a
+# step, and fix rigid applies it to the body one step later, so a fixed
+# one-step impulse dt*fcm is in flight at any instant.  Including it
+# gives an invariant which holds to round-off rather than to the
+# statistical size of one step's transfer.
 seed	    	    12345
 
 variable            dist index 0
@@ -38,5 +44,8 @@ variable px particle vx
 compute r reduce sum v_px
 
 stats		    200
-stats_style         step np c_r f_1[4] f_1
+stats_style         step np c_r f_1[4] f_1[7] f_1
+# full precision: the conserved combination below is exact, so the
+# test resolution is set by the printed digits, not by the physics
+stats_modify        format float %20.14e
 run 		    2000

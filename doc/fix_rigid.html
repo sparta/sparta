@@ -266,6 +266,20 @@ is accurate when the body mass is large compared to the momentum
 imparted by particles during a single step, which is the intended
 regime of this command (large particulates).
 </P>
+<P>A second, independent requirement on the body mass comes from the
+collision model.  A particle reflects off the body as though the wall
+were infinitely massive, so each collision silently discards the recoil
+energy |dp|^2 / 2M that a body of finite mass would take up.  Momentum
+is unaffected and remains exactly conserved, but the discarded energy
+accumulates in one direction, and its size relative to the body's
+kinetic energy scales as the mass of one simulation particle, fnum
+times the species mass, divided by the body mass M.  For a body many
+orders of magnitude heavier than one simulation particle this is a part
+in 10^4 or less over a long run; for a body only about a hundred times
+heavier it reaches tens of percent.  Choose the body mass, or fnum, so
+that M is much larger than fnum times the species mass.  Total gas plus
+body momentum, and total angular momentum, are conserved regardless.
+</P>
 <HR>
 
 <P>The <I>remap</I> keyword selects how the moving body surfs are re-assigned
