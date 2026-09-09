@@ -1537,4 +1537,65 @@ bool line_tri_moving_intersect(double *start, double *stop,
   return true;
 }
 
+/* ----------------------------------------------------------------------
+   same args and semantics as Geometry::rigid_recoil()
+------------------------------------------------------------------------- */
+
+KOKKOS_INLINE_FUNCTION
+void rigid_recoil(int dim, double msuper, const double *norm,
+                  const double *vwall,
+                  const double *vpre, double *v,
+                  const double *point, double thit,
+                  const double *xcm0, const double *vcm,
+                  double invmass, const double *invinertia)
+{
+  int i,j,k;
+  double r[3],jinf[3],jnew[3],jt[3],kn[3],vmodel[3],wrel[3];
+  double rx[3][3],t[3][3],kmat[3][3],a[3][3],ainv[3][3];
+
+  for (k = 0; k < 3; k++) {
+    vmodel[k] = v[k];
+    r[k] = point[k] - (xcm0[k] + vcm[k]*thit);
+    jinf[k] = msuper * (v[k] - vpre[k]);
+  }
+  if (dim == 2) r[2] = jinf[2] = 0.0;
+
+  rx[0][0] = 0.0;   rx[0][1] = -r[2]; rx[0][2] = r[1];
+  rx[1][0] = r[2];  rx[1][1] = 0.0;   rx[1][2] = -r[0];
+  rx[2][0] = -r[1]; rx[2][1] = r[0];  rx[2][2] = 0.0;
+
+  for (i = 0; i < 3; i++)
+    for (j = 0; j < 3; j++) {
+      t[i][j] = 0.0;
+      for (k = 0; k < 3; k++) t[i][j] += invinertia[3*i+k]*rx[k][j];
+    }
+  for (i = 0; i < 3; i++)
+    for (j = 0; j < 3; j++) {
+      kmat[i][j] = 0.0;
+      for (k = 0; k < 3; k++) kmat[i][j] -= rx[i][k]*t[k][j];
+    }
+  for (i = 0; i < 3; i++) kmat[i][i] += invmass;
+
+  double jn = MathExtraKokkos::dot3(jinf,norm);
+  for (k = 0; k < 3; k++) jt[k] = jinf[k] - jn*norm[k];
+
+  if (MathExtraKokkos::lensq3(jt) <= 1.0e-8*1.0e-8*jn*jn) {
+    MathExtraKokkos::matvec(kmat,norm,kn);
+    double scale = 1.0 / (1.0 + msuper*MathExtraKokkos::dot3(norm,kn));
+    for (k = 0; k < 3; k++) jnew[k] = jinf[k] + (scale-1.0)*jn*norm[k];
+  } else {
+    for (i = 0; i < 3; i++)
+      for (j = 0; j < 3; j++) a[i][j] = msuper*kmat[i][j];
+    for (i = 0; i < 3; i++) a[i][i] += 1.0;
+    MathExtraKokkos::invert3(a,ainv);
+    MathExtraKokkos::matvec(ainv,jinf,jnew);
+  }
+
+  for (k = 0; k < dim; k++) v[k] = vpre[k] + jnew[k]/msuper;
+
+  MathExtraKokkos::sub3(v,vwall,wrel);
+  if (MathExtraKokkos::dot3(wrel,norm) < 0.0)
+    for (k = 0; k < dim; k++) v[k] = vmodel[k];
+}
+
 }

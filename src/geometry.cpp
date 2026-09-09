@@ -19,6 +19,7 @@
 #define MAX(A,B) ((A) > (B)) ? (A) : (B)
 
 #define EPSSQ 1.0e-16
+#define EPSRECOIL 1.0e-8    // tangential/normal impulse ratio treated as 0
 #define EPSSQNEG -1.0e-16
 #define EPSSELF 1.0e-6
 #define EPSTIME 1.0e-16
@@ -1297,6 +1298,103 @@ bool line_tri_moving_intersect(double *start, double *stop,
   vwall[2] += vcm[2];
 
   return true;
+}
+
+/* ----------------------------------------------------------------------
+   correct a particle collision with a moving rigid body for the finite
+     mass of the body
+   the collision model reflected the particle in the frame of the wall
+     as though the body were infinitely massive; the body then receives
+     the full impulse, so the recoil energy would be counted twice
+   dim = 2 or 3
+   msuper = mass of the simulation particle = fnum * weight * species mass
+   norm,vwall = outward surf normal and wall velocity at the hit point
+     and time, as used by the mover for the rest of this step
+   vpre = space-frame particle velocity before the collision
+   v = space-frame particle velocity after the collision, corrected here
+   point,thit = hit point and hit time measured from the start of step
+   xcm0,vcm = body COM at start of step and its velocity
+   invmass,invinertia = 1/M and 3x3 space-frame inverse inertia of body
+   method: kmat = inverse-mass matrix of the body at the hit point
+     = velocity change of the body surface at the hit point per unit
+       impulse on the body = 1/M - [r x] Iinv [r x] for r = point - COM
+     if the impulse is along the normal (specular, a frictionless wall)
+       the exact elastic result is to scale it by 1/(1 + m n.K.n),
+       which flips the normal relative velocity and conserves energy
+     else (diffuse and other accommodating models) the particle leaves
+       relative to the recoiled surface velocity, J = (1 + m K)^-1 Jinf
+   in 2d only in-plane components are corrected, since the body
+     cannot move out of plane
+   the body recoil takes effect on the next step, so for the rest of
+     this step the mover moves the wall at its uncorrected velocity;
+     if the corrected particle would then be overtaken by the wall
+     (possible for an accommodating model when the sampled outgoing
+     normal speed is smaller than the recoil, i.e. with probability
+     of order (m/M)^2), the uncorrected reflection is kept instead
+------------------------------------------------------------------------- */
+
+void rigid_recoil(int dim, double msuper, double *norm, double *vwall,
+                  double *vpre, double *v, double *point, double thit,
+                  double *xcm0, double *vcm,
+                  double invmass, double *invinertia)
+{
+  int i,j,k;
+  double r[3],jinf[3],jnew[3],jt[3],kn[3],vmodel[3],wrel[3];
+  double rx[3][3],t[3][3],kmat[3][3],a[3][3],ainv[3][3];
+
+  // r = hit point relative to the body COM at the hit time
+  // jinf = impulse the collision model gave the particle
+
+  for (k = 0; k < 3; k++) {
+    vmodel[k] = v[k];
+    r[k] = point[k] - (xcm0[k] + vcm[k]*thit);
+    jinf[k] = msuper * (v[k] - vpre[k]);
+  }
+  if (dim == 2) r[2] = jinf[2] = 0.0;
+
+  // kmat = 1/M - [r x] Iinv [r x]
+
+  rx[0][0] = 0.0;   rx[0][1] = -r[2]; rx[0][2] = r[1];
+  rx[1][0] = r[2];  rx[1][1] = 0.0;   rx[1][2] = -r[0];
+  rx[2][0] = -r[1]; rx[2][1] = r[0];  rx[2][2] = 0.0;
+
+  for (i = 0; i < 3; i++)
+    for (j = 0; j < 3; j++) {
+      t[i][j] = 0.0;
+      for (k = 0; k < 3; k++) t[i][j] += invinertia[3*i+k]*rx[k][j];
+    }
+  for (i = 0; i < 3; i++)
+    for (j = 0; j < 3; j++) {
+      kmat[i][j] = 0.0;
+      for (k = 0; k < 3; k++) kmat[i][j] -= rx[i][k]*t[k][j];
+    }
+  for (i = 0; i < 3; i++) kmat[i][i] += invmass;
+
+  // impulse along the normal: scalar correction
+  // else: solve (1 + m K) J = Jinf
+
+  double jn = MathExtra::dot3(jinf,norm);
+  for (k = 0; k < 3; k++) jt[k] = jinf[k] - jn*norm[k];
+
+  if (MathExtra::lensq3(jt) <= EPSRECOIL*EPSRECOIL*jn*jn) {
+    MathExtra::matvec(kmat,norm,kn);
+    double scale = 1.0 / (1.0 + msuper*MathExtra::dot3(norm,kn));
+    for (k = 0; k < 3; k++) jnew[k] = jinf[k] + (scale-1.0)*jn*norm[k];
+  } else {
+    for (i = 0; i < 3; i++)
+      for (j = 0; j < 3; j++) a[i][j] = msuper*kmat[i][j];
+    for (i = 0; i < 3; i++) a[i][i] += 1.0;
+    MathExtra::invert3(a,ainv);
+    MathExtra::matvec(ainv,jinf,jnew);
+  }
+
+  for (k = 0; k < dim; k++) v[k] = vpre[k] + jnew[k]/msuper;
+
+  // keep the uncorrected reflection if the wall would overtake the particle
+
+  MathExtra::sub3(v,vwall,wrel);
+  if (MathExtra::dot3(wrel,norm) < 0.0)
+    for (k = 0; k < dim; k++) v[k] = vmodel[k];
 }
 
 /* ----------------------------------------------------------------------

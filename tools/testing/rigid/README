@@ -18,8 +18,11 @@ restitution   analytic properties of the push-off contact model:
               elastic contact rebounds with restitution 1, a linear
               spring-dashpot restitution is independent of impact speed,
               a Hertzian one depends on it
-momentum      gas + body momentum conservation in a periodic box,
-              within 1.5% statistical drift
+momentum      gas + body momentum conservation in a periodic box:
+              the lag-corrected invariant holds to 1e-11
+recoil        one particle hits a body only 10x heavier, head-on,
+              off-center (spins it) and in 3d: exact two-body elastic
+              result and energy conservation to 1e-10
 overrun       body sweeping 40% of a cell per step through resting
               gas: no particles overrun (deletion counter constant)
 remap         cutcell and incremental remap modes produce identical
@@ -58,7 +61,8 @@ zerothick     negative: a watertight body enclosing no area (2d) or
               volume (3d), e.g. a doubled line or tri, must be rejected
 
 The ballistic, force, bounce, twobody, and pushpair tests contain no
-particles and must produce identical results on any number of procs.
+particles, and the recoil test a single particle; they must produce
+identical results on any number of procs.
 The momentum and overrun tests are statistical and use loose
 tolerances.
 

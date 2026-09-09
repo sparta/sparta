@@ -162,14 +162,19 @@ class UpdateKokkos : public Update {
   // mobile rigid bodies (fix rigid/kk), see Update::rigidmap
   // rigid_on = 1 for this move if any body is active
   // d_rigidmap = per local/ghost surf: body index or -1 if static
-  // d_rigidbody = per body: xcm[3], vcm[3], omega[3] for this step,
-  //   uploaded by rigid_upload() before each move
+  // d_rigidbody = per body: xcm[3], vcm[3], omega[3], 1/mass,
+  //   3x3 inverse inertia for this step, uploaded by rigid_upload()
+  //   before each move
+  // d_species,cellweightflag_kk = for the simulation particle mass
+  //   in the recoil correction of collisions with a body
 
   int rigid_on;
   DAT::tdual_int_1d k_rigidmap;
   DAT::t_int_1d d_rigidmap;
   DAT::tdual_float_2d k_rigidbody;
   DAT::t_float_2d d_rigidbody;
+  t_species_1d d_species;
+  int cellweightflag_kk;
   void rigid_upload();
 
   DAT::t_float_2d_lr d_fieldfix_array_particle;

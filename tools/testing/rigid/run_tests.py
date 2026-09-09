@@ -619,6 +619,71 @@ def test_twobody(exe_cmd):
     return fails
 
 
+def test_recoil(exe_cmd):
+    """single specular collision of a particle with a body only 10x heavier:
+    exact two-body elastic result, frictionless normal impulse"""
+    m = 1.0e10 * 2.325e-26          # fnum * m_N
+    M = 2.325e-15
+    u = 1000.0
+    fails = []
+
+    # 2d: square, I = M/6, hit at r = (-0.5, yhit-5, 0), n = (-1,0,0)
+    I2 = 3.875e-16
+    for yhit in (5.0, 5.4):
+        ry = yhit - 5.0
+        J = 2.0 * m * u / (1.0 + m * (1.0 / M + ry * ry / I2))
+        vx = u - J / m
+        vcm = J / M
+        omega = -ry * J / I2
+        label = "2d yhit=%g" % yhit
+        rc, out = run_deck(exe_cmd, "in.test.recoil",
+                           ["-var", "yhit", str(yhit)])
+        if rc != 0:
+            fails.append("%s: run failed with exit code %d" % (label, rc))
+            continue
+        row = parse_stats(out)[-1]
+        if row["Np"] != 1:
+            fails.append("%s: particle lost" % label)
+        for key, want in (("c_rvx", vx), ("c_rvy", 0.0), ("f_1[4]", vcm),
+                          ("f_1[5]", 0.0), ("f_1[15]", omega)):
+            if not approx(row[key], want, rel=1.0e-10, abs_=1.0e-10 * u):
+                fails.append("%s: %s = %.12g, expected %.12g"
+                             % (label, key, row[key], want))
+        e0 = 0.5 * m * u * u
+        e1 = 0.5 * m * (row["c_rvx"] ** 2 + row["c_rvy"] ** 2) \
+            + 0.5 * M * (row["f_1[4]"] ** 2 + row["f_1[5]"] ** 2) \
+            + 0.5 * I2 * row["f_1[15]"] ** 2
+        if not approx(e1, e0, rel=1.0e-10):
+            fails.append("%s: energy %.12g vs %.12g" % (label, e1, e0))
+
+    # 3d: unit cube, I = M/6, hit at r = (-0.5, 0.3, 0.2), n = (-1,0,0)
+    I3 = 3.875e-16
+    ry, rz = 0.3, 0.2
+    J = 2.0 * m * u / (1.0 + m * (1.0 / M + (ry * ry + rz * rz) / I3))
+    vx = u - J / m
+    vcm = J / M
+    wy, wz = rz * J / I3, -ry * J / I3
+    rc, out = run_deck(exe_cmd, "in.test.recoil3d")
+    if rc != 0:
+        fails.append("3d: run failed with exit code %d" % rc)
+        return fails
+    row = parse_stats(out)[-1]
+    for key, want in (("c_rvx", vx), ("c_rvy", 0.0), ("c_rvz", 0.0),
+                      ("f_1[4]", vcm), ("f_1[5]", 0.0), ("f_1[6]", 0.0),
+                      ("f_1[13]", 0.0), ("f_1[14]", wy), ("f_1[15]", wz)):
+        if not approx(row[key], want, rel=1.0e-10, abs_=1.0e-10 * u):
+            fails.append("3d: %s = %.12g, expected %.12g"
+                         % (key, row[key], want))
+    e0 = 0.5 * m * u * u
+    e1 = 0.5 * m * (row["c_rvx"] ** 2 + row["c_rvy"] ** 2 + row["c_rvz"] ** 2) \
+        + 0.5 * M * (row["f_1[4]"] ** 2 + row["f_1[5]"] ** 2 + row["f_1[6]"] ** 2) \
+        + 0.5 * I3 * (row["f_1[13]"] ** 2 + row["f_1[14]"] ** 2
+                      + row["f_1[15]"] ** 2)
+    if not approx(e1, e0, rel=1.0e-10):
+        fails.append("3d: energy %.12g vs %.12g" % (e1, e0))
+    return fails
+
+
 def negative_test(exe_cmd, deck, message):
     rc, out = run_deck(exe_cmd, deck, expect_error=True)
     fails = []
@@ -651,6 +716,7 @@ TESTS = [
     ("bounce", test_bounce),
     ("restitution", test_restitution),
     ("momentum", test_momentum),
+    ("recoil", test_recoil),
     ("overrun", test_overrun),
     ("remap", test_remap),
     ("multiremap", test_multiremap),

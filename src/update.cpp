@@ -831,8 +831,8 @@ template < int DIM, int SURF, int OPT, int RIGID > void Update::move()
   cellint *neigh;
   double dtremain,frac,newfrac,param,minparam,rnew,dtsurf,tc,tmp;
   double xnew[3],xhold[3],xc[3],vc[3],minxc[3],minvc[3];
-  int minmoving;
-  double nhit[3],vwallhit[3],minnorm[3],minvwall[3];
+  int minmoving,minbody;
+  double nhit[3],vwallhit[3],minnorm[3],minvwall[3],vpre[3];
   double *x,*v,*lo,*hi;
   double Lx,Ly,Lz,dx,dy,dz;
   double *boxlo, *boxhi;
@@ -918,6 +918,8 @@ template < int DIM, int SURF, int OPT, int RIGID > void Update::move()
   Surf::Tri *tris = surf->tris;
   Surf::Line *lines = surf->lines;
   double dt = update->dt;
+  Particle::Species *species = particle->species;
+  int cellweightflag = grid->cellweightflag;
 
   // external per particle field
   // fix calculates field acting on all owned particles
@@ -1495,6 +1497,7 @@ template < int DIM, int SURF, int OPT, int RIGID > void Update::move()
                 if (RIGID) {
                   if (rigidmap[isurf] >= 0) {
                     minmoving = 1;
+                    minbody = rigidmap[isurf];
                     minnorm[0] = nhit[0];
                     minnorm[1] = nhit[1];
                     minnorm[2] = nhit[2];
@@ -1546,6 +1549,9 @@ template < int DIM, int SURF, int OPT, int RIGID > void Update::move()
               //   correct in the local rest frame of the wall
 
               if (RIGID && minmoving) {
+                vpre[0] = v[0];
+                vpre[1] = v[1];
+                vpre[2] = v[2];
                 v[0] -= minvwall[0];
                 v[1] -= minvwall[1];
                 v[2] -= minvwall[2];
@@ -1593,6 +1599,23 @@ template < int DIM, int SURF, int OPT, int RIGID > void Update::move()
                   jpart->v[0] += minvwall[0];
                   jpart->v[1] += minvwall[1];
                   jpart->v[2] += minvwall[2];
+                }
+
+                // correct the reflected velocity for the recoil of the
+                //   finite-mass body, so the impulse tallied below and
+                //   applied to the body conserves energy as well as
+                //   momentum; skipped if a surface reaction occurred
+                // x = hit point, dt-dtremain = hit time from start of step
+
+                if (ipart && !jpart && !reaction) {
+                  FixRigid *fr = fixrigidlist[minbody];
+                  double msuper = fnum * species[ipart->ispecies].mass;
+                  if (cellweightflag) msuper *= ipart->weight;
+                  Geometry::rigid_recoil(DIM == 3 ? 3 : 2,msuper,
+                                         minnorm,minvwall,
+                                         vpre,v,x,dt-dtremain,
+                                         fr->xcm,fr->vcm,
+                                         fr->invmass,fr->invinertia);
                 }
               }
 

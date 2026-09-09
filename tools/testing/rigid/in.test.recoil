@@ -1,0 +1,52 @@
+# TEST: finite-mass recoil of the body in a single specular collision
+# one particle hits the left face of a square body at rest, head-on
+# (yhit = 5.0, through the COM) or off-center (yhit = 5.4, which also
+# spins the body).  The body is only 10x heavier than the simulation
+# particle, so the exact two-body elastic result differs strongly from
+# an infinitely massive wall: for a frictionless normal impulse J,
+#   J = 2 m u / (1 + m (1/M + (r x n)^2 / I))
+#   particle vx' = u - J/m, body vcm = J/M, omega = (r x n) J / I
+# and total kinetic energy is exactly conserved.  The body receives the
+# impulse one step after the collision (force lag).
+
+seed	    	    12345
+variable            yhit index 5.0
+
+dimension   	    2
+boundary            o o p
+
+create_box  	    0 10 0 10 -0.5 0.5
+create_grid 	    10 10 1
+
+# m_super = fnum * m_N = 1e10 * 2.325e-26 = 2.325e-16, M = 10 m_super
+
+global		    nrho 1.0 fnum 1.0e10
+
+species		    air.species N
+mixture		    air N vstream 0 0 0 temp 273.0
+
+read_surf           data.square group body
+surf_collide	    1 specular
+surf_modify         all collide 1
+
+timestep 	    0.0001
+
+compute             c1 surf body all fx fy fz tx ty tz com 5 5 0
+
+global              rigid yes
+
+fix		    1 rigid body c1 body &
+		    mass 2.325e-15 com 5 5 0 vcom 0 0 0 &
+		    moi 1.9375e-16 1.9375e-16 3.875e-16 0 0 0 angmom 0 0 0
+
+create_particles    air single N 3.0 ${yhit} 0.0 1000.0 0.0 0.0
+
+variable vx particle vx
+variable vy particle vy
+compute rvx reduce sum v_vx
+compute rvy reduce sum v_vy
+
+stats		    5
+stats_style         step np c_rvx c_rvy f_1[4] f_1[5] f_1[15] f_1[1] f_1[2]
+stats_modify        format float %20.14e
+run 		    30

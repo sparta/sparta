@@ -254,7 +254,8 @@ omega x r, is subtracted from the particle velocity, the assigned
 surface collision model (<A HREF = "surf_collide.html">surf_collide</A>) is applied
 using the surface normal at the time of the hit, and the wall velocity
 is added back.  All surface collision models thus operate correctly on
-the moving body.
+the moving body.  The reflected velocity is then corrected for the
+recoil of the finite-mass body, as described below.
 </P>
 <P>At the end of the step, the per-surf force/torque tallies of the
 associated compute are summed over the body surfs to become the force
@@ -270,30 +271,46 @@ is accurate when the body mass is large compared to the momentum
 imparted by particles during a single step, which is the intended
 regime of this command (large particulates).
 </P>
-<P>A second, independent requirement on the body mass comes from the
-collision model.  A particle reflects off the body as though the wall
-were infinitely massive, keeping its full speed relative to the
-surface, while the body receives the full impulse dp of the
-collision.  A body of finite mass would instead recoil during the
-collision and return slightly less energy to the particle, so the
-recoil energy |dp|^2 / 2M is counted twice, once in the particle and
-once in the body, and is added to the gas plus body system by every
-collision.  Momentum and angular momentum are unaffected and remain
-exactly conserved (see above).  Relative to the kinetic energy of the
-colliding particle, the added energy is of order the mass of one
-simulation particle, fnum times the species mass, divided by the body
-mass M, and it accumulates in one direction.  A second contribution
-of the same sign arises because the impulses of all the collisions in
-a step are summed and applied to the body as a single force, so the
-energy added per step is |dt*f|^2 / 2M in total (with the analogous
-term for the torque and moment of inertia), which exceeds the sum of
-the per-collision terms; it is first order in the timestep and
-vanishes as dt is reduced.  Neither term is corrected.  For a body
-many orders of magnitude heavier than one simulation particle, which
-is the intended regime of this command, both are negligible; they
-become significant only when M is within a few orders of magnitude of
-fnum times the species mass, so choose the body mass, or fnum, to
-keep M much larger than that.
+<P>A surface collision model reflects a particle as though the wall were
+infinitely massive, so on its own it would return the particle's full
+speed relative to the surface while the body also receives the full
+impulse of the collision, counting the recoil energy of the body
+twice and adding energy to the gas plus body system with every
+collision, at a rate of order the mass of one simulation particle,
+fnum times the species mass, over the body mass M.  This fix corrects
+each collision for the recoil of the body: the impulse the collision
+model produced is reduced by the response of the body at the hit
+point, 1/M for translation plus the rotational term (r x n)^2 / I for
+a hit at r from the center of mass, exactly as in an elastic collision
+between the simulation particle and a free rigid body.  For a
+frictionless model such as <I>specular</I> the impulse is along the
+surface normal and the result is the exact two-body elastic
+collision, which conserves energy.  For an accommodating model such as
+<I>diffuse</I> the particle leaves relative to the recoiled surface
+velocity.  The correction is applied to the particle velocity before
+the surface tallies, so the impulse applied to the body is the
+corrected one and momentum and angular momentum remain exactly
+conserved (see above).  It is skipped for a collision in which a
+surface reaction occurs.  The one remaining source of energy error is
+the one-step coupling itself: the impulses of all collisions in a
+step are summed and applied to the body as a single force at the
+start of the next step, which adds |dt*f|^2 / 2M per step (with the
+analogous term for torque and inertia).  This term is first order in
+the timestep.  In a test with a body only 100 times heavier than a
+simulation particle in a resting gas, the energy drift over 1000
+steps fell from 3.3% uncorrected to 0.5%, and the remainder halves
+with the timestep; for a body 10000 times heavier it is a few parts
+in 10^6.  Because the body recoil takes effect only on the next step,
+a particle leaving an accommodating surface relative to the recoiled
+surface velocity could be overtaken by the surface during the rest of
+the current step if its sampled outgoing speed is smaller than the
+recoil; in that case, which has probability of order (m/M)^2 per
+collision, the uncorrected reflection is kept.  In the extreme regime
+of a body only about 100 times heavier than a simulation particle,
+whose velocity then changes by a large fraction every step, such
+slowly departing particles are occasionally deleted inside a rapidly
+rotating body (see the deletion warning below); at a mass ratio of
+1000 or more this does not occur.
 </P>
 <HR>
 

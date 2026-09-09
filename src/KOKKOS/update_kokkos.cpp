@@ -429,14 +429,16 @@ void UpdateKokkos::build_rigidmap()
 
 /* ----------------------------------------------------------------------
    upload the start-of-step kinematics of every rigid body for the move
-     kernel: xcm, vcm, omega, all in the space frame, set by
-     FixRigid::start_of_step() which runs before the move
+     kernel: xcm, vcm, omega, all in the space frame, plus 1/mass and
+     the space-frame inverse inertia, set by FixRigid::start_of_step()
+     which runs before the move
+   also the species table and weighting flag for the recoil correction
 ------------------------------------------------------------------------- */
 
 void UpdateKokkos::rigid_upload()
 {
   if ((int) k_rigidbody.extent(0) < nfixrigid)
-    k_rigidbody = DAT::tdual_float_2d("update:rigidbody",nfixrigid,9);
+    k_rigidbody = DAT::tdual_float_2d("update:rigidbody",nfixrigid,19);
   auto h_rigidbody = k_rigidbody.view_host();
   for (int m = 0; m < nfixrigid; m++) {
     FixRigid *f = fixrigidlist[m];
@@ -445,10 +447,17 @@ void UpdateKokkos::rigid_upload()
       h_rigidbody(m,3+k) = f->vcm[k];
       h_rigidbody(m,6+k) = f->omega[k];
     }
+    h_rigidbody(m,9) = f->invmass;
+    for (int k = 0; k < 9; k++) h_rigidbody(m,10+k) = f->invinertia[k];
   }
   k_rigidbody.modify_host();
   k_rigidbody.sync_device();
   d_rigidbody = k_rigidbody.view_device();
+
+  ParticleKokkos* particle_kk = (ParticleKokkos*) particle;
+  particle_kk->sync(Device,SPECIES_MASK);
+  d_species = particle_kk->k_species.view_device();
+  cellweightflag_kk = grid->cellweightflag;
 }
 
 void UpdateKokkos::grid_index_refresh()
@@ -1265,7 +1274,8 @@ void UpdateKokkos::operator()(TagUpdateMove<DIM,SURF,REACT,OPT,ATOMIC_REDUCTION>
   double dtremain,frac,newfrac,param,minparam,rnew,dtsurf,tc,tmp;
   double xnew[3],xhold[3],xc[3],vc[3],minxc[3],minvc[3];
   int minmoving = 0;
-  double nhit[3],vwallhit[3],minnorm[3],minvwall[3];
+  int minbody = -1;
+  double nhit[3],vwallhit[3],minnorm[3],minvwall[3],vpre[3];
   double *x,*v;
   Surf::Tri *tri;
   Surf::Line *line;
@@ -1915,6 +1925,7 @@ void UpdateKokkos::operator()(TagUpdateMove<DIM,SURF,REACT,OPT,ATOMIC_REDUCTION>
             if (rigid_on) {
               if (ibody >= 0) {
                 minmoving = 1;
+                minbody = ibody;
                 minnorm[0] = nhit[0];
                 minnorm[1] = nhit[1];
                 minnorm[2] = nhit[2];
@@ -1966,6 +1977,9 @@ void UpdateKokkos::operator()(TagUpdateMove<DIM,SURF,REACT,OPT,ATOMIC_REDUCTION>
 
           const int moving = rigid_on && minmoving;
           if (moving) {
+            vpre[0] = v[0];
+            vpre[1] = v[1];
+            vpre[2] = v[2];
             v[0] -= minvwall[0];
             v[1] -= minvwall[1];
             v[2] -= minvwall[2];
@@ -2001,6 +2015,25 @@ void UpdateKokkos::operator()(TagUpdateMove<DIM,SURF,REACT,OPT,ATOMIC_REDUCTION>
               jpart->v[0] += minvwall[0];
               jpart->v[1] += minvwall[1];
               jpart->v[2] += minvwall[2];
+            }
+
+            // correct the reflected velocity for the recoil of the
+            //   finite-mass body, as in Update::move()
+
+            if (ipart && !jpart && !reaction) {
+              double bxcm[3],bvcm[3],binvi[9];
+              for (int k = 0; k < 3; k++) {
+                bxcm[k] = d_rigidbody(minbody,k);
+                bvcm[k] = d_rigidbody(minbody,3+k);
+              }
+              const double binvmass = d_rigidbody(minbody,9);
+              for (int k = 0; k < 9; k++) binvi[k] = d_rigidbody(minbody,10+k);
+              double msuper = fnum * d_species(ipart->ispecies).mass;
+              if (cellweightflag_kk) msuper *= ipart->weight;
+              GeometryKokkos::rigid_recoil(DIM == 3 ? 3 : 2,msuper,
+                                           minnorm,minvwall,
+                                           vpre,ipart->v,x,dt-dtremain,
+                                           bxcm,bvcm,binvmass,binvi);
             }
           }
 

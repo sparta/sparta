@@ -681,6 +681,11 @@ void FixRigid::start_of_step()
 
   csurf->set_com(xcm);
 
+  // body inverse mass and inertia for collision recoil this step,
+  //   from the start-of-step axes before they are advanced below
+
+  set_recoil();
+
   // time integrate from current position to end-of-step position
   // use full-step semi-implicit Euler algorithm
   // apply forces and torques accumulated from collisions during last step
@@ -1784,6 +1789,8 @@ void FixRigid::setup_body()
   // create initial quaternion
   
   MathExtra::exyz_to_q(ex_space,ey_space,ez_space,quat);
+
+  set_recoil();
 
   // set displacement for each end/corner point in each line/tri
   // delta = vector from COM to end/corner point in space frame
@@ -3167,6 +3174,35 @@ void FixRigid::remove_inside_all(int splitflag)
                "boundaries",all);
       error->warning(FLERR,str);
     }
+  }
+}
+
+/* ----------------------------------------------------------------------
+   set invmass and the space-frame inverse inertia tensor from the
+     current principal axes and moments, used by the particle mover to
+     correct collisions for the recoil of the finite-mass body
+   Iinv = sum over K of (1/inertia[K]) e_K outer-product e_K
+   for 2d only rotation about z is possible, so Iinv has only a zz
+     component = 1/Izz, which keeps the in-plane response decoupled
+------------------------------------------------------------------------- */
+
+void FixRigid::set_recoil()
+{
+  int i,j,k;
+  double *e[3] = {ex_space,ey_space,ez_space};
+
+  invmass = 1.0 / massbody;
+  for (k = 0; k < 9; k++) invinertia[k] = 0.0;
+
+  if (dim == 2) {
+    double izz = 0.0;
+    for (k = 0; k < 3; k++) izz += inertia[k]*e[k][2]*e[k][2];
+    invinertia[8] = 1.0 / izz;
+  } else {
+    for (k = 0; k < 3; k++)
+      for (i = 0; i < 3; i++)
+        for (j = 0; j < 3; j++)
+          invinertia[3*i+j] += e[k][i]*e[k][j] / inertia[k];
   }
 }
 

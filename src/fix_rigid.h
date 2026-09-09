@@ -42,6 +42,9 @@ class FixRigid : public Fix {
   double ***displace;     // displacement in body frame of line/tri points from COM
 
   double xcm[3],vcm[3];   // COM and velocity of COM
+  double invmass;         // 1/massbody
+  double invinertia[9];   // 3x3 space-frame inverse inertia tensor at
+                          //   start of step, for collision recoil
   double quat[4];         // quaternion for orientation of body
 
   double xcmnew[3];       // new COM at end of timestep
@@ -245,6 +248,7 @@ class FixRigid : public Fix {
   void write_outfile();
   void setup_body();
   void check_watertight();
+  void set_recoil();            // set invmass/invinertia from current axes
   void check_enclosed();        // reject a body which encloses no area/volume
 
   void push_off();              // spring forces on this body, with

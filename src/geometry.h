@@ -53,6 +53,9 @@ namespace Geometry {
                                  double *, double *, double *,
                                  double *, double *, double *,
                                  double &param, int &);
+  void rigid_recoil(int, double, double *, double *, double *, double *,
+                    double *, double, double *, double *,
+                    double, double *);
   bool line_tri_intersect_noeps(double *, double *,
                                 double *, double *, double *, double *,
                                 double *, double &param, int &);
