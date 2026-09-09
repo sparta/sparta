@@ -10,6 +10,10 @@ force         same body under a constant external force: COM follows
               the semi-implicit Euler trajectory to output precision
 bounce        body vs static wall via push-off springs: elastic
               rebound within 1%, no tunneling into the cutoff zone
+restitution   analytic properties of the push-off contact model:
+              elastic contact rebounds with restitution 1, a linear
+              spring-dashpot restitution is independent of impact speed,
+              a Hertzian one depends on it
 momentum      gas + body momentum conservation in a periodic box,
               within 1.5% statistical drift
 overrun       body sweeping 40% of a cell per step through resting

@@ -162,6 +162,62 @@ def test_bounce(exe_cmd):
     return fails
 
 
+def test_restitution(exe_cmd):
+    # analytic properties of the push-off contact model, measured as the
+    # rebound speed of a body launched at a static wall with no gas
+    def bounce(pstyle, pk, pdamp, v0):
+        rc, out = run_deck(exe_cmd, "in.test.restitution",
+                           extra=["-var", "pstyle", pstyle, "-var", "pk", pk,
+                                  "-var", "pdamp", pdamp, "-var", "v0",
+                                  repr(v0)])
+        if rc:
+            return None
+        rows = parse_stats(out)
+        if not rows:
+            return None
+        vout = rows[-1]["f_1[4]"]
+        if vout >= 0.0:          # never rebounded: passed through the wall
+            return None
+        return abs(vout) / v0
+
+    fails = []
+
+    # elastic contact conserves energy exactly: e = 1 for both force laws
+    for pstyle, pk in (("linear", "1.0e-18"), ("hertz", "4.0e-18")):
+        for v0 in (10.0, 25.0):
+            e = bounce(pstyle, pk, "0.0", v0)
+            if e is None:
+                fails.append("%s elastic v0=%g: no rebound" % (pstyle, v0))
+            elif not approx(e, 1.0, abs_=1e-3):
+                fails.append("%s elastic v0=%g: restitution %.6f, expected 1"
+                             % (pstyle, v0, e))
+
+    # a linear spring-dashpot has a restitution independent of impact
+    # speed; this is the property which distinguishes it from Hertzian
+    lin = [bounce("linear", "1.0e-18", "3.0e-21", v0) for v0 in (10.0, 25.0)]
+    if None in lin:
+        fails.append("linear damped: no rebound")
+    elif not approx(lin[0], lin[1], rel=1e-4):
+        fails.append("linear damped: restitution %.6f at v0=10 vs %.6f at "
+                     "v0=25, should not depend on impact speed"
+                     % (lin[0], lin[1]))
+
+    # a Hertzian spring-dashpot restitution does depend on impact speed
+    her = [bounce("hertz", "4.0e-18", "3.0e-21", v0) for v0 in (10.0, 25.0)]
+    if None in her:
+        fails.append("hertz damped: no rebound")
+    elif approx(her[0], her[1], rel=1e-3):
+        fails.append("hertz damped: restitution %.6f at v0=10 and %.6f at "
+                     "v0=25 are equal; a Hertzian contact must depend on "
+                     "impact speed" % (her[0], her[1]))
+
+    # damping must actually remove energy, else the checks above are vacuous
+    if lin[0] is not None and lin[0] > 0.9:
+        fails.append("linear damped restitution %.4f is too close to elastic "
+                     "for the test to be meaningful" % lin[0])
+    return fails
+
+
 def test_momentum(exe_cmd):
     rc, out = run_deck(exe_cmd, "in.test.momentum")
     if rc:
@@ -519,6 +575,7 @@ TESTS = [
     ("ballistic", test_ballistic),
     ("force", test_force),
     ("bounce", test_bounce),
+    ("restitution", test_restitution),
     ("momentum", test_momentum),
     ("overrun", test_overrun),
     ("remap", test_remap),
@@ -540,7 +597,8 @@ TESTS = [
 # one whose static surfs are not local on every proc when run on
 # several procs
 
-DIST_TESTS = {"ballistic", "force", "bounce", "momentum", "overrun",
+DIST_TESTS = {"ballistic", "force", "bounce", "restitution", "momentum",
+              "overrun",
               "remap", "multiremap", "staticdist", "staticdist3d",
               "splitcell", "gridchange", "twobody", "pushpair"}
 

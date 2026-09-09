@@ -357,6 +357,21 @@ contributes both force and torque to the body.  Each (corner point,
 static element) pair within the cutoff contributes its own force, so
 k is a per-contact stiffness.
 
+The push-off spring has a finite range, so it can only absorb a finite
+amount of kinetic energy: for a linear spring the work done in
+compressing N contacts through the full cutoff is N k cutoff^2 / 2.  A
+body which arrives with more kinetic energy than that is not stopped;
+it passes through the source surface and out the other side, with no
+error or warning.  When sizing k, check that
+
+N k cutoff^2 / 2 >> 1/2 M v^2 :pre
+
+for the fastest approach speed v the body will reach, where N is the
+number of contacts which engage.  N counts (corner point, source
+element) pairs, so it is larger than the number of corner points: a
+2d square meeting a flat wall face-on engages four contacts, since
+each of the two leading corners belongs to two body lines.
+
 The {pushdamp} keyword adds a dashpot term to each contact, forming
 the standard DEM spring-dashpot contact model:
 
