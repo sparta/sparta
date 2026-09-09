@@ -337,7 +337,14 @@ the half step from the angular momentum (constant over the step) and
 combines full- and half-step quaternion updates, which better
 follows the precession of an asymmetric body.  Both schemes conserve
 angular momentum exactly; they differ only in the orientation
-accuracy per step.
+accuracy.  The <I>euler</I> update is first order in the timestep and
+<I>richardson</I> is second order: on a freely tumbling asymmetric body
+richardson reproduced the analytic polhode period to 5e-8 relative,
+against 7e-3 for euler at the same timestep.  Prefer <I>richardson</I> when
+the body orientation itself matters, noting that its rotation is then
+no longer exactly the constant-rate rotation the collision tests
+assume, a difference of the same order as the rest of the gas-body
+coupling.
 </P>
 <P>The <I>push</I> keyword enables push-off forces which repel the body from
 static (non-body) surface elements, and from other rigid bodies,
@@ -473,6 +480,16 @@ orientation of the rigid body.  The force and torque are those
 accumulated on the most recent timestep, which will be applied to the
 body at the start of the next timestep; they include the push-off
 forces, which are also reported separately in values 20-22.
+</P>
+<P>The angular velocity in values 13-15 is the rate at which the body was
+rotated over the timestep just completed, which is the rate the
+moving-surf collision tests use; the quaternion in values 16-19 is the
+orientation at the end of that step.  The two are thus half a step
+apart, so reconstructing the angular momentum as I(q) w from them
+carries an error of the order of the rotation per step.  The angular
+momentum itself is exact, and constant in the absence of torque; write
+it with the <I>outfile</I> keyword rather than reconstructing it from this
+vector.
 </P>
 <P>This fix performs several validity checks when it is defined and
 initialized: the body must be watertight (see above), its mass must

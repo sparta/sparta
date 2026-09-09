@@ -6,6 +6,10 @@ against analytic expectations with tolerances:
 
 ballistic     free body with initial velocity + angular momentum:
               straight-line COM motion, constant angular velocity
+rotation      torque-free tumbling of an asymmetric 3d body: the
+              angular velocity must vary (polhode motion) while the
+              rotational energy is conserved, and rotate richardson
+              must conserve it far better than rotate euler
 force         same body under a constant external force: COM follows
               the semi-implicit Euler trajectory to output precision
 bounce        body vs static wall via push-off springs: elastic

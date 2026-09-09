@@ -1,0 +1,46 @@
+# TEST: torque-free rotation of an asymmetric rigid body
+# no particles and no contacts, so there is zero torque and the angular
+# momentum L is exactly constant in the space frame.  The body is given
+# three distinct principal moments and an angular momentum aligned with
+# none of them, so it tumbles: the angular velocity must NOT be constant
+# but must trace the closed polhode, while the rotational kinetic energy
+# T = L.w/2 stays fixed.  Since L is constant and known from the input,
+# T can be evaluated from the reported angular velocity alone.
+# rotate euler is first order and rotate richardson second order, so
+# richardson must conserve T far better at the same timestep.
+# run as: -var rot euler   (or richardson)
+
+seed	    	    12345
+
+variable            rot index euler
+dimension   	    3
+boundary            o o o
+
+create_box  	    0 10 0 10 0 10
+create_grid 	    10 10 10
+
+global		    nrho 1.0 fnum 0.001
+
+species		    air.species N
+mixture		    air N vstream 0 0 0 temp 273.0
+
+read_surf           sdata.cube group body trans 5 5 5
+surf_collide	    1 specular
+surf_modify         all collide 1
+
+timestep 	    0.001
+
+compute             c1 surf body all fx fy fz tx ty tz com 5 5 5
+
+global              rigid yes
+
+# three distinct principal moments, angular momentum along none of them
+
+fix		    1 rigid body c1 body mass 1.0e-22 com 5 5 5 &
+                    vcom 0 0 0 &
+                    moi 2.0e-23 3.0e-23 4.0e-23 0 0 0 &
+                    angmom 1.0e-23 1.0e-23 1.0e-23 rotate ${rot}
+
+stats		    200
+stats_style         step f_1[13] f_1[14] f_1[15]
+run 		    20000

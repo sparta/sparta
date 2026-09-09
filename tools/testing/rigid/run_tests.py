@@ -97,6 +97,53 @@ def test_ballistic(exe_cmd):
     return fails
 
 
+def test_rotation(exe_cmd):
+    # torque-free tumbling of an asymmetric body: angular momentum is
+    # exactly conserved, so the rotational kinetic energy T = L.w/2 can
+    # be formed from the reported angular velocity and the known L
+    Lx = Ly = Lz = 1.0e-23
+    fails = []
+    drift = {}
+    for rot in ("euler", "richardson"):
+        rc, out = run_deck(exe_cmd, "in.test.rotation",
+                           extra=["-var", "rot", rot])
+        if rc:
+            fails.append("%s: run failed with exit code %d" % (rot, rc))
+            continue
+        rows = parse_stats(out)
+        if not rows:
+            fails.append("%s: no stats output" % rot)
+            continue
+        ke = [0.5 * (Lx * r["f_1[13]"] + Ly * r["f_1[14]"] + Lz * r["f_1[15]"])
+              for r in rows]
+        ke0 = ke[0]
+        drift[rot] = max(abs(k - ke0) for k in ke) / abs(ke0)
+
+        # the body must actually tumble: for an asymmetric free body the
+        # angular velocity is not constant.  a constant w would mean the
+        # rotational dynamics are not being integrated at all
+        wx = [r["f_1[13]"] for r in rows]
+        if max(wx) - min(wx) < 0.01 * abs(max(wx)):
+            fails.append("%s: angular velocity is nearly constant; an "
+                         "asymmetric torque-free body must tumble" % rot)
+    if fails:
+        return fails
+
+    # euler is first order, richardson second: at this timestep the
+    # energy drift should differ by orders of magnitude
+    if drift["euler"] > 1.0e-2:
+        fails.append("euler: rotational energy drift %.3e is too large"
+                     % drift["euler"])
+    if drift["richardson"] > 1.0e-5:
+        fails.append("richardson: rotational energy drift %.3e, expected "
+                     "second-order accuracy" % drift["richardson"])
+    if drift["richardson"] > drift["euler"]:
+        fails.append("richardson drift %.3e exceeds euler %.3e; the "
+                     "higher-order scheme is not better"
+                     % (drift["richardson"], drift["euler"]))
+    return fails
+
+
 def test_force(exe_cmd):
     # constant external force on the COM: the semi-implicit Euler
     # trajectory is x_n = x0 + n*v0*dt + a*dt^2*n*(n+1)/2, v_n = v0 + n*a*dt
@@ -574,6 +621,7 @@ def test_notwatertight(exe_cmd):
 TESTS = [
     ("ballistic", test_ballistic),
     ("force", test_force),
+    ("rotation", test_rotation),
     ("bounce", test_bounce),
     ("restitution", test_restitution),
     ("momentum", test_momentum),
@@ -597,7 +645,8 @@ TESTS = [
 # one whose static surfs are not local on every proc when run on
 # several procs
 
-DIST_TESTS = {"ballistic", "force", "bounce", "restitution", "momentum",
+DIST_TESTS = {"ballistic", "force", "rotation", "bounce", "restitution",
+              "momentum",
               "overrun",
               "remap", "multiremap", "staticdist", "staticdist3d",
               "splitcell", "gridchange", "twobody", "pushpair"}
