@@ -145,8 +145,8 @@ def test_rotation(exe_cmd):
 
 
 def test_force(exe_cmd):
-    # constant external force on the COM: the semi-implicit Euler
-    # trajectory is x_n = x0 + n*v0*dt + a*dt^2*n*(n+1)/2, v_n = v0 + n*a*dt
+    # constant external force on the COM: velocity Verlet is exact,
+    # x = x0 + v0*t + a*t^2/2, v = v0 + a*t
     fx = 1.0e-21
     rc, out = run_deck(exe_cmd, "in.test.ballistic",
                        extra=["-var", "fx", repr(fx)])
@@ -160,8 +160,9 @@ def test_force(exe_cmd):
     a = fx / 1.0e-22
     dt = 1.0e-4
     n = 1000
-    xexp = 3.0 + n * 12.0 * dt + a * dt * dt * n * (n + 1) / 2.0
-    vexp = 12.0 + n * a * dt
+    t = n * dt
+    xexp = 3.0 + 12.0 * t + 0.5 * a * t * t
+    vexp = 12.0 + a * t
     if not approx(last["f_1[1]"], xexp, rel=1e-7):
         fails.append("xcm = %.12g, expected %.12g" % (last["f_1[1]"], xexp))
     if not approx(last["f_1[4]"], vexp, rel=1e-7):
@@ -279,13 +280,15 @@ def test_momentum(exe_cmd):
     def gas_plus_body(r):
         return MASS_N * FNUM * r["c_r"] + mass_body * r["f_1[4]"]
 
-    # compute surf tallies the momentum the gas gave up on a step and fix
-    # rigid applies it to the body on the next one, so one step's impulse
-    # dt*fcm is always in flight.  Including it makes the invariant exact
-    # rather than accurate to the statistical size of one step's transfer.
+    # compute surf tallies the momentum the gas gave up on a step; with
+    # velocity Verlet the body receives half of it at the end of that step
+    # and half at the start of the next, so half a step's impulse
+    # 0.5*dt*fcm is always in flight.  Including it makes the invariant
+    # exact rather than accurate to the statistical size of one step's
+    # transfer.
 
     def total_px(r):
-        return gas_plus_body(r) + dt * r["f_1[7]"]
+        return gas_plus_body(r) + 0.5 * dt * r["f_1[7]"]
 
     p0 = total_px(rows[0])
     fails = []

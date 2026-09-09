@@ -207,15 +207,17 @@ the space-frame positions of all the points are regenerated from the
 COM and quaternion each timestep, so that the body shape does not
 drift over time.
 
-Each timestep, the following operations are performed.  At the start
-of the step, the equations of motion of the body are time integrated
-via a semi-implicit (symplectic) Euler scheme: the COM velocity and
-angular momentum are first updated by the force and torque
-accumulated during the previous step (plus any constant external
-force from the {force} keyword), then the COM position and quaternion
-are advanced by a full timestep using the updated velocities.  This
-gives the position and orientation the body will have at the end of
-the timestep.
+Each timestep, the following operations are performed.  The
+equations of motion of the body are time integrated with the velocity
+Verlet scheme, as in the rigid-body fixes of LAMMPS.  At the start of
+the step the COM velocity and angular momentum receive a half-step
+kick from the force and torque accumulated during the previous step
+(plus any constant external force from the {force} keyword), then the
+COM position and quaternion are advanced by a full timestep using
+these half-step velocities.  This gives the position and orientation
+the body will have at the end of the timestep.  The second half-step
+kick is applied at the end of the step, once the force and torque of
+the current step are known (see below).
 
 Before particles advect, each body surf is added to the collision
 lists of every grid cell it sweeps through during the step, using the
@@ -247,15 +249,18 @@ recoil of the finite-mass body, as described below.
 
 At the end of the step, the per-surf force/torque tallies of the
 associated compute are summed over the body surfs to become the force
-and torque used at the start of the next step (together with any
-push-off forces).  The body position and orientation are updated to
-their end-of-step values and the coordinates of all its lines or
-triangles are regenerated.  Note that this means the force and torque
-from particle collisions during one step affect the body motion
-starting on the following step.  During any one step the body moves
-with its current (already determined) velocities, which is what makes
-this simple explicit coupling scheme well-defined.  The one-step lag
-is accurate when the body mass is large compared to the momentum
+and torque of the step (together with any push-off forces).  The
+body position and orientation are updated to their end-of-step values,
+the coordinates of all its lines or triangles are regenerated, and
+the COM velocity and angular momentum receive the second half-step
+kick from this force and torque, so that the velocities reported by
+the fix are synchronized with its position and orientation.  Note
+that during any one step the body moves with a single, already
+determined velocity, which is what makes this explicit coupling
+scheme well-defined; the impulse of a step is applied half at its end
+and half at the start of the next.  The scheme is second order
+accurate in the timestep and exact for a constant force.  It is
+accurate when the body mass is large compared to the momentum
 imparted by particles during a single step, which is the intended
 regime of this command (large particulates).
 
@@ -281,17 +286,21 @@ corrected one and momentum and angular momentum remain exactly
 conserved (see above).  It is skipped for a collision in which a
 surface reaction occurs.  It is exact down to a body as light as one
 simulation particle; a lighter body would have to outrun the particle
-within the step, which the one-step coupling below cannot represent,
-so the correction is inactive there and a warning is issued.  The one remaining source of energy error is
-the one-step coupling itself: the impulses of all collisions in a
-step are summed and applied to the body as a single force at the
-start of the next step, which adds |dt*f|^2 / 2M per step (with the
-analogous term for torque and inertia).  This term is first order in
-the timestep.  In a test with a body only 100 times heavier than a
-simulation particle in a resting gas, the energy drift over 1000
-steps fell from 3.3% uncorrected to 0.5%, and the remainder halves
-with the timestep; for a body 10000 times heavier it is a few parts
-in 10^6.  Because the body recoil takes effect only on the next step,
+within the step, which the coupling scheme cannot represent, so the
+correction is inactive there and a warning is issued.  The one
+remaining source of energy error is the coupling itself: during a
+step the body moves at a single velocity while the impulses of all
+its collisions accumulate, and since the drag of the gas correlates
+those impulses with the body velocity, the energy exchanged is that
+of a body whose velocity did not respond within the step.  The error
+per step is of order the square of the fractional velocity change of
+the body per step times its kinetic energy, i.e. first order in the
+timestep, and negligible unless the body velocity changes by a large
+fraction every step.  In a test with a body only 100 times heavier
+than a simulation particle in a resting gas, whose velocity relaxes by
+a third every step, the energy drift over 1000 steps fell from 3.3%
+uncorrected to 0.5%, and the remainder halves with the timestep; for
+a body 10000 times heavier it is a few parts in 10^6.  Because the body recoil takes effect only on the next step,
 a particle leaving an accommodating surface relative to the recoiled
 surface velocity could be overtaken by the surface during the rest of
 the current step if its sampled outgoing speed is smaller than the
@@ -447,8 +456,8 @@ With gamma = 0 (the default) contacts are elastic.
 The {pushbound} keyword additionally applies the same spring force
 from the (non-periodic) boundaries of the simulation box, to keep the
 body inside the box.  Push-off forces are computed for the
-end-of-step geometry and are included in the force and torque which
-move the body on the following step.  The total push-off force is
+end-of-step geometry and are included in the force and torque of the
+step.  The total push-off force is
 included in the global vector output of this fix (see below).
 
 The {force} keyword applies a constant external force to the COM of
@@ -518,19 +527,18 @@ inside the moving body.  The vector has 22 values:
 
 All vector quantities are in the space frame for the current
 orientation of the rigid body.  The force and torque are those
-accumulated on the most recent timestep, which will be applied to the
-body at the start of the next timestep; they include the push-off
-forces, which are also reported separately in values 20-22.
+accumulated on the most recent timestep, half of which has been
+applied to the body at the end of that step and half of which will be
+applied at the start of the next; they include the push-off forces,
+which are also reported separately in values 20-22.
 
-The angular velocity in values 13-15 is the rate at which the body was
-rotated over the timestep just completed, which is the rate the
-moving-surf collision tests use; the quaternion in values 16-19 is the
-orientation at the end of that step.  The two are thus half a step
-apart, so reconstructing the angular momentum as I(q) w from them
-carries an error of the order of the rotation per step.  The angular
-momentum itself is exact, and constant in the absence of torque; write
-it with the {outfile} keyword rather than reconstructing it from this
-vector.
+The velocities in values 4-6 and 13-15 are synchronized with the
+position and orientation in values 1-3 and 16-19, all at the end of
+the timestep just completed; the rate at which the body was rotated
+over that step was the half-step angular velocity, which differs by
+half a step's torque.  The angular momentum, which is exact and
+constant in the absence of torque, can be written with the {outfile}
+keyword.
 
 This fix performs several validity checks when it is defined and
 initialized: the body must be watertight and enclose a non-zero area

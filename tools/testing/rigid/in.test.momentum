@@ -5,10 +5,11 @@
 
 # the exactly conserved quantity is not the bare sum of gas and body
 # momentum: compute surf tallies the momentum the gas gave up during a
-# step, and fix rigid applies it to the body one step later, so a fixed
-# one-step impulse dt*fcm is in flight at any instant.  Including it
-# gives an invariant which holds to round-off rather than to the
-# statistical size of one step's transfer.
+# step, and fix rigid (velocity Verlet) applies half of it at the end
+# of that step and half at the start of the next, so a half-step
+# impulse 0.5*dt*fcm is in flight at any instant.  Including it gives
+# an invariant which holds to round-off rather than to the statistical
+# size of one step's transfer.
 seed	    	    12345
 
 variable            dist index 0

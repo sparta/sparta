@@ -249,6 +249,7 @@ class FixRigid : public Fix {
   void setup_body();
   void check_watertight();
   void set_recoil();            // set invmass/invinertia from current axes
+  void final_kick();            // second half kick of velocity Verlet
   void check_enclosed();        // reject a body which encloses no area/volume
 
   void push_off();              // spring forces on this body, with

@@ -2008,9 +2008,10 @@ finite-mass body.  Each body surf is added to the
 collision lists of every grid cell it sweeps through during the step,
 so a fast-moving body pushes the particles in its path aside and
 imparts momentum to them rather than overtaking and deleting them.
-The force and torque from collisions during one step move the body on
-the following step; see the <A HREF = "fix_rigid.html">fix rigid</A> doc page for
-details of the time integration scheme and this one-step lag.
+The force and torque from collisions during one step are applied to
+the body by velocity Verlet, half at the end of that step and half at
+the start of the next; see the <A HREF = "fix_rigid.html">fix rigid</A> doc page
+for details of the time integration scheme.
 </P>
 <P>The <I>remap</I> option of <A HREF = "fix_rigid.html">fix rigid</A> selects how the
 moving surfs are re-assigned to grid cells each step.  The default

@@ -700,36 +700,37 @@ void FixRigid::start_of_step()
   set_recoil();
 
   // time integrate from current position to end-of-step position
-  // use full-step semi-implicit Euler algorithm
-  // apply forces and torques accumulated from collisions during last step
-  // update vcm/angmom/omega to start-of-step values
-  // use them to calculate xcmnew/quatnew and exyz_space for end-of-step values
-  
+  // velocity Verlet: this is the first half kick and the drift,
+  //   the second half kick is applied in end_of_step() once the force
+  //   and torque of this step are known
+  // fcm,torque = from particle collisions and push-off contacts during
+  //   the previous step, i.e. the force at the start of this step,
+  //   plus the constant external force
+  // vcm/angmom/omega are thus half-step values during the step: the
+  //   body moves, and particles collide with it, at these velocities,
+  //   which is second-order accurate and exact for a constant force
+  // xcmnew/quatnew/exyz_space = end-of-step values
+
   double dt = update->dt;
-  double dtf = dt / massbody;
+  double dtfhalf = 0.5 * dt / massbody;
   double dthalf = 0.5 * dt;
 
-  // update vcm by full step
-  // fcm = force from particle collisions and push-off contacts during
-  //   the previous step, plus the constant external force
+  vcm[0] += dtfhalf * (fcm[0] + fext[0]);
+  vcm[1] += dtfhalf * (fcm[1] + fext[1]);
+  vcm[2] += dtfhalf * (fcm[2] + fext[2]);
 
-  vcm[0] += dtf * (fcm[0] + fext[0]);
-  vcm[1] += dtf * (fcm[1] + fext[1]);
-  vcm[2] += dtf * (fcm[2] + fext[2]);
-
-  // update xcm by full step
-  // use of new vcm turns Euler into semi-implicit Euler
+  // drift xcm by full step with the half-step velocity
   // store as xcmnew so have start/stop position for this timestep
-  
+
   xcmnew[0] = xcm[0] + dt * vcm[0];
   xcmnew[1] = xcm[1] + dt * vcm[1];
   xcmnew[2] = xcm[2] + dt * vcm[2];
 
-  // update angular momentum in spatial frame by full step
+  // half kick of angular momentum in spatial frame
 
-  angmom[0] += dt * torque[0];
-  angmom[1] += dt * torque[1];
-  angmom[2] += dt * torque[2];
+  angmom[0] += dthalf * torque[0];
+  angmom[1] += dthalf * torque[1];
+  angmom[2] += dthalf * torque[2];
 
   // compute new omega from new angmom, both in spatial frame
 
@@ -1064,6 +1065,13 @@ void FixRigid::end_of_step()
         f->torque[2] += f->tqpush[2];
       }
     }
+
+    // second half kick of velocity Verlet for every body, now that
+    //   its end-of-step force and torque are complete: vcm/angmom/omega
+    //   become the velocities at the end of the step, synchronized
+    //   with xcm/quat, as reported by the fix and written to outfile
+
+    for (int m = 0; m < nb; m++) flist[m]->final_kick();
 
     int all_incremental = 1;
     for (int m = 0; m < nb; m++)
@@ -3187,6 +3195,36 @@ void FixRigid::remove_inside_all(int splitflag)
                "boundaries",all);
       error->warning(FLERR,str);
     }
+  }
+}
+
+/* ----------------------------------------------------------------------
+   second half kick of velocity Verlet with the end-of-step force/torque
+   omega is recomputed from angmom with the end-of-step axes
+------------------------------------------------------------------------- */
+
+void FixRigid::final_kick()
+{
+  double dt = update->dt;
+  double dtfhalf = 0.5 * dt / massbody;
+  double dthalf = 0.5 * dt;
+
+  vcm[0] += dtfhalf * (fcm[0] + fext[0]);
+  vcm[1] += dtfhalf * (fcm[1] + fext[1]);
+  vcm[2] += dtfhalf * (fcm[2] + fext[2]);
+
+  angmom[0] += dthalf * torque[0];
+  angmom[1] += dthalf * torque[1];
+  angmom[2] += dthalf * torque[2];
+
+  MathExtra::angmom_to_omega(angmom,ex_space,ey_space,ez_space,inertia,omega);
+
+  if (dim == 2) {
+    vcm[2] = 0.0;
+    angmom[0] = 0.0;
+    angmom[1] = 0.0;
+    omega[0] = 0.0;
+    omega[1] = 0.0;
   }
 }
 
