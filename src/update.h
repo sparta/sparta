@@ -59,7 +59,8 @@ class Update : protected Pointers {
                               // length = surf->nlocal + surf->nghost, since
                               //   the mover tests surfs of ghost cells too
 
-  void build_rigidmap();      // rebuild rigidmap from current surfs
+  virtual void build_rigidmap();  // rebuild rigidmap from current surfs
+  void init_rigid();          // per-run setup of the rigid body list
 
   // bin index over local+ghost child cells, for box -> candidate-cell
   //   queries by fix rigid (swept assignment, incremental re-cut)

@@ -285,28 +285,38 @@ void Update::init()
 
   // setup when using fix rigid for rigid body objects comprised of surfs
 
-  if (rigidflag) {
-    if (domain->axisymmetric)
-      error->all(FLERR,"Cannot use global rigid with axisymmetric domain");
+  init_rigid();
+}
 
-    // build list of all rigid fixes, one mobile body per fix
+/* ----------------------------------------------------------------------
+   per-run setup for mobile rigid bodies (global rigid yes):
+     build the list of all fix rigid instances, one body per fix,
+     and the per-surf map from surf to body
+   also called by UpdateKokkos::init()
+------------------------------------------------------------------------- */
 
-    delete [] fixrigidlist;
+void Update::init_rigid()
+{
+  if (!rigidflag) return;
 
-    nfixrigid = 0;
-    for (int ifix = 0; ifix < modify->nfix; ifix++)
-      if (strcmp(modify->fix[ifix]->style,"rigid") == 0) nfixrigid++;
-    if (!nfixrigid)
-      error->all(FLERR,"Global rigid is set but no fix rigid is defined");
+  if (domain->axisymmetric)
+    error->all(FLERR,"Cannot use global rigid with axisymmetric domain");
 
-    fixrigidlist = new FixRigid*[nfixrigid];
-    nfixrigid = 0;
-    for (int ifix = 0; ifix < modify->nfix; ifix++)
-      if (strcmp(modify->fix[ifix]->style,"rigid") == 0)
-        fixrigidlist[nfixrigid++] = (FixRigid *) modify->fix[ifix];
+  delete [] fixrigidlist;
 
-    build_rigidmap();
-  }
+  nfixrigid = 0;
+  for (int ifix = 0; ifix < modify->nfix; ifix++)
+    if (fix_rigid_style(modify->fix[ifix]->style)) nfixrigid++;
+  if (!nfixrigid)
+    error->all(FLERR,"Global rigid is set but no fix rigid is defined");
+
+  fixrigidlist = new FixRigid*[nfixrigid];
+  nfixrigid = 0;
+  for (int ifix = 0; ifix < modify->nfix; ifix++)
+    if (fix_rigid_style(modify->fix[ifix]->style))
+      fixrigidlist[nfixrigid++] = (FixRigid *) modify->fix[ifix];
+
+  build_rigidmap();
 }
 
 /* ----------------------------------------------------------------------
@@ -2519,11 +2529,7 @@ void Update::global(int narg, char **arg)
 
     } else if (strcmp(arg[iarg],"rigid") == 0) {
       if (iarg+2 > narg) error->all(FLERR,"Illegal global command");
-      if (strcmp(arg[iarg+1],"yes") == 0) {
-        if (sparta->kokkos)
-          error->all(FLERR,"Cannot yet use global rigid with KOKKOS");
-        rigidflag = 1;
-      }
+      if (strcmp(arg[iarg+1],"yes") == 0) rigidflag = 1;
       else if (strcmp(arg[iarg+1],"no") == 0) rigidflag = 0;
       else error->all(FLERR,"Illegal global command");
       iarg += 2;

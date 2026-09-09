@@ -9,6 +9,7 @@ loose tolerances.
 Usage:
   python3 run_tests.py --exe /path/to/spa_serial
   python3 run_tests.py --exe /path/to/spa_mpi --mpi "mpirun -np 4"
+  python3 run_tests.py --exe /path/to/spa_kokkos --args "-k on -sf kk"
 
 Exit code = number of failed tests.
 """
@@ -270,6 +271,27 @@ def test_staticdist(exe_cmd):
     return fails
 
 
+def test_staticdist3d(exe_cmd):
+    # 3d: cube body drifting past a 1200-triangle static sphere, both
+    # remap modes must agree and no particle may be deleted; with --dist
+    # on several procs most sphere triangles are ghost surfs
+    fails, results = compare_remap_modes(
+        exe_cmd, "in.test.staticdist3d",
+        ("f_1[1]", "f_1[2]", "f_1[3]", "f_1[13]", "f_1[14]", "f_1[15]"),
+        ("xcm", "ycm", "zcm", "wx", "wy", "wz"))
+    if fails:
+        return fails
+    for mode in ("cutcell", "incremental"):
+        ndel = results[mode][-1]["f_1"] - results[mode][0]["f_1"]
+        if ndel != 0:
+            fails.append("mode %s: %g particles deleted inside the body "
+                         "during the run" % (mode, ndel))
+    if abs(results["cutcell"][-1]["f_1[1]"] - 4.0) < 0.001:
+        fails.append("body barely moved (xcm = %.6g), test is too weak"
+                     % results["cutcell"][-1]["f_1[1]"])
+    return fails
+
+
 def test_splitcell(exe_cmd):
     # body sweeping alongside a diagonal wall that creates split cells:
     # particles entering swept split cells must be reflected, not
@@ -404,6 +426,7 @@ TESTS = [
     ("remap", test_remap),
     ("multiremap", test_multiremap),
     ("staticdist", test_staticdist),
+    ("staticdist3d", test_staticdist3d),
     ("splitcell", test_splitcell),
     ("twobody", test_twobody),
     ("pushpair", test_pushpair),
@@ -418,8 +441,8 @@ TESTS = [
 # several procs
 
 DIST_TESTS = {"ballistic", "force", "bounce", "momentum", "overrun",
-              "remap", "multiremap", "staticdist", "splitcell",
-              "twobody", "pushpair"}
+              "remap", "multiremap", "staticdist", "staticdist3d",
+              "splitcell", "twobody", "pushpair"}
 
 
 def main():
@@ -429,6 +452,9 @@ def main():
                         help="path to SPARTA executable")
     parser.add_argument("--mpi", default="",
                         help='MPI launcher prefix, e.g. "mpirun -np 4"')
+    parser.add_argument("--args", default="",
+                        help='extra SPARTA command-line args placed after '
+                             'the executable, e.g. "-k on -sf kk"')
     parser.add_argument("--tests", default="",
                         help="comma-separated subset of tests to run")
     parser.add_argument("--dist", action="store_true",
@@ -436,7 +462,8 @@ def main():
                              "(global surfs explicit/distributed)")
     args = parser.parse_args()
 
-    exe_cmd = shlex.split(args.mpi) + [os.path.abspath(args.exe)]
+    exe_cmd = (shlex.split(args.mpi) + [os.path.abspath(args.exe)] +
+               shlex.split(args.args))
 
     subset = None
     if args.tests:

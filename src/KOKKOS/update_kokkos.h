@@ -103,6 +103,7 @@ class UpdateKokkos : public Update {
   void init();
   void setup();
   void run(int);
+  void build_rigidmap() override;
 
   template<int DIM, int SURF, int REACT, int OPT, int ATOMIC_REDUCTION>
   KOKKOS_INLINE_FUNCTION
@@ -157,6 +158,19 @@ class UpdateKokkos : public Update {
   t_tri_1d d_tris;
 
   t_particle_1d d_particles;
+
+  // mobile rigid bodies (fix rigid/kk), see Update::rigidmap
+  // rigid_on = 1 for this move if any body is active
+  // d_rigidmap = per local/ghost surf: body index or -1 if static
+  // d_rigidbody = per body: xcm[3], vcm[3], omega[3] for this step,
+  //   uploaded by rigid_upload() before each move
+
+  int rigid_on;
+  DAT::tdual_int_1d k_rigidmap;
+  DAT::t_int_1d d_rigidmap;
+  DAT::tdual_float_2d k_rigidbody;
+  DAT::t_float_2d d_rigidbody;
+  void rigid_upload();
 
   DAT::t_float_2d_lr d_fieldfix_array_particle;
   DAT::t_float_2d_lr d_fieldfix_array_grid;

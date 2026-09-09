@@ -42,6 +42,7 @@
 #include "kokkos.h"
 #include "sparta_masks.h"
 #include "surf_collide_specular_kokkos.h"
+#include "fix_rigid.h"
 #include "kokkos_base.h"
 
 using namespace SPARTA_NS;
@@ -138,6 +139,7 @@ UpdateKokkos::UpdateKokkos(SPARTA *sparta) : Update(sparta),
   nslist_surf = nslist_isurf = nslist_react_isurf = nslist_react_surf = 0;
   nslist_coll_tally = nslist_react_tally = 0;
   nsc_index_cached = -1;
+  rigid_on = 0;
 
   // the Kokkos views of Particle/Grid/Surf are populated from the host data
   //   once, by setup() when prewrap is set, which then clears prewrap
@@ -281,6 +283,10 @@ void UpdateKokkos::init()
     }
   }
 
+  // setup when using fix rigid for rigid body objects comprised of surfs
+
+  init_rigid();
+
   // checks on external field options
 
   if (fstyle == CFIELD) {
@@ -398,6 +404,52 @@ void UpdateKokkos::setup()
      balance calls mid-run, so the copies held here have to be retaken
      whenever the cell views are, not once at setup
 ------------------------------------------------------------------------- */
+
+/* ----------------------------------------------------------------------
+   rebuild the host rigidmap (Update::build_rigidmap) and mirror it on
+     the device, one entry per local+ghost surf
+   called whenever the surf arrays change (fix rigid setup and
+     grid_changed), and once per run from init_rigid()
+------------------------------------------------------------------------- */
+
+void UpdateKokkos::build_rigidmap()
+{
+  Update::build_rigidmap();
+  if (!rigidflag || !nfixrigid) return;
+
+  int n = surf->nlocal + surf->nghost;
+  if ((int) k_rigidmap.extent(0) < n)
+    k_rigidmap = DAT::tdual_int_1d("update:rigidmap",n);
+  auto h_rigidmap = k_rigidmap.view_host();
+  for (int i = 0; i < n; i++) h_rigidmap(i) = rigidmap[i];
+  k_rigidmap.modify_host();
+  k_rigidmap.sync_device();
+  d_rigidmap = k_rigidmap.view_device();
+}
+
+/* ----------------------------------------------------------------------
+   upload the start-of-step kinematics of every rigid body for the move
+     kernel: xcm, vcm, omega, all in the space frame, set by
+     FixRigid::start_of_step() which runs before the move
+------------------------------------------------------------------------- */
+
+void UpdateKokkos::rigid_upload()
+{
+  if ((int) k_rigidbody.extent(0) < nfixrigid)
+    k_rigidbody = DAT::tdual_float_2d("update:rigidbody",nfixrigid,9);
+  auto h_rigidbody = k_rigidbody.view_host();
+  for (int m = 0; m < nfixrigid; m++) {
+    FixRigid *f = fixrigidlist[m];
+    for (int k = 0; k < 3; k++) {
+      h_rigidbody(m,k) = f->xcm[k];
+      h_rigidbody(m,3+k) = f->vcm[k];
+      h_rigidbody(m,6+k) = f->omega[k];
+    }
+  }
+  k_rigidbody.modify_host();
+  k_rigidbody.sync_device();
+  d_rigidbody = k_rigidbody.view_device();
+}
 
 void UpdateKokkos::grid_index_refresh()
 {
@@ -640,6 +692,15 @@ template < int DIM, int SURF, int REACT, int OPT > void UpdateKokkos::move()
   // one or more loops over particles
   // first iteration = all my particles
   // subsequent iterations = received particles
+
+  // mobile rigid bodies: upload this step's body kinematics; the per-surf
+  //   body map was uploaded when the surf arrays last changed
+
+  rigid_on = 0;
+  if (rigidflag && nfixrigid) {
+    rigid_upload();
+    rigid_on = 1;
+  }
 
   while (1) {
 
@@ -1203,6 +1264,8 @@ void UpdateKokkos::operator()(TagUpdateMove<DIM,SURF,REACT,OPT,ATOMIC_REDUCTION>
   int side,minsurf,nsurf,cflag,isurf,exclude,stuck_iterate;
   double dtremain,frac,newfrac,param,minparam,rnew,dtsurf,tc,tmp;
   double xnew[3],xhold[3],xc[3],vc[3],minxc[3],minvc[3];
+  int minmoving = 0;
+  double nhit[3],vwallhit[3],minnorm[3],minvwall[3];
   double *x,*v;
   Surf::Tri *tri;
   Surf::Line *line;
@@ -1658,8 +1721,10 @@ void UpdateKokkos::operator()(TagUpdateMove<DIM,SURF,REACT,OPT,ATOMIC_REDUCTION>
 
         // for axisymmetric, dtsurf = time that particle stays in cell
         // used as arg to axi_line_intersect()
+        // for rigid bodies, dtsurf = same quantity, the time window of
+        //   the moving-surf intersection tests
 
-        if (DIM == 1) {
+        if (DIM == 1 || rigid_on) {
           if (outface == INTERIOR) dtsurf = dtremain;
           else dtsurf = dtremain * frac;
         }
@@ -1678,22 +1743,60 @@ void UpdateKokkos::operator()(TagUpdateMove<DIM,SURF,REACT,OPT,ATOMIC_REDUCTION>
         for (int m = 0; m < nsurf; m++) {
           isurf = d_csurfs.entries(csurfs_begin + m);
 
+          // skip collisions with previous surf, but not for a moving
+          //   rigid-body surf, which can advance into a just-reflected
+          //   particle; immediate re-hits are rejected by the side test
+          // moving-surf tests use the body motion for this step: x is the
+          //   particle position at time dt-dtremain from the start of the
+          //   step and its path spans the next dtsurf
+
+          int ibody = -1;
+          if (rigid_on) ibody = d_rigidmap(isurf);
+
           if (DIM > 1) {
-            if (isurf == exclude) continue;
+            if (isurf == exclude && ibody < 0) continue;
           }
           if (DIM == 3) {
             tri = &d_tris[isurf];
-            hitflag = GeometryKokkos::
-              line_tri_intersect(x,xnew,
-                                 tri->p1,tri->p2,
-                                 tri->p3,tri->norm,xc,param,side);
+            if (ibody >= 0) {
+              double bxcm[3],bvcm[3],bomega[3];
+              for (int k = 0; k < 3; k++) {
+                bxcm[k] = d_rigidbody(ibody,k);
+                bvcm[k] = d_rigidbody(ibody,3+k);
+                bomega[k] = d_rigidbody(ibody,6+k);
+              }
+              hitflag = GeometryKokkos::
+                line_tri_moving_intersect(x,v,dt-dtremain,dtsurf,
+                                          tri->p1,tri->p2,tri->p3,
+                                          tri->norm,bxcm,bvcm,bomega,
+                                          xc,nhit,vwallhit,param,side);
+            } else {
+              hitflag = GeometryKokkos::
+                line_tri_intersect(x,xnew,
+                                   tri->p1,tri->p2,
+                                   tri->p3,tri->norm,xc,param,side);
+            }
           }
           if (DIM == 2) {
             line = &d_lines[isurf];
-            hitflag = GeometryKokkos::
-              line_line_intersect(x,xnew,
-                                  line->p1,line->p2,
-                                  line->norm,xc,param,side);
+            if (ibody >= 0) {
+              double bxcm[3],bvcm[3],bomega[3];
+              for (int k = 0; k < 3; k++) {
+                bxcm[k] = d_rigidbody(ibody,k);
+                bvcm[k] = d_rigidbody(ibody,3+k);
+                bomega[k] = d_rigidbody(ibody,6+k);
+              }
+              hitflag = GeometryKokkos::
+                line_line_moving_intersect(x,v,dt-dtremain,dtsurf,
+                                           line->p1,line->p2,
+                                           line->norm,bxcm,bvcm,bomega,
+                                           xc,nhit,vwallhit,param,side);
+            } else {
+              hitflag = GeometryKokkos::
+                line_line_intersect(x,xnew,
+                                    line->p1,line->p2,
+                                    line->norm,xc,param,side);
+            }
           }
           if (DIM == 1) {
             line = &d_lines[isurf];
@@ -1803,6 +1906,21 @@ void UpdateKokkos::operator()(TagUpdateMove<DIM,SURF,REACT,OPT,ATOMIC_REDUCTION>
               minvc[1] = vc[1];
               minvc[2] = vc[2];
             }
+
+            // for hit on moving surf, save normal and
+            // wall velocity at hit time and hit point
+
+            if (rigid_on) {
+              if (ibody >= 0) {
+                minmoving = 1;
+                minnorm[0] = nhit[0];
+                minnorm[1] = nhit[1];
+                minnorm[2] = nhit[2];
+                minvwall[0] = vwallhit[0];
+                minvwall[1] = vwallhit[1];
+                minvwall[2] = vwallhit[2];
+              } else minmoving = 0;
+            }
           }
 
         } // END of for loop over surfs
@@ -1839,14 +1957,28 @@ void UpdateKokkos::operator()(TagUpdateMove<DIM,SURF,REACT,OPT,ATOMIC_REDUCTION>
             iorig = particle_i;
           const int n = DIM == 3 ? tri->isc : line->isc;
 
+          // for hit on moving surf: perform the collision in the frame of
+          //   the moving wall, with the surf normal at the hit time, then
+          //   add the wall velocity back, so surf tallies see space-frame
+          //   velocities and the full momentum exchange with the wall
+
+          const int moving = rigid_on && minmoving;
+          if (moving) {
+            v[0] -= minvwall[0];
+            v[1] -= minvwall[1];
+            v[2] -= minvwall[2];
+          }
+
           if (DIM == 3) {
             jpart = surf_collide_dispatch<REACT,ATOMIC_REDUCTION>
-              (n,ipart,dtremain,minsurf,tri->norm,tri->isr,reaction,d_retry,d_nlocal);
+              (n,ipart,dtremain,minsurf,moving ? minnorm : tri->norm,
+               tri->isr,reaction,d_retry,d_nlocal);
           }
 
           if (DIM != 3) {
             jpart = surf_collide_dispatch<REACT,ATOMIC_REDUCTION>
-              (n,ipart,dtremain,minsurf,line->norm,line->isr,reaction,d_retry,d_nlocal);
+              (n,ipart,dtremain,minsurf,moving ? minnorm : line->norm,
+               line->isr,reaction,d_retry,d_nlocal);
           }
 
           if (jpart) {
@@ -1855,6 +1987,19 @@ void UpdateKokkos::operator()(TagUpdateMove<DIM,SURF,REACT,OPT,ATOMIC_REDUCTION>
             jpart->flag = PSURF + 1 + minsurf;
             jpart->dtremain = dtremain;
             jpart->weight = particle_i.weight;
+          }
+
+          if (moving) {
+            if (ipart) {
+              ipart->v[0] += minvwall[0];
+              ipart->v[1] += minvwall[1];
+              ipart->v[2] += minvwall[2];
+            }
+            if (jpart) {
+              jpart->v[0] += minvwall[0];
+              jpart->v[1] += minvwall[1];
+              jpart->v[2] += minvwall[2];
+            }
           }
 
           if (nsurf_tally) {

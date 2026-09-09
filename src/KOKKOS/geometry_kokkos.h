@@ -1387,4 +1387,162 @@ double tri_fraction(double *x, double *v0, double *v1, double *v2)
 
 /* ---------------------------------------------------------------------- */
 
+
+/* ----------------------------------------------------------------------
+   helpers for intersection of a particle path with a moving rigid body
+   device versions of the Geometry:: functions of the same names,
+     see geometry.cpp for the derivation
+   the body translates at constant vcm and rotates at constant omega
+     about its center-of-mass over the course of one timestep
+   time T is measured from the start of the step, when the body's
+     line/tri elements are at their stored positions
+------------------------------------------------------------------------- */
+
+KOKKOS_INLINE_FUNCTION
+void body_frame_point(const double *pt, double t,
+                      const double *xcm0, const double *vcm,
+                      const double *omega, double *y)
+{
+  double xcmt[3],delta[3],axis[3],q[4],dnew[3];
+  double rot[3][3];
+
+  xcmt[0] = xcm0[0] + vcm[0]*t;
+  xcmt[1] = xcm0[1] + vcm[1]*t;
+  xcmt[2] = xcm0[2] + vcm[2]*t;
+  MathExtraKokkos::sub3(pt,xcmt,delta);
+
+  double wmag = MathExtraKokkos::len3(omega);
+  double angle = wmag*t;
+
+  if (angle != 0.0) {
+    axis[0] = omega[0]/wmag;
+    axis[1] = omega[1]/wmag;
+    axis[2] = omega[2]/wmag;
+    MathExtraKokkos::axisangle_to_quat(axis,-angle,q);
+    MathExtraKokkos::quat_to_mat(q,rot);
+    MathExtraKokkos::matvec(rot,delta,dnew);
+    MathExtraKokkos::add3(xcm0,dnew,y);
+  } else MathExtraKokkos::add3(xcm0,delta,y);
+}
+
+KOKKOS_INLINE_FUNCTION
+void space_frame_vector(const double *vec, double t, const double *omega,
+                        double *result)
+{
+  double axis[3],q[4];
+  double rot[3][3];
+
+  double wmag = MathExtraKokkos::len3(omega);
+  double angle = wmag*t;
+
+  if (angle != 0.0) {
+    axis[0] = omega[0]/wmag;
+    axis[1] = omega[1]/wmag;
+    axis[2] = omega[2]/wmag;
+    MathExtraKokkos::axisangle_to_quat(axis,angle,q);
+    MathExtraKokkos::quat_to_mat(q,rot);
+    MathExtraKokkos::matvec(rot,vec,result);
+  } else {
+    result[0] = vec[0];
+    result[1] = vec[1];
+    result[2] = vec[2];
+  }
+}
+
+/* ----------------------------------------------------------------------
+   detect intersection between the path of a moving particle and
+     a line segment which is part of a moving rigid body
+   same args and semantics as Geometry::line_line_moving_intersect()
+------------------------------------------------------------------------- */
+
+KOKKOS_INLINE_FUNCTION
+bool line_line_moving_intersect(double *start, double *v,
+                                double t0, double tsub,
+                                double *v0, double *v1, double *norm,
+                                const double *xcm0, const double *vcm,
+                                const double *omega,
+                                double *point, double *nhit, double *vwall,
+                                double &param, int &side)
+{
+  double stop[3],y0[3],y1[3],yc[3];
+
+  body_frame_point(start,t0,xcm0,vcm,omega,y0);
+
+  stop[0] = start[0] + v[0]*tsub;
+  stop[1] = start[1] + v[1]*tsub;
+  stop[2] = 0.0;
+  body_frame_point(stop,t0+tsub,xcm0,vcm,omega,y1);
+  y0[2] = y1[2] = 0.0;
+
+  bool hit = line_line_intersect(y0,y1,v0,v1,norm,yc,param,side);
+  if (!hit) return false;
+
+  double thit = t0 + param*tsub;
+  point[0] = start[0] + v[0]*(param*tsub);
+  point[1] = start[1] + v[1]*(param*tsub);
+  point[2] = 0.0;
+
+  space_frame_vector(norm,thit,omega,nhit);
+
+  double xcmt[3],delta[3];
+  xcmt[0] = xcm0[0] + vcm[0]*thit;
+  xcmt[1] = xcm0[1] + vcm[1]*thit;
+  xcmt[2] = xcm0[2] + vcm[2]*thit;
+  MathExtraKokkos::sub3(point,xcmt,delta);
+  MathExtraKokkos::cross3(omega,delta,vwall);
+  vwall[0] += vcm[0];
+  vwall[1] += vcm[1];
+  vwall[2] += vcm[2];
+
+  return true;
+}
+
+/* ----------------------------------------------------------------------
+   detect intersection between the path of a moving particle and
+     a triangle which is part of a moving rigid body
+   same args and semantics as Geometry::line_tri_moving_intersect()
+------------------------------------------------------------------------- */
+
+KOKKOS_INLINE_FUNCTION
+bool line_tri_moving_intersect(double *start, double *v,
+                               double t0, double tsub,
+                               double *v0, double *v1, double *v2,
+                               double *norm,
+                               const double *xcm0, const double *vcm,
+                               const double *omega,
+                               double *point, double *nhit, double *vwall,
+                               double &param, int &side)
+{
+  double stop[3],y0[3],y1[3],yc[3];
+
+  body_frame_point(start,t0,xcm0,vcm,omega,y0);
+
+  stop[0] = start[0] + v[0]*tsub;
+  stop[1] = start[1] + v[1]*tsub;
+  stop[2] = start[2] + v[2]*tsub;
+  body_frame_point(stop,t0+tsub,xcm0,vcm,omega,y1);
+
+  bool hit = line_tri_intersect(y0,y1,v0,v1,v2,norm,yc,param,side);
+  if (!hit) return false;
+
+  double thit = t0 + param*tsub;
+  point[0] = start[0] + v[0]*(param*tsub);
+  point[1] = start[1] + v[1]*(param*tsub);
+  point[2] = start[2] + v[2]*(param*tsub);
+
+  space_frame_vector(norm,thit,omega,nhit);
+
+  double xcmt[3],delta[3];
+  xcmt[0] = xcm0[0] + vcm[0]*thit;
+  xcmt[1] = xcm0[1] + vcm[1]*thit;
+  xcmt[2] = xcm0[2] + vcm[2]*thit;
+  MathExtraKokkos::sub3(point,xcmt,delta);
+  MathExtraKokkos::cross3(omega,delta,vwall);
+  vwall[0] += vcm[0];
+  vwall[1] += vcm[1];
+  vwall[2] += vcm[2];
+
+  return true;
+}
+
 }

@@ -442,9 +442,8 @@ distributed surfs each processor stores a replicated copy of the
 and ghost grid cells, so the total surf collection can be much larger
 than any one processor's memory.  Both {remap} modes work with
 distributed surfs.  Rigid bodies cannot be used with axisymmetric
-domains, or with the KOKKOS package's particle mover.  Body surf
-elements cannot be transparent and cannot have surface reactions
-assigned to them.
+domains.  Body surf elements cannot be transparent and cannot have
+surface reactions assigned to them.
 
 Surfs cannot be removed, nor the body's surf group changed, after a
 fix rigid command is defined; surfs may be appended (they become
@@ -467,6 +466,20 @@ If this fix is deleted via the "unfix"_unfix.html command, the
 "global rigid"_global.html setting should also be set to {no}.  The
 body then remains as a static object at its current position which
 particles continue to collide with.
+
+:line
+
+This fix is part of the KOKKOS package, as the {rigid/kk} style, which
+is selected automatically by the "-sf kk"_Section_start.html#start_7
+command-line switch.  The KOKKOS version performs the moving-surf
+collision tests in the KOKKOS particle mover, on the GPU or host
+threads.  The body time integration, the summation of force and
+torque, the per-step re-assignment of body surfs to grid cells, and
+the deletion of particles inside the body run on the host, so each
+timestep the particle data is copied from the device to the host and
+back.  This limits performance on GPUs for large particle counts but
+gives identical results to the non-KOKKOS version.  The compute used
+by the fix must be the {surf/kk} style, which "-sf kk" also selects.
 
 [Related commands:]
 

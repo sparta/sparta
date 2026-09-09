@@ -97,8 +97,7 @@ FixRigid::FixRigid(SPARTA *sparta, int narg, char **arg) :
   gridmigrate = 1;
 
   if (!surf->exist) error->all(FLERR,"Fix rigid requires surf elements exist");
-  if (sparta->kokkos)
-    error->all(FLERR,"Cannot yet use fix rigid with KOKKOS");
+  kokkosable = 0;
   if (domain->axisymmetric)
     error->all(FLERR,"Fix rigid cannot be used with axisymmetric domains");
   if (surf->implicit)
@@ -431,12 +430,19 @@ void FixRigid::init()
   if (update->rigidflag == 0)
     error->all(FLERR,"Cannot use fix rigid unless global rigid is set");
 
+  // with the KOKKOS package active, only the rigid/kk variant brackets
+  //   its host-side work with the required device transfers
+
+  if (sparta->kokkos && !kokkosable)
+    error->all(FLERR,"Must use fix rigid/kk with KOKKOS");
+
   // check that specified compute is valid for use with fix rigid
   // NOTE: check that it operates on same surf group ?
 
   int n = modify->find_compute(csurfID);
   if (n < 0) error->all(FLERR,"Could not find fix rigid compute ID");
-  if (strcmp(modify->compute[n]->style,"surf") != 0)
+  if (strcmp(modify->compute[n]->style,"surf") != 0 &&
+      strcmp(modify->compute[n]->style,"surf/kk") != 0)
     error->all(FLERR,"Fix rigid compute is not style surf");
   csurf = (ComputeSurf *) modify->compute[n];
   if (csurf->per_surf_flag == 0)
@@ -514,7 +520,7 @@ void FixRigid::init()
 
   for (int ifix = 0; ifix < modify->nfix; ifix++) {
     if (modify->fix[ifix] == this) continue;
-    if (strcmp(modify->fix[ifix]->style,"rigid") != 0) continue;
+    if (!fix_rigid_style(modify->fix[ifix]->style)) continue;
     FixRigid *other = (FixRigid *) modify->fix[ifix];
     for (int i = 0; i < nsurf; i++)
       if (other->body_elem(sids[i]) >= 0)
@@ -528,8 +534,8 @@ void FixRigid::init()
 
   int myindex = modify->find_fix(id);
   for (int ifix = 0; ifix < myindex; ifix++)
-    if (strcmp(modify->fix[ifix]->style,"balance") == 0 ||
-        strcmp(modify->fix[ifix]->style,"adapt") == 0)
+    if (strncmp(modify->fix[ifix]->style,"balance",7) == 0 ||
+        strncmp(modify->fix[ifix]->style,"adapt",5) == 0)
       error->all(FLERR,
                  "Fix rigid must be defined before fix balance or fix adapt");
 }

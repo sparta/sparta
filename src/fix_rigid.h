@@ -24,8 +24,17 @@ FixStyle(rigid,FixRigid)
 #include "fix.h"
 #include "my_page.h"
 #include <map>
+#include <string.h>
 
 namespace SPARTA_NS {
+
+// 1 if a fix style string names a fix rigid, with or without the KOKKOS suffix
+
+inline int fix_rigid_style(const char *style)
+{
+  if (strncmp(style,"rigid",5) != 0) return 0;
+  return (style[5] == '\0' || strcmp(&style[5],"/kk") == 0);
+}
 
 class FixRigid : public Fix {
  public:
@@ -78,6 +87,7 @@ class FixRigid : public Fix {
   int massflag,comflag,vcomflag,moiflag,angmomflag;
 
   double fext[3];         // constant external force on the COM
+  int kokkosable;         // 1 if this is the KOKKOS variant (rigid/kk)
 
   int nsurf;     // # of surfs which comprise surface of rigid body
   int *slist;    // list of local surf indices for rigid body surfs

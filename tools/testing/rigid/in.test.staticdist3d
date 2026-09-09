@@ -1,0 +1,47 @@
+# TEST: 3d body next to a large static surface, both remap modes
+# a gas-driven unit cube starts next to a 1200-triangle static sphere
+# of radius 1 (from examples/sphere), in a periodic box with drifting gas
+# with distributed surfs on several procs most sphere triangles are not
+# stored locally on every proc, exercising the ghost-surf handling of
+# the mover and the local copies of body surfs in 3d
+# remap cutcell and remap incremental must give identical trajectories
+# run as: -var mode cutcell   (or incremental)
+
+seed                12345
+
+variable            dist index 0
+if "${dist} == 1" then "global surfs explicit/distributed"
+dimension           3
+global              comm/sort yes
+
+boundary            p p p
+
+create_box          0 8 0 8 0 8
+create_grid         16 16 16
+balance_grid        rcb cell
+
+global              nrho 1.0 fnum 0.01 surfmax 400
+
+species             air.species N
+mixture             air N vstream 150.0 40.0 20.0 temp 273.0
+
+read_surf           sdata.cube group body trans 4.0 4.0 4.0
+read_surf           data.sphere group wall trans 6.5 4.5 4.0
+surf_collide        1 specular
+surf_modify         all collide 1
+
+timestep            0.0001
+
+compute             c1 surf body all fx fy fz tx ty tz com 4.0 4.0 4.0
+
+global              rigid yes
+
+fix                 1 rigid body c1 body mass 1.0e-22 com 4.0 4.0 4.0 &
+                    vcom 0 0 0 moi 1.7e-23 1.7e-23 1.7e-23 0 0 0 &
+                    angmom 0 0 0 remap ${mode} push 1.0e-18 0.3
+
+create_particles    air n 20000
+
+stats               100
+stats_style         step np f_1[1] f_1[2] f_1[3] f_1[13] f_1[14] f_1[15] f_1
+run                 300

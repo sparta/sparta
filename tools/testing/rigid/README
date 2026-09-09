@@ -22,6 +22,9 @@ staticdist    gas-driven body next to a 200-segment static circle:
               identical trajectories in both remap modes, no particles
               deleted; on several procs with --dist most static surfs
               are ghost surfs, exercising ghost-cell collisions
+staticdist3d  3d: cube body drifting past a 1200-triangle static sphere,
+              identical trajectories in both remap modes, no deletions;
+              with --dist on several procs the sphere is mostly ghost surfs
 splitcell     body sweeping alongside a diagonal wall that creates
               split cells: particles entering the swept split cells
               are reflected (no deletions), both remap modes agree
@@ -44,6 +47,11 @@ Usage:
 
   python3 run_tests.py --exe ../../../src/spa_serial
   python3 run_tests.py --exe ../../../src/spa_mpi --mpi "mpirun -np 4"
+  python3 run_tests.py --exe ../../../build/src/spa_kokkos_omp --args "-k on -sf kk"
+
+The --args string is passed to SPARTA after the executable, e.g. to
+run the KOKKOS package (fix rigid/kk).  A KOKKOS build with
+SPARTA_KOKKOS_EXACT reproduces the non-KOKKOS results exactly.
 
 Passing --dist reruns the subset of tests whose decks support
 distributed surfs (global surfs explicit/distributed): all but the
