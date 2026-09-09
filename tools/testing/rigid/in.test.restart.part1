@@ -1,0 +1,33 @@
+# TEST: restart continuation, first half
+# writes a restart file plus the fix rigid outfile, which together hold
+# everything in.test.restart.part2 needs to continue
+# a body is driven into a static wall by push-off springs, with no
+# particles, so the trajectory is deterministic.  in.test.restart.part1
+# and .part2 split the same run in two across a write_restart/read_restart
+# and must reproduce this run's final state.
+# run as: -var nrun <steps>
+seed	    	    12345
+variable            nrun index 500
+dimension   	    2
+boundary            r r p
+create_box  	    0 10 0 10 -0.5 0.5
+create_grid 	    20 20 1
+global		    nrho 1.0 fnum 0.001
+species		    air.species N
+mixture		    air N vstream 0 0 0 temp 273.0
+read_surf           data.square group body
+read_surf           data.wall group wall
+surf_collide	    1 specular
+surf_modify         all collide 1
+timestep 	    0.0001
+compute             csurf surf body all fx fy fz tx ty tz com 5 5 0
+global              rigid yes
+fix		    1 rigid body csurf body mass 1.0e-22 com 5 5 0 &
+                    vcom 50 0 0 &
+		    moi 8.3333333e-24 8.3333333e-24 1.6666667e-23 0 0 0 &
+                    angmom 0 0 0 push 1.0e-18 0.5 pushbound yes &
+                    outfile tmp.rigid.state ${nrun}
+stats		    ${nrun}
+stats_style         step f_1[1] f_1[4] f_1[15]
+run 		    ${nrun}
+write_restart       tmp.rigid.restart

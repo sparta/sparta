@@ -25,6 +25,15 @@ staticdist    gas-driven body next to a 200-segment static circle:
 staticdist3d  3d: cube body drifting past a 1200-triangle static sphere,
               identical trajectories in both remap modes, no deletions;
               with --dist on several procs the sphere is mostly ghost surfs
+restart       restart continuation: a deterministic push-off run split
+              across write_restart/read_restart, with the body state
+              carried by the fix outfile/infile, must reproduce the
+              one-shot trajectory, including splits made while the body
+              is in contact with the wall
+gridchange    the grid changing underneath the body: a no-particle
+              push-off trajectory must be identical with and without
+              fix balance (random style) and fix adapt, which rebuild
+              and re-partition the grid mid-run
 splitcell     body sweeping alongside a diagonal wall that creates
               split cells: particles entering the swept split cells
               are reflected (no deletions), both remap modes agree

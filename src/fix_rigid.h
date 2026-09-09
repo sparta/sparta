@@ -87,6 +87,15 @@ class FixRigid : public Fix {
   int massflag,comflag,vcomflag,moiflag,angmomflag;
 
   double fext[3];         // constant external force on the COM
+
+  // force/torque read from an infile, for run continuation
+  // the body moves on a step under the force accumulated on the previous
+  //   one, so a continuation which starts from zero force loses one
+  //   step's impulse; the outfile writes them and read_infile restores
+  //   them, after setup_body() has zeroed them
+
+  int forceinfile;
+  double fcm_infile[3],torque_infile[3];
   int kokkosable;         // 1 if this is the KOKKOS variant (rigid/kk)
 
   int nsurf;     // # of surfs which comprise surface of rigid body

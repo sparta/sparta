@@ -126,6 +126,10 @@ FixRigid::FixRigid(SPARTA *sparta, int narg, char **arg) :
   slist = NULL;
   displace = NULL;
 
+  forceinfile = 0;
+  fcm_infile[0] = fcm_infile[1] = fcm_infile[2] = 0.0;
+  torque_infile[0] = torque_infile[1] = torque_infile[2] = 0.0;
+
   int iarg = 4;
   if (strcmp(arg[iarg],"body") == 0) {
     if (iarg+22 > narg) error->all(FLERR,"Fix rigid body args not valid");
@@ -295,6 +299,16 @@ FixRigid::FixRigid(SPARTA *sparta, int narg, char **arg) :
   // setup the rigid body
 
   setup_body();
+
+  // restore the force/torque of the step before a continuation, which
+  //   setup_body() zeroed; the body is moved by them on the first step
+
+  if (forceinfile) {
+    for (int j = 0; j < 3; j++) {
+      fcm[j] = fcm_infile[j];
+      torque[j] = torque_infile[j];
+    }
+  }
 
   // irigid = per-surf flags, indexed by local surf index
   // -1 for static surfs, else index into slist of body surfs
@@ -1112,13 +1126,19 @@ void FixRigid::write_outfile()
 
   fprintf(fp,"# rigid body state from fix %s rigid at timestep " BIGINT_FORMAT
           "\n",id,update->ntimestep);
+  // fcm/torque are written after the 16 body params, so that a
+  //   continuation run resumes with the force and torque which would
+  //   have moved the body on the next step
+
   fprintf(fp,"# mtotal xcm ycm zcm ixx iyy izz ixy ixz iyz "
-          "vxcm vycm vzcm lx ly lz\n");
+          "vxcm vycm vzcm lx ly lz fx fy fz tx ty tz\n");
   fprintf(fp,"%.15g %.15g %.15g %.15g %.15g %.15g %.15g %.15g %.15g %.15g "
+          "%.15g %.15g %.15g %.15g %.15g %.15g "
           "%.15g %.15g %.15g %.15g %.15g %.15g\n",
           massbody,xcm[0],xcm[1],xcm[2],
           ispace[0],ispace[1],ispace[2],ispace[3],ispace[4],ispace[5],
-          vcm[0],vcm[1],vcm[2],angmom[0],angmom[1],angmom[2]);
+          vcm[0],vcm[1],vcm[2],angmom[0],angmom[1],angmom[2],
+          fcm[0],fcm[1],fcm[2],torque[0],torque[1],torque[2]);
 
   fclose(fp);
 }
@@ -1147,10 +1167,13 @@ void FixRigid::read_infile(char *filename)
 
     // check that line has correct number of words
     
-    int ncorrect = 16;
+    // 16 params, optionally followed by the force and torque which
+    //   act on the body during the first step of a continuation run
+
     int nwords = input->count_words(line);
-    if (nwords != ncorrect)
+    if (nwords != 16 && nwords != 22)
       error->one(FLERR,"Incorrect rigid body format in fix rigid infile");
+    if (nwords == 22) forceinfile = 1;
 
     // convert each word to a rigid body param
     // totalmass, xcm, moi, vcm, angmom
@@ -1172,6 +1195,13 @@ void FixRigid::read_infile(char *filename)
     angmom[1] = atof(strtok(NULL," \t\n\r\f"));
     angmom[2] = atof(strtok(NULL," \t\n\r\f"));
 
+    if (forceinfile) {
+      for (int j = 0; j < 3; j++)
+        fcm_infile[j] = atof(strtok(NULL," \t\n\r\f"));
+      for (int j = 0; j < 3; j++)
+        torque_infile[j] = atof(strtok(NULL," \t\n\r\f"));
+    }
+
     fclose(fp);
   }
 
@@ -1182,6 +1212,9 @@ void FixRigid::read_infile(char *filename)
   MPI_Bcast(moi,6,MPI_DOUBLE,0,world);
   MPI_Bcast(vcm,3,MPI_DOUBLE,0,world);
   MPI_Bcast(angmom,3,MPI_DOUBLE,0,world);
+  MPI_Bcast(&forceinfile,1,MPI_INT,0,world);
+  MPI_Bcast(fcm_infile,3,MPI_DOUBLE,0,world);
+  MPI_Bcast(torque_infile,3,MPI_DOUBLE,0,world);
 }
 
 /* ----------------------------------------------------------------------

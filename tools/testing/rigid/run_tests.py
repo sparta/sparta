@@ -15,6 +15,7 @@ Exit code = number of failed tests.
 """
 
 import argparse
+import glob
 import os
 import shlex
 import subprocess
@@ -292,6 +293,103 @@ def test_staticdist3d(exe_cmd):
     return fails
 
 
+def test_restart(exe_cmd):
+    # restart continuation: a deterministic push-off run split across a
+    # write_restart/read_restart must reproduce the one-shot trajectory.
+    # the split points straddle the contact with the wall, which is the
+    # sensitive case: the body moves on a step under the force and torque
+    # accumulated on the previous one, so a continuation which resumed
+    # with zero force would lose that impulse
+    total = 1500
+    fails = []
+    rc, out = run_deck(exe_cmd, "in.test.restart.oneshot",
+                       extra=["-var", "nrun", str(total)])
+    if rc:
+        return ["one-shot run failed with exit code %d" % rc]
+    rows = parse_stats(out)
+    if not rows:
+        return ["one-shot run produced no stats output"]
+    ref = rows[-1]
+
+    # the body must actually reach the wall and rebound, else the test
+    # never exercises a restart under load
+
+    if ref["f_1[4]"] > -40.0:
+        return ["one-shot final vx = %.6g, body did not rebound; test "
+                "geometry is broken" % ref["f_1[4]"]]
+
+    for split in (300, 700, 1100):
+        rc, _ = run_deck(exe_cmd, "in.test.restart.part1",
+                         extra=["-var", "nrun", str(split)])
+        if rc:
+            fails.append("split %d: first half failed with exit code %d"
+                         % (split, rc))
+            continue
+        rc, out2 = run_deck(exe_cmd, "in.test.restart.part2",
+                            extra=["-var", "nrun", str(total - split)])
+        if rc:
+            fails.append("split %d: continuation failed with exit code %d"
+                         % (split, rc))
+            continue
+        rows2 = parse_stats(out2)
+        if not rows2:
+            fails.append("split %d: continuation produced no stats output"
+                         % split)
+            continue
+        last = rows2[-1]
+        for key, name in (("f_1[1]", "xcm"), ("f_1[4]", "vx"),
+                          ("f_1[15]", "omega")):
+            if not approx(last[key], ref[key], rel=1e-7, abs_=1e-12):
+                fails.append("split %d: %s = %.12g differs from one-shot "
+                             "%.12g" % (split, name, last[key], ref[key]))
+
+    for f in glob.glob(os.path.join(THISDIR, "tmp.rigid.*")):
+        os.remove(f)
+    return fails
+
+
+def test_gridchange(exe_cmd):
+    # the grid changing underneath the body must not perturb it: a
+    # no-particle push-off trajectory is identical with and without
+    # fix balance (random style, full rebuild every 25 steps) and
+    # fix adapt (refine/coarsen on the body surfs every 100 steps)
+    results = {}
+    fails = []
+    for pert in ("none", "balance", "adapt"):
+        rc, out = run_deck(exe_cmd, "in.test.gridchange",
+                           extra=["-var", "pert", pert])
+        if rc:
+            fails.append("pert %s: run failed with exit code %d" % (pert, rc))
+            continue
+        rows = parse_stats(out)
+        if not rows:
+            fails.append("pert %s: no stats output" % pert)
+            continue
+        results[pert] = rows
+    if fails:
+        return fails
+    ref = results["none"]
+    for pert in ("balance", "adapt"):
+        if len(results[pert]) != len(ref):
+            fails.append("pert %s: %d stats rows vs %d unperturbed"
+                         % (pert, len(results[pert]), len(ref)))
+            continue
+        for r, r0 in zip(results[pert], ref):
+            for key in ("f_1[1]", "f_1[4]", "f_1[15]", "f_1[20]"):
+                if not approx(r[key], r0[key], rel=1e-12, abs_=1e-30):
+                    fails.append("pert %s, step %d: %s = %.15g differs from "
+                                 "unperturbed %.15g"
+                                 % (pert, int(r["Step"]), key, r[key], r0[key]))
+                    break
+            if fails:
+                break
+    # the body must actually have bounced, else the test is vacuous
+    if ref[-1]["f_1[4]"] > -40.0:
+        fails.append("final vx = %.6g, body did not rebound; test geometry "
+                     "is broken" % ref[-1]["f_1[4]"])
+    return fails
+
+
 def test_splitcell(exe_cmd):
     # body sweeping alongside a diagonal wall that creates split cells:
     # particles entering swept split cells must be reflected, not
@@ -428,6 +526,8 @@ TESTS = [
     ("staticdist", test_staticdist),
     ("staticdist3d", test_staticdist3d),
     ("splitcell", test_splitcell),
+    ("gridchange", test_gridchange),
+    ("restart", test_restart),
     ("twobody", test_twobody),
     ("pushpair", test_pushpair),
     ("badmoi", test_badmoi),
@@ -442,7 +542,7 @@ TESTS = [
 
 DIST_TESTS = {"ballistic", "force", "bounce", "momentum", "overrun",
               "remap", "multiremap", "staticdist", "staticdist3d",
-              "splitcell", "twobody", "pushpair"}
+              "splitcell", "gridchange", "twobody", "pushpair"}
 
 
 def main():

@@ -183,6 +183,15 @@ following 16 parameters in the order listed:
 </P>
 <PRE>mtotal xcm ycm zcm ixx iyy izz ixy ixz iyz vxcm vycm vzcm lx ly lz 
 </PRE>
+<P>Six more values may follow the 16, the force and torque on the body:
+</P>
+<PRE>mtotal ... lx ly lz fx fy fz tx ty tz 
+</PRE>
+<P>A file written by the <I>outfile</I> keyword always includes them.  They
+matter only for run continuation, where they carry the force and
+torque of the last completed step into the first step of the
+continuation run; see the discussion of restarting below.
+</P>
 <P>Note that these are the same 5 parameters, each with their respective
 values, as those specified directly in the input script by the
 <I>mass</I>, <I>com</I>, <I>moi</I>, <I>vcom</I>, and <I>angmom</I> keywords.  The meaning of
@@ -386,7 +395,7 @@ gravitational field g pointing in -y would use <I>force</I> 0 -M*g 0.  For
 2d systems, fz must be zero.
 </P>
 <P>The <I>outfile</I> keyword writes the current state of the rigid body
-(same 16 parameters as the <I>infile</I> format, with the moments of
+(the same parameters as the <I>infile</I> format, with the moments of
 inertia given in the space frame for the current body orientation) to
 the specified file every Nevery timesteps.  The file is overwritten
 each time, so it always contains the most recent state.
@@ -402,6 +411,30 @@ and start the continuation run with the <I>infile</I> style pointing at
 that file.  The restart file itself stores the current (moved)
 coordinates of all surface elements, which this fix combines with the
 infile parameters to re-initialize the body-frame representation.
+</P>
+<P>The outfile stores the force and torque on the body as well as its
+position and velocity.  This is what makes the continuation exact: the
+body is moved on each step by the force and torque accumulated on the
+previous one, so a continuation which began with zero force would lose
+one step's impulse.  The error is invisible for a body in free flight,
+but not for one which is in contact with a surface, or in a dense
+flow, when the state is written.
+</P>
+<P>A <A HREF = "read_restart.html">read_restart</A> file stores the surface elements
+but not the assignment of surface collision models to them, so the
+<A HREF = "surf_collide.html">surf_collide</A> and <A HREF = "surf_modify.html">surf_modify</A>
+commands must be re-issued in the continuation script, as they must
+for any run which restarts a simulation with surfaces.
+</P>
+<P>Two caveats.  The cumulative count of deleted particles output as the
+scalar of this fix restarts at zero, since it is a diagnostic rather
+than part of the body state.  And for a body whose principal moments
+of inertia are degenerate (e.g. a square, where ixx = iyy), the
+diagonalization of the inertia tensor may pick different principal
+axes than the original run did, so the quaternion output of the
+continuation run need not match.  The body motion is unaffected: the
+shape is re-derived from the moved coordinates in whichever body frame
+is chosen.
 </P>
 <HR>
 

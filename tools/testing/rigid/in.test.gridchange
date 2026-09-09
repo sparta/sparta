@@ -1,0 +1,53 @@
+# TEST: the grid changing underneath a moving rigid body
+# a body bounces between a static wall and the box boundary with no
+# particles, so its motion comes only from push-off forces, which every
+# proc computes identically: the trajectory must not depend on the
+# decomposition, nor on the grid being rebalanced or adapted mid-run
+# fix balance with the random style migrates every cell to a random proc
+# and forces a full grid rebuild; fix adapt refines and coarsens on the
+# body's own surfs, so the refinement follows the body as it moves
+# both exercise FixRigid::grid_changed(): re-establishing local copies of
+# the body surfs, rebuilding the per-surf body map, freeing incrementally
+# re-cut cell lists, and invalidating the box->cell index
+# run as: -var pert none   (or balance, or adapt)
+
+seed	    	    12345
+
+variable            dist index 0
+variable            pert index none
+if "${dist} == 1" then "global surfs explicit/distributed"
+dimension   	    2
+boundary            r r p
+
+create_box  	    0 10 0 10 -0.5 0.5
+create_grid 	    20 20 1
+
+global		    nrho 1.0 fnum 0.001
+
+species		    air.species N
+mixture		    air N vstream 0 0 0 temp 273.0
+
+read_surf           data.square group body
+read_surf           data.wall group wall
+surf_collide	    1 specular
+surf_modify         all collide 1
+
+timestep 	    0.0001
+
+compute             csurf surf body all fx fy fz tx ty tz com 5 5 0
+
+global              rigid yes
+
+# fix rigid must be defined before any fix which changes the grid
+
+fix		    1 rigid body csurf body mass 1.0e-22 com 5 5 0 &
+                    vcom 50 0 0 &
+		    moi 8.3333333e-24 8.3333333e-24 1.6666667e-23 0 0 0 &
+                    angmom 0 0 0 push 1.0e-18 0.5 pushbound yes
+
+if "${pert} == balance" then "fix 2 balance 25 1.0 random"
+if "${pert} == adapt" then "fix 2 adapt 100 all refine coarsen surf body 0.2 maxlevel 3"
+
+stats		    250
+stats_style         step f_1[1] f_1[4] f_1[15] f_1[20]
+run 		    3500

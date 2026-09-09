@@ -1,0 +1,18 @@
+# TEST: restart continuation, second half
+# reads the grid, surfs and moved body coordinates from the restart file
+# and the body parameters from the fix rigid outfile written by part1.
+# surf_collide/surf_modify must be re-issued: a restart file stores the
+# surfs but not their collision model assignment.
+# run as: -var nrun <steps>
+seed	    	    12345
+variable            nrun index 1000
+read_restart        tmp.rigid.restart
+surf_collide	    1 specular
+surf_modify         all collide 1
+compute             csurf surf body all fx fy fz tx ty tz com 5 5 0
+global              rigid yes
+fix		    1 rigid body csurf infile tmp.rigid.state &
+                    push 1.0e-18 0.5 pushbound yes
+stats		    ${nrun}
+stats_style         step f_1[1] f_1[4] f_1[15]
+run 		    ${nrun}
