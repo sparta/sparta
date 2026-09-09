@@ -44,6 +44,7 @@ static constexpr double EPSILON = 1.0e-7;
 #define INVOKED_PER_SURF 32
 #define MAXLINE 1024
 #define EPSSURF 1.0e-4          // same as Grid
+#define EPSENCLOSED 1.0e-8      // min enclosed area/volume, relative
 #define BIG 1.0e20
 #define DELTA_MODIFY 1024
 
@@ -1692,8 +1693,10 @@ void FixRigid::setup_body()
   gather_body();
 
   // insure body surfs form a closed (watertight) object
+  //   which encloses a non-zero area or volume
 
   check_watertight();
+  check_enclosed();
 
   // tensor = inertia tensor in space frame
 		    
@@ -3243,6 +3246,77 @@ void FixRigid::check_watertight()
       sprintf(str,"Fix rigid body is not watertight: "
               "%d unmatched edges",unmatched);
     error->all(FLERR,str);
+  }
+}
+
+/* ----------------------------------------------------------------------
+   check that the body surfs enclose a non-zero area (2d) or volume (3d)
+   a zero-thickness body, e.g. a line or tri traversed once in each
+     direction, passes the watertight check but has no interior:
+     the cut-cell routines cannot mark cells inside/outside it
+   measure = signed area via the shoelace sum over the lines, or
+     signed volume via the divergence theorem over the tris,
+     each computed relative to the centroid of the body points
+     so that round-off is set by the body extent, not its position
+   only the magnitude is tested, since a watertight body with
+     inward normals (a container) is a valid object
+   all procs store all surfs, so the check is identical on every proc
+------------------------------------------------------------------------- */
+
+void FixRigid::check_enclosed()
+{
+  int i,j,k;
+  double c[3],a[3],b[3],d[3],e[3];
+
+  int npoint = dim;
+  double lo[3],hi[3];
+  lo[0] = lo[1] = lo[2] = BIG;
+  hi[0] = hi[1] = hi[2] = -BIG;
+  c[0] = c[1] = c[2] = 0.0;
+
+  for (i = 0; i < nsurf; i++)
+    for (j = 0; j < npoint; j++)
+      for (k = 0; k < 3; k++) {
+        c[k] += bodypt[i][j][k];
+        lo[k] = MIN(lo[k],bodypt[i][j][k]);
+        hi[k] = MAX(hi[k],bodypt[i][j][k]);
+      }
+  for (k = 0; k < 3; k++) c[k] /= nsurf*npoint;
+
+  double extent = MAX(hi[0]-lo[0],hi[1]-lo[1]);
+  if (dim == 3) extent = MAX(extent,hi[2]-lo[2]);
+
+  double measure = 0.0;
+
+  if (dim == 2) {
+    for (i = 0; i < nsurf; i++) {
+      MathExtra::sub3(bodypt[i][0],c,a);
+      MathExtra::sub3(bodypt[i][1],c,b);
+      measure += a[0]*b[1] - a[1]*b[0];
+    }
+    measure *= 0.5;
+  } else {
+    for (i = 0; i < nsurf; i++) {
+      MathExtra::sub3(bodypt[i][0],c,a);
+      MathExtra::sub3(bodypt[i][1],c,b);
+      MathExtra::sub3(bodypt[i][2],c,d);
+      MathExtra::cross3(b,d,e);
+      measure += MathExtra::dot3(a,e);
+    }
+    measure /= 6.0;
+  }
+
+  // scale = extent^dim, a body thinner than EPSENCLOSED of its extent
+  //   has no usable interior on any grid that could resolve it
+
+  double scale = extent*extent;
+  if (dim == 3) scale *= extent;
+
+  if (fabs(measure) <= EPSENCLOSED*scale) {
+    if (dim == 2)
+      error->all(FLERR,"Fix rigid body encloses zero area");
+    else
+      error->all(FLERR,"Fix rigid body encloses zero volume");
   }
 }
 

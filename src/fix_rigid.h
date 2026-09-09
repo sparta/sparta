@@ -245,6 +245,7 @@ class FixRigid : public Fix {
   void write_outfile();
   void setup_body();
   void check_watertight();
+  void check_enclosed();        // reject a body which encloses no area/volume
 
   void push_off();              // spring forces on this body, with
                                 //   equal-opposite reactions on others

@@ -637,6 +637,13 @@ def test_notwatertight(exe_cmd):
     return negative_test(exe_cmd, "in.test.notwatertight", "not watertight")
 
 
+def test_zerothick(exe_cmd):
+    fails = negative_test(exe_cmd, "in.test.zerothick", "encloses zero area")
+    fails += negative_test(exe_cmd, "in.test.zerothick3d",
+                           "encloses zero volume")
+    return fails
+
+
 TESTS = [
     ("ballistic", test_ballistic),
     ("force", test_force),
@@ -656,6 +663,7 @@ TESTS = [
     ("pushpair", test_pushpair),
     ("badmoi", test_badmoi),
     ("notwatertight", test_notwatertight),
+    ("zerothick", test_zerothick),
 ]
 
 # tests whose decks support -var dist 1 (global surfs explicit/distributed)

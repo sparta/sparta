@@ -1748,7 +1748,9 @@ void UpdateKokkos::operator()(TagUpdateMove<DIM,SURF,REACT,OPT,ATOMIC_REDUCTION>
           //   particle; immediate re-hits are rejected by the side test
           // moving-surf tests use the body motion for this step: x is the
           //   particle position at time dt-dtremain from the start of the
-          //   step and its path spans the next dtsurf
+          //   step and its path to xnew spans the next dtsurf
+          //   xnew is the same cell-face-clipped endpoint used for static
+          //   surfs, so a body face on a cell boundary cannot be missed
 
           int ibody = -1;
           if (rigid_on) ibody = d_rigidmap(isurf);
@@ -1766,7 +1768,7 @@ void UpdateKokkos::operator()(TagUpdateMove<DIM,SURF,REACT,OPT,ATOMIC_REDUCTION>
                 bomega[k] = d_rigidbody(ibody,6+k);
               }
               hitflag = GeometryKokkos::
-                line_tri_moving_intersect(x,v,dt-dtremain,dtsurf,
+                line_tri_moving_intersect(x,xnew,dt-dtremain,dtsurf,
                                           tri->p1,tri->p2,tri->p3,
                                           tri->norm,bxcm,bvcm,bomega,
                                           xc,nhit,vwallhit,param,side);
@@ -1787,7 +1789,7 @@ void UpdateKokkos::operator()(TagUpdateMove<DIM,SURF,REACT,OPT,ATOMIC_REDUCTION>
                 bomega[k] = d_rigidbody(ibody,6+k);
               }
               hitflag = GeometryKokkos::
-                line_line_moving_intersect(x,v,dt-dtremain,dtsurf,
+                line_line_moving_intersect(x,xnew,dt-dtremain,dtsurf,
                                            line->p1,line->p2,
                                            line->norm,bxcm,bvcm,bomega,
                                            xc,nhit,vwallhit,param,side);

@@ -766,8 +766,11 @@ static void space_frame_vector(double *vec, double t, double *omega,
 /* ----------------------------------------------------------------------
    detect intersection between the path of a moving particle and
      a line segment which is part of a moving rigid body
-   start = particle position at time T0 (from start of step)
-   v = particle velocity, constant over the path
+   start,stop = particle path endpoints at times T0 and T0+TSUB
+     stop is the same endpoint the caller uses for static surf tests,
+     i.e. already clipped to the cell face the path exits through,
+     so a body face lying exactly on a cell boundary is tested against
+     the identical path segment and cannot be tunneled through
    t0,tsub = path extends from time T0 to time T0+TSUB
    v0,v1,norm = line segment end pts and outward normal at their
      start-of-step positions
@@ -791,22 +794,18 @@ static void space_frame_vector(double *vec, double t, double *omega,
        particle/body relative motion
 ------------------------------------------------------------------------- */
 
-bool line_line_moving_intersect(double *start, double *v,
+bool line_line_moving_intersect(double *start, double *stop,
                                 double t0, double tsub,
                                 double *v0, double *v1, double *norm,
                                 double *xcm0, double *vcm, double *omega,
                                 double *point, double *nhit, double *vwall,
                                 double &param, int &side)
 {
-  double stop[3],y0[3],y1[3],yc[3];
+  double y0[3],y1[3],yc[3];
 
   // map particle path endpoints into body frame
 
   body_frame_point(start,t0,xcm0,vcm,omega,y0);
-
-  stop[0] = start[0] + v[0]*tsub;
-  stop[1] = start[1] + v[1]*tsub;
-  stop[2] = 0.0;
   body_frame_point(stop,t0+tsub,xcm0,vcm,omega,y1);
   y0[2] = y1[2] = 0.0;
 
@@ -817,8 +816,8 @@ bool line_line_moving_intersect(double *start, double *v,
   // hit pt is along the particle's straight space-frame path
 
   double thit = t0 + param*tsub;
-  point[0] = start[0] + v[0]*(param*tsub);
-  point[1] = start[1] + v[1]*(param*tsub);
+  point[0] = start[0] + param*(stop[0]-start[0]);
+  point[1] = start[1] + param*(stop[1]-start[1]);
   point[2] = 0.0;
 
   // normal at time of hit
@@ -1256,7 +1255,7 @@ bool line_tri_intersect(double *start, double *stop,
        particle/body relative motion
 ------------------------------------------------------------------------- */
 
-bool line_tri_moving_intersect(double *start, double *v,
+bool line_tri_moving_intersect(double *start, double *stop,
                                double t0, double tsub,
                                double *v0, double *v1, double *v2,
                                double *norm,
@@ -1264,15 +1263,11 @@ bool line_tri_moving_intersect(double *start, double *v,
                                double *point, double *nhit, double *vwall,
                                double &param, int &side)
 {
-  double stop[3],y0[3],y1[3],yc[3];
+  double y0[3],y1[3],yc[3];
 
   // map particle path endpoints into body frame
 
   body_frame_point(start,t0,xcm0,vcm,omega,y0);
-
-  stop[0] = start[0] + v[0]*tsub;
-  stop[1] = start[1] + v[1]*tsub;
-  stop[2] = start[2] + v[2]*tsub;
   body_frame_point(stop,t0+tsub,xcm0,vcm,omega,y1);
 
   bool hit = line_tri_intersect(y0,y1,v0,v1,v2,norm,yc,param,side);
@@ -1282,9 +1277,9 @@ bool line_tri_moving_intersect(double *start, double *v,
   // hit pt is along the particle's straight space-frame path
 
   double thit = t0 + param*tsub;
-  point[0] = start[0] + v[0]*(param*tsub);
-  point[1] = start[1] + v[1]*(param*tsub);
-  point[2] = start[2] + v[2]*(param*tsub);
+  point[0] = start[0] + param*(stop[0]-start[0]);
+  point[1] = start[1] + param*(stop[1]-start[1]);
+  point[2] = start[2] + param*(stop[2]-start[2]);
 
   // normal at time of hit
   // vwall = velocity of body surface at hit point = vcm + omega x r

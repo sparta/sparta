@@ -1356,7 +1356,9 @@ template < int DIM, int SURF, int OPT, int RIGID > void Update::move()
             // reset x,v,xnew,dtremain and continue single particle trajectory
             // for RIGID: moving surf tests use the body motion for this step,
             //   x is the particle position at time dt-dtremain from
-            //   the start of the step, its path spans the next dtsurf
+            //   the start of the step, its path to xnew spans the next dtsurf
+            //   xnew is the same cell-face-clipped endpoint used for static
+            //   surfs, so a body face on a cell boundary cannot be missed
 
             cflag = 0;
             minparam = 2.0;
@@ -1377,7 +1379,7 @@ template < int DIM, int SURF, int OPT, int RIGID > void Update::move()
                 if (RIGID && rigidmap[isurf] >= 0) {
                   FixRigid *fr = fixrigidlist[rigidmap[isurf]];
                   hitflag = Geometry::
-                    line_tri_moving_intersect(x,v,dt-dtremain,dtsurf,
+                    line_tri_moving_intersect(x,xnew,dt-dtremain,dtsurf,
                                               tri->p1,tri->p2,tri->p3,
                                               tri->norm,fr->xcm,
                                               fr->vcm,fr->omega,
@@ -1393,7 +1395,7 @@ template < int DIM, int SURF, int OPT, int RIGID > void Update::move()
                 if (RIGID && rigidmap[isurf] >= 0) {
                   FixRigid *fr = fixrigidlist[rigidmap[isurf]];
                   hitflag = Geometry::
-                    line_line_moving_intersect(x,v,dt-dtremain,dtsurf,
+                    line_line_moving_intersect(x,xnew,dt-dtremain,dtsurf,
                                                line->p1,line->p2,
                                                line->norm,fr->xcm,
                                                fr->vcm,fr->omega,

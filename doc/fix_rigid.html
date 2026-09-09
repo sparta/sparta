@@ -100,7 +100,11 @@ collection of surfs must form a closed (watertight) object, which is
 checked when the fix is defined: in 2d every point must be the first
 endpoint of exactly as many body lines as it is the second endpoint,
 and in 3d every edge must be traversed the same number of times in
-each direction by the body triangles which share it.
+each direction by the body triangles which share it.  The body must
+also enclose a non-zero area (2d) or volume (3d): a zero-thickness
+body, such as a single line or triangle traversed once in each
+direction, passes the watertight test but has no interior for the
+cut-cell routines to mark, and is rejected.
 </P>
 <P>Each fix rigid command defines a single rigid body.  Multiple rigid
 bodies can be simulated by using multiple fix rigid commands, each
@@ -268,17 +272,28 @@ regime of this command (large particulates).
 </P>
 <P>A second, independent requirement on the body mass comes from the
 collision model.  A particle reflects off the body as though the wall
-were infinitely massive, so each collision silently discards the recoil
-energy |dp|^2 / 2M that a body of finite mass would take up.  Momentum
-is unaffected and remains exactly conserved, but the discarded energy
-accumulates in one direction, and its size relative to the body's
-kinetic energy scales as the mass of one simulation particle, fnum
-times the species mass, divided by the body mass M.  For a body many
-orders of magnitude heavier than one simulation particle this is a part
-in 10^4 or less over a long run; for a body only about a hundred times
-heavier it reaches tens of percent.  Choose the body mass, or fnum, so
-that M is much larger than fnum times the species mass.  Total gas plus
-body momentum, and total angular momentum, are conserved regardless.
+were infinitely massive, keeping its full speed relative to the
+surface, while the body receives the full impulse dp of the
+collision.  A body of finite mass would instead recoil during the
+collision and return slightly less energy to the particle, so the
+recoil energy |dp|^2 / 2M is counted twice, once in the particle and
+once in the body, and is added to the gas plus body system by every
+collision.  Momentum and angular momentum are unaffected and remain
+exactly conserved (see above).  Relative to the kinetic energy of the
+colliding particle, the added energy is of order the mass of one
+simulation particle, fnum times the species mass, divided by the body
+mass M, and it accumulates in one direction.  A second contribution
+of the same sign arises because the impulses of all the collisions in
+a step are summed and applied to the body as a single force, so the
+energy added per step is |dt*f|^2 / 2M in total (with the analogous
+term for the torque and moment of inertia), which exceeds the sum of
+the per-collision terms; it is first order in the timestep and
+vanishes as dt is reduced.  Neither term is corrected.  For a body
+many orders of magnitude heavier than one simulation particle, which
+is the intended regime of this command, both are negligible; they
+become significant only when M is within a few orders of magnitude of
+fnum times the species mass, so choose the body mass, or fnum, to
+keep M much larger than that.
 </P>
 <HR>
 
@@ -333,19 +348,13 @@ the start of the run.  The cumulative count of particles deleted
 because they were inside a body is output as the scalar value of this
 fix.  Because of swept collision coverage this count normally does not
 grow after the start of a run, and a warning is issued at the end of a
-run in which it did.  There are two causes.  The body may be moving so
-far in one step that it jumps entirely past a particle (see the
-motion-per-step warnings below).  Or the body's surfaces may lie
-exactly on grid cell boundaries, which makes the cut cells degenerate:
-a face which coincides with a cell face is ambiguous both to the cut
-routines and to the moving-surf collision test, whose path endpoints,
-unlike those of a static surf, are not snapped to the cell face.
-Particles then pass through the body and are deleted as interior, and
-the force on the body reads low, until it moves off the alignment.  A
-static surface in the same position does not have this problem, since
-it is cut into the grid once.  If a body starts out aligned this way,
-offset it by a fraction of a cell: with a grid of spacing 0.05, a body
-face at x = 1.0 is degenerate and one at x = 1.017 is not.
+run in which it did.  The usual cause is a body moving so far in one
+step that it jumps entirely past a particle (see the motion-per-step
+warnings below).  A body whose faces lie exactly on grid cell
+boundaries, e.g. a box aligned with the grid, is handled correctly:
+the moving-surf collision test uses the same particle path, clipped
+to the faces of the cell, as the test for a static surf, so a body
+face which coincides with a cell face cannot be tunneled through.
 </P>
 <HR>
 
@@ -516,7 +525,8 @@ it with the <I>outfile</I> keyword rather than reconstructing it from this
 vector.
 </P>
 <P>This fix performs several validity checks when it is defined and
-initialized: the body must be watertight (see above), its mass must
+initialized: the body must be watertight and enclose a non-zero area
+or volume (see above), its mass must
 be positive, its principal moments of inertia must be positive and
 (in 3d) satisfy the triangle inequality I1 + I2 >= I3, and the
 compute's surf group must include all body surfs.  During a run, a
@@ -550,7 +560,8 @@ surface reactions assigned to them.
 fix rigid command is defined; surfs may be appended (they become
 static surfs).
 </P>
-<P>The body must be a closed (watertight) object.  The body must stay
+<P>The body must be a closed (watertight) object which encloses a
+non-zero area or volume.  The body must stay
 within the simulation box if the boundaries it would cross are
 periodic; body coordinates are not wrapped across periodic
 boundaries, so an error is generated in that case.  The body may exit

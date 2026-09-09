@@ -54,6 +54,8 @@ pushpair      ASYMMETRIC body-body contact (heavy large body vs light
 badmoi        negative: 3d moi violating the triangle inequality
               must be rejected
 notwatertight negative: open body group must be rejected
+zerothick     negative: a watertight body enclosing no area (2d) or
+              volume (3d), e.g. a doubled line or tri, must be rejected
 
 The ballistic, force, bounce, twobody, and pushpair tests contain no
 particles and must produce identical results on any number of procs.

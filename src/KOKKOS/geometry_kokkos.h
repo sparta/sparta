@@ -1456,7 +1456,7 @@ void space_frame_vector(const double *vec, double t, const double *omega,
 ------------------------------------------------------------------------- */
 
 KOKKOS_INLINE_FUNCTION
-bool line_line_moving_intersect(double *start, double *v,
+bool line_line_moving_intersect(double *start, double *stop,
                                 double t0, double tsub,
                                 double *v0, double *v1, double *norm,
                                 const double *xcm0, const double *vcm,
@@ -1464,13 +1464,9 @@ bool line_line_moving_intersect(double *start, double *v,
                                 double *point, double *nhit, double *vwall,
                                 double &param, int &side)
 {
-  double stop[3],y0[3],y1[3],yc[3];
+  double y0[3],y1[3],yc[3];
 
   body_frame_point(start,t0,xcm0,vcm,omega,y0);
-
-  stop[0] = start[0] + v[0]*tsub;
-  stop[1] = start[1] + v[1]*tsub;
-  stop[2] = 0.0;
   body_frame_point(stop,t0+tsub,xcm0,vcm,omega,y1);
   y0[2] = y1[2] = 0.0;
 
@@ -1478,8 +1474,8 @@ bool line_line_moving_intersect(double *start, double *v,
   if (!hit) return false;
 
   double thit = t0 + param*tsub;
-  point[0] = start[0] + v[0]*(param*tsub);
-  point[1] = start[1] + v[1]*(param*tsub);
+  point[0] = start[0] + param*(stop[0]-start[0]);
+  point[1] = start[1] + param*(stop[1]-start[1]);
   point[2] = 0.0;
 
   space_frame_vector(norm,thit,omega,nhit);
@@ -1504,7 +1500,7 @@ bool line_line_moving_intersect(double *start, double *v,
 ------------------------------------------------------------------------- */
 
 KOKKOS_INLINE_FUNCTION
-bool line_tri_moving_intersect(double *start, double *v,
+bool line_tri_moving_intersect(double *start, double *stop,
                                double t0, double tsub,
                                double *v0, double *v1, double *v2,
                                double *norm,
@@ -1513,22 +1509,18 @@ bool line_tri_moving_intersect(double *start, double *v,
                                double *point, double *nhit, double *vwall,
                                double &param, int &side)
 {
-  double stop[3],y0[3],y1[3],yc[3];
+  double y0[3],y1[3],yc[3];
 
   body_frame_point(start,t0,xcm0,vcm,omega,y0);
-
-  stop[0] = start[0] + v[0]*tsub;
-  stop[1] = start[1] + v[1]*tsub;
-  stop[2] = start[2] + v[2]*tsub;
   body_frame_point(stop,t0+tsub,xcm0,vcm,omega,y1);
 
   bool hit = line_tri_intersect(y0,y1,v0,v1,v2,norm,yc,param,side);
   if (!hit) return false;
 
   double thit = t0 + param*tsub;
-  point[0] = start[0] + v[0]*(param*tsub);
-  point[1] = start[1] + v[1]*(param*tsub);
-  point[2] = start[2] + v[2]*(param*tsub);
+  point[0] = start[0] + param*(stop[0]-start[0]);
+  point[1] = start[1] + param*(stop[1]-start[1]);
+  point[2] = start[2] + param*(stop[2]-start[2]);
 
   space_frame_vector(norm,thit,omega,nhit);
 
