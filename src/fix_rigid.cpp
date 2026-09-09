@@ -471,6 +471,19 @@ void FixRigid::init()
   if (sparta->kokkos && !kokkosable)
     error->all(FLERR,"Must use fix rigid/kk with KOKKOS");
 
+  // the recoil correction of collisions is exact down to a body as
+  //   light as one simulation particle; below that the exact result
+  //   would carry the particle past the wall within the step, which the
+  //   one-step coupling cannot represent, so the correction is inactive
+
+  double mmax = 0.0;
+  for (int i = 0; i < particle->nspecies; i++)
+    mmax = MAX(mmax,particle->species[i].mass);
+  if (massbody < update->fnum*mmax && comm->me == 0)
+    error->warning(FLERR,"Fix rigid body mass is less than the mass of a "
+                   "simulation particle, collisions are not corrected "
+                   "for body recoil");
+
   // check that specified compute is valid for use with fix rigid
   // NOTE: check that it operates on same surf group ?
 

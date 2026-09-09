@@ -291,7 +291,10 @@ velocity.  The correction is applied to the particle velocity before
 the surface tallies, so the impulse applied to the body is the
 corrected one and momentum and angular momentum remain exactly
 conserved (see above).  It is skipped for a collision in which a
-surface reaction occurs.  The one remaining source of energy error is
+surface reaction occurs.  It is exact down to a body as light as one
+simulation particle; a lighter body would have to outrun the particle
+within the step, which the one-step coupling below cannot represent,
+so the correction is inactive there and a warning is issued.  The one remaining source of energy error is
 the one-step coupling itself: the impulses of all collisions in a
 step are summed and applied to the body as a single force at the
 start of the next step, which adds |dt*f|^2 / 2M per step (with the

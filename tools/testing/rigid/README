@@ -21,8 +21,9 @@ restitution   analytic properties of the push-off contact model:
 momentum      gas + body momentum conservation in a periodic box:
               the lag-corrected invariant holds to 1e-11
 recoil        one particle hits a body only 10x heavier, head-on,
-              off-center (spins it) and in 3d: exact two-body elastic
-              result and energy conservation to 1e-10
+              off-center (spins it) and in 3d, and a body of equal
+              mass: exact two-body elastic result and energy
+              conservation to 1e-10
 overrun       body sweeping 40% of a cell per step through resting
               gas: no particles overrun (deletion counter constant)
 remap         cutcell and incremental remap modes produce identical

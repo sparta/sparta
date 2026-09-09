@@ -623,21 +623,23 @@ def test_recoil(exe_cmd):
     """single specular collision of a particle with a body only 10x heavier:
     exact two-body elastic result, frictionless normal impulse"""
     m = 1.0e10 * 2.325e-26          # fnum * m_N
-    M = 2.325e-15
     u = 1000.0
     fails = []
 
     # 2d: square, I = M/6, hit at r = (-0.5, yhit-5, 0), n = (-1,0,0)
-    I2 = 3.875e-16
-    for yhit in (5.0, 5.4):
+    # mratio = 1 is the equal-mass exchange: particle stops, body takes u
+    for yhit, mratio in ((5.0, 10.0), (5.4, 10.0), (5.0, 1.0)):
+        M = mratio * m
+        I2 = M / 6.0
         ry = yhit - 5.0
         J = 2.0 * m * u / (1.0 + m * (1.0 / M + ry * ry / I2))
         vx = u - J / m
         vcm = J / M
         omega = -ry * J / I2
-        label = "2d yhit=%g" % yhit
+        label = "2d yhit=%g M/m=%g" % (yhit, mratio)
         rc, out = run_deck(exe_cmd, "in.test.recoil",
-                           ["-var", "yhit", str(yhit)])
+                           ["-var", "yhit", str(yhit),
+                            "-var", "mratio", str(mratio)])
         if rc != 0:
             fails.append("%s: run failed with exit code %d" % (label, rc))
             continue
@@ -657,7 +659,8 @@ def test_recoil(exe_cmd):
             fails.append("%s: energy %.12g vs %.12g" % (label, e1, e0))
 
     # 3d: unit cube, I = M/6, hit at r = (-0.5, 0.3, 0.2), n = (-1,0,0)
-    I3 = 3.875e-16
+    M = 10.0 * m
+    I3 = M / 6.0
     ry, rz = 0.3, 0.2
     J = 2.0 * m * u / (1.0 + m * (1.0 / M + (ry * ry + rz * rz) / I3))
     vx = u - J / m

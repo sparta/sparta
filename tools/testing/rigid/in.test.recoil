@@ -11,6 +11,7 @@
 
 seed	    	    12345
 variable            yhit index 5.0
+variable            mratio index 10.0
 
 dimension   	    2
 boundary            o o p
@@ -18,7 +19,12 @@ boundary            o o p
 create_box  	    0 10 0 10 -0.5 0.5
 create_grid 	    10 10 1
 
-# m_super = fnum * m_N = 1e10 * 2.325e-26 = 2.325e-16, M = 10 m_super
+# m_super = fnum * m_N = 1e10 * 2.325e-26 = 2.325e-16, M = mratio * m_super
+# unit square: Ixx = Iyy = M/12, Izz = M/6
+
+variable            M equal ${mratio}*2.325e-16
+variable            Ixy equal v_M/12
+variable            Iz equal v_M/6
 
 global		    nrho 1.0 fnum 1.0e10
 
@@ -36,8 +42,8 @@ compute             c1 surf body all fx fy fz tx ty tz com 5 5 0
 global              rigid yes
 
 fix		    1 rigid body c1 body &
-		    mass 2.325e-15 com 5 5 0 vcom 0 0 0 &
-		    moi 1.9375e-16 1.9375e-16 3.875e-16 0 0 0 angmom 0 0 0
+		    mass ${M} com 5 5 0 vcom 0 0 0 &
+		    moi ${Ixy} ${Ixy} ${Iz} 0 0 0 angmom 0 0 0
 
 create_particles    air single N 3.0 ${yhit} 0.0 1000.0 0.0 0.0
 
