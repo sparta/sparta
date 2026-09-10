@@ -29,6 +29,7 @@ namespace SPARTA_NS {
 
 class FixEmitSurf : public FixEmit {
  public:
+  int surf_groupbit() {return groupbit;}
   FixEmitSurf(class SPARTA *, int, char **);
   ~FixEmitSurf();
   void init();

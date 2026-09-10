@@ -80,8 +80,9 @@ class FixRigid : public Fix {
   int ensure_local_copies();    // distributed: local copies of body surfs
                                 //   returns 1 if surf arrays were changed
   void surfs_changed(int, int = 0);  // notify per-surf models of the above
+                                     //   2nd arg = 0 in run, 1 init, 2 setup
 
-  int emitflag;           // 1 if an emit/face fix is defined
+  int typechanged;        // 1 if incremental_recut changed a cell type
   int listschanged;       // 1 if this fix changed a per-cell surf list
                           //   on the host since the flag was cleared
                           //   (read/cleared by fix rigid/kk)

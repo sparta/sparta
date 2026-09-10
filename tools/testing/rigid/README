@@ -67,6 +67,11 @@ modifyafter   negative: with distributed surfs, surf_modify of the body
               surfs after the fix is defined must be rejected
 wallmotion    negative: a body surf_collide model with its own wall
               motion (diffuse translate) must be rejected
+emitsurf      negative: a fix emit/surf emitting from the body surfs
+              must be rejected
+renumber      negative: with distributed surfs, a remove_surf issued
+              after the fix is defined which re-numbers the body surfs
+              must be rejected
 
 The ballistic, force, bounce, twobody, and pushpair tests contain no
 particles, and the recoil test a single particle; they must produce

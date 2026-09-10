@@ -28,6 +28,7 @@ namespace SPARTA_NS {
 class SurfReactAdsorb : public SurfReact {
  public:
   int sync_every() {return nsync;}   // surf state sync interval
+  int surf_mode();                    // 1 if per-surf state (mode surf)
   SurfReactAdsorb(class SPARTA *, int, char **);
   SurfReactAdsorb(class SPARTA *sparta) : SurfReact(sparta) {} // needed for Kokkos
   ~SurfReactAdsorb();

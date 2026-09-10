@@ -52,6 +52,8 @@ class Update : protected Pointers {
   int fieldfreq;         // update GFIELD every this many timsteps
 
   int rigidflag;         // 1 if a mobile rigid-body surf object will be used
+  int rigid_notify_sr;   // 1 if surf reaction models must be told of new
+                         //   local body-surf copies once they have init'd
   int nfixrigid;              // # of FixRigid instances = # of bodies
   class FixRigid **fixrigidlist;  // ptrs to each FixRigid instance
   int *rigidmap;              // which FixRigid each surf belongs to

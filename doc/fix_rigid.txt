@@ -361,7 +361,9 @@ for large grids; it is chiefly useful as a reference for validating
 whose cut leaves its markings undecided (all body surfs merely
 touching its faces, as for a face lying exactly on a cell boundary)
 falls back to a full re-map on that step, so both modes give the same
-cell markings and volumes.
+cell markings and volumes.  When an incremental re-cut changes the
+marking of any cell, the emit fixes are notified to rebuild their
+per-cell emission tasks, as a full re-map does.
 Any particles found inside the body after the re-map are deleted, but
 with swept collision coverage (see above) particles in the body's
 path are reflected rather than overtaken, so in practice no particles
@@ -595,15 +597,19 @@ than any one processor's memory.  Both {remap} modes work with
 distributed surfs.  Rigid bodies cannot be used with axisymmetric
 domains.  Body surf elements cannot be transparent and cannot have
 surface reactions assigned to them.  Because the grid may be re-mapped
-on any step, a "surf_react adsorb"_surf_react_adsorb.html model on
-any surfs requires its {nsync} setting to be 1.  The {incremental}
+on any step, with distributed surfs a "surf_react
+adsorb"_surf_react_adsorb.html model in its {surf} mode on any surfs
+requires its {nsync} setting to be 1.  A "fix
+emit/surf"_fix_emit_surf.html command cannot emit from the body
+surfs, since its emission tasks are built from the surf positions at
+the start of a run.  The {incremental}
 remap mode assumes the body does not pass through the interior of
 closed static geometry, whose interior cells it would type by the
 body alone.
 
-Surfs cannot be removed, nor the body's surf group changed, after a
-fix rigid command is defined; surfs may be appended (they become
-static surfs).  With distributed surfs the collision model, reaction
+Surfs cannot be removed or re-numbered, nor the body's surf group
+changed, after a fix rigid command is defined; surfs may be appended
+(they become static surfs).  With distributed surfs the collision model, reaction
 model, transparency and group membership of the body surfs cannot be
 changed after the fix is defined either, since the fix builds its
 local copies of body surfs from a replicated table of these

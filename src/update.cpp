@@ -119,6 +119,7 @@ Update::Update(SPARTA *sparta) : Pointers(sparta)
   mem_limit_grid_flag = 0;
 
   rigidflag = 0;
+  rigid_notify_sr = 0;
   nfixrigid = 0;
   fixrigidlist = NULL;
   rigidmap = NULL;
@@ -1650,7 +1651,10 @@ template < int DIM, int SURF, int OPT, int RIGID > void Update::move()
 
               // stuck_iterate = consecutive iterations particle is immobile
 
-              if (minparam <= 1.0e-14) stuck_iterate++;
+              // a re-hit of the surf just hit (moving surfs only) also
+              //   counts, so repeated re-hits by a sweeping surf end
+
+              if (minparam <= 1.0e-14 || minsurf == exclude) stuck_iterate++;
               else stuck_iterate = 0;
 
               // reset post-bounce xnew

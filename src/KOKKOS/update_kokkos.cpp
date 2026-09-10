@@ -2065,7 +2065,7 @@ void UpdateKokkos::operator()(TagUpdateMove<DIM,SURF,REACT,OPT,ATOMIC_REDUCTION>
 
           // stuck_iterate = consecutive iterations particle is immobile
 
-          if (minparam <= 1.0e-14) stuck_iterate++;
+          if (minparam <= 1.0e-14 || minsurf == exclude) stuck_iterate++;
           else stuck_iterate = 0;
 
           // reset post-bounce xnew

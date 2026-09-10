@@ -471,7 +471,7 @@ def test_restart(exe_cmd):
                 fails.append("split %d: %s = %.12g differs from one-shot "
                              "%.12g" % (split, name, last[key], ref[key]))
 
-    for f in glob.glob(os.path.join(THISDIR, "tmp.rigid.*")):
+    for f in glob.glob(os.path.join(THISDIR, "tmp.rigid*")):
         os.remove(f)
     return fails
 
@@ -749,6 +749,15 @@ def test_wallmotion(exe_cmd):
     return negative_test(exe_cmd, "in.test.wallmotion", "own wall motion")
 
 
+def test_emitsurf(exe_cmd):
+    return negative_test(exe_cmd, "in.test.emitsurf",
+                         "cannot emit from fix rigid body surfs")
+
+
+def test_renumber(exe_cmd):
+    return negative_test(exe_cmd, "in.test.renumber", "were renumbered")
+
+
 def test_zerothick(exe_cmd):
     fails = negative_test(exe_cmd, "in.test.zerothick", "encloses zero area")
     fails += negative_test(exe_cmd, "in.test.zerothick3d",
@@ -780,6 +789,8 @@ TESTS = [
     ("zerothick", test_zerothick),
     ("modifyafter", test_modifyafter),
     ("wallmotion", test_wallmotion),
+    ("emitsurf", test_emitsurf),
+    ("renumber", test_renumber),
 ]
 
 # tests whose decks support -var dist 1 (global surfs explicit/distributed)
