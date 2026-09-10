@@ -78,7 +78,7 @@ int FixRigidKokkos::last_body()
 void FixRigidKokkos::host_begin()
 {
   ((GridKokkos*) grid)->sync(Host,ALL_MASK);
-  ((ParticleKokkos*) particle)->sync(Host,PARTICLE_MASK);
+  ((ParticleKokkos*) particle)->sync(Host,PARTICLE_MASK|CUSTOM_MASK);
   ((SurfKokkos*) surf)->sync(Host,ALL_MASK);
 }
 

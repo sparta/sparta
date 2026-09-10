@@ -1681,6 +1681,8 @@ void Grid::set_inout()
   //   the box center to a point beyond all surfs with all surfs,
   //   odd = enclosed; each proc counts the surfs it uniquely owns
   //   (distributed) or proc 0 counts them all (replicated)
+  // transparent surfs are skipped: they need not be watertight and
+  //   do not enclose anything
   // explicit surfs only: implicit surfs always overlap cells, so
   //   this case does not arise for them
 
@@ -1707,6 +1709,8 @@ void Grid::set_inout()
     if (!distributed && me) nsurfme = 0;
 
     for (int i = 0; i < nsurfme; i++) {
+      if (dim == 2 && lines[i].transparent) continue;
+      if (dim == 3 && tris[i].transparent) continue;
       for (int j = 0; j < 3; j++) {
         if (dim == 2) {
           slo[j] = MIN(slo[j],MIN(lines[i].p1[j],lines[i].p2[j]));
@@ -1748,6 +1752,8 @@ void Grid::set_inout()
     int side;
     for (int i = 0; i < nsurfme; i++) {
       int hit;
+      if (dim == 2 && lines[i].transparent) continue;
+      if (dim == 3 && tris[i].transparent) continue;
       if (dim == 2)
         hit = Geometry::line_line_intersect(xin,xout,lines[i].p1,lines[i].p2,
                                             lines[i].norm,xc,param,side);

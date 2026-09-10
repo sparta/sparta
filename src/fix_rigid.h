@@ -81,6 +81,7 @@ class FixRigid : public Fix {
                                 //   returns 1 if surf arrays were changed
   void surfs_changed(int, int = 0);  // notify per-surf models of the above
 
+  int emitflag;           // 1 if an emit/face fix is defined
   int listschanged;       // 1 if this fix changed a per-cell surf list
                           //   on the host since the flag was cleared
                           //   (read/cleared by fix rigid/kk)

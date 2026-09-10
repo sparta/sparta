@@ -24,6 +24,7 @@
 #include "surf.h"
 #include "surf_collide.h"
 #include "surf_react.h"
+#include "surf_react_adsorb.h"
 #include "grid.h"
 #include "particle.h"
 #include "comm.h"
@@ -66,7 +67,7 @@ enum{CUTCELL,INCREMENTAL};          // remap modes
 // reasons incremental_recut() requests a full grid re-map
 
 enum{FALLBACK_NONE,FALLBACK_NOPREV,FALLBACK_SPLIT,FALLBACK_SURFMAX,
-     FALLBACK_UNKNOWN};
+     FALLBACK_UNKNOWN,FALLBACK_EMIT};
 
 enum{LINEAR,HERTZ};             // push-off force laws
 enum{EULER,RICHARDSON};         // quaternion rotation update schemes
@@ -518,6 +519,20 @@ void FixRigid::init()
   // attributes come from the replicated body table, valid for both
   //   non-distributed and distributed surfs
 
+  if (surf->count_group(igroup) != nsurf)
+    error->all(FLERR,"Fix rigid body surf group was changed "
+               "after fix rigid was defined");
+
+  if (!surf->distributed) {
+    if (surf->nlocal < nsurfall)
+      error->all(FLERR,"Surfs were removed after fix rigid was defined");
+    if (surf->nlocal > nsurfall) {
+      memory->grow(irigid,surf->nlocal,"fix_rigid:irigid");
+      for (int i = nsurfall; i < surf->nlocal; i++) irigid[i] = -1;
+      nsurfall = surf->nlocal;
+    }
+  }
+
   // the replicated table of body surf attributes was captured when the
   //   fix was defined: refresh it from the current surfs, or with
   //   distributed surfs, where the local copies of body surfs are built
@@ -542,11 +557,29 @@ void FixRigid::init()
   //   model cannot impose a wall motion of its own
 
   for (int i = 0; i < nsurf; i++) {
+    if (bodyisc[i] < 0) continue;
     SurfCollide *sc = surf->sc[bodyisc[i]];
     if (sc->moving_wall())
       error->all(FLERR,"Fix rigid body surfs cannot use a surf_collide "
                  "model with its own wall motion");
   }
+
+  // the grid may be re-mapped on any step (remap cutcell: every step,
+  //   incremental: any step it falls back), which surf_react adsorb
+  //   only allows on its synchronization steps
+
+  for (int i = 0; i < surf->nsr; i++)
+    if (strcmp(surf->sr[i]->style,"adsorb") == 0 &&
+        ((SurfReactAdsorb *) surf->sr[i])->sync_every() > 1)
+      error->all(FLERR,"Fix rigid requires surf_react adsorb nsync = 1");
+
+  // incremental re-cuts of cells on a domain boundary must fall back to
+  //   a full re-map when an emit/face fix is defined, since only the
+  //   full re-map notifies it to rebuild its per-cell emission tasks
+
+  emitflag = 0;
+  for (int ifix = 0; ifix < modify->nfix; ifix++)
+    if (strncmp(modify->fix[ifix]->style,"emit/face",9) == 0) emitflag = 1;
 
   // smallest grid cell edge length, for motion-rate warnings
 
@@ -576,19 +609,6 @@ void FixRigid::init()
   // Update::init() clamps its rigidmap scan to nsurfall, so it is
   //   correct even though it runs before this method
 
-  if (surf->count_group(igroup) != nsurf)
-    error->all(FLERR,"Fix rigid body surf group was changed "
-               "after fix rigid was defined");
-
-  if (!surf->distributed) {
-    if (surf->nlocal < nsurfall)
-      error->all(FLERR,"Surfs were removed after fix rigid was defined");
-    if (surf->nlocal > nsurfall) {
-      memory->grow(irigid,surf->nlocal,"fix_rigid:irigid");
-      for (int i = nsurfall; i < surf->nlocal; i++) irigid[i] = -1;
-      nsurfall = surf->nlocal;
-    }
-  }
 
   // each fix rigid defines its own body: no surf can be in two bodies
   // each fix rigid must have its own compute: the fix resets the
@@ -1147,6 +1167,9 @@ void FixRigid::end_of_step()
           else if (fallback == FALLBACK_UNKNOWN)
             why = "the cut of a cell could not decide its inside/outside "
               "marking (body surfs only touching its faces)";
+          else if (fallback == FALLBACK_EMIT)
+            why = "a re-cut cell is on a domain boundary with an "
+              "emit/face fix defined";
           else why = "no previous body position is known";
           char str[256];
           snprintf(str,sizeof(str),"Fix rigid incremental remap fell back "
@@ -1759,8 +1782,8 @@ void FixRigid::surfs_changed(int changed, int initflag)
   //   as after a grid change (see Grid::notify_changed())
   // initflag = 1 when called from Update::init_rigid() before the
   //   collision models init: flag the change as of the previous step,
-  //   which is what SurfCollide::init() tests to re-spread its
-  //   per-surf values over the new local+ghost surfs
+  //   which is what SurfCollide::dynamic() tests at setup to re-spread
+  //   its per-surf values over the new local+ghost surfs
   // collective: every proc takes the same branch
 
   int changed_any;
@@ -1769,6 +1792,7 @@ void FixRigid::surfs_changed(int changed, int initflag)
     for (int i = 0; i < surf->nsr; i++) surf->sr[i]->grid_changed();
     if (initflag) surf->localghost_changed_step = update->ntimestep - 1;
     else surf->localghost_changed_step = update->ntimestep;
+    for (int i = 0; i < surf->ncustom; i++) surf->estatus[i] = 0;
   }
 }
 
@@ -2462,6 +2486,14 @@ void FixRigid::grid_rebuild()
   //   local body-surf copies and the per-surf rigidmap for the rebuilt
   //   local/ghost surf arrays, before per-surf computes re-size
 
+  // as after a load balance: distributed local/ghost surf arrays were
+  //   rebuilt, so per-surf custom values must be re-spread
+
+  if (surf->distributed) {
+    surf->localghost_changed_step = update->ntimestep;
+    for (int i = 0; i < surf->ncustom; i++) surf->estatus[i] = 0;
+  }
+
   grid->notify_changed();
 }
 
@@ -2610,7 +2642,6 @@ void FixRigid::swept_assign_all()
       nsurf_saved[nmodified] = cells[icell].nsurf;
       csurfs_saved[nmodified] = cells[icell].csurfs;
       nmodified++;
-      listschanged = 1;
       cells[icell].nsurf = nmerged;
       cells[icell].csurfs = merged;
     } else {
@@ -2626,6 +2657,10 @@ void FixRigid::swept_assign_all()
       }
     }
   }
+
+  // per-cell surf lists changed on the host (read by fix rigid/kk)
+
+  if (nmodified) listschanged = 1;
 }
 
 /* ----------------------------------------------------------------------
@@ -2877,6 +2912,18 @@ int FixRigid::incremental_recut()
     ctr[1] = 0.5 * (clo[1] + chi[1]);
     if (dim == 3) ctr[2] = 0.5 * (clo[2] + chi[2]);
     else ctr[2] = 0.0;
+
+    // a cell on a domain boundary whose marking changes must be seen
+    //   by any emit/face fix, which only a full re-map notifies
+
+    if (emitflag) {
+      double *boxlo = domain->boxlo;
+      double *boxhi = domain->boxhi;
+      int onbound = 0;
+      for (i = 0; i < dim; i++)
+        if (clo[i] == boxlo[i] || chi[i] == boxhi[i]) onbound = 1;
+      if (onbound) return FALLBACK_EMIT;
+    }
 
     if (n == 0) {
 

@@ -53,6 +53,8 @@ enum{NOFIELD,CFIELD,PFIELD,GFIELD};             // several files
 enum{BCSTD,BCWRAP,BCMIRROR,BCEXIT};             // Update::bcopt values
 
 #define MAXSTUCK 20
+#define EPSREHIT 1.0e-6     // re-hit of just-hit moving surf below this
+                            //   fraction of the path is round-off
 #define EPSPARAM 1.0e-7
 
 // max value (bytes) for global_mem_limit = 2000 MiB = 2097152000
@@ -1366,11 +1368,12 @@ template < int DIM, int SURF, int OPT, int RIGID > void Update::move()
 
             // check for collisions with triangles or lines in cell
             // find 1st surface hit via minparam
-            // skip collisions with previous surf, but not for axisymmetric
-            //   also for a moving rigid-body surf: within one step the body
-            //   moves uniformly, so a surf cannot advance into a particle
-            //   it just reflected, and a re-test would only find the
-            //   round-off re-hit at param = 0 that the exclude avoids
+            // skip collisions with previous surf,
+            //   but not for axisymmetric or moving rigid-body surfs
+            //   a rotating surf can sweep back into a particle it just
+            //   reflected, but only after a finite fraction of the path,
+            //   so a re-hit of the previous surf at param ~ 0 is round-off
+            //   and is rejected below
             // not considered collision if 2 params are tied and one INSIDE surf
             // if collision occurs, perform collision with surface model
             // reset x,v,xnew,dtremain and continue single particle trajectory
@@ -1389,7 +1392,10 @@ template < int DIM, int SURF, int OPT, int RIGID > void Update::move()
               isurf = csurfs[m];
 
               if (DIM > 1) {
-                if (isurf == exclude) continue;
+                if (isurf == exclude) {
+                  if (!RIGID) continue;
+                  if (rigidmap[isurf] < 0) continue;
+                }
               }
               if (DIM == 3) {
                 tri = &tris[isurf];
@@ -1492,6 +1498,9 @@ template < int DIM, int SURF, int OPT, int RIGID > void Update::move()
                   printf("CROSSFINAL %g %g %g\n",cross[0],cross[1],cross[2]);
               }
 #endif
+
+              if (RIGID && hitflag && isurf == exclude && param < EPSREHIT)
+                hitflag = 0;
 
               if (hitflag && param < minparam && side == OUTSIDE) {
                 cflag = 1;

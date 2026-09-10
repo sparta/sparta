@@ -58,6 +58,7 @@ enum{NOFIELD,CFIELD,PFIELD,GFIELD};             // several files
 enum{BCSTD,BCWRAP,BCMIRROR,BCEXIT};             // Update::bcopt values
 
 #define MAXSTUCK 20
+#define EPSREHIT 1.0e-6     // same as Update
 #define EPSPARAM 1.0e-7
 
 // either set ID or PROC/INDEX, set other to -1
@@ -1754,8 +1755,9 @@ void UpdateKokkos::operator()(TagUpdateMove<DIM,SURF,REACT,OPT,ATOMIC_REDUCTION>
         for (int m = 0; m < nsurf; m++) {
           isurf = d_csurfs.entries(csurfs_begin + m);
 
-          // skip collisions with previous surf, also for a moving
-          //   rigid-body surf, as in Update::move()
+          // skip collisions with previous surf, but not for a moving
+          //   rigid-body surf, whose round-off re-hit at param ~ 0 is
+          //   rejected below, as in Update::move()
           // moving-surf tests use the body motion for this step: x is the
           //   particle position at time dt-dtremain from the start of the
           //   step and its path to xnew spans the next dtsurf
@@ -1766,7 +1768,7 @@ void UpdateKokkos::operator()(TagUpdateMove<DIM,SURF,REACT,OPT,ATOMIC_REDUCTION>
           if (rigid_on) ibody = d_rigidmap(isurf);
 
           if (DIM > 1) {
-            if (isurf == exclude) continue;
+            if (isurf == exclude && ibody < 0) continue;
           }
           if (DIM == 3) {
             tri = &d_tris[isurf];
@@ -1880,6 +1882,9 @@ void UpdateKokkos::operator()(TagUpdateMove<DIM,SURF,REACT,OPT,ATOMIC_REDUCTION>
               printf("CROSSFINAL %g %g %g\n",cross[0],cross[1],cross[2]);
           }
 #endif
+
+          if (rigid_on && hitflag && isurf == exclude && param < EPSREHIT)
+            hitflag = 0;
 
           if (hitflag && param < minparam && side == OUTSIDE) {
 

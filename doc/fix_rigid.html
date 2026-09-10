@@ -606,7 +606,12 @@ and ghost grid cells, so the total surf collection can be much larger
 than any one processor's memory.  Both <I>remap</I> modes work with
 distributed surfs.  Rigid bodies cannot be used with axisymmetric
 domains.  Body surf elements cannot be transparent and cannot have
-surface reactions assigned to them.
+surface reactions assigned to them.  Because the grid may be re-mapped
+on any step, a <A HREF = "surf_react_adsorb.html">surf_react adsorb</A> model on
+any surfs requires its <I>nsync</I> setting to be 1.  The <I>incremental</I>
+remap mode assumes the body does not pass through the interior of
+closed static geometry, whose interior cells it would type by the
+body alone.
 </P>
 <P>Surfs cannot be removed, nor the body's surf group changed, after a
 fix rigid command is defined; surfs may be appended (they become
