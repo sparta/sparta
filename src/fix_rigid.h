@@ -24,6 +24,7 @@ FixStyle(rigid,FixRigid)
 #include "fix.h"
 #include "my_page.h"
 #include <map>
+#include <unordered_map>
 #include <string.h>
 
 namespace SPARTA_NS {
@@ -62,7 +63,7 @@ class FixRigid : public Fix {
 
   int body_elem(surfint id)
   {
-    std::map<surfint,int>::iterator it = idmap.find(id);
+    std::unordered_map<surfint,int>::const_iterator it = idmap.find(id);
     if (it == idmap.end()) return -1;
     return it->second;
   }
@@ -75,6 +76,14 @@ class FixRigid : public Fix {
   virtual void start_of_step();
   virtual void end_of_step();
   void grid_changed();
+  double memory_usage();
+  int ensure_local_copies();    // distributed: local copies of body surfs
+                                //   returns 1 if surf arrays were changed
+  void surfs_changed(int, int = 0);  // notify per-surf models of the above
+
+  int listschanged;       // 1 if this fix changed a per-cell surf list
+                          //   on the host since the flag was cleared
+                          //   (read/cleared by fix rigid/kk)
   double compute_scalar();
   double compute_vector(int);
 
@@ -118,7 +127,7 @@ class FixRigid : public Fix {
   int *bodytrans;         // per-element transparent flag
   int *bodyisc;           // per-element collision model index
   int *bodyisr;           // per-element reaction model index
-  std::map<surfint,int> idmap;   // global surf ID -> element index
+  std::unordered_map<surfint,int> idmap;  // global surf ID -> element index
 
   // where this proc stores copies of body elements in the Surf arrays
   // non-distributed: lblist = slist, one copy per element
@@ -258,7 +267,7 @@ class FixRigid : public Fix {
                     class FixRigid *);  // corner contacts vs one source elem
   void push_bins();             // bin static surfs for candidate pruning
   void gather_body();           // build replicated body element table
-  void ensure_local_copies();   // distributed: local copies of body surfs
+  void check_body_attributes(); // error if body surf attributes changed
   void update_surf_copies();    // write bodypt/bodynorm into Surf storage
   void grid_rebuild();          // full re-map of all surfs to grid cells
   void record_oldinside();      // cells interior to body, pre-move
@@ -274,7 +283,6 @@ class FixRigid : public Fix {
   int inside_any_body(double *); // 1 if inside any rigid body
   bigint remove_inside_particles(int);  // per-body, used at setup
   void remove_inside_all(int);  // fused pass over all bodies, per step
-  void surfs_changed();         // notify per-surf computes of new surfs
 };
 
 }

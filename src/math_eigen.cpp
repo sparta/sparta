@@ -55,9 +55,9 @@ int MathEigen::jacobi3(double const mat[3][3], double *eval, double evec[3][3], 
   else if (sort == 1)
     ierror = ecalc3.Diagonalize(mat, eval, evec, Jacobi_v1::SORT_INCREASING_EVALS);
 
-  if (ierror) return ierror;
-
   // transpose the evec matrix
+  // done even if the iteration did not converge, so that evec has the
+  //   documented layout for any caller which ignores the return value
 
   for (int i = 0; i < 3; i++)
     for (int j = i + 1; j < 3; j++) std::swap(evec[i][j], evec[j][i]);
@@ -86,9 +86,9 @@ int MathEigen::jacobi3(double const *const *mat, double *eval, double **evec, in
   else if (sort == 1)
     ierror = ecalc3.Diagonalize(mat, eval, evec, Jacobi_v2::SORT_INCREASING_EVALS);
 
-  if (ierror) return ierror;
-
   // transpose the evec matrix
+  // done even if the iteration did not converge, so that evec has the
+  //   documented layout for any caller which ignores the return value
 
   for (int i = 0; i < 3; i++)
     for (int j = i + 1; j < 3; j++) std::swap(evec[i][j], evec[j][i]);

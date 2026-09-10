@@ -17,8 +17,8 @@ create_box  	    0 10 0 10 -0.5 0.5
 Created orthogonal box = (0 0 -0.5) to (10 10 0.5)
 create_grid 	    20 20 1
 Created 400 child grid cells
-  CPU time = 0.0402183 secs
-  create/ghost percent = 19.9527 80.0473
+  CPU time = 0.0018626 secs
+  create/ghost percent = 79.5506 20.4494
 
 global		    nrho 1.0 fnum 0.001
 
@@ -35,10 +35,10 @@ read_surf           data.square group body
   384 0 16 = cells outside/inside/overlapping surfs
   16 = surf cells with 1,2,etc splits
   99 99 = cell-wise and global flow volume
-  CPU time = 0.000568082 secs
-  read/check/sort/surf2grid/ghost/inout/particle percent = 7.97755 25.5343 0.783338 50.0708 15.634 16.7527 0.154379
-  surf2grid time = 0.000284443 secs
-  map/comm1/comm2/comm3/comm4/split percent = 34.0929 12.9632 10.793 5.96921 25.9082 4.82557
+  CPU time = 0.000975824 secs
+  read/check/sort/surf2grid/ghost/inout/particle percent = 7.6481 20.7752 0.801476 54.2607 16.5146 13.0009 0.162222
+  surf2grid time = 0.000529489 secs
+  map/comm1/comm2/comm3/comm4/split percent = 35.7014 10.817 8.82511 5.55366 29.598 4.28224
 read_surf           data.wall group wall
   4 lines
   8 8.2 xlo xhi
@@ -49,10 +49,10 @@ read_surf           data.wall group wall
   356 0 44 = cells outside/inside/overlapping surfs
   44 = surf cells with 1,2,etc splits
   97.8 97.8 = cell-wise and global flow volume
-  CPU time = 0.000276443 secs
-  read/check/sort/surf2grid/ghost/inout/particle percent = 10.0151 9.68988 0.802697 52.0556 27.4368 26.7288 0.312904
-  surf2grid time = 0.000143904 secs
-  map/comm1/comm2/comm3/comm4/split percent = 44.9223 8.95945 16.3171 9.33609 3.81365 8.13112
+  CPU time = 0.00064719 secs
+  read/check/sort/surf2grid/ghost/inout/particle percent = 8.42983 7.87528 1.01562 48.9731 33.7062 28.5034 0.272254
+  surf2grid time = 0.000316949 secs
+  map/comm1/comm2/comm3/comm4/split percent = 50.428 11.103 16.0278 8.29376 2.19373 6.0811
 surf_collide	    1 specular
 surf_modify         all collide 1
 
@@ -74,8 +74,8 @@ Memory usage per proc in Mbytes:
   particles (ave,min,max) = 0 0 0
   grid      (ave,min,max) = 1.51379 1.51379 1.51379
   surf      (ave,min,max) = 0.000823975 0.000823975 0.000823975
-  modify    (ave,min,max) = 0 0 0
-  total     (ave,min,max) = 1.51462 1.51462 1.51462
+  modify    (ave,min,max) = 0.251907 0.251907 0.251907
+  total     (ave,min,max) = 1.76653 1.76653 1.76653
 Step f_1[1] f_1[4] f_1[15] f_1[20] f_1[21] 
        0            5           50            0            0            0 
      250         6.25           50            0            0            0 
@@ -92,20 +92,20 @@ Step f_1[1] f_1[4] f_1[15] f_1[20] f_1[21]
     3000    6.3763641    50.001605            0            0            0 
     3250    7.1876709   -33.034595            0 -7.5068349e-19            0 
     3500     5.962216   -50.002055            0            0            0 
-Loop time of 0.0245933 on 4 procs for 3500 steps with 0 particles
-Performance: 142315.178 timesteps/s, 0.000 particle-step/s
+Loop time of 0.040552 on 4 procs for 3500 steps with 0 particles
+Performance: 86308.995 timesteps/s, 0.000 particle-step/s
 
 MPI task timing breakdown:
 Section |  min time  |  avg time  |  max time  |%varavg| %total
 ---------------------------------------------------------------
-Move    | 0.00017713 | 0.00018694 | 0.00020039 |   0.0 |  0.76
+Move    | 0.00019393 | 0.00023139 | 0.00031836 |   0.0 |  0.57
 Coll    | 0          | 0          | 0          |   0.0 |  0.00
 Sort    | 0          | 0          | 0          |   0.0 |  0.00
-Comm    | 0.0082695  | 0.0084519  | 0.0086423  |   0.2 | 34.37
-Modify  | 0.015485   | 0.015651   | 0.015832   |   0.1 | 63.64
-Output  | 4.2558e-05 | 5.2868e-05 | 7.7287e-05 |   0.0 |  0.21
-MPI Sync| 7.86e-07   | 9.11e-07   | 1.033e-06  |   0.0 |  0.00
-Other   |            | 0.0002492  |            |       |  1.01
+Comm    | 0.014272   | 0.015463   | 0.017806   |   1.1 | 38.13
+Modify  | 0.022206   | 0.024395   | 0.025485   |   0.8 | 60.16
+Output  | 8.1508e-05 | 0.00010168 | 0.00012813 |   0.0 |  0.25
+MPI Sync| 1.178e-06  | 1.9997e-06 | 2.436e-06  |   0.0 |  0.00
+Other   |            | 0.0003588  |            |       |  0.88
 
 Particle moves    = 0 (0K)
 Cells touched     = 0 (0K)

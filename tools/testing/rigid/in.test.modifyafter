@@ -1,0 +1,37 @@
+# NEGATIVE TEST: surf attributes of the body changed after the fix
+# with distributed surfs, a surf_modify issued after the fix rigid
+# command changes the collision model of the body surfs; the fix builds
+# its local copies of body surfs from the replicated table of attributes
+# captured at definition and must reject the change
+
+seed	    	    12345
+global              surfs explicit/distributed
+dimension   	    2
+boundary            o o p
+
+create_box  	    0 10 0 10 -0.5 0.5
+create_grid 	    10 10 1
+
+global		    nrho 1.0 fnum 0.001
+
+species		    air.species N
+mixture		    air N vstream 0 0 0 temp 273.0
+
+read_surf           data.square group body
+surf_collide	    1 specular
+surf_collide	    2 diffuse 300.0 1.0
+surf_modify         all collide 1
+
+timestep 	    0.0001
+
+compute             c1 surf body all fx fy fz tx ty tz com 5 5 0
+
+global              rigid yes
+
+fix		    1 rigid body c1 body &
+		    mass 1.0e-22 com 5 5 0 vcom 0 0 0 &
+		    moi 1.7e-23 1.7e-23 3.4e-23 0 0 0 angmom 0 0 0
+
+surf_modify         body collide 2
+
+run 		    10

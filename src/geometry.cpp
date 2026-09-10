@@ -734,7 +734,15 @@ static void body_frame_point(double *pt, double t,
     double dnew[3];
     MathExtra::matvec(rot,delta,dnew);
     MathExtra::add3(xcm0,dnew,y);
-  } else MathExtra::add3(xcm0,delta,y);
+  } else {
+
+    // pure translation: y = pt - vcm*t exactly, without the
+    //   round-off of subtracting and re-adding the COM position
+
+    y[0] = pt[0] - vcm[0]*t;
+    y[1] = pt[1] - vcm[1]*t;
+    y[2] = pt[2] - vcm[2]*t;
+  }
 }
 
 /* ----------------------------------------------------------------------

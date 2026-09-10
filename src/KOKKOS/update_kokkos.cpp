@@ -438,7 +438,7 @@ void UpdateKokkos::build_rigidmap()
 void UpdateKokkos::rigid_upload()
 {
   if ((int) k_rigidbody.extent(0) < nfixrigid)
-    k_rigidbody = DAT::tdual_float_2d("update:rigidbody",nfixrigid,19);
+    k_rigidbody = tdual_rigidbody_2d("update:rigidbody",nfixrigid,19);
   auto h_rigidbody = k_rigidbody.view_host();
   for (int m = 0; m < nfixrigid; m++) {
     FixRigid *f = fixrigidlist[m];
@@ -1279,7 +1279,7 @@ void UpdateKokkos::operator()(TagUpdateMove<DIM,SURF,REACT,OPT,ATOMIC_REDUCTION>
   double *x,*v;
   Surf::Tri *tri;
   Surf::Line *line;
-  int reaction;
+  int reaction = 0;
 
   Particle::OnePart &particle_i = d_particles[i];
   pflag = particle_i.flag;
@@ -1748,14 +1748,14 @@ void UpdateKokkos::operator()(TagUpdateMove<DIM,SURF,REACT,OPT,ATOMIC_REDUCTION>
 
         cflag = 0;
         minparam = 2.0;
+        minmoving = 0;
         auto csurfs_begin = d_csurfs.row_map(icell);
 
         for (int m = 0; m < nsurf; m++) {
           isurf = d_csurfs.entries(csurfs_begin + m);
 
-          // skip collisions with previous surf, but not for a moving
-          //   rigid-body surf, which can advance into a just-reflected
-          //   particle; immediate re-hits are rejected by the side test
+          // skip collisions with previous surf, also for a moving
+          //   rigid-body surf, as in Update::move()
           // moving-surf tests use the body motion for this step: x is the
           //   particle position at time dt-dtremain from the start of the
           //   step and its path to xnew spans the next dtsurf
@@ -1766,7 +1766,7 @@ void UpdateKokkos::operator()(TagUpdateMove<DIM,SURF,REACT,OPT,ATOMIC_REDUCTION>
           if (rigid_on) ibody = d_rigidmap(isurf);
 
           if (DIM > 1) {
-            if (isurf == exclude && ibody < 0) continue;
+            if (isurf == exclude) continue;
           }
           if (DIM == 3) {
             tri = &d_tris[isurf];

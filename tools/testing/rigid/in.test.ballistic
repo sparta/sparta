@@ -2,7 +2,7 @@
 # no particles: COM must move in a straight line at constant velocity,
 # angular velocity must stay constant
 # with -var fx set, a constant external force acts on the COM and the
-# COM must follow the semi-implicit Euler trajectory exactly
+# COM must follow the exact constant-force trajectory (velocity Verlet)
 
 seed	    	    12345
 

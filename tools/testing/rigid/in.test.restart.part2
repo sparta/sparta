@@ -13,6 +13,9 @@ compute             csurf surf body all fx fy fz tx ty tz com 5 5 0
 global              rigid yes
 fix		    1 rigid body csurf infile tmp.rigid.state &
                     push 1.0e-18 0.5 pushbound yes
+compute             csurf2 surf body2 all fx fy fz tx ty tz com 5 8 0
+fix		    2 rigid body2 csurf2 infile tmp.rigid2.state &
+                    push 1.0e-18 0.5 pushbound yes
 stats		    ${nrun}
-stats_style         step f_1[1] f_1[4] f_1[15]
+stats_style         step f_1[1] f_1[4] f_1[15] f_2[1] f_2[4] f_2[15]
 run 		    ${nrun}

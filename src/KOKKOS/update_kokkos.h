@@ -171,8 +171,13 @@ class UpdateKokkos : public Update {
   int rigid_on;
   DAT::tdual_int_1d k_rigidmap;
   DAT::t_int_1d d_rigidmap;
-  DAT::tdual_float_2d k_rigidbody;
-  DAT::t_float_2d d_rigidbody;
+  // always double: holds absolute COM coordinates compared against
+  //   double-precision surf points, whatever SPA_PRECISION is
+
+  typedef Kokkos::DualView<double**,DeviceType::array_layout,DeviceType>
+    tdual_rigidbody_2d;
+  tdual_rigidbody_2d k_rigidbody;
+  tdual_rigidbody_2d::t_dev d_rigidbody;
   t_species_1d d_species;
   int cellweightflag_kk;
   void rigid_upload();

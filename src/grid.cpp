@@ -1676,9 +1676,13 @@ void Grid::set_inout()
   // can occur when a mobile rigid body (fix rigid) has moved entirely
   //   outside the domain, so its surfs no longer overlap any grid cell
   // every cell is then OUTSIDE, unless the surfs enclose the entire
-  //   domain, in which case every cell would be INSIDE instead
-  // the surf bounding box distinguishes the two: surfs which do not span
-  //   the box in every dimension cannot enclose it
+  //   domain, in which case every cell is INSIDE instead
+  // decide by a parity test: count intersections of a segment from
+  //   the box center to a point beyond all surfs with all surfs,
+  //   odd = enclosed; each proc counts the surfs it uniquely owns
+  //   (distributed) or proc 0 counts them all (replicated)
+  // explicit surfs only: implicit surfs always overlap cells, so
+  //   this case does not arise for them
 
   int overlap_mine = 0;
   for (icell = 0; icell < nlocal; icell++)
@@ -1686,22 +1690,21 @@ void Grid::set_inout()
   int overlap_any;
   MPI_Allreduce(&overlap_mine,&overlap_any,1,MPI_INT,MPI_MAX,world);
 
-  if (!overlap_any) {
+  if (!overlap_any && !surf->implicit) {
 
     // bounding box around all surfs, computed here rather than taken
     //   from Surf::bblo/bbhi, which are not updated as a body moves
-    // distributed surfs: each surf is owned by exactly one proc,
-    //   else every proc stores every surf
 
     double slo[3],shi[3],slo_all[3],shi_all[3];
     slo[0] = slo[1] = slo[2] = BIG;
     shi[0] = shi[1] = shi[2] = -BIG;
 
     int dim = domain->dimension;
-    int distributed = surf->distributed && !surf->implicit;
+    int distributed = surf->distributed;
     Surf::Line *lines = distributed ? surf->mylines : surf->lines;
     Surf::Tri *tris = distributed ? surf->mytris : surf->tris;
     int nsurfme = distributed ? surf->nown : surf->nlocal;
+    if (!distributed && me) nsurfme = 0;
 
     for (int i = 0; i < nsurfme; i++) {
       for (int j = 0; j < 3; j++) {
@@ -1720,22 +1723,49 @@ void Grid::set_inout()
     MPI_Allreduce(slo,slo_all,3,MPI_DOUBLE,MPI_MIN,world);
     MPI_Allreduce(shi,shi_all,3,MPI_DOUBLE,MPI_MAX,world);
 
+    // segment from the box center to a point outside all surfs and
+    //   the box, oblique to the axes to avoid grazing edges or vertices
+
     double *boxlo = domain->boxlo;
     double *boxhi = domain->boxhi;
+    double dmax = 0.0;
+    for (int j = 0; j < dim; j++) {
+      dmax = MAX(dmax,shi_all[j]-slo_all[j]);
+      dmax = MAX(dmax,boxhi[j]-boxlo[j]);
+      dmax = MAX(dmax,fabs(shi_all[j]-boxlo[j]));
+    }
 
-    int spans = 1;
-    for (int j = 0; j < dim; j++)
-      if (slo_all[j] > boxlo[j] || shi_all[j] < boxhi[j]) spans = 0;
+    double xin[3],xout[3],xc[3];
+    xin[0] = 0.5*(boxlo[0]+boxhi[0]);
+    xin[1] = 0.5*(boxlo[1]+boxhi[1]);
+    xin[2] = (dim == 3) ? 0.5*(boxlo[2]+boxhi[2]) : 0.0;
+    xout[0] = MAX(shi_all[0],boxhi[0]) + 0.414159*dmax;
+    xout[1] = xin[1] + 0.271828*dmax;
+    xout[2] = (dim == 3) ? xin[2] + 0.161803*dmax : 0.0;
 
-    if (spans)
-      error->all(FLERR,"Cannot mark grid cells as inside/outside surfs "
-                 "because no cell overlaps a surf and the surfs may "
-                 "enclose the entire simulation box");
+    int count = 0;
+    double param;
+    int side;
+    for (int i = 0; i < nsurfme; i++) {
+      int hit;
+      if (dim == 2)
+        hit = Geometry::line_line_intersect(xin,xout,lines[i].p1,lines[i].p2,
+                                            lines[i].norm,xc,param,side);
+      else
+        hit = Geometry::line_tri_intersect(xin,xout,tris[i].p1,tris[i].p2,
+                                           tris[i].p3,tris[i].norm,
+                                           xc,param,side);
+      if (hit) count++;
+    }
+    int count_all;
+    MPI_Allreduce(&count,&count_all,1,MPI_INT,MPI_SUM,world);
 
+    int mark = (count_all % 2) ? INSIDE : OUTSIDE;
     int nc = (dim == 3) ? 8 : 4;
     for (icell = 0; icell < nlocal; icell++) {
-      cinfo[icell].type = OUTSIDE;
-      for (int j = 0; j < nc; j++) cinfo[icell].corner[j] = OUTSIDE;
+      cinfo[icell].type = mark;
+      for (int j = 0; j < nc; j++) cinfo[icell].corner[j] = mark;
+      if (mark == INSIDE) cinfo[icell].volume = 0.0;
     }
     return;
   }

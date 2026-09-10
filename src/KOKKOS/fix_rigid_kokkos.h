@@ -37,6 +37,8 @@ class FixRigidKokkos : public FixRigid {
 
  private:
   int last_body();
+  int any_lists_changed();
+  void clear_lists_changed();
   void host_begin();
   void host_end();
 };

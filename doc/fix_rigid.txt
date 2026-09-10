@@ -60,7 +60,7 @@ zero or more optional keyword/value pairs :l
 
 compute csurf surf all all fx fy fz tx ty tz com 5 5 0
 global rigid yes
-fix 1 rigid all csurf body mass 1.0 com 5 5 0 vcom 0 0 0 moi 1 1 2 -1 0 0 angmom 0 0 0
+fix 1 rigid all csurf body mass 1.0 com 5 5 0 vcom 0 0 0 moi 2 2 3 0.5 0 0 angmom 0 0 0
 fix 1 rigid all csurf infile square.rigid outfile square.state 1000
 fix 1 rigid all csurf infile square.rigid push 1.0e-18 0.5 pushbound yes
 fix 1 rigid all csurf infile square.rigid force 0 -9.8e-22 0 :pre
@@ -114,11 +114,12 @@ per-surf array with 6 columns:
 
 compute csurf surf all all fx fy fz tx ty tz com 5 5 0 :pre
 
-The compute must also specify the {com} keyword, whose values should
-be the initial center-of-mass (COM) of the rigid body, consistent
-with the COM specified by this command.  As the body moves, this fix
-resets the COM used by the compute at the beginning of each timestep,
-so that tallied torques are always about the current COM of the body.
+The compute must also specify the {com} keyword, which "compute
+surf"_compute_surf.html requires for its torque values; the
+coordinates given to it are irrelevant here, since this fix resets
+the COM used by the compute at the beginning of each timestep to the
+mid-step position of the body's COM, so that tallied torques are
+always about the current COM of the body.
 This fix also insures the compute tallies collision info on every
 timestep of a run.
 
@@ -234,11 +235,15 @@ augments the collision lists only; grid cell flow volumes and
 INSIDE/OUTSIDE markings come from the {remap} keyword below and are
 unaffected.)
 
-Particle collisions with the moving surfs use the exact translating
-and rotating position of each line or triangle during the step: a
+Particle collisions with the moving surfs use the position of each
+line or triangle as it translates and rotates during the step: a
 particle can hit a surf which is moving toward or away from it,
 including a surf which sweeps over a slowly-moving or stationary
-particle.  Each collision is performed in the local rest frame of the
+particle.  The test is exact for a translating body; for a rotating
+body the particle path is mapped into the rotating frame and
+approximated by its chord, with a relative error of order the square
+of the rotation angle per step, which is why a warning is issued when
+that angle exceeds 0.1 radian (see below).  Each collision is performed in the local rest frame of the
 moving wall: the wall velocity at the point of impact, vwall = vcom +
 omega x r, is subtracted from the particle velocity, the assigned
 surface collision model ("surf_collide"_surf_collide.html) is applied
@@ -282,8 +287,10 @@ collision, which conserves energy.  For an accommodating model such as
 {diffuse} the particle leaves relative to the recoiled surface
 velocity.  The correction is applied to the particle velocity before
 the surface tallies, so the impulse applied to the body is the
-corrected one and momentum and angular momentum remain exactly
-conserved (see above).  It is skipped for a collision in which a
+corrected one and momentum remains exactly conserved (see above);
+angular momentum is conserved up to the motion of the COM within the
+step, since the tallied torque is taken about the mid-step COM while
+the recoil uses the COM at the time of the hit.  It is skipped for a collision in which a
 surface reaction occurs.  It is exact down to a body as light as one
 simulation particle; a lighter body would have to outrun the particle
 within the step, which the coupling scheme cannot represent, so the
@@ -318,8 +325,10 @@ The {remap} keyword selects how the moving body surfs are re-assigned
 to grid cells as the body moves, which is also discussed in "Section
 6.20"_Section_howto.html#howto_20.  In both modes the body surfs
 participate in the standard cut and split cell machinery, so grid
-cell flow volumes and INSIDE/OUTSIDE cell markings are exact near the
-body; the two modes differ only in cost.
+cell flow volumes and INSIDE/OUTSIDE cell markings near the body are
+those of the cut cells; the two modes differ in cost and in how the
+markings of cells which the cut cannot decide on its own are
+resolved, as described below.
 
 The {remap incremental} mode (the default) re-cuts only the grid
 cells near the body.  Each timestep a single pass collects the cells
@@ -344,11 +353,15 @@ For {remap cutcell}, at the end of every timestep, after the body
 surfs move, all surfs are re-assigned to grid cells and cut/split
 cell info including flow volumes and INSIDE/OUTSIDE cell markings is
 re-computed, exactly as is done by the "fix
-move/surf"_fix_move_surf.html command.  This produces the same cut
-cells as {incremental} but performs a full grid re-map every
-timestep, which can be expensive for large grids; it is chiefly
-useful as a reference for validating {incremental}, and is the mode
-used automatically with distributed surfs (see Restrictions below).
+move/surf"_fix_move_surf.html command, including the flood fill
+which marks the cells of the whole grid INSIDE or OUTSIDE.  This
+performs a full grid re-map every timestep, which can be expensive
+for large grids; it is chiefly useful as a reference for validating
+{incremental}.  The {incremental} mode does not flood fill: a cell
+whose cut leaves its markings undecided (all body surfs merely
+touching its faces, as for a face lying exactly on a cell boundary)
+falls back to a full re-map on that step, so both modes give the same
+cell markings and volumes.
 Any particles found inside the body after the re-map are deleted, but
 with swept collision coverage (see above) particles in the body's
 path are reflected rather than overtaken, so in practice no particles
@@ -424,7 +437,9 @@ resolved by the timestep: stiffer k means shorter contacts, and an
 under-resolved contact does not conserve energy.  The force
 contributes both force and torque to the body.  Each (corner point,
 static element) pair within the cutoff contributes its own force, so
-k is a per-contact stiffness.
+k is a per-contact stiffness.  The force acts along the outward normal
+of the static element, also when the closest feature of the element to
+the corner point is one of its edges or vertices.
 
 The push-off spring has a finite range, so it can only absorb a finite
 amount of kinetic energy: for a linear spring the work done in
@@ -455,7 +470,9 @@ at zero, so the dashpot never produces adhesion as a contact ends.
 With gamma = 0 (the default) contacts are elastic.
 The {pushbound} keyword additionally applies the same spring force
 from the (non-periodic) boundaries of the simulation box, to keep the
-body inside the box.  Push-off forces are computed for the
+body inside the box; a corner point which has crossed a boundary is
+pushed back with the maximum force k*cutoff.  Push-off forces are
+computed for the
 end-of-step geometry and are included in the force and torque of the
 step.  The total push-off force is
 included in the global vector output of this fix (see below).
@@ -530,7 +547,9 @@ orientation of the rigid body.  The force and torque are those
 accumulated on the most recent timestep, half of which has been
 applied to the body at the end of that step and half of which will be
 applied at the start of the next; they include the push-off forces,
-which are also reported separately in values 20-22.
+which are also reported separately in values 20-22, but not the
+constant external force of the {force} keyword, which is applied
+separately and is not part of the tallied force.
 
 The velocities in values 4-6 and 13-15 are synchronized with the
 position and orientation in values 1-3 and 16-19, all at the end of
@@ -544,8 +563,13 @@ This fix performs several validity checks when it is defined and
 initialized: the body must be watertight and enclose a non-zero area
 or volume (see above), its mass must
 be positive, its principal moments of inertia must be positive and
-(in 3d) satisfy the triangle inequality I1 + I2 >= I3, and the
-compute's surf group must include all body surfs.  During a run, a
+satisfy the triangle inequality I1 + I2 >= I3 in 3d, or its moment
+about the z axis must be positive in 2d, the compute's surf group
+must include all body surfs, and the surf collision model of the
+body surfs must not itself impose a wall motion (the {translate} and
+{rotate} options of "surf_collide"_surf_collide.html diffuse, and the
+piston style), since the motion of the body is what the surfs
+follow.  During a run, a
 one-time warning is issued if the body rotates by more than 0.1
 radian in a single timestep (which degrades the accuracy of
 moving-surf collisions), if any body surf point moves farther than
@@ -574,7 +598,24 @@ surface reactions assigned to them.
 
 Surfs cannot be removed, nor the body's surf group changed, after a
 fix rigid command is defined; surfs may be appended (they become
-static surfs).
+static surfs).  With distributed surfs the collision model, reaction
+model, transparency and group membership of the body surfs cannot be
+changed after the fix is defined either, since the fix builds its
+local copies of body surfs from a replicated table of these
+attributes; issue the "surf_modify"_surf_modify.html
+commands for the body surfs before the fix rigid command, and an
+error is generated at the start of a run if they have changed.  With
+non-distributed surfs such changes are picked up at the start of the
+next run.
+
+Per-surf tallies of "compute surf"_compute_surf.html other than the
+force and torque, such as pressure and shear stress, resolve
+quantities along the surf normal stored at the start of the step, not
+the normal at the time of the hit, so on a rotating body they are
+approximate to the rotation per step.  A "global field"_global.html or
+per-particle field perturbs the particle paths within a step while the
+moving-surf collision test assumes straight paths, so the hit time on
+a body is approximate to the same order as the field perturbation.
 
 The body must be a closed (watertight) object which encloses a
 non-zero area or volume.  The body must stay
@@ -597,17 +638,22 @@ particles continue to collide with.
 
 :line
 
-This fix is part of the KOKKOS package, as the {rigid/kk} style, which
-is selected automatically by the "-sf kk"_Section_start.html#start_7
-command-line switch.  The KOKKOS version performs the moving-surf
-collision tests in the KOKKOS particle mover, on the GPU or host
-threads.  The body time integration, the summation of force and
-torque, the per-step re-assignment of body surfs to grid cells, and
-the deletion of particles inside the body run on the host, so each
-timestep the particle data is copied from the device to the host and
-back.  This limits performance on GPUs for large particle counts but
-gives identical results to the non-KOKKOS version.  The compute used
-by the fix must be the {surf/kk} style, which "-sf kk" also selects.
+The {rigid/kk} style is part of the KOKKOS package and is selected
+automatically by the "-sf kk"_Section_start.html#start_7 command-line
+switch; when the KOKKOS package is active (the "-k on" switch) the
+{rigid/kk} style must be used, and the plain style generates an
+error.  The KOKKOS version performs the moving-surf collision tests
+in the KOKKOS particle mover, on the GPU or host threads.  The body
+time integration, the summation of force and torque, the per-step
+re-assignment of body surfs to grid cells, and the deletion of
+particles inside the body run on the host, so each timestep the
+particle data is copied from the device to the host and back.  This
+limits performance on GPUs for large particle counts.  The results
+are statistically equivalent to those of the non-KOKKOS version; the
+KOKKOS surface collision models use a different random number stream
+and per-surf tallies are summed in a different order, so trajectories
+are not bit-for-bit identical.  The compute used by the fix must be
+the {surf/kk} style, which "-sf kk" also selects.
 
 [Related commands:]
 

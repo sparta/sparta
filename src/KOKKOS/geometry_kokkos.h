@@ -18,6 +18,7 @@
 #define EPSSQNEG -1.0e-16
 #define EPSSELF 1.0e-6
 #define EPSTIME 1.0e-16
+#define EPSRECOIL 1.0e-8    // same as Geometry
 
 enum{OUTSIDE,INSIDE,ONSURF2OUT,ONSURF2IN};    // same as Update
 
@@ -1422,7 +1423,11 @@ void body_frame_point(const double *pt, double t,
     MathExtraKokkos::quat_to_mat(q,rot);
     MathExtraKokkos::matvec(rot,delta,dnew);
     MathExtraKokkos::add3(xcm0,dnew,y);
-  } else MathExtraKokkos::add3(xcm0,delta,y);
+  } else {
+    y[0] = pt[0] - vcm[0]*t;
+    y[1] = pt[1] - vcm[1]*t;
+    y[2] = pt[2] - vcm[2]*t;
+  }
 }
 
 KOKKOS_INLINE_FUNCTION
@@ -1579,7 +1584,7 @@ void rigid_recoil(int dim, double msuper, const double *norm,
   double jn = MathExtraKokkos::dot3(jinf,norm);
   for (k = 0; k < 3; k++) jt[k] = jinf[k] - jn*norm[k];
 
-  if (MathExtraKokkos::lensq3(jt) <= 1.0e-8*1.0e-8*jn*jn) {
+  if (MathExtraKokkos::lensq3(jt) <= EPSRECOIL*EPSRECOIL*jn*jn) {
     MathExtraKokkos::matvec(kmat,norm,kn);
     double scale = 1.0 / (1.0 + msuper*MathExtraKokkos::dot3(norm,kn));
     for (k = 0; k < 3; k++) jnew[k] = jinf[k] + (scale-1.0)*jn*norm[k];

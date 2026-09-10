@@ -29,7 +29,7 @@ MASS_N = 2.325e-26
 FNUM = 0.001
 
 
-def run_deck(exe_cmd, deck, extra=None, expect_error=False):
+def run_deck(exe_cmd, deck, extra=None):
     """Run one deck, return (returncode, stdout+stderr)."""
     cmd = exe_cmd + ["-in", deck] + (extra or [])
     proc = subprocess.run(cmd, cwd=THISDIR, stdout=subprocess.PIPE,
@@ -424,7 +424,9 @@ def test_restart(exe_cmd):
     # the split points straddle the contact with the wall, which is the
     # sensitive case: the body moves on a step under the force and torque
     # accumulated on the previous one, so a continuation which resumed
-    # with zero force would lose that impulse
+    # with zero force would lose that impulse.  two bodies, each with its
+    # own outfile, so that the state written for a body other than the
+    # last-defined one is also checked to be the complete end-of-step state
     total = 1500
     fails = []
     rc, out = run_deck(exe_cmd, "in.test.restart.oneshot",
@@ -463,7 +465,8 @@ def test_restart(exe_cmd):
             continue
         last = rows2[-1]
         for key, name in (("f_1[1]", "xcm"), ("f_1[4]", "vx"),
-                          ("f_1[15]", "omega")):
+                          ("f_1[15]", "omega"), ("f_2[1]", "xcm2"),
+                          ("f_2[4]", "vx2"), ("f_2[15]", "omega2")):
             if not approx(last[key], ref[key], rel=1e-7, abs_=1e-12):
                 fails.append("split %d: %s = %.12g differs from one-shot "
                              "%.12g" % (split, name, last[key], ref[key]))
@@ -480,7 +483,7 @@ def test_gridchange(exe_cmd):
     # fix adapt (refine/coarsen on the body surfs every 100 steps)
     results = {}
     fails = []
-    for pert in ("none", "balance", "adapt"):
+    for pert in ("none", "balance", "balancecell", "adapt"):
         rc, out = run_deck(exe_cmd, "in.test.gridchange",
                            extra=["-var", "pert", pert])
         if rc:
@@ -494,7 +497,7 @@ def test_gridchange(exe_cmd):
     if fails:
         return fails
     ref = results["none"]
-    for pert in ("balance", "adapt"):
+    for pert in ("balance", "balancecell", "adapt"):
         if len(results[pert]) != len(ref):
             fails.append("pert %s: %d stats rows vs %d unperturbed"
                          % (pert, len(results[pert]), len(ref)))
@@ -646,7 +649,11 @@ def test_recoil(exe_cmd):
         if rc != 0:
             fails.append("%s: run failed with exit code %d" % (label, rc))
             continue
-        row = parse_stats(out)[-1]
+        rows = parse_stats(out)
+        if not rows:
+            fails.append("%s: no stats output" % label)
+            continue
+        row = rows[-1]
         if row["Np"] != 1:
             fails.append("%s: particle lost" % label)
         for key, want in (("c_rvx", vx), ("c_rvy", 0.0), ("f_1[4]", vcm),
@@ -673,7 +680,11 @@ def test_recoil(exe_cmd):
     if rc != 0:
         fails.append("3d: run failed with exit code %d" % rc)
         return fails
-    row = parse_stats(out)[-1]
+    rows = parse_stats(out)
+    if not rows:
+        fails.append("3d: no stats output")
+        return fails
+    row = rows[-1]
     for key, want in (("c_rvx", vx), ("c_rvy", 0.0), ("c_rvz", 0.0),
                       ("f_1[4]", vcm), ("f_1[5]", 0.0), ("f_1[6]", 0.0),
                       ("f_1[13]", 0.0), ("f_1[14]", wy), ("f_1[15]", wz)):
@@ -690,8 +701,29 @@ def test_recoil(exe_cmd):
     return fails
 
 
+def test_exitbox(exe_cmd):
+    # two bodies leaving through opposite faces: the run must complete
+    # (no false "surfs may enclose the box" error) and the motion is
+    # ballistic, ycm = y0 + vy * t with t = 200 * 1e-4
+    rc, out = run_deck(exe_cmd, "in.test.exitbox")
+    if rc:
+        return ["run failed with exit code %d" % rc]
+    rows = parse_stats(out)
+    if not rows:
+        return ["no stats output"]
+    last = rows[-1]
+    fails = []
+    if not approx(last["f_1[2]"], 3.0 - 400.0 * 0.02, rel=1e-10):
+        fails.append("body 1 ycm = %.12g, expected %.12g"
+                     % (last["f_1[2]"], 3.0 - 400.0 * 0.02))
+    if not approx(last["f_2[2]"], 7.0 + 400.0 * 0.02, rel=1e-10):
+        fails.append("body 2 ycm = %.12g, expected %.12g"
+                     % (last["f_2[2]"], 7.0 + 400.0 * 0.02))
+    return fails
+
+
 def negative_test(exe_cmd, deck, message):
-    rc, out = run_deck(exe_cmd, deck, expect_error=True)
+    rc, out = run_deck(exe_cmd, deck)
     fails = []
     if rc == 0:
         fails.append("run succeeded but an error was expected")
@@ -706,6 +738,15 @@ def test_badmoi(exe_cmd):
 
 def test_notwatertight(exe_cmd):
     return negative_test(exe_cmd, "in.test.notwatertight", "not watertight")
+
+
+def test_modifyafter(exe_cmd):
+    return negative_test(exe_cmd, "in.test.modifyafter",
+                         "attributes were changed")
+
+
+def test_wallmotion(exe_cmd):
+    return negative_test(exe_cmd, "in.test.wallmotion", "own wall motion")
 
 
 def test_zerothick(exe_cmd):
@@ -730,12 +771,15 @@ TESTS = [
     ("staticdist3d", test_staticdist3d),
     ("splitcell", test_splitcell),
     ("gridchange", test_gridchange),
+    ("exitbox", test_exitbox),
     ("restart", test_restart),
     ("twobody", test_twobody),
     ("pushpair", test_pushpair),
     ("badmoi", test_badmoi),
     ("notwatertight", test_notwatertight),
     ("zerothick", test_zerothick),
+    ("modifyafter", test_modifyafter),
+    ("wallmotion", test_wallmotion),
 ]
 
 # tests whose decks support -var dist 1 (global surfs explicit/distributed)
@@ -748,7 +792,7 @@ DIST_TESTS = {"ballistic", "force", "rotation", "bounce", "restitution",
               "momentum",
               "overrun",
               "remap", "multiremap", "staticdist", "staticdist3d",
-              "splitcell", "gridchange", "twobody", "pushpair"}
+              "splitcell", "gridchange", "exitbox", "twobody", "pushpair"}
 
 
 def main():
@@ -782,9 +826,9 @@ def main():
             subset &= DIST_TESTS
         base_run_deck = run_deck
 
-        def dist_run_deck(exe_cmd, deck, extra=None, expect_error=False):
+        def dist_run_deck(exe_cmd, deck, extra=None):
             extra = (extra or []) + ["-var", "dist", "1"]
-            return base_run_deck(exe_cmd, deck, extra, expect_error)
+            return base_run_deck(exe_cmd, deck, extra)
 
         run_deck = dist_run_deck
 

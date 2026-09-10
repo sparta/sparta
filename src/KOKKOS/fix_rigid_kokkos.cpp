@@ -78,7 +78,7 @@ int FixRigidKokkos::last_body()
 void FixRigidKokkos::host_begin()
 {
   ((GridKokkos*) grid)->sync(Host,ALL_MASK);
-  ((ParticleKokkos*) particle)->sync(Host,ALL_MASK);
+  ((ParticleKokkos*) particle)->sync(Host,PARTICLE_MASK);
   ((SurfKokkos*) surf)->sync(Host,ALL_MASK);
 }
 
@@ -97,13 +97,18 @@ void FixRigidKokkos::host_end()
   ParticleKokkos *particle_kk = (ParticleKokkos*) particle;
   SurfKokkos *surf_kk = (SurfKokkos*) surf;
 
+  // particles: compress_rebalance() moves particles and their custom data
+  // surfs: the body geometry was regenerated on the host
+  // per-cell surf lists: only rewrap the device graphs if a list changed
+
   grid_kk->modify(Host,ALL_MASK);
-  particle_kk->modify(Host,ALL_MASK);
+  particle_kk->modify(Host,PARTICLE_MASK|CUSTOM_MASK);
   surf_kk->modify(Host,ALL_MASK);
   particle_kk->sorted_kk = 0;
 
   if (grid->changed) grid_kk->resync_after_host_change();
-  else grid_kk->wrap_kokkos_graphs();
+  else if (any_lists_changed()) grid_kk->wrap_kokkos_graphs();
+  clear_lists_changed();
 }
 
 /* ---------------------------------------------------------------------- */
@@ -134,7 +139,8 @@ void FixRigidKokkos::start_of_step()
 
   if (last_body()) {
     grid_kk->modify(Host,CELL_MASK);
-    grid_kk->wrap_kokkos_graphs();
+    if (any_lists_changed()) grid_kk->wrap_kokkos_graphs();
+    clear_lists_changed();
   }
 }
 
@@ -168,6 +174,25 @@ void FixRigidKokkos::end_of_step()
 void FixRigidKokkos::grid_changed()
 {
   FixRigid::grid_changed();
-  ((SurfKokkos*) surf)->modify(Host,ALL_MASK);
+  if (surf->distributed) ((SurfKokkos*) surf)->modify(Host,ALL_MASK);
   ((GridKokkos*) grid)->modify(Host,CELL_MASK);
+}
+
+/* ----------------------------------------------------------------------
+   1 if any rigid fix changed a per-cell surf list on the host since the
+     device graphs were last rewrapped: swept lists installed or
+     restored, or cells re-cut incrementally
+------------------------------------------------------------------------- */
+
+int FixRigidKokkos::any_lists_changed()
+{
+  for (int m = 0; m < update->nfixrigid; m++)
+    if (update->fixrigidlist[m]->listschanged) return 1;
+  return 0;
+}
+
+void FixRigidKokkos::clear_lists_changed()
+{
+  for (int m = 0; m < update->nfixrigid; m++)
+    update->fixrigidlist[m]->listschanged = 0;
 }

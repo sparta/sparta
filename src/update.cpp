@@ -302,6 +302,12 @@ void Update::init_rigid()
   if (domain->axisymmetric)
     error->all(FLERR,"Cannot use global rigid with axisymmetric domain");
 
+  // the cell-bin index holds cell indices for the grid it was built
+  //   from; the grid may have been replaced between runs by a command
+  //   which does not notify fixes, so rebuild it on first use
+
+  rigid_bins_clear();
+
   delete [] fixrigidlist;
 
   nfixrigid = 0;
@@ -316,7 +322,18 @@ void Update::init_rigid()
     if (fix_rigid_style(modify->fix[ifix]->style))
       fixrigidlist[nfixrigid++] = (FixRigid *) modify->fix[ifix];
 
-  build_rigidmap();
+  // distributed surfs: establish the local copies of the body surfs
+  //   now, before the surface collision and reaction models init,
+  //   so that their per-surf state is sized for the final local+ghost
+  //   surf arrays of this run
+
+  if (surf->distributed) {
+    int changed = 0;
+    for (int m = 0; m < nfixrigid; m++)
+      if (fixrigidlist[m]->ensure_local_copies()) changed = 1;
+    build_rigidmap();
+    fixrigidlist[0]->surfs_changed(changed,1);
+  } else build_rigidmap();
 }
 
 /* ----------------------------------------------------------------------
@@ -1349,10 +1366,11 @@ template < int DIM, int SURF, int OPT, int RIGID > void Update::move()
 
             // check for collisions with triangles or lines in cell
             // find 1st surface hit via minparam
-            // skip collisions with previous surf,
-            //   but not for axisymmetric or moving rigid-body surfs
-            //   a moving surf can advance into a just-reflected particle,
-            //   immediate re-hits are rejected by the outward side test
+            // skip collisions with previous surf, but not for axisymmetric
+            //   also for a moving rigid-body surf: within one step the body
+            //   moves uniformly, so a surf cannot advance into a particle
+            //   it just reflected, and a re-test would only find the
+            //   round-off re-hit at param = 0 that the exclude avoids
             // not considered collision if 2 params are tied and one INSIDE surf
             // if collision occurs, perform collision with surface model
             // reset x,v,xnew,dtremain and continue single particle trajectory
@@ -1371,10 +1389,7 @@ template < int DIM, int SURF, int OPT, int RIGID > void Update::move()
               isurf = csurfs[m];
 
               if (DIM > 1) {
-                if (isurf == exclude) {
-                  if (!RIGID) continue;
-                  if (rigidmap[isurf] < 0) continue;
-                }
+                if (isurf == exclude) continue;
               }
               if (DIM == 3) {
                 tri = &tris[isurf];

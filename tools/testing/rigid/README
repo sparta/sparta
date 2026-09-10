@@ -11,7 +11,7 @@ rotation      torque-free tumbling of an asymmetric 3d body: the
               rotational energy is conserved, and rotate richardson
               must conserve it far better than rotate euler
 force         same body under a constant external force: COM follows
-              the semi-implicit Euler trajectory to output precision
+              the exact constant-force trajectory to output precision
 bounce        body vs static wall via push-off springs: elastic
               rebound within 1%, no tunneling into the cutoff zone
 restitution   analytic properties of the push-off contact model:
@@ -37,8 +37,8 @@ staticdist    gas-driven body next to a 200-segment static circle:
 staticdist3d  3d: cube body drifting past a 1200-triangle static sphere,
               identical trajectories in both remap modes, no deletions;
               with --dist on several procs the sphere is mostly ghost surfs
-restart       restart continuation: a deterministic push-off run split
-              across write_restart/read_restart, with the body state
+restart       restart continuation: a deterministic push-off run of two
+              bodies split across write_restart/read_restart, with each body's state
               carried by the fix outfile/infile, must reproduce the
               one-shot trajectory, including splits made while the body
               is in contact with the wall
@@ -46,6 +46,9 @@ gridchange    the grid changing underneath the body: a no-particle
               push-off trajectory must be identical with and without
               fix balance (random style) and fix adapt, which rebuild
               and re-partition the grid mid-run
+exitbox       two bodies leave the box through opposite faces: the
+              inside/outside marking of a surf-free grid is decided by
+              parity, the run completes and the motion is ballistic
 splitcell     body sweeping alongside a diagonal wall that creates
               split cells: particles entering the swept split cells
               are reflected (no deletions), both remap modes agree
@@ -60,6 +63,10 @@ badmoi        negative: 3d moi violating the triangle inequality
 notwatertight negative: open body group must be rejected
 zerothick     negative: a watertight body enclosing no area (2d) or
               volume (3d), e.g. a doubled line or tri, must be rejected
+modifyafter   negative: with distributed surfs, surf_modify of the body
+              surfs after the fix is defined must be rejected
+wallmotion    negative: a body surf_collide model with its own wall
+              motion (diffuse translate) must be rejected
 
 The ballistic, force, bounce, twobody, and pushpair tests contain no
 particles, and the recoil test a single particle; they must produce
@@ -79,7 +86,8 @@ SPARTA_KOKKOS_EXACT reproduces the non-KOKKOS results exactly.
 
 Passing --dist reruns the subset of tests whose decks support
 distributed surfs (global surfs explicit/distributed): all but the
-two negative tests.  Run it on several procs as well as on one, since
-only then are static surfs stored as ghost surfs on some procs.
+negative tests, recoil, and restart.  Run it on several procs as well
+as on one, since only then are static surfs stored as ghost surfs on
+some procs.
 
 Exit code = number of failed tests.

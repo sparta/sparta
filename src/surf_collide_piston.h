@@ -28,6 +28,7 @@ namespace SPARTA_NS {
 
 class SurfCollidePiston : public SurfCollide {
  public:
+  int moving_wall() {return 1;}
   SurfCollidePiston(class SPARTA *, int, char **);
   SurfCollidePiston(class SPARTA *sparta) : SurfCollide(sparta) {} // needed for Kokkos
   virtual ~SurfCollidePiston() {}
