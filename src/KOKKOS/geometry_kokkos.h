@@ -19,6 +19,8 @@
 #define EPSSELF 1.0e-6
 #define EPSTIME 1.0e-16
 #define EPSRECOIL 1.0e-8    // same as Geometry
+#define EPSREFINE 1.0e-15   // same as Geometry
+#define MAXREFINE 10        // same as Geometry
 
 enum{OUTSIDE,INSIDE,ONSURF2OUT,ONSURF2IN};    // same as Update
 
@@ -1454,6 +1456,113 @@ void space_frame_vector(const double *vec, double t, const double *omega,
   }
 }
 
+KOKKOS_INLINE_FUNCTION
+void body_frame_state(const double *pt, const double *u, double t,
+                      const double *xcm0, const double *vcm,
+                      const double *omega, double *y, double *dy)
+{
+  double xcmt[3],delta[3],rel[3],wxd[3],axis[3],q[4],dnew[3];
+  double rot[3][3];
+
+  xcmt[0] = xcm0[0] + vcm[0]*t;
+  xcmt[1] = xcm0[1] + vcm[1]*t;
+  xcmt[2] = xcm0[2] + vcm[2]*t;
+  MathExtraKokkos::sub3(pt,xcmt,delta);
+
+  MathExtraKokkos::cross3(omega,delta,wxd);
+  MathExtraKokkos::sub3(u,wxd,rel);
+
+  double wmag = MathExtraKokkos::len3(omega);
+  double angle = wmag*t;
+
+  if (angle != 0.0) {
+    axis[0] = omega[0]/wmag;
+    axis[1] = omega[1]/wmag;
+    axis[2] = omega[2]/wmag;
+    MathExtraKokkos::axisangle_to_quat(axis,-angle,q);
+    MathExtraKokkos::quat_to_mat(q,rot);
+    MathExtraKokkos::matvec(rot,delta,dnew);
+    MathExtraKokkos::add3(xcm0,dnew,y);
+    MathExtraKokkos::matvec(rot,rel,dy);
+  } else {
+    y[0] = pt[0] - vcm[0]*t;
+    y[1] = pt[1] - vcm[1]*t;
+    y[2] = pt[2] - vcm[2]*t;
+    dy[0] = rel[0];
+    dy[1] = rel[1];
+    dy[2] = rel[2];
+  }
+}
+
+/* ----------------------------------------------------------------------
+   refine the hit fraction of a collision with a moving body element on
+     the exact mapped particle path
+   same method and semantics as Geometry::refine_moving_param(), where
+     the error it removes is derived
+------------------------------------------------------------------------- */
+
+KOKKOS_INLINE_FUNCTION
+void refine_moving_param(const double *start, const double *stop,
+                         double t0, double tsub,
+                         const double *v0, const double *norm,
+                         const double *xcm0, const double *vcm,
+                         const double *omega,
+                         const double *y0, const double *y1, double &param)
+{
+  double x[3],y[3],dy[3],u[3],delta[3];
+
+  if (omega[0] == 0.0 && omega[1] == 0.0 && omega[2] == 0.0) return;
+  if (tsub == 0.0) return;
+  if (param <= 0.0 || param >= 1.0) return;
+
+  MathExtraKokkos::sub3(y0,v0,delta);
+  double f0 = MathExtraKokkos::dot3(delta,norm);
+  MathExtraKokkos::sub3(y1,v0,delta);
+  double f1 = MathExtraKokkos::dot3(delta,norm);
+
+  if (f0 == 0.0 || f1 == 0.0) return;
+  if ((f0 > 0.0) == (f1 > 0.0)) return;
+
+  u[0] = (stop[0]-start[0])/tsub - vcm[0];
+  u[1] = (stop[1]-start[1])/tsub - vcm[1];
+  u[2] = (stop[2]-start[2])/tsub - vcm[2];
+
+  double lo = 0.0;
+  double hi = 1.0;
+  double h = param;
+
+  for (int iter = 0; iter < MAXREFINE; iter++) {
+    x[0] = start[0] + h*(stop[0]-start[0]);
+    x[1] = start[1] + h*(stop[1]-start[1]);
+    x[2] = start[2] + h*(stop[2]-start[2]);
+    body_frame_state(x,u,t0+h*tsub,xcm0,vcm,omega,y,dy);
+    MathExtraKokkos::sub3(y,v0,delta);
+    double f = MathExtraKokkos::dot3(delta,norm);
+    if (f == 0.0) break;
+
+    if ((f > 0.0) == (f0 > 0.0)) lo = h;
+    else hi = h;
+
+    double df = tsub*MathExtraKokkos::dot3(dy,norm);
+    if (df == 0.0) {
+      h = 0.5*(lo+hi);
+      continue;
+    }
+
+    double dh = -f/df;
+    if (fabs(dh) <= EPSREFINE) {
+      h += dh;
+      break;
+    }
+
+    double hnew = h + dh;
+    if (hnew <= lo || hnew >= hi) hnew = 0.5*(lo+hi);
+    h = hnew;
+  }
+
+  param = h;
+}
+
 /* ----------------------------------------------------------------------
    detect intersection between the path of a moving particle and
      a line segment which is part of a moving rigid body
@@ -1477,6 +1586,12 @@ bool line_line_moving_intersect(double *start, double *stop,
 
   bool hit = line_line_intersect(y0,y1,v0,v1,norm,yc,param,side);
   if (!hit) return false;
+
+  // the chord is only a first-order-accurate stand-in for the mapped
+  //   path of a rotating body: refine the hit fraction on the exact
+  //   mapped path before deriving anything from it
+
+  refine_moving_param(start,stop,t0,tsub,v0,norm,xcm0,vcm,omega,y0,y1,param);
 
   double thit = t0 + param*tsub;
   point[0] = start[0] + param*(stop[0]-start[0]);
@@ -1521,6 +1636,10 @@ bool line_tri_moving_intersect(double *start, double *stop,
 
   bool hit = line_tri_intersect(y0,y1,v0,v1,v2,norm,yc,param,side);
   if (!hit) return false;
+
+  // refine the hit fraction on the exact mapped path, as in 2d
+
+  refine_moving_param(start,stop,t0,tsub,v0,norm,xcm0,vcm,omega,y0,y1,param);
 
   double thit = t0 + param*tsub;
   point[0] = start[0] + param*(stop[0]-start[0]);

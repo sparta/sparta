@@ -251,11 +251,21 @@ unaffected.)
 line or triangle as it translates and rotates during the step: a
 particle can hit a surf which is moving toward or away from it,
 including a surf which sweeps over a slowly-moving or stationary
-particle.  The test is exact for a translating body; for a rotating
-body the particle path is mapped into the rotating frame and
-approximated by its chord, with a relative error of order the square
-of the rotation angle per step, which is why a warning is issued when
-that angle exceeds 0.1 radian (see below).  Each collision is performed in the local rest frame of the
+particle.  The test is exact for a translating body.  For a rotating
+body the particle path is mapped into the rotating frame, where it is
+curved; the chord between its endpoints selects which element the
+particle hits, and the time of the hit is then solved for on the
+exact mapped path, so the hit time and point, the surface normal and
+the wall velocity are all exact to round-off.  What remains
+approximate is which element of the body is hit when the hit is
+within a rotation angle per step of the edge between two elements,
+and a grazing contact which enters and leaves the same element within
+one step, neither of which is a leakage path: a particle cannot pass
+through an element undetected.  Both scale with the rotation angle
+per step, which is why a warning is issued when that angle exceeds
+0.1 radian (see below).
+
+Each collision is performed in the local rest frame of the
 moving wall: the wall velocity at the point of impact, vwall = vcom +
 omega x r, is subtracted from the particle velocity, the assigned
 surface collision model (<A HREF = "surf_collide.html">surf_collide</A>) is applied

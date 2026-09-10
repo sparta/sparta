@@ -23,6 +23,8 @@
 #define EPSSQNEG -1.0e-16
 #define EPSSELF 1.0e-6
 #define EPSTIME 1.0e-16
+#define EPSREFINE 1.0e-15   // converged hit-fraction Newton step
+#define MAXREFINE 10        // iteration cap for the same
 
 enum{OUTSIDE,INSIDE,ONSURF2OUT,ONSURF2IN};    // same as Update
 
@@ -773,6 +775,166 @@ static void space_frame_vector(double *vec, double t, double *omega,
 }
 
 /* ----------------------------------------------------------------------
+   same mapping as body_frame_point(), and also the time derivative of
+     the mapped position, for the refinement below
+   u = velocity of the particle relative to the body = v - vcm
+   the mapped path is y(t) = xcm0 + R(-omega t) D(t) with
+     D(t) = pt(t) - xcm(t), whose derivative is
+     dy/dt = R(-omega t) (u - omega x D)
+------------------------------------------------------------------------- */
+
+static void body_frame_state(double *pt, double *u, double t,
+                             double *xcm0, double *vcm, double *omega,
+                             double *y, double *dy)
+{
+  double xcmt[3],delta[3],rel[3],wxd[3];
+  double axis[3],q[4],dnew[3];
+  double rot[3][3];
+
+  xcmt[0] = xcm0[0] + vcm[0]*t;
+  xcmt[1] = xcm0[1] + vcm[1]*t;
+  xcmt[2] = xcm0[2] + vcm[2]*t;
+  MathExtra::sub3(pt,xcmt,delta);
+
+  MathExtra::cross3(omega,delta,wxd);
+  MathExtra::sub3(u,wxd,rel);
+
+  double wmag = MathExtra::len3(omega);
+  double angle = wmag*t;
+
+  if (angle != 0.0) {
+    axis[0] = omega[0]/wmag;
+    axis[1] = omega[1]/wmag;
+    axis[2] = omega[2]/wmag;
+    MathExtra::axisangle_to_quat(axis,-angle,q);
+    MathExtra::quat_to_mat(q,rot);
+    MathExtra::matvec(rot,delta,dnew);
+    MathExtra::add3(xcm0,dnew,y);
+    MathExtra::matvec(rot,rel,dy);
+  } else {
+    y[0] = pt[0] - vcm[0]*t;
+    y[1] = pt[1] - vcm[1]*t;
+    y[2] = pt[2] - vcm[2]*t;
+    dy[0] = rel[0];
+    dy[1] = rel[1];
+    dy[2] = rel[2];
+  }
+}
+
+/* ----------------------------------------------------------------------
+   refine the hit fraction of a collision with a moving body element,
+     on the exact mapped particle path
+   the chord test intersects the frozen element with the straight
+     segment between the two exactly mapped path endpoints, but the
+     mapped path is not straight: seen from the body the particle is
+     deflected by the centrifugal term omega x (omega x D) and by the
+     Coriolis term 2 omega x u, so the chord departs from it by up to
+       (1/8)(omega tsub)^2 |D| + (1/4)(omega tsub)(|u| tsub)
+     the second term is only first order in the rotation per step, and
+     for a gas particle (relative speed >> surface speed omega |D|) it
+     is the larger one, so a hit whose approach is oblique to the
+     element is mis-timed by a fraction ~ (omega tsub)/4 of the step
+   f(h) = normal distance of the exactly mapped particle position from
+     the plane of the element.  f(0) and f(1) are exactly the two values
+     the chord interpolates, so whenever the chord crosses the plane
+     within the step so does the exact path, and the root is bracketed
+     by the ends of the path
+   Newton iteration with a bisection safeguard, seeded with the chord
+     fraction, converges to machine precision in 2 to 4 iterations for a
+     rotation per step within the 0.1 radian guidance
+   only the fraction is refined, and only where the chord test already
+     found a hit.  which element is hit, and the side of the relative
+     approach, are left to the chord test: the chord is one segment
+     tested against every element of the body, so it sees a watertight
+     body as watertight and cannot leak a particle into its interior,
+     and it agrees with the exact path on the side of an element the
+     particle ends the step on.  what the chord gets wrong is where
+     between the endpoints the crossing happens, which is what is
+     refined here
+   param is updated in place, so the hit point, the hit time, and the
+     normal and wall velocity at the hit, all of which the caller
+     derives from it, follow the exact mapped path
+------------------------------------------------------------------------- */
+
+static void refine_moving_param(double *start, double *stop,
+                                double t0, double tsub,
+                                double *v0, double *norm,
+                                double *xcm0, double *vcm, double *omega,
+                                double *y0, double *y1, double &param)
+{
+  double x[3],y[3],dy[3],u[3],delta[3];
+
+  // the mapped path of a body which does not rotate is exactly a chord
+
+  if (omega[0] == 0.0 && omega[1] == 0.0 && omega[2] == 0.0) return;
+  if (tsub == 0.0) return;
+  if (param <= 0.0 || param >= 1.0) return;
+
+  // f at the two ends of the path, from the already mapped endpoints
+
+  MathExtra::sub3(y0,v0,delta);
+  double f0 = MathExtra::dot3(delta,norm);
+  MathExtra::sub3(y1,v0,delta);
+  double f1 = MathExtra::dot3(delta,norm);
+
+  // leave the chord fraction alone if the path starts or ends on the
+  //   plane of the element, or does not cross it within the step
+  //   (a path which grazes the element crosses it twice, or not at all,
+  //   and a chord cannot resolve either case)
+
+  if (f0 == 0.0 || f1 == 0.0) return;
+  if ((f0 > 0.0) == (f1 > 0.0)) return;
+
+  u[0] = (stop[0]-start[0])/tsub - vcm[0];
+  u[1] = (stop[1]-start[1])/tsub - vcm[1];
+  u[2] = (stop[2]-start[2])/tsub - vcm[2];
+
+  double lo = 0.0;
+  double hi = 1.0;
+  double h = param;
+
+  for (int iter = 0; iter < MAXREFINE; iter++) {
+    x[0] = start[0] + h*(stop[0]-start[0]);
+    x[1] = start[1] + h*(stop[1]-start[1]);
+    x[2] = start[2] + h*(stop[2]-start[2]);
+    body_frame_state(x,u,t0+h*tsub,xcm0,vcm,omega,y,dy);
+    MathExtra::sub3(y,v0,delta);
+    double f = MathExtra::dot3(delta,norm);
+    if (f == 0.0) break;
+
+    // keep the root bracketed, so a Newton step which leaves the
+    //   bracket (a nearly tangential path) can fall back on bisection
+
+    if ((f > 0.0) == (f0 > 0.0)) lo = h;
+    else hi = h;
+
+    double df = tsub*MathExtra::dot3(dy,norm);
+    if (df == 0.0) {
+      h = 0.5*(lo+hi);
+      continue;
+    }
+
+    // the Newton step is tested for convergence before it is clamped to
+    //   the bracket: h is an endpoint of the bracket as of the update
+    //   just made, so a converged step, which leaves h where it is,
+    //   would otherwise be read as leaving the bracket and be thrown
+    //   away for a bisection
+
+    double dh = -f/df;
+    if (fabs(dh) <= EPSREFINE) {
+      h += dh;
+      break;
+    }
+
+    double hnew = h + dh;
+    if (hnew <= lo || hnew >= hi) hnew = 0.5*(lo+hi);
+    h = hnew;
+  }
+
+  param = h;
+}
+
+/* ----------------------------------------------------------------------
    detect intersection between the path of a moving particle and
      a line segment which is part of a moving rigid body
    start,stop = particle path endpoints at times T0 and T0+TSUB
@@ -788,9 +950,10 @@ static void space_frame_vector(double *vec, double t, double *omega,
    method: map the two particle path endpoints into the frame where the
      body is static at its start-of-step configuration, then use the
      static line_line_intersect() on the chord through the mapped points
-   exact for a translating body; for a rotating body the mapped path
-     is curved and the chord approximation has relative error
-     O((omega*tsub)^2), negligible for rotation per timestep << 1 radian
+   exact for a translating body; for a rotating body the mapped path is
+     curved, and the chord through its endpoints mis-times the crossing
+     by a fraction of the step which is first order in the rotation per
+     step (see refine_moving_param(), which corrects it)
    a nearly stationary particle swept over by an advancing surf IS
      detected, since the mapped path reflects the relative motion
    return TRUE if there is an intersection, else FALSE
@@ -820,6 +983,12 @@ bool line_line_moving_intersect(double *start, double *stop,
 
   bool hit = line_line_intersect(y0,y1,v0,v1,norm,yc,param,side);
   if (!hit) return false;
+
+  // the chord is only a first-order-accurate stand-in for the mapped
+  //   path of a rotating body: refine the hit fraction on the exact
+  //   mapped path before deriving anything from it
+
+  refine_moving_param(start,stop,t0,tsub,v0,norm,xcm0,vcm,omega,y0,y1,param);
 
   // thit = time of collision measured from start of step
   // hit pt is along the particle's straight space-frame path
@@ -1281,6 +1450,10 @@ bool line_tri_moving_intersect(double *start, double *stop,
 
   bool hit = line_tri_intersect(y0,y1,v0,v1,v2,norm,yc,param,side);
   if (!hit) return false;
+
+  // refine the hit fraction on the exact mapped path, as in 2d
+
+  refine_moving_param(start,stop,t0,tsub,v0,norm,xcm0,vcm,omega,y0,y1,param);
 
   // thit = time of collision measured from start of step
   // hit pt is along the particle's straight space-frame path

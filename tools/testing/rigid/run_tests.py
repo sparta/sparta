@@ -749,6 +749,55 @@ def test_wallmotion(exe_cmd):
     return negative_test(exe_cmd, "in.test.wallmotion", "own wall motion")
 
 
+def timestep_independence(exe_cmd, deck, keys, coarse, fine, tol=1.0e-9):
+    """run the same physical problem at two timesteps and require the same
+    answer: the deck is built so that the only timestep-dependent piece is
+    the moving-surf collision test"""
+    fails = []
+    last = {}
+    for label, (dt, nsteps) in (("coarse", coarse), ("fine", fine)):
+        rc, out = run_deck(exe_cmd, deck, ["-var", "dt", dt,
+                                           "-var", "nsteps", nsteps])
+        if rc:
+            fails.append("%s: run failed with exit code %d" % (label, rc))
+            continue
+        rows = parse_stats(out)
+        if not rows:
+            fails.append("%s: no stats output" % label)
+            continue
+        if rows[-1]["Np"] != 1:
+            fails.append("%s: the particle was lost" % label)
+            continue
+        last[label] = rows[-1]
+    if fails:
+        return fails
+    for key in keys:
+        c, f = last["coarse"][key], last["fine"][key]
+        if not approx(c, f, rel=tol, abs_=tol):
+            fails.append("%s: %.14g at the coarse timestep, %.14g at the "
+                         "fine one" % (key, c, f))
+    return fails
+
+
+def test_rotwall(exe_cmd):
+    # the body is heavy enough that the collision does not perturb it and
+    # spins at a constant rate, so its pose is exact at any timestep, and
+    # the particle is ballistic on either side of the collision.  the hit
+    # fraction of the moving-surf test is then the only thing that can
+    # make the two runs differ
+    return timestep_independence(
+        exe_cmd, "in.test.rotwall",
+        ("c_rx", "c_ry", "c_rvx", "c_rvy"),
+        ("1.0e-3", "5"), ("2.0e-5", "250"))
+
+
+def test_rotwall3d(exe_cmd):
+    return timestep_independence(
+        exe_cmd, "in.test.rotwall3d",
+        ("c_rx", "c_ry", "c_rz", "c_rvx", "c_rvy", "c_rvz"),
+        ("1.0e-3", "5"), ("2.0e-5", "250"))
+
+
 def test_emitsurf(exe_cmd):
     return negative_test(exe_cmd, "in.test.emitsurf",
                          "cannot emit from fix rigid body surfs")
@@ -845,6 +894,8 @@ TESTS = [
     ("wallmotion", test_wallmotion),
     ("emitsurf", test_emitsurf),
     ("renumber", test_renumber),
+    ("rotwall", test_rotwall),
+    ("rotwall3d", test_rotwall3d),
     ("axistuck", test_axistuck),
     ("tallyorder", test_tallyorder),
 ]
@@ -860,7 +911,7 @@ DIST_TESTS = {"ballistic", "force", "rotation", "bounce", "restitution",
               "overrun",
               "remap", "multiremap", "staticdist", "staticdist3d",
               "splitcell", "gridchange", "exitbox", "twobody", "pushpair",
-              "tallyorder"}
+              "tallyorder", "rotwall", "rotwall3d"}
 
 
 def main():

@@ -860,8 +860,10 @@ void FixRigid::start_of_step()
   MathExtra::q_to_exyz(quatnew,ex_space,ey_space,ez_space);
 
   // warn once per run if body motion in a single step is too large
-  // rotation > 0.1 radian degrades the chord approximation used for
-  //   collisions of particles with rotating surfs
+  // rotation > 0.1 radian degrades the collision test for particles
+  //   hitting rotating surfs: the hit time is exact, but which element
+  //   is hit comes from the chord through the mapped path endpoints
+  //   (see Geometry::refine_moving_param)
   // max surf pt displacement > smallest grid cell degrades the
   //   accuracy of surf assignment to grid cells for cutcell remapping
 

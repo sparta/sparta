@@ -73,6 +73,13 @@ renumber      negative: a remove_surf issued after the fix is defined
               which re-numbers the body surfs must be rejected, with
               distributed surfs and (with a read_surf restoring the
               surf count) non-distributed surfs
+rotwall       a collision with a body spinning at 0.09 radian per step
+              must be independent of the timestep: the body is heavy
+              enough not to be perturbed by it and spins at a constant
+              rate, so nothing else in the problem depends on the
+              timestep.  the 3d variant does the same for a spinning
+              cube and the moving-triangle test
+rotwall3d     see rotwall
 axistuck      no rigid body: axisymmetric tube in which particles hit
               the same static line many times per step; the mover must
               not treat the repeated hits as a stuck particle
