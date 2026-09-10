@@ -69,9 +69,16 @@ wallmotion    negative: a body surf_collide model with its own wall
               motion (diffuse translate) must be rejected
 emitsurf      negative: a fix emit/surf emitting from the body surfs
               must be rejected
-renumber      negative: with distributed surfs, a remove_surf issued
-              after the fix is defined which re-numbers the body surfs
-              must be rejected
+renumber      negative: a remove_surf issued after the fix is defined
+              which re-numbers the body surfs must be rejected, with
+              distributed surfs and (with a read_surf restoring the
+              surf count) non-distributed surfs
+axistuck      no rigid body: axisymmetric tube in which particles hit
+              the same static line many times per step; the mover must
+              not treat the repeated hits as a stuck particle
+tallyorder    a fix ave/surf on a static wall defined after fix rigid
+              must see the same hit counts as one defined before it
+              (KOKKOS: tallies fetched before the grid rebuild)
 
 The ballistic, force, bounce, twobody, and pushpair tests contain no
 particles, and the recoil test a single particle; they must produce

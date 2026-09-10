@@ -755,7 +755,61 @@ def test_emitsurf(exe_cmd):
 
 
 def test_renumber(exe_cmd):
-    return negative_test(exe_cmd, "in.test.renumber", "were renumbered")
+    fails = negative_test(exe_cmd, "in.test.renumber", "were renumbered")
+    fails += negative_test(exe_cmd, "in.test.renumber2", "were renumbered")
+    return fails
+
+
+def test_axistuck(exe_cmd):
+    # no rigid body: the mover's moving-surf re-hit rule must leave the
+    # legitimate repeated hits on one static line alone (axisymmetric)
+    rc, out = run_deck(exe_cmd, "in.test.axistuck")
+    if rc:
+        return ["run failed with exit code %d" % rc]
+    rows = parse_stats(out)
+    if not rows:
+        return ["no stats output"]
+    fails = []
+    for row in rows:
+        if row["Np"] != 2000:
+            fails.append("step %d: np = %d, particles were deleted"
+                         % (row["Step"], row["Np"]))
+            break
+    if rows[-1]["Nscoll"] < 1000:
+        fails.append("too few surf collisions (%d) for the test to be "
+                     "meaningful" % rows[-1]["Nscoll"])
+    return fails
+
+
+def test_tallyorder(exe_cmd):
+    # a fix ave/surf on a static wall must see the same per-step hit
+    # counts whether it is defined before or after fix rigid
+    results = {}
+    fails = []
+    for order in ("0", "1"):
+        rc, out = run_deck(exe_cmd, "in.test.tallyorder",
+                           extra=["-var", "order", order])
+        if rc:
+            fails.append("order %s: run failed with exit code %d"
+                         % (order, rc))
+            continue
+        rows = parse_stats(out)
+        if not rows:
+            fails.append("order %s: no stats output" % order)
+            continue
+        results[order] = rows
+    if fails:
+        return fails
+    for r0, r1 in zip(results["0"], results["1"]):
+        if r0["c_red"] != r1["c_red"]:
+            fails.append("step %d: wall hits %g (ave/surf before fix rigid)"
+                         " vs %g (after)" % (r0["Step"], r0["c_red"],
+                                             r1["c_red"]))
+            break
+    if results["0"][-1]["c_red"] < 10:
+        fails.append("too few wall hits (%g) for the test to be meaningful"
+                     % results["0"][-1]["c_red"])
+    return fails
 
 
 def test_zerothick(exe_cmd):
@@ -791,6 +845,8 @@ TESTS = [
     ("wallmotion", test_wallmotion),
     ("emitsurf", test_emitsurf),
     ("renumber", test_renumber),
+    ("axistuck", test_axistuck),
+    ("tallyorder", test_tallyorder),
 ]
 
 # tests whose decks support -var dist 1 (global surfs explicit/distributed)
@@ -803,7 +859,8 @@ DIST_TESTS = {"ballistic", "force", "rotation", "bounce", "restitution",
               "momentum",
               "overrun",
               "remap", "multiremap", "staticdist", "staticdist3d",
-              "splitcell", "gridchange", "exitbox", "twobody", "pushpair"}
+              "splitcell", "gridchange", "exitbox", "twobody", "pushpair",
+              "tallyorder"}
 
 
 def main():

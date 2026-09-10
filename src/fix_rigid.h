@@ -270,6 +270,7 @@ class FixRigid : public Fix {
   void push_bins();             // bin static surfs for candidate pruning
   void gather_body();           // build replicated body element table
   void check_body_attributes(); // error if body surf attributes changed
+  int same_coords(double *, double *, double *, int);  // coords = elem
   void update_surf_copies();    // write bodypt/bodynorm into Surf storage
   void grid_rebuild();          // full re-map of all surfs to grid cells
   void record_oldinside();      // cells interior to body, pre-move

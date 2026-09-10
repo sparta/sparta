@@ -1651,10 +1651,13 @@ template < int DIM, int SURF, int OPT, int RIGID > void Update::move()
 
               // stuck_iterate = consecutive iterations particle is immobile
 
-              // a re-hit of the surf just hit (moving surfs only) also
-              //   counts, so repeated re-hits by a sweeping surf end
+              // with moving surfs a re-hit of the surf just hit also
+              //   counts, so repeated re-hits by a sweeping surf end;
+              //   the excluded surf is otherwise a legitimate re-hit
+              //   (axisymmetric: repeated hits on the same line)
 
-              if (minparam <= 1.0e-14 || minsurf == exclude) stuck_iterate++;
+              if (minparam <= 1.0e-14 || (RIGID && minsurf == exclude))
+                stuck_iterate++;
               else stuck_iterate = 0;
 
               // reset post-bounce xnew

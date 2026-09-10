@@ -1739,12 +1739,28 @@ int FixRigid::ensure_local_copies()
 }
 
 /* ----------------------------------------------------------------------
+   1 if the coords of a surf (p3 = NULL in 2d) are bit-identical to
+     body element k
+------------------------------------------------------------------------- */
+
+int FixRigid::same_coords(double *p1, double *p2, double *p3, int k)
+{
+  if (memcmp(p1,bodypt[k][0],3*sizeof(double))) return 0;
+  if (memcmp(p2,bodypt[k][1],3*sizeof(double))) return 0;
+  if (p3 && memcmp(p3,bodypt[k][2],3*sizeof(double))) return 0;
+  return 1;
+}
+
+/* ----------------------------------------------------------------------
    the replicated table of body surf attributes (collision model,
      reaction model, transparency, mask) was captured when the fix was
      defined; a later surf_modify or group command may have changed them
-   the surf IDs must also be unchanged: a re-numbering (e.g. by a
-     read_surf with the clip option, or a remove_surf) would invalidate
-     the body element table
+   the surfs at the body element indices must also still be the body
+     surfs: a re-numbering (a remove_surf of lower-ID surfs, followed by
+     a read_surf which restores the count) would invalidate the body
+     element table; since IDs are re-compacted, it is detected by the
+     surf coords, which are bit-identical to the body table because
+     update_surf_copies() writes them from it
    non-distributed: every proc stores every surf, so refresh the table
      from the current surfs; nothing else is derived from the old values
    distributed: the local copies of body surfs on procs which do not
@@ -1766,13 +1782,17 @@ void FixRigid::check_body_attributes()
       int i = lblist[k];
       if (i < 0) continue;
       if (dim == 2) {
-        if (lines[i].id != sids[k]) renumbered = 1;
+        if (lines[i].id != sids[k] ||
+            !same_coords(lines[i].p1,lines[i].p2,NULL,k))
+          renumbered = 1;
         bodyisc[k] = lines[i].isc;
         bodyisr[k] = lines[i].isr;
         bodytrans[k] = lines[i].transparent;
         bodymask[k] = lines[i].mask;
       } else {
-        if (tris[i].id != sids[k]) renumbered = 1;
+        if (tris[i].id != sids[k] ||
+            !same_coords(tris[i].p1,tris[i].p2,tris[i].p3,k))
+          renumbered = 1;
         bodyisc[k] = tris[i].isc;
         bodyisr[k] = tris[i].isr;
         bodytrans[k] = tris[i].transparent;
@@ -1791,12 +1811,16 @@ void FixRigid::check_body_attributes()
         continue;
       }
       if (dim == 2) {
-        if (mylines[i].id != sids[k]) renumbered = 1;
+        if (mylines[i].id != sids[k] ||
+            !same_coords(mylines[i].p1,mylines[i].p2,NULL,k))
+          renumbered = 1;
         if (mylines[i].isc != bodyisc[k] || mylines[i].isr != bodyisr[k] ||
             mylines[i].transparent != bodytrans[k] ||
             mylines[i].mask != bodymask[k]) changed = 1;
       } else {
-        if (mytris[i].id != sids[k]) renumbered = 1;
+        if (mytris[i].id != sids[k] ||
+            !same_coords(mytris[i].p1,mytris[i].p2,mytris[i].p3,k))
+          renumbered = 1;
         if (mytris[i].isc != bodyisc[k] || mytris[i].isr != bodyisr[k] ||
             mytris[i].transparent != bodytrans[k] ||
             mytris[i].mask != bodymask[k]) changed = 1;
@@ -1809,8 +1833,8 @@ void FixRigid::check_body_attributes()
   flags[1] = changed;
   MPI_Allreduce(flags,flags_any,2,MPI_INT,MPI_MAX,world);
   if (flags_any[0])
-    error->all(FLERR,"Fix rigid body surfs were renumbered after "
-               "the fix was defined");
+    error->all(FLERR,"Fix rigid body surfs were renumbered or moved "
+               "after the fix was defined");
   if (flags_any[1])
     error->all(FLERR,"Fix rigid body surf attributes were changed after "
                "the fix was defined");
@@ -2504,6 +2528,24 @@ void FixRigid::push_off()
 
 void FixRigid::grid_rebuild()
 {
+  // every surf compute tallying this step must first bring its tallies
+  //   to the host, keyed by surf ID: the KOKKOS variant of compute surf
+  //   indexes its device tallies by local surf index, which the rebuild
+  //   of the surf arrays below invalidates (distributed surfs), and
+  //   re-sizes its per-surf tally index when it re-allocates after the
+  //   rebuild, which discards device tallies not yet fetched
+  // must precede any change to the local+ghost surf arrays
+  // no-op for a compute whose tallies were already fetched, and for the
+  //   non-KOKKOS compute
+
+  for (int m = 0; m < update->nsurf_tally; m++) {
+    Compute *c = update->slist_active[m];
+    if (strcmp(c->style,"surf") != 0 && strcmp(c->style,"surf/kk") != 0)
+      continue;
+    surfint *t2s;
+    ((ComputeSurf *) c)->tallyinfo(t2s);
+  }
+
   // sort particles, grid rebuild requires it
 
   if (particle->exist) particle->sort();
@@ -2542,21 +2584,6 @@ void FixRigid::grid_rebuild()
   // invokes grid_changed() of every rigid fix, which re-establishes the
   //   local body-surf copies and the per-surf rigidmap for the rebuilt
   //   local/ghost surf arrays, before per-surf computes re-size
-
-  // every surf compute tallying this step must first bring its tallies
-  //   to the host, keyed by surf ID: the KOKKOS variant of compute surf
-  //   re-sizes its per-surf tally index when it re-allocates below,
-  //   which discards device tallies not yet fetched via tallyinfo()
-  // no-op for a compute whose tallies were already fetched, and for the
-  //   non-KOKKOS compute
-
-  for (int m = 0; m < update->nsurf_tally; m++) {
-    Compute *c = update->slist_active[m];
-    if (strcmp(c->style,"surf") != 0 && strcmp(c->style,"surf/kk") != 0)
-      continue;
-    surfint *t2s;
-    ((ComputeSurf *) c)->tallyinfo(t2s);
-  }
 
   // as after a load balance: distributed local/ghost surf arrays were
   //   rebuilt, so per-surf custom values must be re-spread
