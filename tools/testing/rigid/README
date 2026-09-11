@@ -80,6 +80,9 @@ rotwall       a collision with a body spinning at 0.09 radian per step
               timestep.  the 3d variant does the same for a spinning
               cube and the moving-triangle test
 rotwall3d     see rotwall
+mixture       negative: a compute surf whose mixture omits a species
+              must be rejected, since the body would feel only part of
+              the gas
 axistuck      no rigid body: axisymmetric tube in which particles hit
               the same static line many times per step; the mover must
               not treat the repeated hits as a stuck particle

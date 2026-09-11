@@ -117,7 +117,7 @@ FixRigid::FixRigid(SPARTA *sparta, int narg, char **arg) :
   igroup = surf->find_group(arg[2]);
   if (igroup < 0) error->all(FLERR,"Fix rigid surf group ID does not exist");
   groupbit = surf->bitmask[igroup];
-  
+
   int n = strlen(arg[3]) + 1;
   csurfID = new char[n];
   strcpy(csurfID,arg[3]);
@@ -196,7 +196,7 @@ FixRigid::FixRigid(SPARTA *sparta, int narg, char **arg) :
     if (!massflag || !comflag || !moiflag || !vcomflag || !angmomflag)
       error->all(FLERR,"Fix rigid body args not valid");
     iarg += 22;
-    
+
   } else if (strcmp(arg[iarg],"infile") == 0) {
     if (iarg+2 > narg) error->all(FLERR,"Fix rigid infile args not valid");
     int n = strlen(arg[iarg+1]) + 1;
@@ -204,7 +204,7 @@ FixRigid::FixRigid(SPARTA *sparta, int narg, char **arg) :
     strcpy(infile,arg[iarg+1]);
     read_infile(infile);
     iarg += 2;
-    
+
   } else error->all(FLERR,"Fix rigid define style not recognized");
 
   // optional args
@@ -402,7 +402,7 @@ FixRigid::FixRigid(SPARTA *sparta, int narg, char **arg) :
 }
 
 /* ---------------------------------------------------------------------- */
- 
+
 FixRigid::~FixRigid()
 {
   delete [] csurfID;
@@ -510,6 +510,9 @@ void FixRigid::init()
   if (csurf->size_per_surf_cols != 6 || !csurf->force_torque_colcheck())
     error->all(FLERR,"Fix rigid compute must tally exactly "
                "fx fy fz tx ty tz for a single group");
+  if (!csurf->mixture_covers_all_species())
+    error->all(FLERR,"Fix rigid compute surf mixture must contain "
+               "all species");
 
   // insure the compute tallies on the first step of the next run
   // end_of_step() extends this to every step of the run
@@ -1291,7 +1294,7 @@ void FixRigid::read_infile(char *filename)
 {
   // open file and read first non-empty, non-comment line
   // only done by proc 0
-  
+
   if (comm->me == 0) {
     char *start;
     char line[MAXLINE];
@@ -1306,7 +1309,7 @@ void FixRigid::read_infile(char *filename)
     }
 
     // check that line has correct number of words
-    
+
     // 16 params, optionally followed by the force and torque which
     //   act on the body during the first step of a continuation run
 
@@ -1346,7 +1349,7 @@ void FixRigid::read_infile(char *filename)
   }
 
   // broadcast result of file read to all procs
-    
+
   MPI_Bcast(&massbody,1,MPI_DOUBLE,0,world);
   MPI_Bcast(xcm,3,MPI_DOUBLE,0,world);
   MPI_Bcast(moi,6,MPI_DOUBLE,0,world);
@@ -1963,7 +1966,7 @@ void FixRigid::setup_body()
   check_enclosed();
 
   // tensor = inertia tensor in space frame
-		    
+
   double tensor[3][3],evectors[3][3];
 
   tensor[0][0] = moi[0];
@@ -1974,7 +1977,7 @@ void FixRigid::setup_body()
   tensor[0][1] = tensor[1][0] = moi[3];
 
   // diagonalize the inertia tensor to create body frame
-  
+
   int ierror = MathEigen::jacobi3(tensor,inertia,evectors,1);
   if (ierror) error->all(FLERR,"Insufficient Jacobi rotations for rigid body");
 
@@ -2046,7 +2049,7 @@ void FixRigid::setup_body()
   if (MathExtra::dot3(cross,ez_space) < 0.0) MathExtra::negate3(ez_space);
 
   // create initial quaternion
-  
+
   MathExtra::exyz_to_q(ex_space,ey_space,ez_space,quat);
 
   set_recoil();
@@ -3781,14 +3784,41 @@ void FixRigid::check_enclosed()
 double FixRigid::memory_usage()
 {
   double bytes = 0.0;
+
+  // replicated body: geometry, per-element tables, element index maps
+
   bytes += (double) nsurf * dim * 3 * sizeof(double);     // bodypt
   bytes += (double) nsurf * 3 * sizeof(double);           // bodynorm
   bytes += (double) nsurf * dim * 3 * sizeof(double);     // displace
   bytes += (double) nsurf * 6 * sizeof(double);           // elemlo/elemhi
   bytes += (double) nsurf * (sizeof(surfint) + 6*sizeof(int));  // tables
+  bytes += (double) nsurf * 2 * sizeof(int);              // slist,lblist
+  bytes += (double) nsurf * 2 * sizeof(int);              // olist_own/elem
+  bytes += (double) maxcopy * 2 * sizeof(int);            // copy_index/elem
+  bytes += (double) nsurf * (sizeof(surfint) + sizeof(int) +
+                             3*sizeof(void *));            // idmap, approx
+
+  // per local surf and per local cell
+
+  bytes += (double) nsurfall * sizeof(int);               // irigid
+  if (pushstamp) {
+    int nbins = pushnbin[0]*pushnbin[1]*pushnbin[2];
+    bytes += (double) (nbins+1) * sizeof(int);            // pushbinstart
+    bytes += (double) pushbinstart[nbins] * sizeof(int);  // pushbinlist
+    bytes += (double) surf->nlocal * sizeof(int);         // pushstamp
+  }
+  bytes += (double) maxswcell * 2 * sizeof(int);          // swstamp,swhead
+  bytes += (double) maxswcells * sizeof(int);             // swcells
+  bytes += (double) maxent * (sizeof(int) + sizeof(surfint)); // entries
+  bytes += (double) maxoldinside * sizeof(int);           // oldinside
+  bytes += (double) maxrcand * sizeof(int);               // rcand
+
+  // re-cut work bufs, restore lists, swept lists page, registry
+
   bytes += (double) maxmodified * (2*sizeof(int) + sizeof(surfint *));
   bytes += (double) maxreclist * sizeof(surfint);
   bytes += (double) 2 * maxnewlist * sizeof(int);
+  bytes += (double) 12 * update->nfixrigid * sizeof(double); // ftbuf
   if (cpage) bytes += (double) cpage->size();
   bytes += (double) registry.size() *
     (sizeof(std::pair<int,surfint *>) + grid->maxsurfpercell*sizeof(surfint));

@@ -57,6 +57,7 @@ class ComputeSurf : public Compute {
   // used by fix rigid to insure its compute tallies force/torque
 
   int force_torque_colcheck();
+  int mixture_covers_all_species();
 
   // surf group this compute tallies for
   // used by fix rigid to insure all its body surfs are tallied

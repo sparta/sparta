@@ -121,8 +121,9 @@ body-body interactions conserve linear and angular momentum exactly.
 <P>Compute-ID is the ID of a <A HREF = "compute_surf.html">compute surf</A> command
 which tallies the force and torque on individual surface elements due
 to collisions with particles.  It must compute exactly these 6 values
-in this order, for a single mixture group, so that it produces a
-per-surf array with 6 columns:
+in this order, for a single group of a mixture which contains every
+species (otherwise part of the gas would push on the body without
+being tallied), so that it produces a per-surf array with 6 columns:
 </P>
 <PRE>compute csurf surf all all fx fy fz tx ty tz com 5 5 0 
 </PRE>

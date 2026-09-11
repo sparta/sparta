@@ -861,6 +861,11 @@ def test_tallyorder(exe_cmd):
     return fails
 
 
+def test_mixture(exe_cmd):
+    return negative_test(exe_cmd, "in.test.mixture",
+                         "mixture must contain all species")
+
+
 def test_zerothick(exe_cmd):
     fails = negative_test(exe_cmd, "in.test.zerothick", "encloses zero area")
     fails += negative_test(exe_cmd, "in.test.zerothick3d",
@@ -894,6 +899,7 @@ TESTS = [
     ("wallmotion", test_wallmotion),
     ("emitsurf", test_emitsurf),
     ("renumber", test_renumber),
+    ("mixture", test_mixture),
     ("rotwall", test_rotwall),
     ("rotwall3d", test_rotwall3d),
     ("axistuck", test_axistuck),
