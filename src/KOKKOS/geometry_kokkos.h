@@ -1456,6 +1456,23 @@ void space_frame_vector(const double *vec, double t, const double *omega,
   }
 }
 
+/* ----------------------------------------------------------------------
+   map the two endpoints of one particle path into the frame where the
+     body is frozen at its start-of-step configuration
+   same as Geometry::body_frame_path(): done once per path per body by
+     the caller, not once per element
+------------------------------------------------------------------------- */
+
+KOKKOS_INLINE_FUNCTION
+void body_frame_path(const double *start, const double *stop,
+                     double t0, double tsub,
+                     const double *xcm0, const double *vcm,
+                     const double *omega, double *y0, double *y1)
+{
+  body_frame_point(start,t0,xcm0,vcm,omega,y0);
+  body_frame_point(stop,t0+tsub,xcm0,vcm,omega,y1);
+}
+
 KOKKOS_INLINE_FUNCTION
 void body_frame_state(const double *pt, const double *u, double t,
                       const double *xcm0, const double *vcm,
@@ -1575,14 +1592,11 @@ bool line_line_moving_intersect(double *start, double *stop,
                                 double *v0, double *v1, double *norm,
                                 const double *xcm0, const double *vcm,
                                 const double *omega,
+                                double *y0, double *y1,
                                 double *point, double *nhit, double *vwall,
                                 double &param, int &side)
 {
-  double y0[3],y1[3],yc[3];
-
-  body_frame_point(start,t0,xcm0,vcm,omega,y0);
-  body_frame_point(stop,t0+tsub,xcm0,vcm,omega,y1);
-  y0[2] = y1[2] = 0.0;
+  double yc[3];
 
   bool hit = line_line_intersect(y0,y1,v0,v1,norm,yc,param,side);
   if (!hit) return false;
@@ -1626,13 +1640,11 @@ bool line_tri_moving_intersect(double *start, double *stop,
                                double *norm,
                                const double *xcm0, const double *vcm,
                                const double *omega,
+                               double *y0, double *y1,
                                double *point, double *nhit, double *vwall,
                                double &param, int &side)
 {
-  double y0[3],y1[3],yc[3];
-
-  body_frame_point(start,t0,xcm0,vcm,omega,y0);
-  body_frame_point(stop,t0+tsub,xcm0,vcm,omega,y1);
+  double yc[3];
 
   bool hit = line_tri_intersect(y0,y1,v0,v1,v2,norm,yc,param,side);
   if (!hit) return false;

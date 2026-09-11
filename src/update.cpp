@@ -851,8 +851,9 @@ template < int DIM, int SURF, int OPT, int RIGID > void Update::move()
   cellint *neigh;
   double dtremain,frac,newfrac,param,minparam,rnew,dtsurf,tc,tmp;
   double xnew[3],xhold[3],xc[3],vc[3],minxc[3],minvc[3];
-  int minmoving,minbody;
+  int minmoving,minbody,mapbody;
   double nhit[3],vwallhit[3],minnorm[3],minvwall[3],vpre[3];
+  double ymap0[3],ymap1[3];   // path endpoints mapped into the body frame
   double *x,*v,*lo,*hi;
   double Lx,Ly,Lz,dx,dy,dz;
   double *boxlo, *boxhi;
@@ -1387,6 +1388,7 @@ template < int DIM, int SURF, int OPT, int RIGID > void Update::move()
             cflag = 0;
             minparam = 2.0;
             minmoving = 0;
+            mapbody = -1;
             csurfs = cells[icell].csurfs;
 
             for (m = 0; m < nsurf; m++) {
@@ -1398,6 +1400,23 @@ template < int DIM, int SURF, int OPT, int RIGID > void Update::move()
                   if (rigidmap[isurf] < 0) continue;
                 }
               }
+
+              // moving surf: the path endpoints mapped into the body's
+              //   frozen frame do not depend on which element is tested,
+              //   so they are computed once per body and reused for the
+              //   rest of that body's elements in this cell
+              // in 2d the mapped z is zero up to round-off; it is set to
+              //   zero exactly, as the static line test expects
+
+              if (RIGID && rigidmap[isurf] >= 0 && rigidmap[isurf] != mapbody) {
+                FixRigid *fr = fixrigidlist[rigidmap[isurf]];
+                Geometry::body_frame_path(x,xnew,dt-dtremain,dtsurf,
+                                          fr->xcm,fr->vcm,fr->omega,
+                                          ymap0,ymap1);
+                if (DIM == 2) ymap0[2] = ymap1[2] = 0.0;
+                mapbody = rigidmap[isurf];
+              }
+
               if (DIM == 3) {
                 tri = &tris[isurf];
                 if (RIGID && rigidmap[isurf] >= 0) {
@@ -1406,7 +1425,7 @@ template < int DIM, int SURF, int OPT, int RIGID > void Update::move()
                     line_tri_moving_intersect(x,xnew,dt-dtremain,dtsurf,
                                               tri->p1,tri->p2,tri->p3,
                                               tri->norm,fr->xcm,
-                                              fr->vcm,fr->omega,
+                                              fr->vcm,fr->omega,ymap0,ymap1,
                                               xc,nhit,vwallhit,param,side);
                 } else {
                   hitflag = Geometry::
@@ -1422,7 +1441,7 @@ template < int DIM, int SURF, int OPT, int RIGID > void Update::move()
                     line_line_moving_intersect(x,xnew,dt-dtremain,dtsurf,
                                                line->p1,line->p2,
                                                line->norm,fr->xcm,
-                                               fr->vcm,fr->omega,
+                                               fr->vcm,fr->omega,ymap0,ymap1,
                                                xc,nhit,vwallhit,param,side);
                 } else {
                   hitflag = Geometry::

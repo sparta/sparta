@@ -1752,6 +1752,13 @@ void UpdateKokkos::operator()(TagUpdateMove<DIM,SURF,REACT,OPT,ATOMIC_REDUCTION>
         minmoving = 0;
         auto csurfs_begin = d_csurfs.row_map(icell);
 
+        // body whose path endpoints are currently mapped, and the mapping
+        //   itself: it depends on the path and the body, not on which
+        //   element is tested, so it is reused across a body's elements
+
+        int mapbody = -1;
+        double mxcm[3],mvcm[3],momega[3],ymap0[3],ymap1[3];
+
         for (int m = 0; m < nsurf; m++) {
           isurf = d_csurfs.entries(csurfs_begin + m);
 
@@ -1770,19 +1777,31 @@ void UpdateKokkos::operator()(TagUpdateMove<DIM,SURF,REACT,OPT,ATOMIC_REDUCTION>
           if (DIM > 1) {
             if (isurf == exclude && ibody < 0) continue;
           }
+
+          // moving surf: body motion and the mapped path endpoints are
+          //   loaded once per body and reused for that body's elements,
+          //   as in Update::move(); 2d mapped z set to zero exactly
+
+          if (ibody >= 0 && ibody != mapbody) {
+            for (int k = 0; k < 3; k++) {
+              mxcm[k] = d_rigidbody(ibody,k);
+              mvcm[k] = d_rigidbody(ibody,3+k);
+              momega[k] = d_rigidbody(ibody,6+k);
+            }
+            GeometryKokkos::body_frame_path(x,xnew,dt-dtremain,dtsurf,
+                                            mxcm,mvcm,momega,ymap0,ymap1);
+            if (DIM == 2) ymap0[2] = ymap1[2] = 0.0;
+            mapbody = ibody;
+          }
+
           if (DIM == 3) {
             tri = &d_tris[isurf];
             if (ibody >= 0) {
-              double bxcm[3],bvcm[3],bomega[3];
-              for (int k = 0; k < 3; k++) {
-                bxcm[k] = d_rigidbody(ibody,k);
-                bvcm[k] = d_rigidbody(ibody,3+k);
-                bomega[k] = d_rigidbody(ibody,6+k);
-              }
               hitflag = GeometryKokkos::
                 line_tri_moving_intersect(x,xnew,dt-dtremain,dtsurf,
                                           tri->p1,tri->p2,tri->p3,
-                                          tri->norm,bxcm,bvcm,bomega,
+                                          tri->norm,mxcm,mvcm,momega,
+                                          ymap0,ymap1,
                                           xc,nhit,vwallhit,param,side);
             } else {
               hitflag = GeometryKokkos::
@@ -1794,16 +1813,11 @@ void UpdateKokkos::operator()(TagUpdateMove<DIM,SURF,REACT,OPT,ATOMIC_REDUCTION>
           if (DIM == 2) {
             line = &d_lines[isurf];
             if (ibody >= 0) {
-              double bxcm[3],bvcm[3],bomega[3];
-              for (int k = 0; k < 3; k++) {
-                bxcm[k] = d_rigidbody(ibody,k);
-                bvcm[k] = d_rigidbody(ibody,3+k);
-                bomega[k] = d_rigidbody(ibody,6+k);
-              }
               hitflag = GeometryKokkos::
                 line_line_moving_intersect(x,xnew,dt-dtremain,dtsurf,
                                            line->p1,line->p2,
-                                           line->norm,bxcm,bvcm,bomega,
+                                           line->norm,mxcm,mvcm,momega,
+                                           ymap0,ymap1,
                                            xc,nhit,vwallhit,param,side);
             } else {
               hitflag = GeometryKokkos::

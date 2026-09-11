@@ -775,6 +775,23 @@ static void space_frame_vector(double *vec, double t, double *omega,
 }
 
 /* ----------------------------------------------------------------------
+   map the two endpoints of one particle path into the frame where the
+     body is frozen at its start-of-step configuration
+   the mapping depends only on the path and on the body motion, not on
+     which element is being tested, so the caller does this once per path
+     per body and hands the result to every moving-surf test against that
+     body in the cell, instead of repeating it for each element
+------------------------------------------------------------------------- */
+
+void body_frame_path(double *start, double *stop, double t0, double tsub,
+                     double *xcm0, double *vcm, double *omega,
+                     double *y0, double *y1)
+{
+  body_frame_point(start,t0,xcm0,vcm,omega,y0);
+  body_frame_point(stop,t0+tsub,xcm0,vcm,omega,y1);
+}
+
+/* ----------------------------------------------------------------------
    same mapping as body_frame_point(), and also the time derivative of
      the mapped position, for the refinement below
    u = velocity of the particle relative to the body = v - vcm
@@ -947,9 +964,14 @@ static void refine_moving_param(double *start, double *stop,
      start-of-step positions
    xcm0,vcm,omega = body COM at start of step, its velocity,
      and the body angular velocity
-   method: map the two particle path endpoints into the frame where the
-     body is static at its start-of-step configuration, then use the
-     static line_line_intersect() on the chord through the mapped points
+   y0,y1 = the path endpoints already mapped into the frame where the
+     body is static at its start-of-step configuration, from
+     body_frame_path(); they depend on the path and the body, not on
+     the element, so the caller shares them across the body's elements
+     in 2d the caller sets their z to exactly zero, as the static line
+     test expects of its path endpoints
+   method: use the static line_line_intersect() on the chord through the
+     mapped points
    exact for a translating body; for a rotating body the mapped path is
      curved, and the chord through its endpoints mis-times the crossing
      by a fraction of the step which is first order in the rotation per
@@ -970,16 +992,11 @@ bool line_line_moving_intersect(double *start, double *stop,
                                 double t0, double tsub,
                                 double *v0, double *v1, double *norm,
                                 double *xcm0, double *vcm, double *omega,
+                                double *y0, double *y1,
                                 double *point, double *nhit, double *vwall,
                                 double &param, int &side)
 {
-  double y0[3],y1[3],yc[3];
-
-  // map particle path endpoints into body frame
-
-  body_frame_point(start,t0,xcm0,vcm,omega,y0);
-  body_frame_point(stop,t0+tsub,xcm0,vcm,omega,y1);
-  y0[2] = y1[2] = 0.0;
+  double yc[3];
 
   bool hit = line_line_intersect(y0,y1,v0,v1,norm,yc,param,side);
   if (!hit) return false;
@@ -1438,15 +1455,11 @@ bool line_tri_moving_intersect(double *start, double *stop,
                                double *v0, double *v1, double *v2,
                                double *norm,
                                double *xcm0, double *vcm, double *omega,
+                               double *y0, double *y1,
                                double *point, double *nhit, double *vwall,
                                double &param, int &side)
 {
-  double y0[3],y1[3],yc[3];
-
-  // map particle path endpoints into body frame
-
-  body_frame_point(start,t0,xcm0,vcm,omega,y0);
-  body_frame_point(stop,t0+tsub,xcm0,vcm,omega,y1);
+  double yc[3];
 
   bool hit = line_tri_intersect(y0,y1,v0,v1,v2,norm,yc,param,side);
   if (!hit) return false;
