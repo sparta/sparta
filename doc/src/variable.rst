@@ -1,0 +1,1276 @@
+.. index:: variable
+
+variable command
+================
+
+**Syntax:**
+
+
+.. parsed-literal::
+
+   variable name style args ...
+
+* name = name of variable to define
+* style = *delete* or *index* or *loop* or *world* or *universe* or *uloop* or *string* or *format* or *getenv* or *file* or *python* or *internal* or *equal* or *particle* or *grid* or *surf*
+  
+  .. parsed-literal::
+  
+       delete = no args
+       index args = one or more strings
+       loop args = N
+         N = integer size of loop, loop from 1 to N inclusive
+       loop args = N pad
+         N = integer size of loop, loop from 1 to N inclusive
+         pad = all values will be same length, e.g. 001, 002, ..., 100
+       loop args = N1 N2
+         N1,N2 = loop from N1 to N2 inclusive
+       loop args = N1 N2 pad
+         N1,N2 = loop from N1 to N2 inclusive
+         pad = all values will be same length, e.g. 050, 051, ..., 100
+       world args = one string for each partition of processors
+       universe args = one or more strings
+       uloop args = N
+         N = integer size of loop
+       uloop args = N pad
+         N = integer size of loop
+         pad = all values will be same length, e.g. 001, 002, ..., 100
+       string arg = one string
+       format args = vname fstr
+         vname = name of equal-style variable to evaluate
+         fstr = C-style format string
+       getenv arg = one string
+       file arg = filename
+       python arg = function
+       internal arg = numeric value
+       equal or particle or grid or surf args = one formula
+       containing numbers, stats keywords, math operations, particle vectors, compute/fix and custom attribute and surface collision/reaction and variable references
+         numbers = 0.0, 100, -5.4, 2.8e-4, etc
+         constants = PI
+         stats keywords = step, np, vol, etc from :doc:`stats_style <stats_style>`
+         math operators = (), -x, x+y, x-y, x\*y, x/y, x\^y, x%y,
+                          x==y, x!=y, x<y, x<=y, x>y, x>=y, x&&y, x\|\|y, !x
+         math functions = sqrt(x), exp(x), ln(x), log(x), abs(x),
+                          sin(x), cos(x), tan(x), asin(x), acos(x), atan(x), atan2(y,x), erf(x),
+                          random(x,y), normal(x,y), ceil(x), floor(x), round(x)
+                          ramp(x,y), stagger(x,y), logfreq(x,y,z), stride(x,y,z), vdisplace(x,y), swiggle(x,y,z), cwiggle(x,y,z)
+         special functions = sum(x), min(x), max(x), ave(x), trap(x), slope(x), next(x), grid2part(x), is_file(x), extract_setting(name)
+         python function wrapper = py_varname(x,y,z,...)
+         particle vectors = id, type, mass, q, mu, x, y, z, vx, vy, vz
+         grid vectors = cxlo, cxhi, cylo, cyhi, czlo, czhi
+         compute references = c_ID, c_ID[I], c_ID[I][J]
+         fix references = f_ID, f_ID[I], f_ID[I][J]
+         custom attribute references = p_name, p_name[I], g_name, g_name[I], s_name, s_name[I]
+         surface collision model references = sc_ID[I]
+         surface reaction model references = sr_ID[I]
+         variable references = v_name
+
+
+
+**Examples:**
+
+
+.. parsed-literal::
+
+   variable x index run1 run2 run3 run4 run5 run6 run7 run8
+   variable LoopVar loop $n
+   variable beta equal vol/ngrid
+   variable beta equal "vol / ngrid"
+   variable b equal c_myTemp
+   variable b particle x\*y/vol
+   variable foo string myfile
+   variable myPy python increase
+   variable foo internal 3.5
+   variable f file values.txt
+   variable temp world 300.0 310.0 320.0 ${Tfinal}
+   variable x universe 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15
+   variable x uloop 15 pad
+   variable str format x %.6g
+   variable x delete
+
+**Description:**
+
+This command assigns one or more strings to a variable name for
+evaluation later in the input script or during a simulation.
+
+Variables can thus be useful in several contexts.  A variable can be
+defined and then referenced elsewhere in an input script to become
+part of a new input command.  For variable styles that store multiple
+strings, the :doc:`next <next>` command can be used to increment which
+string is assigned to the variable.  Variables of style *equal* store
+a formula which when evaluated produces a single numeric value which
+can be output either directly (see the :doc:`print <print>`, :doc:`fix print <fix_print>`, and :doc:`run every <run>` commands) or as part
+of statistical output (see the :doc:`stats\_style <stats_style>`
+command), or used as input to an averaging fix (see the :doc:`fix ave/time <fix_ave_time>` command).  Variables of style *particle*
+or *grid* or *surf* store a formula which when evaluated produces one
+numeric value per particle or grid cell or surface element which can
+be output to the appropriate styles of dump file (see the
+:doc:`dump <dump>` command).  Variables of style *internal* are used by
+a few commands which set their value directly.
+
+Variables of style \*python\* can be hooked to Python functions using
+Python code you provide, so that the variable gets its value from the
+evaluation of the Python code.  Variables of style \*internal\* are used
+by a few commands which set their value directly.
+
+In the discussion that follows, the "name" of the variable is the
+arbitrary string that is the 1st argument in the variable command.
+This name can only contain alphanumeric characters and underscores.
+The "string" is one or more of the subsequent arguments.  The "string"
+can be simple text as in the 1st example above, it can contain other
+variables as in the 2nd example, or it can be a formula as in the 3rd
+example.  The "value" is the numeric quantity resulting from
+evaluation of the string.  Note that the same string can generate
+different values when it is evaluated at different times during a
+simulation.
+
+IMPORTANT NOTE: When an input script line is encountered that defines
+a variable of style *equal* or *particle* or *grid* or *surf* that
+contains a formula or links to Python code,, the formula or Python
+code is NOT immediately evaluated and the result stored.  See the
+discussion below about "Immediate Evaluation of Variables" if you want
+to do this.  This is also true of the *format* style variable since it
+evaluates another variable when it is invoked.
+
+Variables of style *equal* and *particle* and *grid* and *surf* can be
+used as inputs to various other commands which evaluate their formulas
+as needed, e.g. at different timesteps during a :doc:`run <run>`.  In
+this context, variables of style *internal* or *python* can be used in
+place of an equal-style variable, with the following two caveats.
+
+First, internal-style variables of reuqire their values be set by code
+elsewhere in SPARTA.  When a SPARTA input script or command evaluates
+an internal-style variable, it must have a current value set
+(internally) via that mechanism.  Second, python-style variables can
+be used so long as the associated Python function, as defined by the
+:doc:`python <python>` command, returns a numeric value.  When the
+SPARTA command evaluates the python-style variable, the Python
+function will be executed.
+
+IMPORTANT NOTE: When a variable command is encountered in the input
+script and the variable name has already been specified, the command
+is ignored.  This means variables can NOT be re-defined in an input
+script (with 2 exceptions, read further).  This is to allow an input
+script to be processed multiple times without resetting the variables;
+see the :doc:`jump <jump>` or :doc:`include <include>` commands.  It also
+means that using the `command-line switch <Section_start.html#start_7>`_
+-var will override a corresponding index variable setting in the input
+script.
+
+There are two exceptions to this rule.  First, variables of style
+*string*\ , *getenv*\ , *internal*\ , *equal*\ , *particle*\ , *grid*\ , and
+*surf* ARE redefined each time the command is encountered.  This
+allows these style of variables to be redefined multiple times in an
+input script.  In a loop, this means the formula associated with an
+*equal* or *particle* or *grid* or *surf* style variable can change if
+it contains a substitution for another variable, e.g. $x or v\_x.
+
+Second, as described below, if a variable is iterated on to the end of
+its list of strings via the :doc:`next <next>` command, it is removed
+from the list of active variables, and is thus available to be
+re-defined in a subsequent variable command.  The *delete* style does
+the same thing.
+
+Variables are **not** deleted by the :doc:`clear <clear>` command.
+
+
+----------
+
+
+`Section 3.2 <Section_commands.html#cmd_2>`_ of the manual explains how
+occurrences of a variable name in an input script line are replaced by
+the variable's string.  The variable name can be referenced as $x if
+the name "x" is a single character, or as ${LoopVar} if the name
+"LoopVar" is one or more characters.
+
+As described below, for variable styles *index*\ , *loop*\ , *universe*\ ,
+and *uloop*\ , which string is assigned to a variable can be incremented
+via the :doc:`next <next>` command.  When there are no more strings to
+assign, the variable is exhausted and a flag is set that causes the
+next :doc:`jump <jump>` command encountered in the input script to be
+skipped.  This enables the construction of simple loops in the input
+script that are iterated over and then exited from.
+
+As explained above, an exhausted variable can be re-used in an input
+script.  The *delete* style also removes the variable, the same as if
+it were exhausted, allowing it to be redefined later in the input
+script or when the input script is looped over.  This can be useful
+when breaking out of a loop via the :doc:`if <if>` and :doc:`jump <jump>`
+commands before the variable would become exhausted.  For example,
+
+
+.. parsed-literal::
+
+   label	    loop
+   variable    a loop 5
+   print	    "A = $a"
+   if	    "$a > 2" then "jump in.script break"
+   next	    a
+   jump	    in.script loop
+   label	    break
+   variable    a delete
+
+
+----------
+
+
+This section describes how various variable styles are defined and
+what they store.  Many of the styles store one or more strings.  Note
+that a single string can contain spaces (multiple words), if it is
+enclosed in quotes in the variable command.  When the variable is
+substituted for in another input script command, its returned string
+will then be interpreted as multiple arguments in the expanded
+command.
+
+For the *index* style, one or more strings are specified.  Initially,
+the 1st string is assigned to the variable.  Each time a
+:doc:`next <next>` command is used with the variable name, the next
+string is assigned.  All processors assign the same string to the
+variable.
+
+*Index* style variables with a single string value can also be set by
+using the command-line switch -var; see `Section 2.6 <Section_start.html#start_7>`_ of the manual for details.
+
+The *loop* style is identical to the *index* style except that the
+strings are the integers from 1 to N inclusive, if only one argument N
+is specified.  This allows generation of a long list of runs
+(e.g. 1000) without having to list N strings in the input script.
+Initially, the string "1" is assigned to the variable.  Each time a
+:doc:`next <next>` command is used with the variable name, the next
+string ("2", "3", etc) is assigned.  All processors assign the same
+string to the variable.  The *loop* style can also be specified with
+two arguments N1 and N2.  In this case the loop runs from N1 to N2
+inclusive, and the string N1 is initially assigned to the variable.
+N1 <= N2 and N2 >= 0 is required.
+
+For the *world* style, one or more strings are specified.  There must
+be one string for each processor partition or "world".  See `Section 2.6 <Section_start.html#start_7>`_ of the manual for information on
+running SPARTA with multiple partitions via the "-partition"
+command-line switch.  This variable command assigns one string to each
+world.  All processors in the world are assigned the same string.  The
+next command cannot be used with *equal* style variables, since there
+is only one value per world.  This style of variable is useful when
+you wish to run different simulations on different partitions.
+
+For the *universe* style, one or more strings are specified.  There
+must be at least as many strings as there are processor partitions or
+"worlds".  See `this page <Section_start.html#start_7>`_ for information
+on running SPARTA with multiple partitions via the "-partition"
+command-line switch.  This variable command initially assigns one
+string to each world.  When a :doc:`next <next>` command is encountered
+using this variable, the first processor partition to encounter it, is
+assigned the next available string.  This continues until all the
+variable strings are consumed.  Thus, this command can be used to run
+50 simulations on 8 processor partitions.  The simulations will be run
+one after the other on whatever partition becomes available, until
+they are all finished.  *Universe* style variables are incremented
+using the files "tmp.sparta.variable" and "tmp.sparta.variable.lock"
+which you will see in your directory during such a SPARTA run.
+
+The *uloop* style is identical to the *universe* style except that the
+strings are the integers from 1 to N.  This allows generation of long
+list of runs (e.g. 1000) without having to list N strings in the input
+script.
+
+For the *string* style, a single string is assigned to the variable.
+The only difference between this and using the *index* style with a
+single string is that a variable with *string* style can be redefined.
+E.g. by another command later in the input script, or if the script is
+read again in a loop.
+
+For the *format* style, an equal-style variable is specified along
+with a C-style format string, e.g. "%f" or "%.10g", which must be
+appropriate for formatting a double-precision floating-point value.
+This allows an equal-style variable to be formatted specifically for
+output as a string, e.g. by the :doc:`print <print>` command, if the
+default format "%.15g" has too much precision.
+
+For the *getenv* style, a single string is assigned to the variable
+which should be the name of an environment variable.  When the
+variable is evaluated, it returns the value of the environment
+variable, or an empty string if it not defined.  This style of
+variable can be used to adapt the behavior of SPARTA input scripts via
+environment variable settings, or to retrieve information that has
+been previously stored with the :doc:`shell putenv <shell>` command.
+Note that because environment variable settings are stored by the
+operating systems, they persist beyond a :doc:`clear <clear>` command.
+
+For the *file* style, a filename is provided which contains a list of
+strings to assign to the variable, one per line.  The strings can be
+numeric values if desired.  See the discussion of the next() function
+below for equal-style variables, which will convert the string of a
+file-style variable into a numeric value in a formula.
+
+When a file-style variable is defined, the file is opened and the
+string on the first line is read and stored with the variable.  This
+means the variable can then be evaluated as many times as desired and
+will return that string.  There are two ways to cause the next string
+from the file to be read: use the :doc:`next <next>` command or the
+next() function in an equal- or particle- or grid-style variable, as
+discussed below.
+
+The rules for formatting the file are as follows.  A comment character
+"#" can be used anywhere on a line; text starting with the comment
+character is stripped.  Blank lines are skipped.  The first "word" of
+a non-blank line, delimited by white space, is the "string" assigned
+to the variable.
+
+For the *internal* style a numeric value is provided.  This value will
+be assigned to the variable until a SPARTA command sets it to a new
+value.
+
+Note however, that commands which use internal-style variables do not
+require them to be defined in the input script.  They create one or
+more internal-style variables if they do not already exist.  Examples
+are these commands:
+
+* :doc:`create\_particles <create_particles>`
+* :doc:`python <python>` command in conjunction with Python function wrappers used in equal-, particle-, grid-, and surf-style variable formulas
+
+\----------
+
+For the *python* style a Python function name is provided.  This needs
+to match a function name specified in a :doc:`python <python>` command
+which returns a value to this variable as defined by its *return*
+keyword.  For example these two commands would be self-consistent:
+
+
+.. parsed-literal::
+
+   variable foo python myMultiply
+   python myMultiply return v_foo format f file funcs.py
+
+The two commands can appear in either order so long as both are
+specified before the Python function is invoked for the first time.
+
+Each time the variable is evaluated, the associated Python function is
+invoked, and the value it returns is also returned by the variable.
+Since the Python function can use other SPARTA variables as input, or
+query internal SPARTA quantities to perform its computation, this means
+the variable can return a different value each time it is evaluated.
+
+The type of value stored in the variable is determined by the *format*
+keyword of the :doc:`python <python>` command.  It can be an integer
+(i), floating point (f), or string (s) value.  As mentioned above, if
+it is a numeric value (integer or floating point), then the
+python-style variable can be used in place of an equal-style variable
+anywhere in an input script, e.g. as an argument to another command
+that allows for equal-style variables.
+
+A python-style variable can also be used within the formula for an
+equal-style or atom-style formula in a Python function wrapper, as
+explained below for variable formulas.  In this context, the usage
+syntax is py\_varname(arg1,arg2,...), where varname is the name of the
+python-style variable.  When a Python wrapper function is used in an
+atom-style formula, it can be invoked once per atom using arguments
+specific to each atom.  The resulting values in the atom-style
+variable can thus be calculated by Python code.
+
+
+----------
+
+
+For the *equal*\ , *particle*\ , *grid*\ , and *surf* styles, a single
+string is specified which represents a formula that will be evaluated
+afresh each time the variable is used.  If you want spaces in the
+string, enclose it in double quotes so the parser will treat it as a
+single argument.  For *equal* style variables the formula computes a
+scalar quantity, which becomes the value of the variable whenever it
+is evaluated.
+
+For *particle* style variables the formula computes one quantity for
+each particle whenever it is evaluated.  For *grid* style variables
+the formula computes one quantity for each grid cell whenever it is
+evaluated.  A *grid* style variable computes quantites for all flavors
+of child grid cells in the simulation, which includes unsplit, cut,
+split, and sub cells.  See `Section 6.8 <Section_howto.html#howto_8>`_ of
+the manual gives details of how SPARTA defines child, unsplit, split,
+and sub cells.  For *surf* style variables the formula computes one
+quantity for each surface element (line or triangle) whenever it is
+evaluated.  They can only be defined for explicit surfaces, not
+implicit surfaces.  See `Section 6.9 <Section_howto.html#howto_9>`_ of
+the manual for a description of both kinds of surface elements.
+
+Note that *equal*\ , *particle*\ , *grid*\ , and *surf* variables can
+produce different values at different stages of the input script or at
+different times during a run.  For example, if an *equal* variable is
+used in a :doc:`fix print <fix_print>` command, different values could
+be printed each timestep it was invoked.  If you want a variable to be
+evaluated immediately, so that the result is stored by the variable
+instead of the string, see the section below on "Immediate Evaluation
+of Variables".
+
+The next command cannot be used with *equal*\ , *particle*\ , *grid*\ , or
+*surf* style variables, since there is only one string.
+
+The formula for an *equal*\ , *particle*\ , *grid*\ , or *surf* variable can
+contain a variety of quantities.  The syntax for each kind of quantity
+is simple, but multiple quantities can be nested and combined in
+various ways to build up formulas of arbitrary complexity.  For
+example, this is a valid (though strange) variable formula:
+
+
+.. parsed-literal::
+
+   variable x equal "np + c_MyTemp / vol\^(1/3)"
+
+Specifically, a formula can contain numbers, stats keywords, math
+operators, math functions, Python function wrappers, particle vectors,
+grid vectors, compute references, fix references, custom attribute
+references, and references to other variables.
+
++------------------------------------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| Number                             | 0.2, 100, 1.0e20, -15.4, etc                                                                                                                                                                                                                                                                    |
++------------------------------------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| Constant                           | PI                                                                                                                                                                                                                                                                                              |
++------------------------------------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| Stats keywords                     | step, np, vol, etc                                                                                                                                                                                                                                                                              |
++------------------------------------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| Math operators                     | (), -x, x+y, x-y, x\*y, x/y, x\^y, x%y, x==y, x!=y, x<y, x<=y, x>y, x>=y, x&&y, x\|\|y, !x                                                                                                                                                                                                      |
++------------------------------------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| Math functions                     | sqrt(x), exp(x), ln(x), log(x), abs(x), sin(x), cos(x), tan(x),      asin(x), acos(x), atan(x), atan2(y,x), erf(x), random(x,y,z), normal(x,y,z),      ceil(x), floor(x), round(x), ramp(x,y), stagger(x,y), logfreq(x,y,z),      stride(x,y,z), vdisplace(x,y), swiggle(x,y,z), cwiggle(x,y,z) |
++------------------------------------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| Special functions                  | sum(x), min(x), max(x), ave(x), trap(x), slope(x), next(x), grid2part(x), is\_file(x), extract\_setting(name)                                                                                                                                                                                   |
++------------------------------------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| Python function wrapper            | py\_varname(x,y,z,...)                                                                                                                                                                                                                                                                          |
++------------------------------------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| Particle vectors                   | id, type, mass, q, mu, x, y, z, vx, vy, vz                                                                                                                                                                                                                                                      |
++------------------------------------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| Grid vectors                       | cxlo, cxhi, cylo, cyhi, czlo, czhi                                                                                                                                                                                                                                                              |
++------------------------------------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| Compute references                 | c\_ID, c\_ID[I], c\_ID[I][J]                                                                                                                                                                                                                                                                    |
++------------------------------------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| Fix references                     | f\_ID, f\_ID[I], f\_ID[I][J]                                                                                                                                                                                                                                                                    |
++------------------------------------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| Custom attribute references        | name\_ID, name\_ID[I], name\_ID, name\_ID[I], name\_ID, name\_ID[I]                                                                                                                                                                                                                             |
++------------------------------------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| Surface collision model references | sc\_ID[I]                                                                                                                                                                                                                                                                                       |
++------------------------------------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| Surface reaction model references  | sr\_ID[I]                                                                                                                                                                                                                                                                                       |
++------------------------------------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| Other variables                    | v\_name                                                                                                                                                                                                                                                                                         |
++------------------------------------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+
+
+----------
+
+
+Most of the formula elements produce a scalar value.  A few produce a
+per-particle vector or per-grid vector or per-surf vector of values.
+These are the particle vectors, grid vectors, compute and fix
+references that represent a per-particle or per-grid vector or
+per-surf vector, and variables that are particle-style or grid-style
+or surf-style variables.  Math functions that operate on scalar values
+produce a scalar value; math functions that operate on per-particle or
+per-grid or per-surf vectors do so element-by-element and produce a
+per-particle or per-grid or per-surf vectors.
+
+A formula for equal-style variables cannot use any formula element
+that produces a per-particle or per-grid or per-surf vector.  A
+formula for a particle-style variable can use formula elements that
+produce either a scalar value or a per-particle vector, but not a
+per-grid or per-surf vector.  Likewise a grid-style variable can use
+formula elements that produce either a scalar value or a per-grid
+vector, but not a per-particle or per-surf vector.  And a surf-style
+variable can use formula elements that produce either a scalar value
+or a per-surf vector, but not a per-particle or per-grid vector.
+
+The stats keywords allowed in a formula are those defined by the
+:doc:`stats\_style custom <stats_style>` command.
+
+
+----------
+
+
+Math Operators
+--------------
+
+Math operators are written in the usual way, where the "x" and "y" in
+the examples can themselves be arbitrarily complex formulas, as in the
+examples above.  In this syntax, "x" and "y" can be scalar values or
+per-particle or per-grid vectors.  For example, "vol/np" is the
+division of two scalars, where "vy+vz" is the element-by-element sum
+of two per-particle vectors of y and z velocities.
+
+Operators are evaluated left to right and have the usual C-style
+precedence: unary minus and unary logical NOT operator "!" have the
+highest precedence, exponentiation "\^" is next; multiplication and
+division and the modulo operator "%" are next; addition and
+subtraction are next; the 4 relational operators "<", "<=", ">", and
+">=" are next; the two remaining relational operators "==" and "!="
+are next; then the logical AND operator "&&"; and finally the logical
+OR operator "\|\|" has the lowest precedence.  Parenthesis can be used
+to group one or more portions of a formula and/or enforce a different
+order of evaluation than what would occur with the default precedence.
+
+IMPORTANT NOTE: Because a unary minus is higher precedence than
+exponentiation, the formula "-2\^2" will evaluate to 4, not -4.  This
+convention is compatible with some programming languages, but not
+others.  As mentioned, this behavior can be easily overridden with
+parenthesis; the formula "-(2\^2)" will evaluate to -4.
+
+The exponentiation operator "x\^y" evaluates to 1.0 whenever y is zero,
+for any value of x.  An error is generated if x is zero and y is
+negative, since the result would be infinite.
+
+The 6 relational operators return either a 1.0 or 0.0 depending on
+whether the relationship between x and y is TRUE or FALSE.  For
+example the expression x<10.0 in a particle-style variable formula
+will return 1.0 for all particles whose x-coordinate is less than
+10.0, and 0.0 for the others.  The logical AND operator will return
+1.0 if both its arguments are non-zero, else it returns 0.0.  The
+logical OR operator will return 1.0 if either of its arguments is
+non-zero, else it returns 0.0.  The logical NOT operator returns 1.0
+if its argument is 0.0, else it returns 0.0.
+
+These relational and logical operators can be used as a masking or
+selection operation in a formula.  For example, the number of
+particles whose properties satifsy one or more criteria could be
+calculated by taking the returned per-particle vector of ones and
+zeroes and passing it to the :doc:`compute reduce <compute_reduce>`
+command.
+
+
+----------
+
+
+Math Functions
+--------------
+
+Math functions are specified as keywords followed by one or more
+parenthesized arguments "x", "y", "z", each of which can themselves be
+arbitrarily complex formulas.  In this syntax, the arguments can
+represent scalar values or per-particle or per-grid vectors.  In the
+latter cases, the math operation is performed on each element of the
+vector.  For example, "sqrt(np)" is the sqrt() of a scalar, where
+"sqrt(y\*z)" yields a per-particle vector with each element being the
+sqrt() of the product of one particle's y and z coordinates.
+
+Most of the math functions perform obvious operations.  The ln() is
+the natural log; log() is the base 10 log.
+
+The random(x,y) function takes 2 arguments: x = lo and y = hi.  It
+generates a uniform random number between lo and hi.  The normal(x,y)
+function also takes 2 arguments: x = mu and y = sigma.  It generates a
+Gaussian variate centered on mu with variance sigma\^2.  For
+equal-style variables, every processor uses the same random number
+seed so that they each generate the same sequence of random numbers.
+For particle-style or grid-style variables, a unique seed is created
+for each processor.  This effectively generates a different random
+number for each particle or grid cell being looped over in the
+particle-style or grid-style variable.
+
+IMPORTANT NOTE: Internally, there is just one random number generator
+for all equal-style variables and one for all particle-style and
+grid-style variables.  If you define multiple variables (of each
+style) which use the random() or normal() math functions, then the
+internal random number generators will only be initialized once.
+
+The ceil(), floor(), and round() functions are those in the C math
+library.  Ceil() is the smallest integer not less than its argument.
+Floor() if the largest integer not greater than its argument.  Round()
+is the nearest integer to its argument.
+
+The ramp(x,y) function uses the current timestep to generate a value
+linearly intepolated between the specified x,y values over the course
+of a run, according to this formula:
+
+
+.. parsed-literal::
+
+   value = x + (y-x) \* (timestep-startstep) / (stopstep-startstep)
+
+The run begins on startstep and ends on stopstep.  Startstep and
+stopstep can span multiple runs, using the *start* and *stop* keywords
+of the :doc:`run <run>` command.  See the :doc:`run <run>` command for
+details of how to do this.
+
+IMPORTANT NOTE: Currently, the run command does not currently support
+the start/stop keywords.  In the formula above startstep = 0 and
+stopstep = the number of timesteps being performed by the run.
+
+The stagger(x,y) function uses the current timestep to generate a new
+timestep.  X,y > 0 and x > y are required.  The generated timesteps
+increase in a staggered fashion, as the sequence
+x,x+y,2x,2x+y,3x,3x+y,etc.  For any current timestep, the next
+timestep in the sequence is returned.  Thus if stagger(1000,100) is
+used in a variable by the :doc:`dump\_modify every <dump_modify>`
+command, it will generate the sequence of output timesteps:
+
+
+.. parsed-literal::
+
+   100,1000,1100,2000,2100,3000,etc
+
+The logfreq(x,y,z) function uses the current timestep to generate a
+new timestep.  X,y,z > 0 and y < z are required.  The generated
+timesteps increase in a logarithmic fashion, as the sequence
+x,2x,3x,...y\*x,z\*x,2\*z\*x,3\*z\*x,...y\*z\*x,z\*z\*x,2\*z\*x\*x,etc.  For any
+current timestep, the next timestep in the sequence is returned.  Thus
+if logfreq(100,4,10) is used in a variable by the :doc:`dump\_modify every <dump_modify>` command, it will generate the sequence of
+output timesteps:
+
+
+.. parsed-literal::
+
+   100,200,300,400,1000,2000,3000,4000,10000,20000,etc
+
+The stride(x,y,z) function uses the current timestep to generate a new
+timestep.  X,y >= 0 and z > 0 and x <= y are required.  The generated
+timesteps increase in increments of z, from x to y, I.e. it generates
+the sequece x,x+z,x+2z,...,y.  If y-x is not a multiple of z, then
+similar to the way a for loop operates, the last value will be one
+that does not exceed y.  For any current timestep, the next timestep
+in the sequence is returned.  Thus if stagger(1000,2000,100) is used
+in a variable by the :doc:`dump\_modify every <dump_modify>` command, it
+will generate the sequence of output timesteps:
+
+
+.. parsed-literal::
+
+   1000,1100,1200, ... ,1900,2000
+
+The vdisplace(x,y) function takes 2 arguments: x = value0 and y =
+velocity, and uses the elapsed time to change the value by a linear
+displacement due to the applied velocity over the course of a run,
+according to this formula:
+
+
+.. parsed-literal::
+
+   value = value0 + velocity\*(timestep-startstep)\*dt
+
+where dt = the timestep size.
+
+The run begins on startstep.  Startstep can span multiple runs, using
+the *start* keyword of the :doc:`run <run>` command.  See the
+:doc:`run <run>` command for details of how to do this.  Note that the
+:doc:`stats\_style <stats_style>` keyword *elaplong* =
+timestep-startstep.
+
+The swiggle(x,y,z) and cwiggle(x,y,z) functions each take 3 arguments:
+x = value0, y = amplitude, z = period.  They use the elapsed time to
+oscillate the value by a sin() or cos() function over the course of a
+run, according to one of these formulas, where omega = 2 PI / period:
+
+
+.. parsed-literal::
+
+   value = value0 + Amplitude \* sin(omega\*(timestep-startstep)\*dt)
+   value = value0 + Amplitude \* (1 - cos(omega\*(timestep-startstep)\*dt))
+
+where dt = the timestep size.
+
+The run begins on startstep.  Startstep can span multiple runs, using
+the *start* keyword of the :doc:`run <run>` command.  See the
+:doc:`run <run>` command for details of how to do this.  Note that the
+:doc:`stats\_style <stats_style>` keyword *elaplong* =
+timestep-startstep.
+
+
+----------
+
+
+Special Functions
+-----------------
+
+Special functions take specific kinds of arguments, meaning their
+arguments cannot be formulas themselves.
+
+The sum(x), min(x), max(x), ave(x), trap(x), and slope(x) functions
+each take 1 argument which is of the form "c\_ID" or "c\_ID[N]" or
+"f\_ID" or "f\_ID[N]".  The first two are computes and the second two
+are fixes; the ID in the reference should be replaced by the ID of a
+compute or fix defined elsewhere in the input script.  The compute or
+fix must produce either a global vector or array.  If it produces a
+global vector, then the notation without "[N]" should be used.  If
+it produces a global array, then the notation with "[N]" should be
+used, when N is an integer, to specify which column of the global
+array is being referenced.
+
+These functions operate on the global vector of inputs and reduce it
+to a single scalar value.  This is analagous to the operation of the
+:doc:`compute reduce <compute_reduce>` command, which invokes the same
+functions on per-particle or per-grid vectors.
+
+The sum() function calculates the sum of all the vector elements.  The
+min() and max() functions find the minimum and maximum element
+respectively.  The ave() function is the same as sum() except that it
+divides the result by the length of the vector.
+
+The trap() function is the same as sum() except the first and last
+elements are multiplied by a weighting factor of 1/2 when performing
+the sum.  This effectively implements an integratiion via the
+trapezoidal rule on the global vector of data.  I.e. consider a set of
+points, equally spaced by 1 in their x coordinate: (1,V1), (2,V2),
+..., (N,VN), where the Vi are the values in the global vector of
+length N.  The integral from 1 to N of these points is trap().
+
+The slope() function uses linear regression to fit a line to the set
+of points, equally spaced by 1 in their x coordinate: (1,V1), (2,V2),
+..., (N,VN), where the Vi are the values in the global vector of
+length N.  The returned value is the slope of the line.  If the line
+has a single point or is vertical, it returns 1.0e20.
+
+The next(x) function takes 1 argument which is a variable ID (not
+"v\_foo", just "foo").  It must be for a file-style
+variable.  Each time the next() function is invoked (i.e. each time
+the equal-style or particle-style or grid-style variable is evaluated),
+the following steps occur.
+
+For file-style variables, the current string value stored by the
+file-style variable is converted to a numeric value and returned by
+the function.  And the next string value in the file is read and
+stored.  Note that if the line previously read from the file was not a
+numeric string, then it will typically evaluate to 0.0, which is
+likely not what you want.
+
+Since file-style variables read and store the first line of the file
+when they are defined in the input script, this is the value that will
+be returned the first time the next() function is invoked.  If next()
+is invoked more times than there are lines in the file, the variable
+is deleted, similar to how the :doc:`next <next>` command operates.
+
+The grid2part(x) function can only be used in a particle-style
+variable formula.  Its purpose is to enable each particle to access a
+per-grid quantity for the grid cell it is currently in.  The per-grid
+quantity must be produced by a compute or fix.  When the
+particle-style variable formula is evaluated for each particle, the
+per-grid vector or array from the compute or fix is accessed, using
+the grid cell index for each particle.
+
+An example of its usage is as follows:
+
+
+.. parsed-literal::
+
+   variable     csq particle "vx\*vx + vy\*vy + vz\*vz"
+   compute      therm thermal/grid all all temp press
+   variable     csq_norm particle v_csq/grid2part(c_therm\ 1\ )
+
+The per-particle variable csq\_norm will calculate the kinetic energy
+for each particle, normalized by the thermal temperature of the full
+set of particles for the grid cell it is in.  The latter is computed
+by the :doc:`compute thermal/grid <compute_thermal_grid>` command.
+
+The grid2part(x) function takes 1 argument which is of the form "c\_ID"
+or "c\_ID[N]" or "f\_ID" or "f\_ID[N]".  The first two are computes
+and the second two are fixes; the ID in the reference should be
+replaced by the ID of a compute or fix defined elsewhere in the input
+script.  The compute or fix must produce either a per-grid vector or
+array.  If it produces a per-grid vector, then the notation without
+"[N]" should be used.  If it produces a per-grid array, then the
+notation with "[N]" should be used, when N is an integer, to specify
+which column of the per-grid array is being referenced.
+
+The is\_file(x) function is a test whether "x" is a (readable) file and
+returns 1 in this case, otherwise it returns 0. For this test, "x" is taken
+as a literal string and must not have any blanks in it.
+
+The extract\_setting(name) function returns the value of the setting
+*name* as a number.  It gives an input script access to basic settings
+of the SPARTA executable and of the running simulation, by calling the
+sparta\_extract\_setting() library function; `Section howto <Section_howto.html#howto_6>`_ lists the settings *name* may be.
+It is an error if *name* is not one of them.  Note that *name* is taken
+as a literal string and must not have any blanks in it, and that it is
+not enclosed in quotes.
+
+This is how an input script asks for something it has no other way to
+see, most usefully the number of MPI ranks it is running on.  A script
+whose decomposition must match the launcher would otherwise have to be
+told the rank count with the `-var <Section_start.html#start_7>`_
+command-line switch, and when the two disagree it builds a processor
+grid for the wrong size; the mismatch then surfaces much later as a
+"Bad grid of processors" error that cannot say what was intended.  For
+example, this computes a processor grid from the rank count itself:
+
+
+.. parsed-literal::
+
+   variable nprocs equal extract_setting(world_size)
+   variable px equal 2\^floor(log(v_nprocs)/log(2)/3)
+
+Two cautions.  A setting is read locally on each rank rather than
+through a collective, so nothing is added to the collective path and
+partitions that evaluate the variable on different code paths cannot
+deadlock on it -- but by the same token *world\_rank* differs from rank
+to rank, and a variable built from it has a different value on every
+rank.  That is fine for a :doc:`print <print>` of per-rank information
+and wrong for anything that must agree across ranks, such as a
+:doc:`region <region>` or a :doc:`create\_grid <create_grid>` argument.
+Second, under the `-partition <Section_start.html#start_7>`_ switch,
+*world\_size* and *world\_rank* are the size of and the rank within the
+partition running the script, matching every other per-partition
+quantity a script sees; use *universe\_size* and *universe\_rank* for the
+totals across all partitions.
+
+
+----------
+
+
+Python function wrapper
+
+A Python function wrapper enables the formula for an equal-style,
+particle-style, grid-style, or surf-style variable to invoke functions
+coded in Python.  In the case of an equal-style variable, the
+Python-coded function will be invoked once.  In the case of the other
+styles, it can be invoked once per particle, once per grid cell, or
+once per surface element.  This is the case if one or more of its
+arguments include a per-particle, per-grid, or per-surf quantity
+respectively, e.g. the position of a particle.  As illustrated below,
+the reason to use a Python function wrapper is to make it easy to pass
+SPARTA-related arguments to the Python-coded function associated with
+a python-style variable.
+
+The syntax for defining a Python function wrapper is
+
+
+.. parsed-literal::
+
+   py_varname(arg1,arg2,...argN)
+
+where *varname* is the name of a python-style variable which couples
+to a Python-coded function.  The function will be passed the zero or
+more arguments listed in parentheses: \*arg1\*, \*arg2\*, ... \*argN\*.  As
+with Math Functions, each argument can itself be an arbitrarily
+complex formula.
+
+A Python function wrapper can be used in the following manner by an
+input script:
+
+variable        foo python truncate
+python          truncate return v\_foo input 1 iv\_arg format fi here """
+def truncate(x):
+return int(x)
+"""
+variable        xtrunc particle py\_foo(x)
+variable        ytrunc particle py\_foo(y)
+variable        ztrunc particle py\_foo(z)
+dump            1 particle all 100 tmp.dump id x y z v\_xtrunc v\_ytrunc v\_ztrunc
+
+The first two commands define a python-style variable *foo* and couple
+it to the Python-coded function *truncate()* which takes a single
+floating point argument, and returns its truncated integer value.  In
+this case, the Python code for truncate() is included in the *python*
+command; it could also be contained in a file.  See the
+:doc:`python <python>` command doc page for details.
+
+The next three commands define particle-style variables *xtrunc*\ ,
+*ytrunc*\ , and *ztrunc*\ .  Each of them include the same Python function
+wrapper in their formula, with a different argument.  The
+particle-style variable *xtrunc* will invoke the python-style variable
+*foo*\ , which will in turn invoke the Python-coded *truncate()* method.
+Because *xtrunc* is a particle-style variable, and the argument *x* in
+the Python function wrapper is a per-particle quantity (the x-coord of
+each particle), each processor will invoke the *truncate()* method
+once per particle, for the particles it owns.
+
+When invoked for the Ith particle, the value of the *arg*
+internal-style variable, defined by the *python* command, is set to
+the x-coord of the Ith particle.  The call via python-style variable
+*foo* to the Python *truncate()* function passes the value of the
+*arg* variable as the function's first (and only) argument.  Likewise,
+the return value of the Python function is stored by the python-style
+variable *foo* and used in the *xtrunc* particle-style variable
+formula for the Ith particle.
+
+The resulting per-particle vector for *xtrunc* will thus contain the
+truncated x-coord of every particle in the system.  The dump command
+includes the truncated xyz coords for each particle in its output.
+
+See the :doc:`python <python>` command for more details on options the
+*python* command can specify as well as examples of more complex
+Python functions which can be wrapped in this manner.  In particular,
+the Python function can take a variety of arguments, some generated by
+the *python* command, and others by the arguments of the Python
+function wrapper.
+
+
+----------
+
+
+Particle Vectors
+----------------
+
+Particle vectors generate one value per particle, so that a reference
+like "vx" means the x-component of each particles's velocity will be
+used when evaluating the variable.  The reference "type" is an integer
+index representing the particle species.  It is a value from 1 to
+Nspecies. The value corresponds to the order in which species were
+defined via the :doc:`species <species>` command.
+
+Particle vectors for mass and q and mu are per-species values.  "Mass"
+is the mass for the particle's species, "q" is the particle's charge,
+"mu" is its magnetic moment.
+
+The meaning of the other particle vectors should be self-explanatory.
+
+Particle vectors can only be used in *particle* style variables, not
+in *equal* or *grid* or *surf* style varaibles.
+
+
+----------
+
+
+Grid Vectors
+------------
+
+Grid vectors generate one value per grid cell, so that a reference
+like "cxhi" means the x-component of each grid cell's upper right
+corner will be used when evaluating the variable.
+
+The meaning of the other grid vectors should be self-explanatory.
+
+Grid vectors can only be used in *grid* style variables, not in
+*equal* or *particle* or *surf* style varaibles.
+
+
+----------
+
+
+Compute References
+------------------
+
+Compute references access quantities calculated by a
+:doc:`compute <compute>`.  The ID in the reference should be replaced by
+the ID of a compute defined elsewhere in the input script.  As
+discussed in the doc page for the :doc:`compute <compute>` command,
+computes can produce global, per-particle, per-grid, or per-surf
+values.  Computes can also produce a scalar, vector, or array.  See
+the doc pages for individual computes to see what kind of values they
+produce.
+
+An equal-style variable can only use scalar values, which means a
+global scalar, or an element of a global vector or array.
+Particle-style variables can use the same scalar values.  They can
+also use per-particle vector values.  A vector value can be a
+per-particle vector itself, or a column of an per-particle array.
+Grid-style variables can use the same scalar values.  They can also
+use per-grid vector values.  A vector value can be a per-grid vector
+itself, or a column of an per-grid array.  Surf-style variables can
+use the same scalar values.  They can also use per-surf vector values.
+A vector value can be a per-surf vector itself, or a column of an
+per-surf array.
+
+Examples of different kinds of compute references are as follows.
+There is no ambiguity as to what a reference means, since computes
+only produce global, per-particle, per-grid, or per-surf quantities,
+never more than one kind of quantity.
+
++-------------+---------------------------------------------------------------------------------------------+
+| c\_ID       | global scalar, or per-particle or per-grid or per-surf vector                               |
++-------------+---------------------------------------------------------------------------------------------+
+| c\_ID[I]    | Ith element of global vector, or Ith column from per-particle or per-grid or per-surf array |
++-------------+---------------------------------------------------------------------------------------------+
+| c\_ID[I][J] | I,J element of global array                                                                 |
++-------------+---------------------------------------------------------------------------------------------+
+
+For I and J, integers can be specified or a variable name, specified
+as v\_name, where name is the name of the variable, like
+x[v\_myIndex].  The variable can be of any style expect
+particle-style.  The variable is evaluated and the result is expected
+to be numeric and is cast to an integer (i.e. 3.4 becomes 3), to use
+an an index, which must be a value from 1 to N.  Note that a "formula"
+cannot be used as the argument between the brackets, e.g. x[243+10]
+or x[v\_myIndex+1] are not allowed.  To do this a single variable can
+be defined that contains the needed formula.
+
+If a variable containing a compute is evaluated directly in an input
+script (not during a run), then the values accessed by the compute
+must be current.  See the discussion below about "Variable Accuracy".
+
+
+----------
+
+
+Fix References
+--------------
+
+Fix references access quantities calculated by a :doc:`fix <compute>`.
+The ID in the reference should be replaced by the ID of a fix defined
+elsewhere in the input script.  As discussed in the doc page for the
+:doc:`fix <fix>` command, fixes can produce global, per-particle,
+per-grid, or per-surf values.  Fixes can also produce a scalar,
+vector, or array.  See the doc pages for individual fixes to see what
+kind of values they produce.
+
+An equal-style variable can only use scalar values, which means a
+global scalar, or an element of a global vector or array.
+Particle-style variables can use the same scalar values.  They can
+also use per-particle vector values.  A vector value can be a
+per-particle vector itself, or a column of an per-particle array.
+Grid-style variables can use the same scalar values.  They can also
+use per-grid vector values.  A vector value can be a per-grid vector
+itself, or a column of an per-grid array.  Surf-style variables can
+use the same scalar values.  They can also use per-surf vector values.
+A vector value can be a per-surf vector itself, or a column of an
+per-surf array.
+
+The different kinds of fix references are exactly the same as the
+compute references listed in the above table, where "c\_" is replaced
+by "f\_".  Again, there is no ambiguity as to what a reference means,
+since fixes only produce global or per-particle or per-grid
+quantities, never more than one kind of quantity.
+
++-------------+---------------------------------------------------------------------------------------------+
+| f\_ID       | global scalar, or per-particle or per-grid or per-surf vector                               |
++-------------+---------------------------------------------------------------------------------------------+
+| f\_ID[I]    | Ith element of global vector, or Ith column from per-particle or per-grid or per-surf array |
++-------------+---------------------------------------------------------------------------------------------+
+| f\_ID[I][J] | I,J element of global array                                                                 |
++-------------+---------------------------------------------------------------------------------------------+
+
+For I and J, integers can be specified or a variable name, specified
+as v\_name, where name is the name of the variable.  The rules for this
+syntax are the same as for the "Compute References" discussion above.
+
+If a variable containing a fix is evaluated directly in an input
+script (not during a run), then the values accessed by the fix should
+be current.  See the discussion below about "Variable Accuracy".
+
+Note that some fixes only generate quantities on certain timesteps.
+If a variable attempts to access the fix on non-allowed timesteps, an
+error is generated.  For example, the :doc:`fix ave/time <fix_ave_time>`
+command may only generate averaged quantities every 100 steps.  See
+the doc pages for individual fix commands for details.
+
+
+----------
+
+
+Custom Attribute References
+---------------------------
+
+Particles, grid cells, and surface elements can have custom attributes
+which store either single or multiple values per particle, per grid
+cell, or per surface element.  They can be defined and initialized in
+data files, e.g. via the :doc:`read\_surf <read_surf>` command.  Or they
+can be defined and used by specific commands, e.g. :doc:`fix ambipolar <fix_ambipolar>` or :doc:`fix surf/temp <fix_surf_temp>` or
+:doc:`surf\_react adsorb <surf_react_adsorb>`.  The name of each
+attribute sis set by the user or defined by the command.  See `Section 6.17 <Section_howto.html#howto_17>`_ for more discussion of custom
+attributes.
+
+Single-value attributes are referred to as per-particle, per-grid, or
+per-surf vectors.  Multiple-value attributes are referred to as
+per-particle, per-grid, or per-surf arrays.  In variable formulas they
+can be referenced using the following syntax:
+
++------------+--------------------------------------+
+| p\_name    | per-particle vector                  |
++------------+--------------------------------------+
+| p\_name[I] | Ith column from a per-particle array |
++------------+--------------------------------------+
+| g\_name    | per-grid vector                      |
++------------+--------------------------------------+
+| g\_name[I] | Ith column from a per-grid array     |
++------------+--------------------------------------+
+| s\_name    | per-surf vector                      |
++------------+--------------------------------------+
+| s\_name[I] | Ith column from a per-surf array     |
++------------+--------------------------------------+
+
+Particle attributes can only be used in particle-style variables.
+Grid cell attributes can only be used in grid-style variables.
+Surface element attributes can only be used in surf-style variables.
+
+
+----------
+
+
+Surface Collision and Surface Reaction Model References
+-------------------------------------------------------
+
+These references access quantities calculated by a
+:doc:`surf\_collide <surf_collide>` or :doc:`surf\_react <surf_react>`
+command.  The ID in the reference should be replaced by the ID of a
+surface collision or surface reaction model defined elsewhere in the
+input script.  As discussed in the doc pages for the
+:doc:`surf\_collide <surf_collide>` and :doc:`surf\_react <surf_react>`
+commands, these commmands produce global vectors, the elements of
+which can be accessed by equal-style, particle-style, grid-style, or
+surf-style variables, e.g.
+
++-----------+------------------------------------------------------------+
+| sc\_ID[I] | Ith element of global vector for a surface collision model |
++-----------+------------------------------------------------------------+
+| sr\_ID[I] | Ith element of global vector for a surface reaction model  |
++-----------+------------------------------------------------------------+
+
+
+----------
+
+
+Variable References
+-------------------
+
+Variable references access quantities stored or calculated by other
+variables, which will cause those variables to be evaluated.  The name
+in the reference should be replaced by the name of a variable defined
+elsewhere in the input script.
+
+As discussed on this doc page, equal-style variables generate a global
+scalar numeric value; particle-style variables generate a per-particle
+vector of numeric values; grid-style variables generate a per-grid
+vector of numeric values; surf-style variables generate a per-surf
+vector of numeric values; all other variables store a string.
+
+The formula for an equal-style variable can use any style of variable
+except a particle- or grid- or surf-style.  The formula for a
+particle-style variable can use any style of variable except a grid-
+or surf-style.  The formula for a grid-style variable can use any
+style of variable except a particle- or surf-style.  The formula for a
+surf-style variable can use any style of variable except a particle-
+or grid-style.
+
+If a string-storing variable is used, the string is converted to a
+numeric value.  Note that this will typically produce a 0.0 if the
+string is not a numeric string, which is likely not what you want.
+
+Examples of different kinds of variable references are as follows.
+There is no ambiguity as to what a reference means, since variables
+produce only a global scalar or a per-particle or per-grid or per-surf
+vector, never more than one of these quantities.
+
++---------+-----------------------------------------------------+
+| v\_name | equal- or particle- or grid- or surf-style variable |
++---------+-----------------------------------------------------+
+
+
+----------
+
+
+**Immediate Evaluation of Variables:**
+
+There is a difference between referencing a variable with a leading $
+sign (e.g. $x or ${abc}) versus with a leading "v\_" (e.g. v\_x or
+v\_abc).  The former can be used in any input script command, including
+a variable command.  The input script parser evaluates the reference
+variable immediately and substitutes its value into the command.  As
+explained in `Section commands 3.2 <Section_commands.html#cmd_2>`_ for
+"Parsing rules", you can also use un-named "immediate" variables for
+this purpose.  For example, a string like this
+$((xlo+xhi)/2+sqrt(v\_area)) in an input script command evaluates the
+string between the parenthesis as an equal-style variable formula.
+
+Referencing a variable with a leading "v\_" is an optional or required
+kind of argument for some commands (e.g. the :doc:`fix ave/grid <fix_ave_grid>` or :doc:`dump custom <dump>` or
+:doc:`stats\_style <stats_style>` commands) if you wish it to evaluate a
+variable periodically during a run.  It can also be used in a variable
+formula if you wish to reference a second variable.  The second
+variable will be evaluated whenever the first variable is evaluated.
+
+As an example, suppose you use this command in your input script to
+define the variable "n" as
+
+
+.. parsed-literal::
+
+   variable n equal np
+
+before a run where the particle count changes.  You might think this
+will assign the initial count to the variable "n".  That is not the
+case.  Rather it assigns a formula which evaluates the count (using
+the stats\_style keyword "np") to the variable "n".  If you use the
+variable "n" in some other command like :doc:`fix ave/time <fix_ave_time>` then the current particle count will be
+evaluated continuously during the run.
+
+If you want to store the initial particle count of the system, it
+can be done in this manner:
+
+
+.. parsed-literal::
+
+   variable n equal np
+   variable n0 equal $n
+
+The second command will force "n" to be evaluated (yielding the
+initial count) and assign that value to the variable "n0".  Thus the
+command
+
+
+.. parsed-literal::
+
+   stats_style custom step v_n v_n0
+
+would print out both the current and initial particle count
+periodically during the run.
+
+Also note that it is a mistake to enclose a variable formula in quotes
+if it contains variables preceeded by $ signs.  For example,
+
+
+.. parsed-literal::
+
+   variable nratio equal "${nfinal}/${n0}"
+
+This is because the quotes prevent variable substitution (see `Section 3.2 <Section_commands.html#cmd_2>`_ of the manual on parsing input script
+commands), and thus an error will occur when the formula for "nratio"
+is evaluated later.
+
+
+----------
+
+
+**Variable Accuracy:**
+
+Obviously, SPARTA attempts to evaluate variables containing formulas
+(\ *equal*\ , *particle*\ , *grid*\ , *surf* style variables) accurately
+whenever the evaluation is performed.  Depending on what is included
+in the formula, this may require invoking a :doc:`compute <compute>`, or
+accessing a value previously calculated by a compute, or accessing a
+value calculated and stored by a :doc:`fix <fix>`.  If the compute is
+one that calculates certain properties of the system such as the
+pressure induced on a global boundary due to collisions, then these
+quantities need to be tallied during the timesteps on which the
+variable will need the values.
+
+SPARTA keeps track of all of this as it performs a :doc:`run <run>` as
+well as in between simulations.  An error will be generated if you
+attempt to evaluate a variable when SPARTA knows it cannot produce
+accurate values.  For example, if a :doc:`stats <stats>` command prints
+a variable which accesses values stored by a :doc:`fix ave/time <fix_ave_time>` command and the timesteps on which stats
+output is generated are not multiples of the averaging frequency used
+in the fix command, then an error will occur.
+
+However, there are two special cases to be aware of when a variable
+requires invocation of a compute (directly or indirectly).  The first
+is if the variable is evaluated before a :doc:`run <run>` command which
+follows the :doc:`compute <compute>` command which created that compute.
+In this case, SPARTA will generate an error.  This is because some
+computes require initializations which does not take place unit a run
+is initialized.  One example is the :doc:`compute property/surf <compute_property_surf>` command which creates a list
+of surface elements in the specified group.  This does not occur until
+a run begins.
+
+The second special case is when a variable that depends on a compute
+is evaluated in between :doc:`run <run>` commands.  It is possible for
+other input script commands issued following the previous run, but
+before the variable is evaluated, to change the system.  For example,
+the :doc:`remove\_surf <remove_surf>` command could be used to remove
+surface elements.  If the variable depends on a :doc:`property/surf compute <compute_property_surf>`, that compute will not
+re-initialize itself until the next simulation.  Thus it may generate
+an incorrect answer when evaluated.  Note that SPARTA will not
+generate an error in this case; the evaluated variable may simply be
+incorrect.
+
+The way to get around both of these special cases is to perform a
+0-timestep run before evaluating the variable.
+
+
+----------
+
+
+**Restrictions:**
+
+All *universe*\ - and *uloop*\ -style variables defined in an input script
+must have the same number of values.
+
+**Related commands:**
+
+:doc:`next <next>`, :doc:`jump <jump>`, :doc:`include <include>`, :doc:`fix print <fix_print>`, :doc:`print <print>`
+
+**Default:** none
+
+
+.. _sws: https://sparta.github.io
+.. _sd: Manual.html
+.. _sc: Section_commands.html

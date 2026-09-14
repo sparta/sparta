@@ -34,9 +34,20 @@ python                     Python wrapper on SPARTA as a library
 src                        source files
 tools                      pre- and post-processing tools
 
-Point your browser at any of these files to get started:
+The manual is built from reStructuredText sources in doc/src with
+Sphinx, which is installed into a virtualenv on the first build, so the
+only prerequisite is a python3 with venv.  The targets are:
 
-doc/Manual.html	           the SPARTA manual
-doc/Section_intro.html	   hi-level introduction to SPARTA
-doc/Section_start.html	   how to build and use SPARTA
-doc/Developer.pdf          SPARTA developer guide
+make -C doc html          the manual, in doc/html
+make -C doc pdf           doc/html/Manual.pdf (needs latexmk and pdflatex)
+make -C doc fasthtml      quick per-page preview, in doc/fasthtml (needs
+                          pandoc); "make -C doc fasthtml/read_surf.html"
+                          rebuilds just that page, for checking an edit
+make -C doc check         verify every internal link and anchor resolves
+
+"make -C doc" on its own lists these with the rest.  Then point your
+browser at any of these files to get started:
+
+doc/html/Manual.html	   the SPARTA manual
+doc/html/Section_intro.html   hi-level introduction to SPARTA
+doc/html/Section_start.html   how to build and use SPARTA

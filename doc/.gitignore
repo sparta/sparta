@@ -1,0 +1,9 @@
+/html
+/doctrees
+/latex
+/latexdoctrees
+/fasthtml
+/docenv
+*.pyc
+__pycache__
+/utils/sphinx-config/_static/mathjax

@@ -165,3 +165,33 @@ jobs:
 
     - name: Build
       run: cd build; make -j4
+
+  # The manual is Sphinx now, and nothing else in this workflow would notice
+  # if it stopped building.  -W turns Sphinx's warnings into errors, so a
+  # broken cross-reference or a malformed table fails the pull request
+  # rather than reaching the web site; --keep-going reports all of them
+  # instead of stopping at the first.
+  doc:
+    runs-on: ubuntu-22.04
+    # Both ends of the Python range, because they do not resolve to the
+    # same Sphinx and the two do not report the same things.  Sphinx 9
+    # requires Python 3.11, so pip gives 3.9 the newest 7.x instead --
+    # and 7.x reported 13 duplicate-target warnings that 9.x does not.
+    # Testing only the newer one meant a clean CI while a contributor on
+    # an older python saw a wall of warnings.
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ['3.9', '3.11']
+    steps:
+    - uses: actions/checkout@v4
+
+    - uses: actions/setup-python@v5
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Build the manual
+      run: make -C doc html SPHINXEXTRA="-W --keep-going"
+
+    - name: Check every internal link and anchor resolves
+      run: python3 doc/utils/link-check.py doc/html

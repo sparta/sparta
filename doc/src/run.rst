@@ -1,0 +1,204 @@
+.. index:: run
+
+run command
+===========
+
+**Syntax:**
+
+
+.. parsed-literal::
+
+   run N keyword values ...
+
+* value = # of integer timesteps N
+* zero or more keyword/value pairs may be appended
+* keyword = *upto* or *start* or *stop* or *pre* or *post* or *every*
+  
+  .. parsed-literal::
+  
+       upto value = none
+       start value = N1
+         N1 = timestep at which 1st run started
+       stop value = N2
+         N2 = timestep at which last run will end
+       pre value = no or yes
+       post value = no or yes
+       every values = M c1 c2 ...
+         M = break the run into M-timestep segments and invoke one or more commands between each segment
+         c1,c2,...,cN = one or more SPARTA commands, each enclosed in quotes
+         c1 = NULL means no command will be invoked
+
+
+
+**Examples:**
+
+
+.. parsed-literal::
+
+   run 10000
+   run 1000000 upto
+   run 100 start 0 stop 1000
+   run 1000 pre no post yes
+   run 100000 start 0 stop 1000000 every 1000 "print 'Temp = $t'"
+   run 100000 every 1000 NULL
+
+**Description:**
+
+Run or continue a simulation for a specified number of timesteps.
+
+A value of N = 0 is acceptable; only the statistics of the system are
+computed and printed without taking a timestep.
+
+The *upto* keyword means to perform a run starting at the current
+timestep up to the specified timestep.  E.g. if the current timestep
+is 10,000 and "run 100000 upto" is used, then an additional 90,000
+timesteps will be run.  This can be useful for very long runs on a
+machine that allocates chunks of time and terminate your job when time
+is exceeded.  If you need to restart your script multiple times
+(reading in the last restart file), you can keep restarting your
+script with the same run command until the simulation finally
+completes.
+
+The *start* or *stop* keywords can be used if multiple runs are being
+performed and you want a :doc:`variable <variable>` or :doc:`fix <fix>`
+command that changes some value over time (e.g. target temperature) to
+make the change across the entire set of runs and not just a single
+run.
+
+For example, consider these commands followed by 10 run commands:
+
+
+.. parsed-literal::
+
+   variable     myTemp equal ramp(300,500)
+   surf_collide 1 diffuse v_myTemp 0.5
+   run	     1000 start 0 stop 10000
+   run	     1000 start 0 stop 10000
+   ...
+   run	     1000 start 0 stop 10000
+
+The ramp() function in the :doc:`variable <variable>` and its use in the
+"surf\_collide" command will ramp the target temperature from 300 to
+500 during a run.  If the run commands did not have the start/stop
+keywords (just "run 1000"), then the temperature would ramp from 300
+to 500 during the 1000 steps of each run.  With the start/stop
+keywords, the ramping takes place smoothly over the 10000 steps of all
+the runs together.
+
+The *pre* and *post* keywords can be used to streamline the setup,
+clean-up, and associated output to the screen that happens before and
+after a run.  This can be useful if you wish to do many short runs in
+succession (e.g. SPARTA is being called as a library which is doing
+other computations between successive short SPARTA runs).
+
+By default (pre and post = yes), SPARTA zeroes statistical counts
+before every run and initializes other :doc:`fixes <fix>` and
+:doc:`computes <compute>` as needed.  And after every run it gathers and
+prints timings statistics.  If a run is just a continuation of a
+previous run (i.e. no settings are changed), the initial computation
+is not necessary.  So if *pre* is specified as "no" then the initial
+setup is skipped, except for printing statistical info.  Note that if
+*pre* is set to "no" for the very 1st run SPARTA performs, then it is
+overridden, since the initial setup computations must be done.
+
+IMPORTANT NOTE: If your input script changes settings between 2 runs
+(e.g. adds a :doc:`fix <fix>` or :doc:`compute <compute>`), then the
+initial setup must be performed.  SPARTA does not check for this, but
+it would be an error to use the *pre no* option in this case.
+
+If *post* is specified as "no", the full timing and statistical output
+is skipped; only a one-line summary timing is printed.
+
+The *every* keyword provides a means of breaking a SPARTA run into a
+series of shorter runs.  Optionally, one or more SPARTA commands (c1,
+c2, ..., cN) will be executed in between the short runs.  If used, the
+*every* keyword must be the last keyword, since it has a variable
+number of arguments.  Each of the trailing arguments is a single
+SPARTA command, and each command should be enclosed in quotes, so that
+the entire command will be treated as a single argument.  This will
+also prevent any variables in the command from being evaluated until
+it is executed multiple times during the run.  Note that if a command
+itself needs one of its arguments quoted (e.g. the :doc:`print <print>`
+command), then you can use a combination of single and double quotes,
+as in the example above or below.
+
+The *every* keyword is a means to avoid listing a long series of runs
+and interleaving commands in your input script.  For example, a
+:doc:`print <print>` command could be invoked or a :doc:`fix <fix>` could
+be redefined, e.g. to reset a load balancing parameter.  Or this could
+be useful for invoking a command you have added to SPARTA that wraps
+some other code (e.g. as a library) to perform a computation
+periodically during a long SPARTA run.  See :doc:`Section 8 <Section_modify>` of the manual for info about how to add new
+commands to SPARTA.  See `Section 6.7 <Section_howto.html#howto_10>`_ of
+the manual for ideas about how to couple SPARTA to other codes.
+
+With the *every* option, N total steps are simulated, in shorter runs
+of M steps each.  After each M-length run, the specified commands are
+invoked.  If only a single command is specified as NULL, then no
+command is invoked.  Thus these lines:
+
+
+.. parsed-literal::
+
+   compute t temp
+   variable myT equal c_t
+   run 6000 every 2000 "print 'Temp = $\ myT\ '"
+
+are the equivalent of:
+
+
+.. parsed-literal::
+
+   compute t temp
+   variable myT equal c_t
+   run 2000
+   print "Temp = $\ myT\ "
+   run 2000
+   print "Temp = $\ myT\ "
+   run 2000
+   print "Temp = $\ myT\ "
+
+which does 3 runs of 2000 steps and prints the x-coordinate of a
+particular atom between runs.  Note that the variable "$q" will
+be evaluated afresh each time the print command is executed.
+
+Note that by using the line continuation character "&", the run every
+command can be spread across many lines, though it is still a single
+command:
+
+
+.. parsed-literal::
+
+   run 100000 every 1000 &
+     "print 'Minimum value = $a'" &
+     "print 'Maximum value = $b'" &
+     "print 'Temp = $c'"
+
+If the *pre* and *post* options are set to "no" when used with the
+*every* keyword, then the 1st run will do the full setup and the last
+run will print the full timing summary, but these operations will be
+skipped for intermediate runs.
+
+If you want SPARTA to exit early during the middle of a run when a
+condition is met, use :doc:`fix halt <fix_halt>`.
+
+**Restrictions:**
+
+The number of specified timesteps N must fit in a signed 32-bit
+integer, so you are limited to slightly more than 2 billion steps
+(2\^31) in a single run.  However, you can perform successive runs to
+run a simulation for any number of steps (ok, up to 2\^63 steps).
+
+**Related commands:**
+
+:doc:`fix halt <fix_halt>`
+
+**Default:**
+
+The option defaults are start = the current timestep, stop = current
+timestep + N, pre = yes, and post = yes.
+
+
+.. _sws: https://sparta.github.io
+.. _sd: Manual.html
+.. _sc: Section_commands.html
