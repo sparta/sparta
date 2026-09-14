@@ -1203,6 +1203,7 @@ void Surf::check_watertight_2d_distributed()
 
   int nrvous = 0;
   for (int i = 0; i < n; i++) {
+    if (lines_rvous[i].transparent) continue;
     proclist[nrvous] = hashlittle(lines_rvous[i].p1,2*sizeof(double),0) % nprocs;
     inpoint[nrvous].x[0] = lines_rvous[i].p1[0];
     inpoint[nrvous].x[1] = lines_rvous[i].p1[1];
@@ -1461,6 +1462,7 @@ void Surf::check_watertight_3d_distributed()
 
   int nrvous = 0;
   for (int i = 0; i < n; i++) {
+    if (tris_rvous[i].transparent) continue;
     p1 = tris_rvous[i].p1;
     p2 = tris_rvous[i].p2;
     p3 = tris_rvous[i].p3;
