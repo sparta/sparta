@@ -116,21 +116,12 @@ static int cellcount_target(int need, int nlocal_in, int ngrid_in,
 
 ParticleKokkos::ParticleKokkos(SPARTA *sparta) : Particle(sparta)
 {
-  // NOTE: the weight_rand_pool seed cannot be set here.  Every other Kokkos
-  //   class seeds its pool in the constructor initializer list with
-  //   12345 + comm->me, but those are all styles the input script creates,
-  //   long after SPARTA::create() has finished.  ParticleKokkos is built by
-  //   create() itself, at sparta.cpp:484, three lines BEFORE comm exists
-  //   (:487), and comm is not NULL-initialized -- so reading comm->me there
-  //   dereferences an uninitialized pointer.  Seed on first use instead.
 
+  // ParticleKokkos is built before comm exists, so this pool is seeded on
+  // first use rather than from comm->me in the constructor.
 #ifndef SPARTA_KOKKOS_EXACT
   weight_rand_pool_seeded = 0;
 #endif
-
-
-  d_resize = DAT::t_int_scalar("particle:resize");
-  h_resize = HAT::t_int_scalar("particle:resize_mirror");
 
   k_reorder_pass = DAT::tdual_int_scalar("particle:reorder_pass");
   d_reorder_pass = k_reorder_pass.view_device();
@@ -339,40 +330,33 @@ void ParticleKokkos::sort_kokkos()
   //  repeat the parallel loop again
 
   int resize = 1;
-  while (resize) {
+  while (resize > 0) {
     resize = 0;
 
     copymode = 1;
     if (sparta->kokkos->need_atomics) {
       if (reorder_flag && reorder_scheme == COPYPARTICLELIST)
-        Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagParticleSort<1,1> >(0,nlocal),*this);
+        Kokkos::parallel_reduce(Kokkos::RangePolicy<DeviceType, TagParticleSort<1,1> >(0,nlocal),*this,Kokkos::Max<int>(resize));
       else
-        Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagParticleSort<1,0> >(0,nlocal),*this);
+        Kokkos::parallel_reduce(Kokkos::RangePolicy<DeviceType, TagParticleSort<1,0> >(0,nlocal),*this,Kokkos::Max<int>(resize));
     } else {
       if (reorder_flag && reorder_scheme == COPYPARTICLELIST)
-        Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagParticleSort<0,1> >(0,nlocal),*this);
+        Kokkos::parallel_reduce(Kokkos::RangePolicy<DeviceType, TagParticleSort<0,1> >(0,nlocal),*this,Kokkos::Max<int>(resize));
       else
-        Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagParticleSort<0,0> >(0,nlocal),*this);
+        Kokkos::parallel_reduce(Kokkos::RangePolicy<DeviceType, TagParticleSort<0,0> >(0,nlocal),*this,Kokkos::Max<int>(resize));
     }
     copymode = 0;
 
-    Kokkos::deep_copy(h_resize,d_resize);
-    resize = h_resize();
-
-    if (resize) {
+    if (resize > 0) {
       Kokkos::deep_copy(d_cellcount,0);
-
       // grow with headroom, not to exactly what this step needed
 
       maxcellcount =
         MAX(cellcount_target(resize,nlocal,ngrid,cell_contiguous),
             static_cast<int> (maxcellcount*CELLCOUNT_GROWTH));
-
       d_plist = {};
-      MemKK::realloc_kokkos(grid_kk->d_plist,"particle:plist",ngrid,maxcellcount);
+      grid_kk->d_plist=decltype(grid_kk->d_plist)("particle:plist",ngrid,maxcellcount);
       d_plist = grid_kk->d_plist;
-
-      Kokkos::deep_copy(d_resize,0);
     }
   }
 
@@ -578,7 +562,7 @@ void ParticleKokkos::operator()(TagSetIcellFromPlist, const int &icell) const
 
 template<int NEED_ATOMICS, int REORDER_FLAG>
 KOKKOS_INLINE_FUNCTION
-void ParticleKokkos::operator()(TagParticleSort<NEED_ATOMICS,REORDER_FLAG>, const int &i) const
+void ParticleKokkos::operator()(TagParticleSort<NEED_ATOMICS,REORDER_FLAG>, const int &i, int &resize) const
 {
   const int icell = d_particles[i].icell;
   int j;
@@ -589,8 +573,8 @@ void ParticleKokkos::operator()(TagParticleSort<NEED_ATOMICS,REORDER_FLAG>, cons
     d_cellcount[icell]++;
   }
 
-  if (j >= int(d_plist.extent(1)))
-    d_resize() = MAX(d_resize(),j+1);
+  if (j >= maxcellcount)
+    resize = MAX(resize, j+1);
   else {
     d_plist(icell,j) = i;
 

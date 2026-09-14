@@ -123,7 +123,7 @@ class ParticleKokkos : public Particle {
 
   template<int NEED_ATOMICS, int REORDER_FLAG>
   KOKKOS_INLINE_FUNCTION
-  void operator()(TagParticleSort<NEED_ATOMICS,REORDER_FLAG>, const int&) const;
+  void operator()(TagParticleSort<NEED_ATOMICS,REORDER_FLAG>, const int&, int&) const;
 
   KOKKOS_INLINE_FUNCTION
   void operator()(TagParticleReorder_COPYPARTICLELIST1, const int, int&, const bool&) const;
@@ -194,9 +194,6 @@ class ParticleKokkos : public Particle {
   HAT::t_int_2d_lr h_lists;
   HAT::t_int_1d h_mlist;
   HAT::t_int_1d h_slist;
-
-  DAT::t_int_scalar d_resize;
-  HAT::t_int_scalar h_resize;
 
   // work memory for reduced memory reordering
   t_particle_1d d_pswap1;
