@@ -102,8 +102,11 @@ overridden, since the initial setup computations must be done.
 </P>
 <P>IMPORTANT NOTE: If your input script changes settings between 2 runs
 (e.g. adds a <A HREF = "fix.html">fix</A> or <A HREF = "compute.html">compute</A>), then the
-initial setup must be performed.  SPARTA does not check for this, but
-it would be an error to use the <I>pre no</I> option in this case.
+initial setup must be performed.  Defining or deleting a fix or a
+compute is detected and <I>pre no</I> is refused in that case, since the
+skipped setup is what refreshes the stored pointers to them.  Other
+changed settings are not detected, and it would be an error to use the
+<I>pre no</I> option after them.
 </P>
 <P>If <I>post</I> is specified as "no", the full timing and statistical output
 is skipped; only a one-line summary timing is printed.
