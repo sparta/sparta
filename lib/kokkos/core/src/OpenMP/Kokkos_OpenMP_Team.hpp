@@ -86,7 +86,7 @@ class TeamPolicyInternal<Kokkos::OpenMP, Properties...>
 
   inline static int scratch_size_max(int level) {
     return (level == 0 ? 1024 * 32 :  // Roughly L1 size
-                20 * 1024 * 1024);    // Limit to keep compatibility with CUDA
+                80 * 1024 * 1024);    // Limit to keep compatibility with CUDA
   }
 
   //----------------------------------------
@@ -116,8 +116,13 @@ class TeamPolicyInternal<Kokkos::OpenMP, Properties...>
 
     m_league_size = league_size_request;
 
-    if (team_size_request > team_max)
-      Kokkos::abort("Kokkos::abort: Requested Team Size is too large!");
+    if (team_size_request > team_max) {
+      std::stringstream error;
+      error << "Kokkos::TeamPolicy<OpenMP>: Requested too large team size. "
+               "Requested: "
+            << team_size_request << ", Maximum: " << team_max;
+      Kokkos::Impl::throw_runtime_exception(error.str().c_str());
+    }
     m_team_size = team_size_request < team_max ? team_size_request : team_max;
 
     // Round team size up to a multiple of 'team_gain'

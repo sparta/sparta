@@ -8,7 +8,6 @@
 #if defined(KOKKOS_ENABLE_CUDA)
 
 #include <algorithm>
-#include <string>
 
 #include <Kokkos_Parallel.hpp>
 
@@ -16,14 +15,10 @@
 #include <Cuda/Kokkos_Cuda_ReduceScan.hpp>
 #include <Cuda/Kokkos_Cuda_BlockSize_Deduction.hpp>
 
-#include <impl/Kokkos_Tools.hpp>
-#include <typeinfo>
-
 #include <KokkosExp_MDRangePolicy.hpp>
 #include <impl/KokkosExp_IterateTileGPU.hpp>
 
-namespace Kokkos {
-namespace Impl {
+namespace Kokkos::Impl {
 
 template <typename ParallelType, typename Policy, typename LaunchBounds>
 int max_tile_size_product_helper(const Policy& pol, const LaunchBounds&) {
@@ -53,6 +48,53 @@ int max_tile_size_product_helper(const Policy& pol, const LaunchBounds&) {
       static_cast<int>(Kokkos::Impl::CudaTraits::MaxHierarchicalParallelism));
 }
 
+// Device closure for MDRange ParallelFor on CUDA.
+// Selects between stride and no-stride iteration patterns at compile time
+template <typename FunctorType, bool UseStride, typename... Traits>
+class ParallelForMDRange;
+
+template <typename FunctorType, bool UseStride, typename... Traits>
+class ParallelForMDRange<FunctorType, UseStride,
+                         Kokkos::MDRangePolicy<Traits...>> {
+ public:
+  using Policy       = Kokkos::MDRangePolicy<Traits...>;
+  using functor_type = FunctorType;
+
+ private:
+  using index_type       = typename Policy::index_type;
+  using array_index_type = typename Policy::array_index_type;
+  using array_type       = typename Policy::point_type;
+
+  using DeviceIteratePattern =
+      Kokkos::Impl::DeviceIterate<Policy::rank, array_index_type, index_type,
+                                  Policy::inner_direction, UseStride,
+                                  FunctorType, typename Policy::work_tag>;
+
+  const FunctorType m_functor;
+  const Policy m_policy;
+  const array_type m_lower;
+  const array_type m_upper;
+  const array_type m_extent;  // tile_size * num_tiles
+
+ public:
+  ParallelForMDRange() = delete;
+
+  Policy const& get_policy() const { return m_policy; }
+
+  inline __device__ void operator()() const {
+    DeviceIteratePattern(m_lower, m_upper, m_extent, m_functor).exec_range();
+  }
+
+  ParallelForMDRange(FunctorType const& arg_functor, const Policy& arg_policy,
+                     const array_type& lower, const array_type& upper,
+                     const array_type& extent)
+      : m_functor(arg_functor),
+        m_policy(arg_policy),
+        m_lower(lower),
+        m_upper(upper),
+        m_extent(extent) {}
+};
+
 template <class FunctorType, class... Traits>
 class ParallelFor<FunctorType, Kokkos::MDRangePolicy<Traits...>, Kokkos::Cuda> {
  public:
@@ -60,40 +102,47 @@ class ParallelFor<FunctorType, Kokkos::MDRangePolicy<Traits...>, Kokkos::Cuda> {
   using functor_type = FunctorType;
 
  private:
-  using RP               = Policy;
   using array_index_type = typename Policy::array_index_type;
   using index_type       = typename Policy::index_type;
   using LaunchBounds     = typename Policy::launch_bounds;
-  using MaxGridSize      = Kokkos::Array<index_type, 3>;
+  using MaxGridSize      = Kokkos::Array<array_index_type, 3>;
+  using array_type       = typename Policy::point_type;
 
   const FunctorType m_functor;
-  const Policy m_rp;
+  const Policy m_policy;
   const MaxGridSize m_max_grid_size;
+
+  array_type m_lower;
+  array_type m_upper;
+  array_type m_extent;  // tile_size * num_tiles
 
  public:
   template <typename Policy, typename Functor>
   static int max_tile_size_product(const Policy& pol, const Functor&) {
     return max_tile_size_product_helper<ParallelFor>(pol, LaunchBounds{});
   }
-  Policy const& get_policy() const { return m_rp; }
+
+  Policy const& get_policy() const { return m_policy; }
+
   inline __device__ void operator()() const {
-    Kokkos::Impl::DeviceIterateTile<Policy::rank, Policy, FunctorType,
-                                    MaxGridSize, typename Policy::work_tag>(
-        m_rp, m_functor, m_max_grid_size)
+    Kokkos::Impl::DeviceIterate<Policy::rank, array_index_type, index_type,
+                                Policy::inner_direction, true, FunctorType,
+                                typename Policy::work_tag>(m_lower, m_upper,
+                                                           m_extent, m_functor)
         .exec_range();
   }
 
   inline void execute() const {
-    if (m_rp.m_num_tiles == 0) return;
+    if (m_policy.m_num_tiles == 0) return;
 
     // maximum number of threads in each dimension of the block as fetched by
     // the API
     [[maybe_unused]] const auto max_threads_dim =
-        m_rp.space().cuda_device_prop().maxThreadsDim;
+        m_policy.space().cuda_device_prop().maxThreadsDim;
 
     // maximum total number of threads per block as fetched by the API
     [[maybe_unused]] const auto max_threads_per_block =
-        m_rp.space().cuda_device_prop().maxThreadsPerBlock;
+        m_policy.space().cuda_device_prop().maxThreadsPerBlock;
 
     // make sure the block dimensions don't exceed the max number of threads
     // allowed
@@ -119,95 +168,63 @@ class ParallelFor<FunctorType, Kokkos::MDRangePolicy<Traits...>, Kokkos::Cuda> {
                     grid.z <= static_cast<unsigned int>(m_max_grid_size[2]));
     };
 
-    dim3 grid(1, 1, 1);
-    dim3 block(1, 1, 1);
-    if constexpr (RP::rank == 2) {
-      // id0 to threadIdx.x; id1 to threadIdx.y
-      block = dim3(m_rp.m_tile[0], m_rp.m_tile[1], 1);
-      grid =
-          dim3(std::min<array_index_type>(
-                   (m_rp.m_upper[0] - m_rp.m_lower[0] + block.x - 1) / block.x,
-                   m_max_grid_size[0]),
-               std::min<array_index_type>(
-                   (m_rp.m_upper[1] - m_rp.m_lower[1] + block.y - 1) / block.y,
-                   m_max_grid_size[1]),
-               1);
-    } else if constexpr (RP::rank == 3) {
-      // id0 to threadIdx.x; id1 to threadIdx.y; id2 to threadIdx.z
-      block = dim3(m_rp.m_tile[0], m_rp.m_tile[1], m_rp.m_tile[2]);
-      grid =
-          dim3(std::min<array_index_type>(
-                   (m_rp.m_upper[0] - m_rp.m_lower[0] + block.x - 1) / block.x,
-                   m_max_grid_size[0]),
-               std::min<array_index_type>(
-                   (m_rp.m_upper[1] - m_rp.m_lower[1] + block.y - 1) / block.y,
-                   m_max_grid_size[1]),
-               std::min<array_index_type>(
-                   (m_rp.m_upper[2] - m_rp.m_lower[2] + block.z - 1) / block.z,
-                   m_max_grid_size[2]));
-    } else if constexpr (RP::rank == 4) {
-      // id0,id1 encoded within threadIdx.x; id2 to threadIdx.y; id3 to
-      // threadIdx.z
-      block =
-          dim3(m_rp.m_tile[0] * m_rp.m_tile[1], m_rp.m_tile[2], m_rp.m_tile[3]);
-      grid =
-          dim3(std::min<array_index_type>(
-                   m_rp.m_tile_end[0] * m_rp.m_tile_end[1], m_max_grid_size[0]),
-               std::min<array_index_type>(
-                   (m_rp.m_upper[2] - m_rp.m_lower[2] + block.y - 1) / block.y,
-                   m_max_grid_size[1]),
-               std::min<array_index_type>(
-                   (m_rp.m_upper[3] - m_rp.m_lower[3] + block.z - 1) / block.z,
-                   m_max_grid_size[2]));
-    } else if constexpr (RP::rank == 5) {
-      // id0,id1 encoded within threadIdx.x; id2,id3 to threadIdx.y; id4 to
-      // threadIdx.z
-      block = dim3(m_rp.m_tile[0] * m_rp.m_tile[1],
-                   m_rp.m_tile[2] * m_rp.m_tile[3], m_rp.m_tile[4]);
-      grid =
-          dim3(std::min<array_index_type>(
-                   m_rp.m_tile_end[0] * m_rp.m_tile_end[1], m_max_grid_size[0]),
-               std::min<array_index_type>(
-                   m_rp.m_tile_end[2] * m_rp.m_tile_end[3], m_max_grid_size[1]),
-               std::min<array_index_type>(
-                   (m_rp.m_upper[4] - m_rp.m_lower[4] + block.z - 1) / block.z,
-                   m_max_grid_size[2]));
-    } else if constexpr (RP::rank == 6) {
-      // id0,id1 encoded within threadIdx.x; id2,id3 to threadIdx.y; id4,id5 to
-      // threadIdx.z
-      block =
-          dim3(m_rp.m_tile[0] * m_rp.m_tile[1], m_rp.m_tile[2] * m_rp.m_tile[3],
-               m_rp.m_tile[4] * m_rp.m_tile[5]);
-      grid = dim3(
-          std::min<array_index_type>(m_rp.m_tile_end[0] * m_rp.m_tile_end[1],
-                                     m_max_grid_size[0]),
-          std::min<array_index_type>(m_rp.m_tile_end[2] * m_rp.m_tile_end[3],
-                                     m_max_grid_size[1]),
-          std::min<array_index_type>(m_rp.m_tile_end[4] * m_rp.m_tile_end[5],
-                                     m_max_grid_size[2]));
-    } else {
-      Kokkos::abort("Kokkos::MDRange Error: Exceeded rank bounds with Cuda\n");
-    }
+    const auto [grid, block] =
+        Kokkos::Impl::compute_device_launch_params(m_policy, m_max_grid_size);
+
     // ensure we don't exceed the capability of the device
     check_grid_sizes(grid);
     check_block_sizes(block);
-    // launch the kernel
-    CudaParallelLaunch<ParallelFor, LaunchBounds>(
-        *this, grid, block, 0, m_rp.space().impl_internal_space_instance());
+
+    const bool need_grid_stride =
+        Kokkos::Impl::need_grid_stride_loop(m_max_grid_size, block, m_extent);
+
+    // Use this kernel for graph capture if the policy is a graph kernel
+    if constexpr (Policy::is_graph_kernel::value) {
+      CudaParallelLaunch<ParallelFor, LaunchBounds>(
+          *this, grid, block, 0,
+          m_policy.space().impl_internal_space_instance());
+    } else {
+      // launch the kernel with or without grid stride
+      if (need_grid_stride) {
+        using ClosureType = ParallelForMDRange<FunctorType, true, Policy>;
+        ClosureType closure(m_functor, m_policy, m_lower, m_upper, m_extent);
+        CudaParallelLaunch<ClosureType, LaunchBounds>(
+            closure, grid, block, 0,
+            m_policy.space().impl_internal_space_instance());
+      } else {
+        using ClosureType = ParallelForMDRange<FunctorType, false, Policy>;
+        ClosureType closure(m_functor, m_policy, m_lower, m_upper, m_extent);
+        CudaParallelLaunch<ClosureType, LaunchBounds>(
+            closure, grid, block, 0,
+            m_policy.space().impl_internal_space_instance());
+      }
+    }
   }  // end execute
 
   //  inline
   ParallelFor(const FunctorType& arg_functor, Policy arg_policy)
       : m_functor(arg_functor),
-        m_rp(arg_policy),
+        m_policy(arg_policy),
         m_max_grid_size({
-            static_cast<index_type>(
-                m_rp.space().cuda_device_prop().maxGridSize[0]),
-            static_cast<index_type>(
-                m_rp.space().cuda_device_prop().maxGridSize[1]),
-            static_cast<index_type>(
-                m_rp.space().cuda_device_prop().maxGridSize[2]),
-        }) {}
+            m_policy.space().cuda_device_prop().maxGridSize[0],
+            m_policy.space().cuda_device_prop().maxGridSize[1],
+            m_policy.space().cuda_device_prop().maxGridSize[2],
+        }) {
+    // Initialize begins and ends based on layout
+    // Swap the fastest indexes to x dimension
+    for (array_index_type i = 0; i < Policy::rank; ++i) {
+      if constexpr (Policy::inner_direction == Iterate::Left) {
+        m_lower[i]  = m_policy.m_lower[i];
+        m_upper[i]  = m_policy.m_upper[i];
+        m_extent[i] = m_policy.m_tile[i] * m_policy.m_tile_end[i];
+      } else {
+        m_lower[i]  = m_policy.m_lower[Policy::rank - 1 - i];
+        m_upper[i]  = m_policy.m_upper[Policy::rank - 1 - i];
+        m_extent[i] = m_policy.m_tile[Policy::rank - 1 - i] *
+                      m_policy.m_tile_end[Policy::rank - 1 - i];
+      }
+    }
+  }
 };
 
 template <class CombinedFunctorReducerType, class... Traits>
@@ -277,6 +294,7 @@ class ParallelReduce<CombinedFunctorReducerType,
   static int max_tile_size_product(const Policy& pol, const Functor&) {
     return max_tile_size_product_helper<ParallelReduce>(pol, LaunchBounds{});
   }
+
   Policy const& get_policy() const { return m_policy; }
   inline __device__ void exec_range(reference_type update) const {
     Kokkos::Impl::Reduce::DeviceIterateTile<Policy::rank, Policy, FunctorType,
@@ -389,6 +407,11 @@ class ParallelReduce<CombinedFunctorReducerType,
                        : suggested_blocksize;  // Note: block_size must be less
                                                // than or equal to 512
 
+      // Only let one instance at a time resize the instance's scratch memory
+      // allocations.
+      std::scoped_lock<std::mutex> scratch_buffers_lock(
+          m_policy.space().impl_internal_space_instance()->m_mutexScratchSpace);
+
       m_scratch_space =
           reinterpret_cast<word_size_type*>(cuda_internal_scratch_space(
               m_policy.space(),
@@ -460,8 +483,8 @@ class ParallelReduce<CombinedFunctorReducerType,
         m_policy, m_functor_reducer.get_functor());
   }
 };
-}  // namespace Impl
-}  // namespace Kokkos
+
+}  // namespace Kokkos::Impl
 #endif
 
-#endif
+#endif  // KOKKOS_CUDA_PARALLEL_MD_RANGE_HPP

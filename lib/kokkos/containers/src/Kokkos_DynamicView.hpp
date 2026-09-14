@@ -35,14 +35,10 @@ struct ChunkedArrayManager {
   using pointer_type = ValueType*;
   using track_type   = Kokkos::Impl::SharedAllocationTracker;
 
-  ChunkedArrayManager()                                      = default;
-  ChunkedArrayManager(ChunkedArrayManager const&)            = default;
-  ChunkedArrayManager(ChunkedArrayManager&&)                 = default;
-  ChunkedArrayManager& operator=(ChunkedArrayManager&&)      = default;
-  ChunkedArrayManager& operator=(const ChunkedArrayManager&) = default;
-
   template <typename Space, typename Value>
   friend struct ChunkedArrayManager;
+
+  ChunkedArrayManager() = default;
 
   template <typename Space, typename Value>
   inline ChunkedArrayManager(const ChunkedArrayManager<Space, Value>& rhs)
@@ -124,11 +120,7 @@ struct ChunkedArrayManager {
   /// allocation
   template <typename Space>
   struct Destroy {
-    Destroy()                          = default;
-    Destroy(Destroy&&)                 = default;
-    Destroy(const Destroy&)            = default;
-    Destroy& operator=(Destroy&&)      = default;
-    Destroy& operator=(const Destroy&) = default;
+    Destroy() = default;
 
     Destroy(std::string label, value_type** arg_chunk,
             const unsigned arg_chunk_max, const unsigned arg_chunk_size,
@@ -339,19 +331,6 @@ class DynamicView : public Kokkos::ViewTraits<DataType, P...> {
     return r == 0 ? size() : 1;
   }
 
-  // clang-format off
-#ifdef KOKKOS_ENABLE_DEPRECATED_CODE_4
-  KOKKOS_DEPRECATED_WITH_COMMENT("Use stride(0) instead") KOKKOS_FUNCTION constexpr size_t stride_0() const { return stride(0); }
-  KOKKOS_DEPRECATED_WITH_COMMENT("Use stride(1) instead") KOKKOS_FUNCTION constexpr size_t stride_1() const { return stride(1); }
-  KOKKOS_DEPRECATED_WITH_COMMENT("Use stride(2) instead") KOKKOS_FUNCTION constexpr size_t stride_2() const { return stride(2); }
-  KOKKOS_DEPRECATED_WITH_COMMENT("Use stride(3) instead") KOKKOS_FUNCTION constexpr size_t stride_3() const { return stride(3); }
-  KOKKOS_DEPRECATED_WITH_COMMENT("Use stride(4) instead") KOKKOS_FUNCTION constexpr size_t stride_4() const { return stride(4); }
-  KOKKOS_DEPRECATED_WITH_COMMENT("Use stride(5) instead") KOKKOS_FUNCTION constexpr size_t stride_5() const { return stride(5); }
-  KOKKOS_DEPRECATED_WITH_COMMENT("Use stride(6) instead") KOKKOS_FUNCTION constexpr size_t stride_6() const { return stride(6); }
-  KOKKOS_DEPRECATED_WITH_COMMENT("Use stride(7) instead") KOKKOS_FUNCTION constexpr size_t stride_7() const { return stride(7); }
-#endif
-  // clang-format on
-
   template <typename iType>
   KOKKOS_INLINE_FUNCTION void stride(iType* const s) const {
     *s = 0;
@@ -475,12 +454,7 @@ class DynamicView : public Kokkos::ViewTraits<DataType, P...> {
 
   //----------------------------------------------------------------------
 
-  ~DynamicView()                             = default;
-  DynamicView()                              = default;
-  DynamicView(DynamicView&&)                 = default;
-  DynamicView(const DynamicView&)            = default;
-  DynamicView& operator=(DynamicView&&)      = default;
-  DynamicView& operator=(const DynamicView&) = default;
+  DynamicView() = default;
 
   template <class RT, class... RP>
   DynamicView(const DynamicView<RT, RP...>& rhs)
@@ -515,7 +489,7 @@ class DynamicView : public Kokkos::ViewTraits<DataType, P...> {
         m_chunk_max((max_extent + m_chunk_mask) >>
                     m_chunk_shift)  // max num pointers-to-chunks in array
         ,
-        m_chunk_size(2 << (m_chunk_shift - 1)) {
+        m_chunk_size(1 << m_chunk_shift) {
     m_chunks = device_accessor(m_chunk_max, m_chunk_size);
 
     const std::string& label =
@@ -634,10 +608,6 @@ inline auto create_mirror(const Kokkos::Experimental::DynamicView<T, P...>& src,
 
     return ret;
   }
-#if defined(KOKKOS_COMPILER_NVCC) && KOKKOS_COMPILER_NVCC >= 1130 && \
-    !defined(KOKKOS_COMPILER_MSVC)
-  __builtin_unreachable();
-#endif
 }
 
 }  // namespace Impl
@@ -732,10 +702,6 @@ inline auto create_mirror_view(
       return Kokkos::Impl::choose_create_mirror(src, arg_prop);
     }
   }
-#if defined(KOKKOS_COMPILER_NVCC) && KOKKOS_COMPILER_NVCC >= 1130 && \
-    !defined(KOKKOS_COMPILER_MSVC)
-  __builtin_unreachable();
-#endif
 }
 
 }  // namespace Impl
@@ -1001,10 +967,6 @@ auto create_mirror_view_and_copy(
       deep_copy(mirror, src);
     return mirror;
   }
-#if defined(KOKKOS_COMPILER_NVCC) && KOKKOS_COMPILER_NVCC >= 1130 && \
-    !defined(KOKKOS_COMPILER_MSVC)
-  __builtin_unreachable();
-#endif
 }
 
 template <class Space, class T, class... P,
@@ -1014,6 +976,15 @@ auto create_mirror_view_and_copy(
     std::string const& name = "") {
   return create_mirror_view_and_copy(
       Kokkos::view_alloc(typename Space::memory_space{}, name), src);
+}
+
+template <class T, class... P>
+auto create_mirror_view_and_copy(
+    const Kokkos::Experimental::DynamicView<T, P...>& src) {
+  return create_mirror_view_and_copy(
+      typename Kokkos::Experimental::DynamicView<
+          T, P...>::host_mirror_type::memory_space{},
+      src);
 }
 
 }  // namespace Kokkos

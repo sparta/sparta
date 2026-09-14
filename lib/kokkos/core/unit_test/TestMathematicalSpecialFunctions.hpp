@@ -21,7 +21,7 @@ struct TestExponentialIntergral1Function {
 
   void testit() {
     using Kokkos::fabs;
-    using Kokkos::Experimental::infinity;
+    using Kokkos::infinity;
 
     d_x      = ViewType("d_x", 15);
     d_expint = ViewType("d_expint", 15);
@@ -100,7 +100,7 @@ struct TestComplexErrorFunction {
   DblHostViewType h_ref_erfcx_dbl;
 
   void testit() {
-    using Kokkos::Experimental::infinity;
+    using Kokkos::infinity;
 
     d_z         = ViewType("d_z", 52);
     d_erf       = ViewType("d_erf", 52);
@@ -448,7 +448,7 @@ struct TestComplexBesselJ0Y0Function {
   HostViewType h_ref_cbj0_large, h_ref_cby0_large;
 
   void testit() {
-    using Kokkos::Experimental::infinity;
+    using Kokkos::infinity;
 
     int N      = 25;
     d_z        = ViewType("d_z", N);
@@ -739,7 +739,7 @@ struct TestComplexBesselJ1Y1Function {
   HostViewType h_ref_cbj1_large, h_ref_cby1_large;
 
   void testit() {
-    using Kokkos::Experimental::infinity;
+    using Kokkos::infinity;
 
     int N      = 25;
     d_z        = ViewType("d_z", N);
@@ -1035,7 +1035,7 @@ struct TestComplexBesselI0K0Function {
   HostViewType h_ref_cbi0_large, h_ref_cbk0_large;
 
   void testit() {
-    using Kokkos::Experimental::infinity;
+    using Kokkos::infinity;
 
     int N      = 26;
     d_z        = ViewType("d_z", N);
@@ -1280,7 +1280,7 @@ struct TestComplexBesselI1K1Function {
   HostViewType h_ref_cbi1_large, h_ref_cbk1_large;
 
   void testit() {
-    using Kokkos::Experimental::infinity;
+    using Kokkos::infinity;
 
     int N      = 25;
     d_z        = ViewType("d_z", N);
@@ -1522,7 +1522,7 @@ struct TestComplexBesselH1Function {
   HostViewType h_ref_ch10, h_ref_ch11;
 
   void testit() {
-    using Kokkos::Experimental::infinity;
+    using Kokkos::infinity;
 
     int N      = 25;
     d_z        = ViewType("d_z", N);
@@ -1715,7 +1715,7 @@ struct TestComplexBesselH2Function {
   HostViewType h_ref_ch20, h_ref_ch21;
 
   void testit() {
-    using Kokkos::Experimental::infinity;
+    using Kokkos::infinity;
 
     int N      = 25;
     d_z        = ViewType("d_z", N);
@@ -1908,9 +1908,6 @@ TEST(TEST_CATEGORY, mathspecialfunc_expint1) {
   test.testit();
 }
 
-// FIXME_OPENMPTARGET: This unit test fails with a misaligned address error at
-// runtime with LLVM/13.
-#ifndef KOKKOS_ENABLE_OPENMPTARGET
 TEST(TEST_CATEGORY, mathspecialfunc_errorfunc) {
 #if __FINITE_MATH_ONLY__
   GTEST_SKIP() << "skipping when compiling with -ffinite-math-only";
@@ -1918,7 +1915,6 @@ TEST(TEST_CATEGORY, mathspecialfunc_errorfunc) {
   TestComplexErrorFunction<TEST_EXECSPACE> test;
   test.testit();
 }
-#endif
 
 TEST(TEST_CATEGORY, mathspecialfunc_cbesselj0y0) {
 #if __FINITE_MATH_ONLY__

@@ -18,9 +18,6 @@ if(NOT desul_FOUND)
       set(DESUL_ATOMICS_ENABLE_SYCL_SEPARABLE_COMPILATION ON)
     endif()
   endif()
-  if(KOKKOS_ENABLE_OPENMPTARGET)
-    set(DESUL_ATOMICS_ENABLE_OPENMP ON) # not a typo Kokkos OpenMPTarget -> Desul OpenMP
-  endif()
   if(KOKKOS_ENABLE_OPENACC)
     # FIXME_OPENACC FIXME_CLACC - Below condition will be removed if Clacc can compile atomics.
     if(KOKKOS_CXX_COMPILER_ID STREQUAL NVHPC)
@@ -60,11 +57,6 @@ if(KOKKOS_ENABLE_OPENMP)
   append_glob(KOKKOS_CORE_HEADERS ${CMAKE_CURRENT_SOURCE_DIR}/OpenMP/*.hpp)
 endif()
 
-if(KOKKOS_ENABLE_OPENMPTARGET)
-  append_glob(KOKKOS_CORE_SRCS ${CMAKE_CURRENT_SOURCE_DIR}/OpenMPTarget/*.cpp)
-  append_glob(KOKKOS_CORE_HEADERS ${CMAKE_CURRENT_SOURCE_DIR}/OpenMPTarget/*.hpp)
-endif()
-
 if(KOKKOS_ENABLE_OPENACC)
   append_glob(KOKKOS_CORE_SRCS ${CMAKE_CURRENT_SOURCE_DIR}/OpenACC/*.cpp)
   append_glob(KOKKOS_CORE_HEADERS ${CMAKE_CURRENT_SOURCE_DIR}/OpenACC/*.hpp)
@@ -93,6 +85,11 @@ endif()
 if(KOKKOS_ENABLE_SYCL)
   append_glob(KOKKOS_CORE_SRCS ${CMAKE_CURRENT_SOURCE_DIR}/SYCL/*.cpp)
   append_glob(KOKKOS_CORE_HEADERS ${CMAKE_CURRENT_SOURCE_DIR}/SYCL/*.hpp)
+endif()
+
+if(KOKKOS_ENABLE_NEXTSILICON)
+  append_glob(KOKKOS_CORE_SRCS ${CMAKE_CURRENT_SOURCE_DIR}/NextSilicon/*.cpp)
+  append_glob(KOKKOS_CORE_HEADERS ${CMAKE_CURRENT_SOURCE_DIR}/NextSilicon/*.hpp)
 endif()
 
 if(NOT desul_FOUND)
@@ -156,7 +153,7 @@ if(Kokkos_ENABLE_IMPL_MDSPAN)
   if(Kokkos_ENABLE_MDSPAN_EXTERNAL)
     global_set(KOKKOS_MDSPAN_VERSION "unknown")
     message(STATUS "Using external mdspan")
-    target_link_libraries(kokkoscore PUBLIC std::mdspan)
+    target_link_libraries(kokkoscore PUBLIC mdspan::mdspan)
   else()
     target_include_directories(kokkoscore SYSTEM PUBLIC $<BUILD_INTERFACE:${KOKKOS_SOURCE_DIR}/tpls/mdspan/include>)
 
@@ -193,13 +190,7 @@ if(NOT KOKKOS_ENABLE_COMPILE_AS_CMAKE_LANGUAGE)
 endif()
 kokkos_link_tpl(kokkoscore PUBLIC LIBQUADMATH)
 
-# FIXME: We need a proper solution to figure out whether to enable
-#        libatomic
-# Most compilers only require libatomic for 128-bit CAS
-# I (CT) had removed 128bit CAS from desul to not need libatomic.
-if(KOKKOS_ENABLE_OPENMPTARGET)
-  target_link_libraries(kokkoscore PUBLIC atomic)
-endif()
+kokkos_link_tpl(kokkoscore PUBLIC NEXTAPI)
 
 if(desul_FOUND)
   target_link_libraries(kokkoscore PUBLIC desul_atomics)

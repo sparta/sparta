@@ -74,8 +74,18 @@ class TeamPolicyInternal<HIP, Properties...>
   }
 
   template <typename FunctorType, typename ReducerType>
-  inline int team_size_max(const FunctorType& f, const ReducerType&,
-                           const ParallelReduceTag&) const {
+  inline int team_size_max(const FunctorType& f, const ReducerType& reducer,
+                           const ParallelReduceTag& tag) const {
+    using functor_analysis_type =
+        Impl::FunctorAnalysis<Impl::FunctorPatternInterface::REDUCE,
+                              TeamPolicyInternal, ReducerType, void>;
+    return team_size_max_internal(
+        f, typename functor_analysis_type::Reducer{reducer}, tag);
+  }
+
+  template <typename FunctorType, typename ReducerType>
+  inline int team_size_max_internal(const FunctorType& f, const ReducerType&,
+                                    const ParallelReduceTag&) const {
     using closure_type =
         Impl::ParallelReduce<CombinedFunctorReducer<FunctorType, ReducerType>,
                              TeamPolicy<Properties...>, Kokkos::HIP>;
@@ -108,8 +118,18 @@ class TeamPolicyInternal<HIP, Properties...>
   }
 
   template <typename FunctorType, typename ReducerType>
-  int team_size_recommended(FunctorType const& f, ReducerType const&,
-                            ParallelReduceTag const&) const {
+  int team_size_recommended(const FunctorType& f, const ReducerType& reducer,
+                            const ParallelReduceTag& tag) const {
+    using functor_analysis_type =
+        Impl::FunctorAnalysis<Impl::FunctorPatternInterface::REDUCE,
+                              TeamPolicyInternal, ReducerType, void>;
+    return team_size_recommended_internal(
+        f, typename functor_analysis_type::Reducer{reducer}, tag);
+  }
+
+  template <typename FunctorType, typename ReducerType>
+  int team_size_recommended_internal(const FunctorType& f, const ReducerType&,
+                                     const ParallelReduceTag&) const {
     using closure_type =
         Impl::ParallelReduce<CombinedFunctorReducer<FunctorType, ReducerType>,
                              TeamPolicy<Properties...>, Kokkos::HIP>;
@@ -140,7 +160,7 @@ class TeamPolicyInternal<HIP, Properties...>
     // arbitrarily setting level 1 scratch limit to 20MB, for a
     // MI250 that would give us about 4.4GB for 2 teams per CU
     constexpr size_t max_l1_scratch_size =
-        static_cast<size_t>(20 * 1024 * 1024);
+        static_cast<size_t>(80 * 1024 * 1024);
 
     size_t max_shmem = HIP().hip_device_prop().sharedMemPerBlock;
     return (level == 0 ? max_shmem - max_reserved_shared_mem_per_team
@@ -202,10 +222,14 @@ class TeamPolicyInternal<HIP, Properties...>
           "space.");
 
     // Make sure total block size is permissible
-    if (m_team_size * m_vector_length > HIPTraits::MaxThreadsPerBlock) {
-      Impl::throw_runtime_exception(
-          std::string("Kokkos::TeamPolicy< HIP > the team size is too large. "
-                      "Team size x vector length must be smaller than 1024."));
+    if (m_team_size * m_vector_length >
+        static_cast<int>(HIPTraits::MaxThreadsPerBlock)) {
+      std::stringstream error;
+      error << "Kokkos::TeamPolicy<HIP>: Requested too large team size. "
+               "Requested: "
+            << m_team_size
+            << ", Maximum: " << HIPTraits::MaxThreadsPerBlock / m_vector_length;
+      Kokkos::Impl::throw_runtime_exception(error.str().c_str());
     }
   }
 

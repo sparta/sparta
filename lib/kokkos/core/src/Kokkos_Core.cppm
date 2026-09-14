@@ -47,9 +47,6 @@ export {
 #ifdef KOKKOS_ENABLE_HPX
   using ::Kokkos::Experimental::HPX;
 #endif
-#ifdef KOKKOS_ENABLE_OPENMPTARGET
-  using ::Kokkos::Experimental::OpenMPTarget;
-#endif
 #ifdef KOKKOS_ENABLE_OPENACC
   using ::Kokkos::Experimental::OpenACC;
 #endif
@@ -62,6 +59,7 @@ export {
   using ::Kokkos::DefaultHostExecutionSpace;
   using ::Kokkos::Device;
   using ::Kokkos::device_id;
+  using ::Kokkos::ExecutionSpace;
   using ::Kokkos::has_shared_host_pinned_space;
   using ::Kokkos::has_shared_space;
   using ::Kokkos::HostSpace;
@@ -72,6 +70,7 @@ export {
   using ::Kokkos::is_memory_space;
   using ::Kokkos::is_memory_space_v;
   using ::Kokkos::is_space;
+  using ::Kokkos::MemorySpace;
   using ::Kokkos::ScratchMemorySpace;
   using ::Kokkos::ScratchRequest;
 #ifdef KOKKOS_HAS_SHARED_SPACE
@@ -129,6 +128,7 @@ export {
   using ::Kokkos::ViewTraits;
   using ::Kokkos::WithoutInitializing;
   namespace Experimental {
+  using ::Kokkos::Experimental::Accessor;
   using ::Kokkos::Experimental::AppendExtent;
   using ::Kokkos::Experimental::Extents;
   using ::Kokkos::Experimental::is_hooks_policy;
@@ -139,6 +139,15 @@ export {
   using ::Kokkos::Experimental::SubscribableViewHooks;
   }  // namespace Experimental
 
+  // View iterators (Kokkos_Iterator.hpp)
+  namespace Experimental {
+  using ::Kokkos::Experimental::begin;
+  using ::Kokkos::Experimental::cbegin;
+  using ::Kokkos::Experimental::cend;
+  using ::Kokkos::Experimental::distance;
+  using ::Kokkos::Experimental::end;
+  }  // namespace Experimental
+
   // execution policies
   using ::Kokkos::AUTO;
   using ::Kokkos::AUTO_t;
@@ -146,6 +155,7 @@ export {
   using ::Kokkos::default_inner_direction;
   using ::Kokkos::default_outer_direction;
   using ::Kokkos::Dynamic;
+  using ::Kokkos::ExecutionPolicy;
   using ::Kokkos::IndexType;
   using ::Kokkos::is_execution_policy;
   using ::Kokkos::is_execution_policy_v;
@@ -166,7 +176,7 @@ export {
   using ::Kokkos::Schedule;
   using ::Kokkos::single;
   using ::Kokkos::Static;
-  using ::Kokkos::team_policy_check_valid_storage_level_argument;
+  using ::Kokkos::TeamHandle;
   using ::Kokkos::TeamPolicy;
   using ::Kokkos::TeamThreadMDRange;
   using ::Kokkos::TeamThreadRange;
@@ -237,6 +247,9 @@ export {
   using ::Kokkos::real;
   using ::Kokkos::tie;
   using ::Kokkos::to_array;
+  namespace Experimental {
+  using ::Kokkos::Experimental::BadAlloc;
+  }  // namespace Experimental
 
   // reducers
   using ::Kokkos::BAnd;
@@ -264,6 +277,7 @@ export {
   using ::Kokkos::MinMaxLocScalar;
   using ::Kokkos::MinMaxScalar;
   using ::Kokkos::Prod;
+  using ::Kokkos::Reducer;
   using ::Kokkos::reduction_identity;
   using ::Kokkos::StdIsPartitioned;    // FIXME Move to algorithms
   using ::Kokkos::StdIsPartScalar;     // FIXME Move to algorithms
@@ -315,7 +329,41 @@ export {
   using ::Kokkos::rotr;
 
   // numeric limits
-  namespace Experimental {
+  using ::Kokkos::denorm_min;
+  using ::Kokkos::denorm_min_v;
+  using ::Kokkos::digits;
+  using ::Kokkos::digits10;
+  using ::Kokkos::digits10_v;
+  using ::Kokkos::digits_v;
+  using ::Kokkos::epsilon;
+  using ::Kokkos::epsilon_v;
+  using ::Kokkos::finite_max;
+  using ::Kokkos::finite_max_v;
+  using ::Kokkos::finite_min;
+  using ::Kokkos::finite_min_v;
+  using ::Kokkos::infinity;
+  using ::Kokkos::infinity_v;
+  using ::Kokkos::max_digits10;
+  using ::Kokkos::max_digits10_v;
+  using ::Kokkos::max_exponent;
+  using ::Kokkos::max_exponent10;
+  using ::Kokkos::max_exponent10_v;
+  using ::Kokkos::max_exponent_v;
+  using ::Kokkos::min_exponent;
+  using ::Kokkos::min_exponent10;
+  using ::Kokkos::min_exponent10_v;
+  using ::Kokkos::min_exponent_v;
+  using ::Kokkos::norm_min;
+  using ::Kokkos::norm_min_v;
+  using ::Kokkos::quiet_NaN;
+  using ::Kokkos::quiet_NaN_v;
+  using ::Kokkos::radix;
+  using ::Kokkos::radix_v;
+  using ::Kokkos::round_error;
+  using ::Kokkos::round_error_v;
+  using ::Kokkos::signaling_NaN;
+  using ::Kokkos::signaling_NaN_v;
+  namespace Experimental {  // for backward compatibility
   using ::Kokkos::Experimental::denorm_min;
   using ::Kokkos::Experimental::denorm_min_v;
   using ::Kokkos::Experimental::digits;
@@ -483,15 +531,38 @@ export {
   using ::Kokkos::fmod;
   using ::Kokkos::fmodf;
   using ::Kokkos::fmodl;
+  using ::Kokkos::fpclassify;
+  using ::Kokkos::frexp;
+  using ::Kokkos::frexpf;
+  using ::Kokkos::frexpl;
   using ::Kokkos::hypot;
   using ::Kokkos::hypotf;
   using ::Kokkos::hypotl;
+  using ::Kokkos::ilogb;
+  using ::Kokkos::ilogbf;
+  using ::Kokkos::ilogbl;
   using ::Kokkos::isfinite;
+  using ::Kokkos::isgreater;
+  using ::Kokkos::isgreaterequal;
   using ::Kokkos::isinf;
+  using ::Kokkos::isless;
+  using ::Kokkos::islessequal;
+  using ::Kokkos::islessgreater;
   using ::Kokkos::isnan;
+  using ::Kokkos::isnormal;
+  using ::Kokkos::isunordered;
+  using ::Kokkos::ldexp;
+  using ::Kokkos::ldexpf;
+  using ::Kokkos::ldexpl;
   using ::Kokkos::lgamma;
   using ::Kokkos::lgammaf;
   using ::Kokkos::lgammal;
+  using ::Kokkos::llrint;
+  using ::Kokkos::llrintf;
+  using ::Kokkos::llrintl;
+  using ::Kokkos::llround;
+  using ::Kokkos::llroundf;
+  using ::Kokkos::llroundl;
   using ::Kokkos::log;
   using ::Kokkos::log10;
   using ::Kokkos::log10f;
@@ -507,6 +578,15 @@ export {
   using ::Kokkos::logbl;
   using ::Kokkos::logf;
   using ::Kokkos::logl;
+  using ::Kokkos::lrint;
+  using ::Kokkos::lrintf;
+  using ::Kokkos::lrintl;
+  using ::Kokkos::lround;
+  using ::Kokkos::lroundf;
+  using ::Kokkos::lroundl;
+  using ::Kokkos::modf;
+  using ::Kokkos::modff;
+  using ::Kokkos::modfl;
   using ::Kokkos::nan;
   using ::Kokkos::nanf;
   using ::Kokkos::nanl;
@@ -516,18 +596,37 @@ export {
   using ::Kokkos::nextafter;
   using ::Kokkos::nextafterf;
   using ::Kokkos::nextafterl;
+  using ::Kokkos::nexttoward;
+  using ::Kokkos::nexttowardf;
+  using ::Kokkos::nexttowardl;
+  using ::Kokkos::norm;
   using ::Kokkos::pow;
   using ::Kokkos::powf;
   using ::Kokkos::powl;
+  using ::Kokkos::rcp;
+  using ::Kokkos::rcpf;
+  using ::Kokkos::rcpl;
   using ::Kokkos::remainder;
   using ::Kokkos::remainderf;
   using ::Kokkos::remainderl;
+  using ::Kokkos::remquo;
+  using ::Kokkos::remquof;
+  using ::Kokkos::remquol;
+  using ::Kokkos::rint;
+  using ::Kokkos::rintf;
+  using ::Kokkos::rintl;
   using ::Kokkos::round;
   using ::Kokkos::roundf;
   using ::Kokkos::roundl;
   using ::Kokkos::rsqrt;
   using ::Kokkos::rsqrtf;
   using ::Kokkos::rsqrtl;
+  using ::Kokkos::scalbln;
+  using ::Kokkos::scalblnf;
+  using ::Kokkos::scalblnl;
+  using ::Kokkos::scalbn;
+  using ::Kokkos::scalbnf;
+  using ::Kokkos::scalbnl;
   using ::Kokkos::signbit;
   using ::Kokkos::sin;
   using ::Kokkos::sinf;

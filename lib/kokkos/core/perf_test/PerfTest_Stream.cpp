@@ -96,8 +96,7 @@ int validate_array(V& a_dev, typename V::const_value_type expected) {
 
   // all values here are pretty easy for float types to represent
   // so let's make the tolerances very tight.
-  return std::abs(avgError / expected) >
-         Kokkos::Experimental::epsilon_v<scalar_type>;
+  return std::abs(avgError / expected) > Kokkos::epsilon_v<scalar_type>;
 }
 
 template <unsigned MemTraits>
@@ -213,13 +212,17 @@ static void or_skip(benchmark::State& state) {
   }
 }
 
-// As of May 2025, 10^8 doubles is larger than caches, but not so large as
-// to be inconvenient. Also run 11^8 for a quick check of convergence.
+// We choose the case of 9^8 doubles to test with (which allocates ~1 GB), as
+// well as a quick test with 10^8 doubles (~2.4 GB) for checking convergence. As
+// of January 2026, This value is higher than caches but reasonable enough
+// to be safely allocated, even on low-memory devices. This needs to be
+// (potentially) periodically revisited.
+
 #define STREAM_ARGS(label)            \
   Name(label)                         \
       ->ArgName("N")                  \
+      ->Arg(9)                        \
       ->Arg(10)                       \
-      ->Arg(11)                       \
       ->Unit(benchmark::kMillisecond) \
       ->UseManualTime()
 

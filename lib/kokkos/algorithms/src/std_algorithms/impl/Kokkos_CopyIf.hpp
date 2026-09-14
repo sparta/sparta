@@ -13,7 +13,6 @@ import kokkos.core;
 #include "Kokkos_Constraints.hpp"
 #include "Kokkos_HelperPredicates.hpp"
 #include "Kokkos_MustUseKokkosSingleInTeam.hpp"
-#include <std_algorithms/Kokkos_Distance.hpp>
 #include <string>
 
 namespace Kokkos {
@@ -141,11 +140,6 @@ KOKKOS_FUNCTION OutputIterator copy_if_team_impl(
     // no barrier needed because of the scan accumulating into count
     return d_first + count;
   }
-
-#if defined(KOKKOS_COMPILER_NVCC) && KOKKOS_COMPILER_NVCC >= 1130 && \
-    !defined(KOKKOS_COMPILER_MSVC)
-  __builtin_unreachable();
-#endif
 }
 
 }  // namespace Impl

@@ -8,17 +8,29 @@
 #define KOKKOS_IMPL_PUBLIC_INCLUDE_NOTDEFINED_GRAPH_FWD
 #endif
 
-#include <Kokkos_Macros.hpp>
+#include <Kokkos_Concepts.hpp>
+
+#include <cstdint>
 
 namespace Kokkos {
 namespace Experimental {
 
 struct TypeErasedTag {};
+struct GraphNodeRootTag {};
 
 template <class ExecutionSpace>
 struct Graph;
 
-template <class ExecutionSpace, class Kernel = TypeErasedTag,
+enum class GraphNodeKind : std::uint8_t {
+  TypeErased,
+  Root,
+  Kernel,
+  Aggregate,
+  Host,
+  Capture,
+};
+
+template <Kokkos::ExecutionSpace ExecutionSpace, class Kernel = TypeErasedTag,
           class Predecessor = TypeErasedTag>
 class GraphNodeRef;
 

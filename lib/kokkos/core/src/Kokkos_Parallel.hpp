@@ -13,7 +13,6 @@ static_assert(false,
 #define KOKKOS_PARALLEL_HPP
 
 #include <Kokkos_Core_fwd.hpp>
-#include <Kokkos_CheckUsage.hpp>
 #include <Kokkos_DetectionIdiom.hpp>
 #include <Kokkos_ExecPolicy.hpp>
 #include <Kokkos_View.hpp>
@@ -21,8 +20,9 @@ static_assert(false,
 #include <impl/Kokkos_Tools.hpp>
 #include <impl/Kokkos_Tools_Generic.hpp>
 
-#include <impl/Kokkos_Traits.hpp>
+#include <impl/Kokkos_CheckUsage.hpp>
 #include <impl/Kokkos_FunctorAnalysis.hpp>
+#include <impl/Kokkos_Traits.hpp>
 
 #include <cstddef>
 #include <type_traits>
@@ -115,11 +115,18 @@ namespace Kokkos {
  * This compares to a single iteration \c iwork of a \c for loop.
  * If \c execution_space is not defined DefaultExecutionSpace will be used.
  */
-template <
-    class ExecPolicy, class FunctorType,
-    class Enable = std::enable_if_t<is_execution_policy<ExecPolicy>::value>>
-inline void parallel_for(const std::string& str, const ExecPolicy& policy,
-                         const FunctorType& functor) {
+template <class Label, Kokkos::ExecutionPolicy ExecPolicy, class FunctorType>
+  requires(std::is_constructible_v<std::string, const Label&>)
+inline void parallel_for([[maybe_unused]] const Label& label,
+                         const ExecPolicy& policy, const FunctorType& functor) {
+  // Work around unsuppressable warning of calling host (constexpr) function
+  // from host device function.
+  // This occurs when trying to instantiate this parallel for from inside
+  // a host-device function which is called on the host.
+  // The problem is the ctor from c-string for std::string
+  std::string str;
+  KOKKOS_IF_ON_HOST(str = std::string(label);)
+
   /** Enforce correct use **/
   Impl::CheckUsage<Impl::UsageRequires::insideExecEnv>::check(
       "parallel_for", policy, str.c_str());
@@ -135,18 +142,25 @@ inline void parallel_for(const std::string& str, const ExecPolicy& policy,
           Impl::ParallelFor<FunctorType, ExecPolicy>>(functor, inner_policy);
 
   closure.execute();
-
   Kokkos::Tools::Impl::end_parallel_for(inner_policy, functor, str, kpID);
 }
 
-template <class ExecPolicy, class FunctorType>
-inline void parallel_for(
-    const ExecPolicy& policy, const FunctorType& functor,
-    std::enable_if_t<is_execution_policy<ExecPolicy>::value>* = nullptr) {
+template <Kokkos::ExecutionPolicy ExecPolicy, class FunctorType>
+KOKKOS_INLINE_FUNCTION void parallel_for(const ExecPolicy& policy,
+                                         const FunctorType& functor) {
+  KOKKOS_IF_ON_DEVICE(
+      Kokkos::abort("Kokkos::parallel_for(ExecutionPolicy, functor) cannot be "
+                    "called from device.\n");)
+
+  // Work around nvcc complaint about calling __host__ function from __host__
+  // __device__ function. Assert above that we are not actually calling on
+  // device.
+  KOKKOS_IMPL_DISABLE_CALLING_HOST_FROM_DEVICE_WARNINGS_PUSH()
   /** Enforce correct use **/
   Impl::CheckUsage<Impl::UsageRequires::insideExecEnv>::check("parallel_for",
                                                               policy);
   Kokkos::parallel_for("", policy, functor);
+  KOKKOS_IMPL_DISABLE_CALLING_HOST_FROM_DEVICE_WARNINGS_POP()
 }
 
 template <class FunctorType>
@@ -347,9 +361,7 @@ namespace Kokkos {
 /// };
 /// \endcode
 ///
-template <class ExecutionPolicy, class FunctorType,
-          class Enable =
-              std::enable_if_t<is_execution_policy<ExecutionPolicy>::value>>
+template <Kokkos::ExecutionPolicy ExecutionPolicy, class FunctorType>
 inline void parallel_scan(const std::string& str, const ExecutionPolicy& policy,
                           const FunctorType& functor) {
   /** Enforce correct use **/
@@ -372,10 +384,9 @@ inline void parallel_scan(const std::string& str, const ExecutionPolicy& policy,
   Kokkos::Tools::Impl::end_parallel_scan(inner_policy, functor, str, kpID);
 }
 
-template <class ExecutionPolicy, class FunctorType>
-inline void parallel_scan(
-    const ExecutionPolicy& policy, const FunctorType& functor,
-    std::enable_if_t<is_execution_policy<ExecutionPolicy>::value>* = nullptr) {
+template <Kokkos::ExecutionPolicy ExecutionPolicy, class FunctorType>
+inline void parallel_scan(const ExecutionPolicy& policy,
+                          const FunctorType& functor) {
   /** Enforce correct use **/
   Impl::CheckUsage<Impl::UsageRequires::insideExecEnv>::check("parallel_scan",
                                                               policy);
@@ -409,9 +420,8 @@ inline void parallel_scan(const size_t work_count, const FunctorType& functor) {
   ::Kokkos::parallel_scan("", work_count, functor);
 }
 
-template <class ExecutionPolicy, class FunctorType, class ReturnType,
-          class Enable =
-              std::enable_if_t<is_execution_policy<ExecutionPolicy>::value>>
+template <Kokkos::ExecutionPolicy ExecutionPolicy, class FunctorType,
+          class ReturnType>
 inline void parallel_scan(const std::string& str, const ExecutionPolicy& policy,
                           const FunctorType& functor,
                           ReturnType& return_value) {
@@ -447,11 +457,11 @@ inline void parallel_scan(const std::string& str, const ExecutionPolicy& policy,
         "Kokkos::parallel_scan: fence due to result being a value, not a view");
 }
 
-template <class ExecutionPolicy, class FunctorType, class ReturnType>
-inline void parallel_scan(
-    const ExecutionPolicy& policy, const FunctorType& functor,
-    ReturnType& return_value,
-    std::enable_if_t<is_execution_policy<ExecutionPolicy>::value>* = nullptr) {
+template <Kokkos::ExecutionPolicy ExecutionPolicy, class FunctorType,
+          class ReturnType>
+inline void parallel_scan(const ExecutionPolicy& policy,
+                          const FunctorType& functor,
+                          ReturnType& return_value) {
   /** Enforce correct use **/
   Impl::CheckUsage<Impl::UsageRequires::insideExecEnv>::check("parallel_scan",
                                                               policy);

@@ -232,7 +232,6 @@ specific hardware. For example:
 
 for Sandy Bridge CPUs, set -D Kokkos_ARCH_SNB=ON
 for Broadwell CPUs, set -D Kokkos_ARCH_BDW=ON
-for K80 GPUs, set -D Kokkos_ARCH_KEPLER37=ON
 for V100 GPUs and Power9 CPUs, set -D Kokkos_ARCH_VOLTA70=ON -D Kokkos_ARCH_POWER9=ON
 for A100 GPUs, set -D Kokkos_ARCH_AMPERE80=ON
 for H100 GPUs, set -D Kokkos_ARCH_HOPPER90=ON :ul
@@ -280,7 +279,7 @@ cmake -C /path/to/sparta/cmake/presets/kokkos_omp.cmake -DKokkos_ARCH_HSW=ON /pa
 [Compile for NVIDIA GPUs using CUDA (with OpenMPI or MPICH):]
 
 NOTE: To build with Kokkos support for NVIDIA GPUs, NVIDIA CUDA
-software version 11.0 or later must be installed on your system.
+software version 12.2 or later must be installed on your system.
 
 The kokkos_cuda.cmake preset defaults to NVIDIA Hopper (H100) GPUs.
 To target a different GPU, override the architecture flag. Common NVIDIA
@@ -317,12 +316,24 @@ cmake -C /path/to/sparta/cmake/presets/kokkos_cuda.cmake \
   /path/to/sparta/cmake
 make -j 4 :pre
 
+Build with CUDA unified memory, so that a simulation can use memory on
+the host to supplement the memory on the GPU, and host code can read
+and write GPU data directly. See the [Advanced Kokkos Options] section
+below for what this option requires and costs:
+
+mkdir build
+cd build
+cmake -C /path/to/sparta/cmake/presets/kokkos_cuda.cmake \
+  -DKokkos_ENABLE_IMPL_CUDA_UNIFIED_MEMORY=ON \
+  /path/to/sparta/cmake
+make -j 4 :pre
+
 The resulting executable will be named spa_kokkos_cuda.
 
 [Compile for AMD GPUs using HIP:]
 
 NOTE: To build with Kokkos support for AMD GPUs, ROCm software version
-5.2 or later must be installed on your system.
+6.2 or later must be installed on your system.
 
 The kokkos_hip.cmake preset targets AMD MI250X GPUs (GFX90A). Common AMD
 GPU models and their Kokkos arch flags are:
@@ -632,6 +643,8 @@ ICL | HOST | Intel Ice Lake Client CPUs (AVX512) |
 ICX | HOST | Intel Ice Lake Xeon Server CPUs (AVX512) |
 SKL | HOST | Intel Skylake Client CPUs |
 SKX | HOST | Intel Skylake Xeon Server CPUs (AVX512) |
+KNC | HOST | Intel Knights Corner Xeon Phi |
+KNL | HOST | Intel Knights Landing Xeon Phi |
 SPR | HOST | Intel Sapphire Rapids Xeon Server CPUs (AVX512) |
 POWER8 | HOST | IBM POWER8 CPUs |
 POWER9 | HOST | IBM POWER9 CPUs |
@@ -643,10 +656,6 @@ ZEN5 | HOST | AMD Zen5 architecture |
 RISCV_SG2042 | HOST | SG2042 (RISC-V) CPUs |
 RISCV_RVA22V | HOST | RVA22V (RISC-V) CPUs |
 RISCV_U74MC | HOST | U74MC (RISC-V) CPUs |
-KEPLER30 | GPU | NVIDIA Kepler generation CC 3.0 |
-KEPLER32 | GPU | NVIDIA Kepler generation CC 3.2 |
-KEPLER35 | GPU | NVIDIA Kepler generation CC 3.5 |
-KEPLER37 | GPU | NVIDIA Kepler generation CC 3.7 |
 MAXWELL50 | GPU | NVIDIA Maxwell generation CC 5.0 |
 MAXWELL52 | GPU | NVIDIA Maxwell generation CC 5.2 |
 MAXWELL53 | GPU | NVIDIA Maxwell generation CC 5.3 |
@@ -661,16 +670,23 @@ AMPERE87 | GPU | NVIDIA Ampere generation CC 8.7 |
 ADA89 | GPU | NVIDIA Ada generation CC 8.9 |
 HOPPER90 | GPU | NVIDIA Hopper generation CC 9.0 |
 BLACKWELL100 | GPU | NVIDIA Blackwell generation CC 10.0 |
+BLACKWELL103 | GPU | NVIDIA Blackwell generation CC 10.3 |
 BLACKWELL120 | GPU | NVIDIA Blackwell generation CC 12.0 |
+BLACKWELL121 | GPU | NVIDIA Blackwell generation CC 12.1 |
 AMD_GFX906 | GPU | AMD GPU MI50/60 |
 AMD_GFX908 | GPU | AMD GPU MI100 |
 AMD_GFX90A | GPU | AMD GPU MI200 |
 AMD_GFX940 | GPU | AMD GPU MI300 |
 AMD_GFX942 | GPU | AMD GPU MI300 |
 AMD_GFX942_APU | GPU | AMD APU MI300A |
+AMD_GFX950 | GPU | AMD GPU MI350 |
 AMD_GFX1030 | GPU | AMD GPU V620/W6800 |
 AMD_GFX1100 | GPU | AMD GPU RX7900XTX |
-AMD_GFX1103 | GPU | AMD GPU PHOENIX |
+AMD_GFX1101 | GPU | AMD GPU RX7800XT/RX7700XT |
+AMD_GFX1103 | GPU | AMD APU Phoenix |
+AMD_GFX1151 | GPU | AMD APU Strix Halo |
+AMD_GFX1152 | GPU | AMD GPU Radeon 860M |
+AMD_GFX1201 | GPU | AMD GPU RX9070XT |
 INTEL_GEN | GPU | SPIR64-based devices, e.g. Intel GPUs, using JIT |
 INTEL_DG1 | GPU | Intel Iris XeMAX GPU |
 INTEL_GEN9 | GPU | Intel GPU Gen9 |
@@ -681,13 +697,23 @@ INTEL_PVC | GPU | Intel GPU Ponte Vecchio |
 INTEL_DG2 | GPU | Intel GPU DG2 |
 :tb(c=3,s=|)
 
+This list was last updated for version 5.2.2 of the Kokkos library.
+
 The CMake option Kokkos_ENABLE_CUDA_{OPTION} enables additional
 options for CUDA. For example, the CMake option
-Kokkos_ENABLE_CUDA_UVM=ON enables the use of CUDA
-"Unified Virtual Memory" (UVM) in Kokkos. UVM allows to one to use the
-host CPU memory to supplement the memory used on the GPU (with some
-performance penalty) and thus enables running larger problems that
-would otherwise not fit into the RAM on the GPU. 
+Kokkos_ENABLE_IMPL_CUDA_UNIFIED_MEMORY=ON makes Kokkos allocate all GPU
+memory as CUDA managed memory, which the host can read and write
+directly. This allows a simulation to use memory on the host to
+supplement the memory on the GPU (with some performance penalty), so
+that larger problems can be run than would otherwise fit on the GPU,
+and it allows host code to access GPU data directly, which is useful
+when developing or debugging a Kokkos-enabled style within SPARTA. It
+requires CUDA 12.2 or later and a GPU with support for concurrent
+managed access, which is any NVIDIA GPU since the Pascal generation
+running under Linux. Kokkos classifies this as an internal option that
+may change in a future release. It replaces the option
+Kokkos_ENABLE_CUDA_UVM=ON, which Kokkos no longer supports;
+configuring with that option now stops with an error.
 
 The CMake option Kokkos_ENABLE_DEBUG=ON is useful
 when developing a Kokkos-enabled style within SPARTA. This option enables printing of run-time debugging
