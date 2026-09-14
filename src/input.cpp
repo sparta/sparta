@@ -763,7 +763,7 @@ int Input::expand_args(int narg, char **arg, int mode, char **&earg)
               "does not produce multiple values",arg[iarg]);
       error->all(FLERR,str);
     }
-    
+
     if (expandflag) {
       *ptr2 = '\0';
       bounds(ptr1+1,nmax,nlo,nhi);

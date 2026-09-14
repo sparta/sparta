@@ -5,7 +5,7 @@
 SPARTA Documentation
 ====================
 
-24 Sep 2025 version
+27 Aug 2026 version
 -------------------
 
 Version info:

@@ -351,10 +351,9 @@ TEST(TEST_CATEGORY, range_reduce_require) {
   }
 }
 
-#ifndef KOKKOS_ENABLE_OPENMPTARGET
 TEST(TEST_CATEGORY, range_dynamic_policy_require) {
 #if !defined(KOKKOS_ENABLE_CUDA) && !defined(KOKKOS_ENABLE_HIP) && \
-    !defined(KOKKOS_ENABLE_SYCL)
+    !defined(KOKKOS_ENABLE_SYCL) && !defined(KOKKOS_ENABLE_OPENACC)
   using Property = Kokkos::Experimental::WorkItemProperty::HintLightWeight_t;
   {
     TestRangeRequire<TEST_EXECSPACE, Kokkos::Schedule<Kokkos::Dynamic>,
@@ -376,6 +375,5 @@ TEST(TEST_CATEGORY, range_dynamic_policy_require) {
   }
 #endif
 }
-#endif
 
 }  // namespace Test

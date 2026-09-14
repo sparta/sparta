@@ -29,11 +29,12 @@ enum struct DeviceType {
   OpenMP,
   Cuda,
   HIP,
-  OpenMPTarget,
+  OpenMPTarget,  // removed
   HPX,
   Threads,
   SYCL,
   OpenACC,
+  NextSilicon,
   Unknown
 };
 
@@ -54,11 +55,12 @@ inline DeviceType devicetype_from_uint32t(const uint32_t in) {
     case 1: return DeviceType::OpenMP;
     case 2: return DeviceType::Cuda;
     case 3: return DeviceType::HIP;
-    case 4: return DeviceType::OpenMPTarget;
+    case 4: return DeviceType::OpenMPTarget;  // removed
     case 5: return DeviceType::HPX;
     case 6: return DeviceType::Threads;
     case 7: return DeviceType::SYCL;
     case 8: return DeviceType::OpenACC;
+    case 9: return DeviceType::NextSilicon;
     default: return DeviceType::Unknown;  // TODO: error out?
   }
 }

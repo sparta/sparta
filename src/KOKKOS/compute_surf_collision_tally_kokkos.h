@@ -101,11 +101,11 @@ class ComputeSurfCollisionTallyKokkos : public ComputeSurfCollisionTally, public
     for (int m = 0; m < nvalue; m++) {
       switch (d_which[m]) {
       case IDSURF:
-        if (dim == 2) d_array_tally(itally,m) = ubuf(d_lines(isurf).id).d;
-        else d_array_tally(itally,m) = ubuf(d_tris(isurf).id).d;
+        if (dim == 2) d_array_tally(itally,m) = d_ubuf(d_lines(isurf).id).d;
+        else d_array_tally(itally,m) = d_ubuf(d_tris(isurf).id).d;
         break;
-      case ID:     d_array_tally(itally,m) = ubuf(ip->id).d; break;
-      case TYPE:   d_array_tally(itally,m) = ubuf(ip->ispecies+1).d; break;
+      case ID:     d_array_tally(itally,m) = d_ubuf(ip->id).d; break;
+      case TYPE:   d_array_tally(itally,m) = d_ubuf(ip->ispecies+1).d; break;
       case XC:     d_array_tally(itally,m) = iorig->x[0]; break;
       case YC:     d_array_tally(itally,m) = iorig->x[1]; break;
       case ZC:     d_array_tally(itally,m) = iorig->x[2]; break;

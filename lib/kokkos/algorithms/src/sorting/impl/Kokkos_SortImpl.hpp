@@ -6,7 +6,7 @@
 
 #include "../Kokkos_BinOpsPublicAPI.hpp"
 #include "../Kokkos_BinSortPublicAPI.hpp"
-#include <std_algorithms/Kokkos_BeginEnd.hpp>
+#include <Kokkos_Iterator.hpp>
 #include <std_algorithms/Kokkos_Copy.hpp>
 #include <Kokkos_Macros.hpp>
 #ifdef KOKKOS_ENABLE_EXPERIMENTAL_CXX20_MODULES
@@ -31,38 +31,16 @@ import kokkos.core;
 #pragma GCC diagnostic ignored "-Wshadow"
 #pragma GCC diagnostic ignored "-Wsuggest-override"
 
-#if defined(KOKKOS_COMPILER_CLANG)
-// Some versions of Clang fail to compile Thrust, failing with errors like
-// this:
-//    <snip>/thrust/system/cuda/detail/core/agent_launcher.h:557:11:
-//    error: use of undeclared identifier 'va_printf'
-// The exact combination of versions for Clang and Thrust (or CUDA) for this
-// failure was not investigated, however even very recent version combination
-// (Clang 10.0.0 and Cuda 10.0) demonstrated failure.
-//
-// Defining _CubLog here locally allows us to avoid that code path, however
-// disabling some debugging diagnostics
-#pragma push_macro("_CubLog")
-#ifdef _CubLog
-#undef _CubLog
-#endif
-// NOLINTNEXTLINE(bugprone-reserved-identifier)
-#define _CubLog
 #include <thrust/device_ptr.h>
 #include <thrust/sort.h>
-#pragma pop_macro("_CubLog")
-#else
-#include <thrust/device_ptr.h>
-#include <thrust/sort.h>
-#endif
 
 #pragma GCC diagnostic pop
 
-#endif
+#elif defined(KOKKOS_ENABLE_ROCTHRUST)
 
-#if defined(KOKKOS_ENABLE_ROCTHRUST)
 #include <thrust/device_ptr.h>
 #include <thrust/sort.h>
+
 #endif
 
 #if defined(KOKKOS_ENABLE_ONEDPL)

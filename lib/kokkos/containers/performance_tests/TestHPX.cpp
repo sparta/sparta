@@ -19,6 +19,7 @@ import kokkos.unordered_map;
 
 #include <TestDynRankView.hpp>
 #include <TestScatterView.hpp>
+#include <TestDualView.hpp>
 
 #include <iomanip>
 #include <sstream>
@@ -27,13 +28,19 @@ import kokkos.unordered_map;
 
 namespace Performance {
 
-TEST(TEST_CATEGORY, dynrankview_perf) {
+TEST(hpx, dynrankview_perf) {
   std::cout << "HPX" << std::endl;
   std::cout << " DynRankView vs View: Initialization Only " << std::endl;
   test_dynrankview_op_perf<Kokkos::Experimental::HPX>(8192);
 }
 
-TEST(TEST_CATEGORY, global_2_local) {
+TEST(hpx, dualview_perf) {
+  std::cout << "HPX" << std::endl;
+  std::cout << " DualView Access Performance " << std::endl;
+  test_dualview<size_t, Kokkos::Experimental::HPX>();
+}
+
+TEST(hpx, global_2_local) {
   std::cout << "HPX" << std::endl;
   std::cout << "size, create, generate, fill, find" << std::endl;
   for (unsigned i = Performance::begin_id_size; i <= Performance::end_id_size;
@@ -41,7 +48,7 @@ TEST(TEST_CATEGORY, global_2_local) {
     test_global_to_local_ids<Kokkos::Experimental::HPX>(i);
 }
 
-TEST(TEST_CATEGORY, unordered_map_performance_near) {
+TEST(hpx, unordered_map_performance_near) {
   unsigned num_hpx = 4;
   std::ostringstream base_file_name;
   base_file_name << "hpx-" << num_hpx << "-near";
@@ -49,7 +56,7 @@ TEST(TEST_CATEGORY, unordered_map_performance_near) {
       base_file_name.str());
 }
 
-TEST(TEST_CATEGORY, unordered_map_performance_far) {
+TEST(hpx, unordered_map_performance_far) {
   unsigned num_hpx = 4;
   std::ostringstream base_file_name;
   base_file_name << "hpx-" << num_hpx << "-far";
@@ -57,7 +64,7 @@ TEST(TEST_CATEGORY, unordered_map_performance_far) {
       base_file_name.str());
 }
 
-TEST(TEST_CATEGORY, scatter_view) {
+TEST(hpx, scatter_view) {
   std::cout << "ScatterView data-duplicated test:\n";
   Perf::test_scatter_view<Kokkos::Experimental::HPX, Kokkos::LayoutRight,
                           Kokkos::Experimental::ScatterDuplicated,

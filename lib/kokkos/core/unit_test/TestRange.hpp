@@ -26,24 +26,18 @@ struct TestRange {
   struct VerifyInitTag {};
   struct ResetTag {};
   struct VerifyResetTag {};
-  struct OffsetTag {};
-  struct VerifyOffsetTag {};
+  struct PosOffsetTag {};
+  struct NegOffsetTag {};
+  struct VerifyNegOffsetTag {};
+  struct VerifyPosOffsetTag {};
 
   int N;
-#ifndef KOKKOS_WORKAROUND_OPENMPTARGET_GCC
   static const int offset = 13;
-#else
-  int offset;
-#endif
   TestRange(const size_t N_)
       : m_flags(Kokkos::view_alloc(Kokkos::WithoutInitializing, "flags"), N_),
         result_view(Kokkos::view_alloc(Kokkos::WithoutInitializing, "results"),
                     N_),
-        N(N_) {
-#ifdef KOKKOS_WORKAROUND_OPENMPTARGET_GCC
-    offset = 13;
-#endif
-  }
+        N(N_) {}
 
   void test_for() {
     typename view_type::host_mirror_type host_flags =
@@ -79,13 +73,14 @@ struct TestRange {
     }
     ASSERT_EQ(error_count, int(0));
 
+    // Test positive offset
     Kokkos::parallel_for(
-        Kokkos::RangePolicy<ExecSpace, ScheduleType, OffsetTag>(offset,
-                                                                N + offset),
+        Kokkos::RangePolicy<ExecSpace, ScheduleType, PosOffsetTag>(offset,
+                                                                   N + offset),
         *this);
     Kokkos::parallel_for(
         std::string("TestKernelFor"),
-        Kokkos::RangePolicy<ExecSpace, ScheduleType, VerifyOffsetTag>(0, N),
+        Kokkos::RangePolicy<ExecSpace, ScheduleType, VerifyPosOffsetTag>(0, N),
         *this);
 
     Kokkos::deep_copy(host_flags, m_flags);
@@ -93,6 +88,25 @@ struct TestRange {
     error_count = 0;
     for (int i = 0; i < N; ++i) {
       if (i + offset != host_flags(i)) ++error_count;
+    }
+    ASSERT_EQ(error_count, int(0));
+
+    // Test negative offset
+    Kokkos::parallel_for(
+        Kokkos::RangePolicy<ExecSpace, ScheduleType, NegOffsetTag>(-offset,
+                                                                   N - offset),
+        *this);
+    Kokkos::parallel_for(
+        std::string("TestKernelFor"),
+        Kokkos::RangePolicy<ExecSpace, ScheduleType, VerifyNegOffsetTag>(0, N),
+        *this);
+
+    Kokkos::deep_copy(host_flags, m_flags);
+
+    // host_flag is at initial values again
+    error_count = 0;
+    for (int i = 0; i < N; ++i) {
+      if (i - offset != host_flags(i)) ++error_count;
     }
     ASSERT_EQ(error_count, int(0));
   }
@@ -120,14 +134,27 @@ struct TestRange {
   }
 
   KOKKOS_INLINE_FUNCTION
-  void operator()(const OffsetTag &, const int i) const {
+  void operator()(const PosOffsetTag &, const int i) const {
     m_flags(i - offset) = i;
   }
 
   KOKKOS_INLINE_FUNCTION
-  void operator()(const VerifyOffsetTag &, const int i) const {
+  void operator()(const NegOffsetTag &, const int i) const {
+    m_flags(i + offset) = i;
+  }
+
+  KOKKOS_INLINE_FUNCTION
+  void operator()(const VerifyPosOffsetTag &, const int i) const {
     if (i + offset != m_flags(i)) {
       Kokkos::printf("TestRange::test_for_error at %d != %d\n", i + offset,
+                     m_flags(i));
+    }
+  }
+
+  KOKKOS_INLINE_FUNCTION
+  void operator()(const VerifyNegOffsetTag &, const int i) const {
+    if (i - offset != m_flags(i)) {
+      Kokkos::printf("TestRange::test_for_error at %d != %d\n", i - offset,
                      m_flags(i));
     }
   }
@@ -153,8 +180,15 @@ struct TestRange {
     ASSERT_EQ(size_t((N - 1) * (N) / 2), size_t(total));
 
     Kokkos::parallel_reduce(
-        Kokkos::RangePolicy<ExecSpace, ScheduleType, OffsetTag>(offset,
-                                                                N + offset),
+        Kokkos::RangePolicy<ExecSpace, ScheduleType, PosOffsetTag>(offset,
+                                                                   N + offset),
+        *this, total);
+    // sum( 1 .. N )
+    ASSERT_EQ(size_t((N) * (N + 1) / 2), size_t(total));
+
+    Kokkos::parallel_reduce(
+        Kokkos::RangePolicy<ExecSpace, ScheduleType, NegOffsetTag>(-offset,
+                                                                   N - offset),
         *this, total);
     // sum( 1 .. N )
     ASSERT_EQ(size_t((N) * (N + 1) / 2), size_t(total));
@@ -166,8 +200,13 @@ struct TestRange {
   }
 
   KOKKOS_INLINE_FUNCTION
-  void operator()(const OffsetTag &, const int i, value_type &update) const {
+  void operator()(const PosOffsetTag &, const int i, value_type &update) const {
     update += 1 + m_flags(i - offset);
+  }
+
+  KOKKOS_INLINE_FUNCTION
+  void operator()(const NegOffsetTag &, const int i, value_type &update) const {
+    update += 1 + m_flags(i + offset);
   }
 
   void test_dynamic_policy() {
@@ -368,10 +407,9 @@ struct TestStaticBatchSize {
   }
 };
 
-#ifndef KOKKOS_ENABLE_OPENMPTARGET
 TEST(TEST_CATEGORY, range_dynamic_policy) {
 #if !defined(KOKKOS_ENABLE_CUDA) && !defined(KOKKOS_ENABLE_HIP) && \
-    !defined(KOKKOS_ENABLE_SYCL)
+    !defined(KOKKOS_ENABLE_SYCL) && !defined(KOKKOS_ENABLE_OPENACC)
   {
     TestRange<TEST_EXECSPACE, Kokkos::Schedule<Kokkos::Dynamic>> f(0);
     f.test_dynamic_policy();
@@ -386,7 +424,6 @@ TEST(TEST_CATEGORY, range_dynamic_policy) {
   }
 #endif
 }
-#endif
 
 // For 32-bit builds a View can't store enough elements
 #ifndef KOKKOS_IMPL_32BIT
@@ -419,7 +456,13 @@ TEST(TEST_CATEGORY, large_parallel_for_reduce) {
                                Kokkos::HostSpace>) {
     GTEST_SKIP() << "Disabling for host backends";
   }
+// NVC++ warned about unreachable code without the
+// if/else construct here
+#ifndef KOKKOS_ENABLE_LARGE_MEM_TESTS
+  GTEST_SKIP() << "skipping for GPUs with not enough memory";
+#else
   test_large_parallel_for_reduce();
+#endif
 }
 #endif
 

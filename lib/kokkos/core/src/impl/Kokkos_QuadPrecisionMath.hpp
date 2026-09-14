@@ -8,7 +8,6 @@
 
 #if defined(KOKKOS_ENABLE_LIBQUADMATH)
 
-#include <Kokkos_MathematicalConstants.hpp>
 #include <Kokkos_MathematicalFunctions.hpp>
 
 #include <quadmath.h>
@@ -28,7 +27,7 @@ inline __float128 abs(__float128 x) { return ::fabsq(x); }
 inline __float128 fabs(__float128 x) { return ::fabsq(x); }
 inline __float128 fmod(__float128 x, __float128 y) { return ::fmodq(x, y); }
 inline __float128 remainder(__float128 x, __float128 y) { return ::remainderq(x, y); }
-// remquo
+inline __float128 remquo(__float128 x, __float128 y, int* quo) { return ::remquoq(x,y,quo); }
 inline __float128 fma(__float128 x, __float128 y, __float128 z) { return ::fmaq(x, y, z); }
 inline __float128 fmax(__float128 x, __float128 y) { return ::fmaxq(x, y); }
 inline __float128 fmin(__float128 x, __float128 y) { return ::fminq(x, y); }
@@ -72,19 +71,19 @@ inline __float128 ceil(__float128 x) { return ::ceilq(x); }
 inline __float128 floor(__float128 x) { return ::floorq(x); }
 inline __float128 trunc(__float128 x) { return ::truncq(x); }
 inline __float128 round(__float128 x) { return ::roundq(x); }
-// lround
-// llround
+inline long lround(__float128 x) { return ::lroundq(x); }
+inline long long llround(__float128 x) { return ::llroundq(x); }
 inline __float128 nearbyint(__float128 x) { return ::nearbyintq(x); }
-// rint
-// lrint
-// llrint
+inline __float128 rint(__float128 x) { return ::rintq(x); }
+inline long lrint(__float128 x) { return ::lrintq(x); }
+inline long long llrint(__float128 x) { return ::llrintq(x); }
 // Floating point manipulation functions
-// frexp
-// ldexp
-// modf
-// scalbn
-// scalbln
-// ilog
+inline __float128 frexp(__float128 num, int* exp) { return ::frexpq(num, exp); }
+inline __float128 ldexp(__float128 num, int exp) { return ::ldexpq(num, exp); }
+inline __float128 modf(__float128 num, __float128* iptr) { return ::modfq(num, iptr); }
+inline __float128 scalbn(__float128 num, int exp) { return ::scalbnq(num, exp); }
+inline __float128 scalbln(__float128 num, long exp) { return ::scalblnq(num, exp); }
+inline int ilogb(__float128 x) { return ::ilogbq(x); }
 inline __float128 logb(__float128 x) { return ::logbq(x); }
 inline __float128 nextafter(__float128 x, __float128 y) { return ::nextafterq(x, y); }
 // nexttoward
@@ -104,26 +103,6 @@ inline bool signbit(__float128 x) { return ::signbitq(x); }
 // isunordered
 // clang-format on
 }  // namespace Kokkos
-//</editor-fold>
-
-//<editor-fold desc="Mathematical constants __float128 specializations">
-namespace Kokkos::numbers {
-// clang-format off
-template <> constexpr __float128 e_v         <__float128> = 2.718281828459045235360287471352662498Q;
-template <> constexpr __float128 log2e_v     <__float128> = 1.442695040888963407359924681001892137Q;
-template <> constexpr __float128 log10e_v    <__float128> = 0.434294481903251827651128918916605082Q;
-template <> constexpr __float128 pi_v        <__float128> = 3.141592653589793238462643383279502884Q;
-template <> constexpr __float128 inv_pi_v    <__float128> = 0.318309886183790671537767526745028724Q;
-template <> constexpr __float128 inv_sqrtpi_v<__float128> = 0.564189583547756286948079451560772586Q;
-template <> constexpr __float128 ln2_v       <__float128> = 0.693147180559945309417232121458176568Q;
-template <> constexpr __float128 ln10_v      <__float128> = 2.302585092994045684017991454684364208Q;
-template <> constexpr __float128 sqrt2_v     <__float128> = 1.414213562373095048801688724209698079Q;
-template <> constexpr __float128 sqrt3_v     <__float128> = 1.732050807568877293527446341505872367Q;
-template <> constexpr __float128 inv_sqrt3_v <__float128> = 0.577350269189625764509148780501957456Q;
-template <> constexpr __float128 egamma_v    <__float128> = 0.577215664901532860606512090082402431Q;
-template <> constexpr __float128 phi_v       <__float128> = 1.618033988749894848204586834365638118Q;
-// clang-format on
-}  // namespace Kokkos::numbers
 //</editor-fold>
 
 #endif

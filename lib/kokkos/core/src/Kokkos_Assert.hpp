@@ -5,7 +5,9 @@
 #define KOKKOS_ASSERT_HPP
 
 #include <Kokkos_Macros.hpp>
+#ifndef KOKKOS_ENABLE_EXPERIMENTAL_CXX20_MODULES
 #include <Kokkos_Abort.hpp>
+#endif
 
 #if !defined(NDEBUG) || defined(KOKKOS_ENFORCE_CONTRACTS) || \
     defined(KOKKOS_ENABLE_DEBUG)
@@ -45,9 +47,7 @@
 #else  // not debug mode
 #define KOKKOS_EXPECTS(...)
 #define KOKKOS_ENSURES(...)
-#ifndef KOKKOS_ASSERT
 #define KOKKOS_ASSERT(...)
-#endif  // ifndef KOKKOS_ASSERT
 #endif  // end debug mode ifdefs
 
 #endif /* #ifndef KOKKOS_ASSERT_HPP */

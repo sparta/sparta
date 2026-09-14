@@ -82,7 +82,7 @@ void test_shared_alloc() {
     // by RecordBase::decrement) fences all execution space instances. If this
     // is a parallel_for, the test can hang with the parallel_for blocking
     // waiting for itself to complete.
-    for (size_t i = range.begin(); i < range.end(); ++i) {
+    for (auto i = range.begin(); i < range.end(); ++i) {
       while (nullptr !=
              (r[i] = static_cast<RecordMemS*>(RecordBase::decrement(r[i])))) {
 #ifdef KOKKOS_ENABLE_DEBUG
@@ -127,7 +127,7 @@ void test_shared_alloc() {
     // by RecordBase::decrement) fences all execution space instances. If this
     // is a parallel_for, the test can hang with the parallel_for blocking
     // waiting for itself to complete.
-    for (size_t i = range.begin(); i < range.end(); ++i) {
+    for (auto i = range.begin(); i < range.end(); ++i) {
       while (nullptr !=
              (r[i] = static_cast<RecordMemS*>(RecordBase::decrement(r[i])))) {
 #ifdef KOKKOS_ENABLE_DEBUG
@@ -200,9 +200,6 @@ TEST(TEST_CATEGORY, impl_shared_alloc) {
 #ifdef TEST_CATEGORY_NUMBER
 #if (TEST_CATEGORY_NUMBER < 4)  // serial threads openmp hpx
   test_shared_alloc<Kokkos::HostSpace, TEST_EXECSPACE>();
-#elif (TEST_CATEGORY_NUMBER == 4)  // openmptarget
-  test_shared_alloc<Kokkos::Experimental::OpenMPTargetSpace,
-                    Kokkos::DefaultHostExecutionSpace>();
 #elif (TEST_CATEGORY_NUMBER == 5)  // cuda
   test_shared_alloc<Kokkos::CudaSpace, Kokkos::DefaultHostExecutionSpace>();
 #elif (TEST_CATEGORY_NUMBER == 6)  // hip

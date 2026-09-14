@@ -204,8 +204,7 @@ void test_sort_integer_overflow() {
 
   // array with two extrema in reverse order to expose integer overflow bug in
   // bin calculation
-  T a[2]  = {Kokkos::Experimental::finite_max<T>::value,
-             Kokkos::Experimental::finite_min<T>::value};
+  T a[2]  = {Kokkos::finite_max<T>::value, Kokkos::finite_min<T>::value};
   auto vd = Kokkos::create_mirror_view_and_copy(
       ExecutionSpace(), Kokkos::View<T[2], Kokkos::HostSpace>(a));
   Kokkos::sort(vd);
@@ -217,10 +216,6 @@ void test_sort_integer_overflow() {
 }  // namespace BinSortSetA
 
 TEST(TEST_CATEGORY, BinSortGenericTests) {
-  // FIXME_OPENMPTARGET - causes runtime failure with CrayClang compiler
-#if defined(KOKKOS_COMPILER_CRAY_LLVM) && defined(KOKKOS_ENABLE_OPENMPTARGET)
-  GTEST_SKIP() << "known to fail with OpenMPTarget+Cray LLVM";
-#endif
   using ExecutionSpace = TEST_EXECSPACE;
   using key_type       = unsigned;
   constexpr int N      = 171;

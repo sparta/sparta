@@ -6,11 +6,7 @@
 #endif
 
 #include <Kokkos_Macros.hpp>
-#ifdef KOKKOS_ENABLE_EXPERIMENTAL_CXX20_MODULES
-import kokkos.core;
-#else
 #include <Kokkos_Core.hpp>
-#endif
 #include <sstream>
 #include <Kokkos_ExecPolicy.hpp>
 
@@ -29,7 +25,9 @@ Impl::PerThreadValue PerThread(const size_t& arg) {
   return Impl::PerThreadValue(arg);
 }
 
-void team_policy_check_valid_storage_level_argument(int level) {
+}  // namespace Kokkos
+
+void Kokkos::Impl::team_policy_check_valid_storage_level_argument(int level) {
   if (!(level == 0 || level == 1)) {
     std::stringstream ss;
     ss << "TeamPolicy::set_scratch_size(/*level*/ " << level
@@ -37,5 +35,3 @@ void team_policy_check_valid_storage_level_argument(int level) {
     abort(ss.str().c_str());
   }
 }
-
-}  // namespace Kokkos

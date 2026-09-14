@@ -138,7 +138,7 @@ hardware and software is required on your system, and how to build and
 use this package.  Its styles can be invoked at run time via the "-sf
 kk" or "-suffix kk" `command-line switches <Section_start.html#start_7>`_.
 
-You must have a C++17 compatible compiler to use this package.
+You must have a C++20 compatible compiler to use this package.
 
 IMPORTANT NOTE: The KOKKOS package must be built using CMake. GNU
 Makefile builds are not supported.

@@ -238,11 +238,6 @@ class MemoryPool {
 
   //--------------------------------------------------------------------------
 
-  KOKKOS_DEFAULTED_FUNCTION MemoryPool(MemoryPool &&)                 = default;
-  KOKKOS_DEFAULTED_FUNCTION MemoryPool(const MemoryPool &)            = default;
-  KOKKOS_DEFAULTED_FUNCTION MemoryPool &operator=(MemoryPool &&)      = default;
-  KOKKOS_DEFAULTED_FUNCTION MemoryPool &operator=(const MemoryPool &) = default;
-
   KOKKOS_INLINE_FUNCTION MemoryPool()
       : m_tracker(),
         m_sb_state_array(nullptr),
@@ -775,6 +770,7 @@ class MemoryPool {
       KOKKOS_IF_ON_DEVICE(
           (return SpaceAccessibility<DefaultExecutionSpace,
                                      base_memory_space>::accessible;))
+      KOKKOS_IMPL_UNREACHABLE();
     }();
 
     if (can_access_state_array) {
