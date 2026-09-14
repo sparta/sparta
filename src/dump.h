@@ -17,6 +17,7 @@
 
 #include "stdio.h"
 #include "pointers.h"
+#include "sparta_masks.h"
 
 namespace SPARTA_NS {
 
@@ -35,6 +36,9 @@ class Dump : protected Pointers {
   virtual ~Dump();
   void init();
   virtual void write();
+  // Styles without a more precise declaration can depend on arbitrary host
+  // data through their computes, fixes, or variables.
+  virtual unsigned int sync_mask() const { return ALL_MASK; }
   virtual void reset_grid_count() {}
   void modify_params(int, char **);
   virtual bigint memory_usage();

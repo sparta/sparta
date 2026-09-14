@@ -74,6 +74,7 @@ class Output : protected Pointers {
   void set_stats(int, char **);      // set stats output frequency
   void create_stats(int, char **);   // create a Stats style
   void create_restart(int, char **); // create Restart and restart files
+  void reset_sync_mask_for_output(); // Kokkos data needed by configured output
 
   void memory_usage();               // print out memory usage
 };

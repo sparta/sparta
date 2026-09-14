@@ -528,7 +528,7 @@ void UpdateKokkos::run(int nsteps)
     // all output
 
     if (ntimestep == output->next) {
-      particle_kk->sync(Host,ALL_MASK);
+      particle_kk->sync(Host,sparta->kokkos->sync_mask_for_output);
       output->write(ntimestep);
       timer->stamp(TIME_OUTPUT);
     }
