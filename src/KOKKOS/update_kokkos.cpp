@@ -70,6 +70,8 @@ enum{BCSTD,BCWRAP,BCMIRROR,BCEXIT};             // Update::bcopt values
 #define VAL_1(X) X
 #define VAL_2(X) VAL_1(X), VAL_1(X)
 
+#define MOVE_TWO_PASS_RECHECK 100
+
 /* ----------------------------------------------------------------------
    blit one active tally compute into its per-type device buffer
    same operation and same rationale as KKCopy::copy() (kokkos_copy.h:71):
@@ -138,6 +140,8 @@ UpdateKokkos::UpdateKokkos(SPARTA *sparta) : Update(sparta),
   nslist_surf = nslist_isurf = nslist_react_isurf = nslist_react_surf = 0;
   nslist_coll_tally = nslist_react_tally = 0;
   nsc_index_cached = -1;
+  use_two_pass_move = 1;
+  two_pass_move_recheck = 0;
 
   // the Kokkos views of Particle/Grid/Surf are populated from the host data
   //   once, by setup() when prewrap is set, which then clears prewrap
@@ -788,18 +792,41 @@ template < int DIM, int SURF, int REACT, int OPT > void UpdateKokkos::move()
   #if SPARTA_KOKKOS_REDUCE_ARCH
       Kokkos::parallel_reduce(Kokkos::RangePolicy<DeviceType, TagUpdateMove<DIM,SURF,REACT,OPT,-1> >(pstart,pstop),*this,reduce);
   #else
-    if ( fstyle == NOFIELD && niterate == 1 && !continue_loop_flag ) {
+    const int concurrency = DeviceType().concurrency();
+    const int particle_count = pstop - pstart;
+    const int can_recheck_two_pass =
+      fstyle == NOFIELD && niterate == 1 && !continue_loop_flag &&
+      (use_two_pass_move || update->ntimestep >= two_pass_move_recheck);
+    if (can_recheck_two_pass && particle_count >= concurrency) {
       // on the first iteration, split the move on GPU: fast path for trivial
       // particles, indirect team-based path for complex ones
       Kokkos::deep_copy(not_updated_cnt,0);
       Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagUpdateMoveFirstPass<DIM> >(pstart,pstop),*this);
       Kokkos::deep_copy(h_not_updated_cnt,not_updated_cnt);
-      int team_size=128;
-      int num_teams = (std::min<int>(DeviceType().concurrency(),h_not_updated_cnt())-1)/team_size+1;
-      auto policy=Kokkos::TeamPolicy<DeviceType, TagUpdateMoveIndirect<DIM,SURF,REACT,OPT,-1> >(num_teams,team_size);
-      Kokkos::parallel_reduce(policy,*this,reduce);
-    } else
+      const double eliminated_fraction =
+        static_cast<double>(particle_count - h_not_updated_cnt()) / particle_count;
+      if (eliminated_fraction < 0.90) {
+        use_two_pass_move = 0;
+        two_pass_move_recheck = update->ntimestep + MOVE_TWO_PASS_RECHECK;
+      } else {
+        use_two_pass_move = 1;
+      }
+
+      if (h_not_updated_cnt()) {
+        const int team_size = 128;
+        const int num_teams =
+          (std::min<int>(concurrency,h_not_updated_cnt())-1)/team_size+1;
+        auto policy = Kokkos::TeamPolicy<DeviceType,
+          TagUpdateMoveIndirect<DIM,SURF,REACT,OPT,-1>>(num_teams,team_size);
+        Kokkos::parallel_reduce(policy,*this,reduce);
+      }
+    } else {
+      if (can_recheck_two_pass) {
+        use_two_pass_move = 0;
+        two_pass_move_recheck = update->ntimestep + MOVE_TWO_PASS_RECHECK;
+      }
       Kokkos::parallel_reduce(Kokkos::RangePolicy<DeviceType, TagUpdateMove<DIM,SURF,REACT,OPT,-1> >(pstart,pstop),*this,reduce);
+    }
   #endif
 #elif defined KOKKOS_ENABLE_SERIAL
       if constexpr(std::is_same<DeviceType,Kokkos::Serial>::value)
@@ -1236,50 +1263,43 @@ template<int DIM>
 KOKKOS_INLINE_FUNCTION
 void UpdateKokkos::operator()(TagUpdateMoveFirstPass<DIM>, const int i) const {
   Particle::OnePart &particle_i = d_particles[i];
+  bool fail=false;
 
   int &pflag = particle_i.flag;
+  double xnew[DIM];
+  double * x = particle_i.x;
+  int icell = particle_i.icell;
+  const double * const v = particle_i.v;
+  xnew[0] = x[0] + dt*v[0];
+  if constexpr (DIM > 1) xnew[1] = x[1] + dt*v[1];
+  if constexpr (DIM > 2) xnew[2] = x[2] + dt*v[2];
+  int nsurf = d_cells[icell].nsurf;
+
   if (pflag != PKEEP) {
     if (pflag == PDONE)
       pflag = PKEEP;
     else {
-      const int indx = Kokkos::atomic_fetch_add(&not_updated_cnt(),1);
-      not_updated(indx) = i;
-      return;
+      fail=true;
     }
   }
 
-  const double * const v = particle_i.v;
-  double * x = particle_i.x;
-  double xnew[3];
-  xnew[0] = x[0] + dt*v[0];
-  if (DIM > 1) xnew[1] = x[1] + dt*v[1];
-  if (DIM > 2) xnew[2] = x[2] + dt*v[2];
-
-  int icell = particle_i.icell;
-  int nsurf = d_cells[icell].nsurf;
-  if (nsurf) {
-    const int indx = Kokkos::atomic_fetch_add(&not_updated_cnt(),1);
-    not_updated(indx) = i;
-    return;
+  if (!fail) {
+    const double* const lo = d_cells[icell].lo;
+    const double* const hi = d_cells[icell].hi;
+    if (xnew[0] < lo[0] || xnew[0] >= hi[0]) fail = true;
+    if (DIM>1 && (xnew[1] < lo[1] || xnew[1] >= hi[1])) fail = true;
+    if (DIM>2 && (xnew[2] < lo[2] || xnew[2] >= hi[2])) fail = true;
   }
 
-  const double* const lo = d_cells[icell].lo;
-  const double* const hi = d_cells[icell].hi;
-  bool leave = false;
-  if (xnew[0] < lo[0] || xnew[0] >= hi[0]) leave = true;
-  if (DIM>1 && (xnew[1] < lo[1] || xnew[1] >= hi[1])) leave = true;
-  if (DIM>2 && (xnew[2] < lo[2] || xnew[2] >= hi[2])) leave = true;
-
-  if (leave) {
+  if (fail || nsurf) {
     const int indx = Kokkos::atomic_fetch_add(&not_updated_cnt(),1);
     not_updated(indx) = i;
     return;
   }
 
   x[0] = xnew[0];
-  if (DIM > 1) x[1] = xnew[1];
-  if (DIM > 2) x[2] = xnew[2];
-  pflag = PKEEP;
+  if constexpr (DIM > 1) x[1] = xnew[1];
+  if constexpr (DIM > 2) x[2] = xnew[2];
 }
 
 /*-----------------------------------------------------------------------------*/

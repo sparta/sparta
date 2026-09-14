@@ -133,6 +133,8 @@ class UpdateKokkos : public Update {
   Kokkos::View<int> not_updated_cnt;
   Kokkos::View<int, SPAHostType> h_not_updated_cnt;
   Kokkos::View<int*> not_updated;
+  int use_two_pass_move;
+  bigint two_pass_move_recheck;
 
   double dt;
   int field_active[3];
