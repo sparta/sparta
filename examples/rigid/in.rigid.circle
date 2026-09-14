@@ -1,0 +1,60 @@
+################################################################################
+# 2d flow around a mobile rigid-body circle
+#
+# a circular particulate is embedded in a free-stream flow
+# particle collisions push it downstream and it responds as a rigid body
+#
+# Note:
+#  - The "comm/sort" option to the "global" command is used to match MPI runs.
+#  - The "twopass" option is used to match Kokkos runs.
+# The "comm/sort" and "twopass" options should not be used for production runs.
+################################################################################
+
+seed	    	    12345
+dimension   	    2
+global              gridcut 0.0 comm/sort yes
+
+boundary	    o r p
+
+create_box  	    0 10 0 10 -0.5 0.5
+create_grid 	    20 20 1
+balance_grid        rcb cell
+
+global		    nrho 1.0 fnum 0.001
+
+species		    air.species N O
+mixture		    air N O vstream 100.0 0 0
+
+# circle of radius 1 centered at (5,5), treated as a mobile rigid body
+
+read_surf           data.circle group circle origin 5 5 0 &
+                    scale 0.3333333333 0.3333333333 1
+
+surf_collide	    1 diffuse 300.0 0.0
+surf_modify         all collide 1
+
+collide             vss air air.vss
+
+fix		    in emit/face air xlo twopass
+
+timestep 	    0.0001
+
+# per-surf force/torque tallies used to move the rigid body
+# moi of a uniform disk of radius R: izz = 1/2 M R^2, ixx = iyy = izz/2
+
+compute             csurf surf circle all fx fy fz tx ty tz com 5 5 0
+
+global              rigid 1
+
+fix		    1 rigid circle csurf body &
+                    mass 5.0e-22 com 5 5 0 vcom 0 0 0 &
+                    moi 1.25e-22 1.25e-22 2.5e-22 0 0 0 angmom 0 0 0
+
+#dump                2 image all 100 image.*.ppm type type pdiam 0.1 &
+#                    surf proc 0.01 size 512 512 zoom 1.75 &
+#                    gline yes 0.005
+#dump_modify	    2 pad 4
+
+stats		    100
+stats_style	    step cpu np nscoll f_1[1] f_1[2] f_1[4] f_1[5] f_1[15]
+run 		    1500

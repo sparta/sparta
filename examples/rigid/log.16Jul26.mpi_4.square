@@ -1,0 +1,129 @@
+SPARTA (24 Sep 2025)
+Running on 4 MPI task(s)
+################################################################################
+# 2d rigid body square driven by pseudo particles
+#
+# demonstrates the fix rigid pseudo option, a debugging aid which
+# bounces fictitious particles off the body each step instead of
+# computing forces from real particle collisions
+################################################################################
+
+seed	    	    12345
+dimension   	    2
+
+create_box  	    0 10 0 10 -0.5 0.5
+Created orthogonal box = (0 0 -0.5) to (10 10 0.5)
+create_grid 	    10 10 1
+Created 100 child grid cells
+  CPU time = 0.00115183 secs
+  create/ghost percent = 85.1732 14.8268
+
+global		    nrho 1.0 fnum 0.001
+
+species		    air.species N O
+mixture		    air N O vstream 100.0 0 0
+
+read_surf           data.square
+  4 lines
+  4.5 5.5 xlo xhi
+  4.5 5.5 ylo yhi
+  0 0 zlo zhi
+  1 min line length
+  4 0 = cells overlapping surfs, overlap cells with unmarked corner pts
+  96 0 4 = cells outside/inside/overlapping surfs
+  4 = surf cells with 1,2,etc splits
+  99 99 = cell-wise and global flow volume
+  CPU time = 0.000534726 secs
+  read/check/sort/surf2grid/ghost/inout/particle percent = 8.93804 27.4404 0.625554 55.1668 7.82924 20.3487 0.208892
+  surf2grid time = 0.000294991 secs
+  map/comm1/comm2/comm3/comm4/split percent = 23.4221 8.86603 7.66091 4.08046 44.082 4.68319
+surf_collide	    1 diffuse 300.0 0.0
+surf_modify         all collide 1
+
+timestep 	    0.0001
+
+compute      csurf surf all all fx fy fz tx ty tz com 5 5 0
+
+global              rigid 1
+
+fix		    1 rigid all csurf body 		    mass 1.0 com 5 5 0 vcom 0 0 0                     moi 0.083333333 0.083333333 0.166666667 0 0 0                     angmom 0 0 0 		    pseudo 10 100.0 0.2
+
+#fix		    1 rigid all csurf infile square.rigid #		    pseudo 10 100.0 0.2
+
+#dump                2 image all 10 image.*.ppm type type pdiam 0.1 #                    surf proc 0.01 size 512 512 zoom 1.75 #                    gline yes 0.005
+#dump_modify	    2 pad 4
+
+stats		    10
+stats_style   step cpu f_1[1] f_1[2] f_1[4] f_1[5] f_1[15]
+run 		    100
+Memory usage per proc in Mbytes:
+  particles (ave,min,max) = 0 0 0
+  grid      (ave,min,max) = 1.51379 1.51379 1.51379
+  surf      (ave,min,max) = 0.000411987 0.000411987 0.000411987
+  total     (ave,min,max) = 1.51421 1.51421 1.51421
+Step CPU f_1[1] f_1[2] f_1[4] f_1[5] f_1[15] 
+       0            0            5            5            0            0            0 
+      10    8.387e-05     5.000866    5.0000002    1.7199994 0.00070881846    4.1164155 
+      20  0.000150297     5.003616    5.0000041     3.579964 0.0081814911    8.6189524 
+      30    0.0002133    5.0082498    5.0000236    5.5196541  0.031992326    13.209253 
+      40  0.000278539    5.0148289    5.0000796    7.4384282  0.079788477     17.75718 
+      50  0.000339976    5.0233497    5.0002019    9.3948684   0.16249615    22.532469 
+      60   0.00042545    5.0338066    5.0004287    11.286977   0.28395381    27.032198 
+      70  0.000499911    5.0461238    5.0008019    13.131573   0.45180307    31.475032 
+      80  0.000589497    5.0602594     5.001372    14.963836   0.67656276     35.81772 
+      90   0.00066946    5.0762414    5.0022039    16.778167   0.96371751    40.085175 
+     100  0.000739882    5.0940319    5.0033627    18.586091     1.323967    44.277581 
+Loop time of 0.000745159 on 4 procs for 100 steps with 0 particles
+Performance: 134199.592 timesteps/s, 0.000 particle-step/s
+
+MPI task timing breakdown:
+Section |  min time  |  avg time  |  max time  |%varavg| %total
+---------------------------------------------------------------
+Move    | 5.624e-06  | 6.6947e-06 | 7.889e-06  |   0.0 |  0.90
+Coll    | 0          | 0          | 0          |   0.0 |  0.00
+Sort    | 0          | 0          | 0          |   0.0 |  0.00
+Comm    | 0.00024088 | 0.00026757 | 0.00030233 |   0.0 | 35.91
+Modify  | 0.0004006  | 0.00043229 | 0.00045372 |   0.0 | 58.01
+Output  | 2.3359e-05 | 2.835e-05  | 3.8048e-05 |   0.0 |  3.80
+Other   |            | 1.026e-05  |            |       |  1.38
+
+Particle moves    = 0 (0K)
+Cells touched     = 0 (0K)
+Particle comms    = 0 (0K)
+Boundary collides = 0 (0K)
+Boundary exits    = 0 (0K)
+SurfColl checks   = 0 (0K)
+SurfColl occurs   = 0 (0K)
+Surf reactions    = 0 (0K)
+Collide attempts  = 0 (0K)
+Collide occurs    = 0 (0K)
+Reactions         = 0 (0K)
+Particles stuck   = 0
+Axisymm bad moves = 0
+
+Particle-moves/CPUsec/proc: 0
+Particle-moves/step: 0
+Cell-touches/particle/step: 0
+Particle comm iterations/step: 0
+Particle fraction communicated: 0
+Particle fraction colliding with boundary: 0
+Particle fraction exiting boundary: 0
+Surface-checks/particle/step: 0
+Surface-collisions/particle/step: 0
+Surf-reactions/particle/step: 0
+Collision-attempts/particle/step: 0
+Collisions/particle/step: 0
+Reactions/particle/step: 0
+
+Particles: 0 ave 0 max 0 min
+Histogram: 4 0 0 0 0 0 0 0 0 0
+Cells:      25 ave 25 max 25 min
+Histogram: 4 0 0 0 0 0 0 0 0 0
+GhostCell: 75 ave 75 max 75 min
+Histogram: 4 0 0 0 0 0 0 0 0 0
+EmptyCell: 0 ave 0 max 0 min
+Histogram: 4 0 0 0 0 0 0 0 0 0
+Surfs:    4 ave 4 max 4 min
+Histogram: 4 0 0 0 0 0 0 0 0 0
+GhostSurf: 0 ave 0 max 0 min
+Histogram: 4 0 0 0 0 0 0 0 0 0

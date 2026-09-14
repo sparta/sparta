@@ -1,0 +1,57 @@
+################################################################################
+# 3d flow around a mobile rigid-body cube
+#
+# a cubic particulate, rotated off-axis to the flow, is embedded in a
+# free-stream flow: particle collisions push it downstream and
+# exert a torque which makes it tumble
+#
+# Note:
+#  - The "comm/sort" option to the "global" command is used to match MPI runs.
+#  - The "twopass" option is used to match Kokkos runs.
+# The "comm/sort" and "twopass" options should not be used for production runs.
+################################################################################
+
+seed	    	    12345
+dimension   	    3
+global              gridcut 0.0 comm/sort yes
+
+boundary	    o r r
+
+create_box  	    0 10 0 10 0 10
+create_grid 	    10 10 10
+balance_grid        rcb cell
+
+global		    nrho 1.0 fnum 0.01
+
+species		    air.species N O
+mixture		    air N O vstream 100.0 0 0
+
+# unit cube centered at (5,5,5), rotated 30 degrees about z,
+# treated as a mobile rigid body
+
+read_surf           sdata.cube group cube rotate 30 0 0 1 trans 5 5 5
+
+surf_collide	    1 diffuse 300.0 0.0
+surf_modify         all collide 1
+
+collide             vss air air.vss
+
+fix		    in emit/face air xlo twopass
+
+timestep 	    0.0001
+
+# per-surf force/torque tallies used to move the rigid body
+# moi of a uniform cube of edge A is isotropic: 1/6 M A^2 on the diagonal,
+# which is the same in any orientation
+
+compute             csurf surf cube all fx fy fz tx ty tz com 5 5 5
+
+global              rigid 1
+
+fix		    1 rigid cube csurf body &
+                    mass 3.0e-21 com 5 5 5 vcom 0 0 0 &
+                    moi 5.0e-22 5.0e-22 5.0e-22 0 0 0 angmom 0 0 0
+
+stats		    100
+stats_style	    step cpu np nscoll f_1[1] f_1[4] f_1[13] f_1[14] f_1[15]
+run 		    1000

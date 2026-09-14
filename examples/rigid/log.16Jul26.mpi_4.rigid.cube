@@ -1,0 +1,150 @@
+SPARTA (24 Sep 2025)
+Running on 4 MPI task(s)
+################################################################################
+# 3d flow around a mobile rigid-body cube
+#
+# a cubic particulate, rotated off-axis to the flow, is embedded in a
+# free-stream flow: particle collisions push it downstream and
+# exert a torque which makes it tumble
+#
+# Note:
+#  - The "comm/sort" option to the "global" command is used to match MPI runs.
+#  - The "twopass" option is used to match Kokkos runs.
+# The "comm/sort" and "twopass" options should not be used for production runs.
+################################################################################
+
+seed	    	    12345
+dimension   	    3
+global              gridcut 0.0 comm/sort yes
+
+boundary	    o r r
+
+create_box  	    0 10 0 10 0 10
+Created orthogonal box = (0 0 0) to (10 10 10)
+create_grid 	    10 10 10
+WARNING: Could not acquire nearby ghost cells b/c grid partition is not clumped (../grid.cpp:473)
+Created 1000 child grid cells
+  CPU time = 0.001049 secs
+  create/ghost percent = 91.1176 8.88236
+balance_grid        rcb cell
+Balance grid migrated 740 cells
+  CPU time = 0.000829986 secs
+  reassign/sort/migrate/ghost percent = 37.858 2.00907 24.2835 35.8494
+
+global		    nrho 1.0 fnum 0.01
+
+species		    air.species N O
+mixture		    air N O vstream 100.0 0 0
+
+# unit cube centered at (5,5,5), rotated 30 degrees about z,
+# treated as a mobile rigid body
+
+read_surf           sdata.cube group cube rotate 30 0 0 1 trans 5 5 5
+  12 triangles
+  4.31699 5.68301 xlo xhi
+  4.31699 5.68301 ylo yhi
+  4.5 5.5 zlo zhi
+  1 min triangle edge length
+  0.5 min triangle area
+  8 0 = cells overlapping surfs, overlap cells with unmarked corner pts
+  992 0 8 = cells outside/inside/overlapping surfs
+  8 = surf cells with 1,2,etc splits
+  999 999 = cell-wise and global flow volume
+  CPU time = 0.00113048 secs
+  read/check/sort/surf2grid/ghost/inout/particle percent = 8.98929 21.7395 1.10581 52.3015 15.8639 10.0668 2.48567
+  surf2grid time = 0.000591257 secs
+  map/comm1/comm2/comm3/comm4/split percent = 38.1026 4.83597 6.9518 3.66186 19.7926 22.955
+
+surf_collide	    1 diffuse 300.0 0.0
+surf_modify         all collide 1
+
+collide             vss air air.vss
+
+fix		    in emit/face air xlo twopass
+
+timestep 	    0.0001
+
+# per-surf force/torque tallies used to move the rigid body
+# moi of a uniform cube of edge A is isotropic: 1/6 M A^2 on the diagonal,
+# which is the same in any orientation
+
+compute             csurf surf cube all fx fy fz tx ty tz com 5 5 5
+
+global              rigid 1
+
+fix		    1 rigid cube csurf body                     mass 3.0e-21 com 5 5 5 vcom 0 0 0                     moi 5.0e-22 5.0e-22 5.0e-22 0 0 0 angmom 0 0 0
+
+stats		    100
+stats_style	    step cpu np nscoll f_1[1] f_1[4] f_1[13] f_1[14] f_1[15]
+run 		    1000
+Memory usage per proc in Mbytes:
+  particles (ave,min,max) = 0 0 0
+  grid      (ave,min,max) = 1.51379 1.51379 1.51379
+  surf      (ave,min,max) = 0.00151062 0.00151062 0.00151062
+  total     (ave,min,max) = 1.5153 1.5153 1.5153
+Step CPU Np Nscoll f_1[1] f_1[4] f_1[13] f_1[14] f_1[15] 
+       0            0        0        0            5            0            0            0            0 
+     100  0.022840068    20902        2    5.0000086 0.0046061616 -0.00071303164 0.00043048448 -0.0013070009 
+     200  0.054102448    35859        6    5.0001288  0.020127223 -0.0001058178 -0.0012003624 -0.0032329092 
+     300   0.10653013    43488        4    5.0004214  0.037506064 0.0010178407 -0.0060682737 -0.0017370111 
+     400   0.16295679    47659        7    5.0009072  0.057459624 -0.0024445871 -0.006952137  0.001570342 
+     500   0.22374226    50269        5    5.0015872  0.078992918 -0.0021595417 -0.0043588396 -0.00069082806 
+     600   0.27068698    52040        5    5.0024705  0.097286852 0.0017760327 -0.0023484906 -0.0020981351 
+     700     0.316962    53332        5     5.003543   0.11632829 0.0077580649 -0.0051699333 0.0049516917 
+     800   0.36331003    54159        6    5.0048116    0.1370144 0.0058710675 -0.011503614 0.0017297437 
+     900   0.40872858    54760        7    5.0062816   0.15586577 0.0077441277 -0.0048454031 -0.00027033835 
+    1000   0.45250467    55452        3    5.0079414   0.17705348 0.0082602607 -0.0078419356 0.0052131816 
+Loop time of 0.452626 on 4 procs for 1000 steps with 55452 particles
+Performance: 2209.328 timesteps/s, 122.512 Mparticle-step/s
+
+MPI task timing breakdown:
+Section |  min time  |  avg time  |  max time  |%varavg| %total
+---------------------------------------------------------------
+Move    | 0.12087    | 0.15514    | 0.19743    |   8.3 | 34.27
+Coll    | 0.028202   | 0.03556    | 0.044432   |   3.9 |  7.86
+Sort    | 0.015244   | 0.021068   | 0.027526   |   3.3 |  4.65
+Comm    | 0.031889   | 0.034783   | 0.036019   |   0.9 |  7.68
+Modify  | 0.11035    | 0.11878    | 0.12776    |   2.3 | 26.24
+Output  | 0.00022831 | 0.00060468 | 0.0012692  |   0.0 |  0.13
+Other   |            | 0.0867     |            |       | 19.15
+
+Particle moves    = 44219579 (44.2M)
+Cells touched     = 48486983 (48.5M)
+Particle comms    = 315700 (0.316M)
+Boundary collides = 275635 (0.276M)
+Boundary exits    = 155189 (0.155M)
+SurfColl checks   = 2032044 (2.03M)
+SurfColl occurs   = 4541 (4.54K)
+Surf reactions    = 0 (0K)
+Collide attempts  = 0 (0K)
+Collide occurs    = 0 (0K)
+Reactions         = 0 (0K)
+Particles stuck   = 0
+Axisymm bad moves = 0
+
+Particle-moves/CPUsec/proc: 2.44239e+07
+Particle-moves/step: 44219.6
+Cell-touches/particle/step: 1.0965
+Particle comm iterations/step: 2.405
+Particle fraction communicated: 0.00713937
+Particle fraction colliding with boundary: 0.00623332
+Particle fraction exiting boundary: 0.00350951
+Surface-checks/particle/step: 0.0459535
+Surface-collisions/particle/step: 0.000102692
+Surf-reactions/particle/step: 0
+Collision-attempts/particle/step: 0
+Collisions/particle/step: 0
+Reactions/particle/step: 0
+
+Particles: 13863 ave 14826 max 12971 min
+Histogram: 2 0 0 0 0 0 0 0 1 1
+Cells:      250 ave 250 max 250 min
+Histogram: 4 0 0 0 0 0 0 0 0 0
+GhostCell: 110 ave 110 max 110 min
+Histogram: 4 0 0 0 0 0 0 0 0 0
+EmptyCell: 110 ave 110 max 110 min
+Histogram: 4 0 0 0 0 0 0 0 0 0
+Surfs:    12 ave 12 max 12 min
+Histogram: 4 0 0 0 0 0 0 0 0 0
+GhostSurf: 0 ave 0 max 0 min
+Histogram: 4 0 0 0 0 0 0 0 0 0

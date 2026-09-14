@@ -13,12 +13,13 @@
 </H3>
 <P><B>Syntax:</B>
 </P>
-<UL><LI>fix ID rigid group-ID compute-ID dstyle args keyword value ...
-ID is documented in <A HREF = "fix.html">fix</A> command 
+<PRE>fix ID rigid group-ID compute-ID dstyle args keyword value ... 
+</PRE>
+<UL><LI>ID is documented in <A HREF = "fix.html">fix</A> command 
 
 <LI>rigid = style name of this fix command 
 
-<LI>group-ID = ID of surface group ID containing surf elements which comprise the rigid body 
+<LI>group-ID = ID of surface group containing surf elements which comprise the rigid body 
 
 <LI>compute-ID = ID of <A HREF = "compute_surf.html">compute surf</A> command for force/torque calculation on rigid body 
 
@@ -27,7 +28,7 @@ ID is documented in <A HREF = "fix.html">fix</A> command
 <PRE>  <I>body</I> args = several keyword/values pairs, all keywords must appear, in any order
     keyword = <I>com</I> and <I>mass</I> and <I>moi</I> and <I>vcom</I> and <I>angmom</I>
       <I>mass</I> value = mtotal
-        mtotal = = total mass of rigid body (mass units)
+        mtotal = total mass of rigid body (mass units)
       <I>com</I> values = xcm ycm zcm
         xcm,ycm,zcm = center-of-mass (COM) of rigid body (distance units)
       <I>moi</I> values = ixx iyy izz ixy ixz iyz
@@ -38,54 +39,110 @@ ID is documented in <A HREF = "fix.html">fix</A> command
       <I>angmom</I> values = lx ly lz
         lx, ly, lz = angular momentum of rigid body in space frame (mass-distance^2/time units) 
 </PRE>
-<LI>   (infile</I> args = filename
-    filename - name of file containing all rigid body attributes on a single line
-zero or more optional keyword/value pairs 
+<PRE>  <I>infile</I> args = filename
+    filename = name of file containing all rigid body attributes on a single line 
+</PRE>
+<LI>zero or more optional keyword/value pairs 
 
-<PRE>  keyword = <I>scale</I> or <I>pseudo</I>
+<PRE>  keyword = <I>scale</I> or <I>remap</I> or <I>rotate</I> or <I>push</I> or <I>pushbound</I> or <I>outfile</I> or <I>pseudo</I>
      <I>scale</I> value = factor
        factor = multiply all mass-dependent body values by this factor
+     <I>remap</I> value = <I>cutcell</I> or <I>incremental</I>
+       method used to assign the moving body surfs to grid cells
+     <I>rotate</I> value = <I>euler</I> or <I>richardson</I>
+       scheme used to update the body orientation quaternion each step
+     <I>push</I> values = k cutoff
+       k = stiffness for push-off forces
+           (force/distance units for pushstyle linear,
+            force/distance^3/2 units for pushstyle hertz)
+       cutoff = apply push-off forces below this distance (distance units)
+     <I>pushbound</I> value = <I>yes</I> or <I>no</I>
+       yes to also apply push-off forces from non-periodic boundaries
+     <I>pushstyle</I> value = <I>linear</I> or <I>hertz</I>
+       force law used for push-off forces
+     <I>pushdamp</I> value = gamma
+       gamma = dashpot damping coefficient for push-off contacts
+               (force/velocity units, 0 = elastic)
+     <I>outfile</I> values = filename Nevery
+       filename = write body state to this file every Nevery steps
      <I>pseudo</I> values = Np pmass frac
-       Np = # number of pseudo particles to bounce off object each timestep
+       Np = number of pseudo particles to bounce off object each timestep
        pmass = mass of each pseudo particle
-       frac = fraction of object bouding box to aim at (0.1 = bottom 10%, 1.0 = entire bounding box) 
+       frac = fraction of object bounding box to aim at (0.1 = bottom 10%, 1.0 = entire bounding box) 
 </PRE>
 
 </UL>
 <P><B>Examples:</B>
 </P>
-<PRE>compte csurf surf all all fx fy fz tx ty tz com 5 5 0
-fix 1 rigid all 1 rigid all csurf body mass 1.0 com 5 5 0 vcom 0 0 0 moi 1 1 2 -1 0 0 angmom 0 0 0
-fix 1 rigid all 1 rigid all csurf infile square.rigid pseudo 1 1000.0 0.5 
+<PRE>compute csurf surf all all fx fy fz tx ty tz com 5 5 0
+global rigid 1
+fix 1 rigid all csurf body mass 1.0 com 5 5 0 vcom 0 0 0 moi 1 1 2 -1 0 0 angmom 0 0 0
+fix 1 rigid all csurf infile square.rigid outfile square.state 1000
+fix 1 rigid all csurf infile square.rigid push 1.0e-18 0.5 pushbound yes 
 </PRE>
 <P><B>Description:</B>
 </P>
-<P>Define the initial properties of a group of surface elements which
-represent a single rigid object which moves as a rigid body.  This
-means it can be embedded within a flow of particles and interact with
-the particles each timestep, as explained below.
+<P>Define the properties of a group of surface elements which represent
+a single rigid object, and time integrate its motion as a rigid body.
+The object is embedded within a flow of particles and interacts with
+the particles each timestep.  Particles which collide with the object
+bounce off its moving surface and impart force and torque to it,
+which cause the object to translate and rotate in response to the
+flow.  The flow itself is affected by the presence and motion of the
+object.  This can be useful for modeling the effect of gas flows on
+large particulates.  See <A HREF = "Section_howto.html#howto_20">Section 6.20</A>
+for an overview of using rigid body objects in SPARTA.
 </P>
-<P>Group-ID is the ID of the group of surface elements (lines or tris)
-which comprise the rigid body object.  Explain the collection of surfs
-needs to be a closed object.  Does SPRATA check for this ?
+<P>Use of this fix requires the <A HREF = "global.html">global rigid</A> command to be
+set with the ID of this fix, so that the particle move code checks
+for collisions with moving surface elements.
 </P>
-<P>Compute-Id is the ID of a compute surf command which calculates the
-force and torque on individual surface elements due to collisions with
-particles.  It should produce 6 columns of per-surf values as a
-per-surf arrary.  To compute torque it also needs the center-of-mass
-(COM) of the rigid body, which should be consistent with the COM
-specified by this command.  See the above example.
+<P>Group-ID is the ID of the group of surface elements (lines in 2d or
+triangles in 3d) which comprise the rigid body object.  The
+collection of surfs must form a closed (watertight) object, which is
+checked when the fix is defined: in 2d every point must be the first
+endpoint of exactly as many body lines as it is the second endpoint,
+and in 3d every edge must be traversed the same number of times in
+each direction by the body triangles which share it.
 </P>
-<P>The parameters of the rigid body can be specifiied in one of two ways
+<P>Each fix rigid command defines a single rigid body.  Multiple rigid
+bodies can be simulated by using multiple fix rigid commands, each
+with its own surf group and its own compute; no surf element can
+belong to more than one body.  Bodies interact with each other via
+the push-off forces described below: another body's surfs act as
+push-off sources just as static surfs do, so a body with the <I>push</I>
+keyword enabled is repelled by other bodies before contact.  All
+push-off forces are computed once per step after every body has moved
+to its end-of-step position, and each body-body contact force is
+applied equal-and-opposite to both bodies at the contact point, so
+body-body interactions conserve linear and angular momentum exactly.
+</P>
+<P>Compute-ID is the ID of a <A HREF = "compute_surf.html">compute surf</A> command
+which tallies the force and torque on individual surface elements due
+to collisions with particles.  It must compute exactly these 6 values
+in this order, for a single mixture group, so that it produces a
+per-surf array with 6 columns:
+</P>
+<PRE>compute csurf surf all all fx fy fz tx ty tz com 5 5 0 
+</PRE>
+<P>The compute must also specify the <I>com</I> keyword, whose values should
+be the initial center-of-mass (COM) of the rigid body, consistent
+with the COM specified by this command.  As the body moves, this fix
+resets the COM used by the compute at the beginning of each timestep,
+so that tallied torques are always about the current COM of the body.
+This fix also insures the compute tallies collision info on every
+timestep of a run.
+</P>
+<P>The parameters of the rigid body can be specified in one of two ways
 via the <I>dstyle</I> setting: <I>body</I> or <I>infile</I>.  Note that all these
 parameters are specified in the coordinate frame of the simulation
 box, also called the "space" frame.  See the discussion below of
-"space" versus "body" frame for rigid bodies.
+"space" versus "body" frames for rigid bodies.
 </P>
 <P>The <I>body</I> style allows the 5 parameters to be specified directly in
-the input script.  The 5 are specified as arguments <I>com</I>, <I>mass</I>, <I>moi</I>,
-<I>vcom</I>, <I>angmom</I>, each of which is followed by one or more values.
-The 5 arguments can be specified in any order.
+the input script.  The 5 are specified as arguments <I>com</I>, <I>mass</I>,
+<I>moi</I>, <I>vcom</I>, <I>angmom</I>, each of which is followed by one or more
+values.  The 5 arguments can be specified in any order.
 </P>
 <P>The <I>mass</I> argument provides one value, the total mass of the rigid
 body.
@@ -94,104 +151,354 @@ body.
 coordinates of the rigid body.  For 2d systems, zcm must be zero.
 </P>
 <P>The <I>moi</I> argument provides six values which are the moments of
-inertia of the rigid body in its current configuration (read from a
-surface data file via the <A HREF = "read_surf.html">read_surf</A> command).  These
-are the matrix elements of a 3x3 symmetric interia tensor in the space
-frame of the rigid body (not the body frame).  For 2d systems, the ixz
-and iyz components must be zero.
+inertia of the rigid body in its current configuration (as read from
+a surface data file via the <A HREF = "read_surf.html">read_surf</A> command).
+These are the matrix elements of the 3x3 symmetric inertia tensor of
+the body in the space frame (not the body frame):
+</P>
+<PRE>Ixx = Sum_i m_i (y_i^2 + z_i^2)
+Iyy = Sum_i m_i (x_i^2 + z_i^2)
+Izz = Sum_i m_i (x_i^2 + y_i^2)
+Ixy = - Sum_i m_i x_i y_i
+Ixz = - Sum_i m_i x_i z_i
+Iyz = - Sum_i m_i y_i z_i 
+</PRE>
+<P>where the sum is over the mass distribution of the body and
+(x_i,y_i,z_i) are coordinates relative to its COM.  For simple shapes
+the values can be taken from analytic formulas, e.g. a uniform disk
+of mass M and radius R in the xy plane has Izz = 1/2 M R^2 and Ixx =
+Iyy = 1/4 M R^2, a uniform cube of edge length A has Ixx = Iyy = Izz
+= 1/6 M A^2 (in any orientation), with all off-diagonal components
+zero.  For 2d systems, the ixz and iyz components must be zero.
 </P>
 <P>The <I>vcom</I> argument provides 3 values for the COM velocity of the
 rigid body.  For 2d systems, vzcm must be zero.
 </P>
-<P>The <I>angmom</I> argument provides 3 values for the angular moment of the
-rigid body.  For 2d systems, lx and ly must be zero.
+<P>The <I>angmom</I> argument provides 3 values for the angular momentum of
+the rigid body in the space frame.  For 2d systems, lx and ly must be
+zero.
 </P>
 <P>The <I>infile</I> style allows the same 5 parameters to be read from a
 specified <I>filename</I>.  The format of the file is as follows.  It can
 contain initial blank lines or comment lines starting with "#" which
 are ignored.  The first non-blank, non-comment line should list the
-following 16 parameters in the order listed.
+following 16 parameters in the order listed:
 </P>
 <PRE>mtotal xcm ycm zcm ixx iyy izz ixy ixz iyz vxcm vycm vzcm lx ly lz 
 </PRE>
-<P>Note that these are the same 5 paramters, each with their respective
-values, as those specified directly in the input script by the <I>mass</I>,
-<I>com</I>, <I>moi</I>, <I>vcom</I>, and <I>angmom</I> keywords.  The meaning of the
-parameters and values is the same for both choices of <I>dstyle</I>.
+<P>Note that these are the same 5 parameters, each with their respective
+values, as those specified directly in the input script by the
+<I>mass</I>, <I>com</I>, <I>moi</I>, <I>vcom</I>, and <I>angmom</I> keywords.  The meaning of
+the parameters and values is the same for both choices of <I>dstyle</I>.
+The <I>outfile</I> keyword described below writes a file in exactly this
+format, which enables a simulation with a rigid body to be continued
+in a subsequent run; see the discussion of restarting below.
 </P>
-<P>NOTE: still to add:
+<HR>
+
+<P>Internally, SPARTA converts some of these quantities to "body" frame
+parameters, which are independent of the orientation of the body as
+it rotates.  The inertia tensor is diagonalized to give 3 principal
+moments of inertia and the principal axes of the body.  In the body
+frame defined by the principal axes, the inertia tensor is diagonal
+(just 3 values) and constant in time.  The orientation of the body
+frame with respect to the space frame is stored as a quaternion and
+updated as the body rotates.  The displacement of each line or
+triangle corner point from the COM is stored in the body frame, and
+the space-frame positions of all the points are regenerated from the
+COM and quaternion each timestep, so that the body shape does not
+drift over time.
 </P>
-<P>Give the formulas for the 6 MOI components.
+<P>Each timestep, the following operations are performed.  At the start
+of the step, the equations of motion of the body are time integrated
+via a semi-implicit (symplectic) Euler scheme: the COM velocity and
+angular momentum are first updated by the force and torque
+accumulated during the previous step, then the COM position and
+quaternion are advanced by a full timestep using the updated
+velocities, with dq/dt = 1/2 w q for the quaternion.  This gives the
+position and orientation the body will have at the end of the
+timestep.
 </P>
-<P>SPARTA diagnolizes the inertia tensor to compute the 3 values and
-the prinicpal axes of the body in the body frame.
+<P>Before particles advect, each body surf is added to the collision
+lists of every grid cell it sweeps through during the step, using the
+union of its start-of-step and end-of-step positions.  This is called
+swept collision coverage: because a fast body advances into cells that
+did not contain it at the start of the step, a particle sitting in the
+body's path would otherwise never be tested against the surf and would
+be overtaken and deleted when the cell is later marked inside the body.
+By covering the swept cells, every particle in the path is instead
+tested against the moving surf and reflected off it.  A body moving
+through stationary gas therefore deletes no particles; it pushes them
+out of its way, imparting momentum to them.  (The swept coverage
+augments the collision lists only; grid cell flow volumes and
+INSIDE/OUTSIDE markings come from the <I>remap</I> keyword below and are
+unaffected.)
 </P>
-<P>Explain that the inertial tensor is diagonal (just 3 values) in the
-body frame.
+<P>Particle collisions with the moving surfs use the exact translating
+and rotating position of each line or triangle during the step: a
+particle can hit a surf which is moving toward or away from it,
+including a surf which sweeps over a slowly-moving or stationary
+particle.  Each collision is performed in the local rest frame of the
+moving wall: the wall velocity at the point of impact, vwall = vcom +
+omega x r, is subtracted from the particle velocity, the assigned
+surface collision model (<A HREF = "surf_collide.html">surf_collide</A>) is applied
+using the surface normal at the time of the hit, and the wall velocity
+is added back.  All surface collision models thus operate correctly on
+the moving body.
 </P>
-<P>Internally, SPARTA will convert
-some of them to "body" frame parameters, so that they are indpendent
-of the orientiation of the body as it rotates.
+<P>At the end of the step, the per-surf force/torque tallies of the
+associated compute are summed over the body surfs to become the force
+and torque used at the start of the next step (together with any
+push-off forces).  The body position and orientation are updated to
+their end-of-step values and the coordinates of all its lines or
+triangles are regenerated.  Note that this means the force and torque
+from particle collisions during one step affect the body motion
+starting on the following step.  During any one step the body moves
+with its current (already determined) velocities, which is what makes
+this simple explicit coupling scheme well-defined.  The one-step lag
+is accurate when the body mass is large compared to the momentum
+imparted by particles during a single step, which is the intended
+regime of this command (large particulates).
 </P>
-<P>Use of restart file for continued simulations with rigid bodies.
+<HR>
+
+<P>The <I>remap</I> keyword selects how the moving body surfs are re-assigned
+to grid cells as the body moves, which is also discussed in <A HREF = "Section_howto.html#howto_20">Section
+6.20</A>.  In both modes the body surfs
+participate in the standard cut and split cell machinery, so grid
+cell flow volumes and INSIDE/OUTSIDE cell markings are exact near the
+body; the two modes differ only in cost.
 </P>
-<P>Other topics to cover.
+<P>The <I>remap incremental</I> mode (the default) re-cuts only the grid
+cells near the body.  Each timestep a single pass collects the cells
+overlapping the region the bodies moved through, and a cell is re-cut
+only if the set of surfs overlapping it changed or if it is
+overlapped by a body surf which moved.  Cells the body interior moved
+over or away from are re-marked as INSIDE or OUTSIDE.  All of this
+work is local to each processor.  Whenever the change to a cell would
+be structural - the cell would become or stop being a split cell, or
+its surf count would exceed the <A HREF = "global.html">global surfmax</A> setting
+- the fix automatically falls back to the full grid re-map that
+<I>cutcell</I> performs on every step.  On a benchmark with 10,000 grid
+cells, <I>incremental</I> was about 5x faster than <I>cutcell</I>.
 </P>
-<P>What occurs at start of step: time integration.  Calc final position
-of tri and end of this step, so can be used for collision detection.
+<P>For <I>remap cutcell</I>, at the end of every timestep, after the body
+surfs move, all surfs are re-assigned to grid cells and cut/split
+cell info including flow volumes and INSIDE/OUTSIDE cell markings is
+re-computed, exactly as is done by the <A HREF = "fix_move_surf.html">fix
+move/surf</A> command.  This produces the same cut
+cells as <I>incremental</I> but performs a full grid re-map every
+timestep, which can be expensive for large grids; it is chiefly
+useful as a reference for validating <I>incremental</I>, and is the mode
+used automatically with distributed surfs (see Restrictions below).
+Any particles found inside the body after the re-map are deleted, but
+with swept collision coverage (see above) particles in the body's
+path are reflected rather than overtaken, so in practice no particles
+are deleted once a run is under way.
 </P>
-<P>Explain how collision detection works, what approximations are used.
-any.  One is that force/torque from collisions are applied on the next
-step.  I.e. in this step, the motion of the surf is proscribed,
-collisions do not affect it.
+<P>With multiple rigid bodies, the <I>incremental</I> re-cut is applied only
+if every body uses <I>incremental</I>; the last-defined body then re-cuts
+the cells affected by all of them in a single coordinated pass.  If
+any body uses <I>cutcell</I>, an exact full grid re-map is performed
+instead, which correctly handles all bodies.
 </P>
-<P>Explain semi-implit Euler alg used to time integrate rigid body
-motion.
+<P>Particles which are inside the body when a run starts are deleted at
+the start of the run.  The cumulative count of particles deleted
+because they were inside a body is output as the scalar value of this
+fix.  Because of swept collision coverage this count normally does not
+grow after the start of a run; growth during a run indicates a
+particle was overtaken by the body, which can happen only if the body
+moves so far in one step that it jumps entirely past a particle (see
+the motion-per-step warnings below).
 </P>
-<P>What occurs at end of step: summing of forces/torques to apply at
-start of next step.  Triangle vertices are updated.  Triangles are
-remapped to grid cells.  Push-off forces from too-close other tris.
+<HR>
+
+<P>The <I>rotate</I> keyword selects the scheme used to advance the body
+orientation quaternion each step.  The default <I>euler</I> update is a
+single explicit step of dq/dt = 1/2 w q, consistent in order with the
+overall explicit gas-body coupling.  The <I>richardson</I> option uses the
+Richardson iteration employed by LAMMPS rigid-body fixes: it
+re-evaluates the angular velocity at the half step from the angular
+momentum (constant over the step) and combines full- and half-step
+quaternion updates for a higher-order rotation, which can help for
+rapidly rotating bodies.  Both schemes conserve angular momentum
+exactly; they differ only in the orientation accuracy per step.
 </P>
-<P>Is there a custom per-surf vector created by this command ?
-To flag moving surfs ?
+<P>The <I>push</I> keyword enables push-off forces which repel the body from
+static (non-body) surface elements, and from other rigid bodies,
+before it touches them.  If any corner point of a body line or
+triangle comes within <I>cutoff</I> distance of a source surf element, a
+repulsive force is applied to the body at that point, directed along
+the outward normal of the source element.  When the source element
+belongs to another rigid body, the reaction force is applied
+equal-and-opposite to that body at the same contact point, so
+body-body contacts conserve linear and angular momentum exactly;
+reaction forces are applied even to bodies which do not use the
+<I>push</I> keyword themselves.  Static surf elements are binned once per
+run, so the per-step cost scales with the number of nearby elements,
+not the total number of static surfs.  With overlap delta =
+cutoff - d, where d is the distance from the point to the element,
+the force is
+</P>
+<PRE>F = k delta            for pushstyle linear (the default)
+F = k delta^(3/2)      for pushstyle hertz 
+</PRE>
+<P>The <I>linear</I> law is a simple spring with bounded stiffness; its
+maximum force is k*cutoff.  The <I>hertz</I> law is the Hertzian contact
+force for elastic contact of curved bodies, the standard model for
+particulate contact mechanics: both the force and its derivative
+vanish smoothly at the cutoff.  For either law the contact must be
+resolved by the timestep: stiffer k means shorter contacts, and an
+under-resolved contact does not conserve energy.  The force
+contributes both force and torque to the body.  Each (corner point,
+static element) pair within the cutoff contributes its own force, so
+k is a per-contact stiffness.
+</P>
+<P>The <I>pushdamp</I> keyword adds a dashpot term to each contact, forming
+the standard DEM spring-dashpot contact model:
+</P>
+<PRE>F = k delta^n + gamma d(delta)/dt 
+</PRE>
+<P>where d(delta)/dt is the normal approach rate of the body corner
+point relative to the source surface, including the motion of another
+rigid body when the source is one.  The dashpot removes energy during
+a collision, producing an inelastic bounce with a coefficient of
+restitution controlled by gamma; the total contact force is clamped
+at zero, so the dashpot never produces adhesion as a contact ends.
+With gamma = 0 (the default) contacts are elastic.
+The <I>pushbound</I> keyword additionally applies the same spring force
+from the (non-periodic) boundaries of the simulation box, to keep the
+body inside the box.  Push-off forces are computed for the
+end-of-step geometry and are included in the force and torque which
+move the body on the following step.  The total push-off force is
+included in the global vector output of this fix (see below).
+</P>
+<P>The <I>scale</I> keyword multiplies all the mass-dependent body values
+(mass, moi, angmom) by the specified factor, whether they were
+defined by the <I>body</I> keywords or read from an <I>infile</I>.  This is a
+convenience option for adjusting the inertia of a body, e.g. to
+verify that a heavier body responds more slowly to the same flow.
+</P>
+<P>The <I>outfile</I> keyword writes the current state of the rigid body
+(same 16 parameters as the <I>infile</I> format, with the moments of
+inertia given in the space frame for the current body orientation) to
+the specified file every Nevery timesteps.  The file is overwritten
+each time, so it always contains the most recent state.
+</P>
+<P>The <I>pseudo</I> keyword is a debugging option.  Instead of using
+force/torque from real particle collisions, each timestep Np
+fictitious particles of mass pmass moving in the +x direction are
+bounced off the object from random positions on the lower <I>frac</I>
+portion of its bounding box, and the resulting force/torque moves the
+body.  This can be used to exercise the rigid body time integration
+without creating any real particles.
+</P>
+<HR>
+
+<P><B>Restart continuation:</B>
+</P>
+<P>No information about this fix is written to <A HREF = "restart.html">binary restart
+files</A>.  To continue a simulation with a rigid body, use
+the <I>outfile</I> keyword to periodically write the body state to a file,
+and start the continuation run with the <I>infile</I> style pointing at
+that file.  The restart file itself stores the current (moved)
+coordinates of all surface elements, which this fix combines with the
+infile parameters to re-initialize the body-frame representation.
 </P>
 <HR>
 
 <P><B>Restart, output info:</B>
 </P>
-<P>No information about this fix is written to <A HREF = "restart.html">binary restart
-files</A>.  Could write out the rigid body params so
-that the simulation can be restarted.
-</P>
-<P>Or could write out of a new rigid "outfile" with each restart so it
-can be read as an "infile" on the restarted run.
-</P>
-<P>This fix computes a global vector which can be accessed by various
-output commands at any timestep.  The vector size is 12 quantities, as follow:
+<P>This fix computes a global scalar and a global vector, which can be
+accessed by various output commands at any timestep.  The scalar is
+the cumulative number of particles deleted because they ended up
+inside the moving body.  The vector has 22 values:
 </P>
 <UL><LI>1,2,3 = xyz coords of the center of mass (COM) (distance units)
 <LI>4,5,6 = xyz components of the COM velocity (velocity units)
 <LI>7,8,9 = xyz components of the force acting on the COM (force units)
-<LI>10,11,12 = xyz components of the torque acting on the COM (force-distance units) 
+<LI>10,11,12 = xyz components of the torque acting on the body (force-distance units)
+<LI>13,14,15 = xyz components of the angular velocity of the body (1/time units)
+<LI>16,17,18,19 = quaternion for the orientation of the body
+<LI>20,21,22 = xyz components of the push-off force acting on the COM (force units) 
 </UL>
-<P>NOTE: are these in the space frame for current orientation of the
-rigid body ?  What about output of the quat ?
+<P>All vector quantities are in the space frame for the current
+orientation of the rigid body.  The force and torque are those
+accumulated on the most recent timestep, which will be applied to the
+body at the start of the next timestep; they include the push-off
+forces, which are also reported separately in values 20-22.
 </P>
-<HR>
-
+<P>This fix performs several validity checks when it is defined and
+initialized: the body must be watertight (see above), its mass must
+be positive, its principal moments of inertia must be positive and
+(in 3d) satisfy the triangle inequality I1 + I2 >= I3, and the
+compute's surf group must include all body surfs.  During a run, a
+one-time warning is issued if the body rotates by more than 0.1
+radian in a single timestep (which degrades the accuracy of
+moving-surf collisions), if any body surf point moves farther than
+the smallest grid cell in a single timestep (which degrades the
+accuracy of surf-to-cell assignment for the cutcell remap modes), or
+if the body exits the simulation box entirely (after which it no
+longer interacts with any particles).
+</P>
 <P><B>Restrictions:</B>
 </P>
-<P>There can only be a single rigid body in the simulation.  Does SPARTA
-check for this ?
+<P>The <A HREF = "global.html">global rigid</A> command must be used to enable
+moving-surf collisions in the particle mover.  Each fix rigid command
+defines one rigid body; multiple bodies require multiple fixes with
+disjoint surf groups.
 </P>
-<P>Moving surfs can only be used with explicit, non-distributed surface
-elements.  See Howto section on this.
+<P>Rigid bodies can be used with explicit surface elements, both
+non-distributed and distributed (<A HREF = "global.html">global surfs</A>
+explicit/distributed); implicit surfs are not supported.  With
+distributed surfs each processor stores only a replicated copy of the
+(compact) body elements plus the static surfs it owns, so the total
+surf collection can be much larger than any one processor's memory.
+Both <I>remap</I> modes work with distributed surfs; the <I>pseudo</I> debug
+option requires non-distributed surfs.  Rigid bodies cannot be used with axisymmetric
+domains, or with the KOKKOS package's particle mover.  Body surf
+elements cannot be transparent and cannot have surface reactions
+assigned to them.
+</P>
+<P>Surfs cannot be removed, nor the body's surf group changed, after a
+fix rigid command is defined; surfs may be appended (they become
+static surfs).
+</P>
+<P>The body must be a closed (watertight) object.  The body must stay
+within the simulation box if the boundaries it would cross are
+periodic; body coordinates are not wrapped across periodic
+boundaries, so an error is generated in that case.  The body may exit
+the domain through non-periodic boundaries.  Particles are not
+prevented from being emitted inside the body region during a run
+(e.g. by <A HREF = "fix_emit_face.html">fix emit/face</A> with an emission region
+overlapping the body).
+</P>
+<P>This fix must be defined before any <A HREF = "fix_balance.html">fix balance</A> or
+<A HREF = "fix_adapt.html">fix adapt</A> command, so that it re-cuts the grid cells
+for the moved body before the grid is re-balanced or adapted.
+</P>
+<P>If this fix is deleted via the <A HREF = "unfix.html">unfix</A> command, the
+<A HREF = "global.html">global rigid</A> setting should also be set to NULL.  The
+body then remains as a static object at its current position which
+particles continue to collide with.
 </P>
 <P><B>Related commands:</B>
 </P>
-<P>List other commands which are used with rigid bodies, e.g. compute
-surf or custom surf
+<P><A HREF = "global.html">global rigid</A>, <A HREF = "compute_surf.html">compute surf</A>,
+<A HREF = "fix_move_surf.html">fix move/surf</A>, <A HREF = "read_surf.html">read_surf</A>
 </P>
-<P><B>Default:</B> none
+<P><B>Default:</B>
+</P>
+<P>The option defaults are remap = incremental, rotate = euler,
+pushbound = no, pushstyle = linear, pushdamp = 0.0, scale = 1.0,
+no push-off forces, no outfile, no pseudo particles.
+</P>
+<HR>
+
+<P>A regression test suite for rigid bodies, with analytic checks of
+ballistic motion, push-off bounces, gas+body momentum conservation,
+overrun robustness, remap-mode consistency, symmetric and asymmetric
+two-body collisions, and distributed-surf runs, is available in the
+tools/testing/rigid directory.
 </P>
 </HTML>

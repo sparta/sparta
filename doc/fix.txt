@@ -85,6 +85,7 @@ styles available in SPARTA:
 "halt"_fix_halt.html - stop the simulation early if a condition is met
 "move/surf"_fix_move_surf.html - move surfaces dynamically during a simulation
 "print"_fix_print.html - print text and variables during a simulation
+"rigid"_fix_rigid.html - treat a surface object as a mobile rigid body
 "surf/temp"_fix_surf_temp.html - compute per-surf temperatures dynamically
 "temp/global/rescale"_fix_temp_global_rescale.html - rescale particle temperatures
 "temp/rescale"_fix_temp_rescale.html - rescale particle temperatures within each grid cell
