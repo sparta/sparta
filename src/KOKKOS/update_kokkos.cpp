@@ -400,13 +400,6 @@ void UpdateKokkos::setup()
 }
 
 /* ----------------------------------------------------------------------
-   take the cell lookups used by the optimized move from the grid
-   both are rebuilt from scratch by GridKokkos::update_hash(), which fix
-     balance calls mid-run, so the copies held here have to be retaken
-     whenever the cell views are, not once at setup
-------------------------------------------------------------------------- */
-
-/* ----------------------------------------------------------------------
    rebuild the host rigidmap (Update::build_rigidmap) and mirror it on
      the device, one entry per local+ghost surf
    called whenever the surf arrays change (fix rigid setup and
@@ -460,6 +453,13 @@ void UpdateKokkos::rigid_upload()
   d_species = particle_kk->k_species.view_device();
   cellweightflag_kk = grid->cellweightflag;
 }
+
+/* ----------------------------------------------------------------------
+   take the cell lookups used by the optimized move from the grid
+   both are rebuilt from scratch by GridKokkos::update_hash(), which fix
+     balance calls mid-run, so the copies held here have to be retaken
+     whenever the cell views are, not once at setup
+------------------------------------------------------------------------- */
 
 void UpdateKokkos::grid_index_refresh()
 {

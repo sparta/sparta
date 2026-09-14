@@ -1868,6 +1868,91 @@ double distsq_point_tri(double *x, double *p1, double *p2, double *p3,
 }
 
 /* ----------------------------------------------------------------------
+   closest point CP on line segment (P1,P2) to point X
+   return squared distance from X to CP, as distsq_point_line() does
+------------------------------------------------------------------------- */
+
+double closest_point_line(double *x, double *p1, double *p2, double *cp)
+{
+  double a[3],b[3],c[3];
+  MathExtra::sub3(x,p1,a);
+  MathExtra::sub3(p2,p1,b);
+
+  double alpha = MathExtra::dot3(a,b)/MathExtra::lensq3(b);
+
+  if (alpha >= 1.0) {
+    cp[0] = p2[0]; cp[1] = p2[1]; cp[2] = p2[2];
+  } else if (alpha > 0.0) {
+    cp[0] = p1[0] + alpha*b[0];
+    cp[1] = p1[1] + alpha*b[1];
+    cp[2] = p1[2] + alpha*b[2];
+  } else {
+    cp[0] = p1[0]; cp[1] = p1[1]; cp[2] = p1[2];
+  }
+
+  MathExtra::sub3(x,cp,c);
+  return MathExtra::lensq3(c);
+}
+
+/* ----------------------------------------------------------------------
+   closest point CP on triangle (P1,P2,P3) with NORM to point X
+   return squared distance from X to CP, as distsq_point_tri() does
+------------------------------------------------------------------------- */
+
+double closest_point_tri(double *x, double *p1, double *p2, double *p3,
+                         double *norm, double *cp)
+{
+  double a[3],point[3],edge[3],pvec[3],xproduct[3],cpe[3];
+
+  // point = X projected onto the triangle plane
+
+  MathExtra::sub3(x,p1,a);
+  double alpha = MathExtra::dot3(a,norm);
+  point[0] = x[0] - alpha*norm[0];
+  point[1] = x[1] - alpha*norm[1];
+  point[2] = x[2] - alpha*norm[2];
+
+  // inside the triangle: the projection is the closest point
+
+  int inside = 1;
+
+  MathExtra::sub3(p2,p1,edge);
+  MathExtra::sub3(point,p1,pvec);
+  MathExtra::cross3(edge,pvec,xproduct);
+  if (MathExtra::dot3(xproduct,norm) < 0.0) inside = 0;
+
+  MathExtra::sub3(p3,p2,edge);
+  MathExtra::sub3(point,p2,pvec);
+  MathExtra::cross3(edge,pvec,xproduct);
+  if (MathExtra::dot3(xproduct,norm) < 0.0) inside = 0;
+
+  MathExtra::sub3(p1,p3,edge);
+  MathExtra::sub3(point,p3,pvec);
+  MathExtra::cross3(edge,pvec,xproduct);
+  if (MathExtra::dot3(xproduct,norm) < 0.0) inside = 0;
+
+  if (inside) {
+    cp[0] = point[0]; cp[1] = point[1]; cp[2] = point[2];
+    return alpha*alpha;
+  }
+
+  // outside: the closest point is on the closest edge
+
+  double rsq = closest_point_line(x,p1,p2,cp);
+  double rsq2 = closest_point_line(x,p2,p3,cpe);
+  if (rsq2 < rsq) {
+    rsq = rsq2;
+    cp[0] = cpe[0]; cp[1] = cpe[1]; cp[2] = cpe[2];
+  }
+  rsq2 = closest_point_line(x,p3,p1,cpe);
+  if (rsq2 < rsq) {
+    rsq = rsq2;
+    cp[0] = cpe[0]; cp[1] = cpe[1]; cp[2] = cpe[2];
+  }
+  return rsq;
+}
+
+/* ----------------------------------------------------------------------
    compute distance bewteen a line segmeht XY and 2d quad lo/hi
 ------------------------------------------------------------------------- */
 

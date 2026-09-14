@@ -30,6 +30,9 @@ remap         cutcell and incremental remap modes produce identical
               deterministic trajectories
 multiremap    two gas-driven bodies give identical trajectories in
               cutcell and incremental modes (multi-body incremental)
+transplane    body sweeping 1.4 cells per step over cells cut only by
+              a transparent plane: total flow volume per step identical
+              in both remap modes (engulfed and vacated uncut cells)
 staticdist    gas-driven body next to a 200-segment static circle:
               identical trajectories in both remap modes, no particles
               deleted; on several procs with --dist most static surfs
@@ -54,6 +57,9 @@ splitcell     body sweeping alongside a diagonal wall that creates
               are reflected (no deletions), both remap modes agree
 twobody       two bodies colliding head-on via push-off: symmetric,
               elastic within 2%
+splitbalance  split cells plus a fix balance every 3 steps: the particle
+              count must not change (a stale sort after the re-map let
+              the balance migrate cells with duplicated particles)
 pushpair      ASYMMETRIC body-body contact (heavy large body vs light
               small body, corner-vs-face): total pair momentum
               conserved to output precision, verifying that contact
@@ -63,10 +69,37 @@ badmoi        negative: 3d moi violating the triangle inequality
 notwatertight negative: open body group must be rejected
 zerothick     negative: a watertight body enclosing no area (2d) or
               volume (3d), e.g. a doubled line or tri, must be rejected
+inward        body surfs traversed the wrong way round (normals pointing
+              inward, a container) are rejected in 2d and 3d
+torqueonly    compute surf torque columns without force columns fed by
+              fix emit/surf (no incoming particle state) must not crash
+refix         a fix rigid re-defined between runs, then balance_grid
+              before the next run: the rigid map rebuild must not reach
+              the deleted fix (use-after-free visible under ASAN)
+facetbounce   a square rebounding from a 200-segment static circle via
+              push-off: kinetic energy in free flight after the contact
+              equals the launch energy to 1e-4 (contacts with a faceted
+              curved surface must be conservative)
+vacate        gas collisions (collide vss) with a fast body spanning whole
+              interior cells: the sliver of an interior cell the body
+              uncovers within a step holds particles at zero flow volume
+              until the end-of-step re-cut, and the collision step must
+              skip such a cell rather than abort; Np constant, no deletions
+balancetally  no rigid body: fix balance every step after the move; the
+              per-surf collision and reaction tallies summed over a static
+              wall must equal the step's Nscoll and Nsreact (KOKKOS: the
+              tallies must survive the grid change's index re-size)
+prenofix      negative: a fix rigid re-defined between runs, then
+              "run pre no" (setup skipped): the uninitialized fix must
+              refuse to run rather than advance a deleted body's state
 modifyafter   negative: with distributed surfs, surf_modify of the body
               surfs after the fix is defined must be rejected
 wallmotion    negative: a body surf_collide model with its own wall
               motion (diffuse translate) must be rejected
+customemit    a fix emit/surf spreading a custom per-surf attribute,
+              defined before fix rigid, over two runs: the per-surf
+              status flags fix rigid resets after a grid rebuild must
+              be reset collectively, else the second run hangs (dist)
 emitsurf      negative: a fix emit/surf emitting from the body surfs
               must be rejected
 renumber      negative: a remove_surf issued after the fix is defined
@@ -83,6 +116,8 @@ rotwall3d     see rotwall
 mixture       negative: a compute surf whose mixture omits a species
               must be rejected, since the body would feel only part of
               the gas
+badinfile     negative: an infile with a malformed number (1.0d-22)
+              must be rejected rather than read as 1.0
 axistuck      no rigid body: axisymmetric tube in which particles hit
               the same static line many times per step; the mover must
               not treat the repeated hits as a stuck particle
@@ -93,8 +128,9 @@ tallyorder    a fix ave/surf on a static wall defined after fix rigid
 The ballistic, force, bounce, twobody, and pushpair tests contain no
 particles, and the recoil test a single particle; they must produce
 identical results on any number of procs.
-The momentum and overrun tests are statistical and use loose
-tolerances.
+The momentum and overrun tests run through statistical gas, but their
+checks are exact: the lag-corrected momentum invariant holds to 1e-11
+and the overrun deletion count must be exactly zero.
 
 Usage:
 
@@ -108,8 +144,9 @@ SPARTA_KOKKOS_EXACT reproduces the non-KOKKOS results exactly.
 
 Passing --dist reruns the subset of tests whose decks support
 distributed surfs (global surfs explicit/distributed): all but the
-negative tests, recoil, and restart.  Run it on several procs as well
-as on one, since only then are static surfs stored as ghost surfs on
-some procs.
+negative tests, recoil, restart, and axistuck (no rigid body, a
+single grid cell).  Run it on several procs
+as well as on one, since only then are static surfs stored as ghost
+surfs on some procs.
 
 Exit code = number of failed tests.

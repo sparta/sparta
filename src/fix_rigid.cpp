@@ -15,6 +15,7 @@
 #include "mpi.h"
 #include "string.h"
 #include "stdlib.h"
+#include "ctype.h"
 #include <array>
 #include <map>
 #include <algorithm>
@@ -31,6 +32,7 @@
 #include "modify.h"
 #include "compute.h"
 #include "compute_surf.h"
+#include "compute_react_surf.h"
 #include "fix_emit_surf.h"
 #include "input.h"
 #include "geometry.h"
@@ -128,6 +130,7 @@ FixRigid::FixRigid(SPARTA *sparta, int narg, char **arg) :
   // parse body params
 
   dim = domain->dimension;
+  csurf = NULL;
   infile = NULL;
   slist = NULL;
   displace = NULL;
@@ -765,6 +768,12 @@ void FixRigid::setup()
 
 void FixRigid::start_of_step()
 {
+  // csurf is set by init(): a fix defined after the last init (e.g.
+  //   re-defined before a "run pre no") has no body state to advance
+
+  if (!csurf)
+    error->all(FLERR,"Fix rigid was not initialized before the run");
+
   // body inverse mass and inertia for collision recoil this step,
   //   from the start-of-step axes before they are advanced below
 
@@ -1204,7 +1213,8 @@ void FixRigid::end_of_step()
         if (comm->me == 0) {
           const char *why;
           if (fallback == FALLBACK_SPLIT)
-            why = "a split cell is in the re-cut region";
+            why = "a cell in the re-cut region is or would become "
+                  "a split cell";
           else if (fallback == FALLBACK_SURFMAX)
             why = "a cell would exceed global surfmax";
           else if (fallback == FALLBACK_UNKNOWN)
@@ -1275,15 +1285,44 @@ void FixRigid::write_outfile()
 
   fprintf(fp,"# mtotal xcm ycm zcm ixx iyy izz ixy ixz iyz "
           "vxcm vycm vzcm lx ly lz fx fy fz tx ty tz\n");
-  fprintf(fp,"%.15g %.15g %.15g %.15g %.15g %.15g %.15g %.15g %.15g %.15g "
-          "%.15g %.15g %.15g %.15g %.15g %.15g "
-          "%.15g %.15g %.15g %.15g %.15g %.15g\n",
+  // 17 significant digits, the fewest which read back as the same double
+
+  fprintf(fp,"%.17g %.17g %.17g %.17g %.17g %.17g %.17g %.17g %.17g %.17g "
+          "%.17g %.17g %.17g %.17g %.17g %.17g "
+          "%.17g %.17g %.17g %.17g %.17g %.17g\n",
           massbody,xcm[0],xcm[1],xcm[2],
           ispace[0],ispace[1],ispace[2],ispace[3],ispace[4],ispace[5],
           vcm[0],vcm[1],vcm[2],angmom[0],angmom[1],angmom[2],
           fcm[0],fcm[1],fcm[2],torque[0],torque[1],torque[2]);
 
   fclose(fp);
+}
+
+/* ----------------------------------------------------------------------
+   convert one word of the infile to a double
+   the word must be a complete floating point number: atof() would
+     silently truncate "1.0d-22" to 1.0 and run the body with that mass
+   proc 0 only, so error->one
+------------------------------------------------------------------------- */
+
+static double infile_numeric(Error *error, const char *word)
+{
+  if (!word || !word[0])
+    error->one(FLERR,"Unexpected end of line in fix rigid infile");
+
+  int n = strlen(word);
+  for (int i = 0; i < n; i++) {
+    if (isdigit((unsigned char) word[i])) continue;
+    if (word[i] == '-' || word[i] == '+' || word[i] == '.') continue;
+    if (word[i] == 'e' || word[i] == 'E') continue;
+    error->one(FLERR,"Invalid floating point number in fix rigid infile");
+  }
+
+  char *end;
+  double value = strtod(word,&end);
+  if (end == word || *end != '\0')
+    error->one(FLERR,"Invalid floating point number in fix rigid infile");
+  return value;
 }
 
 /* ----------------------------------------------------------------------
@@ -1303,7 +1342,8 @@ void FixRigid::read_infile(char *filename)
       error->one(FLERR,"Cannot open fix rigid infile");
     while (true) {
       char *eof = fgets(line,MAXLINE,fp);
-      if (eof == nullptr) error->one(FLERR,"Unexpected end of fix rigid infile");
+      if (eof == nullptr)
+        error->one(FLERR,"Unexpected end of fix rigid infile");
       start = &line[strspn(line," \t\n\v\f\r")];
       if (*start != '\0' && *start != '#') break;
     }
@@ -1321,28 +1361,22 @@ void FixRigid::read_infile(char *filename)
     // convert each word to a rigid body param
     // totalmass, xcm, moi, vcm, angmom
 
-    massbody = atof(strtok(line," \t\n\r\f"));
-    xcm[0] = atof(strtok(NULL," \t\n\r\f"));
-    xcm[1] = atof(strtok(NULL," \t\n\r\f"));
-    xcm[2] = atof(strtok(NULL," \t\n\r\f"));
-    moi[0] = atof(strtok(NULL," \t\n\r\f"));
-    moi[1] = atof(strtok(NULL," \t\n\r\f"));
-    moi[2] = atof(strtok(NULL," \t\n\r\f"));
-    moi[3] = atof(strtok(NULL," \t\n\r\f"));
-    moi[4] = atof(strtok(NULL," \t\n\r\f"));
-    moi[5] = atof(strtok(NULL," \t\n\r\f"));
-    vcm[0] = atof(strtok(NULL," \t\n\r\f"));
-    vcm[1] = atof(strtok(NULL," \t\n\r\f"));
-    vcm[2] = atof(strtok(NULL," \t\n\r\f"));
-    angmom[0] = atof(strtok(NULL," \t\n\r\f"));
-    angmom[1] = atof(strtok(NULL," \t\n\r\f"));
-    angmom[2] = atof(strtok(NULL," \t\n\r\f"));
+    const char *sep = " \t\n\r\f";
+    massbody = infile_numeric(error,strtok(line,sep));
+    for (int j = 0; j < 3; j++)
+      xcm[j] = infile_numeric(error,strtok(NULL,sep));
+    for (int j = 0; j < 6; j++)
+      moi[j] = infile_numeric(error,strtok(NULL,sep));
+    for (int j = 0; j < 3; j++)
+      vcm[j] = infile_numeric(error,strtok(NULL,sep));
+    for (int j = 0; j < 3; j++)
+      angmom[j] = infile_numeric(error,strtok(NULL,sep));
 
     if (forceinfile) {
       for (int j = 0; j < 3; j++)
-        fcm_infile[j] = atof(strtok(NULL," \t\n\r\f"));
+        fcm_infile[j] = infile_numeric(error,strtok(NULL,sep));
       for (int j = 0; j < 3; j++)
-        torque_infile[j] = atof(strtok(NULL," \t\n\r\f"));
+        torque_infile[j] = infile_numeric(error,strtok(NULL,sep));
     }
 
     fclose(fp);
@@ -1861,12 +1895,15 @@ void FixRigid::surfs_changed(int changed, int stage)
   // if any proc appended copies or re-indexed ghosts, the per-surf
   //   state of surface reaction and collision models must follow,
   //   as after a grid change (see Grid::notify_changed())
-  // stage = 0 when called during a run: flag the change as of this step
   // stage = 1 when called from Update::init_rigid() before the models
   //   init, stage = 2 from setup() after they init: flag the change as
   //   of the previous step, which is what SurfCollide::dynamic() tests
   //   in Update::setup() to re-spread its per-surf values over the new
   //   local+ghost surfs
+  // a change during a run, after a grid rebuild, is handled by
+  //   grid_changed() instead: Grid::notify_changed() itself notifies
+  //   the computes and reaction models after the fixes, so only the
+  //   flags are reset there (stage 0 here would flag it as of this step)
   // stage = 1: the reaction models have not init'd yet, so their
   //   notification is deferred to init() via Update::rigid_notify_sr
   // collective: every proc takes the same branch
@@ -2227,16 +2264,26 @@ void FixRigid::push_bins()
    contact forces between all corner pts of this body and one source
      element with corner pts p1,p2 (p3 for 3d) and outward normal norm
    for each body corner pt within pushcutoff of the element, apply a
-     repulsive force along the element outward normal, with overlap
-     delta = pushcutoff - dist:
+     repulsive force directed from the closest point of the element to
+     the corner pt (the element outward normal for a face-on contact),
+     with overlap delta = pushcutoff - dist:
      linear spring F = kpush * delta, or
      Hertzian contact F = kpush * delta^3/2 (smooth onset, standard
      model for elastic contact of spherical particulates)
-   if gammapush > 0, a dashpot term F -= gammapush * d(delta)/dt is
-     added (the DEM spring-dashpot pair), computed from the normal
-     approach rate of the corner pt relative to the source surface;
-     the total contact force is clamped at zero, so the dashpot never
-     produces adhesion as a contact ends
+   every element within the cutoff contributes, on either side of it:
+     each force is the gradient of its own spring potential in the
+     distance to the element, so the total is the gradient of the sum
+     and the contacts conserve energy exactly
+   a corner pt inside a wall thinner than 2*pushcutoff is repelled by
+     both faces at once; their potentials add to a barrier whose peak
+     is at the near surface, so the wall repels the body rather than
+     driving it through, and the body passes only if it arrives with
+     more energy than the barrier
+   if gammapush > 0, a dashpot term F += gammapush * d(delta)/dt is
+     added (the DEM spring-dashpot pair), i.e. minus gammapush times
+     the normal separation rate of the corner pt relative to the source
+     surface; the total contact force is clamped at zero, so the
+     dashpot never produces adhesion as a contact ends
    src = the rigid body the element belongs to, or NULL if static
    if src is set, the reaction force -F is applied to src at the same
      contact point, so body-body contacts conserve momentum exactly
@@ -2248,7 +2295,7 @@ void FixRigid::push_contact(double *p1, double *p2, double *p3,
   int i,j;
   double dsq,d,scale;
   double **pts;
-  double fone[3],rdelta[3],tq[3];
+  double fone[3],rdelta[3],tq[3],cp[3],fdir[3];
 
   int npoint = dim;     // 2 corner pts per line, 3 per tri
   double cutsq = pushcutoff*pushcutoff;
@@ -2276,15 +2323,31 @@ void FixRigid::push_contact(double *p1, double *p2, double *p3,
     pts = bodypt[i];
 
     for (j = 0; j < npoint; j++) {
+
       if (dim == 2)
-        dsq = Geometry::distsq_point_line(pts[j],p1,p2);
+        dsq = Geometry::closest_point_line(pts[j],p1,p2,cp);
       else
-        dsq = Geometry::distsq_point_tri(pts[j],p1,p2,p3,norm);
+        dsq = Geometry::closest_point_tri(pts[j],p1,p2,p3,norm,cp);
       if (dsq >= cutsq) continue;
 
       d = sqrt(dsq);
       if (pushstyle == LINEAR) scale = kpush * (pushcutoff-d);
       else scale = kpush * (pushcutoff-d) * sqrt(pushcutoff-d);
+
+      // force direction = from the closest point of the element to the
+      //   corner pt, the gradient of the spring potential in d: equals
+      //   the element normal when the closest feature is the interior,
+      //   and stays conservative when it is an edge or vertex, as it is
+      //   for most contacts with a faceted curved surface
+      // a corner pt on the element (d = 0) is pushed along the normal
+
+      if (d > 0.0) {
+        fdir[0] = (pts[j][0]-cp[0]) / d;
+        fdir[1] = (pts[j][1]-cp[1]) / d;
+        fdir[2] = (pts[j][2]-cp[2]) / d;
+      } else {
+        fdir[0] = norm[0]; fdir[1] = norm[1]; fdir[2] = norm[2];
+      }
 
       // dashpot: damp by the normal approach rate of the corner pt
       //   relative to the source surface,
@@ -2301,13 +2364,13 @@ void FixRigid::push_contact(double *p1, double *p2, double *p3,
           MathExtra::add3(src->vcm,vsrc,vsrc);
           MathExtra::sub3(vpt,vsrc,vpt);
         }
-        scale -= gammapush * MathExtra::dot3(vpt,norm);
+        scale -= gammapush * MathExtra::dot3(vpt,fdir);
         if (scale < 0.0) scale = 0.0;
       }
 
-      fone[0] = scale*norm[0];
-      fone[1] = scale*norm[1];
-      fone[2] = scale*norm[2];
+      fone[0] = scale*fdir[0];
+      fone[1] = scale*fdir[1];
+      fone[2] = scale*fdir[2];
 
       fpush[0] += fone[0];
       fpush[1] += fone[1];
@@ -2349,7 +2412,12 @@ void FixRigid::push_contact(double *p1, double *p2, double *p3,
      which the caller merges with one Allreduce
    NOTE: a corner pt shared by adjacent body elements contributes once
      per element, and a corner close to several source elements
-     interacts with each of them, so kpush is a per-contact stiffness
+     interacts with each of them, so kpush is a per-contact stiffness;
+     two bodies which both push engage the corner pts of each against
+     the elements of the other, about twice the contacts of one body
+     against a static surf of the same shape (each set is a distinct
+     geometric contact, and dropping either would make the force
+     depend on the order the fixes are defined in)
 ------------------------------------------------------------------------- */
 
 void FixRigid::push_off()
@@ -2534,21 +2602,24 @@ void FixRigid::push_off()
 void FixRigid::grid_rebuild()
 {
   // every surf compute tallying this step must first bring its tallies
-  //   to the host, keyed by surf ID: the KOKKOS variant of compute surf
-  //   indexes its device tallies by local surf index, which the rebuild
-  //   of the surf arrays below invalidates (distributed surfs), and
-  //   re-sizes its per-surf tally index when it re-allocates after the
-  //   rebuild, which discards device tallies not yet fetched
+  //   to the host, keyed by surf ID: the KOKKOS variants of compute surf
+  //   and compute react/surf index their device tallies by local surf
+  //   index, which the rebuild of the surf arrays below invalidates
+  //   (distributed surfs), and re-size their per-surf tally index when
+  //   they re-allocate after the rebuild, which discards device tallies
+  //   not yet fetched
   // must precede any change to the local+ghost surf arrays
   // no-op for a compute whose tallies were already fetched, and for the
-  //   non-KOKKOS compute
+  //   non-KOKKOS computes
 
   for (int m = 0; m < update->nsurf_tally; m++) {
     Compute *c = update->slist_active[m];
-    if (strcmp(c->style,"surf") != 0 && strcmp(c->style,"surf/kk") != 0)
-      continue;
     surfint *t2s;
-    ((ComputeSurf *) c)->tallyinfo(t2s);
+    if (strcmp(c->style,"surf") == 0 || strcmp(c->style,"surf/kk") == 0)
+      ((ComputeSurf *) c)->tallyinfo(t2s);
+    else if (strcmp(c->style,"react/surf") == 0 ||
+             strcmp(c->style,"react/surf/kk") == 0)
+      ((ComputeReactSurf *) c)->tallyinfo(t2s);
   }
 
   // sort particles, grid rebuild requires it
@@ -2789,9 +2860,11 @@ void FixRigid::swept_restore()
    called via Grid::notify_changed(), after the new owned cells and
      ghost cells (and for distributed surfs, the local/ghost surf
      arrays) are in place, and before per-surf computes re-size
-   any merged csurfs lists were discarded by the grid rebuild, and any
-     csurfs lists installed by incremental re-cutting were copied into
-     grid storage by Grid::compress() or discarded by Grid::clear_surf()
+   any merged csurfs lists were discarded by the grid rebuild; csurfs
+     lists installed by incremental re-cutting were copied into grid
+     storage by Grid::compress() or discarded by Grid::clear_surf(),
+     except on a proc which migrated no cells and so skipped compress(),
+     whose cells still reference them (handled below)
    next re-map re-cuts body surfs into the new grid cells
 ------------------------------------------------------------------------- */
 
@@ -2822,8 +2895,14 @@ void FixRigid::grid_changed()
     // a fix earlier in the notification may already have re-spread
     //   per-surf custom values over the pre-append layout: invalidate
     //   them again so they are re-spread over the final one
+    // collective: the flags below gate collective re-spreads (a custom
+    //   attribute in FixEmitSurf::init(), SurfCollide::dynamic()), so
+    //   every proc must reset them or none; whether copies were
+    //   appended differs by proc, so the decision is reduced first
 
-    if (changed) {
+    int changed_any;
+    MPI_Allreduce(&changed,&changed_any,1,MPI_INT,MPI_MAX,world);
+    if (changed_any) {
       surf->localghost_changed_step = update->ntimestep;
       for (int i = 0; i < surf->ncustom; i++) surf->estatus[i] = 0;
     }
@@ -2832,7 +2911,9 @@ void FixRigid::grid_changed()
 
 /* ----------------------------------------------------------------------
    for incremental remap: record cells interior to the body,
-     i.e. INSIDE cells with no surfs whose center is within the body
+     i.e. INSIDE cells cut by no surf whose center is within the body
+   a cell whose only surfs are transparent is not cut, and is typed
+     INSIDE/OUTSIDE like a surf-free cell
    called before the body surfs move to their end-of-step positions
 ------------------------------------------------------------------------- */
 
@@ -2861,7 +2942,7 @@ void FixRigid::record_oldinside()
     icell = cand[ic];
     if (icell >= nglocal) continue;
     if (cells[icell].nsplit != 1) continue;
-    if (cells[icell].nsurf) continue;
+    if (cell_cut(icell)) continue;
     if (cinfo[icell].type != CELLINSIDE) continue;
     if (!box_overlap(cells[icell].lo,cells[icell].hi,bbodylo,bbodyhi))
       continue;
@@ -2891,7 +2972,9 @@ void FixRigid::record_oldinside()
      count; only local surf indices are ever referenced, as required
      for distributed surfs
    cells interior to the body at its old or new position are re-typed
-     as INSIDE/OUTSIDE via parity tests, all other cells are untouched
+     as INSIDE/OUTSIDE via parity tests, all other cells are untouched;
+     a cell cut by no surf (surf-free, or overlapped only by transparent
+     surfs) is typed this way, as Grid::set_inout() types it
    ghost cell copies of re-cut cells become stale, which is acceptable:
      the ghost cell surf lists the mover consults are re-covered by the
      swept assignment every step, and cell volumes/types of ghost cells
@@ -2904,7 +2987,7 @@ void FixRigid::record_oldinside()
 
 int FixRigid::incremental_recut()
 {
-  int i,n,ncand,icell,nsplitone,xsub,moving,nontrans;
+  int i,n,ncand,icell,nsplitone,xsub,moving;
   double vol;
   double xsplit[3],ctr[3],rlo[3],rhi[3];
   double *vols;
@@ -2912,8 +2995,6 @@ int FixRigid::incremental_recut()
 
   Grid::ChildCell *cells = grid->cells;
   Grid::ChildInfo *cinfo = grid->cinfo;
-  Surf::Line *lines = surf->lines;
-  Surf::Tri *tris = surf->tris;
   int nglocal = grid->nlocal;
   int maxsurfpercell = grid->maxsurfpercell;
   int *rigidmap = update->rigidmap;
@@ -2922,12 +3003,15 @@ int FixRigid::incremental_recut()
   if (dim == 3) ncorner = 8;
 
   // gather all incremental bodies; every one must have a previous region
-  // R = rlo/rhi = union over all incremental bodies of the region each
+  // R = union over all incremental bodies of the region rlo/rhi each
   //   occupied before and after its move this step
+  // collect the owned cells overlapping R from the box->cell index,
+  //   one body region at a time, so bodies far apart do not sweep the
+  //   cells between them; the re-cut and re-type passes below iterate
+  //   only this list
 
-  rlo[0] = rlo[1] = rlo[2] = BIG;
-  rhi[0] = rhi[1] = rhi[2] = -BIG;
   int nincr = 0;
+  nrcand = 0;
 
   FixRigid **flist = update->fixrigidlist;
   int nb = update->nfixrigid;
@@ -2937,30 +3021,33 @@ int FixRigid::incremental_recut()
     if (f->remapmode != INCREMENTAL) continue;
     if (!f->pbodyflag) return FALLBACK_NOPREV;
     for (i = 0; i < 3; i++) {
-      rlo[i] = MIN(rlo[i],MIN(f->pbodylo[i],f->bbodylo[i]));
-      rhi[i] = MAX(rhi[i],MAX(f->pbodyhi[i],f->bbodyhi[i]));
+      rlo[i] = MIN(f->pbodylo[i],f->bbodylo[i]);
+      rhi[i] = MAX(f->pbodyhi[i],f->bbodyhi[i]);
     }
     nincr++;
+
+    int *cand;
+    int ncells = update->rigid_cell_box(rlo,rhi,&cand);
+
+    for (int ic = 0; ic < ncells; ic++) {
+      icell = cand[ic];
+      if (icell >= nglocal) continue;
+      if (cells[icell].nsplit <= 0) continue;
+      if (!box_overlap(cells[icell].lo,cells[icell].hi,rlo,rhi)) continue;
+      if (nrcand == maxrcand) {
+        maxrcand += DELTA_MODIFY;
+        memory->grow(rcand,maxrcand,"fix_rigid:rcand");
+      }
+      rcand[nrcand++] = icell;
+    }
   }
   if (!nincr) return FALLBACK_NOPREV;
 
-  // collect the owned cells overlapping R from the box->cell index;
-  //   the re-cut and re-type passes below iterate only this list
+  // a cell in the regions of several bodies is listed once
 
-  int *cand;
-  int ncells = update->rigid_cell_box(rlo,rhi,&cand);
-
-  nrcand = 0;
-  for (int ic = 0; ic < ncells; ic++) {
-    icell = cand[ic];
-    if (icell >= nglocal) continue;
-    if (cells[icell].nsplit <= 0) continue;
-    if (!box_overlap(cells[icell].lo,cells[icell].hi,rlo,rhi)) continue;
-    if (nrcand == maxrcand) {
-      maxrcand += DELTA_MODIFY;
-      memory->grow(rcand,maxrcand,"fix_rigid:rcand");
-    }
-    rcand[nrcand++] = icell;
+  if (nincr > 1) {
+    std::sort(rcand,rcand+nrcand);
+    nrcand = std::unique(rcand,rcand+nrcand) - rcand;
   }
 
   // pass 1: re-cut cells in R whose surf overlap changed
@@ -3064,17 +3151,7 @@ int FixRigid::incremental_recut()
       //   pipeline (Grid::surf2grid_split() skips non-OVERLAP cells):
       //   full flow volume, interior/exterior typing via parity test
 
-      nontrans = 0;
-      for (i = 0; i < n; i++) {
-        int trans = (dim == 2) ? lines[list[i]].transparent :
-          tris[list[i]].transparent;
-        if (!trans) {
-          nontrans = 1;
-          break;
-        }
-      }
-
-      if (!nontrans) {
+      if (!cell_cut(icell)) {
         if (dim == 3)
           vol = (chi[0]-clo[0]) * (chi[1]-clo[1]) * (chi[2]-clo[2]);
         else vol = (chi[0]-clo[0]) * (chi[1]-clo[1]);
@@ -3119,7 +3196,7 @@ int FixRigid::incremental_recut()
 
   // pass 2: cells a body interior moved away from become OUTSIDE
   // process every incremental body's recorded interior cells
-  // only cells which are now surf-free and inside no body,
+  // only cells which are now cut by no surf and inside no body,
   //   which leaves any static (non-body) INSIDE cells untouched
 
   for (int mb = 0; mb < nb; mb++) {
@@ -3128,7 +3205,7 @@ int FixRigid::incremental_recut()
 
     for (int m = 0; m < f->noldinside; m++) {
       icell = f->oldinside[m];
-      if (cells[icell].nsurf) continue;
+      if (cell_cut(icell)) continue;
 
       clo = cells[icell].lo;
       chi = cells[icell].hi;
@@ -3139,7 +3216,7 @@ int FixRigid::incremental_recut()
       if (inside_any_body(ctr)) continue;
 
       cinfo[icell].type = CELLOUTSIDE;
-    typechanged = 1;
+      typechanged = 1;
       if (dim == 3)
         cinfo[icell].volume = (chi[0]-clo[0]) * (chi[1]-clo[1]) *
           (chi[2]-clo[2]);
@@ -3149,7 +3226,7 @@ int FixRigid::incremental_recut()
     }
   }
 
-  // pass 3: surf-free cells a body interior moved over become INSIDE
+  // pass 3: uncut cells a body interior moved over become INSIDE
   // catches cells swept over entirely within one step, which never
   //   overlap a body surf at start- or end-of-step positions
   // R covers the swept corridor since it unions old and new positions
@@ -3158,7 +3235,7 @@ int FixRigid::incremental_recut()
   for (int ic = 0; ic < nrcand; ic++) {
     icell = rcand[ic];
     if (cells[icell].nsplit != 1) continue;
-    if (cells[icell].nsurf) continue;
+    if (cell_cut(icell)) continue;
     if (cinfo[icell].type == CELLINSIDE) continue;
 
     clo = cells[icell].lo;
@@ -3177,6 +3254,32 @@ int FixRigid::incremental_recut()
   }
 
   return FALLBACK_NONE;
+}
+
+/* ----------------------------------------------------------------------
+   return 1 if grid cell icell is cut by a surf, else 0
+   a cell overlapped only by transparent surfs is not cut:
+     Grid::surf2grid_split() leaves it uncut, and Grid::set_inout()
+     types it INSIDE/OUTSIDE by flood fill like a surf-free cell,
+     so the incremental re-cut must re-type it the same way
+------------------------------------------------------------------------- */
+
+int FixRigid::cell_cut(int icell)
+{
+  Grid::ChildCell *cells = grid->cells;
+  int n = cells[icell].nsurf;
+  surfint *list = cells[icell].csurfs;
+
+  if (dim == 2) {
+    Surf::Line *lines = surf->lines;
+    for (int i = 0; i < n; i++)
+      if (!lines[list[i]].transparent) return 1;
+  } else {
+    Surf::Tri *tris = surf->tris;
+    for (int i = 0; i < n; i++)
+      if (!tris[list[i]].transparent) return 1;
+  }
+  return 0;
 }
 
 /* ----------------------------------------------------------------------
@@ -3397,12 +3500,17 @@ bigint FixRigid::remove_inside_particles(int splitflag)
   // reassign particles in split cells to sub cell owner
   // requires sorted particles, done by grid_rebuild()
 
+  // the particles are relabeled to their sub cells but not re-listed
+  //   under them, so they are no longer sorted; a fix balance later in
+  //   this step would otherwise migrate cells with stale particle lists
+
   if (splitflag && grid->nsplitlocal) {
     Grid::ChildCell *cells = grid->cells;
     int nglocal = grid->nlocal;
     for (int icell = 0; icell < nglocal; icell++)
       if (cells[icell].nsplit > 1)
         grid->assign_split_cell_particles(icell);
+    particle->sorted = 0;
   }
 
   // bbox around body at its current position
@@ -3470,12 +3578,17 @@ void FixRigid::remove_inside_all(int splitflag)
   // reassign particles in split cells to sub cell owner
   // requires sorted particles, done by grid_rebuild()
 
+  // the particles are relabeled to their sub cells but not re-listed
+  //   under them, so they are no longer sorted; a fix balance later in
+  //   this step would otherwise migrate cells with stale particle lists
+
   if (splitflag && grid->nsplitlocal) {
     Grid::ChildCell *cells = grid->cells;
     int nglocal = grid->nlocal;
     for (int icell = 0; icell < nglocal; icell++)
       if (cells[icell].nsplit > 1)
         grid->assign_split_cell_particles(icell);
+    particle->sorted = 0;
   }
 
   // flag particles inside any body or in INSIDE cells for deletion
@@ -3715,8 +3828,7 @@ void FixRigid::check_watertight()
      signed volume via the divergence theorem over the tris,
      each computed relative to the centroid of the body points
      so that round-off is set by the body extent, not its position
-   only the magnitude is tested, since a watertight body with
-     inward normals (a container) is a valid object
+   the sign is tested too: the normals must point outward (see below)
    all procs store all surfs, so the check is identical on every proc
 ------------------------------------------------------------------------- */
 
@@ -3775,6 +3887,20 @@ void FixRigid::check_enclosed()
     else
       error->all(FLERR,"Fix rigid body encloses zero volume");
   }
+
+  // the normals must point outward, so the body is an object with the
+  //   gas outside it: the point-in-body parity test ignores the normal
+  //   direction, so a body traversed the other way round (a container,
+  //   with the gas inside) would have its interior and exterior swapped
+  //   relative to the cut-cell typing and lose every particle inside it
+  // sign of the enclosed measure: 2d lines with outward normals run
+  //   clockwise (the normal is to the left of p1 -> p2), 3d triangles
+  //   with outward normals run counter-clockwise seen from outside
+
+  int inward = 0;
+  if (dim == 2 && measure > 0.0) inward = 1;
+  if (dim == 3 && measure < 0.0) inward = 1;
+  if (inward) error->all(FLERR,"Fix rigid body surf normals point inward");
 }
 
 /* ----------------------------------------------------------------------

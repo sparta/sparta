@@ -2,7 +2,8 @@
 # no particles: deterministic on any number of procs
 # body launched at +50 m/s must rebound at ~-50 m/s (energy conserved)
 # and must never tunnel into the push-off cutoff region past the spring
-# run as: -var pstyle linear -var pk 1.0e-18   (or hertz / 4.0e-18)
+# run as: -var pstyle linear -var pk 1.0e-18 -var pdamp 0.0
+#         (or hertz / 4.0e-18)
 
 seed	    	    12345
 

@@ -2,8 +2,9 @@
 # 3d flow around a mobile rigid-body cube
 #
 # a cubic particulate, rotated off-axis to the flow, is embedded in a
-# free-stream flow: particle collisions push it downstream and
-# exert a torque which makes it tumble
+# free-stream flow: particle collisions push it downstream, and the
+# statistical scatter of the collision torque sets it slowly rotating
+# (a cube has no mean aerodynamic torque about its center of mass)
 #
 # Note:
 #  - The "comm/sort" option to the "global" command is used to match MPI runs.

@@ -32,4 +32,5 @@ fix		    2 rigid body2 csurf2 body mass 1.0e-22 com 5 8 0 &
                     angmom 0 0 1.0e-23 push 1.0e-18 0.5 pushbound yes
 stats		    ${nrun}
 stats_style         step f_1[1] f_1[4] f_1[15] f_2[1] f_2[4] f_2[15]
+stats_modify        format float %.17g
 run 		    ${nrun}

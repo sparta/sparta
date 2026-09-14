@@ -1,0 +1,34 @@
+# TEST: per-surf tallies survive a grid change made after the tallies
+# fix balance re-balances the grid every step, after the move and before
+# the output; the tallies of the step must still be complete:
+#   compute surf n summed over the wall  == Nscoll of the step
+#   compute react/surf summed over the wall == Nsreact of the step
+# (KOKKOS: the tally index is re-sized by the grid change; the tallies
+# must be brought to the host first, and the index walked as allocated)
+# distributed surfs, so the local/ghost surf arrays change too
+
+seed                12345
+variable            dist index 1
+if "${dist} == 1" then "global surfs explicit/distributed"
+dimension           2
+boundary            p p p
+create_box          0 10 0 10 -0.5 0.5
+create_grid         40 40 1
+global              nrho 1.0 fnum 0.001
+species             air.species N
+mixture             air N vstream 0 0 0 temp 273.0
+read_surf           data.circle200 group wall
+surf_collide        1 specular
+surf_modify         all collide 1
+surf_react          2 global 0.0 0.3
+surf_modify         wall react 2
+timestep            0.0001
+compute             cs surf wall all n
+compute             csum reduce sum c_cs[1]
+compute             rs react/surf wall 2
+compute             rsum reduce sum c_rs[1] c_rs[2]
+fix                 9 balance 1 1.0 random
+create_particles    air n 40000
+stats               1
+stats_style         step np nscoll c_csum nsreact c_rsum[2]
+run                 10

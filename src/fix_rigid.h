@@ -162,7 +162,8 @@ class FixRigid : public Fix {
   double ex_space[3],ey_space[3],ez_space[3];  // prinicpal axes of body
   double fcm[3];          // force on COM in space frame
   double torque[3];       // torque on body in space frame
-  double fpush[3];        // push-off force on COM from static surfs
+  double fpush[3];        // push-off force on COM: static surfs, other
+                          //   bodies' reactions, box boundaries
 
   int pushflag;           // 1 if push-off forces are enabled
   int pushboundflag;      // 1 to also push off non-periodic boundaries
@@ -282,6 +283,7 @@ class FixRigid : public Fix {
   void swept_assign_all();      // add all bodies' surfs to swept cells
   void swept_restore();         // undo swept_assign_all
   void body_bbox(int);          // bbox of body, current or swept over step
+  int cell_cut(int);            // 1 if cell is cut by a non-transparent surf
   int inside_body(double *);    // 1 if point is inside rigid body, else 0
   int inside_any_body(double *); // 1 if inside any rigid body
   bigint remove_inside_particles(int);  // per-body, used at setup

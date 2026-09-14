@@ -36,5 +36,6 @@ fix		    2 rigid body2 csurf2 body mass 1.0e-22 com 5 8 0 &
                     outfile tmp.rigid2.state ${nrun}
 stats		    ${nrun}
 stats_style         step f_1[1] f_1[4] f_1[15] f_2[1] f_2[4] f_2[15]
+stats_modify        format float %.17g
 run 		    ${nrun}
 write_restart       tmp.rigid.restart

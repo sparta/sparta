@@ -104,7 +104,10 @@ each direction by the body triangles which share it.  The body must
 also enclose a non-zero area (2d) or volume (3d): a zero-thickness
 body, such as a single line or triangle traversed once in each
 direction, passes the watertight test but has no interior for the
-cut-cell routines to mark, and is rejected.
+cut-cell routines to mark, and is rejected.  The surf normals must
+point outward, away from the enclosed interior: the body is an object
+surrounded by gas, not a container with gas inside it, and a body
+traversed the wrong way round is rejected.
 </P>
 <P>Each fix rigid command defines a single rigid body.  Multiple rigid
 bodies can be simulated by using multiple fix rigid commands, each
@@ -243,7 +246,12 @@ be overtaken and deleted when the cell is later marked inside the body.
 By covering the swept cells, every particle in the path is instead
 tested against the moving surf and reflected off it.  A body moving
 through stationary gas therefore deletes no particles; it pushes them
-out of its way, imparting momentum to them.  (The swept coverage
+out of its way, imparting momentum to them.  A grid cell interior to
+the body at the start of a step, part of which the body vacates during
+the step, keeps its zero flow volume until the end-of-step re-cut:
+gas-phase collisions are skipped in such a cell for that one step,
+since its particles are in the thin sliver the body uncovered (or
+inside the body, and about to be deleted).  (The swept coverage
 augments the collision lists only; grid cell flow volumes and
 INSIDE/OUTSIDE markings come from the <I>remap</I> keyword below and are
 unaffected.)
@@ -462,16 +470,37 @@ resolved by the timestep: stiffer k means shorter contacts, and an
 under-resolved contact does not conserve energy.  The force
 contributes both force and torque to the body.  Each (corner point,
 static element) pair within the cutoff contributes its own force, so
-k is a per-contact stiffness.  The force acts along the outward normal
-of the static element, also when the closest feature of the element to
-the corner point is one of its edges or vertices.
+k is a per-contact stiffness.  Two bodies which both use the {push}
+keyword engage the corner points of each against the elements of the
+other, so a body-body contact has about twice as many contacts, and
+twice the effective stiffness, as the same body meeting a static surf
+or a body without {push} (which only receives reaction forces).  The
+force acts along the direction from the closest point of the source
+element to the corner point, which is the outward normal of the
+element when the closest feature is its interior; when the closest
+feature is an edge or a vertex, as it is for most contacts with a
+faceted curved surface, this direction is what keeps each contact
+force the gradient of its spring potential, so that the contacts
+conserve energy.  Every element within the cutoff contributes, on
+either side of it, so the total contact force is the gradient of the
+sum of the per-element spring potentials: the only energy error of a
+contact resolved by the timestep is then the second-order error of
+the time integration itself, with no secular drift (measured 4.5e-5,
+1.5e-5, 3.8e-6 and 6.9e-7 of the body kinetic energy for a single 2d
+contact as the timestep is halved from 5e-5).  A corner point inside
+a wall thinner than twice the cutoff is repelled by both of its faces
+at once, whose potentials add to a barrier peaking at the near
+surface, so a thin wall repels a body rather than propelling it
+through.
 </P>
 <P>The push-off spring has a finite range, so it can only absorb a finite
 amount of kinetic energy: for a linear spring the work done in
 compressing N contacts through the full cutoff is N k cutoff^2 / 2.  A
 body which arrives with more kinetic energy than that is not stopped;
 it passes through the source surface and out the other side, with no
-error or warning.  When sizing k, check that
+warning from the push-off model itself; if it then overlaps a static
+surface, the grid cut of the cells holding both fails with an error.
+When sizing k, check that
 </P>
 <PRE>N k cutoff^2 / 2 >> 1/2 M v^2 
 </PRE>
@@ -652,7 +681,8 @@ moving-surf collision test assumes straight paths, so the hit time on
 a body is approximate to the same order as the field perturbation.
 </P>
 <P>The body must be a closed (watertight) object which encloses a
-non-zero area or volume.  The body must stay
+non-zero area or volume, with its surf normals pointing outward.  The
+body must stay
 within the simulation box if the boundaries it would cross are
 periodic; body coordinates are not wrapped across periodic
 boundaries, so an error is generated in that case.  The body may exit
@@ -661,9 +691,10 @@ prevented from being emitted inside the body region during a run
 (e.g. by <A HREF = "fix_emit_face.html">fix emit/face</A> with an emission region
 overlapping the body).
 </P>
-<P>This fix must be defined before any <A HREF = "fix_balance.html">fix balance</A> or
-<A HREF = "fix_adapt.html">fix adapt</A> command, so that it re-cuts the grid cells
-for the moved body before the grid is re-balanced or adapted.
+<P>This fix must be defined before any <A HREF = "fix_balance.html">fix balance</A>,
+<A HREF = "fix_adapt.html">fix adapt</A>, or <A HREF = "fix_move_surf.html">fix move/surf</A>
+command, so that it re-cuts the grid cells for the moved body before
+the grid is re-balanced, adapted, or re-mapped to moved static surfs.
 </P>
 <P>If this fix is deleted via the <A HREF = "unfix.html">unfix</A> command, the
 <A HREF = "global.html">global rigid</A> setting should also be set to <I>no</I>.  The

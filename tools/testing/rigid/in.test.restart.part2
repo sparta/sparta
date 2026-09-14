@@ -18,4 +18,5 @@ fix		    2 rigid body2 csurf2 infile tmp.rigid2.state &
                     push 1.0e-18 0.5 pushbound yes
 stats		    ${nrun}
 stats_style         step f_1[1] f_1[4] f_1[15] f_2[1] f_2[4] f_2[15]
+stats_modify        format float %.17g
 run 		    ${nrun}

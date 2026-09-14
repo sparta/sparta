@@ -70,6 +70,9 @@ namespace Geometry {
 
   double distsq_point_line(double *, double *, double *);
   double distsq_point_tri(double *, double *, double *, double *, double *);
+  double closest_point_line(double *, double *, double *, double *);
+  double closest_point_tri(double *, double *, double *, double *, double *,
+                           double *);
 
   double dist_line_quad(double *, double *, double *, double *);
   double dist_tri_hex(double *, double *, double *, double *,

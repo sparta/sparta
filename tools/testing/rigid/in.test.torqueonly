@@ -1,0 +1,25 @@
+# TEST: compute surf torque columns without force columns, fed by
+# fix emit/surf: emitted particles have no incoming state, and the
+# torque tally must treat that like the force tally does (device and
+# host); a crash here is the failure, the run only has to complete
+
+seed	    	    12345
+variable            dist index 0
+if "${dist} == 1" then "global surfs explicit/distributed"
+dimension   	    2
+boundary            o o p
+create_box  	    0 10 0 10 -0.5 0.5
+create_grid 	    10 10 1
+global		    nrho 1.0 fnum 0.001
+species		    air.species N
+mixture		    air N vstream 0 0 0 temp 273.0
+read_surf           data.square group body
+surf_collide	    1 diffuse 300.0 1.0
+surf_modify         all collide 1
+timestep 	    0.0001
+compute             c1 surf body all tx ty tz com 5 5 0
+fix                 3 ave/surf body 1 1 1 c_c1[*]
+fix                 2 emit/surf air body
+stats               1
+stats_style         step np
+run 		    5

@@ -1,0 +1,49 @@
+# TEST: fix emit/surf with a custom per-surf attribute, defined before
+# fix rigid, over two runs.  after each grid rebuild fix rigid resets
+# the per-surf status flags so the attribute is re-spread over the new
+# local surf arrays; the re-spread is collective, so the reset must be
+# made on every proc or on none.  with distributed surfs on 2 procs the
+# second run's init hung when only the procs which appended local
+# copies of the body surfs had reset the flags.
+
+seed	    	    12345
+variable            dist index 0
+if "${dist} == 1" then "global surfs explicit/distributed"
+
+dimension   	    2
+global              comm/sort yes
+boundary            o o p
+
+create_box  	    0 10 0 10 -0.5 0.5
+create_grid 	    20 20 1
+
+global		    nrho 1.0 fnum 0.001 surfmax 400
+
+species		    air.species N
+mixture		    air N vstream 0 0 0 temp 273.0
+
+read_surf           data.square group body
+read_surf           data.wall group wall
+
+variable            rc equal 1.0
+custom              surf create erho float 0 set erho v_rc all NULL
+
+surf_collide	    1 diffuse 300.0 1.0
+surf_modify         all collide 1
+
+timestep 	    0.0001
+
+fix                 e emit/surf air wall custom density s_erho
+
+compute             c1 surf body all fx fy fz tx ty tz com 5 5 0
+
+global              rigid yes
+
+fix		    1 rigid body c1 body mass 1.0e-22 com 5 5 0 &
+                    vcom 20 5 0 moi 1.7e-23 1.7e-23 3.4e-23 0 0 0 &
+                    angmom 0 0 0 remap cutcell
+
+stats		    25
+stats_style         step np f_1[1]
+run 		    25
+run 		    25

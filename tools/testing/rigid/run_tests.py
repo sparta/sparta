@@ -32,8 +32,16 @@ FNUM = 0.001
 def run_deck(exe_cmd, deck, extra=None):
     """Run one deck, return (returncode, stdout+stderr)."""
     cmd = exe_cmd + ["-in", deck] + (extra or [])
-    proc = subprocess.run(cmd, cwd=THISDIR, stdout=subprocess.PIPE,
-                          stderr=subprocess.STDOUT, text=True, timeout=600)
+    try:
+        proc = subprocess.run(cmd, cwd=THISDIR, stdout=subprocess.PIPE,
+                              stderr=subprocess.STDOUT, text=True,
+                              timeout=600)
+    except subprocess.TimeoutExpired as e:
+        # a hang (e.g. a collective entered by only some ranks) is a
+        # failure, not a reason to stall the suite
+        out = e.stdout.decode() if isinstance(e.stdout, bytes) else \
+            (e.stdout or "")
+        return -1, out + "\nTIMEOUT after 600 s\n"
     return proc.returncode, proc.stdout
 
 
@@ -240,6 +248,17 @@ def test_restitution(exe_cmd):
                 fails.append("%s elastic v0=%g: restitution %.6f, expected 1"
                              % (pstyle, v0, e))
 
+    # the wall is 0.2 thick, less than 2*cutoff, so a corner pt which
+    # crosses the near face is within range of the far face too; contact
+    # is one-sided, so the far face must not push the body on through
+    # (v0=90 is within the 4-contact capacity of the linear spring)
+    e = bounce("linear", "1.0e-18", "0.0", 90.0)
+    if e is None:
+        fails.append("linear elastic v0=90: no rebound, thin wall pushed "
+                     "the body through instead of repelling it")
+    elif not approx(e, 1.0, abs_=1e-3):
+        fails.append("linear elastic v0=90: restitution %.6f, expected 1" % e)
+
     # a linear spring-dashpot has a restitution independent of impact
     # speed; this is the property which distinguishes it from Hertzian
     lin = [bounce("linear", "1.0e-18", "3.0e-21", v0) for v0 in (10.0, 25.0)]
@@ -394,6 +413,11 @@ def test_staticdist(exe_cmd):
         if ndel != 0:
             fails.append("mode %s: %g particles deleted inside the body "
                          "during the run" % (mode, ndel))
+    # the gas must actually have moved the body (it drifts ~0.006 in x
+    # over the run), else the two modes agree trivially
+    if abs(results["cutcell"][-1]["f_1[1]"] - 6.0) < 0.001:
+        fails.append("body barely moved (xcm = %.6g), test is too weak"
+                     % results["cutcell"][-1]["f_1[1]"])
     return fails
 
 
@@ -445,13 +469,16 @@ def test_restart(exe_cmd):
         return ["one-shot final vx = %.6g, body did not rebound; test "
                 "geometry is broken" % ref["f_1[4]"]]
 
-    for split in (300, 700, 1100):
-        rc, _ = run_deck(exe_cmd, "in.test.restart.part1",
-                         extra=["-var", "nrun", str(split)])
+    # 480 falls inside body 1's contact with the wall (steps ~405-565),
+    # so its stored force and torque are nonzero at that split
+    for split in (300, 480, 700, 1100):
+        rc, out1 = run_deck(exe_cmd, "in.test.restart.part1",
+                            extra=["-var", "nrun", str(split)])
         if rc:
             fails.append("split %d: first half failed with exit code %d"
                          % (split, rc))
             continue
+        rows1 = parse_stats(out1)
         rc, out2 = run_deck(exe_cmd, "in.test.restart.part2",
                             extra=["-var", "nrun", str(total - split)])
         if rc:
@@ -459,15 +486,40 @@ def test_restart(exe_cmd):
                          % (split, rc))
             continue
         rows2 = parse_stats(out2)
-        if not rows2:
-            fails.append("split %d: continuation produced no stats output"
+        if not rows1 or not rows2:
+            fails.append("split %d: a half produced no stats output"
                          % split)
             continue
+        keys = (("f_1[1]", "xcm"), ("f_1[4]", "vx"), ("f_1[15]", "omega"),
+                ("f_2[1]", "xcm2"), ("f_2[4]", "vx2"), ("f_2[15]", "omega2"))
+
+        # the state read back from the outfile at the start of the
+        # continuation must equal the state at the end of the first half
+        # exactly: the outfile stores 17 digits, which round-trip a double
+        # (15 digits, the previous format, lost the last few ulp)
+
+        first = rows2[0]
+        end1 = rows1[-1]
+        for key, name in keys:
+            if name.startswith("omega"):
+                # omega is not stored: it is re-derived from the angular
+                # momentum through the inertia eigensolver, to round-off
+                if not approx(first[key], end1[key], rel=1e-12, abs_=1e-300):
+                    fails.append("split %d: %s re-derived from the outfile "
+                                 "as %.17g, was %.17g"
+                                 % (split, name, first[key], end1[key]))
+            elif first[key] != end1[key]:
+                fails.append("split %d: %s read back from the outfile as "
+                             "%.17g, written from %.17g"
+                             % (split, name, first[key], end1[key]))
+
+        # the rest of the continuation re-derives the body-frame geometry
+        # from the restarted surfs, so it tracks the one-shot run to
+        # round-off rather than exactly
+
         last = rows2[-1]
-        for key, name in (("f_1[1]", "xcm"), ("f_1[4]", "vx"),
-                          ("f_1[15]", "omega"), ("f_2[1]", "xcm2"),
-                          ("f_2[4]", "vx2"), ("f_2[15]", "omega2")):
-            if not approx(last[key], ref[key], rel=1e-7, abs_=1e-12):
+        for key, name in keys:
+            if not approx(last[key], ref[key], rel=1e-12, abs_=1e-300):
                 fails.append("split %d: %s = %.12g differs from one-shot "
                              "%.12g" % (split, name, last[key], ref[key]))
 
@@ -537,6 +589,63 @@ def test_splitcell(exe_cmd):
         if results[mode][-1]["Nscoll"] == 0:
             fails.append("mode %s: no surface collisions, test geometry "
                          "is broken" % mode)
+    return fails
+
+
+def test_splitbalance(exe_cmd):
+    # split cells plus a fix balance in the same run: after a full re-map
+    # fix rigid reassigns split-cell particles to sub cells, which leaves
+    # them unsorted, and the balance later in the step must re-sort
+    # before migrating cells.  the box is periodic with no emission and
+    # no deletion, so the particle count must stay at its initial value;
+    # with stale lists a random balance quadrupled it on 4 ranks
+    fails = []
+    for mode in ("cutcell", "incremental"):
+        rc, out = run_deck(exe_cmd, "in.test.splitbalance",
+                           extra=["-var", "mode", mode])
+        if rc:
+            fails.append("mode %s: run failed with exit code %d" % (mode, rc))
+            continue
+        rows = parse_stats(out)
+        if not rows:
+            fails.append("mode %s: no stats output" % mode)
+            continue
+        np0 = rows[0]["Np"]
+        for row in rows[1:]:
+            if row["Np"] != np0:
+                fails.append("mode %s: step %d has %d particles, started "
+                             "with %d" % (mode, row["Step"], row["Np"], np0))
+                break
+        if rows[-1]["f_1"] != 0:
+            fails.append("mode %s: %g particles deleted inside the body"
+                         % (mode, rows[-1]["f_1"]))
+    return fails
+
+
+def test_transplane(exe_cmd):
+    # a fast body sweeps over and then vacates cells cut only by a
+    # transparent plane; the total flow volume per step must agree
+    # between the incremental and cutcell remap modes
+    vols = {}
+    fails = []
+    for mode in ("cutcell", "incremental"):
+        rc, out = run_deck(exe_cmd, "in.test.transplane",
+                           extra=["-var", "mode", mode])
+        if rc:
+            fails.append("mode %s: run failed with exit code %d" % (mode, rc))
+            continue
+        rows = parse_stats(out)
+        if len(rows) < 15:
+            fails.append("mode %s: expected 15 stats rows, got %d"
+                         % (mode, len(rows)))
+            continue
+        vols[mode] = [r["c_tvol"] for r in rows]
+    if fails:
+        return fails
+    for i, (vi, vc) in enumerate(zip(vols["incremental"], vols["cutcell"])):
+        if not approx(vi, vc, rel=1e-12):
+            fails.append("step %d: incremental flow volume %.17g differs "
+                         "from cutcell %.17g" % (i, vi, vc))
     return fails
 
 
@@ -740,6 +849,124 @@ def test_notwatertight(exe_cmd):
     return negative_test(exe_cmd, "in.test.notwatertight", "not watertight")
 
 
+def test_facetbounce(exe_cmd):
+    # a square rebounding from a 200-segment static circle: kinetic
+    # energy in free flight after the contact must equal the launch
+    # energy (contacts with a faceted surface must be conservative)
+    rc, out = run_deck(exe_cmd, "in.test.facetbounce")
+    if rc:
+        return ["run failed with exit code %d" % rc]
+    rows = parse_stats(out)
+    if len(rows) < 21:
+        return ["expected 21 stats rows, got %d" % len(rows)]
+    free = [r for r in rows if r["f_1[20]"] == 0.0 and r["f_1[21]"] == 0.0]
+    if len(free) == len(rows):
+        return ["the body never touched the circle, test geometry is broken"]
+    if rows[-1]["f_1[4]"] >= 0.0:
+        return ["body did not rebound (vx = %.6g)" % rows[-1]["f_1[4]"]]
+    e0 = rows[0]["v_ke"]
+    e1 = free[-1]["v_ke"]
+    if not approx(e1, e0, rel=1e-4):
+        return ["kinetic energy after the rebound %.10g vs %.10g before "
+                "(%.3g%%)" % (e1, e0, 100.0 * (e1 / e0 - 1.0))]
+    return []
+
+
+def test_vacate(exe_cmd):
+    # gas collisions with a fast body spanning whole interior cells: the
+    # cells the body partly vacates within a step hold particles at zero
+    # flow volume until the re-cut; the run must complete with the
+    # particle count constant and nothing deleted after step 0
+    rc, out = run_deck(exe_cmd, "in.test.vacate")
+    if rc:
+        return ["run failed with exit code %d" % rc]
+    rows = parse_stats(out)
+    if len(rows) < 11:
+        return ["expected 11 stats rows, got %d" % len(rows)]
+    fails = []
+    np0 = rows[0]["Np"]
+    for r in rows[1:]:
+        if r["Np"] != np0:
+            fails.append("step %d: Np %g != %g" % (r["Step"], r["Np"], np0))
+            break
+    if rows[-1]["f_1"] != rows[0]["f_1"]:
+        fails.append("%g particles deleted during the run"
+                     % (rows[-1]["f_1"] - rows[0]["f_1"]))
+    if rows[-1]["f_1[1]"] < 5.5:
+        fails.append("body barely moved (xcm = %.6g), test is too weak"
+                     % rows[-1]["f_1[1]"])
+    return fails
+
+
+def test_balancetally(exe_cmd):
+    # fix balance every step: the per-surf collision and reaction tallies
+    # summed over the wall must equal the step's Nscoll and Nsreact
+    rc, out = run_deck(exe_cmd, "in.test.balancetally")
+    if rc:
+        return ["run failed with exit code %d" % rc]
+    rows = parse_stats(out)
+    if len(rows) < 11:
+        return ["expected 11 stats rows, got %d" % len(rows)]
+    fails = []
+    for r in rows[1:]:
+        if r["c_csum"] != r["Nscoll"]:
+            fails.append("step %d: surf tally sum %g != Nscoll %g"
+                         % (r["Step"], r["c_csum"], r["Nscoll"]))
+        if r["c_rsum[2]"] != r["Nsreact"]:
+            fails.append("step %d: react/surf tally sum %g != Nsreact %g"
+                         % (r["Step"], r["c_rsum[2]"], r["Nsreact"]))
+    if sum(r["Nscoll"] for r in rows) == 0:
+        fails.append("no surface collisions, test geometry is broken")
+    return fails
+
+
+def test_prenofix(exe_cmd):
+    return negative_test(exe_cmd, "in.test.prenofix",
+                         "not initialized before the run")
+
+
+def test_refix(exe_cmd):
+    # a fix rigid re-defined between runs, then balance_grid before the
+    # next run: the rigid map rebuild must not reach the deleted fix;
+    # the second run continues the ballistic body from where the
+    # re-definition placed it (xcm 5.08 + 20*0.0001*20)
+    rc, out = run_deck(exe_cmd, "in.test.refix")
+    if rc:
+        return ["run failed with exit code %d" % rc]
+    rows = parse_stats(out)
+    if not rows or rows[-1]["Step"] != 60:
+        return ["run did not reach step 60"]
+    x = rows[-1]["f_1[1]"]
+    if not approx(x, 5.08 + 20.0 * 1.0e-4 * 20, rel=1e-12):
+        return ["xcm after the second run %.17g, expected %.17g"
+                % (x, 5.08 + 20.0 * 1.0e-4 * 20)]
+    return []
+
+
+def test_torqueonly(exe_cmd):
+    # compute surf tx ty tz (no fx fy fz) with fix emit/surf: the emitted
+    # particle has no incoming state, which the torque tally must
+    # tolerate on the host and on the device
+    rc, out = run_deck(exe_cmd, "in.test.torqueonly")
+    if rc:
+        return ["run failed with exit code %d" % rc]
+    rows = parse_stats(out)
+    if len(rows) < 6:
+        return ["expected 6 stats rows, got %d" % len(rows)]
+    if rows[-1]["Np"] <= 0:
+        return ["no particles were emitted"]
+    return []
+
+
+def test_inward(exe_cmd):
+    # a body traversed the wrong way round (normals pointing into its
+    # interior, a container) is rejected in 2d and 3d
+    fails = negative_test(exe_cmd, "in.test.inward", "normals point inward")
+    fails += negative_test(exe_cmd, "in.test.inward3d",
+                           "normals point inward")
+    return fails
+
+
 def test_modifyafter(exe_cmd):
     return negative_test(exe_cmd, "in.test.modifyafter",
                          "attributes were changed")
@@ -749,10 +976,13 @@ def test_wallmotion(exe_cmd):
     return negative_test(exe_cmd, "in.test.wallmotion", "own wall motion")
 
 
-def timestep_independence(exe_cmd, deck, keys, coarse, fine, tol=1.0e-9):
+def timestep_independence(exe_cmd, deck, keys, coarse, fine, tol=1.0e-9,
+                          hitkey="c_rvx"):
     """run the same physical problem at two timesteps and require the same
     answer: the deck is built so that the only timestep-dependent piece is
-    the moving-surf collision test"""
+    the moving-surf collision test; the particle is launched in +x and
+    must have been turned around by the body (hitkey < 0), else the
+    moving-surf test was never exercised"""
     fails = []
     last = {}
     for label, (dt, nsteps) in (("coarse", coarse), ("fine", fine)):
@@ -767,6 +997,10 @@ def timestep_independence(exe_cmd, deck, keys, coarse, fine, tol=1.0e-9):
             continue
         if rows[-1]["Np"] != 1:
             fails.append("%s: the particle was lost" % label)
+            continue
+        if rows[-1][hitkey] >= 0.0:
+            fails.append("%s: %s = %.6g, the particle never hit the body"
+                         % (label, hitkey, rows[-1][hitkey]))
             continue
         last[label] = rows[-1]
     if fails:
@@ -796,6 +1030,21 @@ def test_rotwall3d(exe_cmd):
         exe_cmd, "in.test.rotwall3d",
         ("c_rx", "c_ry", "c_rz", "c_rvx", "c_rvy", "c_rvz"),
         ("1.0e-3", "5"), ("2.0e-5", "250"))
+
+
+def test_customemit(exe_cmd):
+    # a fix emit/surf which spreads a custom per-surf attribute, defined
+    # before fix rigid, across two runs with distributed surfs: the
+    # per-surf status flags fix rigid resets after a grid rebuild gate a
+    # collective re-spread in the emit fix's init, so they must be reset
+    # on every rank or none, else the second run's init hangs
+    rc, out = run_deck(exe_cmd, "in.test.customemit")
+    if rc:
+        return ["run failed with exit code %d" % rc]
+    rows = parse_stats(out)
+    if len(rows) < 2:
+        return ["fewer than two stats rows, the second run did not start"]
+    return []
 
 
 def test_emitsurf(exe_cmd):
@@ -861,6 +1110,11 @@ def test_tallyorder(exe_cmd):
     return fails
 
 
+def test_badinfile(exe_cmd):
+    return negative_test(exe_cmd, "in.test.badinfile",
+                         "Invalid floating point number")
+
+
 def test_mixture(exe_cmd):
     return negative_test(exe_cmd, "in.test.mixture",
                          "mixture must contain all species")
@@ -884,6 +1138,8 @@ TESTS = [
     ("overrun", test_overrun),
     ("remap", test_remap),
     ("multiremap", test_multiremap),
+    ("transplane", test_transplane),
+    ("splitbalance", test_splitbalance),
     ("staticdist", test_staticdist),
     ("staticdist3d", test_staticdist3d),
     ("splitcell", test_splitcell),
@@ -895,11 +1151,20 @@ TESTS = [
     ("badmoi", test_badmoi),
     ("notwatertight", test_notwatertight),
     ("zerothick", test_zerothick),
+    ("inward", test_inward),
+    ("torqueonly", test_torqueonly),
+    ("refix", test_refix),
+    ("prenofix", test_prenofix),
+    ("balancetally", test_balancetally),
+    ("vacate", test_vacate),
+    ("facetbounce", test_facetbounce),
     ("modifyafter", test_modifyafter),
     ("wallmotion", test_wallmotion),
+    ("customemit", test_customemit),
     ("emitsurf", test_emitsurf),
     ("renumber", test_renumber),
     ("mixture", test_mixture),
+    ("badinfile", test_badinfile),
     ("rotwall", test_rotwall),
     ("rotwall3d", test_rotwall3d),
     ("axistuck", test_axistuck),
@@ -915,9 +1180,12 @@ TESTS = [
 DIST_TESTS = {"ballistic", "force", "rotation", "bounce", "restitution",
               "momentum",
               "overrun",
-              "remap", "multiremap", "staticdist", "staticdist3d",
+              "remap", "multiremap", "transplane", "staticdist",
+              "staticdist3d",
               "splitcell", "gridchange", "exitbox", "twobody", "pushpair",
-              "tallyorder", "rotwall", "rotwall3d"}
+              "tallyorder", "rotwall", "rotwall3d", "customemit",
+              "splitbalance", "torqueonly", "balancetally",
+              "vacate", "facetbounce"}
 
 
 def main():

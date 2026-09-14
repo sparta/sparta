@@ -62,6 +62,7 @@ class Update : protected Pointers {
                               //   the mover tests surfs of ghost cells too
 
   virtual void build_rigidmap();  // rebuild rigidmap from current surfs
+  void refresh_fixrigidlist();    // rebuild the fix list from Modify
   void init_rigid();          // per-run setup of the rigid body list
 
   // bin index over local+ghost child cells, for box -> candidate-cell

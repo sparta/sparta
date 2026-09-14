@@ -171,6 +171,7 @@ class UpdateKokkos : public Update {
   int rigid_on;
   DAT::tdual_int_1d k_rigidmap;
   DAT::t_int_1d d_rigidmap;
+
   // always double: holds absolute COM coordinates compared against
   //   double-precision surf points, whatever SPA_PRECISION is
 
