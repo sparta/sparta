@@ -1,8 +1,16 @@
 ################################################################################
-# 2d flow around a mobile rigid-body circle
+# 2d mobile rigid-body circle vs an opposing free-molecular beam
 #
-# a circular particulate is embedded in a free-stream flow
-# particle collisions push it downstream and it responds as a rigid body
+# a circular particulate is launched to the right into a cold gas beam
+# streaming to the left.  momentum transfer from the colliding particles
+# decelerates the body, reverses it, and carries it back downstream.
+#
+# this is the deck used to render the single-circle rigid-body movie.
+# run it as-is for the example; add "-var movie 1" to also dump the
+# image frames the movie is encoded from (179 frames):
+#   spa_serial -in in.rigid.circle -var movie 1
+#   ffmpeg -framerate 20 -pattern_type glob -i 'image.*.ppm' \
+#          -vf scale=512:512 -c:v libx264 -pix_fmt yuv420p -b:v 2500k out.mp4
 #
 # Note:
 #  - The "comm/sort" option to the "global" command is used to match MPI runs.
@@ -20,41 +28,43 @@ create_box  	    0 10 0 10 -0.5 0.5
 create_grid 	    20 20 1
 balance_grid        rcb cell
 
-global		    nrho 1.0 fnum 0.001
+global		    nrho 0.5 fnum 0.001
 
 species		    air.species N O
-mixture		    air N O vstream 100.0 0 0
+mixture		    air N O vstream -100.0 0 0 temp 1.0
 
-# circle of radius 1 centered at (5,5), treated as a mobile rigid body
+# circle of radius 1 centered at (2.5,5), initially moving in +x
 
 read_surf           data.circle group circle origin 5 5 0 &
-                    scale 0.3333333333 0.3333333333 1
+                    scale 0.3333333333 0.3333333333 1 trans -2.5 0 0
 
 surf_collide	    1 diffuse 300.0 0.0
 surf_modify         all collide 1
 
-collide             vss air air.vss
+# free molecular flow: no gas-gas collisions
+# fill the box with the cold leftward beam, emit more at the right face
 
-fix		    in emit/face air xlo twopass
+create_particles    air n 0
+fix		    in emit/face air xhi twopass
 
 timestep 	    0.0001
 
 # per-surf force/torque tallies used to move the rigid body
 # moi of a uniform disk of radius R: izz = 1/2 M R^2, ixx = iyy = izz/2
 
-compute             csurf surf circle all fx fy fz tx ty tz com 5 5 0
+compute             csurf surf circle all fx fy fz tx ty tz com 2.5 5 0
 
 global              rigid yes
 
 fix		    1 rigid circle csurf body &
-                    mass 5.0e-22 com 5 5 0 vcom 0 0 0 &
-                    moi 1.25e-22 1.25e-22 2.5e-22 0 0 0 angmom 0 0 0
+                    mass 1.8e-24 com 2.5 5 0 vcom 60 0 0 &
+                    moi 4.5e-25 4.5e-25 9.0e-25 0 0 0 angmom 0 0 0
 
-#dump                2 image all 100 image.*.ppm type type pdiam 0.1 &
-#                    surf proc 0.01 size 512 512 zoom 1.75 &
-#                    gline yes 0.005
-#dump_modify	    2 pad 4
+variable            movie index 0
+if                  "${movie} == 1" then &
+                    "dump 2 image all 25 image.*.ppm type type pdiam 0.06 surf one 0.012 size 800 800 zoom 1.75" &
+                    "dump_modify 2 pad 5 scolor * gray"
 
-stats		    100
-stats_style	    step cpu np nscoll f_1[1] f_1[2] f_1[4] f_1[5] f_1[15]
-run 		    1500
+stats		    200
+stats_style	    step cpu np f_1[1] f_1[4] f_1[15]
+run 		    4450
