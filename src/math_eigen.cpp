@@ -1,14 +1,17 @@
 /* ----------------------------------------------------------------------
-   LAMMPS - Large-scale Atomic/Molecular Massively Parallel Simulator
-   https://www.lammps.org/, Sandia National Laboratories
-   LAMMPS development team: developers@lammps.org
+   SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
+   http://sparta.github.io
+   Steve Plimpton, sjplimp@gmail.com, Michael Gallis, magalli@sandia.gov
+   Sandia National Laboratories
 
-   Copyright (2003) Sandia Corporation.  Under the terms of Contract
+   Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
    certain rights in this software.  This software is distributed under
    the GNU General Public License.
 
-   See the README file in the top-level LAMMPS directory.
+   See the README file in the top-level SPARTA directory.
+
+   Adapted from the LAMMPS math_eigen files (https://www.lammps.org/)
 ------------------------------------------------------------------------- */
 
 /* ----------------------------------------------------------------------
@@ -18,14 +21,18 @@
 #include "math_eigen.h"
 #include "math_eigen_impl.h"
 
+#include <array>
 #include <utility>
+#include <vector>
 
+using std::array;
+using std::vector;
 using namespace MathEigen;
 
 // Special case: 3x3 matrices
 
-using Jacobi_v1 = Jacobi<double, double *, double (*)[3], double const (*)[3]>;
-using Jacobi_v2 = Jacobi<double, double *, double **, double const *const *>;
+typedef Jacobi<double, double *, double (*)[3], double const (*)[3]> Jacobi_v1;
+typedef Jacobi<double, double *, double **, double const *const *> Jacobi_v2;
 
 int MathEigen::jacobi3(double const mat[3][3], double *eval, double evec[3][3], int sort)
 {
@@ -48,9 +55,9 @@ int MathEigen::jacobi3(double const mat[3][3], double *eval, double evec[3][3], 
   else if (sort == 1)
     ierror = ecalc3.Diagonalize(mat, eval, evec, Jacobi_v1::SORT_INCREASING_EVALS);
 
-  if (ierror) return ierror;
-
   // transpose the evec matrix
+  // done even if the iteration did not converge, so that evec has the
+  //   documented layout for any caller which ignores the return value
 
   for (int i = 0; i < 3; i++)
     for (int j = i + 1; j < 3; j++) std::swap(evec[i][j], evec[j][i]);
@@ -79,9 +86,9 @@ int MathEigen::jacobi3(double const *const *mat, double *eval, double **evec, in
   else if (sort == 1)
     ierror = ecalc3.Diagonalize(mat, eval, evec, Jacobi_v2::SORT_INCREASING_EVALS);
 
-  if (ierror) return ierror;
-
   // transpose the evec matrix
+  // done even if the iteration did not converge, so that evec has the
+  //   documented layout for any caller which ignores the return value
 
   for (int i = 0; i < 3; i++)
     for (int j = i + 1; j < 3; j++) std::swap(evec[i][j], evec[j][i]);

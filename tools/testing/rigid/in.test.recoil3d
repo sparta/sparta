@@ -1,0 +1,50 @@
+# TEST: finite-mass recoil of the body in a single specular collision, 3d
+# one particle hits the -x face of a unit cube at rest off-center, at
+# r = (-0.5, 0.3, 0.2) from the COM, which translates and spins the body
+# see in.test.recoil for the analytic two-body result
+
+seed	    	    12345
+
+dimension   	    3
+boundary            o o o
+
+create_box  	    0 10 0 10 0 10
+create_grid 	    10 10 10
+
+# m_super = fnum * m_N = 1e10 * 2.325e-26 = 2.325e-16, M = 10 m_super
+
+global		    nrho 1.0 fnum 1.0e10
+
+species		    air.species N
+mixture		    air N vstream 0 0 0 temp 273.0
+
+read_surf           sdata.cube group body trans 5 5 5
+surf_collide	    1 specular
+surf_modify         all collide 1
+
+timestep 	    0.0001
+
+compute             c1 surf body all fx fy fz tx ty tz com 5 5 5
+
+global              rigid yes
+
+# unit cube: I = M/6 about each axis
+
+fix		    1 rigid body c1 body &
+		    mass 2.325e-15 com 5 5 5 vcom 0 0 0 &
+		    moi 3.875e-16 3.875e-16 3.875e-16 0 0 0 angmom 0 0 0
+
+create_particles    air single N 3.0 5.3 5.2 1000.0 0.0 0.0
+
+variable vx particle vx
+variable vy particle vy
+variable vz particle vz
+compute rvx reduce sum v_vx
+compute rvy reduce sum v_vy
+compute rvz reduce sum v_vz
+
+stats		    5
+stats_style         step np c_rvx c_rvy c_rvz f_1[4] f_1[5] f_1[6] &
+                    f_1[13] f_1[14] f_1[15]
+stats_modify        format float %20.14e
+run 		    30

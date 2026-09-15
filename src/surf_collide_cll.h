@@ -28,6 +28,7 @@ namespace SPARTA_NS {
 
 class SurfCollideCLL : public SurfCollide {
  public:
+  int moving_wall() {return trflag;}
   SurfCollideCLL(class SPARTA *, int, char **);
   SurfCollideCLL(class SPARTA *sparta) : SurfCollide(sparta) {} // needed for Kokkos
   void init();

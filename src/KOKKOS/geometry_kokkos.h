@@ -18,6 +18,9 @@
 #define EPSSQNEG -1.0e-16
 #define EPSSELF 1.0e-6
 #define EPSTIME 1.0e-16
+#define EPSRECOIL 1.0e-8    // same as Geometry
+#define EPSREFINE 1.0e-15   // same as Geometry
+#define MAXREFINE 10        // same as Geometry
 
 enum{OUTSIDE,INSIDE,ONSURF2OUT,ONSURF2IN};    // same as Update
 
@@ -1386,5 +1389,349 @@ double tri_fraction(double *x, double *v0, double *v1, double *v2)
 };
 
 /* ---------------------------------------------------------------------- */
+
+
+/* ----------------------------------------------------------------------
+   helpers for intersection of a particle path with a moving rigid body
+   device versions of the Geometry:: functions of the same names,
+     see geometry.cpp for the derivation
+   the body translates at constant vcm and rotates at constant omega
+     about its center-of-mass over the course of one timestep
+   time T is measured from the start of the step, when the body's
+     line/tri elements are at their stored positions
+------------------------------------------------------------------------- */
+
+KOKKOS_INLINE_FUNCTION
+void body_frame_point(const double *pt, double t,
+                      const double *xcm0, const double *vcm,
+                      const double *omega, double *y)
+{
+  double xcmt[3],delta[3],axis[3],q[4],dnew[3];
+  double rot[3][3];
+
+  xcmt[0] = xcm0[0] + vcm[0]*t;
+  xcmt[1] = xcm0[1] + vcm[1]*t;
+  xcmt[2] = xcm0[2] + vcm[2]*t;
+  MathExtraKokkos::sub3(pt,xcmt,delta);
+
+  double wmag = MathExtraKokkos::len3(omega);
+  double angle = wmag*t;
+
+  if (angle != 0.0) {
+    axis[0] = omega[0]/wmag;
+    axis[1] = omega[1]/wmag;
+    axis[2] = omega[2]/wmag;
+    MathExtraKokkos::axisangle_to_quat(axis,-angle,q);
+    MathExtraKokkos::quat_to_mat(q,rot);
+    MathExtraKokkos::matvec(rot,delta,dnew);
+    MathExtraKokkos::add3(xcm0,dnew,y);
+  } else {
+    y[0] = pt[0] - vcm[0]*t;
+    y[1] = pt[1] - vcm[1]*t;
+    y[2] = pt[2] - vcm[2]*t;
+  }
+}
+
+KOKKOS_INLINE_FUNCTION
+void space_frame_vector(const double *vec, double t, const double *omega,
+                        double *result)
+{
+  double axis[3],q[4];
+  double rot[3][3];
+
+  double wmag = MathExtraKokkos::len3(omega);
+  double angle = wmag*t;
+
+  if (angle != 0.0) {
+    axis[0] = omega[0]/wmag;
+    axis[1] = omega[1]/wmag;
+    axis[2] = omega[2]/wmag;
+    MathExtraKokkos::axisangle_to_quat(axis,angle,q);
+    MathExtraKokkos::quat_to_mat(q,rot);
+    MathExtraKokkos::matvec(rot,vec,result);
+  } else {
+    result[0] = vec[0];
+    result[1] = vec[1];
+    result[2] = vec[2];
+  }
+}
+
+/* ----------------------------------------------------------------------
+   map the two endpoints of one particle path into the frame where the
+     body is frozen at its start-of-step configuration
+   same as Geometry::body_frame_path(): done once per path per body by
+     the caller, not once per element
+------------------------------------------------------------------------- */
+
+KOKKOS_INLINE_FUNCTION
+void body_frame_path(const double *start, const double *stop,
+                     double t0, double tsub,
+                     const double *xcm0, const double *vcm,
+                     const double *omega, double *y0, double *y1)
+{
+  body_frame_point(start,t0,xcm0,vcm,omega,y0);
+  body_frame_point(stop,t0+tsub,xcm0,vcm,omega,y1);
+}
+
+KOKKOS_INLINE_FUNCTION
+void body_frame_state(const double *pt, const double *u, double t,
+                      const double *xcm0, const double *vcm,
+                      const double *omega, double *y, double *dy)
+{
+  double xcmt[3],delta[3],rel[3],wxd[3],axis[3],q[4],dnew[3];
+  double rot[3][3];
+
+  xcmt[0] = xcm0[0] + vcm[0]*t;
+  xcmt[1] = xcm0[1] + vcm[1]*t;
+  xcmt[2] = xcm0[2] + vcm[2]*t;
+  MathExtraKokkos::sub3(pt,xcmt,delta);
+
+  MathExtraKokkos::cross3(omega,delta,wxd);
+  MathExtraKokkos::sub3(u,wxd,rel);
+
+  double wmag = MathExtraKokkos::len3(omega);
+  double angle = wmag*t;
+
+  if (angle != 0.0) {
+    axis[0] = omega[0]/wmag;
+    axis[1] = omega[1]/wmag;
+    axis[2] = omega[2]/wmag;
+    MathExtraKokkos::axisangle_to_quat(axis,-angle,q);
+    MathExtraKokkos::quat_to_mat(q,rot);
+    MathExtraKokkos::matvec(rot,delta,dnew);
+    MathExtraKokkos::add3(xcm0,dnew,y);
+    MathExtraKokkos::matvec(rot,rel,dy);
+  } else {
+    y[0] = pt[0] - vcm[0]*t;
+    y[1] = pt[1] - vcm[1]*t;
+    y[2] = pt[2] - vcm[2]*t;
+    dy[0] = rel[0];
+    dy[1] = rel[1];
+    dy[2] = rel[2];
+  }
+}
+
+/* ----------------------------------------------------------------------
+   refine the hit fraction of a collision with a moving body element on
+     the exact mapped particle path
+   same method and semantics as Geometry::refine_moving_param(), where
+     the error it removes is derived
+------------------------------------------------------------------------- */
+
+KOKKOS_INLINE_FUNCTION
+void refine_moving_param(const double *start, const double *stop,
+                         double t0, double tsub,
+                         const double *v0, const double *norm,
+                         const double *xcm0, const double *vcm,
+                         const double *omega,
+                         const double *y0, const double *y1, double &param)
+{
+  double x[3],y[3],dy[3],u[3],delta[3];
+
+  if (omega[0] == 0.0 && omega[1] == 0.0 && omega[2] == 0.0) return;
+  if (tsub == 0.0) return;
+  if (param <= 0.0 || param >= 1.0) return;
+
+  MathExtraKokkos::sub3(y0,v0,delta);
+  double f0 = MathExtraKokkos::dot3(delta,norm);
+  MathExtraKokkos::sub3(y1,v0,delta);
+  double f1 = MathExtraKokkos::dot3(delta,norm);
+
+  if (f0 == 0.0 || f1 == 0.0) return;
+  if ((f0 > 0.0) == (f1 > 0.0)) return;
+
+  u[0] = (stop[0]-start[0])/tsub - vcm[0];
+  u[1] = (stop[1]-start[1])/tsub - vcm[1];
+  u[2] = (stop[2]-start[2])/tsub - vcm[2];
+
+  double lo = 0.0;
+  double hi = 1.0;
+  double h = param;
+
+  for (int iter = 0; iter < MAXREFINE; iter++) {
+    x[0] = start[0] + h*(stop[0]-start[0]);
+    x[1] = start[1] + h*(stop[1]-start[1]);
+    x[2] = start[2] + h*(stop[2]-start[2]);
+    body_frame_state(x,u,t0+h*tsub,xcm0,vcm,omega,y,dy);
+    MathExtraKokkos::sub3(y,v0,delta);
+    double f = MathExtraKokkos::dot3(delta,norm);
+    if (f == 0.0) break;
+
+    if ((f > 0.0) == (f0 > 0.0)) lo = h;
+    else hi = h;
+
+    double df = tsub*MathExtraKokkos::dot3(dy,norm);
+    if (df == 0.0) {
+      h = 0.5*(lo+hi);
+      continue;
+    }
+
+    double dh = -f/df;
+    if (fabs(dh) <= EPSREFINE) {
+      h += dh;
+      break;
+    }
+
+    double hnew = h + dh;
+    if (hnew <= lo || hnew >= hi) hnew = 0.5*(lo+hi);
+    h = hnew;
+  }
+
+  param = h;
+}
+
+/* ----------------------------------------------------------------------
+   detect intersection between the path of a moving particle and
+     a line segment which is part of a moving rigid body
+   same args and semantics as Geometry::line_line_moving_intersect()
+------------------------------------------------------------------------- */
+
+KOKKOS_INLINE_FUNCTION
+bool line_line_moving_intersect(double *start, double *stop,
+                                double t0, double tsub,
+                                double *v0, double *v1, double *norm,
+                                const double *xcm0, const double *vcm,
+                                const double *omega,
+                                double *y0, double *y1,
+                                double *point, double *nhit, double *vwall,
+                                double &param, int &side)
+{
+  double yc[3];
+
+  bool hit = line_line_intersect(y0,y1,v0,v1,norm,yc,param,side);
+  if (!hit) return false;
+
+  // the chord is only a first-order-accurate stand-in for the mapped
+  //   path of a rotating body: refine the hit fraction on the exact
+  //   mapped path before deriving anything from it
+
+  refine_moving_param(start,stop,t0,tsub,v0,norm,xcm0,vcm,omega,y0,y1,param);
+
+  double thit = t0 + param*tsub;
+  point[0] = start[0] + param*(stop[0]-start[0]);
+  point[1] = start[1] + param*(stop[1]-start[1]);
+  point[2] = 0.0;
+
+  space_frame_vector(norm,thit,omega,nhit);
+
+  double xcmt[3],delta[3];
+  xcmt[0] = xcm0[0] + vcm[0]*thit;
+  xcmt[1] = xcm0[1] + vcm[1]*thit;
+  xcmt[2] = xcm0[2] + vcm[2]*thit;
+  MathExtraKokkos::sub3(point,xcmt,delta);
+  MathExtraKokkos::cross3(omega,delta,vwall);
+  vwall[0] += vcm[0];
+  vwall[1] += vcm[1];
+  vwall[2] += vcm[2];
+
+  return true;
+}
+
+/* ----------------------------------------------------------------------
+   detect intersection between the path of a moving particle and
+     a triangle which is part of a moving rigid body
+   same args and semantics as Geometry::line_tri_moving_intersect()
+------------------------------------------------------------------------- */
+
+KOKKOS_INLINE_FUNCTION
+bool line_tri_moving_intersect(double *start, double *stop,
+                               double t0, double tsub,
+                               double *v0, double *v1, double *v2,
+                               double *norm,
+                               const double *xcm0, const double *vcm,
+                               const double *omega,
+                               double *y0, double *y1,
+                               double *point, double *nhit, double *vwall,
+                               double &param, int &side)
+{
+  double yc[3];
+
+  bool hit = line_tri_intersect(y0,y1,v0,v1,v2,norm,yc,param,side);
+  if (!hit) return false;
+
+  // refine the hit fraction on the exact mapped path, as in 2d
+
+  refine_moving_param(start,stop,t0,tsub,v0,norm,xcm0,vcm,omega,y0,y1,param);
+
+  double thit = t0 + param*tsub;
+  point[0] = start[0] + param*(stop[0]-start[0]);
+  point[1] = start[1] + param*(stop[1]-start[1]);
+  point[2] = start[2] + param*(stop[2]-start[2]);
+
+  space_frame_vector(norm,thit,omega,nhit);
+
+  double xcmt[3],delta[3];
+  xcmt[0] = xcm0[0] + vcm[0]*thit;
+  xcmt[1] = xcm0[1] + vcm[1]*thit;
+  xcmt[2] = xcm0[2] + vcm[2]*thit;
+  MathExtraKokkos::sub3(point,xcmt,delta);
+  MathExtraKokkos::cross3(omega,delta,vwall);
+  vwall[0] += vcm[0];
+  vwall[1] += vcm[1];
+  vwall[2] += vcm[2];
+
+  return true;
+}
+
+/* ----------------------------------------------------------------------
+   same args and semantics as Geometry::rigid_recoil()
+------------------------------------------------------------------------- */
+
+KOKKOS_INLINE_FUNCTION
+void rigid_recoil(int dim, double msuper, const double *norm,
+                  const double *vwall,
+                  const double *vpre, double *v,
+                  const double *point, double thit,
+                  const double *xcm0, const double *vcm,
+                  double invmass, const double *invinertia)
+{
+  int i,j,k;
+  double r[3],jinf[3],jnew[3],jt[3],kn[3],vmodel[3],wrel[3];
+  double rx[3][3],t[3][3],kmat[3][3],a[3][3],ainv[3][3];
+
+  for (k = 0; k < 3; k++) {
+    vmodel[k] = v[k];
+    r[k] = point[k] - (xcm0[k] + vcm[k]*thit);
+    jinf[k] = msuper * (v[k] - vpre[k]);
+  }
+  if (dim == 2) r[2] = jinf[2] = 0.0;
+
+  rx[0][0] = 0.0;   rx[0][1] = -r[2]; rx[0][2] = r[1];
+  rx[1][0] = r[2];  rx[1][1] = 0.0;   rx[1][2] = -r[0];
+  rx[2][0] = -r[1]; rx[2][1] = r[0];  rx[2][2] = 0.0;
+
+  for (i = 0; i < 3; i++)
+    for (j = 0; j < 3; j++) {
+      t[i][j] = 0.0;
+      for (k = 0; k < 3; k++) t[i][j] += invinertia[3*i+k]*rx[k][j];
+    }
+  for (i = 0; i < 3; i++)
+    for (j = 0; j < 3; j++) {
+      kmat[i][j] = 0.0;
+      for (k = 0; k < 3; k++) kmat[i][j] -= rx[i][k]*t[k][j];
+    }
+  for (i = 0; i < 3; i++) kmat[i][i] += invmass;
+
+  double jn = MathExtraKokkos::dot3(jinf,norm);
+  for (k = 0; k < 3; k++) jt[k] = jinf[k] - jn*norm[k];
+
+  if (MathExtraKokkos::lensq3(jt) <= EPSRECOIL*EPSRECOIL*jn*jn) {
+    MathExtraKokkos::matvec(kmat,norm,kn);
+    double scale = 1.0 / (1.0 + msuper*MathExtraKokkos::dot3(norm,kn));
+    for (k = 0; k < 3; k++) jnew[k] = jinf[k] + (scale-1.0)*jn*norm[k];
+  } else {
+    for (i = 0; i < 3; i++)
+      for (j = 0; j < 3; j++) a[i][j] = msuper*kmat[i][j];
+    for (i = 0; i < 3; i++) a[i][i] += 1.0;
+    MathExtraKokkos::invert3(a,ainv);
+    MathExtraKokkos::matvec(ainv,jinf,jnew);
+  }
+
+  for (k = 0; k < dim; k++) v[k] = vpre[k] + jnew[k]/msuper;
+
+  MathExtraKokkos::sub3(v,vwall,wrel);
+  if (MathExtraKokkos::dot3(wrel,norm) < 0.0)
+    for (k = 0; k < dim; k++) v[k] = vmodel[k];
+}
 
 }

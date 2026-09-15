@@ -33,9 +33,14 @@ namespace Geometry {
   bool line_line_intersect(double *, double *,
                            double *, double *, double *,
                            double *, double &param, int &, int=0);
-  bool line_line_moving_intersect(double *, double *,
-				  double *, double *, double *,
-				  double *, double &param, int &);
+  void body_frame_path(double *, double *, double, double,
+                       double *, double *, double *, double *, double *);
+  bool line_line_moving_intersect(double *, double *, double, double,
+                                  double *, double *, double *,
+                                  double *, double *, double *,
+                                  double *, double *,
+                                  double *, double *, double *,
+                                  double &param, int &);
 
   bool axi_line_intersect(double, double *, double *, int, double *, double *,
                           double *, double *, double *, int,
@@ -46,9 +51,15 @@ namespace Geometry {
   bool line_tri_intersect(double *, double *,
                           double *, double *, double *, double *,
                           double *, double &param, int &);
-  bool line_tri_moving_intersect(double *, double *,
-				 double *, double *, double *, double *,
-				 double *, double &param, int &);
+  bool line_tri_moving_intersect(double *, double *, double, double,
+                                 double *, double *, double *, double *,
+                                 double *, double *, double *,
+                                 double *, double *,
+                                 double *, double *, double *,
+                                 double &param, int &);
+  void rigid_recoil(int, double, double *, double *, double *, double *,
+                    double *, double, double *, double *,
+                    double, double *);
   bool line_tri_intersect_noeps(double *, double *,
                                 double *, double *, double *, double *,
                                 double *, double &param, int &);
@@ -59,6 +70,9 @@ namespace Geometry {
 
   double distsq_point_line(double *, double *, double *);
   double distsq_point_tri(double *, double *, double *, double *, double *);
+  double closest_point_line(double *, double *, double *, double *);
+  double closest_point_tri(double *, double *, double *, double *, double *,
+                           double *);
 
   double dist_line_quad(double *, double *, double *, double *);
   double dist_tri_hex(double *, double *, double *, double *,

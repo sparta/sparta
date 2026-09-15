@@ -42,6 +42,7 @@
 #include "kokkos.h"
 #include "sparta_masks.h"
 #include "surf_collide_specular_kokkos.h"
+#include "fix_rigid.h"
 #include "kokkos_base.h"
 
 using namespace SPARTA_NS;
@@ -57,6 +58,7 @@ enum{NOFIELD,CFIELD,PFIELD,GFIELD};             // several files
 enum{BCSTD,BCWRAP,BCMIRROR,BCEXIT};             // Update::bcopt values
 
 #define MAXSTUCK 20
+#define EPSREHIT 1.0e-6     // same as Update
 #define EPSPARAM 1.0e-7
 
 // either set ID or PROC/INDEX, set other to -1
@@ -138,6 +140,7 @@ UpdateKokkos::UpdateKokkos(SPARTA *sparta) : Update(sparta),
   nslist_surf = nslist_isurf = nslist_react_isurf = nslist_react_surf = 0;
   nslist_coll_tally = nslist_react_tally = 0;
   nsc_index_cached = -1;
+  rigid_on = 0;
 
   // the Kokkos views of Particle/Grid/Surf are populated from the host data
   //   once, by setup() when prewrap is set, which then clears prewrap
@@ -281,6 +284,10 @@ void UpdateKokkos::init()
     }
   }
 
+  // setup when using fix rigid for rigid body objects comprised of surfs
+
+  init_rigid();
+
   // checks on external field options
 
   if (fstyle == CFIELD) {
@@ -390,6 +397,61 @@ void UpdateKokkos::setup()
   //  fflush(stdout);
   //  sleep(30);
   //  printf("Continuing...\n");
+}
+
+/* ----------------------------------------------------------------------
+   rebuild the host rigidmap (Update::build_rigidmap) and mirror it on
+     the device, one entry per local+ghost surf
+   called whenever the surf arrays change (fix rigid setup and
+     grid_changed), and once per run from init_rigid()
+------------------------------------------------------------------------- */
+
+void UpdateKokkos::build_rigidmap()
+{
+  Update::build_rigidmap();
+  if (!rigidflag || !nfixrigid) return;
+
+  int n = surf->nlocal + surf->nghost;
+  if ((int) k_rigidmap.extent(0) < n)
+    k_rigidmap = DAT::tdual_int_1d("update:rigidmap",n);
+  auto h_rigidmap = k_rigidmap.view_host();
+  for (int i = 0; i < n; i++) h_rigidmap(i) = rigidmap[i];
+  k_rigidmap.modify_host();
+  k_rigidmap.sync_device();
+  d_rigidmap = k_rigidmap.view_device();
+}
+
+/* ----------------------------------------------------------------------
+   upload the start-of-step kinematics of every rigid body for the move
+     kernel: xcm, vcm, omega, all in the space frame, plus 1/mass and
+     the space-frame inverse inertia, set by FixRigid::start_of_step()
+     which runs before the move
+   also the species table and weighting flag for the recoil correction
+------------------------------------------------------------------------- */
+
+void UpdateKokkos::rigid_upload()
+{
+  if ((int) k_rigidbody.extent(0) < nfixrigid)
+    k_rigidbody = tdual_rigidbody_2d("update:rigidbody",nfixrigid,19);
+  auto h_rigidbody = k_rigidbody.view_host();
+  for (int m = 0; m < nfixrigid; m++) {
+    FixRigid *f = fixrigidlist[m];
+    for (int k = 0; k < 3; k++) {
+      h_rigidbody(m,k) = f->xcm[k];
+      h_rigidbody(m,3+k) = f->vcm[k];
+      h_rigidbody(m,6+k) = f->omega[k];
+    }
+    h_rigidbody(m,9) = f->invmass;
+    for (int k = 0; k < 9; k++) h_rigidbody(m,10+k) = f->invinertia[k];
+  }
+  k_rigidbody.modify_host();
+  k_rigidbody.sync_device();
+  d_rigidbody = k_rigidbody.view_device();
+
+  ParticleKokkos* particle_kk = (ParticleKokkos*) particle;
+  particle_kk->sync(Device,SPECIES_MASK);
+  d_species = particle_kk->k_species.view_device();
+  cellweightflag_kk = grid->cellweightflag;
 }
 
 /* ----------------------------------------------------------------------
@@ -640,6 +702,15 @@ template < int DIM, int SURF, int REACT, int OPT > void UpdateKokkos::move()
   // one or more loops over particles
   // first iteration = all my particles
   // subsequent iterations = received particles
+
+  // mobile rigid bodies: upload this step's body kinematics; the per-surf
+  //   body map was uploaded when the surf arrays last changed
+
+  rigid_on = 0;
+  if (rigidflag && nfixrigid) {
+    rigid_upload();
+    rigid_on = 1;
+  }
 
   while (1) {
 
@@ -1203,10 +1274,13 @@ void UpdateKokkos::operator()(TagUpdateMove<DIM,SURF,REACT,OPT,ATOMIC_REDUCTION>
   int side,minsurf,nsurf,cflag,isurf,exclude,stuck_iterate;
   double dtremain,frac,newfrac,param,minparam,rnew,dtsurf,tc,tmp;
   double xnew[3],xhold[3],xc[3],vc[3],minxc[3],minvc[3];
+  int minmoving = 0;
+  int minbody = -1;
+  double nhit[3],vwallhit[3],minnorm[3],minvwall[3],vpre[3];
   double *x,*v;
   Surf::Tri *tri;
   Surf::Line *line;
-  int reaction;
+  int reaction = 0;
 
   Particle::OnePart &particle_i = d_particles[i];
   pflag = particle_i.flag;
@@ -1658,8 +1732,10 @@ void UpdateKokkos::operator()(TagUpdateMove<DIM,SURF,REACT,OPT,ATOMIC_REDUCTION>
 
         // for axisymmetric, dtsurf = time that particle stays in cell
         // used as arg to axi_line_intersect()
+        // for rigid bodies, dtsurf = same quantity, the time window of
+        //   the moving-surf intersection tests
 
-        if (DIM == 1) {
+        if (DIM == 1 || rigid_on) {
           if (outface == INTERIOR) dtsurf = dtremain;
           else dtsurf = dtremain * frac;
         }
@@ -1673,27 +1749,82 @@ void UpdateKokkos::operator()(TagUpdateMove<DIM,SURF,REACT,OPT,ATOMIC_REDUCTION>
 
         cflag = 0;
         minparam = 2.0;
+        minmoving = 0;
         auto csurfs_begin = d_csurfs.row_map(icell);
+
+        // body whose path endpoints are currently mapped, and the mapping
+        //   itself: it depends on the path and the body, not on which
+        //   element is tested, so it is reused across a body's elements
+
+        int mapbody = -1;
+        double mxcm[3],mvcm[3],momega[3],ymap0[3],ymap1[3];
 
         for (int m = 0; m < nsurf; m++) {
           isurf = d_csurfs.entries(csurfs_begin + m);
 
+          // skip collisions with previous surf, but not for a moving
+          //   rigid-body surf, whose round-off re-hit at param ~ 0 is
+          //   rejected below, as in Update::move()
+          // moving-surf tests use the body motion for this step: x is the
+          //   particle position at time dt-dtremain from the start of the
+          //   step and its path to xnew spans the next dtsurf
+          //   xnew is the same cell-face-clipped endpoint used for static
+          //   surfs, so a body face on a cell boundary cannot be missed
+
+          int ibody = -1;
+          if (rigid_on) ibody = d_rigidmap(isurf);
+
           if (DIM > 1) {
-            if (isurf == exclude) continue;
+            if (isurf == exclude && ibody < 0) continue;
           }
+
+          // moving surf: body motion and the mapped path endpoints are
+          //   loaded once per body and reused for that body's elements,
+          //   as in Update::move(); 2d mapped z set to zero exactly
+
+          if (ibody >= 0 && ibody != mapbody) {
+            for (int k = 0; k < 3; k++) {
+              mxcm[k] = d_rigidbody(ibody,k);
+              mvcm[k] = d_rigidbody(ibody,3+k);
+              momega[k] = d_rigidbody(ibody,6+k);
+            }
+            GeometryKokkos::body_frame_path(x,xnew,dt-dtremain,dtsurf,
+                                            mxcm,mvcm,momega,ymap0,ymap1);
+            if (DIM == 2) ymap0[2] = ymap1[2] = 0.0;
+            mapbody = ibody;
+          }
+
           if (DIM == 3) {
             tri = &d_tris[isurf];
-            hitflag = GeometryKokkos::
-              line_tri_intersect(x,xnew,
-                                 tri->p1,tri->p2,
-                                 tri->p3,tri->norm,xc,param,side);
+            if (ibody >= 0) {
+              hitflag = GeometryKokkos::
+                line_tri_moving_intersect(x,xnew,dt-dtremain,dtsurf,
+                                          tri->p1,tri->p2,tri->p3,
+                                          tri->norm,mxcm,mvcm,momega,
+                                          ymap0,ymap1,
+                                          xc,nhit,vwallhit,param,side);
+            } else {
+              hitflag = GeometryKokkos::
+                line_tri_intersect(x,xnew,
+                                   tri->p1,tri->p2,
+                                   tri->p3,tri->norm,xc,param,side);
+            }
           }
           if (DIM == 2) {
             line = &d_lines[isurf];
-            hitflag = GeometryKokkos::
-              line_line_intersect(x,xnew,
-                                  line->p1,line->p2,
-                                  line->norm,xc,param,side);
+            if (ibody >= 0) {
+              hitflag = GeometryKokkos::
+                line_line_moving_intersect(x,xnew,dt-dtremain,dtsurf,
+                                           line->p1,line->p2,
+                                           line->norm,mxcm,mvcm,momega,
+                                           ymap0,ymap1,
+                                           xc,nhit,vwallhit,param,side);
+            } else {
+              hitflag = GeometryKokkos::
+                line_line_intersect(x,xnew,
+                                    line->p1,line->p2,
+                                    line->norm,xc,param,side);
+            }
           }
           if (DIM == 1) {
             line = &d_lines[isurf];
@@ -1766,6 +1897,9 @@ void UpdateKokkos::operator()(TagUpdateMove<DIM,SURF,REACT,OPT,ATOMIC_REDUCTION>
           }
 #endif
 
+          if (rigid_on && hitflag && isurf == exclude && param < EPSREHIT)
+            hitflag = 0;
+
           if (hitflag && param < minparam && side == OUTSIDE) {
 
             // NOTE: these were the old checks
@@ -1803,6 +1937,22 @@ void UpdateKokkos::operator()(TagUpdateMove<DIM,SURF,REACT,OPT,ATOMIC_REDUCTION>
               minvc[1] = vc[1];
               minvc[2] = vc[2];
             }
+
+            // for hit on moving surf, save normal and
+            // wall velocity at hit time and hit point
+
+            if (rigid_on) {
+              if (ibody >= 0) {
+                minmoving = 1;
+                minbody = ibody;
+                minnorm[0] = nhit[0];
+                minnorm[1] = nhit[1];
+                minnorm[2] = nhit[2];
+                minvwall[0] = vwallhit[0];
+                minvwall[1] = vwallhit[1];
+                minvwall[2] = vwallhit[2];
+              } else minmoving = 0;
+            }
           }
 
         } // END of for loop over surfs
@@ -1839,14 +1989,31 @@ void UpdateKokkos::operator()(TagUpdateMove<DIM,SURF,REACT,OPT,ATOMIC_REDUCTION>
             iorig = particle_i;
           const int n = DIM == 3 ? tri->isc : line->isc;
 
+          // for hit on moving surf: perform the collision in the frame of
+          //   the moving wall, with the surf normal at the hit time, then
+          //   add the wall velocity back, so surf tallies see space-frame
+          //   velocities and the full momentum exchange with the wall
+
+          const int moving = rigid_on && minmoving;
+          if (moving) {
+            vpre[0] = v[0];
+            vpre[1] = v[1];
+            vpre[2] = v[2];
+            v[0] -= minvwall[0];
+            v[1] -= minvwall[1];
+            v[2] -= minvwall[2];
+          }
+
           if (DIM == 3) {
             jpart = surf_collide_dispatch<REACT,ATOMIC_REDUCTION>
-              (n,ipart,dtremain,minsurf,tri->norm,tri->isr,reaction,d_retry,d_nlocal);
+              (n,ipart,dtremain,minsurf,moving ? minnorm : tri->norm,
+               tri->isr,reaction,d_retry,d_nlocal);
           }
 
           if (DIM != 3) {
             jpart = surf_collide_dispatch<REACT,ATOMIC_REDUCTION>
-              (n,ipart,dtremain,minsurf,line->norm,line->isr,reaction,d_retry,d_nlocal);
+              (n,ipart,dtremain,minsurf,moving ? minnorm : line->norm,
+               line->isr,reaction,d_retry,d_nlocal);
           }
 
           if (jpart) {
@@ -1855,6 +2022,38 @@ void UpdateKokkos::operator()(TagUpdateMove<DIM,SURF,REACT,OPT,ATOMIC_REDUCTION>
             jpart->flag = PSURF + 1 + minsurf;
             jpart->dtremain = dtremain;
             jpart->weight = particle_i.weight;
+          }
+
+          if (moving) {
+            if (ipart) {
+              ipart->v[0] += minvwall[0];
+              ipart->v[1] += minvwall[1];
+              ipart->v[2] += minvwall[2];
+            }
+            if (jpart) {
+              jpart->v[0] += minvwall[0];
+              jpart->v[1] += minvwall[1];
+              jpart->v[2] += minvwall[2];
+            }
+
+            // correct the reflected velocity for the recoil of the
+            //   finite-mass body, as in Update::move()
+
+            if (ipart && !jpart && !reaction) {
+              double bxcm[3],bvcm[3],binvi[9];
+              for (int k = 0; k < 3; k++) {
+                bxcm[k] = d_rigidbody(minbody,k);
+                bvcm[k] = d_rigidbody(minbody,3+k);
+              }
+              const double binvmass = d_rigidbody(minbody,9);
+              for (int k = 0; k < 9; k++) binvi[k] = d_rigidbody(minbody,10+k);
+              double msuper = fnum * d_species(ipart->ispecies).mass;
+              if (cellweightflag_kk) msuper *= ipart->weight;
+              GeometryKokkos::rigid_recoil(DIM == 3 ? 3 : 2,msuper,
+                                           minnorm,minvwall,
+                                           vpre,ipart->v,x,dt-dtremain,
+                                           bxcm,bvcm,binvmass,binvi);
+            }
           }
 
           if (nsurf_tally) {
@@ -1880,7 +2079,8 @@ void UpdateKokkos::operator()(TagUpdateMove<DIM,SURF,REACT,OPT,ATOMIC_REDUCTION>
 
           // stuck_iterate = consecutive iterations particle is immobile
 
-          if (minparam <= 1.0e-14) stuck_iterate++;
+          if (minparam <= 1.0e-14 || (rigid_on && minsurf == exclude))
+            stuck_iterate++;
           else stuck_iterate = 0;
 
           // reset post-bounce xnew

@@ -168,6 +168,8 @@ class CollideVSSKokkos : public CollideVSS {
   typedef tdual_params_2d::t_dev_const t_params_2d_const;
   t_params_2d_const d_params_const;
 
+  int rigid_skip;     // 1 to skip zero-volume cells (rigid body active)
+
  private:
   KOKKOS_INLINE_FUNCTION
   void ambi_reset_kokkos(int, int, int, int,

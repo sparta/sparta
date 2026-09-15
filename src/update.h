@@ -52,6 +52,37 @@ class Update : protected Pointers {
   int fieldfreq;         // update GFIELD every this many timsteps
 
   int rigidflag;         // 1 if a mobile rigid-body surf object will be used
+  int rigid_notify_sr;   // 1 if surf reaction models must be told of new
+                         //   local body-surf copies once they have init'd
+  int nfixrigid;              // # of FixRigid instances = # of bodies
+  class FixRigid **fixrigidlist;  // ptrs to each FixRigid instance
+  int *rigidmap;              // which FixRigid each surf belongs to
+                              // = index into fixrigidlist, -1 = static surf
+                              // length = surf->nlocal + surf->nghost, since
+                              //   the mover tests surfs of ghost cells too
+
+  virtual void build_rigidmap();  // rebuild rigidmap from current surfs
+  void refresh_fixrigidlist();    // rebuild the fix list from Modify
+  void init_rigid();          // per-run setup of the rigid body list
+
+  // bin index over local+ghost child cells, for box -> candidate-cell
+  //   queries by fix rigid (swept assignment, incremental re-cut)
+  // built lazily on first query, invalidated whenever the grid changes,
+  //   so per-step query cost scales with the box, not the local grid
+
+  void rigid_bins_clear();
+  int rigid_cell_box(double *, double *, int **);
+
+  int rigid_binvalid;
+  int rigid_nbin[3];
+  double rigid_binlo[3],rigid_bininv[3];
+  int *rigid_binstart;        // CSR offsets per bin
+  int *rigid_binlist;         // cell indices, binned by cell bbox
+  int rigid_ncellbin;         // # of cells when bins were built
+  int *rigid_cellstamp;       // dedup stamp per cell
+  int rigid_stampcur;
+  int *rigid_cand;            // query result buffer
+  int maxrigidcand;
 
   int nmigrate;          // # of particles to migrate to new procs
   int *mlist;            // indices of particles to migrate
@@ -168,12 +199,6 @@ class Update : protected Pointers {
   class Compute **slist_compute;  // list of all gas/surf Computes
   class Compute **blist_compute;  // list of all gas/boundary Computes
   class SurfCollide **dlist_surfcollide;  // list of all dynamic SurfCollides
-
-  // enable use of mobile rigid bodies comprised of surfs
-  
-  char *rigidID;         // ID of associated fix rigid commaned defining the object
-  class FixRigid *fixrigid;   // ptr to FixRigid instance
-  int *irigid;                // custom per-surf vector defined by FixRigid
 
   // methods
 

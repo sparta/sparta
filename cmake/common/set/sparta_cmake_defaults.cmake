@@ -56,7 +56,8 @@ if(SPARTA_ENABLE_TESTING)
       "explicit2implicit"
       "mfp_mct"
       "optmove"
-      "torque")
+      "torque"
+      "rigid")
 
   set(SPARTA_DISABLED_TESTS
       "in.ablation.3d.reactions" # Failing

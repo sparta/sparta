@@ -1,0 +1,59 @@
+# TEST: timestep-independence of a collision with a fast-spinning body
+# the body is so heavy that the collision does not change its motion, and
+# it spins at a constant rate, so its pose is integrated exactly at any
+# timestep.  the particle is ballistic before and after the collision.
+# the exact trajectory is therefore independent of the timestep, and any
+# difference between a coarse and a fine run measures the error of the
+# moving-surf collision test alone.  the coarse run turns the body by
+# 0.09 radian per step, just inside the guidance limit.
+
+seed	    	    12345
+variable            dist index 0
+if "${dist} == 1" then "global surfs explicit/distributed"
+variable            dt index 1.0e-3
+variable            nsteps index 5
+
+dimension   	    2
+boundary            o o p
+
+create_box  	    0 10 0 10 -0.5 0.5
+create_grid 	    5 5 1
+
+global		    nrho 1.0 fnum 1.0e10
+
+species		    air.species N
+mixture		    air N vstream 0 0 0 temp 273.0
+
+read_surf           data.square group body
+surf_collide	    1 specular
+surf_modify         all collide 1
+
+timestep 	    ${dt}
+
+compute             c1 surf body all fx fy fz tx ty tz com 5 5 0
+
+global              rigid yes
+
+# mass and inertia large enough that the impulse of one collision leaves
+#   vcom and omega unchanged to round-off
+# angmom = Izz * omega with omega = 90 rad/s
+
+fix		    1 rigid body c1 body &
+		    mass 1.0e-6 com 5 5 0 vcom 0 0 0 &
+		    moi 1.0e-7 1.0e-7 2.0e-7 0 0 0 angmom 0 0 1.8e-5
+
+create_particles    air single N 1.0 4.6 0.0 1500.0 260.0 0.0
+
+variable            px particle x
+variable            py particle y
+variable            pvx particle vx
+variable            pvy particle vy
+compute             rx reduce sum v_px
+compute             ry reduce sum v_py
+compute             rvx reduce sum v_pvx
+compute             rvy reduce sum v_pvy
+
+stats		    ${nsteps}
+stats_style         step np nscoll c_rx c_ry c_rvx c_rvy f_1[15]
+stats_modify        format float %20.14e
+run 		    ${nsteps}

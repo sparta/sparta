@@ -19,9 +19,12 @@
 #define MAX(A,B) ((A) > (B)) ? (A) : (B)
 
 #define EPSSQ 1.0e-16
+#define EPSRECOIL 1.0e-8    // tangential/normal impulse ratio treated as 0
 #define EPSSQNEG -1.0e-16
 #define EPSSELF 1.0e-6
 #define EPSTIME 1.0e-16
+#define EPSREFINE 1.0e-15   // converged hit-fraction Newton step
+#define MAXREFINE 10        // iteration cap for the same
 
 enum{OUTSIDE,INSIDE,ONSURF2OUT,ONSURF2IN};    // same as Update
 
@@ -695,22 +698,339 @@ bool line_line_intersect(double *start, double *stop,
 }
 
 /* ----------------------------------------------------------------------
-   detect intersection between a directed line segment A and moving line segment B
-   intersection is defined as any A pt (including end pts)
-     in common with any B pt (interior,vertex)
+   helpers for intersection of a particle path with a moving rigid body
+   the body translates at constant vcm and rotates at constant omega
+     about its center-of-mass over the course of one timestep
+   time T is measured from the start of the step, when the body's
+     line/tri elements are at their stored positions
+   body COM position: xcm(T) = xcm0 + vcm*T
+------------------------------------------------------------------------- */
+
+/* ----------------------------------------------------------------------
+   map space-frame point PT at time T into the frame where the body
+     is at its start-of-step configuration
+   Y = R(-omega*T) (PT - xcm(T)) + xcm0, exact rotation via quaternion
+------------------------------------------------------------------------- */
+
+static void body_frame_point(double *pt, double t,
+                             double *xcm0, double *vcm, double *omega,
+                             double *y)
+{
+  double xcmt[3],delta[3],axis[3],q[4];
+  double rot[3][3];
+
+  xcmt[0] = xcm0[0] + vcm[0]*t;
+  xcmt[1] = xcm0[1] + vcm[1]*t;
+  xcmt[2] = xcm0[2] + vcm[2]*t;
+  MathExtra::sub3(pt,xcmt,delta);
+
+  double wmag = MathExtra::len3(omega);
+  double angle = wmag*t;
+
+  if (angle != 0.0) {
+    axis[0] = omega[0]/wmag;
+    axis[1] = omega[1]/wmag;
+    axis[2] = omega[2]/wmag;
+    MathExtra::axisangle_to_quat(axis,-angle,q);
+    MathExtra::quat_to_mat(q,rot);
+    double dnew[3];
+    MathExtra::matvec(rot,delta,dnew);
+    MathExtra::add3(xcm0,dnew,y);
+  } else {
+
+    // pure translation: y = pt - vcm*t exactly, without the
+    //   round-off of subtracting and re-adding the COM position
+
+    y[0] = pt[0] - vcm[0]*t;
+    y[1] = pt[1] - vcm[1]*t;
+    y[2] = pt[2] - vcm[2]*t;
+  }
+}
+
+/* ----------------------------------------------------------------------
+   rotate start-of-step body vector VEC into the space frame at time T
+------------------------------------------------------------------------- */
+
+static void space_frame_vector(double *vec, double t, double *omega,
+                               double *result)
+{
+  double axis[3],q[4];
+  double rot[3][3];
+
+  double wmag = MathExtra::len3(omega);
+  double angle = wmag*t;
+
+  if (angle != 0.0) {
+    axis[0] = omega[0]/wmag;
+    axis[1] = omega[1]/wmag;
+    axis[2] = omega[2]/wmag;
+    MathExtra::axisangle_to_quat(axis,angle,q);
+    MathExtra::quat_to_mat(q,rot);
+    MathExtra::matvec(rot,vec,result);
+  } else {
+    result[0] = vec[0];
+    result[1] = vec[1];
+    result[2] = vec[2];
+  }
+}
+
+/* ----------------------------------------------------------------------
+   map the two endpoints of one particle path into the frame where the
+     body is frozen at its start-of-step configuration
+   the mapping depends only on the path and on the body motion, not on
+     which element is being tested, so the caller does this once per path
+     per body and hands the result to every moving-surf test against that
+     body in the cell, instead of repeating it for each element
+------------------------------------------------------------------------- */
+
+void body_frame_path(double *start, double *stop, double t0, double tsub,
+                     double *xcm0, double *vcm, double *omega,
+                     double *y0, double *y1)
+{
+  body_frame_point(start,t0,xcm0,vcm,omega,y0);
+  body_frame_point(stop,t0+tsub,xcm0,vcm,omega,y1);
+}
+
+/* ----------------------------------------------------------------------
+   same mapping as body_frame_point(), and also the time derivative of
+     the mapped position, for the refinement below
+   u = velocity of the particle relative to the body = v - vcm
+   the mapped path is y(t) = xcm0 + R(-omega t) D(t) with
+     D(t) = pt(t) - xcm(t), whose derivative is
+     dy/dt = R(-omega t) (u - omega x D)
+------------------------------------------------------------------------- */
+
+static void body_frame_state(double *pt, double *u, double t,
+                             double *xcm0, double *vcm, double *omega,
+                             double *y, double *dy)
+{
+  double xcmt[3],delta[3],rel[3],wxd[3];
+  double axis[3],q[4],dnew[3];
+  double rot[3][3];
+
+  xcmt[0] = xcm0[0] + vcm[0]*t;
+  xcmt[1] = xcm0[1] + vcm[1]*t;
+  xcmt[2] = xcm0[2] + vcm[2]*t;
+  MathExtra::sub3(pt,xcmt,delta);
+
+  MathExtra::cross3(omega,delta,wxd);
+  MathExtra::sub3(u,wxd,rel);
+
+  double wmag = MathExtra::len3(omega);
+  double angle = wmag*t;
+
+  if (angle != 0.0) {
+    axis[0] = omega[0]/wmag;
+    axis[1] = omega[1]/wmag;
+    axis[2] = omega[2]/wmag;
+    MathExtra::axisangle_to_quat(axis,-angle,q);
+    MathExtra::quat_to_mat(q,rot);
+    MathExtra::matvec(rot,delta,dnew);
+    MathExtra::add3(xcm0,dnew,y);
+    MathExtra::matvec(rot,rel,dy);
+  } else {
+    y[0] = pt[0] - vcm[0]*t;
+    y[1] = pt[1] - vcm[1]*t;
+    y[2] = pt[2] - vcm[2]*t;
+    dy[0] = rel[0];
+    dy[1] = rel[1];
+    dy[2] = rel[2];
+  }
+}
+
+/* ----------------------------------------------------------------------
+   refine the hit fraction of a collision with a moving body element,
+     on the exact mapped particle path
+   the chord test intersects the frozen element with the straight
+     segment between the two exactly mapped path endpoints, but the
+     mapped path is not straight: seen from the body the particle is
+     deflected by the centrifugal term omega x (omega x D) and by the
+     Coriolis term 2 omega x u, so the chord departs from it by up to
+       (1/8)(omega tsub)^2 |D| + (1/4)(omega tsub)(|u| tsub)
+     the second term is only first order in the rotation per step, and
+     for a gas particle (relative speed >> surface speed omega |D|) it
+     is the larger one, so a hit whose approach is oblique to the
+     element is mis-timed by a fraction ~ (omega tsub)/4 of the step
+   f(h) = normal distance of the exactly mapped particle position from
+     the plane of the element.  f(0) and f(1) are exactly the two values
+     the chord interpolates, so whenever the chord crosses the plane
+     within the step so does the exact path, and the root is bracketed
+     by the ends of the path
+   Newton iteration with a bisection safeguard, seeded with the chord
+     fraction, converges to machine precision in 2 to 4 iterations for a
+     rotation per step within the 0.1 radian guidance
+   only the fraction is refined, and only where the chord test already
+     found a hit.  which element is hit, and the side of the relative
+     approach, are left to the chord test: the chord is one segment
+     tested against every element of the body, so it sees a watertight
+     body as watertight and cannot leak a particle into its interior,
+     and it agrees with the exact path on the side of an element the
+     particle ends the step on.  what the chord gets wrong is where
+     between the endpoints the crossing happens, which is what is
+     refined here
+   param is updated in place, so the hit point, the hit time, and the
+     normal and wall velocity at the hit, all of which the caller
+     derives from it, follow the exact mapped path
+------------------------------------------------------------------------- */
+
+static void refine_moving_param(double *start, double *stop,
+                                double t0, double tsub,
+                                double *v0, double *norm,
+                                double *xcm0, double *vcm, double *omega,
+                                double *y0, double *y1, double &param)
+{
+  double x[3],y[3],dy[3],u[3],delta[3];
+
+  // the mapped path of a body which does not rotate is exactly a chord
+
+  if (omega[0] == 0.0 && omega[1] == 0.0 && omega[2] == 0.0) return;
+  if (tsub == 0.0) return;
+  if (param <= 0.0 || param >= 1.0) return;
+
+  // f at the two ends of the path, from the already mapped endpoints
+
+  MathExtra::sub3(y0,v0,delta);
+  double f0 = MathExtra::dot3(delta,norm);
+  MathExtra::sub3(y1,v0,delta);
+  double f1 = MathExtra::dot3(delta,norm);
+
+  // leave the chord fraction alone if the path starts or ends on the
+  //   plane of the element, or does not cross it within the step
+  //   (a path which grazes the element crosses it twice, or not at all,
+  //   and a chord cannot resolve either case)
+
+  if (f0 == 0.0 || f1 == 0.0) return;
+  if ((f0 > 0.0) == (f1 > 0.0)) return;
+
+  u[0] = (stop[0]-start[0])/tsub - vcm[0];
+  u[1] = (stop[1]-start[1])/tsub - vcm[1];
+  u[2] = (stop[2]-start[2])/tsub - vcm[2];
+
+  double lo = 0.0;
+  double hi = 1.0;
+  double h = param;
+
+  for (int iter = 0; iter < MAXREFINE; iter++) {
+    x[0] = start[0] + h*(stop[0]-start[0]);
+    x[1] = start[1] + h*(stop[1]-start[1]);
+    x[2] = start[2] + h*(stop[2]-start[2]);
+    body_frame_state(x,u,t0+h*tsub,xcm0,vcm,omega,y,dy);
+    MathExtra::sub3(y,v0,delta);
+    double f = MathExtra::dot3(delta,norm);
+    if (f == 0.0) break;
+
+    // keep the root bracketed, so a Newton step which leaves the
+    //   bracket (a nearly tangential path) can fall back on bisection
+
+    if ((f > 0.0) == (f0 > 0.0)) lo = h;
+    else hi = h;
+
+    double df = tsub*MathExtra::dot3(dy,norm);
+    if (df == 0.0) {
+      h = 0.5*(lo+hi);
+      continue;
+    }
+
+    // the Newton step is tested for convergence before it is clamped to
+    //   the bracket: h is an endpoint of the bracket as of the update
+    //   just made, so a converged step, which leaves h where it is,
+    //   would otherwise be read as leaving the bracket and be thrown
+    //   away for a bisection
+
+    double dh = -f/df;
+    if (fabs(dh) <= EPSREFINE) {
+      h += dh;
+      break;
+    }
+
+    double hnew = h + dh;
+    if (hnew <= lo || hnew >= hi) hnew = 0.5*(lo+hi);
+    h = hnew;
+  }
+
+  param = h;
+}
+
+/* ----------------------------------------------------------------------
+   detect intersection between the path of a moving particle and
+     a line segment which is part of a moving rigid body
+   start,stop = particle path endpoints at times T0 and T0+TSUB
+     stop is the same endpoint the caller uses for static surf tests,
+     i.e. already clipped to the cell face the path exits through,
+     so a body face lying exactly on a cell boundary is tested against
+     the identical path segment and cannot be tunneled through
+   t0,tsub = path extends from time T0 to time T0+TSUB
+   v0,v1,norm = line segment end pts and outward normal at their
+     start-of-step positions
+   xcm0,vcm,omega = body COM at start of step, its velocity,
+     and the body angular velocity
+   y0,y1 = the path endpoints already mapped into the frame where the
+     body is static at its start-of-step configuration, from
+     body_frame_path(); they depend on the path and the body, not on
+     the element, so the caller shares them across the body's elements
+     in 2d the caller sets their z to exactly zero, as the static line
+     test expects of its path endpoints
+   method: use the static line_line_intersect() on the chord through the
+     mapped points
+   exact for a translating body; for a rotating body the mapped path is
+     curved, and the chord through its endpoints mis-times the crossing
+     by a fraction of the step which is first order in the rotation per
+     step (see refine_moving_param(), which corrects it)
+   a nearly stationary particle swept over by an advancing surf IS
+     detected, since the mapped path reflects the relative motion
    return TRUE if there is an intersection, else FALSE
    if TRUE also return:
-     point = pt of intersection
-     param = intersection pt is this fraction along line A (0-1 inclusive)
-     side = side of B that was hit = OUTSIDE,INSIDE,ONSURF2OUT,ONSURF2IN
+     point = space-frame pt of intersection on the particle path
+     nhit = outward normal of the line segment at the time of the hit
+     vwall = velocity of the body surface at the hit point
+     param = hit is this fraction of the path from T0 to T0+TSUB
+     side = OUTSIDE,INSIDE,ONSURF2OUT,ONSURF2IN for the
+       particle/body relative motion
 ------------------------------------------------------------------------- */
 
 bool line_line_moving_intersect(double *start, double *stop,
-				double *v0, double *v1, double *norm,
-				double *point, double &param, int &side)
+                                double t0, double tsub,
+                                double *v0, double *v1, double *norm,
+                                double *xcm0, double *vcm, double *omega,
+                                double *y0, double *y1,
+                                double *point, double *nhit, double *vwall,
+                                double &param, int &side)
 {
-  bool hit = line_line_intersect(start,stop,v0,v1,norm,point,param,side);
-  return hit;
+  double yc[3];
+
+  bool hit = line_line_intersect(y0,y1,v0,v1,norm,yc,param,side);
+  if (!hit) return false;
+
+  // the chord is only a first-order-accurate stand-in for the mapped
+  //   path of a rotating body: refine the hit fraction on the exact
+  //   mapped path before deriving anything from it
+
+  refine_moving_param(start,stop,t0,tsub,v0,norm,xcm0,vcm,omega,y0,y1,param);
+
+  // thit = time of collision measured from start of step
+  // hit pt is along the particle's straight space-frame path
+
+  double thit = t0 + param*tsub;
+  point[0] = start[0] + param*(stop[0]-start[0]);
+  point[1] = start[1] + param*(stop[1]-start[1]);
+  point[2] = 0.0;
+
+  // normal at time of hit
+  // vwall = velocity of body surface at hit point = vcm + omega x r
+
+  space_frame_vector(norm,thit,omega,nhit);
+
+  double xcmt[3],delta[3];
+  xcmt[0] = xcm0[0] + vcm[0]*thit;
+  xcmt[1] = xcm0[1] + vcm[1]*thit;
+  xcmt[2] = xcm0[2] + vcm[2]*thit;
+  MathExtra::sub3(point,xcmt,delta);
+  MathExtra::cross3(omega,delta,vwall);
+  vwall[0] += vcm[0];
+  vwall[1] += vcm[1];
+  vwall[2] += vcm[2];
+
+  return true;
 }
 
 /* ----------------------------------------------------------------------
@@ -1115,28 +1435,160 @@ bool line_tri_intersect(double *start, double *stop,
 }
 
 /* ----------------------------------------------------------------------
-   detect intersection between a directed line segment and a triangle
-   intersection is defined as any line segment pt (including end pts)
-     in common with any triangle pt (interior, edge, vertex)
-   one exception is if both line end pts are in plane of triangle,
-     then is NOT an intersection
-   start,stop = end points of directed line segment, can have zero length
-   v0,v1,v2 = 3 vertices of triangle
-   norm = unit vector normal to triangle plane
-     pointing OUTSIDE via right-hand rule
+   detect intersection between the path of a moving particle and
+     a triangle which is part of a moving rigid body
+   same method and args as line_line_moving_intersect(), for 3d
+   v0,v1,v2,norm = tri corner pts and outward normal at their
+     start-of-step positions
    return TRUE if there is an intersection, else FALSE
    if TRUE also return:
-     point = pt of intersection
-     param = intersection pt is this fraction along line (0-1 inclusive)
-     side = side of B that was hit = OUTSIDE,INSIDE,ONSURF2OUT,ONSURF2IN
+     point = space-frame pt of intersection on the particle path
+     nhit = outward normal of the triangle at the time of the hit
+     vwall = velocity of the body surface at the hit point
+     param = hit is this fraction of the path from T0 to T0+TSUB
+     side = OUTSIDE,INSIDE,ONSURF2OUT,ONSURF2IN for the
+       particle/body relative motion
 ------------------------------------------------------------------------- */
 
 bool line_tri_moving_intersect(double *start, double *stop,
-			       double *v0, double *v1, double *v2, double *norm,
-			       double *point, double &param, int &side)
+                               double t0, double tsub,
+                               double *v0, double *v1, double *v2,
+                               double *norm,
+                               double *xcm0, double *vcm, double *omega,
+                               double *y0, double *y1,
+                               double *point, double *nhit, double *vwall,
+                               double &param, int &side)
 {
-  bool hit = line_tri_intersect(start,stop,v0,v1,v2,norm,point,param,side);
-  return hit;
+  double yc[3];
+
+  bool hit = line_tri_intersect(y0,y1,v0,v1,v2,norm,yc,param,side);
+  if (!hit) return false;
+
+  // refine the hit fraction on the exact mapped path, as in 2d
+
+  refine_moving_param(start,stop,t0,tsub,v0,norm,xcm0,vcm,omega,y0,y1,param);
+
+  // thit = time of collision measured from start of step
+  // hit pt is along the particle's straight space-frame path
+
+  double thit = t0 + param*tsub;
+  point[0] = start[0] + param*(stop[0]-start[0]);
+  point[1] = start[1] + param*(stop[1]-start[1]);
+  point[2] = start[2] + param*(stop[2]-start[2]);
+
+  // normal at time of hit
+  // vwall = velocity of body surface at hit point = vcm + omega x r
+
+  space_frame_vector(norm,thit,omega,nhit);
+
+  double xcmt[3],delta[3];
+  xcmt[0] = xcm0[0] + vcm[0]*thit;
+  xcmt[1] = xcm0[1] + vcm[1]*thit;
+  xcmt[2] = xcm0[2] + vcm[2]*thit;
+  MathExtra::sub3(point,xcmt,delta);
+  MathExtra::cross3(omega,delta,vwall);
+  vwall[0] += vcm[0];
+  vwall[1] += vcm[1];
+  vwall[2] += vcm[2];
+
+  return true;
+}
+
+/* ----------------------------------------------------------------------
+   correct a particle collision with a moving rigid body for the finite
+     mass of the body
+   the collision model reflected the particle in the frame of the wall
+     as though the body were infinitely massive; the body then receives
+     the full impulse, so the recoil energy would be counted twice
+   dim = 2 or 3
+   msuper = mass of the simulation particle = fnum * weight * species mass
+   norm,vwall = outward surf normal and wall velocity at the hit point
+     and time, as used by the mover for the rest of this step
+   vpre = space-frame particle velocity before the collision
+   v = space-frame particle velocity after the collision, corrected here
+   point,thit = hit point and hit time measured from the start of step
+   xcm0,vcm = body COM at start of step and its velocity
+   invmass,invinertia = 1/M and 3x3 space-frame inverse inertia of body
+   method: kmat = inverse-mass matrix of the body at the hit point
+     = velocity change of the body surface at the hit point per unit
+       impulse on the body = 1/M - [r x] Iinv [r x] for r = point - COM
+     if the impulse is along the normal (specular, a frictionless wall)
+       the exact elastic result is to scale it by 1/(1 + m n.K.n),
+       which flips the normal relative velocity and conserves energy
+     else (diffuse and other accommodating models) the particle leaves
+       relative to the recoiled surface velocity, J = (1 + m K)^-1 Jinf
+   in 2d only in-plane components are corrected, since the body
+     cannot move out of plane
+   the body recoil takes effect on the next step, so for the rest of
+     this step the mover moves the wall at its uncorrected velocity;
+     if the corrected particle would then be overtaken by the wall
+     (possible for an accommodating model when the sampled outgoing
+     normal speed is smaller than the recoil, i.e. with probability
+     of order (m/M)^2), the uncorrected reflection is kept instead
+------------------------------------------------------------------------- */
+
+void rigid_recoil(int dim, double msuper, double *norm, double *vwall,
+                  double *vpre, double *v, double *point, double thit,
+                  double *xcm0, double *vcm,
+                  double invmass, double *invinertia)
+{
+  int i,j,k;
+  double r[3],jinf[3],jnew[3],jt[3],kn[3],vmodel[3],wrel[3];
+  double rx[3][3],t[3][3],kmat[3][3],a[3][3],ainv[3][3];
+
+  // r = hit point relative to the body COM at the hit time
+  // jinf = impulse the collision model gave the particle
+
+  for (k = 0; k < 3; k++) {
+    vmodel[k] = v[k];
+    r[k] = point[k] - (xcm0[k] + vcm[k]*thit);
+    jinf[k] = msuper * (v[k] - vpre[k]);
+  }
+  if (dim == 2) r[2] = jinf[2] = 0.0;
+
+  // kmat = 1/M - [r x] Iinv [r x]
+
+  rx[0][0] = 0.0;   rx[0][1] = -r[2]; rx[0][2] = r[1];
+  rx[1][0] = r[2];  rx[1][1] = 0.0;   rx[1][2] = -r[0];
+  rx[2][0] = -r[1]; rx[2][1] = r[0];  rx[2][2] = 0.0;
+
+  for (i = 0; i < 3; i++)
+    for (j = 0; j < 3; j++) {
+      t[i][j] = 0.0;
+      for (k = 0; k < 3; k++) t[i][j] += invinertia[3*i+k]*rx[k][j];
+    }
+  for (i = 0; i < 3; i++)
+    for (j = 0; j < 3; j++) {
+      kmat[i][j] = 0.0;
+      for (k = 0; k < 3; k++) kmat[i][j] -= rx[i][k]*t[k][j];
+    }
+  for (i = 0; i < 3; i++) kmat[i][i] += invmass;
+
+  // impulse along the normal: scalar correction
+  // else: solve (1 + m K) J = Jinf
+
+  double jn = MathExtra::dot3(jinf,norm);
+  for (k = 0; k < 3; k++) jt[k] = jinf[k] - jn*norm[k];
+
+  if (MathExtra::lensq3(jt) <= EPSRECOIL*EPSRECOIL*jn*jn) {
+    MathExtra::matvec(kmat,norm,kn);
+    double scale = 1.0 / (1.0 + msuper*MathExtra::dot3(norm,kn));
+    for (k = 0; k < 3; k++) jnew[k] = jinf[k] + (scale-1.0)*jn*norm[k];
+  } else {
+    for (i = 0; i < 3; i++)
+      for (j = 0; j < 3; j++) a[i][j] = msuper*kmat[i][j];
+    for (i = 0; i < 3; i++) a[i][i] += 1.0;
+    MathExtra::invert3(a,ainv);
+    MathExtra::matvec(ainv,jinf,jnew);
+  }
+
+  for (k = 0; k < dim; k++) v[k] = vpre[k] + jnew[k]/msuper;
+
+  // keep the uncorrected reflection if the wall would overtake the particle
+
+  MathExtra::sub3(v,vwall,wrel);
+  if (MathExtra::dot3(wrel,norm) < 0.0)
+    for (k = 0; k < dim; k++) v[k] = vmodel[k];
 }
 
 /* ----------------------------------------------------------------------
@@ -1413,6 +1865,91 @@ double distsq_point_tri(double *x, double *p1, double *p2, double *p3,
   rsq = MIN(rsq,distsq_point_line(point,p2,p3));
   rsq = MIN(rsq,distsq_point_line(point,p3,p1));
   return rsq + pdistsq;
+}
+
+/* ----------------------------------------------------------------------
+   closest point CP on line segment (P1,P2) to point X
+   return squared distance from X to CP, as distsq_point_line() does
+------------------------------------------------------------------------- */
+
+double closest_point_line(double *x, double *p1, double *p2, double *cp)
+{
+  double a[3],b[3],c[3];
+  MathExtra::sub3(x,p1,a);
+  MathExtra::sub3(p2,p1,b);
+
+  double alpha = MathExtra::dot3(a,b)/MathExtra::lensq3(b);
+
+  if (alpha >= 1.0) {
+    cp[0] = p2[0]; cp[1] = p2[1]; cp[2] = p2[2];
+  } else if (alpha > 0.0) {
+    cp[0] = p1[0] + alpha*b[0];
+    cp[1] = p1[1] + alpha*b[1];
+    cp[2] = p1[2] + alpha*b[2];
+  } else {
+    cp[0] = p1[0]; cp[1] = p1[1]; cp[2] = p1[2];
+  }
+
+  MathExtra::sub3(x,cp,c);
+  return MathExtra::lensq3(c);
+}
+
+/* ----------------------------------------------------------------------
+   closest point CP on triangle (P1,P2,P3) with NORM to point X
+   return squared distance from X to CP, as distsq_point_tri() does
+------------------------------------------------------------------------- */
+
+double closest_point_tri(double *x, double *p1, double *p2, double *p3,
+                         double *norm, double *cp)
+{
+  double a[3],point[3],edge[3],pvec[3],xproduct[3],cpe[3];
+
+  // point = X projected onto the triangle plane
+
+  MathExtra::sub3(x,p1,a);
+  double alpha = MathExtra::dot3(a,norm);
+  point[0] = x[0] - alpha*norm[0];
+  point[1] = x[1] - alpha*norm[1];
+  point[2] = x[2] - alpha*norm[2];
+
+  // inside the triangle: the projection is the closest point
+
+  int inside = 1;
+
+  MathExtra::sub3(p2,p1,edge);
+  MathExtra::sub3(point,p1,pvec);
+  MathExtra::cross3(edge,pvec,xproduct);
+  if (MathExtra::dot3(xproduct,norm) < 0.0) inside = 0;
+
+  MathExtra::sub3(p3,p2,edge);
+  MathExtra::sub3(point,p2,pvec);
+  MathExtra::cross3(edge,pvec,xproduct);
+  if (MathExtra::dot3(xproduct,norm) < 0.0) inside = 0;
+
+  MathExtra::sub3(p1,p3,edge);
+  MathExtra::sub3(point,p3,pvec);
+  MathExtra::cross3(edge,pvec,xproduct);
+  if (MathExtra::dot3(xproduct,norm) < 0.0) inside = 0;
+
+  if (inside) {
+    cp[0] = point[0]; cp[1] = point[1]; cp[2] = point[2];
+    return alpha*alpha;
+  }
+
+  // outside: the closest point is on the closest edge
+
+  double rsq = closest_point_line(x,p1,p2,cp);
+  double rsq2 = closest_point_line(x,p2,p3,cpe);
+  if (rsq2 < rsq) {
+    rsq = rsq2;
+    cp[0] = cpe[0]; cp[1] = cpe[1]; cp[2] = cpe[2];
+  }
+  rsq2 = closest_point_line(x,p3,p1,cpe);
+  if (rsq2 < rsq) {
+    rsq = rsq2;
+    cp[0] = cpe[0]; cp[1] = cpe[1]; cp[2] = cpe[2];
+  }
+  return rsq;
 }
 
 /* ----------------------------------------------------------------------

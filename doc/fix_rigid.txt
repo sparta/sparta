@@ -10,16 +10,17 @@ fix rigid command :h3
 
 [Syntax:]
 
-fix ID rigid group-ID compute-ID dstyle args keyword value ...
+fix ID rigid group-ID compute-ID dstyle args keyword value ... :pre
+
 ID is documented in "fix"_fix.html command :ulb,l
 rigid = style name of this fix command :l
-group-ID = ID of surface group ID containing surf elements which comprise the rigid body :l
+group-ID = ID of surface group containing surf elements which comprise the rigid body :l
 compute-ID = ID of "compute surf"_compute_surf.html command for force/torque calculation on rigid body :l
 dstyle = {body} or {infile}, followed by args :l
   {body} args = several keyword/values pairs, all keywords must appear, in any order
     keyword = {com} and {mass} and {moi} and {vcom} and {angmom}
       {mass} value = mtotal
-        mtotal = = total mass of rigid body (mass units)
+        mtotal = total mass of rigid body (mass units)
       {com} values = xcm ycm zcm
         xcm,ycm,zcm = center-of-mass (COM) of rigid body (distance units)
       {moi} values = ixx iyy izz ixy ixz iyz
@@ -29,157 +30,701 @@ dstyle = {body} or {infile}, followed by args :l
         vxcm,vycm,vzcm = COM velocity of rigid body (velocity units)
       {angmom} values = lx ly lz
         lx, ly, lz = angular momentum of rigid body in space frame (mass-distance^2/time units) :pre
-   (infile} args = filename
-    filename - name of file containing all rigid body attributes on a single line
+  {infile} args = filename
+    filename = name of file containing all rigid body attributes on a single line :pre
 zero or more optional keyword/value pairs :l
-  keyword = {scale} or {pseudo}
-     {scale} value = factor
-       factor = multiply all mass-dependent body values by this factor
-     {pseudo} values = Np pmass frac
-       Np = # number of pseudo particles to bounce off object each timestep
-       pmass = mass of each pseudo particle
-       frac = fraction of object bouding box to aim at (0.1 = bottom 10%, 1.0 = entire bounding box) :pre
+  keyword = {remap} or {rotate} or {push} or {pushbound} or {pushstyle} or {pushdamp} or {force} or {outfile}
+     {remap} value = {cutcell} or {incremental}
+       method used to assign the moving body surfs to grid cells
+     {rotate} value = {euler} or {richardson}
+       scheme used to update the body orientation quaternion each step
+     {push} values = k cutoff
+       k = stiffness for push-off forces
+           (force/distance units for pushstyle linear,
+            force/distance^3/2 units for pushstyle hertz)
+       cutoff = apply push-off forces below this distance (distance units)
+     {pushbound} value = {yes} or {no}
+       yes to also apply push-off forces from non-periodic boundaries
+     {pushstyle} value = {linear} or {hertz}
+       force law used for push-off forces
+     {pushdamp} value = gamma
+       gamma = dashpot damping coefficient for push-off contacts
+               (force/velocity units, 0 = elastic)
+     {force} values = fx fy fz
+       fx,fy,fz = constant external force on the body COM (force units)
+     {outfile} values = filename Nevery
+       filename = write body state to this file every Nevery steps :pre
 :ule
 
 [Examples:]
 
-compte csurf surf all all fx fy fz tx ty tz com 5 5 0
-fix 1 rigid all 1 rigid all csurf body mass 1.0 com 5 5 0 vcom 0 0 0 moi 1 1 2 -1 0 0 angmom 0 0 0
-fix 1 rigid all 1 rigid all csurf infile square.rigid pseudo 1 1000.0 0.5 :pre
+compute csurf surf all all fx fy fz tx ty tz com 5 5 0
+global rigid yes
+fix 1 rigid all csurf body mass 1.0 com 5 5 0 vcom 0 0 0 moi 2 2 3 0.5 0 0 angmom 0 0 0
+fix 1 rigid all csurf infile square.rigid outfile square.state 1000
+fix 1 rigid all csurf infile square.rigid push 1.0e-18 0.5 pushbound yes
+fix 1 rigid all csurf infile square.rigid force 0 -9.8e-22 0 :pre
 
 [Description:]
 
-Define the initial properties of a group of surface elements which
-represent a single rigid object which moves as a rigid body.  This
-means it can be embedded within a flow of particles and interact with
-the particles each timestep, as explained below.
+Define the properties of a group of surface elements which represent
+a single rigid object, and time integrate its motion as a rigid body.
+The object is embedded within a flow of particles and interacts with
+the particles each timestep.  Particles which collide with the object
+bounce off its moving surface and impart force and torque to it,
+which cause the object to translate and rotate in response to the
+flow.  The flow itself is affected by the presence and motion of the
+object.  This can be useful for modeling the effect of gas flows on
+large particulates.  See "Section 6.20"_Section_howto.html#howto_20
+for an overview of using rigid body objects in SPARTA.
 
-Group-ID is the ID of the group of surface elements (lines or tris)
-which comprise the rigid body object.  Explain the collection of surfs
-needs to be a closed object.  Does SPRATA check for this ?
+Use of this fix requires the "global rigid"_global.html command to be
+set to {yes}, so that the particle move code checks for collisions
+with moving surface elements.
 
-Compute-Id is the ID of a compute surf command which calculates the
-force and torque on individual surface elements due to collisions with
-particles.  It should produce 6 columns of per-surf values as a
-per-surf arrary.  To compute torque it also needs the center-of-mass
-(COM) of the rigid body, which should be consistent with the COM
-specified by this command.  See the above example.
+Group-ID is the ID of the group of surface elements (lines in 2d or
+triangles in 3d) which comprise the rigid body object.  The
+collection of surfs must form a closed (watertight) object, which is
+checked when the fix is defined: in 2d every point must be the first
+endpoint of exactly as many body lines as it is the second endpoint,
+and in 3d every edge must be traversed the same number of times in
+each direction by the body triangles which share it.  The body must
+also enclose a non-zero area (2d) or volume (3d): a zero-thickness
+body, such as a single line or triangle traversed once in each
+direction, passes the watertight test but has no interior for the
+cut-cell routines to mark, and is rejected.  The surf normals must
+point outward, away from the enclosed interior: the body is an object
+surrounded by gas, not a container with gas inside it, and a body
+traversed the wrong way round is rejected.
 
-The parameters of the rigid body can be specifiied in one of two ways
+Each fix rigid command defines a single rigid body.  Multiple rigid
+bodies can be simulated by using multiple fix rigid commands, each
+with its own surf group and its own compute; no surf element can
+belong to more than one body.  Bodies interact with each other via
+the push-off forces described below: another body's surfs act as
+push-off sources just as static surfs do, so a body with the {push}
+keyword enabled is repelled by other bodies before contact.  All
+push-off forces are computed once per step after every body has moved
+to its end-of-step position, and each body-body contact force is
+applied equal-and-opposite to both bodies at the contact point, so
+body-body interactions conserve linear and angular momentum exactly.
+
+Compute-ID is the ID of a "compute surf"_compute_surf.html command
+which tallies the force and torque on individual surface elements due
+to collisions with particles.  It must compute exactly these 6 values
+in this order, for a single group of a mixture which contains every
+species (otherwise part of the gas would push on the body without
+being tallied), so that it produces a per-surf array with 6 columns:
+
+compute csurf surf all all fx fy fz tx ty tz com 5 5 0 :pre
+
+The compute must also specify the {com} keyword, which "compute
+surf"_compute_surf.html requires for its torque values; the
+coordinates given to it are irrelevant here, since this fix resets
+the COM used by the compute at the beginning of each timestep to the
+mid-step position of the body's COM, so that tallied torques are
+always about the current COM of the body.
+This fix also insures the compute tallies collision info on every
+timestep of a run.
+
+The parameters of the rigid body can be specified in one of two ways
 via the {dstyle} setting: {body} or {infile}.  Note that all these
 parameters are specified in the coordinate frame of the simulation
 box, also called the "space" frame.  See the discussion below of
-"space" versus "body" frame for rigid bodies.
+"space" versus "body" frames for rigid bodies.
 
 The {body} style allows the 5 parameters to be specified directly in
-the input script.  The 5 are specified as arguments {com}, {mass}, {moi},
-{vcom}, {angmom}, each of which is followed by one or more values.
-The 5 arguments can be specified in any order.
+the input script.  The 5 are specified as arguments {com}, {mass},
+{moi}, {vcom}, {angmom}, each of which is followed by one or more
+values.  The 5 arguments can be specified in any order.
 
 The {mass} argument provides one value, the total mass of the rigid
 body.
- 
+
 The {com} argument provides 3 values for the center-of-mass (COM)
 coordinates of the rigid body.  For 2d systems, zcm must be zero.
 
 The {moi} argument provides six values which are the moments of
-inertia of the rigid body in its current configuration (read from a
-surface data file via the "read_surf"_read_surf.html command).  These
-are the matrix elements of a 3x3 symmetric interia tensor in the space
-frame of the rigid body (not the body frame).  For 2d systems, the ixz
-and iyz components must be zero.
+inertia of the rigid body in its current configuration (as read from
+a surface data file via the "read_surf"_read_surf.html command).
+These are the matrix elements of the 3x3 symmetric inertia tensor of
+the body in the space frame (not the body frame):
+
+Ixx = Sum_i m_i (y_i^2 + z_i^2)
+Iyy = Sum_i m_i (x_i^2 + z_i^2)
+Izz = Sum_i m_i (x_i^2 + y_i^2)
+Ixy = - Sum_i m_i x_i y_i
+Ixz = - Sum_i m_i x_i z_i
+Iyz = - Sum_i m_i y_i z_i :pre
+
+where the sum is over the mass distribution of the body and
+(x_i,y_i,z_i) are coordinates relative to its COM.  For simple shapes
+the values can be taken from analytic formulas, e.g. a uniform disk
+of mass M and radius R in the xy plane has Izz = 1/2 M R^2 and Ixx =
+Iyy = 1/4 M R^2, a uniform cube of edge length A has Ixx = Iyy = Izz
+= 1/6 M A^2 (in any orientation), with all off-diagonal components
+zero.  For 2d systems, the ixz and iyz components must be zero.
 
 The {vcom} argument provides 3 values for the COM velocity of the
 rigid body.  For 2d systems, vzcm must be zero.
 
-The {angmom} argument provides 3 values for the angular moment of the
-rigid body.  For 2d systems, lx and ly must be zero.
+The {angmom} argument provides 3 values for the angular momentum of
+the rigid body in the space frame.  For 2d systems, lx and ly must be
+zero.
 
 The {infile} style allows the same 5 parameters to be read from a
 specified {filename}.  The format of the file is as follows.  It can
 contain initial blank lines or comment lines starting with "#" which
 are ignored.  The first non-blank, non-comment line should list the
-following 16 parameters in the order listed.
+following 16 parameters in the order listed:
 
 mtotal xcm ycm zcm ixx iyy izz ixy ixz iyz vxcm vycm vzcm lx ly lz :pre
 
-Note that these are the same 5 paramters, each with their respective
-values, as those specified directly in the input script by the {mass},
-{com}, {moi}, {vcom}, and {angmom} keywords.  The meaning of the
-parameters and values is the same for both choices of {dstyle}.
+Six more values may follow the 16, the force and torque on the body:
 
-NOTE: still to add:
+mtotal ... lx ly lz fx fy fz tx ty tz :pre
 
-Give the formulas for the 6 MOI components.
+A file written by the {outfile} keyword always includes them.  They
+matter only for run continuation, where they carry the force and
+torque of the last completed step into the first step of the
+continuation run; see the discussion of restarting below.
 
-SPARTA diagnolizes the inertia tensor to compute the 3 values and
-the prinicpal axes of the body in the body frame.
+Note that these are the same 5 parameters, each with their respective
+values, as those specified directly in the input script by the
+{mass}, {com}, {moi}, {vcom}, and {angmom} keywords.  The meaning of
+the parameters and values is the same for both choices of {dstyle}.
+The {outfile} keyword described below writes a file in exactly this
+format, which enables a simulation with a rigid body to be continued
+in a subsequent run; see the discussion of restarting below.
 
-Explain that the inertial tensor is diagonal (just 3 values) in the
-body frame.
+:line
 
-Internally, SPARTA will convert
-some of them to "body" frame parameters, so that they are indpendent
-of the orientiation of the body as it rotates.
+Internally, SPARTA converts some of these quantities to "body" frame
+parameters, which are independent of the orientation of the body as
+it rotates.  The inertia tensor is diagonalized to give 3 principal
+moments of inertia and the principal axes of the body.  In the body
+frame defined by the principal axes, the inertia tensor is diagonal
+(just 3 values) and constant in time.  The orientation of the body
+frame with respect to the space frame is stored as a quaternion and
+updated as the body rotates.  The displacement of each line or
+triangle corner point from the COM is stored in the body frame, and
+the space-frame positions of all the points are regenerated from the
+COM and quaternion each timestep, so that the body shape does not
+drift over time.
 
-Use of restart file for continued simulations with rigid bodies.
+Each timestep, the following operations are performed.  The
+equations of motion of the body are time integrated with the velocity
+Verlet scheme, as in the rigid-body fixes of LAMMPS.  At the start of
+the step the COM velocity and angular momentum receive a half-step
+kick from the force and torque accumulated during the previous step
+(plus any constant external force from the {force} keyword), then the
+COM position and quaternion are advanced by a full timestep using
+these half-step velocities.  This gives the position and orientation
+the body will have at the end of the timestep.  The second half-step
+kick is applied at the end of the step, once the force and torque of
+the current step are known (see below).
 
-Other topics to cover.
+Before particles advect, each body surf is added to the collision
+lists of every grid cell it sweeps through during the step, using the
+union of its start-of-step and end-of-step positions.  This is called
+swept collision coverage: because a fast body advances into cells that
+did not contain it at the start of the step, a particle sitting in the
+body's path would otherwise never be tested against the surf and would
+be overtaken and deleted when the cell is later marked inside the body.
+By covering the swept cells, every particle in the path is instead
+tested against the moving surf and reflected off it.  A body moving
+through stationary gas therefore deletes no particles; it pushes them
+out of its way, imparting momentum to them.  A grid cell interior to
+the body at the start of a step, part of which the body vacates during
+the step, keeps its zero flow volume until the end-of-step re-cut:
+gas-phase collisions are skipped in such a cell for that one step,
+since its particles are in the thin sliver the body uncovered (or
+inside the body, and about to be deleted).  (The swept coverage
+augments the collision lists only; grid cell flow volumes and
+INSIDE/OUTSIDE markings come from the {remap} keyword below and are
+unaffected.)
 
-What occurs at start of step: time integration.  Calc final position
-of tri and end of this step, so can be used for collision detection.
+Particle collisions with the moving surfs use the position of each
+line or triangle as it translates and rotates during the step: a
+particle can hit a surf which is moving toward or away from it,
+including a surf which sweeps over a slowly-moving or stationary
+particle.  The test is exact for a translating body.  For a rotating
+body the particle path is mapped into the rotating frame, where it is
+curved; the chord between its endpoints selects which element the
+particle hits, and the time of the hit is then solved for on the
+exact mapped path, so the hit time and point, the surface normal and
+the wall velocity are all exact to round-off.  What remains
+approximate is which element of the body is hit when the hit is
+within a rotation angle per step of the edge between two elements,
+and a grazing contact which enters and leaves the same element within
+one step, neither of which is a leakage path: a particle cannot pass
+through an element undetected.  Both scale with the rotation angle
+per step, which is why a warning is issued when that angle exceeds
+0.1 radian (see below).
 
-Explain how collision detection works, what approximations are used.
-any.  One is that force/torque from collisions are applied on the next
-step.  I.e. in this step, the motion of the surf is proscribed,
-collisions do not affect it.
+Each collision is performed in the local rest frame of the
+moving wall: the wall velocity at the point of impact, vwall = vcom +
+omega x r, is subtracted from the particle velocity, the assigned
+surface collision model ("surf_collide"_surf_collide.html) is applied
+using the surface normal at the time of the hit, and the wall velocity
+is added back.  All surface collision models thus operate correctly on
+the moving body.  The reflected velocity is then corrected for the
+recoil of the finite-mass body, as described below.
 
-Explain semi-implit Euler alg used to time integrate rigid body
-motion.
+At the end of the step, the per-surf force/torque tallies of the
+associated compute are summed over the body surfs to become the force
+and torque of the step (together with any push-off forces).  The
+body position and orientation are updated to their end-of-step values,
+the coordinates of all its lines or triangles are regenerated, and
+the COM velocity and angular momentum receive the second half-step
+kick from this force and torque, so that the velocities reported by
+the fix are synchronized with its position and orientation.  Note
+that during any one step the body moves with a single, already
+determined velocity, which is what makes this explicit coupling
+scheme well-defined; the impulse of a step is applied half at its end
+and half at the start of the next.  The scheme is second order
+accurate in the timestep and exact for a constant force.  It is
+accurate when the body mass is large compared to the momentum
+imparted by particles during a single step, which is the intended
+regime of this command (large particulates).
 
-What occurs at end of step: summing of forces/torques to apply at
-start of next step.  Triangle vertices are updated.  Triangles are
-remapped to grid cells.  Push-off forces from too-close other tris.
+A surface collision model reflects a particle as though the wall were
+infinitely massive, so on its own it would return the particle's full
+speed relative to the surface while the body also receives the full
+impulse of the collision, counting the recoil energy of the body
+twice and adding energy to the gas plus body system with every
+collision, at a rate of order the mass of one simulation particle,
+fnum times the species mass, over the body mass M.  This fix corrects
+each collision for the recoil of the body: the impulse the collision
+model produced is reduced by the response of the body at the hit
+point, 1/M for translation plus the rotational term (r x n)^2 / I for
+a hit at r from the center of mass, exactly as in an elastic collision
+between the simulation particle and a free rigid body.  For a
+frictionless model such as {specular} the impulse is along the
+surface normal and the result is the exact two-body elastic
+collision, which conserves energy.  For an accommodating model such as
+{diffuse} the particle leaves relative to the recoiled surface
+velocity.  The correction is applied to the particle velocity before
+the surface tallies, so the impulse applied to the body is the
+corrected one and momentum remains exactly conserved (see above);
+angular momentum is conserved up to the motion of the COM within the
+step, since the tallied torque is taken about the mid-step COM while
+the recoil uses the COM at the time of the hit.  It is skipped for a collision in which a
+surface reaction occurs.  It is exact down to a body as light as one
+simulation particle; a lighter body would have to outrun the particle
+within the step, which the coupling scheme cannot represent, so the
+correction is inactive there and a warning is issued.  The one
+remaining source of energy error is the coupling itself: during a
+step the body moves at a single velocity while the impulses of all
+its collisions accumulate, and since the drag of the gas correlates
+those impulses with the body velocity, the energy exchanged is that
+of a body whose velocity did not respond within the step.  The error
+per step is of order the square of the fractional velocity change of
+the body per step times its kinetic energy, i.e. first order in the
+timestep, and negligible unless the body velocity changes by a large
+fraction every step.  In a test with a body only 100 times heavier
+than a simulation particle in a resting gas, whose velocity relaxes by
+a third every step, the energy drift over 1000 steps fell from 3.3%
+uncorrected to 0.5%, and the remainder halves with the timestep; for
+a body 10000 times heavier it is a few parts in 10^6.  Because the body recoil takes effect only on the next step,
+a particle leaving an accommodating surface relative to the recoiled
+surface velocity could be overtaken by the surface during the rest of
+the current step if its sampled outgoing speed is smaller than the
+recoil; in that case, which has probability of order (m/M)^2 per
+collision, the uncorrected reflection is kept.  In the extreme regime
+of a body only about 100 times heavier than a simulation particle,
+whose velocity then changes by a large fraction every step, such
+slowly departing particles are occasionally deleted inside a rapidly
+rotating body (see the deletion warning below); at a mass ratio of
+1000 or more this does not occur.
 
-Is there a custom per-surf vector created by this command ?
-To flag moving surfs ?
+:line
+
+The {remap} keyword selects how the moving body surfs are re-assigned
+to grid cells as the body moves, which is also discussed in "Section
+6.20"_Section_howto.html#howto_20.  In both modes the body surfs
+participate in the standard cut and split cell machinery, so grid
+cell flow volumes and INSIDE/OUTSIDE cell markings near the body are
+those of the cut cells; the two modes differ in cost and in how the
+markings of cells which the cut cannot decide on its own are
+resolved, as described below.
+
+The {remap incremental} mode (the default) re-cuts only the grid
+cells near the body.  Each timestep a single pass collects the cells
+overlapping the region each body moved through, and a cell is re-cut
+only if the set of surfs overlapping it changed or if it is
+overlapped by a body surf which moved.  Re-cutting a cell only
+considers the static surfs already assigned to the cell plus the body
+surfs, so the cost per step depends on the number of grid cells and
+surfs near the bodies, not on the size of the grid or the total
+number of surfs.  Cells the body interior moved over or away from are
+re-marked as INSIDE or OUTSIDE.  All of this work is local to each
+processor.  Whenever the change to a cell would be structural - the
+cell would become or stop being a split cell, or its surf count would
+exceed the "global surfmax"_global.html setting - the fix
+automatically falls back to the full grid re-map that {cutcell}
+performs on every step, and issues a one-time warning saying why.  A
+body whose path is always near a split cell (e.g. a thin static wall
+crossing grid cells) therefore falls back on every step and runs at
+the cost of {cutcell}.
+
+For {remap cutcell}, at the end of every timestep, after the body
+surfs move, all surfs are re-assigned to grid cells and cut/split
+cell info including flow volumes and INSIDE/OUTSIDE cell markings is
+re-computed, exactly as is done by the "fix
+move/surf"_fix_move_surf.html command, including the flood fill
+which marks the cells of the whole grid INSIDE or OUTSIDE.  This
+performs a full grid re-map every timestep, which can be expensive
+for large grids; it is chiefly useful as a reference for validating
+{incremental}.  The {incremental} mode does not flood fill: a cell
+whose cut leaves its markings undecided (all body surfs merely
+touching its faces, as for a face lying exactly on a cell boundary)
+falls back to a full re-map on that step, so both modes give the same
+cell markings and volumes.  When an incremental re-cut changes the
+marking of any cell, the emit fixes are notified to rebuild their
+per-cell emission tasks, as a full re-map does.
+Any particles found inside the body after the re-map are deleted, but
+with swept collision coverage (see above) particles in the body's
+path are reflected rather than overtaken, so in practice no particles
+are deleted once a run is under way.
+
+With multiple rigid bodies, the {incremental} re-cut is applied only
+if every body uses {incremental}; the last-defined body then re-cuts
+the cells affected by all of them in a single coordinated pass.  If
+any body uses {cutcell}, an exact full grid re-map is performed
+instead, which correctly handles all bodies.
+
+Particles which are inside the body when a run starts are deleted at
+the start of the run.  The cumulative count of particles deleted
+because they were inside a body is output as the scalar value of this
+fix.  Because of swept collision coverage this count normally does not
+grow after the start of a run, and a warning is issued at the end of a
+run in which it did.  The usual cause is a body moving so far in one
+step that it jumps entirely past a particle (see the motion-per-step
+warnings below).  A body whose faces lie exactly on grid cell
+boundaries, e.g. a box aligned with the grid, is handled correctly:
+the moving-surf collision test uses the same particle path, clipped
+to the faces of the cell, as the test for a static surf, so a body
+face which coincides with a cell face cannot be tunneled through.
+
+:line
+
+The {rotate} keyword selects the scheme used to advance the body
+orientation quaternion each step.  The default {euler} update holds
+the angular velocity fixed over the step and applies the exact
+rotation by angle |w|*dt about w, which is precisely the motion the
+moving-surf collision tests assume during the step, so the geometry
+installed at the end of the step is the one particles were reflected
+from.  The {richardson} option uses the Richardson iteration employed
+by LAMMPS rigid-body fixes: it re-evaluates the angular velocity at
+the half step from the angular momentum (constant over the step) and
+combines full- and half-step quaternion updates, which better
+follows the precession of an asymmetric body.  Both schemes conserve
+angular momentum exactly; they differ only in the orientation
+accuracy.  The {euler} update is first order in the timestep and
+{richardson} is second order: on a freely tumbling asymmetric body
+richardson reproduced the analytic polhode period to 5e-8 relative,
+against 7e-3 for euler at the same timestep.  Prefer {richardson} when
+the body orientation itself matters, noting that its rotation is then
+no longer exactly the constant-rate rotation the collision tests
+assume, a difference of the same order as the rest of the gas-body
+coupling.
+
+The {push} keyword enables push-off forces which repel the body from
+static (non-body) surface elements, and from other rigid bodies,
+before it touches them.  If any corner point of a body line or
+triangle comes within {cutoff} distance of a source surf element, a
+repulsive force is applied to the body at that point, directed away
+from the element (see below).  When the source element
+belongs to another rigid body, the reaction force is applied
+equal-and-opposite to that body at the same contact point, so
+body-body contacts conserve linear and angular momentum exactly;
+reaction forces are applied even to bodies which do not use the
+{push} keyword themselves.  Static surf elements are binned once per
+run, so the per-step cost scales with the number of nearby elements,
+not the total number of static surfs.  With overlap delta =
+cutoff - d, where d is the distance from the point to the element,
+the force is
+
+F = k delta            for pushstyle linear (the default)
+F = k delta^(3/2)      for pushstyle hertz :pre
+
+The {linear} law is a simple spring with bounded stiffness; its
+maximum force is k*cutoff.  The {hertz} law is the Hertzian contact
+force for elastic contact of curved bodies, the standard model for
+particulate contact mechanics: both the force and its derivative
+vanish smoothly at the cutoff.  For either law the contact must be
+resolved by the timestep: stiffer k means shorter contacts, and an
+under-resolved contact does not conserve energy.  The force
+contributes both force and torque to the body.  Each (corner point,
+static element) pair within the cutoff contributes its own force, so
+k is a per-contact stiffness.  Two bodies which both use the {push}
+keyword engage the corner points of each against the elements of the
+other, so a body-body contact has about twice as many contacts, and
+twice the effective stiffness, as the same body meeting a static surf
+or a body without {push} (which only receives reaction forces).  The
+force acts along the direction from the closest point of the source
+element to the corner point, which is the outward normal of the
+element when the closest feature is its interior; when the closest
+feature is an edge or a vertex, as it is for most contacts with a
+faceted curved surface, this direction is what keeps each contact
+force the gradient of its spring potential, so that the contacts
+conserve energy.  Every element within the cutoff contributes, on
+either side of it, so the total contact force is the gradient of the
+sum of the per-element spring potentials: the only energy error of a
+contact resolved by the timestep is then the second-order error of
+the time integration itself, which falls by a factor of four each
+time the timestep is halved and has no secular drift.  A corner point
+inside a wall thinner than twice the cutoff is repelled by both of its
+faces
+at once, whose potentials add to a barrier peaking at the near
+surface, so a thin wall repels a body rather than propelling it
+through.
+
+The push-off spring has a finite range, so it can only absorb a finite
+amount of kinetic energy: for a linear spring the work done in
+compressing N contacts through the full cutoff is N k cutoff^2 / 2.  A
+body which arrives with more kinetic energy than that is not stopped;
+it passes through the source surface and out the other side, with no
+warning from the push-off model itself; if it then overlaps a static
+surface, the grid cut of the cells holding both fails with an error.
+When sizing k, check that
+
+N k cutoff^2 / 2 >> 1/2 M v^2 :pre
+
+for the fastest approach speed v the body will reach, where N is the
+number of contacts which engage.  N counts (corner point, source
+element) pairs, so it is larger than the number of corner points: a
+2d square meeting a flat wall face-on engages four contacts, since
+each of the two leading corners belongs to two body lines.
+
+The {pushdamp} keyword adds a dashpot term to each contact, forming
+the standard DEM spring-dashpot contact model:
+
+F = k delta^n + gamma d(delta)/dt :pre
+
+where d(delta)/dt is the approach rate of the body corner point
+relative to the source surface, along the same contact direction as
+the spring force, including the motion of another
+rigid body when the source is one.  The dashpot removes energy during
+a collision, producing an inelastic bounce with a coefficient of
+restitution controlled by gamma; the total contact force is clamped
+at zero, so the dashpot never produces adhesion as a contact ends.
+With gamma = 0 (the default) contacts are elastic.
+The {pushbound} keyword additionally applies the same spring force
+from the (non-periodic) boundaries of the simulation box, to keep the
+body inside the box; a corner point which has crossed a boundary is
+pushed back with the maximum force k*cutoff.  Push-off forces are
+computed for the
+end-of-step geometry and are included in the force and torque of the
+step.  The total push-off force is
+included in the global vector output of this fix (see below).
+
+The {force} keyword applies a constant external force to the COM of
+the body every timestep, in addition to the forces from particle
+collisions and push-off contacts.  For example, a body of mass M in a
+gravitational field g pointing in -y would use {force} 0 -M*g 0.  For
+2d systems, fz must be zero.
+
+The {outfile} keyword writes the current state of the rigid body
+(the same parameters as the {infile} format, with the moments of
+inertia given in the space frame for the current body orientation) to
+the specified file every Nevery timesteps.  The file is overwritten
+each time, so it always contains the most recent state.
+
+:line
+
+[Restart continuation:]
+
+No information about this fix is written to "binary restart
+files"_restart.html.  To continue a simulation with a rigid body, use
+the {outfile} keyword to periodically write the body state to a file,
+and start the continuation run with the {infile} style pointing at
+that file.  The restart file itself stores the current (moved)
+coordinates of all surface elements, which this fix combines with the
+infile parameters to re-initialize the body-frame representation.
+
+The outfile stores the force and torque on the body as well as its
+position and velocity.  This is what makes the continuation exact: the
+body is moved on each step by the force and torque accumulated on the
+previous one, so a continuation which began with zero force would lose
+one step's impulse.  The error is invisible for a body in free flight,
+but not for one which is in contact with a surface, or in a dense
+flow, when the state is written.
+
+A "read_restart"_read_restart.html file stores the surface elements
+but not the assignment of surface collision models to them, so the
+"surf_collide"_surf_collide.html and "surf_modify"_surf_modify.html
+commands must be re-issued in the continuation script, as they must
+for any run which restarts a simulation with surfaces.
+
+Two caveats.  The cumulative count of deleted particles output as the
+scalar of this fix restarts at zero, since it is a diagnostic rather
+than part of the body state.  And for a body whose principal moments
+of inertia are degenerate (e.g. a square, where ixx = iyy), the
+diagonalization of the inertia tensor may pick different principal
+axes than the original run did, so the quaternion output of the
+continuation run need not match.  The body motion is unaffected: the
+shape is re-derived from the moved coordinates in whichever body frame
+is chosen.
 
 :line
 
 [Restart, output info:]
 
-No information about this fix is written to "binary restart
-files"_restart.html.  Could write out the rigid body params so
-that the simulation can be restarted.
-
-Or could write out of a new rigid "outfile" with each restart so it
-can be read as an "infile" on the restarted run.
-
-This fix computes a global vector which can be accessed by various
-output commands at any timestep.  The vector size is 12 quantities, as follow:
+This fix computes a global scalar and a global vector, which can be
+accessed by various output commands at any timestep.  The scalar is
+the cumulative number of particles deleted because they ended up
+inside the moving body.  The vector has 22 values:
 
 1,2,3 = xyz coords of the center of mass (COM) (distance units)
 4,5,6 = xyz components of the COM velocity (velocity units)
 7,8,9 = xyz components of the force acting on the COM (force units)
-10,11,12 = xyz components of the torque acting on the COM (force-distance units) :ul
+10,11,12 = xyz components of the torque acting on the body (force-distance units)
+13,14,15 = xyz components of the angular velocity of the body (1/time units)
+16,17,18,19 = quaternion for the orientation of the body
+20,21,22 = xyz components of the push-off force acting on the COM (force units) :ul
 
-NOTE: are these in the space frame for current orientation of the
-rigid body ?  What about output of the quat ?
+All vector quantities are in the space frame for the current
+orientation of the rigid body.  The force and torque are those
+accumulated on the most recent timestep, half of which has been
+applied to the body at the end of that step and half of which will be
+applied at the start of the next; they include the push-off forces,
+which are also reported separately in values 20-22, but not the
+constant external force of the {force} keyword, which is applied
+separately and is not part of the tallied force.
 
-:line
+The velocities in values 4-6 and 13-15 are synchronized with the
+position and orientation in values 1-3 and 16-19, all at the end of
+the timestep just completed; the rate at which the body was rotated
+over that step was the half-step angular velocity, which differs by
+half a step's torque.  The angular momentum, which is exact and
+constant in the absence of torque, can be written with the {outfile}
+keyword.
+
+This fix performs several validity checks when it is defined and
+initialized: the body must be watertight and enclose a non-zero area
+or volume (see above), its mass must
+be positive, its principal moments of inertia must be positive and
+satisfy the triangle inequality I1 + I2 >= I3 in 3d, or its moment
+about the z axis must be positive in 2d, the compute's surf group
+must include all body surfs, and the surf collision model of the
+body surfs must not itself impose a wall motion (the {translate} and
+{rotate} options of "surf_collide"_surf_collide.html diffuse, and the
+piston style), since the motion of the body is what the surfs
+follow.  During a run, a
+one-time warning is issued if the body rotates by more than 0.1
+radian in a single timestep (which degrades the accuracy of
+moving-surf collisions), if any body surf point moves farther than
+the smallest grid cell in a single timestep (which degrades the
+accuracy of the re-assignment of surfs to grid cells), or
+if the body exits the simulation box entirely (after which it no
+longer interacts with any particles).
 
 [Restrictions:]
 
-There can only be a single rigid body in the simulation.  Does SPARTA
-check for this ?
+The "global rigid"_global.html command must be used to enable
+moving-surf collisions in the particle mover.  Each fix rigid command
+defines one rigid body; multiple bodies require multiple fixes with
+disjoint surf groups.
 
-Moving surfs can only be used with explicit, non-distributed surface
-elements.  See Howto section on this.
+Rigid bodies can be used with explicit surface elements, both
+non-distributed and distributed ("global surfs"_global.html
+explicit/distributed); implicit surfs are not supported.  With
+distributed surfs each processor stores a replicated copy of the
+(compact) body elements plus the static surfs which overlap its own
+and ghost grid cells, so the total surf collection can be much larger
+than any one processor's memory.  Both {remap} modes work with
+distributed surfs.  Rigid bodies cannot be used with axisymmetric
+domains.  Body surf elements cannot be transparent and cannot have
+surface reactions assigned to them.  Because the grid may be re-mapped
+on any step, with distributed surfs a "surf_react
+adsorb"_surf_react_adsorb.html model in its {surf} mode on any surfs
+requires its {nsync} setting to be 1.  A "fix
+emit/surf"_fix_emit_surf.html command cannot emit from the body
+surfs, since its emission tasks are built from the surf positions at
+the start of a run.  The {incremental}
+remap mode assumes the body does not pass through the interior of
+closed static geometry, whose interior cells it would type by the
+body alone.
+
+Surfs cannot be removed or re-numbered, nor the body surfs moved by
+another command, nor the body's surf group changed, after a fix rigid
+command is defined; surfs may be appended (they become static surfs).  With distributed surfs the collision model, reaction
+model, transparency and group membership of the body surfs cannot be
+changed after the fix is defined either, since the fix builds its
+local copies of body surfs from a replicated table of these
+attributes; issue the "surf_modify"_surf_modify.html
+commands for the body surfs before the fix rigid command, and an
+error is generated at the start of a run if they have changed.  With
+non-distributed surfs such changes are picked up at the start of the
+next run.
+
+Per-surf tallies of "compute surf"_compute_surf.html other than the
+force and torque, such as pressure and shear stress, resolve
+quantities along the surf normal stored at the start of the step, not
+the normal at the time of the hit, so on a rotating body they are
+approximate to the rotation per step.  A "global field"_global.html or
+per-particle field perturbs the particle paths within a step while the
+moving-surf collision test assumes straight paths, so the hit time on
+a body is approximate to the same order as the field perturbation.
+
+The body must be a closed (watertight) object which encloses a
+non-zero area or volume, with its surf normals pointing outward.  The
+body must stay
+within the simulation box if the boundaries it would cross are
+periodic; body coordinates are not wrapped across periodic
+boundaries, so an error is generated in that case.  The body may exit
+the domain through non-periodic boundaries.  Particles are not
+prevented from being emitted inside the body region during a run
+(e.g. by "fix emit/face"_fix_emit_face.html with an emission region
+overlapping the body).
+
+This fix must be defined before any "fix balance"_fix_balance.html,
+"fix adapt"_fix_adapt.html, or "fix move/surf"_fix_move_surf.html
+command, so that it re-cuts the grid cells for the moved body before
+the grid is re-balanced, adapted, or re-mapped to moved static surfs.
+
+If this fix is deleted via the "unfix"_unfix.html command, the
+"global rigid"_global.html setting should also be set to {no}.  The
+body then remains as a static object at its current position which
+particles continue to collide with.
+
+:line
+
+The {rigid/kk} style is part of the KOKKOS package and is selected
+automatically by the "-sf kk"_Section_start.html#start_7 command-line
+switch; when the KOKKOS package is active (the "-k on" switch) the
+{rigid/kk} style must be used, and the plain style generates an
+error.  The KOKKOS version performs the moving-surf collision tests
+in the KOKKOS particle mover, on the GPU or host threads.  The body
+time integration, the summation of force and torque, the per-step
+re-assignment of body surfs to grid cells, and the deletion of
+particles inside the body run on the host, so each timestep the
+particle data is copied from the device to the host and back.  This
+limits performance on GPUs for large particle counts.  The results
+are statistically equivalent to those of the non-KOKKOS version; the
+KOKKOS surface collision models use a different random number stream
+and per-surf tallies are summed in a different order, so trajectories
+are not bit-for-bit identical.  The compute used by the fix must be
+the {surf/kk} style, which "-sf kk" also selects.
 
 [Related commands:]
 
-List other commands which are used with rigid bodies, e.g. compute
-surf or custom surf
+"global rigid"_global.html, "compute surf"_compute_surf.html,
+"fix move/surf"_fix_move_surf.html, "read_surf"_read_surf.html
 
-[Default:] none
+[Default:]
 
+The option defaults are remap = incremental, rotate = euler,
+pushbound = no, pushstyle = linear, pushdamp = 0.0, force = 0 0 0,
+no push-off forces, no outfile.
+
+:line
+
+A regression test suite for rigid bodies, with analytic checks of
+ballistic motion under external force, push-off bounces, gas+body
+momentum conservation, overrun robustness, remap-mode consistency
+with and without large static geometry and split cells, symmetric
+and asymmetric two-body collisions, and distributed-surf runs, is
+available in the tools/testing/rigid directory.

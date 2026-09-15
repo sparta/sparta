@@ -76,8 +76,9 @@
     bytes = limit extra particle memory to this amount (in MBytes)
   <I>optmove</I> value = yes or no
     yes/no = use optimized particle move if yes, else use regular move
-  <I>rigid</I> value= fixID
-    fixID = ID of a fix rigid command that defines a mobile rigid-body object composed of surface elements 
+  <I>rigid</I> value = <I>yes</I> or <I>no</I>
+    yes = enable mobile rigid-body objects defined by fix rigid commands
+    no = disable mobile rigid-body objects 
 </PRE>
 
 </UL>
@@ -483,13 +484,15 @@ measure of how often the optimized move was not applicable, not of how
 far particles moved. A value near zero means it was used for nearly
 every particle.
 </P>
-<P>The <I>rigid</I> keyword enables a mobile rigid-body object composed of
-surface elements (lines in 2d, triangles in 3d) to be simulated.  The
-fixID argument is the ID of a <A HREF = "fix_rigid.html">fix rigid</A> command which
-defines the set of surfaces in the rigid body.  If fixID is specified
-as NULL, then the motion of the rigid-body object is disabled.  The
-instance o the <A HREF = "fix_rigid.html">fix rigid</A> command shoud also be
-deleted via the <A HREF = "unfix.html">unfix</A> command.
+<P>The <I>rigid</I> keyword enables mobile rigid-body objects composed of
+surface elements (lines in 2d, triangles in 3d) to be simulated.
+Each object is defined by a <A HREF = "fix_rigid.html">fix rigid</A> command; all
+defined fix rigid commands become active.  If the value is <I>no</I>, the
+motion of rigid-body objects is disabled.  In that case any instances
+of the <A HREF = "fix_rigid.html">fix rigid</A> command should also be deleted via
+the <A HREF = "unfix.html">unfix</A> command.  See <A HREF = "Section_howto.html#howto_20">Section
+6.20</A> for an overview of rigid body
+surface objects.
 </P>
 <P><B>Restrictions:</B>
 </P>
@@ -506,6 +509,6 @@ defined, e.g. via the <A HREF = "read_surf.html">read_surf</A> command.
 0.0, temp = 273.15, field = none, surfs = explicit, surfgrid = auto,
 surfmax = 100, splitmax = 10, surftally = auto,
 gridcut = -1.0, comm/sort = no, comm/style = neigh, weight = cell
-none, particle/reorder = 0, mem/limit = 0, optmove = no, rigid = NULL.
+none, particle/reorder = 0, mem/limit = 0, optmove = no, rigid = no.
 </P>
 </HTML>
