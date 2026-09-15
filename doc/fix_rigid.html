@@ -266,13 +266,19 @@ curved; the chord between its endpoints selects which element the
 particle hits, and the time of the hit is then solved for on the
 exact mapped path, so the hit time and point, the surface normal and
 the wall velocity are all exact to round-off.  What remains
-approximate is which element of the body is hit when the hit is
-within a rotation angle per step of the edge between two elements,
-and a grazing contact which enters and leaves the same element within
-one step, neither of which is a leakage path: a particle cannot pass
-through an element undetected.  Both scale with the rotation angle
-per step, which is why a warning is issued when that angle exceeds
-0.1 radian (see below).
+approximate is which element of the body is credited with the hit
+when the crossing lies near the edge between two elements: the chord
+meets the plane of an element at a slightly different place than the
+curved path does, so a crossing close to a shared edge can be
+attributed to the neighbouring element, or fall just off the end of
+both.  This is not a leakage path.  The chord is a single segment
+tested against every element of the body, so a watertight body stays
+watertight in the mapped frame and a particle cannot pass through the
+surface undetected; a missed crossing of this kind is a grazing
+contact which leaves the particle on the side it started, having
+transferred almost no momentum.  The effect scales with the rotation
+angle per step, which is why a warning is issued when that angle
+exceeds 0.1 radian (see below).
 
 Each collision is performed in the local rest frame of the
 moving wall: the wall velocity at the point of impact, vwall = vcom +
