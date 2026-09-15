@@ -437,8 +437,8 @@ struct HIPParallelLaunchKernelInvoker<DriverType, LaunchBounds,
     KOKKOS_EXPECTS(!graph_node);
 
     if (!Impl::is_empty_launch(grid, block)) {
-      auto *driver_ptr = Impl::allocate_driver_storage_for_kernel(
-          HIP(hip_instance->m_stream, ManageStream::no), driver);
+      auto *driver_ptr =
+          get_graph_node_kernel(driver).allocate_driver_memory_buffer();
 
       // Unlike in the non-graph case, we can get away with doing an async copy
       // here because the `DriverType` instance is held in the GraphNodeImpl
@@ -451,7 +451,7 @@ struct HIPParallelLaunchKernelInvoker<DriverType, LaunchBounds,
       // FIXME_HIP Modifying the assignment to args causes a segfault in
       // hip_graph.force_global_launch
       // NOLINTNEXTLINE(bugprone-multi-level-implicit-pointer-conversion)
-      void const *args[] = {&driver_ptr};
+      void *args[] = {&driver_ptr};
 
       hipKernelNodeParams params = {};
 
@@ -460,7 +460,7 @@ struct HIPParallelLaunchKernelInvoker<DriverType, LaunchBounds,
       params.sharedMemBytes = shmem;
       // Casting a function pointer to a data pointer...
       params.func         = reinterpret_cast<void *>(base_t::get_kernel_func());
-      params.kernelParams = const_cast<void **>(args);
+      params.kernelParams = args;
       params.extra        = nullptr;
 
       KOKKOS_IMPL_HIP_SAFE_CALL(hip_instance->hip_graph_add_kernel_node_wrapper(

@@ -28,7 +28,7 @@ template <class ExecutionSpace>
 struct GraphNodeImpl<ExecutionSpace, Kokkos::Experimental::TypeErasedTag,
                      Kokkos::Experimental::TypeErasedTag>
     : GraphNodeBackendSpecificDetails<ExecutionSpace>,
-      InstanceStorage<ExecutionSpace> {
+      InstanceStorage<Kokkos::Impl::DeviceHandle<ExecutionSpace>> {
  public:
   using node_ref_t =
       Kokkos::Experimental::GraphNodeRef<ExecutionSpace,
@@ -37,17 +37,15 @@ struct GraphNodeImpl<ExecutionSpace, Kokkos::Experimental::TypeErasedTag,
 
  protected:
   using implementation_base_t = GraphNodeBackendSpecificDetails<ExecutionSpace>;
-  using execution_space_storage_base_t = InstanceStorage<ExecutionSpace>;
-
- public:
-  virtual ~GraphNodeImpl() = default;
+  using device_handle_t       = Kokkos::Impl::DeviceHandle<ExecutionSpace>;
+  using device_handle_storage_base_t = InstanceStorage<device_handle_t>;
 
  protected:
   //----------------------------------------------------------------------------
   // <editor-fold desc="protected ctors and destructors"> {{{2
 
-  explicit GraphNodeImpl(ExecutionSpace const& ex) noexcept
-      : implementation_base_t(), execution_space_storage_base_t(ex) {}
+  explicit GraphNodeImpl(device_handle_t const& device_handle) noexcept
+      : implementation_base_t(), device_handle_storage_base_t(device_handle) {}
 
   // </editor-fold> end protected ctors and destructors }}}2
   //----------------------------------------------------------------------------
@@ -57,10 +55,10 @@ struct GraphNodeImpl<ExecutionSpace, Kokkos::Experimental::TypeErasedTag,
   // <editor-fold desc="public(-ish) constructors"> {{{2
 
   template <class... Args>
-  GraphNodeImpl(ExecutionSpace const& ex, _graph_node_is_root_ctor_tag,
-                Args&&... args) noexcept
+  GraphNodeImpl(device_handle_t const& device_handle,
+                _graph_node_is_root_ctor_tag, Args&&... args) noexcept
       : implementation_base_t(_graph_node_is_root_ctor_tag{}, (Args&&)args...),
-        execution_space_storage_base_t(ex) {}
+        device_handle_storage_base_t(device_handle) {}
 
   // </editor-fold> end public(-ish) constructors }}}2
   //----------------------------------------------------------------------------
@@ -73,13 +71,17 @@ struct GraphNodeImpl<ExecutionSpace, Kokkos::Experimental::TypeErasedTag,
   GraphNodeImpl(GraphNodeImpl&&)                 = delete;
   GraphNodeImpl& operator=(GraphNodeImpl const&) = delete;
   GraphNodeImpl& operator=(GraphNodeImpl&&)      = delete;
+  virtual ~GraphNodeImpl()                       = default;
 
   // </editor-fold> end no other constructors }}}2
   //----------------------------------------------------------------------------
 
-  ExecutionSpace const& execution_space_instance() const {
-    return this->execution_space_storage_base_t::instance();
+  device_handle_t get_device_handle() const {
+    return this->device_handle_storage_base_t::instance();
   }
+
+  virtual constexpr Experimental::GraphNodeKind get_node_kind()
+      const noexcept = 0;
 };
 
 // </editor-fold> end Fully type-erased GraphNodeImpl }}}1
@@ -99,6 +101,9 @@ struct GraphNodeImpl<ExecutionSpace, Kernel,
   using base_t =
       GraphNodeImpl<ExecutionSpace, Kokkos::Experimental::TypeErasedTag,
                     Kokkos::Experimental::TypeErasedTag>;
+
+ protected:
+  using typename base_t::device_handle_t;
 
  public:
   //----------------------------------------------------------------------------
@@ -130,13 +135,15 @@ struct GraphNodeImpl<ExecutionSpace, Kernel,
                 std::is_same_v<Tag, _graph_node_kernel_ctor_tag> ||
                 std::is_same_v<Tag, _graph_node_capture_ctor_tag> ||
                 std::is_same_v<Tag, _graph_node_host_ctor_tag>>>
-  GraphNodeImpl(ExecutionSpace const& ex, Tag, KernelDeduced&& arg_kernel)
-      : base_t(ex), m_kernel{(KernelDeduced&&)arg_kernel} {}
+  GraphNodeImpl(device_handle_t const& device_handle, Tag,
+                KernelDeduced&& arg_kernel)
+      : base_t(device_handle), m_kernel{(KernelDeduced&&)arg_kernel} {}
 
   template <class... Args>
-  GraphNodeImpl(ExecutionSpace const& ex, _graph_node_is_root_ctor_tag,
-                Args&&... args)
-      : base_t(ex, _graph_node_is_root_ctor_tag{}, (Args&&)args...) {}
+  GraphNodeImpl(device_handle_t const& device_handle,
+                _graph_node_is_root_ctor_tag, Args&&... args)
+      : base_t(device_handle, _graph_node_is_root_ctor_tag{}, (Args&&)args...) {
+  }
 
   //- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
   // <editor-fold desc="Rule of 6 for not copyable or movable"> {{{3
@@ -147,7 +154,7 @@ struct GraphNodeImpl<ExecutionSpace, Kernel,
   GraphNodeImpl(GraphNodeImpl&&)                 = delete;
   GraphNodeImpl& operator=(GraphNodeImpl const&) = delete;
   GraphNodeImpl& operator=(GraphNodeImpl&&)      = delete;
-  ~GraphNodeImpl() override                      = default;
+  ~GraphNodeImpl() noexcept override             = default;
 
   // </editor-fold> end Rule of 6 for not copyable or movable }}}3
   //- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -162,6 +169,24 @@ struct GraphNodeImpl<ExecutionSpace, Kernel,
   Kernel& get_kernel() & { return m_kernel; }
   Kernel const& get_kernel() const& { return m_kernel; }
   Kernel&& get_kernel() && = delete;
+
+  static constexpr Experimental::GraphNodeKind node_kind = []() {
+    if constexpr (is_graph_kernel_v<kernel_type>) {
+      return Experimental::GraphNodeKind::Kernel;
+    } else if constexpr (is_graph_root_v<kernel_type>) {
+      return Experimental::GraphNodeKind::Root;
+    } else if constexpr (is_graph_capture_v<kernel_type>) {
+      return Experimental::GraphNodeKind::Capture;
+    } else if constexpr (is_graph_then_host_v<kernel_type>) {
+      return Experimental::GraphNodeKind::Host;
+    } else {
+      return Experimental::GraphNodeKind::Aggregate;
+    }
+  }();
+
+  constexpr Experimental::GraphNodeKind get_node_kind() const noexcept final {
+    return node_kind;
+  }
 
   // </editor-fold> end member accessors }}}2
   //----------------------------------------------------------------------------
@@ -186,10 +211,7 @@ struct GraphNodeImpl
   using backend_details_base_t =
       GraphNodeBackendDetailsBeforeTypeErasure<ExecutionSpace, Kernel,
                                                PredecessorRef>;
-  // The fully type-erased base type, for the destroy function
-  using type_erased_base_t =
-      GraphNodeImpl<ExecutionSpace, Kokkos::Experimental::TypeErasedTag,
-                    Kokkos::Experimental::TypeErasedTag>;
+  using typename base_t::device_handle_t;
 
  public:
   //----------------------------------------------------------------------------
@@ -220,7 +242,7 @@ struct GraphNodeImpl
   GraphNodeImpl(GraphNodeImpl&&)                 = delete;
   GraphNodeImpl& operator=(GraphNodeImpl const&) = delete;
   GraphNodeImpl& operator=(GraphNodeImpl&&)      = delete;
-  ~GraphNodeImpl() override                      = default;
+  ~GraphNodeImpl() noexcept override             = default;
 
   // Normal kernel-and-predecessor or capture-and-predecessor constructor.
   template <class KernelDeduced, class PredecessorPtrDeduced, class Tag,
@@ -228,24 +250,25 @@ struct GraphNodeImpl
                 std::is_same_v<Tag, _graph_node_kernel_ctor_tag> ||
                 std::is_same_v<Tag, _graph_node_capture_ctor_tag> ||
                 std::is_same_v<Tag, _graph_node_host_ctor_tag>>>
-  GraphNodeImpl(ExecutionSpace const& ex, Tag, KernelDeduced&& arg_kernel,
-                _graph_node_predecessor_ctor_tag,
+  GraphNodeImpl(device_handle_t const& device_handle, Tag,
+                KernelDeduced&& arg_kernel, _graph_node_predecessor_ctor_tag,
                 PredecessorPtrDeduced&& arg_predecessor)
-      : base_t(ex, Tag{}, (KernelDeduced&&)arg_kernel),
+      : base_t(device_handle, Tag{}, (KernelDeduced&&)arg_kernel),
         // The backend gets the ability to store (weak, non-owning) references
         // to the kernel in it's final resting place here if it wants. The
         // predecessor is already a pointer, so it doesn't matter that it isn't
         // already at its final address
-        backend_details_base_t(ex, this->base_t::get_kernel(), arg_predecessor,
-                               *this),
+        backend_details_base_t(device_handle.m_exec, this->base_t::get_kernel(),
+                               arg_predecessor, *this),
         m_predecessor_ref((PredecessorPtrDeduced&&)arg_predecessor) {}
 
   // Root-tagged constructor
   template <class... Args>
-  GraphNodeImpl(ExecutionSpace const& ex, _graph_node_is_root_ctor_tag,
-                Args&&... args)
-      : base_t(ex, _graph_node_is_root_ctor_tag{}, (Args&&)args...),
-        backend_details_base_t(ex, _graph_node_is_root_ctor_tag{}, *this),
+  GraphNodeImpl(device_handle_t const& device_handle,
+                _graph_node_is_root_ctor_tag, Args&&... args)
+      : base_t(device_handle, _graph_node_is_root_ctor_tag{}, (Args&&)args...),
+        backend_details_base_t(device_handle.m_exec,
+                               _graph_node_is_root_ctor_tag{}, *this),
         m_predecessor_ref() {}
 
   // </editor-fold> end Ctors, destructors, and assignment }}}2

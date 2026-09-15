@@ -4,12 +4,7 @@
 #ifndef KOKKOS_SETUP_SYCL_HPP_
 #define KOKKOS_SETUP_SYCL_HPP_
 
-// FIXME_SYCL
-#if __has_include(<sycl/sycl.hpp>)
 #include <sycl/sycl.hpp>
-#else
-#include <CL/sycl.hpp>
-#endif
 
 #ifndef KOKKOS_ENABLE_IMPL_SYCL_OUT_OF_ORDER_QUEUES
 #define KOKKOS_IMPL_SYCL_USE_IN_ORDER_QUEUES
@@ -20,23 +15,6 @@
 #define KOKKOS_IMPL_SYCL_GRAPH_SUPPORT
 #endif
 
-// FIXME_SYCL Use type directly once it has stabilized in SYCL.
-namespace Kokkos::Impl {
-#ifndef SYCL_EXT_INTEL_USM_ADDRESS_SPACES
-#error SYCL_EXT_INTEL_USM_ADDRESS_SPACES undefined!
-#elif SYCL_EXT_INTEL_USM_ADDRESS_SPACES >= 2
-template <typename T>
-using sycl_device_ptr = sycl::ext::intel::device_ptr<T>;
-template <typename T>
-using sycl_host_ptr = sycl::ext::intel::host_ptr<T>;
-#else
-template <typename T>
-using sycl_device_ptr = sycl::device_ptr<T>;
-template <typename T>
-using sycl_host_ptr = sycl::host_ptr<T>;
-#endif
-}  // namespace Kokkos::Impl
-
 // clang-format off
 #ifdef KOKKOS_ENABLE_SYCL_RELOCATABLE_DEVICE_CODE
 #define KOKKOS_IMPL_RELOCATABLE_FUNCTION SYCL_EXTERNAL
@@ -44,5 +22,19 @@ using sycl_host_ptr = sycl::host_ptr<T>;
 #define KOKKOS_IMPL_RELOCATABLE_FUNCTION @"KOKKOS_RELOCATABLE_FUNCTION requires Kokkos_ENABLE_SYCL_RELOCATABLE_DEVICE_CODE=ON"
 #endif
 // clang-format on
+
+#define KOKKOS_IMPL_HALF_TYPE_DEFINED
+#define KOKKOS_IMPL_SYCL_HALF_TYPE_DEFINED
+
+// FIXME_SYCL bfloat16 is only supported for compute capability 8.0 or higher
+// on Nvidia GPUs but SYCL_EXT_ONEAPI_BFLOAT16 is defined even for lower compute
+// capability.
+#if __has_include( \
+    <sycl/ext/oneapi/bfloat16.hpp>) || (defined(SYCL_EXT_ONEAPI_BFLOAT16) && defined(KOKKOS_ARCH_INTEL_GPU))
+#define KOKKOS_IMPL_BHALF_TYPE_DEFINED
+#define KOKKOS_IMPL_SYCL_BHALF_TYPE_DEFINED
+#endif
+
+#define KOKKOS_HALF_IS_FULL_TYPE_ON_ARCH
 
 #endif

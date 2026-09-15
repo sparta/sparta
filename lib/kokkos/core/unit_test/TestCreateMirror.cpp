@@ -28,7 +28,7 @@ void test_create_mirror_properties(const View& view) {
   using DeviceMemorySpace = typename DefaultExecutionSpace::memory_space;
 
   // clang-format off
-  
+
   // create_mirror
   check_memory_space(create_mirror(WithoutInitializing,                          view), host_mirror_test_space(view));
   check_memory_space(create_mirror(                                              view), host_mirror_test_space(view));
@@ -66,6 +66,7 @@ void test_create_mirror_properties(const View& view) {
   check_memory_space(create_mirror_view(view_alloc(DefaultExecutionSpace{},                          DeviceMemorySpace{}), view), DeviceMemorySpace{});
 
   // create_mirror_view_and_copy
+  check_memory_space(create_mirror_view_and_copy(                     view), host_mirror_test_space(view));
   check_memory_space(create_mirror_view_and_copy(HostSpace{},         view), HostSpace{});
   check_memory_space(create_mirror_view_and_copy(DeviceMemorySpace{}, view), DeviceMemorySpace{});
 

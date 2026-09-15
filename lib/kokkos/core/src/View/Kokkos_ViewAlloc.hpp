@@ -11,6 +11,7 @@ static_assert(false,
 #define KOKKOS_VIEW_ALLOC_HPP
 
 #include <cstring>
+#include <new>
 #include <type_traits>
 #include <string>
 #include <optional>
@@ -59,9 +60,7 @@ struct ViewValueFunctor {
 #endif
   }
 
-  ViewValueFunctor()                                   = default;
-  ViewValueFunctor(const ViewValueFunctor&)            = default;
-  ViewValueFunctor& operator=(const ViewValueFunctor&) = default;
+  ViewValueFunctor() = default;
 
   ViewValueFunctor(ExecSpace const& arg_space, ValueType* const arg_ptr,
                    size_t const arg_n, std::string arg_name)
@@ -85,9 +84,11 @@ struct ViewValueFunctor {
 
   template <typename Tag>
   void parallel_for_implementation() {
+    // Use a 64-bit index range: allocations can exceed what the execution
+    // space default index_type (e.g. 32-bit on CUDA/HIP) can represent.
     using PolicyType =
-        Kokkos::RangePolicy<ExecSpace, Kokkos::IndexType<int64_t>, Tag>;
-    PolicyType policy(space, 0, n);
+        Kokkos::RangePolicy<ExecSpace, Kokkos::IndexType<size_t>, Tag>;
+    PolicyType policy(space, size_t(0), n);
     uint64_t kpID = 0;
     if (Kokkos::Profiling::profileLibraryLoaded()) {
       const std::string functor_name =
@@ -100,9 +101,9 @@ struct ViewValueFunctor {
     }
 
 #ifdef KOKKOS_ENABLE_CUDA
-    if (std::is_same<ExecSpace, Kokkos::Cuda>::value) {
-      Kokkos::Impl::cuda_prefetch_pointer(space, ptr, sizeof(ValueType) * n,
-                                          true);
+    if constexpr (std::is_same<ExecSpace, Kokkos::Cuda>::value) {
+      Kokkos::Impl::cuda_prefetch_pointer(space.cuda_stream(), ptr,
+                                          sizeof(ValueType) * n, true);
     }
 #endif
     const Kokkos::Impl::ParallelFor<ViewValueFunctor, PolicyType> closure(
@@ -169,7 +170,7 @@ struct ViewValueFunctor {
   // when the function is queried with cudaFuncGetAttributes
   void functor_instantiate_workaround() {
 #if defined(KOKKOS_ENABLE_CUDA) || defined(KOKKOS_ENABLE_HIP) || \
-    defined(KOKKOS_ENABLE_SYCL) || defined(KOKKOS_ENABLE_OPENMPTARGET)
+    defined(KOKKOS_ENABLE_SYCL)
     if (false) {
       parallel_for_implementation<DestroyTag>();
     }

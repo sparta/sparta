@@ -8,6 +8,10 @@
 #include <Kokkos_Core_fwd.hpp>
 #include <impl/Kokkos_Error.hpp>  // Impl::throw_runtime_exception
 
+#ifdef KOKKOS_ENABLE_NEXTSILICON
+#include <NextSilicon/Kokkos_NextSilicon_PageAlignedData.hpp>
+#endif
+
 #include <cstdint>
 #include <string>
 
@@ -92,6 +96,7 @@ class SharedAllocationRecord<void, void> {
   SharedAllocationRecord(const SharedAllocationRecord&)            = delete;
   SharedAllocationRecord& operator=(SharedAllocationRecord&&)      = delete;
   SharedAllocationRecord& operator=(const SharedAllocationRecord&) = delete;
+  virtual ~SharedAllocationRecord()                                = default;
 
   /**\brief  Construct and insert into 'arg_root' tracking set.
    *         use_count is zero.
@@ -103,7 +108,13 @@ class SharedAllocationRecord<void, void> {
       SharedAllocationHeader* arg_alloc_ptr, size_t arg_alloc_size,
       function_type arg_dealloc, const std::string& label);
  private:
+#ifdef KOKKOS_ENABLE_NEXTSILICON
+  // FIXME_NEXTSILICON: NextSilicon backend has problems with page migration of
+  // thread-local variables, so we need to page align them as a workaround.
+  static inline thread_local PageAlignedData<int> t_tracking_enabled = 1;
+#else
   static inline thread_local int t_tracking_enabled = 1;
+#endif
 
  public:
   virtual std::string get_label() const { return std::string("Unmanaged"); }
@@ -115,6 +126,7 @@ class SharedAllocationRecord<void, void> {
   static KOKKOS_FUNCTION int tracking_enabled() {
     KOKKOS_IF_ON_HOST(return t_tracking_enabled;)
     KOKKOS_IF_ON_DEVICE(return 0;)
+    KOKKOS_IMPL_UNREACHABLE();
   }
 #if defined(__EDG__)
 #pragma pop
@@ -129,8 +141,6 @@ class SharedAllocationRecord<void, void> {
    *        shared allocation tracking flag.
    */
   static void tracking_enable() { t_tracking_enabled = 1; }
-
-  virtual ~SharedAllocationRecord() = default;
 
   SharedAllocationRecord()
       : m_alloc_ptr(nullptr),
@@ -221,7 +231,15 @@ class SharedAllocationRecordCommon : public SharedAllocationRecord<void, void> {
   static void deallocate(record_base_t* arg_rec);
 
  public:
+  SharedAllocationRecordCommon(const SharedAllocationRecordCommon&) = delete;
+  SharedAllocationRecordCommon(SharedAllocationRecordCommon&&)      = delete;
+  SharedAllocationRecordCommon& operator=(const SharedAllocationRecordCommon&) =
+      delete;
+  SharedAllocationRecordCommon& operator=(SharedAllocationRecordCommon&&) =
+      delete;
+
   ~SharedAllocationRecordCommon();
+
   template <class ExecutionSpace>
   SharedAllocationRecordCommon(
       ExecutionSpace const& exec, MemorySpace const& space,
@@ -305,7 +323,17 @@ class HostInaccessibleSharedAllocationRecordCommon
   static void deallocate(record_base_t* arg_rec);
 
  public:
+  HostInaccessibleSharedAllocationRecordCommon(
+      const HostInaccessibleSharedAllocationRecordCommon&) = delete;
+  HostInaccessibleSharedAllocationRecordCommon(
+      HostInaccessibleSharedAllocationRecordCommon&&) = delete;
+  HostInaccessibleSharedAllocationRecordCommon& operator=(
+      const HostInaccessibleSharedAllocationRecordCommon&) = delete;
+  HostInaccessibleSharedAllocationRecordCommon& operator=(
+      HostInaccessibleSharedAllocationRecordCommon&&) = delete;
+
   ~HostInaccessibleSharedAllocationRecordCommon();
+
   template <class ExecutionSpace>
   HostInaccessibleSharedAllocationRecordCommon(
       ExecutionSpace const& exec, MemorySpace const& space,
@@ -468,11 +496,12 @@ class SharedAllocationRecord
             &Kokkos::Impl::deallocate<MemorySpace, DestroyFunctor>),
         m_destroy() {}
 
+ public:
   SharedAllocationRecord()                                         = delete;
   SharedAllocationRecord(const SharedAllocationRecord&)            = delete;
   SharedAllocationRecord& operator=(const SharedAllocationRecord&) = delete;
+  ~SharedAllocationRecord()                                        = default;
 
- public:
   DestroyFunctor m_destroy;
 
   // Allocate with a zero use count.  Incrementing the use count from zero to
@@ -485,6 +514,7 @@ class SharedAllocationRecord
         (return new SharedAllocationRecord(arg_space, arg_label, arg_alloc);))
     KOKKOS_IF_ON_DEVICE(
         ((void)arg_space; (void)arg_label; (void)arg_alloc; return nullptr;))
+    KOKKOS_IMPL_UNREACHABLE();
   }
 
   template <typename ExecutionSpace>
@@ -496,6 +526,7 @@ class SharedAllocationRecord
                                            arg_alloc);))
     KOKKOS_IF_ON_DEVICE(((void)exec_space; (void)arg_space; (void)arg_label;
                          (void)arg_alloc; return nullptr;))
+    KOKKOS_IMPL_UNREACHABLE();
   }
 };
 
@@ -575,6 +606,7 @@ union SharedAllocationTracker {
                        return (tmp ? tmp->use_count() : 0);))
 
     KOKKOS_IF_ON_DEVICE((return 0;))
+    KOKKOS_IMPL_UNREACHABLE();
   }
 
   KOKKOS_INLINE_FUNCTION bool has_record() const {
@@ -596,12 +628,12 @@ union SharedAllocationTracker {
 
   KOKKOS_FORCEINLINE_FUNCTION
 #if defined(KOKKOS_COMPILER_NVCC) || !defined(KOKKOS_COMPILER_GNU) || \
-    (KOKKOS_COMPILER_GNU < 1220) || (KOKKOS_COMPILER_GNU > 1240)
-      // FIXME_GCC: The ViewSupport test fails with gcc 12.2, 12.3 and 12.4
+    (KOKKOS_COMPILER_GNU < 1220) || (KOKKOS_COMPILER_GNU > 1250)
+      // FIXME_GCC: The ViewSupport test fails with gcc 12.2-12.5
       // because this constructor is optimized out, which leads to a nullptr
       // dereference. Removing the constexpr fixes the issue but nvcc complains,
       // so we keep the constexpr but only when using anything other than those
-      // three faulty gcc versions.
+      // four faulty gcc versions.
       constexpr
 #endif
       SharedAllocationTracker()
@@ -611,7 +643,7 @@ union SharedAllocationTracker {
   // Move:
 
   KOKKOS_FORCEINLINE_FUNCTION
-  SharedAllocationTracker(SharedAllocationTracker&& rhs)
+  SharedAllocationTracker(SharedAllocationTracker&& rhs) noexcept
       : m_record_bits(rhs.m_record_bits) {
     rhs.m_record_bits = DO_NOT_DEREF_FLAG;
   }

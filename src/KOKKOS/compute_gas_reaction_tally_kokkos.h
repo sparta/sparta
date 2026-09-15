@@ -97,24 +97,24 @@ class ComputeGasReactionTallyKokkos : public ComputeGasReactionTally, public Kok
 
     for (int m = 0; m < nvalue; m++) {
       switch (d_which[m]) {
-      case REACTION:   d_array_tally(itally,m) = ubuf(reaction).d; break;
+      case REACTION:   d_array_tally(itally,m) = d_ubuf(reaction).d; break;
 
-      case IDCELL:     d_array_tally(itally,m) = ubuf(d_cells[icell].id).d; break;
-      case ID1PRE:     d_array_tally(itally,m) = ubuf(iorig->id).d; break;
-      case ID2PRE:     d_array_tally(itally,m) = ubuf(jorig->id).d; break;
-      case ID1POST:    d_array_tally(itally,m) = ubuf(ip->id).d; break;
+      case IDCELL:     d_array_tally(itally,m) = d_ubuf(d_cells[icell].id).d; break;
+      case ID1PRE:     d_array_tally(itally,m) = d_ubuf(iorig->id).d; break;
+      case ID2PRE:     d_array_tally(itally,m) = d_ubuf(jorig->id).d; break;
+      case ID1POST:    d_array_tally(itally,m) = d_ubuf(ip->id).d; break;
       case ID2POST:
-        d_array_tally(itally,m) = (jp == NULL) ? ubuf(0).d : ubuf(jp->id).d; break;
+        d_array_tally(itally,m) = (jp == NULL) ? d_ubuf(0).d : d_ubuf(jp->id).d; break;
       case ID3POST:
-        d_array_tally(itally,m) = (kp == NULL) ? ubuf(0).d : ubuf(kp->id).d; break;
+        d_array_tally(itally,m) = (kp == NULL) ? d_ubuf(0).d : d_ubuf(kp->id).d; break;
 
-      case TYPE1PRE:   d_array_tally(itally,m) = ubuf(iorig->ispecies+1).d; break;
-      case TYPE2PRE:   d_array_tally(itally,m) = ubuf(jorig->ispecies+1).d; break;
-      case TYPE1POST:  d_array_tally(itally,m) = ubuf(ip->ispecies+1).d; break;
+      case TYPE1PRE:   d_array_tally(itally,m) = d_ubuf(iorig->ispecies+1).d; break;
+      case TYPE2PRE:   d_array_tally(itally,m) = d_ubuf(jorig->ispecies+1).d; break;
+      case TYPE1POST:  d_array_tally(itally,m) = d_ubuf(ip->ispecies+1).d; break;
       case TYPE2POST:
-        d_array_tally(itally,m) = (jp == NULL) ? ubuf(0).d : ubuf(jp->ispecies+1).d; break;
+        d_array_tally(itally,m) = (jp == NULL) ? d_ubuf(0).d : d_ubuf(jp->ispecies+1).d; break;
       case TYPE3POST:
-        d_array_tally(itally,m) = (kp == NULL) ? ubuf(0).d : ubuf(kp->ispecies+1).d; break;
+        d_array_tally(itally,m) = (kp == NULL) ? d_ubuf(0).d : d_ubuf(kp->ispecies+1).d; break;
 
       case VX1PRE:     d_array_tally(itally,m) = iorig->v[0]; break;
       case VY1PRE:     d_array_tally(itally,m) = iorig->v[1]; break;
