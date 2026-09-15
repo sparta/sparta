@@ -363,7 +363,7 @@ resolved, as described below.
 </P>
 <P>The <I>remap incremental</I> mode (the default) re-cuts only the grid
 cells near the body.  Each timestep a single pass collects the cells
-overlapping the region the bodies moved through, and a cell is re-cut
+overlapping the region each body moved through, and a cell is re-cut
 only if the set of surfs overlapping it changed or if it is
 overlapped by a body surf which moved.  Re-cutting a cell only
 considers the static surfs already assigned to the cell plus the body
@@ -446,8 +446,8 @@ coupling.
 static (non-body) surface elements, and from other rigid bodies,
 before it touches them.  If any corner point of a body line or
 triangle comes within <I>cutoff</I> distance of a source surf element, a
-repulsive force is applied to the body at that point, directed along
-the outward normal of the source element.  When the source element
+repulsive force is applied to the body at that point, directed away
+from the element (see below).  When the source element
 belongs to another rigid body, the reaction force is applied
 equal-and-opposite to that body at the same contact point, so
 body-body contacts conserve linear and angular momentum exactly;
@@ -485,9 +485,9 @@ conserve energy.  Every element within the cutoff contributes, on
 either side of it, so the total contact force is the gradient of the
 sum of the per-element spring potentials: the only energy error of a
 contact resolved by the timestep is then the second-order error of
-the time integration itself, with no secular drift (measured 4.5e-5,
-1.5e-5, 3.8e-6 and 6.9e-7 of the body kinetic energy for a single 2d
-contact as the timestep is halved from 5e-5).  A corner point inside
+the time integration itself, which falls by a factor of four each
+time the timestep is halved and has no secular drift.  A corner point
+inside
 a wall thinner than twice the cutoff is repelled by both of its faces
 at once, whose potentials add to a barrier peaking at the near
 surface, so a thin wall repels a body rather than propelling it
@@ -515,8 +515,9 @@ the standard DEM spring-dashpot contact model:
 </P>
 <PRE>F = k delta^n + gamma d(delta)/dt 
 </PRE>
-<P>where d(delta)/dt is the normal approach rate of the body corner
-point relative to the source surface, including the motion of another
+<P>where d(delta)/dt is the approach rate of the body corner point
+relative to the source surface, along the same contact direction as
+the spring force, including the motion of another
 rigid body when the source is one.  The dashpot removes energy during
 a collision, producing an inelastic bounce with a coefficient of
 restitution controlled by gamma; the total contact force is clamped
@@ -628,7 +629,7 @@ one-time warning is issued if the body rotates by more than 0.1
 radian in a single timestep (which degrades the accuracy of
 moving-surf collisions), if any body surf point moves farther than
 the smallest grid cell in a single timestep (which degrades the
-accuracy of surf-to-cell assignment for the cutcell remap modes), or
+accuracy of the re-assignment of surfs to grid cells), or
 if the body exits the simulation box entirely (after which it no
 longer interacts with any particles).
 </P>
