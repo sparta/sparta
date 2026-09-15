@@ -260,6 +260,6 @@ void ComputeSurfCollisionTally::grow_tally()
 bigint ComputeSurfCollisionTally::memory_usage()
 {
   bigint bytes = 0;
-  bytes += nvalue*maxtally * sizeof(double);    // array_tally
+  bytes += (bigint) nvalue*maxtally * sizeof(double);    // array_tally
   return bytes;
 }

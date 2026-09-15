@@ -78,6 +78,8 @@ int Cut3d::surf2grid(cellint id_caller, double *lo_caller, double *hi_caller,
   surfs = surfs_caller;
 
   Surf::Tri *tris = surf->tris;
+  if (surf->nsurf > MAXSMALLINT)
+    error->one(FLERR,"Too many surfs for non-distributed surf operation");
   int ntotal = surf->nsurf;
 
   double value;
@@ -892,7 +894,7 @@ void Cut3d::clip_tris()
       /*
       if (id == VERBOSE_ID) {
         char str[24];
-        sprintf(str,"Partial FACE %d %d\n",iface,ivert);
+        snprintf(str,sizeof(str),"Partial FACE %d %d\n",iface,ivert);
         print_bpg(str);
       }
       */
@@ -944,7 +946,7 @@ void Cut3d::clip_tris()
     /*
     if (id == VERBOSE_ID) {
       char str[24];
-      sprintf(str,"After FACE %d\n",iface);
+      snprintf(str,sizeof(str),"After FACE %d\n",iface);
       print_bpg(str);
     }
     */

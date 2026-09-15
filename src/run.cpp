@@ -23,6 +23,7 @@
 #include "input.h"
 #include "modify.h"
 #include "output.h"
+#include "stats.h"
 #include "finish.h"
 #include "timer.h"
 #include "error.h"
@@ -33,11 +34,59 @@ using namespace SPARTA_NS;
 
 Run::Run(SPARTA *sparta) : Pointers(sparta) {}
 
+/* ----------------------------------------------------------------------
+   put the run state back on the way out of Run::command, whichever way out
+   it takes.  Error::all() throws rather than exiting the process, so an
+   error raised during setup or in the middle of timestepping unwinds
+   straight past the assignments at the bottom of command() that used to do
+   this -- leaving update->runflag set.  That flag is what
+   sparta_is_running() reports, and an embedder reads it to decide whether it
+   may start a run, stop one, or shut down; stuck at 1 it refuses all three.
+   A mistake in an input deck is the commonest thing a user makes, so this is
+   reachable on the first one.  The copied per-step commands are freed here
+   too, for the same reason.
+------------------------------------------------------------------------- */
+
+namespace {
+struct RunCleanup {
+  SPARTA_NS::Update *update;
+  char ***commands;
+  int *ncommands;
+  ~RunCleanup() {
+    update->runflag = 0;
+    update->firststep = update->laststep = 0;
+    update->beginstep = update->endstep = 0;
+    if (*commands) {
+      for (int i = 0; i < *ncommands; i++) delete [] (*commands)[i];
+      delete [] *commands;
+      *commands = NULL;
+    }
+  }
+};
+}
+
 /* ---------------------------------------------------------------------- */
 
 void Run::command(int narg, char **arg)
 {
   if (narg < 1) error->all(FLERR,"Illegal run command");
+
+  // restore timeout in case a previous run was interrupted
+  // by force_timeout() via the library interface,
+  // then open a fresh timeout window for this command.
+  // the order matters: reset first so that init_timeout() saves the real limit
+  //   rather than an expired 0.0.  a "fix halt ... error soft" defeats the
+  //   reset on purpose, via force_timeout(1), because it is documented to skip
+  //   subsequent run commands
+  // init_timeout() is called once here rather than beside each
+  //   timer->barrier_start(TIME_LOOP) below, so that a "run N every M" spends
+  //   one timeout window over the whole command instead of restarting the
+  //   clock on every sub-run
+  // and invalidate the stats cache of the previous run
+
+  timer->reset_timeout();
+  timer->init_timeout();
+  output->stats->reset_cache();
 
   if (!grid->exist)
     error->all(FLERR,"Run command before grid is defined");
@@ -136,6 +185,7 @@ void Run::command(int narg, char **arg)
   // required because re-parsing commands via input->one() will wipe out args
 
   char **commands = NULL;
+  RunCleanup cleanup = {update, &commands, &ncommands};
   if (nevery && ncommands > 0) {
     commands = new char*[ncommands];
     ncommands = 0;
@@ -238,12 +288,6 @@ void Run::command(int narg, char **arg)
     }
   }
 
-  update->runflag = 0;
-  update->firststep = update->laststep = 0;
-  update->beginstep = update->endstep = 0;
-
-  if (commands) {
-    for (int i = 0; i < ncommands; i++) delete [] commands[i];
-    delete [] commands;
-  }
+  // runflag, the step bounds and the copied commands are all reset by
+  // ~RunCleanup, so that they are reset on the error paths as well
 }

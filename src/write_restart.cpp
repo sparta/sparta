@@ -202,7 +202,7 @@ void WriteRestart::write(char *file)
     fp = fopen(hfile,"wb");
     if (fp == NULL) {
       char str[128];
-      sprintf(str,"Cannot open restart file %s",hfile);
+      snprintf(str,128,"Cannot open restart file %s",hfile);
       error->one(FLERR,str);
     }
     if (multiproc) delete [] hfile;
@@ -255,7 +255,7 @@ void WriteRestart::write(char *file)
       fp = fopen(multiname,"wb");
       if (fp == NULL) {
         char str[128];
-        sprintf(str,"Cannot open restart file %s",multiname);
+        snprintf(str,128,"Cannot open restart file %s",multiname);
         error->one(FLERR,str);
       }
       write_int(PROCSPERFILE,nclusterprocs);
@@ -387,7 +387,7 @@ void WriteRestart::write_less_memory(char *file)
     fp = fopen(hfile,"wb");
     if (fp == NULL) {
       char str[128];
-      sprintf(str,"Cannot open restart file %s",hfile);
+      snprintf(str,128,"Cannot open restart file %s",hfile);
       error->one(FLERR,str);
     }
     if (multiproc) delete [] hfile;
@@ -440,7 +440,7 @@ void WriteRestart::write_less_memory(char *file)
       fp = fopen(multiname,"wb");
       if (fp == NULL) {
         char str[128];
-        sprintf(str,"Cannot open restart file %s",multiname);
+        snprintf(str,128,"Cannot open restart file %s",multiname);
         error->one(FLERR,str);
       }
       write_int(PROCSPERFILE,nclusterprocs);
@@ -452,7 +452,11 @@ void WriteRestart::write_less_memory(char *file)
   // communication buffer for per-proc info = child grid cells and particles
   // max_size = largest buffer needed by any proc
 
-  int grid_send_size = grid->size_restart();
+  bigint grid_send_size_big = grid->size_restart();
+  if (grid_send_size_big > MAXSMALLINT)
+    error->one(FLERR,"Restart file grid info exceeds 2 GB per proc, "
+               "run on more processors");
+  int grid_send_size = grid_send_size_big;
   bigint particle_send_size = particle->size_restart_big();
   bigint send_size = grid_send_size + particle_send_size;
 
@@ -477,7 +481,7 @@ void WriteRestart::write_less_memory(char *file)
 
   // number of particles per pass
 
-  int step_size = MIN(particle->nlocal,update->global_mem_limit/nbytes);
+  int step_size = MAX(1,MIN(particle->nlocal,update->global_mem_limit/nbytes));
 
   // extra pass for grid
 
@@ -653,8 +657,8 @@ void WriteRestart::header()
 
   write_bigint(NPARTICLE,particle->nglobal);
   write_bigint(NUNSPLIT,grid->nunsplit);
-  write_int(NSPLIT,grid->nsplit);
-  write_int(NSUB,grid->nsub);
+  write_int(NSPLIT,(int) grid->nsplit);
+  write_int(NSUB,(int) grid->nsub);
   write_bigint(NSURF,surf->nsurf);
 
   // -1 flag signals end of header

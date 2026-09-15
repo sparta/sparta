@@ -32,6 +32,8 @@
 #include "error.h"
 #include "kokkos_type.h"
 #include "particle_kokkos.h"
+#include "grid_kokkos.h"
+#include "fix_emit_kokkos.h"
 #include "sparta_masks.h"
 #include "variable.h"
 #include "Kokkos_Random.hpp"
@@ -63,11 +65,7 @@ FixEmitFaceKokkos::FixEmitFaceKokkos(SPARTA *sparta, int narg, char **arg) :
             , sparta
 #endif
             ),
-  particle_kk_copy(sparta),
-  regblock_kk_copy(sparta),
-  regcylinder_kk_copy(sparta),
-  regplane_kk_copy(sparta),
-  regsphere_kk_copy(sparta)
+  particle_kk_copy(sparta)
 {
   kokkos_flag = 1;
   execution_space = Device;
@@ -75,6 +73,7 @@ FixEmitFaceKokkos::FixEmitFaceKokkos(SPARTA *sparta, int narg, char **arg) :
   datamask_modify = EMPTY_MASK;
 
   region_flag = 0;
+  nregion_token = 0;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -82,12 +81,6 @@ FixEmitFaceKokkos::FixEmitFaceKokkos(SPARTA *sparta, int narg, char **arg) :
 FixEmitFaceKokkos::~FixEmitFaceKokkos()
 {
   if (copymode) return;
-
-  particle_kk_copy.uncopy();
-  regblock_kk_copy.uncopy();
-  regcylinder_kk_copy.uncopy();
-  regplane_kk_copy.uncopy();
-  regsphere_kk_copy.uncopy();
 
 #ifdef SPARTA_KOKKOS_EXACT
   rand_pool.destroy();
@@ -119,27 +112,37 @@ void FixEmitFaceKokkos::init()
   rand_pool.init(random);
 #endif
 
-  k_mix_vscale  = DAT::tdual_float_1d("mix_vscale", nspecies);
+  k_mix_vscale = DAT::tdual_float_1d("mix_vscale", nspecies);
   k_cummulative = DAT::tdual_float_1d("cummulative", nspecies);
-  k_species     = DAT::tdual_int_1d("species", nspecies);
+  k_mspecies = DAT::tdual_int_1d("mspecies", nspecies);
+  k_fraction = DAT::tdual_float_1d("fraction", nspecies);
 
-  d_mix_vscale  = k_mix_vscale .view_device();
+  d_mix_vscale = k_mix_vscale.view_device();
   d_cummulative = k_cummulative.view_device();
-  d_species     = k_species    .view_device();
+  d_mspecies = k_mspecies.view_device();
+  d_fraction = k_fraction.view_device();
 
-  auto h_mix_vscale  = k_mix_vscale .view_host();
+  auto h_mix_vscale = k_mix_vscale.view_host();
   auto h_cummulative = k_cummulative.view_host();
-  auto h_species     = k_species    .view_host();
+  auto h_mspecies = k_mspecies.view_host();
+  auto h_fraction = k_fraction.view_host();
 
   for (int isp = 0; isp < nspecies; ++isp) {
     h_mix_vscale(isp) = particle->mixture[imix]->vscale[isp];
     h_cummulative(isp) = particle->mixture[imix]->cummulative[isp];
-    h_species(isp) = particle->mixture[imix]->species[isp];
+    h_mspecies(isp) = particle->mixture[imix]->species[isp];
+    h_fraction(isp) = particle->mixture[imix]->fraction[isp];
   }
 
-  k_mix_vscale .modify_host();
+  k_mix_vscale.modify_host();
   k_cummulative.modify_host();
-  k_species    .modify_host();
+  k_mspecies.modify_host();
+  k_fraction.modify_host();
+  // the region is fixed for the run; flatten it once here rather than
+  //   rebuilding and re-uploading the token stream in perform_task()
+
+  flatten_region();
+
 }
 
 /* ----------------------------------------------------------------------
@@ -160,6 +163,35 @@ void FixEmitFaceKokkos::create_tasks()
   if (subsonic_style == PONLY) k_vscale.modify_host();
 }
 
+/* ----------------------------------------------------------------------
+   flatten the region to a device-resident postfix token stream, so the
+   emit kernel needs no virtual dispatch and no typed copy per region style.
+   the stream carries each sub-region's interior/exterior sense and the
+   composite's own, so nothing else needs to be passed along.
+   see region_prim_kokkos.h
+
+   a region is fixed for the duration of a run -- Region exposes no move or
+   rotate, and "region" is an input command -- so this runs from init()
+   rather than from perform_task(), which would rebuild the stream on the
+   host and re-upload it every step
+------------------------------------------------------------------------- */
+
+void FixEmitFaceKokkos::flatten_region()
+{
+  region_flag = 0;
+  nregion_token = 0;
+  if (region) {
+    KokkosBase* region_kkbase = dynamic_cast<KokkosBase*>(region);
+    if (!region->kokkos_flag || !region_kkbase)
+      error->all(FLERR,"KOKKOS package does not (yet) support chosen region style");
+    nregion_token = region_kkbase->flatten_region_kokkos(k_region_tokens);
+    if (nregion_token <= 0)
+      error->all(FLERR,"KOKKOS package does not (yet) support chosen region style");
+    d_region_tokens = k_region_tokens.view_device();
+    region_flag = 1;
+  }
+}
+
 /* ---------------------------------------------------------------------- */
 
 void FixEmitFaceKokkos::perform_task()
@@ -171,9 +203,7 @@ void FixEmitFaceKokkos::perform_task()
   // if subsonic, re-compute particle inflow counts for each task
   // also computes current per-task temp_thermal and vstream
 
-  if (subsonic)
-    error->one(FLERR,"Cannot yet use fix emit/face/kk with subsonic emission");
-  //if (subsonic) subsonic_inflow(); ////////////////////////
+  if (subsonic) subsonic_inflow();
 
   // if modulate variable set, evaluate it as prefactor for this timestep
 
@@ -187,9 +217,14 @@ void FixEmitFaceKokkos::perform_task()
   // ntarget/ninsert is either perspecies or for all species
 
   // copy needed task data to device
+  // the kernels below read d_tasks whether or not perspecies is set, so tasks
+  //   is synced unconditionally and ntargetsp in addition, the same shape as
+  //   the second copy further down this routine.  The if/else this replaces
+  //   left tasks unsynced under perspecies and was only harmless because that
+  //   later copy covered it
 
+  k_tasks.sync_device();
   if (perspecies) k_ntargetsp.sync_device();
-  else k_tasks.sync_device();
 
   auto ninsert_dim1 = perspecies ? nspecies : 1;
   if (d_ninsert.extent(0) < ntask * ninsert_dim1)
@@ -257,42 +292,23 @@ void FixEmitFaceKokkos::perform_task()
 
   // copy needed mixture data to device
 
-  k_mix_vscale .sync_device();
-  k_species    .sync_device();
+  k_mix_vscale.sync_device();
+  k_mspecies.sync_device();
   k_cummulative.sync_device();
 
   auto ld_mix_vscale = d_mix_vscale;
-  auto ld_species    = d_species   ;
+  auto ld_mspecies = d_mspecies;
 
   ParticleKokkos* particle_kk = ((ParticleKokkos*)particle);
   particle_kk->update_class_variables();
   particle_kk_copy.copy(particle_kk);
 
-  if (region && !region->kokkos_flag)
-    error->all(FLERR,"KOKKOS package does not (yet) support chosen region style");
+  // flatten the region to a device-resident postfix token stream, so the
+  //   kernel below needs no virtual dispatch and no typed copy per region
+  //   style.  the stream carries each sub-region's interior/exterior sense
+  //   and the composite's own, so nothing else needs to be passed along.
+  //   see region_prim_kokkos.h
 
-  region_flag = 0;
-  if (region) {
-    if (strstr(region->style,"block") != NULL) {
-      RegBlockKokkos* region_kk = ((RegBlockKokkos*)region);
-      regblock_kk_copy.copy(region_kk);
-      region_flag = 1;
-    } else if (strstr(region->style,"cylinder") != NULL) {
-      RegCylinderKokkos* region_kk = ((RegCylinderKokkos*)region);
-      regcylinder_kk_copy.copy(region_kk);
-      region_flag = 2;
-    } else if (strstr(region->style,"plane") != NULL) {
-      RegPlaneKokkos* region_kk = ((RegPlaneKokkos*)region);
-      regplane_kk_copy.copy(region_kk);
-      region_flag = 3;
-    } else if (strstr(region->style,"sphere") != NULL) {
-      RegSphereKokkos* region_kk = ((RegSphereKokkos*)region);
-      regsphere_kk_copy.copy(region_kk);
-      region_flag = 4;
-    } else {
-      error->all(FLERR,"KOKKOS package does not (yet) support chosen region style");
-    }
-  }
 
   int nsingle_reduce = 0;
   copymode = 1;
@@ -329,7 +345,7 @@ void FixEmitFaceKokkos::perform_task()
     auto vscale_val = (l_subsonic_style == PONLY) ?
       ld_vscale(i, isp) : ld_mix_vscale(isp);
 
-    auto ispecies = ld_species(isp);
+    auto ispecies = ld_mspecies(isp);
 
     double x[3];
     for (int d = 0; d < l_dimension; ++d) x[d] = ld_x(cand, d);
@@ -360,6 +376,7 @@ void FixEmitFaceKokkos::perform_task()
   });
   particleKK->nlocal = nlocal_before + nnew;
   particleKK->modify(SPARTA_NS::Device, PARTICLE_MASK);
+  particleKK->zero_custom_kokkos(nlocal_before,particleKK->nlocal);
 
   if (modify->n_update_custom) {
     auto h_keep = Kokkos::create_mirror_view(d_keep);
@@ -406,12 +423,14 @@ void FixEmitFaceKokkos::operator()(TagFixEmitFace_ninsert, const int &i) const
       d_ninsert(i * nspecies + isp) = ninsert;
     }
   } else {
-    if (np == 0) {
+    if (np == 0.0) {
       auto ntarget = prefactor*d_tasks(i).ntarget + rand_gen.drand();
       ninsert = static_cast<int> (ntarget);
     } else {
       ninsert = npertask;
       if (i >= nthresh) ninsert++;
+      if (npremain_pertask > 0.0)
+        ninsert += static_cast<int> (npremain_pertask + rand_gen.drand());
     }
     d_ninsert(i) = ninsert;
   }
@@ -443,7 +462,7 @@ void FixEmitFaceKokkos::operator()(TagFixEmitFace_perform_task, const int &i, in
       auto vscale_val = (subsonic_style == PONLY) ?
         d_vscale(i, isp) : d_mix_vscale(isp);
 
-      auto ispecies = d_species[isp];
+      auto ispecies = d_mspecies[isp];
       auto ninsert = d_ninsert(i * nspecies + isp);
       auto start = d_task2cand(i * nspecies + isp);
       auto scosine = indot / vscale_val;
@@ -453,19 +472,16 @@ void FixEmitFaceKokkos::operator()(TagFixEmitFace_perform_task, const int &i, in
         auto cand = start + m;
         double x[3];
         x[0] = lo[0] + rand_gen.drand() * (hi[0]-lo[0]);
-        x[1] = lo[1] + rand_gen.drand() * (hi[1]-lo[1]);
+        if (axisymmetric)
+          x[1] = sqrt(lo[1]*lo[1] +
+                      rand_gen.drand() * (hi[1]*hi[1]-lo[1]*lo[1]));
+        else x[1] = lo[1] + rand_gen.drand() * (hi[1]-lo[1]);
         if (dimension == 3) x[2] = lo[2] + rand_gen.drand() * (hi[2]-lo[2]);
         else x[2] = 0.0;
 
-        if (region_flag == 1) {
-          if (!regblock_kk_copy.obj.match_kokkos(x[0], x[1], x[2])) continue;
-        } else if (region_flag == 2) {
-          if (!regcylinder_kk_copy.obj.match_kokkos(x[0], x[1], x[2])) continue;
-        } else if (region_flag == 3) {
-          if (!regplane_kk_copy.obj.match_kokkos(x[0], x[1], x[2])) continue;
-        } else if (region_flag == 4) {
-          if (!regsphere_kk_copy.obj.match_kokkos(x[0], x[1], x[2])) continue;
-        }
+        if (region_flag &&
+            !region_match_kk(d_region_tokens,nregion_token,
+                             x[0],x[1],x[2])) continue;
 
         nactual++;
         d_keep(cand) = 1;
@@ -506,24 +522,21 @@ void FixEmitFaceKokkos::operator()(TagFixEmitFace_perform_task, const int &i, in
       while (d_cummulative[isp] < rn) isp++;
       auto vscale_val = (subsonic_style == PONLY) ?
         d_vscale(i, isp) : d_mix_vscale(isp);
-      auto ispecies = d_species[isp];
+      auto ispecies = d_mspecies[isp];
       auto scosine = indot / vscale_val;
 
       double x[3];
       x[0] = lo[0] + rand_gen.drand() * (hi[0]-lo[0]);
-      x[1] = lo[1] + rand_gen.drand() * (hi[1]-lo[1]);
+      if (axisymmetric)
+        x[1] = sqrt(lo[1]*lo[1] +
+                    rand_gen.drand() * (hi[1]*hi[1]-lo[1]*lo[1]));
+      else x[1] = lo[1] + rand_gen.drand() * (hi[1]-lo[1]);
       if (dimension == 3) x[2] = lo[2] + rand_gen.drand() * (hi[2]-lo[2]);
       else x[2] = 0.0;
 
-      if (region_flag == 1) {
-        if (!regblock_kk_copy.obj.match_kokkos(x[0], x[1], x[2])) continue;
-      } else if (region_flag == 2) {
-        if (!regcylinder_kk_copy.obj.match_kokkos(x[0], x[1], x[2])) continue;
-      } else if (region_flag == 3) {
-        if (!regplane_kk_copy.obj.match_kokkos(x[0], x[1], x[2])) continue;
-      } else if (region_flag == 4) {
-        if (!regsphere_kk_copy.obj.match_kokkos(x[0], x[1], x[2])) continue;
-      }
+      if (region_flag &&
+          !region_match_kk(d_region_tokens,nregion_token,
+                           x[0],x[1],x[2])) continue;
 
       nactual++;
       d_keep(cand) = 1;
@@ -559,6 +572,263 @@ void FixEmitFaceKokkos::operator()(TagFixEmitFace_perform_task, const int &i, in
 }
 
 /* ----------------------------------------------------------------------
+   recalculate task properties based on subsonic BC
+------------------------------------------------------------------------- */
+
+void FixEmitFaceKokkos::subsonic_inflow()
+{
+  // for grid cells that are part of tasks:
+  // calculate local nrho, vstream, and thermal temperature
+  // if needed sort particles for grid cells with tasks
+
+  subsonic_sort();
+  subsonic_grid();
+
+  // recalculate particle insertion counts for each task
+  // recompute mixture vscale, since depends on temp_thermal
+
+  ParticleKokkos* particle_kk = (ParticleKokkos*) particle;
+  particle_kk->sync(Device,SPECIES_MASK);
+  d_species_all = particle_kk->k_species.view_device();
+
+  GridKokkos* grid_kk = (GridKokkos*) grid;
+  grid_kk->sync(Device,CINFO_MASK);
+  d_cinfo = grid_kk->k_cinfo.view_device();
+
+  k_tasks.sync_device();
+  if (perspecies) k_ntargetsp.sync_device();
+  k_mspecies.sync_device();
+  k_fraction.sync_device();
+
+  boltz = update->boltz;
+
+  copymode = 1;
+  Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagFixEmitFace_subsonic_inflow>(0,ntask),*this);
+  copymode = 0;
+
+  k_tasks.modify_device();
+  if (perspecies) k_ntargetsp.modify_device();
+}
+
+KOKKOS_INLINE_FUNCTION
+void FixEmitFaceKokkos::operator()(TagFixEmitFace_subsonic_inflow, const int &i) const
+{
+  double *vstream = d_tasks(i).vstream;
+  double *normal = d_tasks(i).normal;
+  const double indot = vstream[0]*normal[0] + vstream[1]*normal[1] +
+    vstream[2]*normal[2];
+
+  const double area = d_tasks(i).area;
+  const double nrho = d_tasks(i).nrho;
+  const double temp_thermal = d_tasks(i).temp_thermal;
+  const int icell = d_tasks(i).icell;
+
+  double ntarget = 0.0;
+  for (int isp = 0; isp < nspecies; isp++) {
+    const double mass = d_species_all[d_mspecies[isp]].mass;
+    const double vscale = sqrt(2.0 * boltz * temp_thermal / mass);
+    double ntargetsp = mol_inflow_kokkos(indot,vscale,d_fraction[isp]);
+    ntargetsp *= nrho*area*dt / fnum;
+    ntargetsp /= d_cinfo[icell].weight;
+    ntarget += ntargetsp;
+    if (perspecies) d_ntargetsp(i,isp) = ntargetsp;
+  }
+  d_tasks(i).ntarget = ntarget;
+  if (ntarget >= MAXSMALLINT)
+    Kokkos::abort("Fix emit/face subsonic insertion count exceeds 32-bit int");
+}
+
+/* ----------------------------------------------------------------------
+   sort particles into grid cells on device
+   same compressed per-cell particle lists as built for collisions,
+   used in lieu of the linked lists built by FixEmitFace::subsonic_sort()
+------------------------------------------------------------------------- */
+
+void FixEmitFaceKokkos::subsonic_sort()
+{
+  ParticleKokkos* particle_kk = (ParticleKokkos*) particle;
+
+  // sorted_kk mirrors the host Particle::sorted flag the non-Kokkos path
+  //   tests here.  Record it BEFORE sorting: like the non-Kokkos
+  //   subsonic_sort(), a sort done on behalf of this fix builds a list that
+  //   is walked in decreasing particle index, while an already-sorted list
+  //   is walked in increasing index.
+
+  plist_descending = !particle_kk->sorted_kk;
+  if (!particle_kk->sorted_kk) particle_kk->sort_kokkos();
+}
+
+/* ----------------------------------------------------------------------
+   compute number density, thermal temperature, stream velocity
+   only for grid cells associated with a task
+   first compute for grid cells, then adjust due to boundary conditions
+------------------------------------------------------------------------- */
+
+void FixEmitFaceKokkos::subsonic_grid()
+{
+  ParticleKokkos* particle_kk = (ParticleKokkos*) particle;
+  particle_kk->sync(Device,PARTICLE_MASK|SPECIES_MASK);
+  d_particles = particle_kk->k_particles.view_device();
+  d_species_all = particle_kk->k_species.view_device();
+
+  // refresh particle_kk_copy since particle data structures may
+  //   have changed since the last copy, e.g. by sort or grow
+
+  particle_kk->update_class_variables();
+  particle_kk_copy.copy(particle_kk);
+
+  GridKokkos* grid_kk = (GridKokkos*) grid;
+  grid_kk->sync(Device,CINFO_MASK);
+  d_cinfo = grid_kk->k_cinfo.view_device();
+  d_plist = grid_kk->d_plist;
+  d_cellcount = grid_kk->d_cellcount;
+
+  k_tasks.sync_device();
+  if (subsonic_style == PONLY) {
+    k_vscale.sync_device();
+    k_mspecies.sync_device();
+  }
+
+  boltz = update->boltz;
+  temp_thermal_mix = particle->mixture[imix]->temp_thermal;
+
+  // only track max thermal temp until the one-time warning has fired
+  // avoids a per-step device->host fence once subsonic_warning is set
+
+  if (!subsonic_warning) {
+    if (d_tempmax.data() == nullptr)
+      d_tempmax = DAT::t_float_scalar("emit/face:tempmax");
+    Kokkos::deep_copy(d_tempmax,0.0);
+  }
+
+  copymode = 1;
+  Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagFixEmitFace_subsonic_grid>(0,ntask),*this);
+  copymode = 0;
+
+  k_tasks.modify_device();
+  if (subsonic_style == PONLY) k_vscale.modify_device();
+
+  // release references to reduce memory use
+
+  d_particles = t_particle_1d();
+  d_species_all = t_species_1d();
+  d_plist = {};
+  d_cellcount = {};
+  d_cinfo = {};
+
+  // test if any task has invalid thermal temperature for first time
+
+  if (!subsonic_warning) {
+    double tempmax = 0.0;
+    Kokkos::deep_copy(tempmax,d_tempmax);
+    int temp_exceed_flag = 0;
+    if (tempmax > TEMPLIMIT) temp_exceed_flag = 1;
+    subsonic_warning = subsonic_temperature_check(temp_exceed_flag,tempmax);
+  }
+}
+
+KOKKOS_INLINE_FUNCTION
+void FixEmitFaceKokkos::operator()(TagFixEmitFace_subsonic_grid, const int &i) const
+{
+  const int icell = d_tasks(i).pcell;
+  const int np = d_cellcount(icell);
+
+  // accumulate needed per-particle quantities
+  // mv = mass*velocity terms, masstot = total mass
+  // gamma = rotational/tranlational DOFs
+
+  double mv[4];
+  mv[0] = mv[1] = mv[2] = mv[3] = 0.0;
+  double masstot = 0.0;
+  double gamma = 0.0;
+
+  // d_plist orders particles by increasing index.  The non-Kokkos path walks
+  // whichever linked list is current: the one Particle::sort() builds (head =
+  // lowest index, so INcreasing order) when the particles were already
+  // sorted, else the one subsonic_sort() builds itself (head = highest index,
+  // so DEcreasing order).  For SPARTA_KOKKOS_EXACT match that order so the
+  // per-cell moment sums are bit-identical (serial, single thread, host).
+
+#ifdef SPARTA_KOKKOS_EXACT
+  const int nbeg = plist_descending ? np-1 : 0;
+  const int nend = plist_descending ? -1 : np;
+  const int ninc = plist_descending ? -1 : 1;
+  for (int n = nbeg; n != nend; n += ninc) {
+#else
+  for (int n = 0; n < np; n++) {
+#endif
+    const int ip = d_plist(icell,n);
+    const int ispecies = d_particles[ip].ispecies;
+    const double mass = d_species_all[ispecies].mass;
+    const double *v = d_particles[ip].v;
+    mv[0] += mass*v[0];
+    mv[1] += mass*v[1];
+    mv[2] += mass*v[2];
+    mv[3] += mass * (v[0]*v[0]+v[1]*v[1]+v[2]*v[2]);
+    masstot += mass;
+    gamma += 1.0 + 2.0 / (3.0 + d_species_all[ispecies].rotdof);
+  }
+
+  // compute/store nrho, 3 temps, vstream for task
+  // also vscale for PONLY
+  // if sound speed = 0.0 due to <= 1 particle in cell or
+  //   all particles having COM velocity, set via mixture properties
+
+  double *vstream = d_tasks(i).vstream;
+  if (np) {
+    vstream[0] = mv[0] / masstot;
+    vstream[1] = mv[1] / masstot;
+    vstream[2] = mv[2] / masstot;
+  } else vstream[0] = vstream[1] = vstream[2] = 0.0;
+
+  double temp_thermal_cell;
+
+  if (subsonic_style == PTBOTH) {
+    d_tasks(i).nrho = nsubsonic;
+    temp_thermal_cell = tsubsonic;
+
+  } else {
+    const double nrho_cell = np * fnum / d_cinfo[icell].volume;
+    const double massrho_cell = masstot * fnum / d_cinfo[icell].volume;
+    if (np > 1) {
+      const double ke = mv[3]/np -
+        (mv[0]*mv[0] + mv[1]*mv[1] + mv[2]*mv[2])/np/masstot;
+      temp_thermal_cell = tprefactor * ke;
+    } else temp_thermal_cell = temp_thermal_mix;
+
+    const double press_cell = nrho_cell * boltz * temp_thermal_cell;
+    double soundspeed_cell;
+    if (np) {
+      const double mass_cell = masstot / np;
+      const double gamma_cell = gamma / np;
+      soundspeed_cell = sqrt(gamma_cell*boltz*temp_thermal_cell / mass_cell);
+    } else soundspeed_cell = soundspeed_mixture;
+
+    d_tasks(i).nrho = nrho_cell +
+      (psubsonic - press_cell) / (soundspeed_cell*soundspeed_cell);
+    temp_thermal_cell = psubsonic / (boltz * d_tasks(i).nrho);
+    if (!subsonic_warning && temp_thermal_cell > TEMPLIMIT)
+      Kokkos::atomic_max(&d_tempmax(),temp_thermal_cell);
+
+    if (np) {
+      const int ndim = d_tasks(i).ndim;
+      const double sign = d_tasks(i).normal[ndim];
+      vstream[ndim] += sign *
+        (psubsonic - press_cell) / (massrho_cell*soundspeed_cell);
+    }
+
+    for (int m = 0; m < nspecies; m++) {
+      const int ispecies = d_mspecies[m];
+      d_vscale(i,m) = sqrt(2.0 * boltz * temp_thermal_cell /
+                           d_species_all[ispecies].mass);
+    }
+  }
+
+  d_tasks(i).temp_thermal = temp_thermal_cell;
+  d_tasks(i).temp_rot = d_tasks(i).temp_vib = temp_thermal_cell;
+}
+
+/* ----------------------------------------------------------------------
    grow task list
 ------------------------------------------------------------------------- */
 
@@ -583,8 +853,8 @@ void FixEmitFaceKokkos::grow_task()
   }
 
   if (subsonic_style == PONLY) {
-    k_vscale.modify_host(); // force resize on host
     k_vscale.sync_host();
+    k_vscale.modify_host(); // force resize on host
     k_vscale.resize(ntaskmax,nspecies);
     d_vscale = k_vscale.view_device();
     for (int i = 0; i < ntaskmax; i++)

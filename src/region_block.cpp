@@ -16,6 +16,7 @@
 #include "string.h"
 #include "region_block.h"
 #include "domain.h"
+#include "input.h"
 #include "error.h"
 
 using namespace SPARTA_NS;
@@ -30,19 +31,19 @@ RegBlock::RegBlock(SPARTA *sparta, int narg, char **arg) :
   options(narg-8,&arg[8]);
 
   if (strcmp(arg[2],"INF") == 0) xlo = -BIG;
-  else xlo = atof(arg[2]);
+  else xlo = input->numeric(FLERR,arg[2]);
   if (strcmp(arg[3],"INF") == 0) xhi = BIG;
-  else xhi = atof(arg[3]);
+  else xhi = input->numeric(FLERR,arg[3]);
 
   if (strcmp(arg[4],"INF") == 0) ylo = -BIG;
-  else ylo = atof(arg[4]);
+  else ylo = input->numeric(FLERR,arg[4]);
   if (strcmp(arg[5],"INF") == 0) yhi = BIG;
-  else yhi = atof(arg[5]);
+  else yhi = input->numeric(FLERR,arg[5]);
 
   if (strcmp(arg[6],"INF") == 0) zlo = -BIG;
-  else zlo = atof(arg[6]);
+  else zlo = input->numeric(FLERR,arg[6]);
   if (strcmp(arg[7],"INF") == 0) zhi = BIG;
-  else zhi = atof(arg[7]);
+  else zhi = input->numeric(FLERR,arg[7]);
 
   // error check
 

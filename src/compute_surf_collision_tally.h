@@ -29,10 +29,11 @@ namespace SPARTA_NS {
 class ComputeSurfCollisionTally : public Compute {
  public:
   ComputeSurfCollisionTally(class SPARTA *, int, char **);
+  ComputeSurfCollisionTally(class SPARTA* sparta) : Compute(sparta) {} // needed for Kokkos
   ~ComputeSurfCollisionTally();
   void init();
   void compute_per_tally();
-  void clear();
+  virtual void clear();
   void surf_tally(double, int, int, int, Particle::OnePart *,
                   Particle::OnePart *, Particle::OnePart *);
   int tallyinfo(surfint *&);

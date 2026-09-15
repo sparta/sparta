@@ -17,6 +17,7 @@
 
 #include "stdio.h"
 #include "pointers.h"
+#include <string>
 
 namespace SPARTA_NS {
 
@@ -25,7 +26,7 @@ class Variable : protected Pointers {
   static constexpr int VALUELENGTH = 64;
 
   Variable(class SPARTA *);
-  ~Variable();
+  virtual ~Variable();
   void set(int, char **);
   void set(char *, int, char **);
   int next(int, char **);
@@ -51,6 +52,12 @@ class Variable : protected Pointers {
 
   int int_between_brackets(char *&, int, const char * = "variable");
   double evaluate_boolean(char *);
+
+  // accessors for the library interface
+
+  int nvar_active() const { return nvar; }
+  const char *name(int i) const { return names[i]; }
+  std::string get_info(int);
 
  protected:
   int me;
@@ -114,6 +121,11 @@ class Variable : protected Pointers {
   int math_function(char *, char *, Tree **, Tree **, int &, double *, int &);
   int special_function(char *, char *, Tree **, Tree **,
                        int &, double *, int &);
+
+  // hook for the KOKKOS package to sync custom attributes to the host
+  // cwhich = PARTICLE_CUSTOM, GRID_CUSTOM, SURF_CUSTOM, see enum in variable.cpp
+
+  virtual void custom_sync(int) {}
 
   int is_particle_vector(char *);
   virtual void particle_vector(char *, Tree **, Tree **, int &);
@@ -315,9 +327,10 @@ E: Modulo 0 in variable formula
 
 Self-explanatory.
 
-E: Power by 0 in variable formula
+E: Invalid power expression in variable formula
 
-Self-explanatory.
+A zero base cannot be raised to a negative power in a variable
+formula, since the result is infinite.
 
 E: Sqrt of negative value in variable formula
 

@@ -67,7 +67,6 @@ ComputeReactSurf::ComputeReactSurf(SPARTA *sparta, int narg, char **arg) :
       char *ptr = copy;
       while ((ptr = strtok(ptr,"/")) != (char *) NULL) {
         for (int ireaction = 0; ireaction < ntotal; ireaction++) {
-          reaction2col[ireaction][icol] = 0;
           if (which == REACTANT) {
             if (surf->sr[isr]->match_reactant(ptr,ireaction))
               reaction2col[ireaction][icol] = 1;
@@ -108,6 +107,8 @@ ComputeReactSurf::ComputeReactSurf(SPARTA *sparta, int narg, char **arg) :
 
 ComputeReactSurf::~ComputeReactSurf()
 {
+  if (copy || copymode) return;
+
   memory->destroy(reaction2col);
   memory->destroy(array_surf_tally);
   memory->destroy(tally2surf);
@@ -150,7 +151,7 @@ void ComputeReactSurf::init()
 
   if (flagall && comm->me == 0) {
     char str[128];
-    sprintf(str,
+    snprintf(str,sizeof(str),
             "Compute react/surf " BIGINT_FORMAT
             " surfs are not assigned to surf react model",flagall);
     error->warning(FLERR,str);
@@ -306,7 +307,7 @@ void ComputeReactSurf::grow_tally()
 bigint ComputeReactSurf::memory_usage()
 {
   bigint bytes = 0;
-  bytes += ntotal*maxtally * sizeof(double);    // array_surf_tally
+  bytes += (bigint) ntotal*maxtally * sizeof(double);    // array_surf_tally
   bytes += maxtally * sizeof(surfint);          // tally2surf
   return bytes;
 }

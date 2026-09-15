@@ -88,6 +88,15 @@ void ModifyKokkos::end_of_step()
 
       sparta->kokkos->auto_sync = prev_auto_sync;
       particle_kk->modify(fix[j]->execution_space,fix[j]->datamask_modify);
+
+      // a non-Kokkos fix may have rebuilt the grid and surfs on the host
+      //   (fix ablate regenerating implicit surfaces).  Resync now, not after
+      //   the whole batch: a later fix in the batch would otherwise read the
+      //   stale device grid and the per-cell particle lists built for the
+      //   pre-change grid.  Kokkos fixes that rebuild the grid (adapt,
+      //   balance) already do this inside their own end_of_step()
+
+      if (grid->changed) ((GridKokkos*) grid)->resync_after_host_change();
     }
 }
 
@@ -279,17 +288,23 @@ void ModifyKokkos::gas_react(int index)
    invoke surf_react() method, only for relevant fixes
 ------------------------------------------------------------------------- */
 
-void ModifyKokkos::surf_react(Particle::OnePart *iorig, int &i, int &)
+void ModifyKokkos::surf_react(Particle::OnePart *iorig, int &i, int &j)
 {
-  for (int m = 0; m < n_surf_react; m++) {
-    int j = list_surf_react[m];
-    particle_kk->sync(fix[j]->execution_space,fix[j]->datamask_read);
-    int prev_auto_sync = sparta->kokkos->auto_sync;
-    if (!fix[j]->kokkos_flag) sparta->kokkos->auto_sync = 1;
+  // the fix index is ifix here, not j: j is the caller's index of the second
+  //   post-reaction particle (negative for an exchange reaction), which the
+  //   fix reads and writes back -- e.g. FixAmbipolar::surf_react() sets it to
+  //   -1 to tell the caller to delete an electron it just created.  Shadowing
+  //   it with the fix index would hand the fix a particle index it never meant
 
-    fix[list_surf_react[m]]->surf_react(iorig,i,j);
+  for (int m = 0; m < n_surf_react; m++) {
+    int ifix = list_surf_react[m];
+    particle_kk->sync(fix[ifix]->execution_space,fix[ifix]->datamask_read);
+    int prev_auto_sync = sparta->kokkos->auto_sync;
+    if (!fix[ifix]->kokkos_flag) sparta->kokkos->auto_sync = 1;
+
+    fix[ifix]->surf_react(iorig,i,j);
 
     sparta->kokkos->auto_sync = prev_auto_sync;
-    particle_kk->modify(fix[j]->execution_space,fix[j]->datamask_modify);
+    particle_kk->modify(fix[ifix]->execution_space,fix[ifix]->datamask_modify);
   }
 }

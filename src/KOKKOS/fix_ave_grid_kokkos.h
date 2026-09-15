@@ -46,6 +46,23 @@ class FixAveGridKokkos : public FixAveGrid, public KokkosBase {
   void setup();
   void end_of_step();
 
+  int pack_grid_one(int, char *, int);
+  int unpack_grid_one(int, char *);
+  void copy_grid_one(int, int);
+  void add_grid_one();
+
+  void sync_pergrid_device_kokkos();
+
+  // k_tally crosses between host and device only when the side in use
+  //   actually changes.  Each host-side value used to pull the whole
+  //   nglocal x ntotal tally down and push it straight back, so N host
+  //   values in one command cost N full round trips where one does
+  //   (see the value loop in end_of_step())
+
+  int tally_on_host;
+  void tally_to_host();
+  void tally_to_device();
+
   KOKKOS_INLINE_FUNCTION
   void operator()(TagFixAveGrid_Zero_group_vector, const int&) const;
 
@@ -103,6 +120,12 @@ class FixAveGridKokkos : public FixAveGrid, public KokkosBase {
   int j,k,kk,jm1,m,ntally;
 
   void grow_percell(int);
+
+  // sync/modify the per-grid dual views (tally + vector/array output)
+  // needed so accumulated tally survives grid cell migration without UVM
+
+  void pergrid_sync(ExecutionSpace);
+  void pergrid_modify(ExecutionSpace);
 };
 
 }

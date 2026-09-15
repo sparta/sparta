@@ -1,0 +1,49 @@
+################################################################################
+# emit through composite regions
+#
+# Covers region union, intersect, plane and sphere, none of which appear in any
+# other deck, and exercises a union nested inside an intersect -- the case the
+# KOKKOS flattened-region path handles with an RPN token stream rather than a
+# flat primitive list.  fix emit/face is region-limited, so the particle count
+# is itself the check that the region test agrees between host and device.
+#
+# Note:
+#  - The "comm/sort" option to the "global" command is used to match MPI runs.
+#  - The "twopass" option is used to match Kokkos runs.
+################################################################################
+
+seed                12345
+dimension           3
+global              gridcut 0.0 comm/sort yes
+boundary            o o o
+create_box          0 10 0 10 0 10
+create_grid         8 8 8
+balance_grid        rcb cell
+
+species             air.species N O
+mixture             air N O vstream 100.0 0 0 temp 300.0
+global              nrho 1.0e18 fnum 1.0e15
+
+# primitives, then a union nested inside an intersect
+
+# two disjoint slabs whose union leaves a gap in y, intersected with a sphere
+#   centred on the emit face and a half space.  The union is nested inside the
+#   intersect, so a flat primitive list cannot express it
+
+region              lo   block  0 10 0 4 0 10
+region              hi   block  0 10 6 10 0 10
+region              band union  2 lo hi
+region              ball sphere 0 5 5 6
+region              cut  plane  0 0 4 0 0 1
+region              both intersect 3 band ball cut
+
+collide             vss air air.vss
+
+fix                 in emit/face air xlo region both perspecies no twopass
+
+compute             t temp
+compute             n reduce sum vx
+stats               50
+stats_style         step np nattempt ncoll c_t c_n
+timestep            1.0e-5
+run                 200

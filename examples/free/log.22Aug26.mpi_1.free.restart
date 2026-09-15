@@ -1,0 +1,207 @@
+SPARTA (24 Sep 2025)
+Running on 1 MPI task(s)
+################################################################################
+# restart round trip: write a restart file, read it back, continue the run
+#
+# This is the only deck that exercises read_restart in CI -- the four
+# examples/custom/in.custom.*.restart decks are all in SPARTA_DISABLED_TESTS.
+#
+# All three filename-substitution paths are driven deliberately:
+#   restart        -> Output::write()        (periodic restart output)
+#   write_restart  -> WriteRestart::command()
+#   read_restart   -> ReadRestart::file_search()  (the "*" wildcard search)
+# Each replaces "*" with a timestep, and each sizes the substituted name
+# itself.  The ".equil.restart" suffix is deliberately long: a name is
+# truncated only when (timestep digits + suffix length) exceeds 15, so a
+# short suffix would let a sizing bug through unnoticed.
+#
+# The file name carries the MPI rank count, because ctest runs the mpi_1 and
+# mpi_4 copies of a test concurrently in one shared suite directory and they
+# would otherwise write the same file (compare the note on
+# in.exp2imp.axi.spherecone.readback in SPARTA_DISABLED_TESTS).
+#
+# Note:
+#  - The "comm/sort" option to the "global" command is used to match MPI runs.
+#  - The "twopass" option is used to match Kokkos runs.
+# The "comm/sort" and "twopass" options should not be used for production runs.
+################################################################################
+
+seed	    	    12345
+dimension   	    3
+global              gridcut 1.0e-5 comm/sort yes
+
+boundary	    rr rr rr
+
+create_box  	    0 0.0001 0 0.0001 0 0.0001
+Created orthogonal box = (0 0 0) to (0.0001 0.0001 0.0001)
+create_grid 	    4 4 4
+Created 64 child grid cells
+  CPU time = 0.000850154 secs
+  create/ghost percent = 95.0951 4.90488
+balance_grid        rcb part
+Balance grid migrated 0 cells
+  CPU time = 0.000138633 secs
+  reassign/sort/migrate/ghost percent = 83.413 0.0880021 10.038 6.46094
+
+species		    ar.species Ar
+mixture		    air Ar vstream 0.0 0.0 0.0 temp 273.15
+
+global              nrho 7.07043E22 fnum 7.07043E7
+
+create_particles    air n 2000 twopass
+Created 2000 particles
+  CPU time = 0.00109105 secs
+
+compute             temp temp
+stats		    10
+stats_style	    step np c_temp
+
+timestep 	    7.00E-9
+
+variable            np equal extract_setting(world_size)
+restart             10 tmp.free.periodic.np${np}.*.equil.restart
+restart             10 tmp.free.periodic.np1.*.equil.restart
+run                 20
+Memory usage per proc in Mbytes:
+  particles (ave,min,max) = 1.5625 1.5625 1.5625
+  grid      (ave,min,max) = 1.51379 1.51379 1.51379
+  surf      (ave,min,max) = 0 0 0
+  modify    (ave,min,max) = 0 0 0
+  total     (ave,min,max) = 3.07629 3.07629 3.07629
+Step Np c_temp 
+       0     2000    274.64074 
+      10     2000    274.64074 
+      20     2000    274.64074 
+Loop time of 0.000867992 on 1 procs for 20 steps with 2000 particles
+Performance: 23041.687 timesteps/s, 46.083 Mparticle-step/s
+
+MPI task timing breakdown:
+Section |  min time  |  avg time  |  max time  |%varavg| %total
+---------------------------------------------------------------
+Move    | 0.00040587 | 0.00040587 | 0.00040587 |   0.0 | 46.76
+Coll    | 0          | 0          | 0          |   0.0 |  0.00
+Sort    | 0          | 0          | 0          |   0.0 |  0.00
+Comm    | 7.649e-06  | 7.649e-06  | 7.649e-06  |   0.0 |  0.88
+Modify  | 0          | 0          | 0          |   0.0 |  0.00
+Output  | 0.00045024 | 0.00045024 | 0.00045024 |   0.0 | 51.87
+MPI Sync| 2.213e-06  | 2.213e-06  | 2.213e-06  |   0.0 |  0.25
+Other   |            | 2.016e-06  |            |       |  0.23
+
+Particle moves    = 40000 (40K)
+Cells touched     = 44761 (44.8K)
+Particle comms    = 0 (0K)
+Boundary collides = 1605 (1.6K)
+Boundary exits    = 0 (0K)
+SurfColl checks   = 0 (0K)
+SurfColl occurs   = 0 (0K)
+Surf reactions    = 0 (0K)
+Collide attempts  = 0 (0K)
+Collide occurs    = 0 (0K)
+Reactions         = 0 (0K)
+Particles stuck   = 0
+Axisymm bad moves = 0
+
+Particle-moves/CPUsec/proc: 4.60834e+07
+Particle-moves/step: 2000
+Cell-touches/particle/step: 1.11902
+Particle comm iterations/step: 1
+Particle fraction communicated: 0
+Particle fraction colliding with boundary: 0.040125
+Particle fraction exiting boundary: 0
+Surface-checks/particle/step: 0
+Surface-collisions/particle/step: 0
+Surf-reactions/particle/step: 0
+Collision-attempts/particle/step: 0
+Collisions/particle/step: 0
+Reactions/particle/step: 0
+
+Particles: 2000 ave 2000 max 2000 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+Cells:      64 ave 64 max 64 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+GhostCell: 0 ave 0 max 0 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+EmptyCell: 0 ave 0 max 0 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+write_restart       tmp.free.np${np}.*.equil.restart
+write_restart       tmp.free.np1.*.equil.restart
+
+# read the restart back through the "*" wildcard search and continue
+
+clear
+Running on 1 MPI task(s)
+seed                12345
+variable            np equal extract_setting(world_size)
+read_restart        tmp.free.np${np}.*.equil.restart
+read_restart        tmp.free.np1.*.equil.restart
+  orthogonal box = (0 0 0) to (0.0001 0.0001 0.0001)
+  64 grid cells
+  2000 particles
+  CPU time = 0.00171303 secs
+  read/surf2grid/rebalance/ghost/inout percent = 98.922 0.01366 0.00402796 1.05713 0.00315231
+
+compute             temp temp
+stats               10
+stats_style         step np c_temp
+run                 20
+Memory usage per proc in Mbytes:
+  particles (ave,min,max) = 1.5625 1.5625 1.5625
+  grid      (ave,min,max) = 1.51379 1.51379 1.51379
+  surf      (ave,min,max) = 0 0 0
+  modify    (ave,min,max) = 0 0 0
+  total     (ave,min,max) = 3.07629 3.07629 3.07629
+Step Np c_temp 
+      20     2000    274.64074 
+      30     2000    274.64074 
+      40     2000    274.64074 
+Loop time of 0.000458225 on 1 procs for 20 steps with 2000 particles
+Performance: 43646.680 timesteps/s, 87.293 Mparticle-step/s
+
+MPI task timing breakdown:
+Section |  min time  |  avg time  |  max time  |%varavg| %total
+---------------------------------------------------------------
+Move    | 0.00041485 | 0.00041485 | 0.00041485 |   0.0 | 90.53
+Coll    | 0          | 0          | 0          |   0.0 |  0.00
+Sort    | 0          | 0          | 0          |   0.0 |  0.00
+Comm    | 6.637e-06  | 6.637e-06  | 6.637e-06  |   0.0 |  1.45
+Modify  | 0          | 0          | 0          |   0.0 |  0.00
+Output  | 3.3252e-05 | 3.3252e-05 | 3.3252e-05 |   0.0 |  7.26
+MPI Sync| 2.173e-06  | 2.173e-06  | 2.173e-06  |   0.0 |  0.47
+Other   |            | 1.318e-06  |            |       |  0.29
+
+Particle moves    = 40000 (40K)
+Cells touched     = 44780 (44.8K)
+Particle comms    = 0 (0K)
+Boundary collides = 1647 (1.65K)
+Boundary exits    = 0 (0K)
+SurfColl checks   = 0 (0K)
+SurfColl occurs   = 0 (0K)
+Surf reactions    = 0 (0K)
+Collide attempts  = 0 (0K)
+Collide occurs    = 0 (0K)
+Reactions         = 0 (0K)
+Particles stuck   = 0
+Axisymm bad moves = 0
+
+Particle-moves/CPUsec/proc: 8.72934e+07
+Particle-moves/step: 2000
+Cell-touches/particle/step: 1.1195
+Particle comm iterations/step: 1
+Particle fraction communicated: 0
+Particle fraction colliding with boundary: 0.041175
+Particle fraction exiting boundary: 0
+Surface-checks/particle/step: 0
+Surface-collisions/particle/step: 0
+Surf-reactions/particle/step: 0
+Collision-attempts/particle/step: 0
+Collisions/particle/step: 0
+Reactions/particle/step: 0
+
+Particles: 2000 ave 2000 max 2000 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+Cells:      64 ave 64 max 64 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+GhostCell: 0 ave 0 max 0 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+EmptyCell: 0 ave 0 max 0 min
+Histogram: 1 0 0 0 0 0 0 0 0 0

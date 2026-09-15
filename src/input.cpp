@@ -59,6 +59,7 @@ Input::Input(SPARTA *sparta, int argc, char **argv) : Pointers(sparta)
   line = copy = work = NULL;
   narg = maxarg = 0;
   arg = NULL;
+  line_num = 0;
 
   echo_screen = 0;
   echo_log = 1;
@@ -74,7 +75,8 @@ Input::Input(SPARTA *sparta, int argc, char **argv) : Pointers(sparta)
     infiles[0] = infile;
   } else infiles = NULL;
 
-  variable = new Variable(sparta);
+  if (sparta->kokkos) variable = new VariableKokkos(sparta);
+  else variable = new Variable(sparta);
 
   // process command-line args
   // check for args "-var" and "-echo"
@@ -218,6 +220,7 @@ void Input::file()
 
     if (n > maxline) reallocate(line,maxline,n);
     MPI_Bcast(line,n,MPI_CHAR,0,world);
+    line_num++;
 
     // echo the command unless scanning for label
 
@@ -239,8 +242,8 @@ void Input::file()
     // execute the command
 
     if (execute_command()) {
-      char *str = new char[maxline+32];
-      sprintf(str,"Unknown command: %s",line);
+      char str[128];
+      snprintf(str,128,"Unknown command: %.90s",line);
       error->all(FLERR,str);
     }
   }
@@ -265,7 +268,7 @@ void Input::file(const char *filename)
     infile = fopen(filename,"r");
     if (infile == NULL) {
       char str[128];
-      sprintf(str,"Cannot open input script %s",filename);
+      snprintf(str,128,"Cannot open input script %s",filename);
       error->one(FLERR,str);
     }
     infiles[0] = infile;
@@ -306,8 +309,8 @@ char *Input::one(const char *single)
   // execute the command and return its name
 
   if (execute_command()) {
-    char *str = new char[maxline+32];
-    sprintf(str,"Unknown command: %s",line);
+    char str[128];
+    snprintf(str,128,"Unknown command: %.90s",line);
     error->all(FLERR,str);
   }
 
@@ -515,7 +518,7 @@ void Input::substitute(char *&str, char *&str2, int &max, int &max2, int flag)
         if (var[i] == '\0') error->one(FLERR,"Invalid immediate variable");
         var[i] = '\0';
         beyond = ptr + strlen(var) + 3;
-        sprintf(immediate,"%.20g",variable->compute_equal(var));
+        snprintf(immediate,sizeof(immediate),"%.20g",variable->compute_equal(var));
         value = immediate;
 
       // single character variable name, e.g. $a
@@ -671,7 +674,7 @@ int Input::expand_args(int narg, char **arg, int mode, char **&earg)
                            modify->compute[icompute]->size_per_tally_cols) {
                   nmax = modify->compute[icompute]->size_per_tally_cols;
                   expandflag = 1;
-                }
+                } else expandflag = -1;
               }
 
             // fix
@@ -703,7 +706,7 @@ int Input::expand_args(int narg, char **arg, int mode, char **&earg)
                            modify->fix[ifix]->size_per_surf_cols) {
                   nmax = modify->fix[ifix]->size_per_surf_cols;
                   expandflag = 1;
-                }
+                } else expandflag = -1;
               }
 
             // per-particle custom attribute
@@ -717,7 +720,7 @@ int Input::expand_args(int narg, char **arg, int mode, char **&earg)
                 if (particle->esize[icustom]) {
                   nmax = particle->esize[icustom];
                   expandflag = 1;
-                }
+                } else expandflag = -1;
               }
 
             // per-grid custom attribute
@@ -731,7 +734,7 @@ int Input::expand_args(int narg, char **arg, int mode, char **&earg)
                 if (grid->esize[icustom]) {
                   nmax = grid->esize[icustom];
                   expandflag = 1;
-                }
+                } else expandflag = -1;
               }
 
             // per-surf custom attribute
@@ -745,13 +748,20 @@ int Input::expand_args(int narg, char **arg, int mode, char **&earg)
                 if (surf->esize[icustom]) {
                   nmax = surf->esize[icustom];
                   expandflag = 1;
-                }
+                } else expandflag = -1;
               }
             }
           }
           *ptr2 = ']';
         }
       }
+    }
+
+    if (expandflag < 0) {
+      char str[256];
+      snprintf(str,sizeof(str),"Cannot use wildcard with %s because it "
+              "does not produce multiple values",arg[iarg]);
+      error->all(FLERR,str);
     }
 
     if (expandflag) {
@@ -889,7 +899,7 @@ int Input::execute_command()
 
   if (sparta->suffix_enable && sparta->suffix) {
     char command2[256];
-    sprintf(command2,"%s/%s",command,sparta->suffix);
+    snprintf(command2,sizeof(command2),"%s/%s",command,sparta->suffix);
 
     if (0) return 0;      // dummy line to enable else-if macro expansion
 #define COMMAND_CLASS
@@ -1000,7 +1010,7 @@ void Input::ifthenelse()
     ncommands = 0;
     for (int i = first; i <= last; i++) {
       int n = strlen(arg[i]) + 1;
-      if (n == 1) error->all(FLERR,"Illegal if command");
+      if (n == 1) { for (int j = 0; j < ncommands; j++) delete [] commands[j]; delete [] commands; error->all(FLERR,"Illegal if command"); }
       commands[ncommands] = new char[n];
       strcpy(commands[ncommands],arg[i]);
       ncommands++;
@@ -1054,7 +1064,7 @@ void Input::ifthenelse()
     ncommands = 0;
     for (int i = first; i <= last; i++) {
       int n = strlen(arg[i]) + 1;
-      if (n == 1) error->all(FLERR,"Illegal if command");
+      if (n == 1) { for (int j = 0; j < ncommands; j++) delete [] commands[j]; delete [] commands; error->all(FLERR,"Illegal if command"); }
       commands[ncommands] = new char[n];
       strcpy(commands[ncommands],arg[i]);
       ncommands++;
@@ -1097,7 +1107,7 @@ void Input::include()
     infile = fopen(arg[0],"r");
     if (infile == NULL) {
       char str[128];
-      sprintf(str,"Cannot open input script %s",arg[0]);
+      snprintf(str,128,"Cannot open input script %s",arg[0]);
       error->one(FLERR,str);
     }
     infiles[nfile++] = infile;
@@ -1122,7 +1132,7 @@ void Input::jump()
       infile = fopen(arg[0],"r");
       if (infile == NULL) {
         char str[128];
-        sprintf(str,"Cannot open input script %s",arg[0]);
+        snprintf(str,128,"Cannot open input script %s",arg[0]);
         error->one(FLERR,str);
       }
       infiles[nfile-1] = infile;
@@ -1167,7 +1177,7 @@ void Input::log()
 
       if (logfile == NULL) {
         char str[128];
-        sprintf(str,"Cannot open logfile %s",arg[0]);
+        snprintf(str,128,"Cannot open logfile %s",arg[0]);
         error->one(FLERR,str);
       }
     }
@@ -1245,7 +1255,7 @@ void Input::print()
         else fp = fopen(arg[iarg+1],"a");
         if (fp == NULL) {
           char str[128];
-          sprintf(str,"Cannot open print file %s",arg[iarg+1]);
+          snprintf(str,128,"Cannot open print file %s",arg[iarg+1]);
           error->one(FLERR,str);
         }
       }
@@ -1388,7 +1398,7 @@ void Input::collide_command()
   if (sparta->suffix_enable) {
     if (sparta->suffix) {
       char estyle[256];
-      sprintf(estyle,"%s/%s",arg[0],sparta->suffix);
+      snprintf(estyle,sizeof(estyle),"%s/%s",arg[0],sparta->suffix);
 
       if (0) return;
 
@@ -1522,7 +1532,7 @@ void Input::react_command()
   if (sparta->suffix_enable) {
     if (sparta->suffix) {
       char estyle[256];
-      sprintf(estyle,"%s/%s",arg[0],sparta->suffix);
+      snprintf(estyle,sizeof(estyle),"%s/%s",arg[0],sparta->suffix);
 
       if (0) return;
 

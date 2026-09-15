@@ -19,7 +19,7 @@ together.
 11.6 "Example Python scripts that use SPARTA"_#py_6
 11.7 "Calling Python from SPARTA"_#py_7 :ul
 
-If you are not familiar with "Python"_<https://www.python.org>, it is
+If you are not familiar with "Python"_https://www.python.org, it is
 a powerful scripting and programming language which can do almost
 everything that compiled languages like C, C++, or Fortran can do in
 fewer lines of code. It also comes with a large collection of add-on
@@ -176,10 +176,10 @@ as a library and allow MPI functions to be called from Python.
 These include
 
 "pyMPI"_http://pympi.sourceforge.net/
-"maroonmpi"_http://code.google.com/p/maroonmpi/
-"mpi4py"_http://code.google.com/p/mpi4py/
-"myMPI"_http://nbcr.sdsc.edu/forum/viewtopic.php?t=89&sid=c997fefc3933bd66204875b436940f16
-"Pypar"_http://code.google.com/p/pypar :ul
+"maroonmpi"_https://code.google.com/archive/p/maroonmpi
+"mpi4py"_https://github.com/mpi4py/mpi4py
+myMPI
+"Pypar"_https://code.google.com/archive/p/pypar :ul
 
 All of these except pyMPI work by wrapping the MPI library and
 exposing (some portion of) its interface to your Python script.  This
@@ -199,7 +199,7 @@ still being actively developed and supported.
 
 The one I recommend, since I have successfully used it with SPARTA, is
 Pypar.  Pypar requires the ubiquitous "Numpy
-package"_http://numpy.scipy.org be installed in your Python.  After
+package"_https://numpy.org be installed in your Python.  After
 launching python, type
 
 import numpy :pre
@@ -320,7 +320,7 @@ from the command line.
 [Test SPARTA and Python in parallel:] :h5
 
 To run SPARTA in parallel, assuming you have installed the
-"Pypar"_http://datamining.anu.edu.au/~ole/pypar package as discussed
+"Pypar"_https://code.google.com/archive/p/pypar package as discussed
 above, create a test.py file containing these lines:
 
 import pypar
@@ -515,7 +515,7 @@ code directly from an input script:
 There are SPARTA input script commands which can invoke Python code directly.
 
 "python"_python.html
-"python-style variables"_varaible.html
+"python-style variables"_variable.html
 "equal-style and grid-style variables with formulas containing Python function wrappers"_variable.html :ul
 
 The "python"_python.html command can be used to define and execute a

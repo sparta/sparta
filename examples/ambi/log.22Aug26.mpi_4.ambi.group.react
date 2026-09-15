@@ -1,0 +1,141 @@
+SPARTA (24 Sep 2025)
+Running on 4 MPI task(s)
+################################################################################
+# thermal plasma in a 2d box, reacting multigroup ambipolar collisions
+#
+# Same setup as in.ambi.group, with gas-phase chemistry enabled and the
+# temperature and density raised until reactions are frequent.  This is the
+# regression guard for the reacting multigroup ambipolar collision path,
+# where group membership, the electron list and the cell particle list all
+# change as reactions rebin, create and destroy particles.
+#
+# Note:
+#  - The "comm/sort" option to the "global" command is used to match MPI runs.
+#  - The "twopass" option is used to match Kokkos runs.
+# The "comm/sort" and "twopass" options should not be used for production runs.
+################################################################################
+
+seed                12345
+dimension           2
+boundary            rr rr p
+global              gridcut 0.01 comm/sort yes
+create_box          -2.0 2.0 -2.0 2.0 -0.5 0.5
+Created orthogonal box = (-2 -2 -0.5) to (2 2 0.5)
+create_grid         20 20 1
+WARNING: Could not acquire nearby ghost cells b/c grid partition is not clumped (/home/user/sparta/src/grid.cpp:486)
+Created 400 child grid cells
+  CPU time = 0.0638546 secs
+  create/ghost percent = 12.3332 87.6668
+balance_grid        rcb cell
+Balance grid migrated 280 cells
+  CPU time = 0.363949 secs
+  reassign/sort/migrate/ghost percent = 56.0389 2.19864 10.9955 30.7669
+
+global              fnum 2.6404E16
+global              nrho 2.6404e23
+
+species             air.species N2 O2 N O NO N2+ O2+ N+ O+ NO+ e
+
+# collide mixture: all species, two groups
+# the ambipolar electron species e must be in a group by itself
+
+mixture             gas N2 O2 N O NO N2+ O2+ N+ O+ NO+ vstream 0 0 0 temp 100000.0 group heavy
+mixture             gas e group electron
+mixture             gas N2 frac 0.6
+mixture             gas N2+ frac 0.4
+
+fix                 ambi ambipolar e N+ N2+ NO+ O+ O2+
+
+collide             vss gas air.vss
+collide_modify      ambipolar yes
+react               tce air.tce
+
+create_particles    gas n 10000 twopass
+Created 10000 particles
+  CPU time = 0.0188347 secs
+
+compute             temp temp
+stats               25
+stats_style         step np nattempt ncoll nreact c_temp
+
+timestep            1.0e-7
+run                 300
+Memory usage per proc in Mbytes:
+  particles (ave,min,max) = 2 2 2
+  grid      (ave,min,max) = 1.51379 1.51379 1.51379
+  surf      (ave,min,max) = 0 0 0
+  modify    (ave,min,max) = 0 0 0
+  total     (ave,min,max) = 3.51379 3.51379 3.51379
+Step Np Natt Ncoll Nreact c_temp 
+       0    10000        0        0        0    99791.345 
+      25    10004     3101      852        0    99737.755 
+      50    10005     3123      848        0    99808.067 
+      75    10011     3140      900        2    99739.046 
+WARNING: TCE reaction probability exceeded 1.0, chemistry may be under-resolved, consider reducing timestep or fnum (further warnings suppressed) (/home/user/sparta/src/react_tce.cpp:204)
+     100    10014     3173      834        0    99632.539 
+     125    10018     3185      861        0    99540.816 
+     150    10027     3188      895        0    99532.743 
+     175    10033     3206      869        0    99400.682 
+     200    10039     3237      933        0    99495.122 
+     225    10044     3236      876        0    99536.782 
+     250    10053     3240      853        1     99457.24 
+     275    10059     3239      870        1    99420.092 
+     300    10063     3295      927        1    99327.363 
+Loop time of 6.77107 on 4 procs for 300 steps with 10063 particles
+Performance: 44.306 timesteps/s, 445.853 kparticle-step/s
+
+MPI task timing breakdown:
+Section |  min time  |  avg time  |  max time  |%varavg| %total
+---------------------------------------------------------------
+Move    | 0.0079257  | 0.0083554  | 0.0086259  |   0.3 |  0.12
+Coll    | 0.053755   | 0.057922   | 0.060777   |   1.1 |  0.86
+Sort    | 0.011579   | 0.012837   | 0.013665   |   0.7 |  0.19
+Comm    | 3.9918     | 4.6744     | 5.5481     |  29.3 | 69.03
+Modify  | 0          | 0          | 0          |   0.0 |  0.00
+Output  | 0.39411    | 0.4104     | 0.42486    |   1.8 |  6.06
+MPI Sync| 0.75409    | 1.6071     | 2.287      |  49.5 | 23.73
+Other   |            | 9.051e-05  |            |       |  0.00
+
+Particle moves    = 3008498 (3.01M)
+Cells touched     = 3020945 (3.02M)
+Particle comms    = 654 (0.654K)
+Boundary collides = 651 (0.651K)
+Boundary exits    = 0 (0K)
+SurfColl checks   = 0 (0K)
+SurfColl occurs   = 0 (0K)
+Surf reactions    = 0 (0K)
+Collide attempts  = 956834 (0.957M)
+Collide occurs    = 261003 (0.261M)
+Reactions         = 162 (0.162K)
+Particles stuck   = 0
+Axisymm bad moves = 0
+
+Particle-moves/CPUsec/proc: 111079
+Particle-moves/step: 10028.3
+Cell-touches/particle/step: 1.00414
+Particle comm iterations/step: 1
+Particle fraction communicated: 0.000217384
+Particle fraction colliding with boundary: 0.000216387
+Particle fraction exiting boundary: 0
+Surface-checks/particle/step: 0
+Surface-collisions/particle/step: 0
+Surf-reactions/particle/step: 0
+Collision-attempts/particle/step: 0.318044
+Collisions/particle/step: 0.0867553
+Reactions/particle/step: 5.38475e-05
+
+Gas reaction tallies:
+  style tce #-of-reactions 45
+  reaction N2 + N2 --> N + N + N2: 63
+  reaction N2 + N+ --> N + N2+: 4
+  reaction N2+ + N --> N2 + N+: 1
+  reaction N + e --> N+ + e + e: 94
+
+Particles: 2515.75 ave 2543 max 2504 min
+Histogram: 1 2 0 0 0 0 0 0 0 1
+Cells:      100 ave 100 max 100 min
+Histogram: 4 0 0 0 0 0 0 0 0 0
+GhostCell: 21 ave 21 max 21 min
+Histogram: 4 0 0 0 0 0 0 0 0 0
+EmptyCell: 0 ave 0 max 0 min
+Histogram: 4 0 0 0 0 0 0 0 0 0

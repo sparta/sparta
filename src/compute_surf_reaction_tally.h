@@ -29,10 +29,11 @@ namespace SPARTA_NS {
 class ComputeSurfReactionTally : public Compute {
  public:
   ComputeSurfReactionTally(class SPARTA *, int, char **);
+  ComputeSurfReactionTally(class SPARTA* sparta) : Compute(sparta) {} // needed for Kokkos
   ~ComputeSurfReactionTally();
   void init();
   void compute_per_tally();
-  void clear();
+  virtual void clear();
   void surf_tally(double, int, int, int, Particle::OnePart *,
                   Particle::OnePart *, Particle::OnePart *);
   int tallyinfo(surfint *&);

@@ -17,6 +17,10 @@
 
 #include "pointers.h"
 
+#include <mutex>
+#include <string>
+#include <vector>
+
 namespace SPARTA_NS {
 
 class Stats : protected Pointers {
@@ -30,10 +34,31 @@ class Stats : protected Pointers {
   void compute(int);
   int evaluate_keyword(char *, double *);
 
+  // thread-safe cache of the last computed stats line
+  // accessed by the library interface (sparta_last_thermo),
+  // e.g. from a GUI thread while a run progresses on another thread
+
+  void *last_thermo(const char *, int);
+  void set_last_image(const char *);
+  void reset_cache();
+
  private:
   char *line;
   char **keyword;
   int *vtype;
+
+  // last-stats cache for the library interface
+
+  std::mutex cache_mutex;
+  bigint cache_step;              // timestep of cached data
+  int cache_num;                  // # of cached fields
+  int cache_setup;                // 1 if in setup phase of a run, data invalid
+  int cache_line;                 // input script line # of executing command
+  std::vector<std::string> cache_keyword;   // per-field keyword strings
+  std::vector<int> cache_type;    // per-field datatype (library codes)
+  struct CacheVal { int i; double d; bigint b; };
+  std::vector<CacheVal> cache_data;          // per-field values
+  std::string cache_imagename;    // most recent dump image filename
 
   int nfield;
   int me;

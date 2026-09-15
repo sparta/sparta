@@ -34,12 +34,16 @@ class SurfCollideVanishKokkos : public SurfCollideVanish {
   ~SurfCollideVanishKokkos() {}
   void pre_collide();
   void post_collide();
+  void backup();
+  void restore();
 
  private:
 
-  DAT::tdual_int_scalar k_nsingle;
-  DAT::t_int_scalar d_nsingle;
-  HAT::t_int_scalar h_nsingle;
+  // bigint: mirrors SurfCollide::nsingle, which can exceed 2^31 in one step
+
+  DAT::tdual_bigint_scalar k_nsingle;
+  DAT::t_bigint_scalar d_nsingle;
+  HAT::t_bigint_scalar h_nsingle;
 
  public:
 

@@ -30,8 +30,10 @@ class Collide : protected Pointers {
   int vibstyle;       // none/discrete/smooth vibrational modes
   int nearcp;         // 1 for near neighbor collisions
   int nearlimit;      // limit on neighbor serach for near neigh collisions
+  int mcflag;         // 0 for NTC attempt counts (default)
+                      // 1 for majorant collision frequency (MCF) attempt counts
 
-  int ncollide_one,nattempt_one,nreact_one;
+  bigint ncollide_one,nattempt_one,nreact_one;
   bigint ncollide_running,nattempt_running,nreact_running;
 
   Collide(class SPARTA *, int, char **);
@@ -65,6 +67,21 @@ class Collide : protected Pointers {
  protected:
   int npmax;          // max # of particles in plist
   int *plist;         // list of particle indices for the entire cell
+
+  int subcellflag;    // 1 if transient subcell method is enabled
+
+  // transient subcell method data structs, used per grid cell
+  // per-particle vectors are indexed same as plist
+  // per-subcell vectors are indexed by flattened subcell ID
+  // # of subcells <= # of particles in cell,
+  //   so all vectors can be allocated to length npmax
+
+  int *subcell_id;      // subcell ID of each particle in plist
+  int *subcell_count;   // # of particles in each subcell
+  int *subcell_first;   // plist index of 1st particle in each subcell
+  int *subcell_next;    // plist index of next particle in same subcell
+                        //   chain length = subcell_count of the subcell
+  int *subcell_ring;    // list of subcell IDs in shell around a subcell
 
   int nglocal;        // current size of per-cell arrays
   int nglocalmax;     // max allocated size of per-cell arrays (vremax, remain)
@@ -118,6 +135,7 @@ class Collide : protected Pointers {
 
   int ambiflag;       // 1 if ambipolar option is enabled
   int ambispecies;    // species for ambipolar electrons
+  int *ions;          // 1 if a species is an ambipolar ion, from fix ambipolar
   int index_ionambi;  // 2 custom ambipolar vectors
   int index_velambi;
 
@@ -162,9 +180,15 @@ class Collide : protected Pointers {
   }
 
   template < int,int > void collisions_one();
+  template < int,int > void collisions_one_subcell();
   template < int,int > void collisions_group();
   template < int > void collisions_one_ambipolar();
   template < int > void collisions_group_ambipolar();
+
+  void subcell_alloc();
+  void subcell_rebin(int, int, int, double *, double *);
+  void subcell_bin_one(int, int, int, double *, double *);
+  void subcell_unbin_one(int, int);
 
   void ambi_reset(int, int, int, Particle::OnePart *, Particle::OnePart *,
                   Particle::OnePart *, int *);

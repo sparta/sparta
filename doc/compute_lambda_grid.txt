@@ -63,7 +63,7 @@ dimension.
 
 The Knudsen number can be useful for estimating the optimal grid cell
 size when adapting the grid, e.g. via the "adapt_grid"_adapt_grid.html
-or "fix adapt/grid"_fix_adapt_grid.html commands, as well as for
+or "fix adapt/grid"_fix_adapt.html commands, as well as for
 estimating the optimal timestep size.
 
 Note that unlike other computes which calculate per-grid values, this
@@ -196,7 +196,7 @@ contain the particles that are geometrically inside the split cell.
 
 The vector or array can be accessed by any command that uses per-grid
 values from a compute as input.  See "Section
-4.4"_Section_howto.html#howto_4 for an overview of SPARTA output
+6.4"_Section_howto.html#howto_4 for an overview of SPARTA output
 options.
 
 The per-grid values for a column of output for {lambda} will be in
@@ -237,11 +237,11 @@ effectively.
 [Restrictions:]
 
 To use this compute, a collision style must be defined via the
-"collide.html"_collide command, which defines properties for the
+"collide.html"_collide.html command, which defines properties for the
 mixture {species}.
 
 As explained above, to use this compute with {nrho} or {temp} defined
-as input from a "fix_ave_grid.html"_fix ave/grid command, this compute
+as input from a "fix_ave_grid.html"_fix.html ave/grid command, this compute
 must only be invoked on timesteps that are multiples of the {Nfreq}
 argument used by the fix, since those are the steps when it produces
 output.
@@ -253,7 +253,7 @@ a two-dimensional simulation.
 [Related commands:]
 
 "compute grid"_compute_grid.html, "compute
-thermal/grid"_compute_thermal/grid.html, "fix
+thermal/grid"_compute_thermal_grid.html, "fix
 ave/grid"_fix_ave_grid.html, "dump grid"_dump.html
 
 [Default:] none

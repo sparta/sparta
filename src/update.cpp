@@ -50,9 +50,16 @@ enum{NCHILD,NPARENT,NUNKNOWN,NPBCHILD,NPBPARENT,NPBUNKNOWN,NBOUND};  // Grid
 enum{TALLYAUTO,TALLYREDUCE,TALLYRVOUS};         // same as Surf
 enum{PERAUTO,PERCELL,PERSURF};                  // several files
 enum{NOFIELD,CFIELD,PFIELD,GFIELD};             // several files
+enum{BCSTD,BCWRAP,BCMIRROR,BCEXIT};             // Update::bcopt values
 
 #define MAXSTUCK 20
 #define EPSPARAM 1.0e-7
+
+// max value (bytes) for global_mem_limit = 2000 MiB = 2097152000
+// kept safely below MAXSMALLINT (INT_MAX = 2147483647) so that the buffer-size
+// arithmetic in restart I/O (e.g. "max_size += 128") cannot overflow a 32-bit int
+
+#define MEMLIMIT_MAX (2000*1024*1024)
 
 // either set ID or PROC/INDEX, set other to -1
 
@@ -74,6 +81,10 @@ Update::Update(SPARTA *sparta) : Pointers(sparta)
   firststep = laststep = 0;
   beginstep = endstep = 0;
   first_update = 0;
+
+  rcbflag = 0;
+  rcblo[0] = rcblo[1] = rcblo[2] = 0.0;
+  rcbhi[0] = rcbhi[1] = rcbhi[2] = 0.0;
 
   time = 0.0;
   time_last_update = 0;
@@ -181,7 +192,15 @@ void Update::init()
           error->all(FLERR,"Cannot use optimized move with fix adapt");
       }
     }
+
+    // the dense cell index is built by rehash(), which skips it unless
+    //   optmove is on, so build it here in case optmove was turned on after
+    //   the last rehash.  during a run rehash() keeps it in step
+
+    grid->update_halo_index();
   }
+
+  optmove_surf_init();
 
   // choose the appropriate move method
 
@@ -345,10 +364,22 @@ void Update::run(int nsteps)
     if (cellweightflag) particle->post_weight();
     timer->stamp(TIME_COMM);
 
-    if (collide) {
-      particle->sort();
-      timer->stamp(TIME_SORT);
+    // sort particles by grid cell if collisions are enabled
+    // also sort if reordering is requested this step, since reordering
+    //   requires the particles first be sorted
+    // reorder() must be called here, not from within sort(), so that it
+    //   only acts on the main timestep loop and not other sort() callers
 
+    int reorder_flag = (reorder_period &&
+                        ntimestep % reorder_period == 0);
+
+    if (collide || reorder_flag) {
+      particle->sort();
+      if (reorder_flag) particle->reorder();
+      timer->stamp(TIME_SORT);
+    }
+
+    if (collide) {
       collide->collisions();
       timer->stamp(TIME_COLLIDE);
     }
@@ -374,6 +405,184 @@ void Update::run(int nsteps)
 }
 
 /* ----------------------------------------------------------------------
+   first step of the optimized move: apply the global boundary condition to an
+     end-of-step position
+   xnew = position at the end of a straight-line move, not modified
+   xp = xnew after any boundary condition, valid only if this returns 1
+   flip = bit 0/1/2 per dimension whose velocity component a mirror negated,
+     plus bit 3/4/5 when it was that dimension's upper face, so the caller can
+     name the face it reflected off.  the caller applies it only once it
+     decides to keep the particle: one that falls through must reach the
+     standard move with its velocity untouched, which is also why xnew is left
+     alone (and why xnew+L-L will not do, since that is not xnew in floating
+     point)
+   bcopt[face] says what this face may do -- BCSTD nothing, BCWRAP translate,
+     BCMIRROR mirror, BCEXIT delete -- so a face the fast path cannot handle
+     leaves the position outside the box and the bound tests below reject it
+   one translation or mirror per dimension covers any particle that did not
+     cross a whole domain in a single step; anything still outside is rejected
+   return 1 if xp is inside the global box, 0 to use the standard move,
+     -1 if the particle left through an outflow face and is to be deleted
+   kept in step with UpdateKokkos::optmove_bc(), which cannot be shared with
+     this one because it has to compile as device code
+------------------------------------------------------------------------- */
+
+template < int DIM >
+static inline int optmove_bc(const double *xnew, double *xp, int &flip,
+                             const int *bcopt,
+                             const double *boxlo, const double *boxhi,
+                             double Lx, double Ly, double Lz)
+{
+  xp[0] = xnew[0];
+  xp[1] = xnew[1];
+  xp[2] = xnew[2];
+  flip = 0;
+
+  // exitbit records, per dimension, that the face the particle went out of is
+  //   an outflow face.  the position is left alone for those, so the bound
+  //   tests below still see the dimension as outside and can tell the two
+  //   reasons for that apart
+
+  int exitbit = 0;
+
+  if (xp[0] < boxlo[0]) {
+    if (bcopt[XLO] == BCWRAP) xp[0] += Lx;
+    else if (bcopt[XLO] == BCMIRROR)
+      { xp[0] = boxlo[0] + (boxlo[0]-xp[0]); flip |= 1; }
+    else if (bcopt[XLO] == BCEXIT) exitbit |= 1;
+  } else if (xp[0] >= boxhi[0]) {
+    if (bcopt[XHI] == BCWRAP) xp[0] -= Lx;
+    else if (bcopt[XHI] == BCMIRROR)
+      { xp[0] = boxhi[0] - (xp[0]-boxhi[0]); flip |= 1|8; }
+    else if (bcopt[XHI] == BCEXIT) exitbit |= 1;
+  }
+
+  if (xp[1] < boxlo[1]) {
+    if (bcopt[YLO] == BCWRAP) xp[1] += Ly;
+    else if (bcopt[YLO] == BCMIRROR)
+      { xp[1] = boxlo[1] + (boxlo[1]-xp[1]); flip |= 2; }
+    else if (bcopt[YLO] == BCEXIT) exitbit |= 2;
+  } else if (xp[1] >= boxhi[1]) {
+    if (bcopt[YHI] == BCWRAP) xp[1] -= Ly;
+    else if (bcopt[YHI] == BCMIRROR)
+      { xp[1] = boxhi[1] - (xp[1]-boxhi[1]); flip |= 2|16; }
+    else if (bcopt[YHI] == BCEXIT) exitbit |= 2;
+  }
+
+  if (DIM == 3) {
+    if (xp[2] < boxlo[2]) {
+      if (bcopt[ZLO] == BCWRAP) xp[2] += Lz;
+      else if (bcopt[ZLO] == BCMIRROR)
+        { xp[2] = boxlo[2] + (boxlo[2]-xp[2]); flip |= 4; }
+      else if (bcopt[ZLO] == BCEXIT) exitbit |= 4;
+    } else if (xp[2] >= boxhi[2]) {
+      if (bcopt[ZHI] == BCWRAP) xp[2] -= Lz;
+      else if (bcopt[ZHI] == BCMIRROR)
+        { xp[2] = boxhi[2] - (xp[2]-boxhi[2]); flip |= 4|32; }
+      else if (bcopt[ZHI] == BCEXIT) exitbit |= 4;
+    }
+  }
+
+  // cell bounds are half open, [lo,hi), so a particle exactly on an upper face
+  // belongs to no cell and has to be rejected too.  with > instead of >= it
+  // would reach the lookup with an index of unx/uny/unz, which aliases onto
+  // the first cell of the next row rather than missing the hash
+  //
+  // a dimension still outside because of an outflow face means the particle
+  //   left the domain, but only if every other dimension is accounted for: a
+  //   face the fast path does not handle runs a surface collision model that
+  //   can turn the particle around before it ever reaches the outflow face, so
+  //   one of those anywhere sends the particle to the standard move instead.
+  //   a wrap or a mirror cannot, since neither changes the motion in the
+  //   dimension that exits
+
+  int exited = 0;
+
+  if (xp[0] < boxlo[0] || xp[0] >= boxhi[0]) {
+    if (!(exitbit & 1)) return 0;
+    exited = 1;
+  }
+  if (xp[1] < boxlo[1] || xp[1] >= boxhi[1]) {
+    if (!(exitbit & 2)) return 0;
+    exited = 1;
+  }
+  if (DIM == 3)
+    if (xp[2] < boxlo[2] || xp[2] >= boxhi[2]) {
+      if (!(exitbit & 4)) return 0;
+      exited = 1;
+    }
+
+  // a particle that mirrored off one face and left through another cannot be
+  //   deleted here.  whether the standard move counts that boundary collision
+  //   depends on which face the particle reached first, and this does not
+  //   determine that: reaching the mirror first reflects it and then it still
+  //   leaves, since a mirror in one dimension does not change the motion in
+  //   the one it exits through, but reaching the outflow face first means the
+  //   reflection never happened.  the fate is the same either way, the tally
+  //   is not, so hand it to the standard move
+  // a wrap alongside an exit is fine and stays here, since a periodic crossing
+  //   tallies nothing
+
+  if (exited) return flip ? 0 : -1;
+
+  return 1;
+}
+
+/* ----------------------------------------------------------------------
+   second step of the optimized move: map a position inside the global box to
+     the local index of the cell holding it
+   caller must have established that xp is inside the box, via optmove_bc()
+   preferred path is one indexed load into grid->halo_index, keyed on the
+     cell's position within this proc's halo arc.  the conditional adds fold a
+     periodically wrapped ghost layer back into the arc
+   return the local cell index, or -1 if this proc does not hold that cell
+     (it is outside the owned plus ghost halo), in which case the caller uses
+     the standard move
+   kept in step with UpdateKokkos::optmove_cell()
+------------------------------------------------------------------------- */
+
+template < int DIM >
+static inline int optmove_cell(const double *xp, const double *boxlo,
+                               double dx, double dy, double dz, Grid *grid)
+{
+  const int ip = static_cast<int> ((xp[0] - boxlo[0])/dx);
+  const int jp = static_cast<int> ((xp[1] - boxlo[1])/dy);
+  int kp = 0;
+  if (DIM == 3) kp = static_cast<int> ((xp[2] - boxlo[2])/dz);
+
+  // optmove_bc() has already put xp inside the box, but dx is a rounded
+  //   quotient, so a position within an ulp of an upper face can still divide
+  //   to unx.  that index is not a miss to be caught by the lookup: the cell
+  //   ID it forms is the valid ID of the first cell of the next row, on the
+  //   far side of the box, and the hash would return it.  reject it here, for
+  //   both lookups
+
+  if (ip >= grid->unx || jp >= grid->uny || kp >= grid->unz) return -1;
+
+  if (grid->halo_index) {
+    int il = ip - grid->halo_ilo; if (il < 0) il += grid->unx;
+    int jl = jp - grid->halo_jlo; if (jl < 0) jl += grid->uny;
+    int kl = kp - grid->halo_klo; if (kl < 0) kl += grid->unz;
+    if (il < grid->halo_nx && jl < grid->halo_ny && kl < grid->halo_nz)
+      return grid->halo_index[(kl*grid->halo_ny + jl)*grid->halo_nx + il];
+    return -1;
+  }
+
+  // no dense index for this decomposition: hash on the global cell ID
+  // must accumulate in cellint: unx/uny/unz are int, so an int expression
+  // overflows once the global cell count passes 2^31, and the wrong ID misses
+  // the hash and silently disables this fast path for every particle above
+  // that point in the grid
+
+  const cellint cellIdx = ((cellint) kp*grid->uny + jp)*grid->unx + ip + 1;
+
+  Grid::MyHash::iterator hashptr = grid->hash->find(cellIdx);
+  if (hashptr != grid->hash->end()) return hashptr->second;
+
+  return -1;
+}
+
+/* ----------------------------------------------------------------------
    advect particles thru grid
    DIM = 2/3 for 2d/3d, 1 for 2d axisymmetric
    SURF = 0/1 for no surfs or surfs
@@ -395,6 +604,7 @@ template < int DIM, int SURF, int OPT, int RIGID > void Update::move()
   double *x,*v,*lo,*hi;
   double Lx,Ly,Lz,dx,dy,dz;
   double *boxlo, *boxhi;
+  int bcopt[6] = {0,0,0,0,0,0};
   Grid::ParentCell *pcell;
   Surf::Tri *tri;
   Surf::Line *line;
@@ -411,6 +621,38 @@ template < int DIM, int SURF, int OPT, int RIGID > void Update::move()
     dx = Lx/grid->unx;
     dy = Ly/grid->uny;
     dz = Lz/grid->unz;
+
+    // which global boundary faces the fast path may handle itself, see below
+    // a compute boundary tallies every kind of crossing, and only the standard
+    //   move calls the tally, so give the optimization up on any step where one
+    //   is active
+    // a surface face is left to the standard move, since it runs a collision
+    //   model.  an outflow face only deletes the particle, so the fast path
+    //   does that itself
+
+    for (int f = 0; f < 6; f++) {
+      if (nboundary_tally) bcopt[f] = BCSTD;
+      else if (domain->bflag[f] == PERIODIC) bcopt[f] = BCWRAP;
+      else if (domain->bflag[f] == REFLECT) bcopt[f] = BCMIRROR;
+      else if (domain->bflag[f] == OUTFLOW) bcopt[f] = BCEXIT;
+      else if (bcmirror_surf[f]) bcopt[f] = BCMIRROR;
+      else bcopt[f] = BCSTD;
+    }
+
+    // axisymmetric: a mirror at the outer radial face is not a mirror in the
+    //   (x,r) plane.  reflecting off that cylinder turns the particle in 3d,
+    //   and the radial path after the turn is not the continuation of the one
+    //   before it, which is what mirroring r about the face would assume --
+    //   the error is percent-level, not round-off.  leave it to the standard
+    //   move, which walks to the face and reflects there
+    // outflow at that face is still exact: r(t)^2 is a parabola in t, so r is
+    //   unimodal, and a particle that starts inside can cross the face only
+    //   once, upward.  ending outside therefore means it left
+    // the axis itself needs nothing: axi_remap() returns r >= 0 = boxlo[1],
+    //   so the fast path never sees a particle below it
+
+    if (domain->axisymmetric && bcopt[YHI] == BCMIRROR) bcopt[YHI] = BCSTD;
+
   }
 
   // for 2d and axisymmetry only
@@ -534,42 +776,102 @@ template < int DIM, int SURF, int OPT, int RIGID > void Update::move()
       }
 
       // optimized move
+      // resolve the particle's end-of-step cell in one step instead of walking
+      //   the grid cell by cell.  optmove_bc() applies whatever global
+      //   boundary condition is needed and optmove_cell() maps the resulting
+      //   position to a local cell index; if either declines, the particle
+      //   falls through to the standard move below with its state untouched
 
       if (OPT) {
-        int optmove = 1;
+        double xp[3];
+        int flip;
 
-        if (xnew[0] < boxlo[0] || xnew[0] > boxhi[0])
-          optmove = 0;
+        // axisymmetry: fold the linear end-of-step position back into the
+        //   (x,r) plane before anything else looks at it.  one remap of the
+        //   whole step is enough, and gives the same answer as the standard
+        //   move's remap at every cell crossing: each remap is a rotation
+        //   about the x axis applied to position and velocity together, so the
+        //   trajectory is unchanged and only the frame moves, and r is
+        //   invariant under it.  the intermediate remaps are there so the
+        //   cell-by-cell walk can follow the curve in (x,r), which the fast
+        //   path does not need to do
+        // remap a copy: axi_remap() rotates the velocity, and a particle that
+        //   falls through has to reach the standard move with v untouched
 
-        if (xnew[1] < boxlo[1] || xnew[1] > boxhi[1])
-          optmove = 0;
+        const double *xin = xnew;
+        double xaxi[3],vaxi[3];
 
-        if (DIM == 3) {
-          if (xnew[2] < boxlo[2] || xnew[2] > boxhi[2])
-            optmove = 0;
+        if (DIM == 1) {
+          xaxi[0] = xnew[0]; xaxi[1] = xnew[1]; xaxi[2] = xnew[2];
+          vaxi[0] = v[0];    vaxi[1] = v[1];    vaxi[2] = v[2];
+          axi_remap(xaxi,vaxi);
+          xin = xaxi;
         }
 
-        if (optmove) {
-          const int ip = static_cast<int>((xnew[0] - boxlo[0])/dx);
-          const int jp = static_cast<int>((xnew[1] - boxlo[1])/dy);
-          int kp = 0;
-          if (DIM == 3) kp = static_cast<int>((xnew[2] - boxlo[2])/dz);
+        const int bc =
+          optmove_bc<DIM>(xin,xp,flip,bcopt,boxlo,boxhi,Lx,Ly,Lz);
 
-          int cellIdx = (kp*grid->uny + jp)*grid->unx + ip + 1;
+        // left through an outflow face: the standard move would walk it to the
+        //   face and delete it there, which is the same particle gone and the
+        //   same counter, so do it here
+        // a discarded particle still goes on the migrate list, since that is
+        //   what deletes it -- migration drops a PDISCARD rather than sending
+        //   it.  it is not counted in ncomm_one, which counts particles sent
 
-          // particle outside ghost grid halo must use standard move
+        if (bc < 0) {
+          particles[i].flag = PDISCARD;
+          mlist[nmigrate++] = i;
+          nexit_one++;
+          continue;
+        }
 
-          if (grid->hash->find(cellIdx) != grid->hash->end()) {
+        if (bc) {
+          const int icell = optmove_cell<DIM>(xp,boxlo,dx,dy,dz,grid);
 
-            int icell = (*(grid->hash))[cellIdx];
+          if (icell >= 0) {
 
             // reset particle cell and coordinates
 
             particles[i].icell = icell;
             particles[i].flag = PKEEP;
-            x[0] = xnew[0];
-            x[1] = xnew[1];
-            x[2] = xnew[2];
+            x[0] = xp[0];
+            x[1] = xp[1];
+            x[2] = xp[2];
+
+            // axisymmetry: the particle is committed, so the rotated velocity
+            //   from the remap becomes its velocity.  x[2] is 0, which xp
+            //   already carries through from the remap
+
+            if (DIM == 1) {
+              v[0] = vaxi[0];
+              v[1] = vaxi[1];
+              v[2] = vaxi[2];
+            }
+
+            // specular reflection off a global boundary: now that the particle
+            //   is committed, negate the velocity components the mirrors
+            //   flipped and count the boundary collisions the standard move
+            //   would have counted
+            // a particle that reaches two faces in one step reflects off both,
+            //   and mirroring one dimension does not change the motion in the
+            //   other, so the two are independent and each is tallied
+
+            if (flip) {
+              if (flip & 1) { v[0] = -v[0]; nboundary_one++; }
+              if (flip & 2) { v[1] = -v[1]; nboundary_one++; }
+              if (flip & 4) { v[2] = -v[2]; nboundary_one++; }
+
+              // an {s} face's surf collide model keeps its own count of the
+              //   collisions it handled, so count them per face here and give
+              //   them to it at the end of the move.  a {r} face has no model,
+              //   and optmove_surf_tally() ignores those faces
+
+              if (bcmirror_any) {
+                if (flip & 1) bcmirror_one[(flip & 8) ? XHI : XLO]++;
+                if (flip & 2) bcmirror_one[(flip & 16) ? YHI : YLO]++;
+                if (flip & 4) bcmirror_one[(flip & 32) ? ZHI : ZLO]++;
+              }
+            }
 
             if (cells[icell].proc != me) {
               mlist[nmigrate++] = i;
@@ -658,22 +960,34 @@ template < int DIM, int SURF, int OPT, int RIGID > void Update::move()
         frac = 1.0;
 
         if (xnew[0] < lo[0]) {
-          frac = (lo[0]-x[0]) / (xnew[0]-x[0]);
+          if (xnew[0] != x[0]) frac = (lo[0]-x[0]) / (xnew[0]-x[0]);
+          else frac = 0.0;
+          if (frac < 0.0) frac = 0.0;
+          else if (frac > 1.0) frac = 1.0;
           outface = XLO;
         } else if (xnew[0] >= hi[0]) {
-          frac = (hi[0]-x[0]) / (xnew[0]-x[0]);
+          if (xnew[0] != x[0]) frac = (hi[0]-x[0]) / (xnew[0]-x[0]);
+          else frac = 0.0;
+          if (frac < 0.0) frac = 0.0;
+          else if (frac > 1.0) frac = 1.0;
           outface = XHI;
         }
 
         if (DIM != 1) {
           if (xnew[1] < lo[1]) {
-            newfrac = (lo[1]-x[1]) / (xnew[1]-x[1]);
+            if (xnew[1] != x[1]) newfrac = (lo[1]-x[1]) / (xnew[1]-x[1]);
+            else newfrac = 0.0;
+            if (newfrac < 0.0) newfrac = 0.0;
+            else if (newfrac > 1.0) newfrac = 1.0;
             if (newfrac < frac) {
               frac = newfrac;
               outface = YLO;
             }
           } else if (xnew[1] >= hi[1]) {
-            newfrac = (hi[1]-x[1]) / (xnew[1]-x[1]);
+            if (xnew[1] != x[1]) newfrac = (hi[1]-x[1]) / (xnew[1]-x[1]);
+            else newfrac = 0.0;
+            if (newfrac < 0.0) newfrac = 0.0;
+            else if (newfrac > 1.0) newfrac = 1.0;
             if (newfrac < frac) {
               frac = newfrac;
               outface = YHI;
@@ -716,13 +1030,19 @@ template < int DIM, int SURF, int OPT, int RIGID > void Update::move()
 
         if (DIM == 3) {
           if (xnew[2] < lo[2]) {
-            newfrac = (lo[2]-x[2]) / (xnew[2]-x[2]);
+            if (xnew[2] != x[2]) newfrac = (lo[2]-x[2]) / (xnew[2]-x[2]);
+            else newfrac = 0.0;
+            if (newfrac < 0.0) newfrac = 0.0;
+            else if (newfrac > 1.0) newfrac = 1.0;
             if (newfrac < frac) {
               frac = newfrac;
               outface = ZLO;
             }
           } else if (xnew[2] >= hi[2]) {
-            newfrac = (hi[2]-x[2]) / (xnew[2]-x[2]);
+            if (xnew[2] != x[2]) newfrac = (hi[2]-x[2]) / (xnew[2]-x[2]);
+            else newfrac = 0.0;
+            if (newfrac < 0.0) newfrac = 0.0;
+            else if (newfrac > 1.0) newfrac = 1.0;
             if (newfrac < frac) {
               frac = newfrac;
               outface = ZHI;
@@ -1008,7 +1328,7 @@ template < int DIM, int SURF, int OPT, int RIGID > void Update::move()
 
               // stuck_iterate = consecutive iterations particle is immobile
 
-              if (minparam == 0.0) stuck_iterate++;
+              if (minparam <= 1.0e-14) stuck_iterate++;
               else stuck_iterate = 0;
 
               // reset post-bounce xnew
@@ -1318,7 +1638,7 @@ template < int DIM, int SURF, int OPT, int RIGID > void Update::move()
         if (particles[i].flag != PDISCARD) {
           if (cells[icell].proc == me) {
             char str[128];
-            sprintf(str,
+            snprintf(str,sizeof(str),
                     "Particle %d on proc %d being sent to self "
                     "on step " BIGINT_FORMAT,
                     i,me,update->ntimestep);
@@ -1341,7 +1661,7 @@ template < int DIM, int SURF, int OPT, int RIGID > void Update::move()
 
     timer->stamp(TIME_MOVE);
     MPI_Allreduce(&entryexit,&any_entryexit,1,MPI_INT,MPI_MAX,world);
-    timer->stamp();
+    timer->stamp(TIME_SYNC);
 
     if (any_entryexit) {
       timer->stamp(TIME_MOVE);
@@ -1362,6 +1682,10 @@ template < int DIM, int SURF, int OPT, int RIGID > void Update::move()
   // END of all move/migrate iterations
 
   particle->sorted = 0;
+
+  // hand any {s} face mirrors the fast path did back to their collide models
+
+  if (OPT && bcmirror_any) optmove_surf_tally();
 
   // accumulate running totals
 
@@ -1559,6 +1883,63 @@ int Update::collide_react_setup()
 }
 
 /* ----------------------------------------------------------------------
+   classify the global boundary faces of style {s} for the optimized move
+   a face whose surf collide model is a plain mirror and which runs no surface
+     chemistry can be reflected by the fast path itself, since the box faces
+     are axis-aligned and a mirror there is one negated velocity component
+   anything else -- a diffuse or piston or transparent model, a reaction model,
+     a face that changes its model between runs -- stays with the standard move
+   called from init(), so a surf_collide or bound_modify command between runs
+     is picked up
+------------------------------------------------------------------------- */
+
+void Update::optmove_surf_init()
+{
+  for (int f = 0; f < 6; f++) {
+    bcmirror_surf[f] = 0;
+    bcmirror_one[f] = 0;
+  }
+  bcmirror_any = 0;
+
+  if (!optmove_flag) return;
+
+  // an external field perturbs the move, and the two boundary styles then part
+  //   company.  for an {r} face Domain::collide() mirrors the end-of-step
+  //   position, which is what the fast path does, so that stays exact.  for an
+  //   {s} face it instead re-derives the position from the collision point as
+  //   x + dtremain*v, applying no field over the remainder of the step, so the
+  //   mirror lands somewhere else.  give the shortcut up rather than reproduce
+  //   that, since it is the normal move's own approximation and not a property
+  //   of the boundary
+
+  if (fstyle != NOFIELD) return;
+
+  for (int f = 0; f < 6; f++) {
+    if (domain->bflag[f] != SURFACE) continue;
+    if (domain->surf_react[f] >= 0) continue;
+    const int isc = domain->surf_collide[f];
+    if (isc < 0) continue;
+    if (surf->sc[isc]->mirror_flag) bcmirror_surf[f] = bcmirror_any = 1;
+  }
+}
+
+/* ----------------------------------------------------------------------
+   give each {s} face's surf collide model the collisions the fast path did
+     for it, so its own tally matches what the standard move would have left
+   called at the end of move(), before collide_react_update() rolls nsingle
+     into the cumulative count at the end of the step
+------------------------------------------------------------------------- */
+
+void Update::optmove_surf_tally()
+{
+  for (int f = 0; f < 6; f++) {
+    if (!bcmirror_surf[f] || !bcmirror_one[f]) continue;
+    surf->sc[domain->surf_collide[f]]->nsingle += bcmirror_one[f];
+    bcmirror_one[f] = 0;
+  }
+}
+
+/* ----------------------------------------------------------------------
    zero counters for tallying surface collisions/reactions
    done at start of each timestep
    done within individual SurfCollide and SurfReact instances
@@ -1601,6 +1982,7 @@ int Update::tally_setup()
   delete [] blist_active;
 
   glist_compute = slist_compute = blist_compute = NULL;
+  glist_active = slist_active = blist_active = NULL;
 
   nglist_compute = nslist_compute = nblist_compute = 0;
   for (int i = 0; i < modify->ncompute; i++) {
@@ -1749,7 +2131,7 @@ void Update::global(int narg, char **arg)
       iarg += 2;
 
     } else if (strcmp(arg[iarg],"field") == 0) {
-      if (iarg+1 > narg) error->all(FLERR,"Illegal global command");
+      if (iarg+2 > narg) error->all(FLERR,"Illegal global command");
       if (strcmp(arg[iarg+1],"none") == 0) {
         fstyle = NOFIELD;
         iarg += 2;
@@ -1868,7 +2250,7 @@ void Update::global(int narg, char **arg)
         double factor = input->numeric(FLERR,arg[iarg+1]);
         bigint global_mem_limit_big = static_cast<bigint> (factor * 1024*1024);
         if (global_mem_limit_big < 0) error->all(FLERR,"Illegal global command");
-        if (global_mem_limit_big > MAXSMALLINT)
+        if (global_mem_limit_big > MEMLIMIT_MAX)
           error->all(FLERR,"Global mem/limit setting cannot exceed 2GB");
         global_mem_limit = global_mem_limit_big;
       }
@@ -1951,8 +2333,10 @@ void Update::set_mem_limit_grid(int gnlocal)
 
   bigint global_mem_limit_big = static_cast<bigint> (gnlocal*sizeof(Grid::ChildCell));
 
-  if (global_mem_limit_big > MAXSMALLINT)
-    error->one(FLERR,"Global mem/limit setting cannot exceed 2GB");
+  // cap at 2 GB rather than erroring out so large grids can still be handled
+
+  if (global_mem_limit_big > MEMLIMIT_MAX)
+    global_mem_limit_big = MEMLIMIT_MAX;
 
   global_mem_limit = global_mem_limit_big;
 }

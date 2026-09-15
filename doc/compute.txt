@@ -34,7 +34,7 @@ surface elements.  Code for new computes can be added to SPARTA; see
 Note that defining a compute does not perform a computation.  Instead
 computes are invoked by other SPARTA commands as needed, e.g. to
 generate statistics or dump file output.  See "Section
-4.4"_Section_howto.html#howto_4 for a summary of various SPARTA output
+6.4"_Section_howto.html#howto_4 for a summary of various SPARTA output
 options, many of which involve computes.
 
 The ID for a compute is used to identify the compute in other

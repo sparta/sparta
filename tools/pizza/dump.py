@@ -262,7 +262,7 @@ class dump:
 
     # sort entries by timestep, cull duplicates
 
-    self.snaps.sort(self.compare_time)
+    self.snaps.sort(key=lambda x: x.time)
     self.cull()
     self.nsnaps = len(self.snaps)
     print("read %d snapshots" % self.nsnaps)

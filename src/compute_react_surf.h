@@ -30,6 +30,7 @@ namespace SPARTA_NS {
 class ComputeReactSurf : public Compute {
  public:
   ComputeReactSurf(class SPARTA *, int, char **);
+  ComputeReactSurf(class SPARTA* sparta) : Compute(sparta) {} // needed for Kokkos
   ~ComputeReactSurf();
   virtual void init();
   void compute_per_surf();
@@ -68,7 +69,7 @@ class ComputeReactSurf : public Compute {
   Surf::Line *lines;
   Surf::Tri *tris;
 
-  void grow_tally();
+  virtual void grow_tally();
 };
 
 }

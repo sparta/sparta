@@ -66,8 +66,8 @@ class Fix : protected Pointers {
   int START_OF_STEP,END_OF_STEP,POST_RUN;    // mask settings
 
   int kokkos_flag;              // 0/1 if Kokkos fix
-  int copy,uncopy,copymode;     // used by Kokkos, prevent deallocation of
-                                //  base class when child copy is destroyed
+  int copy,copymode;     // used by Kokkos, prevent deallocation of
+                         //  base class when child copy is destroyed
   ExecutionSpace execution_space;
   unsigned int datamask_read,datamask_modify;
 

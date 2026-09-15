@@ -12,7 +12,7 @@ import sys
 
 argv = sys.argv
 if len(argv) != 2:
-  print "Syntax: trivial.py in.sparta"
+  print("Syntax: trivial.py in.sparta")
   sys.exit()
 
 infile = sys.argv[1]

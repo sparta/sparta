@@ -642,7 +642,7 @@ bigint ComputeFFTGrid::memory_usage()
   bytes += nglocal * sizeof(double);          // ingrid
   if (conjugate) bytes += nglocal * sizeof(double);       // gridwork
   else bytes += 2*nglocal * sizeof(FFT_SCALAR);           // gridworkcomplex
-  bytes += ncol*nglocal * sizeof(double);     // vector/array grid
+  bytes += (bigint) ncol*nglocal * sizeof(double);     // vector/array grid
   bytes += (nfft+nglocal) * sizeof(int);      // map1,map2
   return bytes;
 }
@@ -700,7 +700,10 @@ void ComputeFFTGrid::fft_create()
   nyfft = nyhi - nylo + 1;
   nzfft = nzhi - nzlo + 1;
 
-  nfft = nxfft * nyfft * nzfft;
+  bigint nfftbig = (bigint) nxfft * nyfft * nzfft;
+  if (2*nfftbig > MAXSMALLINT)
+    error->all(FLERR,"Compute fft/grid FFT size exceeds 2^31 per proc");
+  nfft = nfftbig;
 
   //printf("FFT %d: nxyz %d %d %d np xyz %d %d %d: "
   //       "x %d %d y %d %d z %d %d: %d\n",
@@ -768,7 +771,7 @@ void ComputeFFTGrid::irregular_create()
   for (i = 0; i < nglocal; i++) {
     gid = cells[i].id;
     iy = ((gid-1) / nx) % ny;
-    iz = (gid-1) / (nx*ny);
+    iz = (gid-1) / ((bigint) nx*ny);
 
     ipy = static_cast<int> (1.0*iy/ny * npy);
     while (1) {
@@ -807,7 +810,7 @@ void ComputeFFTGrid::irregular_create()
     gid = idrecv[i];
     ix = (gid-1) % nx;
     iy = ((gid-1) / nx) % ny;
-    iz = (gid-1) / (nx*ny);
+    iz = (gid-1) / ((bigint) nx*ny);
     map1[i] = (iz-nzlo)*nxfft*nyfft + (iy-nylo)*nxfft + (ix-nxlo);
   }
 
@@ -942,7 +945,7 @@ void ComputeFFTGrid::print_FFT_info()
 {
   if (comm->me == 0) {
     char str[64];
-    sprintf(str,"Using " SPARTA_FFT_PREC " precision " SPARTA_FFT_LIB " for FFTs\n");
+    snprintf(str,sizeof(str),"Using " SPARTA_FFT_PREC " precision " SPARTA_FFT_LIB " for FFTs\n");
     if (screen) fprintf(screen,"%s",str);
     if (logfile) fprintf(logfile,"%s",str);
   }

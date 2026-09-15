@@ -82,7 +82,7 @@ void FixDtResetKokkos::end_of_step()
       computeKKBase->post_process_grid_kokkos(step_index,1,DAT::t_float_2d_lr(),NULL,DAT::t_float_1d_strided());
 
     if (step_index == 0 || cstep->post_process_grid_flag)
-      Kokkos::deep_copy(d_gridstep, computeKKBase->d_vector_grid);
+      copy_gridstep(computeKKBase->d_vector_grid,nglocal);
     else {
       d_array = computeKKBase->d_array_grid;
       copymode = 1;
@@ -93,8 +93,11 @@ void FixDtResetKokkos::end_of_step()
     if (!fstep->kokkos_flag)
       error->all(FLERR,"Cannot (yet) use non-Kokkos fixes with fix dt/reset/kk");
     KokkosBase* computeKKBase = dynamic_cast<KokkosBase*>(fstep);
+    // a fix keeps its per-grid output between invocations and grid migration
+    // can leave it current on the host alone, so ask for the device copy
+    if (computeKKBase) computeKKBase->sync_pergrid_device_kokkos();
     if (step_index == 0)
-      d_gridstep = computeKKBase->d_vector_grid;
+      copy_gridstep(computeKKBase->d_vector_grid,nglocal);
     else {
       d_array = computeKKBase->d_array_grid;
       copymode = 1;
@@ -118,6 +121,16 @@ void FixDtResetKokkos::end_of_step()
                           Kokkos::Sum<double>(dtsum_me),
                           Kokkos::Sum<int>(count_me) );
   copymode = 0;
+
+  // a proc which counted no cell contributes the reducer identities, and
+  //   1/(-max double) below would then win the MPI_MIN and make dtmax
+  //   negative.  the non-Kokkos style leaves 0.0 here, whose reciprocal is
+  //   infinite and so loses that reduction as intended
+
+  if (count_me == 0) {
+    dtmin_me = BIG;
+    dtmax_me = 0.0;
+  }
 
   bigint bcount_me = count_me;
   bigint bcount;
@@ -144,6 +157,23 @@ void FixDtResetKokkos::end_of_step()
     update->time_last_update = update->ntimestep;
     update->dt = dtnew;
   }
+}
+
+/* ----------------------------------------------------------------------
+   copy the first N cells of a source per-grid vector into d_gridstep
+   d_gridstep is grown to a high-water mark and never shrunk, so once grid
+     adaptation or a rebalance lowers the cell count the two views no longer
+     have equal extents and Kokkos::deep_copy of the whole view aborts.
+     the non-Kokkos style memcpy's exactly N values for the same reason
+------------------------------------------------------------------------- */
+
+void FixDtResetKokkos::copy_gridstep(DAT::t_float_1d d_src, int n)
+{
+  if (n <= 0) return;
+  auto range = Kokkos::make_pair(0,n);
+  auto d_dst_n = Kokkos::subview(d_gridstep,range);
+  auto d_src_n = Kokkos::subview(d_src,range);
+  Kokkos::deep_copy(d_dst_n,d_src_n);
 }
 
 /* ---------------------------------------------------------------------- */

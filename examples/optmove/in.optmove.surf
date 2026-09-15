@@ -1,0 +1,56 @@
+################################################################################
+# 3d box with a surf_collide model on two box faces
+#
+# Exercises an {s} global boundary whose collision model is a plain specular
+# one.  On an axis-aligned box face that model is a reflection about the face
+# and nothing else, so the optimized move performs it itself and hands the
+# collisions to the model afterwards -- sc_ID[1] and sc_ID[2] below count the
+# same collisions either way.
+#
+# A specular model with the noslip option, or any other collision model, is
+# not a mirror and those faces still use the normal move.
+#
+# Run the same script with "-var opt no" to compare against the normal move.
+# On a single processor the two agree exactly, step for step, including the
+# two surf_collide tallies.
+#
+# Note:
+#  - The "comm/sort" option to the "global" command is used to match MPI runs.
+################################################################################
+
+variable            opt index yes
+
+seed	    	    12345
+dimension   	    3
+global              gridcut 0.0 comm/sort yes optmove ${opt}
+
+boundary	    s p p
+
+create_box  	    0 0.001 0 0.001 0 0.001
+create_grid 	    10 10 10
+balance_grid        rcb part
+
+surf_collide        spec specular
+bound_modify        xlo xhi collide spec
+
+species		    ar.species Ar
+mixture		    air Ar vstream 200.0 100.0 -150.0 temp 300.0
+
+global		    nrho 1.e20 fnum 1.e7
+
+create_particles    air n 0
+collide             vss air ar.vss
+
+fix                 gcheck grid/check 1 error
+
+# nsingle and ntotal of the surf_collide model, which the optimized move
+# keeps up to date for the collisions it performs itself
+
+variable            nsingle equal sc_spec[1]
+variable            ntotal  equal sc_spec[2]
+
+stats		    100
+stats_style	    step cpu np nbound v_nsingle v_ntotal
+
+timestep            1.e-6
+run 		    500

@@ -210,6 +210,16 @@ array must be identical for each x and z coordinate.  Otherwise the
 aggregate set of induced implicit surfaces will not be consistent
 across the y periodic boundary.
 </P>
+<P>For an axisymmetric domain (see the <A HREF = "dimension.html">dimension</A> and
+<A HREF = "boundary.html">boundary</A> commands), the y = 0 face of the box is the
+symmetry axis.  A body of revolution legitimately closes on itself
+there, so if the array of grid cells starts on the axis, corner point
+values on that y = 0 boundary are allowed to be non-zero.  The
+resulting surface end points lie on the box boundary, which the
+watertight check permits.  If the array of grid cells starts above the
+axis, the usual requirement that the outer boundary corner point values
+be 0 still applies.
+</P>
 <P>The specified <I>ablateID</I> is the fix ID of a <A HREF = "fix_ablate.html">fix
 ablate</A> command which has been previously specified in
 the input script.  It will store the grid corner point values for each
@@ -303,6 +313,17 @@ point values are read in, before the first set of surface elements are
 created by the marching cubes or marching squares algorithms.
 </P>
 <P>The default for the <I>push</I> keyword is <I>yes</I>.
+</P>
+<P>Note that <I>push yes</I> re-normalizes the corner point values as they are
+read, snapping fully interior/exterior corners to 0 or 255.  This is
+appropriate for a freshly generated geometry file, but it means a
+read_isurf is not an exact inverse of a <A HREF = "write_isurf.html">write_isurf</A>.
+When you use the write_isurf then read_isurf sequence to save and
+restore a partially ablated (mid-run) surface state, as described on
+the <A HREF = "write_isurf.html">write_isurf</A> doc page, use <I>push no</I> so the
+corner point values are restored exactly as written.  Also use
+<I>precision double</I> in that case (see below), so partially decremented
+corner point values are not truncated to integers.
 </P>
 <P>The <I>read</I> keyword specifies how the input file of grid corner point
 values is read.  If the value is <I>serial</I>, which is the default, then

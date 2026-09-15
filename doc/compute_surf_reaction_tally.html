@@ -1,5 +1,5 @@
 <HTML>
-<CENTER><A HREF = "http://sparta.sandia.gov">SPARTA WWW Site</A> - <A HREF = "Manual.html">SPARTA Documentation</A> - <A HREF = "Section_commands.html#comm">SPARTA Commands</A> 
+<CENTER><A HREF = "https://sparta.github.io">SPARTA WWW Site</A> - <A HREF = "Manual.html">SPARTA Documentation</A> - <A HREF = "Section_commands.html#comm">SPARTA Commands</A> 
 </CENTER>
 
 
@@ -68,7 +68,7 @@ included.  See the <A HREF = "group.html">group grid</A> command for info on how
 surface elements can be assigned to surface groups.
 </P>
 <P>This compute can be used for simulations with either explicit or
-implicit surface elements.  See <A HREF = "Section_howto_13">Section 6.13</A> for
+implicit surface elements.  See <A HREF = "Section_howto.html#howto_13">Section 6.13</A> for
 more discussion of explicit and implicit surfaces.
 </P>
 <P>The results of this compute can be used by different commands in
@@ -91,13 +91,13 @@ number from 1 to N, where N is the number of reactions defined by the
 <P>The <I>id/surf</I> value is the ID of the surface element.  For explicit
 surfaces, surface element IDs are unique.  For implicit surfaces, the
 surface ID of all the surface elements within a grid cell are the grid
-cell ID.  See <A HREF = "Section_howto_13">Section 6.13</A> for more discussion of
+cell ID.  See <A HREF = "Section_howto.html#howto_13">Section 6.13</A> for more discussion of
 explicit and implicit surfaces.
 </P>
 <P>The <I>id/pre</I> value is the ID of the incident particle.  Note that
 particle IDs are generated randomly.  Thus multiple particles in the
-system can potentially have the same ID.  See <A HREF = "Section_howto_17">Section
-6.17</A> for more details on particle IDs.
+system can potentially have the same ID.  See <A HREF = "Section_howto.html#howto_19">Section
+6.19</A> for more details on particle IDs.
 </P>
 <P>The <I>id1/post</I> and <I>id2/post</I> values are the post-collision IDs of the
 0, 1, or 2 resulting particles.  If the incident particle vanished in
@@ -109,7 +109,7 @@ created particle.
 <P>The <I>type/pre</I> value is the integer index for the incident particle
 species.  It is a value from 1 to Nspecies. The value corresponds to
 the order in which species were defined via the <A HREF = "species.html">species</A>
-command.  See <A HREF = "Section_howto_17">Section 6.17</A> for more details on
+command.  See <A HREF = "Section_howto.html#howto_19">Section 6.19</A> for more details on
 particle types.
 </P>
 <P>The <I>type1/post</I> and <I>type2/post</I> values are the post-collision
@@ -161,11 +161,34 @@ as are <I>vx1/post</I>, <I>vy1/post</I>, <I>vz1/post</I> and <I>vx2/post</I>, <I
 </P>
 <HR>
 
+<HR>
+
+<P>Styles with a <I>kk</I> suffix are functionally the same as the
+corresponding style without the suffix.  They have been optimized to
+run faster, depending on your available hardware, as discussed in the
+<A HREF = "Section_accelerate.html">Accelerating SPARTA</A> section of the manual.
+The accelerated styles take the same arguments and should produce the
+same results, except for different random number, round-off and
+precision issues.
+</P>
+<P>These accelerated styles are part of the KOKKOS package. They are only
+enabled if SPARTA was built with that package.  See the <A HREF = "Section_start.html#start_3">Making
+SPARTA</A> section for more info.
+</P>
+<P>You can specify the accelerated styles explicitly in your input script
+by including their suffix, or you can use the <A HREF = "Section_start.html#start_7">-suffix command-line
+switch</A> when you invoke SPARTA, or you can
+use the <A HREF = "suffix.html">suffix</A> command in your input script.
+</P>
+<P>See the <A HREF = "Section_accelerate.html">Accelerating SPARTA</A> section of the
+manual for more instructions on how to use the accelerated styles
+effectively.
+</P>
 <P><B>Restrictions:</B> none
 </P>
 <P><B>Related commands:</B>
 </P>
-<P><A HREF = "compute_surf/collision_tally.html">compute surf/collision/tally</A>,
+<P><A HREF = "compute_surf_collision_tally.html">compute surf/collision/tally</A>,
 <A HREF = "compute_gas_reaction_tally.html">compute gas/reaction/tally</A>,
 <A HREF = "dump.html">dump tally</A>
 </P>

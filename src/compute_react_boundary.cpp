@@ -66,7 +66,6 @@ ComputeReactBoundary(SPARTA *sparta, int narg, char **arg) :
       char *ptr = copy;
       while ((ptr = strtok(ptr,"/")) != (char *) NULL) {
         for (int ireaction = 0; ireaction < ntotal; ireaction++) {
-          reaction2col[ireaction][icol] = 0;
           if (which == REACTANT) {
             if (surf->sr[isr]->match_reactant(ptr,ireaction))
               reaction2col[ireaction][icol] = 1;
@@ -99,6 +98,8 @@ ComputeReactBoundary(SPARTA *sparta, int narg, char **arg) :
 
 ComputeReactBoundary::~ComputeReactBoundary()
 {
+  if (copy || copymode) return;
+
   memory->destroy(reaction2col);
   memory->destroy(array);
   memory->destroy(myarray);

@@ -1,0 +1,51 @@
+################################################################################
+# thermal gas in a 3d box with collisions and reactions
+# tally per-grid-cell gas collisions and reactions
+#
+# Demonstrates/verifies compute gas/collision/grid and compute gas/reaction/grid
+# (the latter in all/every/select modes).
+#
+# Note:
+#  - The "comm/sort" option to the "global" command is used to match MPI runs.
+#  - The "twopass" option is used to match Kokkos runs.
+# The "comm/sort" and "twopass" options should not be used for production runs.
+################################################################################
+
+seed	    	    12345
+dimension   	    3
+global              gridcut 1.0e-5 comm/sort yes
+boundary	    rr rr rr
+create_box  	    0 0.0001 0 0.0001 0 0.0001
+create_grid 	    10 10 10
+balance_grid        rcb part
+
+species		    air.species N2 N
+mixture		    air N2 N vstream 0.0 0.0 0.0 temp 20000.0
+mixture             air N2 frac 1.0
+mixture             air N frac 0.0
+
+global              nrho 7.07043E22
+global              fnum 7.07043E5
+
+collide		    vss air air.vss
+react               tce air.tce
+
+create_particles    air n 10000 twopass
+
+# per-grid-cell tallies of gas collisions and reactions
+
+compute             cc gas/collision/grid all all
+compute             cr gas/reaction/grid all all all
+compute             cre gas/reaction/grid all all every
+
+# sums over all cells: c_sumcc == ncoll-nreact and c_sumcr == nreact each step
+
+compute             sumcc reduce sum c_cc
+compute             sumcr reduce sum c_cr
+
+stats		    100
+compute             temp temp
+stats_style	    step np nattempt ncoll nreact c_temp c_sumcc c_sumcr
+
+timestep 	    7.00E-9
+run 		    500

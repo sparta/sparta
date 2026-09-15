@@ -355,31 +355,38 @@ void IrregularKokkos::exchange_uniform(DAT::t_char_1d d_sendbuf_in, int nbytes_i
     h_recvbuf = HAT::t_char_1d(Kokkos::view_alloc("irregular:d_recvbuf:mirror",Kokkos::WithoutInitializing),d_recvbuf.extent(0));
   }
 
+  // datum_type = MPI datatype for one datum of nbytes
+  // all message sizes become datum counts < 2^31,
+  //   so the int count arg of MPI calls cannot overflow
+  //   even when a message byte count exceeds 2 GB
+
+  // cached across calls: this runs every timestep from migrate_particles
+
+  MPI_Datatype datum_type = uniform_datum_type(nbytes);
+
   // post all receives, starting after self copies
 
   bigint offset = (bigint)num_self*nbytes;
   for (int irecv = 0; irecv < nrecv; irecv++) {
     if (sparta->kokkos->gpu_aware_flag) {
-      MPI_Irecv(&d_recvbuf_ptr[offset],num_recv[irecv]*nbytes,MPI_CHAR,
+      MPI_Irecv(&d_recvbuf_ptr[offset],num_recv[irecv],datum_type,
                 proc_recv[irecv],0,world,&request[irecv]);
     } else {
-      MPI_Irecv(h_recvbuf.data() + offset,num_recv[irecv]*nbytes,MPI_CHAR,
+      MPI_Irecv(h_recvbuf.data() + offset,num_recv[irecv],datum_type,
                 proc_recv[irecv],0,world,&request[irecv]);
     }
     offset += (bigint)num_recv[irecv]*nbytes;
   }
 
   // reallocate buf for largest send if necessary
-
-  if ((bigint)sendmax*nbytes > MAXSMALLINT)
-    error->one(FLERR,"Irregular comm send buffer exceeds 2 GB, try using"
-                     "'global mem/limit' command");
+  // bufmax is bigint since largest send message can exceed 2 GB
 
   if (sparta->kokkos->gpu_aware_flag) {
-    if (sendmax*nbytes > bufmax) {
-      bufmax = sendmax*nbytes;
+    bigint sendbytes = (bigint)sendmax*nbytes;
+    if (sendbytes > bufmax) {
+      bufmax = sendbytes;
       d_buf = DAT::t_char_1d("Irregular:buf",bufmax);
-    } else if (d_buf.extent(0) < bufmax) {
+    } else if ((bigint)d_buf.extent(0) < bufmax) {
       d_buf = DAT::t_char_1d("Irregular:buf",bufmax);
     }
   }
@@ -401,8 +408,9 @@ void IrregularKokkos::exchange_uniform(DAT::t_char_1d d_sendbuf_in, int nbytes_i
 
       // allocate exact buffer size to reduce GPU <--> CPU memory transfer
 
-      if (bufmax != count*nbytes) {
-        bufmax = count*nbytes;
+      bigint sendbytes = (bigint)count*nbytes;
+      if (bufmax != sendbytes) {
+        bufmax = sendbytes;
         d_buf = DAT::t_char_1d(Kokkos::view_alloc("irregular:buf",Kokkos::WithoutInitializing),bufmax);
         h_buf = HAT::t_char_1d(Kokkos::view_alloc("irregular:buf:mirror",Kokkos::WithoutInitializing),bufmax);
       }
@@ -414,10 +422,10 @@ void IrregularKokkos::exchange_uniform(DAT::t_char_1d d_sendbuf_in, int nbytes_i
     copymode = 0;
 
     if (sparta->kokkos->gpu_aware_flag)
-      MPI_Send(d_buf.data(),count*nbytes,MPI_CHAR,proc_send[isend],0,world);
+      MPI_Send(d_buf.data(),count,datum_type,proc_send[isend],0,world);
     else {
       Kokkos::deep_copy(h_buf,d_buf);
-      MPI_Send(h_buf.data(),count*nbytes,MPI_CHAR,proc_send[isend],0,world);
+      MPI_Send(h_buf.data(),count,datum_type,proc_send[isend],0,world);
     }
     offset_send += count;
   }

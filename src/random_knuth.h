@@ -25,6 +25,7 @@ class RanKnuth {
   void reset(double, int, int);
   double uniform();
   double gaussian();
+  double poisson(double);
 
  private:
   int seed,save;

@@ -29,15 +29,12 @@ class SurfCollideAdiabatic : public SurfCollide {
  public:
   SurfCollideAdiabatic(class SPARTA *, int, char **);
   SurfCollideAdiabatic(class SPARTA *sparta) : SurfCollide(sparta) {} // needed for Kokkos
-  ~SurfCollideAdiabatic();
   Particle::OnePart *collide(Particle::OnePart *&, double &,
                              int, double *, int, int &);
   void wrapper(Particle::OnePart *, double *, int *, double*);
   void flags_and_coeffs(int *, double *) {}
 
  protected:
-  class RanKnuth *random; // RNG for particle reflection
-
   void scatter_isotropic(Particle::OnePart *, double *);
 };
 

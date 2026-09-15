@@ -27,6 +27,10 @@
   <I>tce/qk</I> args = infile
     infile = file with list of gas-phase chemistry reactions
   <I>tce/kk</I> args = infile
+    infile = file with list of gas-phase chemistry reactions
+  <I>qk/kk</I> args = infile
+    infile = file with list of gas-phase chemistry reactions
+  <I>tce/qk/kk</I> args = infile
     infile = file with list of gas-phase chemistry reactions 
 </PRE>
 
@@ -243,7 +247,7 @@ you can list multiple reactions of the third kind, each with a unique
 P2.
 </P>
 <P>IMPORTANT NOTE: If the ambipolar approximation is being used, via the
-<A HREF = "fix_ambipolar.hmtl">fix ambipolar</A> and <A HREF = "collide_modify.html">collide_modify ambipolar
+<A HREF = "fix_ambipolar.html">fix ambipolar</A> and <A HREF = "collide_modify.html">collide_modify ambipolar
 yes</A> commands, then reactions which involve either
 ambipolar ions or the ambipolar electron have more restricitve rules
 about the ordering of reactants and products.  See the next section
@@ -280,7 +284,7 @@ described in the preceeding section.
 </P>
 <P>Note that ambipolar collisions are turned on via the <A HREF = "collide_modify.html">collide_modify
 ambipolar yes</A> commands, which in turn requries
-that the <A HREF = "fix_ambipolar.hmtl">fix ambipolar</A> is defined in your input
+that the <A HREF = "fix_ambipolar.html">fix ambipolar</A> is defined in your input
 script.  This fix defines a particular species as an ambipolar
 electron, written as "e" in the reactions that follow.  It also
 defines a list of ambipolar ions, which are written as species with a
@@ -296,8 +300,15 @@ of the reactants equals the net charge of the products.
 products in one of the following orders:
 </P>
 <PRE>AB + e -> A + e + B
-AB+ + e -> A+ + e + B 
+AB+ + e -> A+ + e + B
+AB + C+ -> A + C+ + B
+AB+ + C+ -> A+ + C+ + B 
 </PRE>
+<P>In the last two forms an ambipolar ion C+ acts as an inert third
+body (collision partner).  As with the electron "e", the third body
+must be written as the middle product, so that it maps to the
+unaltered second colliding particle.
+</P>
 <P>Ambipolar ionization reactions with 2 or 3 products must be in one of
 the following orders:
 </P>
@@ -314,8 +325,15 @@ C + AB+ -> A + BC+
 </P>
 <PRE>A+ + e -> A
 A + B+ -> AB+
-A+ + B -> AB+ 
+A+ + B -> AB+
+A + B -> AB + C+ 
 </PRE>
+<P>In the last form an ambipolar ion C+ acts as the inert third body,
+written as the second product P2 (see the non-ambipolar discussion of
+3rd particles above).  The two reactants and the recombined molecule
+P1 must be neutral; the ion C+ is a spectator whose species selects the
+recombination rate.
+</P>
 <P>A third particle for recombination reactions can be specified in
 the same way as described above for non-ambipolar recombination.
 </P>
@@ -377,7 +395,7 @@ rates", Physics of Fluids, 23, 106101, (2011).
 Kinetic-Theory Approach for Computing Chemical-Reaction Rates in
 Upper-Atmosphere Hypersonic Flows", J Chem Phys, 131, 124311, (2009).
 </P>
-<A NAME = "Gallis11"></A>
+<A NAME = "Gallis10"></A>
 
 <P><B>(Gallis10)</B> M. A. Gallis, R. B. Bond, and J. R.Torczynski,
 "Assessment of Collision-Energy-Based Models for Atmospheric-Species

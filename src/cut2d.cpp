@@ -60,6 +60,8 @@ int Cut2d::surf2grid(cellint id_caller, double *lo_caller, double *hi_caller,
   surfs = surfs_caller;
 
   Surf::Line *lines = surf->lines;
+  if (surf->nsurf > MAXSMALLINT)
+    error->one(FLERR,"Too many surfs for non-distributed surf operation");
   int ntotal = surf->nsurf;
 
   double *x1,*x2;

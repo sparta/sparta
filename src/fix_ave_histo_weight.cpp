@@ -173,7 +173,24 @@ void FixAveHistoWeight::calculate_weights()
         compute->compute_per_grid();
         compute->invoked_flag |= INVOKED_PER_GRID;
       }
-      if (j == 0) {
+      if (compute->post_process_grid_flag) {
+        // a post-process per-grid compute (e.g. compute grid) fills vector_grid
+        // on demand via post_process_grid() and never allocates array_grid.
+        // copy the requested column into a private buffer so the subsequent
+        // binning of the value (which may post-process the same compute into
+        // vector_grid) cannot overwrite the weights.
+        compute->post_process_grid(j,1,NULL,NULL,NULL,1);
+        if (grid->maxlocal > maxvectorwt) {
+          memory->destroy(vectorwt);
+          maxvectorwt = grid->maxlocal;
+          memory->create(vectorwt,maxvectorwt,"ave/histo/weight:vectorwt");
+        }
+        double *cvec = compute->vector_grid;
+        int nglocal = grid->nlocal;
+        for (int k = 0; k < nglocal; k++) vectorwt[k] = cvec[k];
+        weights = vectorwt;
+        stridewt = 1;
+      } else if (j == 0) {
         weights = compute->vector_grid;
         stridewt = 1;
       } else if (compute->array_grid) {
@@ -302,8 +319,8 @@ void FixAveHistoWeight::bin_one(double value)
 
 void FixAveHistoWeight::bin_vector(int n, double *values, int stride)
 {
-  int m = 0;
-  int mwt = 0;
+  bigint m = 0;
+  bigint mwt = 0;
   for (int i = 0; i < n; i++) {
     bin_one_weight(values[m],weights[mwt]);
     m += stride;
@@ -326,7 +343,7 @@ void FixAveHistoWeight::bin_particles(int attribute, int index)
   Region *region;
   if (regionflag) region = domain->regions[iregion];
 
-  int mwt = 0;
+  bigint mwt = 0;
 
   if (attribute == X) {
     if (regionflag && mixflag) {
@@ -398,8 +415,8 @@ void FixAveHistoWeight::bin_particles(double *values, int stride)
   Region *region;
   if (regionflag) region = domain->regions[iregion];
 
-  int m = 0;
-  int mwt = 0;
+  bigint m = 0;
+  bigint mwt = 0;
 
   if (regionflag && mixflag) {
     for (int i = 0; i < nlocal; i++) {
@@ -441,8 +458,8 @@ void FixAveHistoWeight::bin_grid_cells(double *values, int stride)
   Grid::ChildInfo *cinfo = grid->cinfo;
   int nglocal = grid->nlocal;
 
-  int m = 0;
-  int mwt = 0;
+  bigint m = 0;
+  bigint mwt = 0;
 
   if (groupflag) {
     for (int i = 0; i < nglocal; i++) {

@@ -49,8 +49,13 @@ if(SPARTA_ENABLE_TESTING)
       "surf_react_heatflux"
       "chem_rates"
       "custom"
+      "tally_computes"
+      "ambi_3body"
+      "regions"
+      "qk"
       "explicit2implicit"
       "mfp_mct"
+      "optmove"
       "torque")
 
   set(SPARTA_DISABLED_TESTS
@@ -65,7 +70,34 @@ if(SPARTA_ENABLE_TESTING)
       "in.custom.cube.set.restart" # Failing
       "in.custom.step.read.restart" # Failing
       "in.custom.step.set.restart" # Failing
+      # The two stages of the write_isurf/read_isurf round trip. Stage 1
+      # writes a corner point file into the shared suite run directory under
+      # a fixed name, which would race with itself when ctest runs the mpi_1
+      # and mpi_4 copies of the test concurrently, and stage 2 consumes that
+      # file so it cannot run standalone. They are kept as a documented
+      # example pair; create_isurf itself is covered by the two
+      # in.exp2imp.axi.* tests above.
+      "in.exp2imp.axi.spherecone.readback"
+      "in.exp2imp.axi.spherecone.readback2"
+      # Ablation driven by particle flux over 500 steps. The surface geometry
+      # is deterministic, but the incident flux that drives it is stochastic
+      # and amplifies last-bit floating point differences between platforms,
+      # so a gold standard log for it is not portable (compare in.axi above).
+      # Kept as a runnable example.
+      "in.ablate.axi.spherecone"
   )
+
+  # When running the KOKKOS regression tests (SPARTA_KOKKOS_EXACT, run with
+  # "-k on -sf kk"), skip the inputs that use features which are not yet
+  # KOKKOS-enabled and would error out at run time. These tests still run in
+  # the non-KOKKOS configurations.
+  if(SPARTA_KOKKOS_EXACT)
+    list(APPEND SPARTA_DISABLED_TESTS
+        # VTK dump styles have no KOKKOS variant
+        "in.vtk"
+        "in.vtk.3d"
+    )
+  endif()
 
   list(APPEND __DEFAULT_MPI_RANKS "1")
   list(APPEND __DEFAULT_MPI_RANKS "4")

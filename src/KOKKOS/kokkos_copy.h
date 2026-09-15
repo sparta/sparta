@@ -15,10 +15,34 @@
 #ifndef SPARTA_KK_COPY_H
 #define SPARTA_KK_COPY_H
 
+#include <cstdlib>
+#include <cstring>
+
+#include "pointers.h"
+
 // Need a copy of classes instantiated on the stack at the class level scope.
 // However, this isn't directly possible due to issues with pointers.h
 //  and Kokkos allocation tracking.
 // This class is a workaround, using low-level memory operations.
+//
+// copy() blits the live object's bytes over obj.  That deliberately bypasses
+//  Kokkos View reference counting, so obj ends up holding View handles whose
+//  reference count was never incremented.  Such a handle must never reach a
+//  View destructor: it would decrement a count it never incremented, which
+//  aborts with "SharedAllocationRecord failed decrement count = 0" and frees
+//  memory the original object still owns.
+//
+// The constructor therefore snapshots obj's pristine, correctly reference
+//  counted bytes, and the destructor puts them back before obj is destroyed.
+//  Restoring in the destructor is also what makes nesting work: a wrapped
+//  class that itself contains KKCopy members has those members restored by
+//  ordinary C++ destruction order.
+//
+// A copy constructed KKCopy -- which is what happens when an enclosing class
+//  is captured by value into a Kokkos functor -- must be non-owning.  Its obj
+//  is properly copy constructed, so its View reference counts are already
+//  correct, and the snapshot belongs to the original: freeing it here would
+//  leave the original restoring from freed memory.
 
 namespace SPARTA_NS {
 
@@ -32,24 +56,22 @@ class KKCopy {
     ptr_temp = NULL;
     save();
     obj.copy = 1;
-    obj.uncopy = 0;
   }
 
-  ~KKCopy() {}
+  // a copy is non-owning: it restores nothing and frees nothing
 
-  void copy(void* orig) {
-    memcpy((void*)&obj, orig, sizeof(ClassStyle));
+  KKCopy(const KKCopy &other) : obj(other.obj) {
+    ptr_temp = NULL;
+  }
+
+  KKCopy &operator=(const KKCopy &) = delete;
+
+  ~KKCopy() { restore(); }
+
+  void copy(const ClassStyle* orig) {
+    if (ptr_temp == NULL) save();
+    memcpy((void*)&obj, (const void*)orig, sizeof(ClassStyle));
     obj.copy = 1;
-    obj.uncopy = 0;
-  }
-
-  void uncopy() {
-    if (ptr_temp != NULL) {
-      memcpy((void*)&obj, ptr_temp, sizeof(ClassStyle));
-      free(ptr_temp);
-      ptr_temp = NULL;
-    }
-    obj.uncopy = 1;
   }
 
  private:
@@ -58,6 +80,13 @@ class KKCopy {
   void save() {
     ptr_temp = (ClassStyle*) malloc(sizeof(ClassStyle));
     memcpy(ptr_temp, (void*)&obj, sizeof(ClassStyle));
+  }
+
+  void restore() {
+    if (ptr_temp == NULL) return;
+    memcpy((void*)&obj, ptr_temp, sizeof(ClassStyle));
+    free(ptr_temp);
+    ptr_temp = NULL;
   }
 
 };

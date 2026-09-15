@@ -508,8 +508,9 @@ void Grid::surf2grid_surf_algorithm(int outflag)
                                               "surf2grid:sbuf1");
         }
         proclist1[nsend] = plist[i];
-        if (dim == 2) memcpy(&sbuf1[nsend*nbytes_surf],&lines[isurf],nbytes_surf);
-        else memcpy(&sbuf1[nsend*nbytes_surf],&tris[isurf],nbytes_surf);
+        if (dim == 2)
+          memcpy(&sbuf1[(bigint) nsend*nbytes_surf],&lines[isurf],nbytes_surf);
+        else memcpy(&sbuf1[(bigint) nsend*nbytes_surf],&tris[isurf],nbytes_surf);
         nsend++;
       }
     }
@@ -1143,22 +1144,26 @@ void Grid::surf2grid_split(int subflag, int outflag)
   // print info on unusual surf split cases
 
   if (dim == 3) {
-    int ntiny = cut3d->ntiny;
-    int alltiny;
-    MPI_Allreduce(&ntiny,&alltiny,1,MPI_INT,MPI_SUM,world);
+    bigint ntiny = cut3d->ntiny;
+    bigint alltiny;
+    MPI_Allreduce(&ntiny,&alltiny,1,MPI_SPARTA_BIGINT,MPI_SUM,world);
     if (alltiny && comm->me == 0) {
-      if (screen) fprintf(screen,"  %d tiny edges removed\n",alltiny);
-      if (logfile) fprintf(logfile,"  %d tiny edges removed\n",alltiny);
+      if (screen) fprintf(screen,"  " BIGINT_FORMAT " tiny edges removed\n",
+                          alltiny);
+      if (logfile) fprintf(logfile,"  " BIGINT_FORMAT " tiny edges removed\n",
+                           alltiny);
     }
 
-    int nshrink = cut3d->nshrink;
-    int allshrink;
-    MPI_Allreduce(&nshrink,&allshrink,1,MPI_INT,MPI_SUM,world);
+    bigint nshrink = cut3d->nshrink;
+    bigint allshrink;
+    MPI_Allreduce(&nshrink,&allshrink,1,MPI_SPARTA_BIGINT,MPI_SUM,world);
     if (allshrink && comm->me == 0) {
       if (screen)
-        fprintf(screen,"  %d cells shrunk to enable splitting\n",allshrink);
+        fprintf(screen,"  " BIGINT_FORMAT
+                " cells shrunk to enable splitting\n",allshrink);
       if (logfile)
-        fprintf(logfile,"  %d cells shrunk to enable splitting\n",allshrink);
+        fprintf(logfile,"  " BIGINT_FORMAT
+                " cells shrunk to enable splitting\n",allshrink);
     }
   }
 
@@ -1253,6 +1258,12 @@ void Grid::recurse2d(cellint parentID, int level, double *plo, double *phi,
         newlo[1] = MAX(bblo[1],clo[1]);
         newhi[0] = MIN(bbhi[0],chi[0]);
         newhi[1] = MIN(bbhi[1],chi[1]);
+
+        // 3rd dim is unused in 2d, but must still be set
+        // id_point_child() reads it, and the caller of recurse2d() sets it to 0
+
+        newlo[2] = 0.0;
+        newhi[2] = 0.0;
         recurse2d(childID,level+1,clo,chi,surfindex,line,newlo,newhi,
                   npair,maxpair,pairs,chash,phash);
       }
@@ -1888,7 +1899,89 @@ int Grid::point_outside_surfs_implicit(int icell, double *x)
     x[2] += displace*tris[isurf].norm[2];
   }
 
-  return -1;      // should never be reached
+  // robustness pass: X was pushed off only the first surf (csurfs[0]) in the
+  //  cell, so for acute/spiky surface features it can land inside a
+  //  neighboring surf; push it back outside every surf in the cell
+  //  (no-op when X is already outside all of them)
+
+  push_reference_outside_surfs(icell,x,displace);
+
+  return 1; // implicit surfs always have a valid flow region
+}
+
+/* ----------------------------------------------------------------------
+   ensure reference point X (already in or near cell ICELL) is in the flow,
+     i.e. outside every non-transparent surf in the cell, not just the single
+     surf it was pushed off of by the caller
+   X is initially set by point_outside_surfs_explicit/implicit() by displacing
+     the centroid of one surf in the cell by DISPLACE along that surf's
+     outward normal
+   for acute (spiky) surface features, where two neighboring surfs meet at a
+     dihedral angle < 90 degrees, that single push can leave X slightly INSIDE
+     a neighboring surf, i.e. still inside the surface rather than in the flow
+   outside_surfs() then uses X as an in-flow reference point and can misclassify
+     particles as being in the flow when they are not, placing particles inside
+     the surface (manifests as fix grid/check errors on interior cells)
+   fix: iteratively push X back to be at least DISPLACE outside every surf in
+     the cell whose face X has intruded behind, until none remain (or a max
+     iteration count is reached for pathological geometry)
+   only surfs whose nearest feature to X lies within a few DISPLACE can
+     constrain X, so far-away surfs never spuriously move it
+   this is a no-op when X is already outside all surfs in the cell, so it does
+     not change the reference point for the common (non-spiky) case
+------------------------------------------------------------------------- */
+
+void Grid::push_reference_outside_surfs(int icell, double *x, double displace)
+{
+  int dim = domain->dimension;
+  int nsurf = cells[icell].nsurf;
+  surfint *csurfs = cells[icell].csurfs;
+
+  double band = 10.0*displace;
+  double band2 = band*band;
+  double sdist,d2,push;
+
+  if (dim == 2) {
+    Surf::Line *lines = surf->lines;
+    for (int iter = 0; iter < 50; iter++) {
+      int moved = 0;
+      for (int i = 0; i < nsurf; i++) {
+        Surf::Line *ln = &lines[csurfs[i]];
+        if (ln->transparent) continue;
+        d2 = Geometry::distsq_point_line(x,ln->p1,ln->p2);
+        if (d2 > band2) continue;
+        sdist = (x[0]-ln->p1[0])*ln->norm[0] + (x[1]-ln->p1[1])*ln->norm[1];
+        if (sdist < displace) {
+          push = displace - sdist;
+          x[0] += push*ln->norm[0];
+          x[1] += push*ln->norm[1];
+          moved = 1;
+        }
+      }
+      if (!moved) break;
+    }
+  } else {
+    Surf::Tri *tris = surf->tris;
+    for (int iter = 0; iter < 50; iter++) {
+      int moved = 0;
+      for (int i = 0; i < nsurf; i++) {
+        Surf::Tri *tr = &tris[csurfs[i]];
+        if (tr->transparent) continue;
+        d2 = Geometry::distsq_point_tri(x,tr->p1,tr->p2,tr->p3,tr->norm);
+        if (d2 > band2) continue;
+        sdist = (x[0]-tr->p1[0])*tr->norm[0] + (x[1]-tr->p1[1])*tr->norm[1] +
+                (x[2]-tr->p1[2])*tr->norm[2];
+        if (sdist < displace) {
+          push = displace - sdist;
+          x[0] += push*tr->norm[0];
+          x[1] += push*tr->norm[1];
+          x[2] += push*tr->norm[2];
+          moved = 1;
+        }
+      }
+      if (!moved) break;
+    }
+  }
 }
 
 /* ----------------------------------------------------------------------
@@ -2015,6 +2108,12 @@ int Grid::point_outside_surfs_explicit(int icell, double *x)
     }
   }
 
+  // robustness pass: ensure reference point X is truly in the flow
+  //  (outside every surf in the cell), not just outside the one surf it
+  //  was pushed off of; see push_reference_outside_surfs()
+
+  if (setflag) push_reference_outside_surfs(icell,x,displace);
+
   // if setflag equal to 0
   //  unable to find a point in flow volume, all surfs invoked "continue"
   //  means entire cell is actually outside or inside, just touched by surfs
@@ -2131,7 +2230,7 @@ void Grid::surf2grid_stats()
   int dimension = domain->dimension;
 
   int scount = 0;
-  int stotal = 0;
+  bigint stotal = 0;
   int smax = 0;
   double sratio = BIG;
 
@@ -2166,7 +2265,7 @@ void Grid::surf2grid_stats()
   }
 
   bigint bscount = scount;
-  bigint bstotal = stotal;
+  bigint bstotal = stotal;   // stotal itself is bigint, sum can exceed 2^31
   bigint scountall,stotalall;
   int smaxall;
   double sratioall;
@@ -2223,18 +2322,25 @@ void Grid::flow_stats()
     if (cinfo[icell].type != INSIDE) cellvolume += cinfo[icell].volume;
   }
 
-  int outall,inall,overall,maxsplitall;
+  // sum cell counts in bigint, global counts can exceed 2^31
+
+  bigint outall,inall,overall;
+  int maxsplitall;
   double cellvolumeall;
-  MPI_Allreduce(&outside,&outall,1,MPI_INT,MPI_SUM,world);
-  MPI_Allreduce(&inside,&inall,1,MPI_INT,MPI_SUM,world);
-  MPI_Allreduce(&overlap,&overall,1,MPI_INT,MPI_SUM,world);
+  bigint one;
+  one = outside;
+  MPI_Allreduce(&one,&outall,1,MPI_SPARTA_BIGINT,MPI_SUM,world);
+  one = inside;
+  MPI_Allreduce(&one,&inall,1,MPI_SPARTA_BIGINT,MPI_SUM,world);
+  one = overlap;
+  MPI_Allreduce(&one,&overall,1,MPI_SPARTA_BIGINT,MPI_SUM,world);
   MPI_Allreduce(&maxsplitone,&maxsplitall,1,MPI_INT,MPI_MAX,world);
   MPI_Allreduce(&cellvolume,&cellvolumeall,1,MPI_DOUBLE,MPI_SUM,world);
 
   double flowvolume = flow_volume();
 
-  int *tally = new int[maxsplitall];
-  int *tallyall = new int[maxsplitall];
+  bigint *tally = new bigint[maxsplitall];
+  bigint *tallyall = new bigint[maxsplitall];
   for (i = 0; i < maxsplitall; i++) tally[i] = 0;
 
   for (int icell = 0; icell < nlocal; icell++) {
@@ -2242,23 +2348,27 @@ void Grid::flow_stats()
     if (cinfo[icell].type == OVERLAP) tally[cells[icell].nsplit-1]++;
   }
 
-  MPI_Allreduce(tally,tallyall,maxsplitall,MPI_INT,MPI_SUM,world);
+  MPI_Allreduce(tally,tallyall,maxsplitall,MPI_SPARTA_BIGINT,MPI_SUM,world);
 
   if (comm->me == 0) {
     if (screen) {
-      fprintf(screen,"  %d %d %d = cells outside/inside/overlapping surfs\n",
+      fprintf(screen,"  " BIGINT_FORMAT " " BIGINT_FORMAT " " BIGINT_FORMAT
+              " = cells outside/inside/overlapping surfs\n",
               outall,inall,overall);
       fprintf(screen," ");
-      for (i = 0; i < maxsplitall; i++) fprintf(screen," %d",tallyall[i]);
+      for (i = 0; i < maxsplitall; i++)
+        fprintf(screen," " BIGINT_FORMAT,tallyall[i]);
       fprintf(screen," = surf cells with 1,2,etc splits\n");
       fprintf(screen,"  %.15g %.15g = cell-wise and global flow volume\n",
               cellvolumeall,flowvolume);
     }
     if (logfile) {
-      fprintf(logfile,"  %d %d %d = cells outside/inside/overlapping surfs\n",
+      fprintf(logfile,"  " BIGINT_FORMAT " " BIGINT_FORMAT " " BIGINT_FORMAT
+              " = cells outside/inside/overlapping surfs\n",
               outall,inall,overall);
       fprintf(logfile," ");
-      for (i = 0; i < maxsplitall; i++) fprintf(logfile," %d",tallyall[i]);
+      for (i = 0; i < maxsplitall; i++)
+        fprintf(logfile," " BIGINT_FORMAT,tallyall[i]);
       fprintf(logfile," = surf cells with 1,2,etc splits\n");
       fprintf(logfile,"  %g %g = cell-wise and global flow volume\n",
               cellvolumeall,flowvolume);

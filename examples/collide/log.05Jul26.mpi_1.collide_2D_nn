@@ -1,0 +1,125 @@
+SPARTA (24 Sep 2025)
+Running on 1 MPI task(s)
+################################################################################
+# thermal gas in a 2d box with collisions
+# particles reflect off global box boundaries
+#
+# collision partners selected with the near-collision-partner method
+#   (see the collide_modify doc page)
+#
+# gas is Ar at 273.15 K with nrho = 5.65634e23 /m^3
+# mean free path lambda ~ 2.4e-6 m, mean collision time tau ~ 6e-9 s
+# grid cells are 1e-5 m ~ 4x lambda, coarser than the lambda/3 rule,
+#   which is the regime where near-neighbor partner selection
+#   (collide_modify nearcp or subcell) reduces the mean collision separation
+#
+# Notes:
+#  - the "comm/sort" option to the "global" command is used to match MPI runs
+#  - the "twopass" option is used to match Kokkos runs
+#  - the "comm/sort" and "twopass" options should not be used for production runs
+################################################################################
+
+seed               12345
+dimension          2
+global             gridcut 1.0e-5 comm/sort yes
+
+boundary           rr rr p
+
+create_box         0 0.0001 0 0.0001 -0.5 0.5
+Created orthogonal box = (0 0 -0.5) to (0.0001 0.0001 0.5)
+create_grid        10 10 1
+Created 100 child grid cells
+  CPU time = 0.0010123 secs
+  create/ghost percent = 96.0868 3.91316
+
+balance_grid       rcb part
+Balance grid migrated 0 cells
+  CPU time = 9.157e-05 secs
+  reassign/sort/migrate/ghost percent = 72.0236 0.230425 17.2753 10.4707
+
+species            ar.species Ar
+mixture            air Ar vstream 0.0 0.0 0.0 temp 273.15
+
+global             nrho 5.65634E23
+global             fnum 5.65634E11
+
+collide            vss air ar.vss
+collide_modify     nearcp yes 30
+
+create_particles   air n 10000 twopass
+Created 10000 particles
+  CPU time = 0.00249696 secs
+
+stats              100
+compute            temp temp
+stats_style        step cpu np nattempt ncoll c_temp
+
+timestep           2.00E-9
+run                1000
+Memory usage per proc in Mbytes:
+  particles (ave,min,max) = 1.5625 1.5625 1.5625
+  grid      (ave,min,max) = 1.51379 1.51379 1.51379
+  surf      (ave,min,max) = 0 0 0
+  total     (ave,min,max) = 3.07629 3.07629 3.07629
+Step CPU Np Natt Ncoll c_temp 
+       0            0    10000        0        0    273.62325 
+     100  0.091035442    10000     2428     1599    273.62325 
+     200   0.18320875    10000     2477     1592    273.62325 
+     300    0.2794121    10000     2483     1641    273.62325 
+     400   0.37527175    10000     2498     1601    273.62325 
+     500   0.47024269    10000     2525     1610    273.62325 
+     600   0.57012625    10000     2511     1629    273.62325 
+     700   0.66638213    10000     2518     1612    273.62325 
+     800   0.76469363    10000     2526     1619    273.62325 
+     900   0.86883139    10000     2538     1600    273.62325 
+    1000   0.97074407    10000     2537     1608    273.62325 
+Loop time of 0.971075 on 1 procs for 1000 steps with 10000 particles
+Performance: 1029.787 timesteps/s, 10.298 Mparticle-step/s
+
+MPI task timing breakdown:
+Section |  min time  |  avg time  |  max time  |%varavg| %total
+---------------------------------------------------------------
+Move    | 0.12828    | 0.12828    | 0.12828    |   0.0 | 13.21
+Coll    | 0.81452    | 0.81452    | 0.81452    |   0.0 | 83.88
+Sort    | 0.026458   | 0.026458   | 0.026458   |   0.0 |  2.72
+Comm    | 0.00025807 | 0.00025807 | 0.00025807 |   0.0 |  0.03
+Modify  | 0          | 0          | 0          |   0.0 |  0.00
+Output  | 0.0011922  | 0.0011922  | 0.0011922  |   0.0 |  0.12
+Other   |            | 0.0003712  |            |       |  0.04
+
+Particle moves    = 10000000 (10M)
+Cells touched     = 10685947 (10.7M)
+Particle comms    = 0 (0K)
+Boundary collides = 76114 (76.1K)
+Boundary exits    = 0 (0K)
+SurfColl checks   = 0 (0K)
+SurfColl occurs   = 0 (0K)
+Surf reactions    = 0 (0K)
+Collide attempts  = 2494362 (2.49M)
+Collide occurs    = 1615873 (1.62M)
+Reactions         = 0 (0K)
+Particles stuck   = 0
+Axisymm bad moves = 0
+
+Particle-moves/CPUsec/proc: 1.02979e+07
+Particle-moves/step: 10000
+Cell-touches/particle/step: 1.06859
+Particle comm iterations/step: 1
+Particle fraction communicated: 0
+Particle fraction colliding with boundary: 0.0076114
+Particle fraction exiting boundary: 0
+Surface-checks/particle/step: 0
+Surface-collisions/particle/step: 0
+Surf-reactions/particle/step: 0
+Collision-attempts/particle/step: 0.249436
+Collisions/particle/step: 0.161587
+Reactions/particle/step: 0
+
+Particles: 10000 ave 10000 max 10000 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+Cells:      100 ave 100 max 100 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+GhostCell: 0 ave 0 max 0 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+EmptyCell: 0 ave 0 max 0 min
+Histogram: 1 0 0 0 0 0 0 0 0 0

@@ -38,10 +38,6 @@ enum{NUM,NRHO,NFRAC,MASS,MASSRHO,MASSFRAC,
 enum{COUNT,MASSSUM,MVX,MVY,MVZ,MVXSQ,MVYSQ,MVZSQ,MVSQ,
      ENGROT,ENGVIB,DOFROT,DOFVIB,CELLCOUNT,CELLMASS,LASTSIZE};
 
-// max # of quantities to accumulate for any user value
-
-#define MAXACCUMULATE 2
-
 /* ---------------------------------------------------------------------- */
 
 ComputeGridKokkos::ComputeGridKokkos(SPARTA *sparta, int narg, char **arg) :
@@ -144,7 +140,7 @@ void ComputeGridKokkos::compute_per_grid_kokkos()
   }
 
   d_particles = t_particle_1d(); // destroy reference to reduce memory use
-  d_plist = DAT::t_int_2d(); // destroy reference to reduce memory use
+  d_plist = {}; // destroy reference to reduce memory use
 }
 
 /* ---------------------------------------------------------------------- */

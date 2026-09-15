@@ -21,6 +21,7 @@
 #include "variable.h"
 #include "memory.h"
 #include "error.h"
+#include "sparta_masks.h"
 
 using namespace SPARTA_NS;
 
@@ -60,7 +61,7 @@ FixPrint::FixPrint(SPARTA *sparta, int narg, char **arg) :
         else fp = fopen(arg[iarg+1],"a");
         if (fp == NULL) {
           char str[128];
-          sprintf(str,"Cannot open fix print file %s",arg[iarg+1]);
+          snprintf(str,128,"Cannot open fix print file %s",arg[iarg+1]);
           error->one(FLERR,str);
         }
       }
@@ -89,6 +90,13 @@ FixPrint::FixPrint(SPARTA *sparta, int narg, char **arg) :
   }
 
   delete [] title;
+
+  // printing touches no particle data, so the Kokkos wrapper around this fix
+  //   need not push particles back to the device afterwards.  datamask_read
+  //   stays ALL_MASK: the format string may contain an equal-style variable
+  //   that references a host compute over particles
+
+  datamask_modify = EMPTY_MASK;
 }
 
 /* ---------------------------------------------------------------------- */

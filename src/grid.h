@@ -27,13 +27,16 @@ class Grid : protected Pointers {
  public:
   int exist;            // 1 if grid is defined
   int exist_ghost;      // 1 if ghost cells exist
+  int changed;          // set by notify_changed() when grid/surf topology changes
+                        // (e.g. ablation, adaptation); consumed by KOKKOS to
+                        // resync per-cell surf graphs to device mid-run
   int clumped;          // 1 if grid ownership is clumped, due to RCB
                         // if not, some operations are not allowed
 
   bigint ncell;         // global count of child cells (unsplit+split, no sub)
   bigint nunsplit;      // global count of unsplit cells
-  int nsplit;           // global count of split cells
-  int nsub;             // global count of split sub cells
+  bigint nsplit;        // global count of split cells
+  bigint nsub;          // global count of split sub cells
 
   int maxlevel;         // max level of any child cell in grid, 0 = root
   int plevel_limit;     // allocation bound of plevels
@@ -56,8 +59,8 @@ class Grid : protected Pointers {
   double tmap,tsplit;   // timing breakdowns of both grid2surf() algs
   double tcomm1,tcomm2,tcomm3,tcomm4;
 
-  int copy,uncopy,copymode; // used by Kokkos, prevent deallocation of
-                            //  base class when child copy is destroyed
+  int copy,copymode; // used by Kokkos, prevent deallocation of
+                     //  base class when child copy is destroyed
 
   // custom vectors/arrays for per-grid data
   // ncustom > 0 if there is any custom per-grid datta
@@ -68,8 +71,18 @@ class Grid : protected Pointers {
   int *etype;               // type = INT/DOUBLE of each attribute
   int *esize;               // size = 0 for vector, N for array columns
   int *estatus;             // status = 0/1 for each attribute
-                            //   0 = only owned ghost values are stored
+                            //   0 = only owned values are stored
                             //   1 = owned + ghost values are stored
+                            // NOTE: unlike Surf::estatus, this flag is written
+                            //   but never read, and there is no Grid analog of
+                            //   Surf::spread_custom() to refresh ghost values.
+                            //   Ghost custom values are only made valid by
+                            //   acquire_ghosts(), which packs them via
+                            //   pack_custom().  So after a "custom grid set"
+                            //   between runs, ghost values are stale until the
+                            //   next ghost acquisition.  Any consumer that
+                            //   needs custom values on ghost cells must not
+                            //   assume estatus == 1 means they are current.
   int *ewhich;              // index into eivec,eiarray,edvec,edarray for data
 
   int **eivec;              // pointer to each integer vector
@@ -89,6 +102,22 @@ class Grid : protected Pointers {
 
   MyHash *hash;
   int hashfilled;             // 1 if hash is filled with cell IDs
+
+  // dense alternative to hash for the uniform-grid fast path in Update::move()
+  //   maps a cell's position within this proc's halo straight to its local
+  //   index, so a lookup is one indexed load rather than a chain of probes
+  // sized by the halo, not the global grid, so it is O(nlocal+nghost) per proc
+  //   and constant under weak scaling
+  // halo_[ijk]lo is the ring position where the halo arc begins, so a
+  //   periodically wrapped ghost layer needs no special case
+  // NULL means unavailable -- optmove not requested, a non-uniform grid, or a
+  //   halo whose bounding box holds far more sites than it has cells -- and
+  //   callers must fall back to hash
+
+  int *halo_index;            // -1 where this proc holds no cell
+  int maxhalo;                // allocated length of halo_index
+  int halo_ilo,halo_jlo,halo_klo;
+  int halo_nx,halo_ny,halo_nz;
 
   // list data structs
 
@@ -232,6 +261,8 @@ class Grid : protected Pointers {
   void remove_ghosts();
   void acquire_ghosts(int surfflag=1);
   void rehash();
+  void update_halo_index();
+  void halo_free(int *);
   void find_neighbors();
   void unset_neighbors();
   void reset_neighbors();
@@ -253,12 +284,12 @@ class Grid : protected Pointers {
 
   void write_restart(FILE *);
   void read_restart(FILE *);
-  int size_restart();
-  int size_restart(int);
-  int pack_restart(char *);
-  int unpack_restart(char *);
+  bigint size_restart();
+  bigint size_restart(int);
+  bigint pack_restart(char *);
+  bigint unpack_restart(char *);
 
-  bigint memory_usage();
+  virtual bigint memory_usage();
 
   void debug();
 
@@ -276,11 +307,11 @@ class Grid : protected Pointers {
 
   // grid_comm.cpp
 
-  int pack_one(int, char *, int, int, int, int);
-  int unpack_one(char *, int, int, int, int sortflag=0);
-  int pack_one_adapt(char *, char *, int);
-  int pack_particles(int, char *, int);
-  int unpack_particles(char *, int, int);
+  bigint pack_one(int, char *, int, int, int, int);
+  bigint unpack_one(char *, int, int, int, int sortflag=0);
+  bigint pack_one_adapt(char *, char *, int);
+  bigint pack_particles(int, char *, int);
+  bigint unpack_particles(char *, int, int);
   void unpack_particles_adapt(int, char *);
   void compress();
 
@@ -489,6 +520,7 @@ class Grid : protected Pointers {
 
   int point_outside_surfs_implicit(int, double *);
   int point_outside_surfs_explicit(int, double *);
+  void push_reference_outside_surfs(int, double *, double);
 
   void surf2grid_stats();
   void flow_stats();

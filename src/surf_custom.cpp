@@ -155,7 +155,7 @@ void Surf::allocate_custom(int index)
     } else {
       int **iarray = memory->create(eiarray[ewhich[index]],
                                     n,eicol[ewhich[index]],"surf:eiarray");
-      if (iarray) memset(&iarray[0][0],0,n*eicol[ewhich[index]]*sizeof(int));
+      if (iarray) memset(&iarray[0][0],0,(bigint) n*eicol[ewhich[index]]*sizeof(int));
       eiarray_local[ewhich[index]] = NULL;
     }
 
@@ -167,7 +167,7 @@ void Surf::allocate_custom(int index)
     } else {
       double **darray = memory->create(edarray[ewhich[index]],
                                        n,edcol[ewhich[index]],"surf:eearray");
-      if (darray) memset(&darray[0][0],0,n*edcol[ewhich[index]]*sizeof(double));
+      if (darray) memset(&darray[0][0],0,(bigint) n*edcol[ewhich[index]]*sizeof(double));
       edarray_local[ewhich[index]] = NULL;
     }
   }
@@ -198,7 +198,7 @@ void Surf::reallocate_custom()
         int **iarray = memory->grow(eiarray[ewhich[index]],
                                     nnew,eicol[ewhich[index]],"surf:eiarray");
         if (nnew > nold)
-        memset(iarray[nold],0,(nnew-nold)*eicol[ewhich[index]]*sizeof(int));
+        memset(iarray[nold],0,(bigint) (nnew-nold)*eicol[ewhich[index]]*sizeof(int));
       }
 
     } else {
@@ -209,7 +209,7 @@ void Surf::reallocate_custom()
         double **darray = memory->grow(edarray[ewhich[index]],
                                        nnew,edcol[ewhich[index]],"surf:eearray");
         if (nnew > nold)
-          memset(darray[nold],0,(nnew-nold)*edcol[ewhich[index]]*sizeof(double));
+          memset(darray[nold],0,(bigint) (nnew-nold)*edcol[ewhich[index]]*sizeof(double));
       }
     }
   }
@@ -228,6 +228,10 @@ void Surf::reallocate_custom()
 void Surf::remove_custom(int index)
 {
   if (!ename || !ename[index]) return;
+
+  // ~SurfKokkos frees and NULLs ewhich before ~Surf deletes the surf reacts
+
+  if (!ewhich) return;
 
   delete [] ename[index];
   ename[index] = NULL;

@@ -39,7 +39,6 @@ enum{NEITHER,BAD,GOOD};
 enum{NONE,CHECK,KEEP};
 enum{UNKNOWN,OUTSIDE,INSIDE,OVERLAP};           // several files
 
-#define MAXLINE 256
 #define CHUNK 1024
 #define EPSILON_NORM 1.0e-12
 #define EPSILON_GRID 1.0e-3

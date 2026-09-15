@@ -56,7 +56,6 @@ SurfReact::SurfReact(SPARTA *sparta, int, char **arg) :
   tally_two_flag = tally_single_flag = tally_total_flag = 0;
 
   kokkosable = copy = copymode = 0;
-  uncopy = 1;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -114,17 +113,22 @@ double SurfReact::compute_vector(int i)
     return all[i];
   }
 
+  // sum tallies over procs in bigint,
+  //   an int sum can overflow at large proc counts
+
   if (i < 2+nlist) {
     if (!tally_single_flag) {
       tally_single_flag = 1;
-      MPI_Allreduce(tally_single,tally_single_all,nlist,MPI_INT,MPI_SUM,world);
+      MPI_Allreduce(tally_single,tally_single_all,nlist,
+                    MPI_SPARTA_BIGINT,MPI_SUM,world);
     }
     return 1.0*tally_single_all[i-2];
   }
 
   if (!tally_total_flag) {
     tally_total_flag = 1;
-    MPI_Allreduce(tally_total,tally_total_all,nlist,MPI_INT,MPI_SUM,world);
+    MPI_Allreduce(tally_total,tally_total_all,nlist,
+                  MPI_SPARTA_BIGINT,MPI_SUM,world);
   }
   return 1.0*tally_total_all[i-nlist-2];
 }

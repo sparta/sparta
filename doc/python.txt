@@ -261,7 +261,7 @@ function can also have additional inputs, also specified by the {input}
 keyword, which are NOT arguments in the Python function wrapper.  See
 the example below for the "mixedargs" Python function.
 
-See the "variable"_varaible.html command doc page for full details on
+See the "variable"_variable.html command doc page for full details on
 formula syntax including for Python function wrappers.  Examples using
 Python function wrappers are shown below.  Note that as explained
 above with python-style variables, Python function wrappers can be
@@ -671,6 +671,6 @@ and global variables will become invisible.
 
 [Related commands:]
 
-"shell"_shell.html, "variable"_variable,html
+"shell"_shell.html, "variable"_variable.html
 
 [Default:] none

@@ -897,10 +897,6 @@ by themselves, not together.
 
 <DD>Self-explanatory. 
 
-<DT><I>Dump image persp option is not yet supported</I> 
-
-<DD>Self-explanatory. 
-
 <DT><I>Dump image requires one snapshot per file</I> 
 
 <DD>Use a "*" in the filename. 
@@ -1405,6 +1401,11 @@ sign, or a minus sign.
 
 <DD>The choice of collision style is unknown. 
 
+<DT><I>Invalid color in dump image command</I> 
+
+<DD>The specified color name was not in the list of recognized colors.
+See the dump image doc page. 
+
 <DT><I>Invalid color in dump_modify command</I> 
 
 <DD>The specified color name was not in the list of recognized colors.
@@ -1445,10 +1446,6 @@ in a 2d simulation.
 
 <DD>The file produced by dump image cannot be binary and must
 be for a single processor. 
-
-<DT><I>Invalid dump image persp value</I> 
-
-<DD>Persp value must be >= 0.0. 
 
 <DT><I>Invalid dump image theta value</I> 
 
@@ -1542,6 +1539,11 @@ and must be a single file for a single processor.
 <DT><I>Invalid point index in triangle</I> 
 
 <DD>Self-explanatory. 
+
+<DT><I>Invalid power expression in variable formula</I> 
+
+<DD>A zero base cannot be raised to a negative power in a variable
+formula, since the result is infinite. 
 
 <DT><I>Invalid react style</I> 
 
@@ -1874,10 +1876,6 @@ issue to the SPARTA developers.
 <DD>This is an error when calculating how a 2d grid is cut or split by
 surface elements.  It should not normally occur.  Please report the
 issue to the SPARTA developers. 
-
-<DT><I>Power by 0 in variable formula</I> 
-
-<DD>Self-explanatory. 
 
 <DT><I>Processor partitions are inconsistent</I> 
 
@@ -2314,10 +2312,6 @@ before the simulation has been setup.
 
 <DD>Must be an equal-style variable. 
 
-<DT><I>Variable for dump image persp is invalid style</I> 
-
-<DD>Must be an equal-style variable. 
-
 <DT><I>Variable for dump image phi is invalid style</I> 
 
 <DD>Must be an equal-style variable. 
@@ -2373,10 +2367,6 @@ longer chains of dependence are also not allowed.
 <DD>Self-explanatory. 
 
 <DT><I>Variable name for dump image center does not exist</I> 
-
-<DD>Self-explanatory. 
-
-<DT><I>Variable name for dump image persp does not exist</I> 
 
 <DD>Self-explanatory. 
 

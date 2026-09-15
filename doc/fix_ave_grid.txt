@@ -152,8 +152,7 @@ array must follow.  Custom attributes can store either a single or
 multiple values per grid cell.  See "Section
 6.17"_Section_howto.html#howto_17 for more discussion of custom
 attributes and command that define them.  For example, the
-"read_grid"_read_grid.html and "surf_react
-implicit"_surf_react_implicit.html commands can define per-grid
+"read_grid"_read_grid.html and surf_react implicit commands can define per-grid
 attributes.  (The surf/react implicit command has not yet been
 released in public SPARTA).
 
@@ -222,7 +221,7 @@ is when averaging is performed.
 
 This fix performs averaging for all child grid cells in the
 simulation, which includes unsplit, split, and sub cells.  "Section
-4.8"_Section_howto.html#howto_ of the manual gives details of how
+6.8"_Section_howto.html#howto_8 of the manual gives details of how
 SPARTA defines child, unsplit, split, and sub cells.
 
 Grid cells not in the specified {group-ID} will output zeroes for all

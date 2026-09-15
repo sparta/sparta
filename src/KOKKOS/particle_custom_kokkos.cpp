@@ -147,10 +147,11 @@ int ParticleKokkos::add_custom(char *name, int type, int size)
 /* ----------------------------------------------------------------------
    grow the vector/array associated with custom attribute with index
    nold = old length, nnew = new length (typically maxlocal)
-   set new values to 0 via memset()
+   nold is unused: unlike memory->grow(), the resize() inside grow_kokkos()
+     value initializes, so the new values are already 0
 ------------------------------------------------------------------------- */
 
-void ParticleKokkos::grow_custom(int index, int nold, int nnew)
+void ParticleKokkos::grow_custom(int index, int /*nold*/, int nnew)
 {
   // modifies the inner part of eivec,eiarray,edvec,edarray on host, and the outer view on device
 
@@ -164,13 +165,13 @@ void ParticleKokkos::grow_custom(int index, int nold, int nnew)
     if (esize[index] == 0) {
       int *ivector = eivec[ewhich[index]];
       auto k_ivector = k_eivec.view_host()[ewhich[index]].k_view;
-      memoryKK->grow_kokkos(k_ivector,ivector,nold+nnew,"particle:ivector");
+      memoryKK->grow_kokkos(k_ivector,ivector,nnew,"particle:ivector");
       k_eivec.view_host()[ewhich[index]].k_view = k_ivector;
       eivec[ewhich[index]] = ivector;
     } else {
       int **iarray = eiarray[ewhich[index]];
       auto k_iarray = k_eiarray.view_host()[ewhich[index]].k_view;
-      memoryKK->grow_kokkos(k_iarray,iarray,nold+nnew,esize[index],"particle:iarray");
+      memoryKK->grow_kokkos(k_iarray,iarray,nnew,esize[index],"particle:iarray");
       k_eiarray.view_host()[ewhich[index]].k_view = k_iarray;
       eiarray[ewhich[index]] = iarray;
     }
@@ -179,13 +180,13 @@ void ParticleKokkos::grow_custom(int index, int nold, int nnew)
     if (esize[index] == 0) {
       double *dvector = edvec[ewhich[index]];
       auto k_dvector = k_edvec.view_host()[ewhich[index]].k_view;
-      memoryKK->grow_kokkos(k_dvector,dvector,nold+nnew,"particle:dvector");
+      memoryKK->grow_kokkos(k_dvector,dvector,nnew,"particle:dvector");
       k_edvec.view_host()[ewhich[index]].k_view = k_dvector;
       edvec[ewhich[index]] = dvector;
     } else {
       double **darray = edarray[ewhich[index]];
       auto k_darray = k_edarray.view_host()[ewhich[index]].k_view;
-      memoryKK->grow_kokkos(k_darray,darray,nold+nnew,esize[index],"particle:darray");
+      memoryKK->grow_kokkos(k_darray,darray,nnew,esize[index],"particle:darray");
       k_edarray.view_host()[ewhich[index]].k_view = k_darray;
       edarray[ewhich[index]] = darray;
     }
@@ -271,10 +272,117 @@ void ParticleKokkos::remove_custom(int index)
     if (ename[i]) empty = 0;
   if (empty) ncustom = 0;
 
+  // all four outer views may have been compacted above
+  // must flag them modified on host or the syncs below are no-ops
+  //   and the device keeps the stale pre-removal ordering
+
+  k_eivec.modify_host();
+  k_eiarray.modify_host();
+  k_edvec.modify_host();
+  k_edarray.modify_host();
+
   k_eivec.sync_device();
   k_eiarray.sync_device();
   k_edvec.sync_device();
   k_edarray.sync_device();
+}
+
+/* ----------------------------------------------------------------------
+   zero the custom attributes of particles LO through HI-1, on the device
+   Particle::add_particle() zeroes them for every particle it creates, so a
+     device path which adds particles has to do the same.  a slot at or
+     above nlocal still holds whatever the last particle there left behind,
+     and without this the new particle silently inherits it
+------------------------------------------------------------------------- */
+
+void ParticleKokkos::zero_custom_kokkos(int lo, int hi)
+{
+  if (!ncustom) return;
+  const int n = hi - lo;
+  if (n <= 0) return;
+
+  this->sync(Device,CUSTOM_MASK);
+
+  if (ncustom_ivec) {
+    auto d_ivec = k_eivec.view_device();
+    const int nvec = ncustom_ivec;
+    Kokkos::parallel_for(n, KOKKOS_LAMBDA(const int m) {
+      const int i = lo + m;
+      for (int k = 0; k < nvec; k++)
+        d_ivec[k].k_view.view_device()[i] = 0;
+    });
+  }
+
+  if (ncustom_iarray) {
+    auto d_iarray = k_eiarray.view_device();
+    auto d_icol = k_eicol.view_device();
+    const int narray = ncustom_iarray;
+    Kokkos::parallel_for(n, KOKKOS_LAMBDA(const int m) {
+      const int i = lo + m;
+      for (int k = 0; k < narray; k++)
+        for (int c = 0; c < d_icol[k]; c++)
+          d_iarray[k].k_view.view_device()(i,c) = 0;
+    });
+  }
+
+  if (ncustom_dvec) {
+    auto d_dvec = k_edvec.view_device();
+    const int nvec = ncustom_dvec;
+    Kokkos::parallel_for(n, KOKKOS_LAMBDA(const int m) {
+      const int i = lo + m;
+      for (int k = 0; k < nvec; k++)
+        d_dvec[k].k_view.view_device()[i] = 0.0;
+    });
+  }
+
+  if (ncustom_darray) {
+    auto d_darray = k_edarray.view_device();
+    auto d_dcol = k_edcol.view_device();
+    const int narray = ncustom_darray;
+    Kokkos::parallel_for(n, KOKKOS_LAMBDA(const int m) {
+      const int i = lo + m;
+      for (int k = 0; k < narray; k++)
+        for (int c = 0; c < d_dcol[k]; c++)
+          d_darray[k].k_view.view_device()(i,c) = 0.0;
+    });
+  }
+
+  this->modify(Device,CUSTOM_MASK);
+}
+
+/* ----------------------------------------------------------------------
+   zero the custom attributes of the unused slots nlocal through maxlocal-1
+   for a kernel which only creates particles, zeroing the new particles once
+     the kernel is done is enough.  but a kernel may also set custom
+     attributes of a particle it just created, e.g. SurfCollide calls
+     FixAmbipolar::update_custom_kokkos() for the products of a surf
+     reaction, and zeroing afterwards would wipe those values out
+   so instead zero every slot such a kernel could fill before launching it,
+     which is all of nlocal to maxlocal-1: add_particle_kokkos() hands out
+     slots above nlocal and sets the retry flag once maxlocal is reached
+------------------------------------------------------------------------- */
+
+void ParticleKokkos::zero_custom_kokkos()
+{
+  zero_custom_kokkos(nlocal,maxlocal);
+}
+
+/* ----------------------------------------------------------------------
+   zero the custom attributes of particle I
+   Particle::add_particle() calls this for every particle a host caller
+     creates, writing through the raw eivec/edvec/... pointers.  Register
+     that write, or a later sync(Device,CUSTOM_MASK) is a no-op and the
+     device keeps whatever the slot last held.  Not covered by the caller
+     in every case: SurfReactAdsorbKokkos inserts PS-chemistry particles on
+     the host and marks only PARTICLE_MASK
+   this is the host-side counterpart of zero_custom_kokkos()
+------------------------------------------------------------------------- */
+
+void ParticleKokkos::zero_custom(int i)
+{
+  sync(Host,CUSTOM_MASK);
+  Particle::zero_custom(i);
+  modify(Host,CUSTOM_MASK);
 }
 
 /* ----------------------------------------------------------------------

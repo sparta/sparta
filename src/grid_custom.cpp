@@ -134,7 +134,7 @@ void Grid::allocate_custom(int index)
     } else {
       int **iarray = memory->create(eiarray[ewhich[index]],
                                     n,eicol[ewhich[index]],"grid:eiarray");
-      if (iarray) memset(&iarray[0][0],0,n*eicol[ewhich[index]]*sizeof(int));
+      if (iarray) memset(&iarray[0][0],0,(bigint) n*eicol[ewhich[index]]*sizeof(int));
     }
 
   } else {
@@ -144,7 +144,7 @@ void Grid::allocate_custom(int index)
     } else {
       double **darray = memory->create(edarray[ewhich[index]],
                                        n,edcol[ewhich[index]],"grid:eiarray");
-      if (darray) memset(&darray[0][0],0,n*edcol[ewhich[index]]*sizeof(double));
+      if (darray) memset(&darray[0][0],0,(bigint) n*edcol[ewhich[index]]*sizeof(double));
     }
   }
 }
@@ -157,6 +157,8 @@ void Grid::allocate_custom(int index)
 void Grid::reallocate_custom(int nold, int nnew)
 {
   for (int ic = 0; ic < ncustom; ic++) {
+    if (ename[ic] == NULL) continue;
+
     if (etype[ic] == INT) {
       if (esize[ic] == 0) {
         int *ivector = memory->grow(eivec[ewhich[ic]],nnew,"grid:eivec");
@@ -166,7 +168,7 @@ void Grid::reallocate_custom(int nold, int nnew)
                                     nnew,eicol[ewhich[ic]],"grid:eiarray");
         if (nnew > nold)
           memset(&iarray[nold][0],0,
-                 (nnew-nold)*eicol[ewhich[ic]]*sizeof(int));
+                 (bigint) (nnew-nold)*eicol[ewhich[ic]]*sizeof(int));
       }
 
     } else {
@@ -176,9 +178,9 @@ void Grid::reallocate_custom(int nold, int nnew)
       } else {
         double **darray = memory->grow(edarray[ewhich[ic]],
                                        nnew,edcol[ewhich[ic]],"grid:edarray");
-        if (nnew - nold)
+        if (nnew > nold)
           memset(&darray[nold][0],0,
-                 (nnew-nold)*edcol[ewhich[ic]]*sizeof(double));
+                 (bigint) (nnew-nold)*edcol[ewhich[ic]]*sizeof(double));
       }
     }
   }

@@ -1,22 +1,15 @@
-//@HEADER
-// ************************************************************************
-//
-//                        Kokkos v. 4.0
-//       Copyright (2022) National Technology & Engineering
-//               Solutions of Sandia, LLC (NTESS).
-//
-// Under the terms of Contract DE-NA0003525 with NTESS,
-// the U.S. Government retains certain rights in this software.
-//
-// Part of Kokkos, under the Apache License v2.0 with LLVM Exceptions.
-// See https://kokkos.org/LICENSE for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-//
-//@HEADER
+// SPDX-FileCopyrightText: Copyright Contributors to the Kokkos project
 
 #include <gtest/gtest.h>
 
+#include <Kokkos_Macros.hpp>
+#ifdef KOKKOS_ENABLE_EXPERIMENTAL_CXX20_MODULES
+import kokkos.core;
+#else
 #include <Kokkos_Core.hpp>
+#endif
+#include <Kokkos_Assert.hpp>
 #include <sstream>
 #include <iostream>
 
@@ -37,8 +30,6 @@ TEST(TEST_CATEGORY, view_remap) {
 #define EXECSPACE                                                  \
   std::conditional_t<std::is_same_v<TEST_EXECSPACE, Kokkos::SYCL>, \
                      Kokkos::SYCLHostUSMSpace, TEST_EXECSPACE>
-#elif defined(KOKKOS_ENABLE_OPENMPTARGET)
-#define EXECSPACE Kokkos::HostSpace
 #else
 #define EXECSPACE TEST_EXECSPACE
 #endif
@@ -105,12 +96,6 @@ void test_left_stride(Extents... extents) {
     expected_stride *= view.extent(i);
   }
   ASSERT_EQ(all_strides[view_type::rank()], expected_stride);
-#ifdef KOKKOS_ENABLE_DEPRECATED_CODE_4
-  for (size_t i = view_type::rank(); i < size_t(8); ++i) {
-    ASSERT_EQ(view.stride(i), view.stride(view_type::rank() - 1) *
-                                  view.extent(view_type::rank() - 1));
-  }
-#endif
 }
 
 template <typename DataType, typename... Extents>
@@ -128,11 +113,6 @@ void test_right_stride(Extents... extents) {
     expected_stride *= view.extent(i);
   }
   ASSERT_EQ(all_strides[view_type::rank()], expected_stride);
-#ifdef KOKKOS_ENABLE_DEPRECATED_CODE_4
-  for (size_t i = view_type::rank(); i < size_t(8); ++i) {
-    ASSERT_EQ(view.stride(i), size_t(1));
-  }
-#endif
 }
 
 template <typename DataType, typename... Extents>
@@ -158,11 +138,6 @@ void test_stride_stride(Extents... extents) {
     }
     ASSERT_EQ(all_strides[view_type::rank()],
               max_stride * view.extent(max_stride_idx));
-#ifdef KOKKOS_ENABLE_DEPRECATED_CODE_4
-    for (size_t i = view_type::rank(); i < size_t(8); ++i) {
-      ASSERT_EQ(view.stride(i), size_t(0));
-    }
-#endif
   };
 
   Kokkos::View<DataType, Kokkos::LayoutRight, Kokkos::HostSpace> view_right(
@@ -188,6 +163,99 @@ TEST(TEST_CATEGORY, view_stride_method) {
   // factorial(8) = 40320
   test_stride<double[1][2][3][4][5][6][7][8]>();
   test_stride<double********>(1, 2, 3, 4, 5, 6, 7, 8);
+}
+
+template <typename V>
+  requires(Kokkos::is_view_v<V>)
+void test_view_stride_precondition_violation(V v) {
+  // workaround "pointless comparison of unsigned integer with zero" warnings
+  // with NVCC
+  if constexpr (V::rank() > 0) {
+    for (size_t r = 0; r < V::rank(); ++r) {
+      (void)v.stride(r);
+    }
+  }
+  std::string const poor_msg =
+      "static_cast<int>\\(r\\) < static_cast<int>\\(rank\\(\\)\\)";
+
+  for (size_t r = V::rank(); r < 8; ++r) {
+    ASSERT_DEATH({ (void)v.stride(r); }, poor_msg);
+  }
+}
+
+TEST(TEST_CATEGORY_DEATH, view_stride_precondition_violation) {
+  ::testing::FLAGS_gtest_death_test_style = "threadsafe";
+  {
+    bool checked_assertions = false;
+    // NOLINTNEXTLINE(bugprone-assignment-in-if-condition)
+    KOKKOS_ASSERT(checked_assertions = true);
+    if (!checked_assertions) {
+      GTEST_SKIP() << "Preconditions are not checked.";
+    }
+  }
+
+#ifdef KOKKOS_ENABLE_IMPL_VIEW_LEGACY
+  GTEST_SKIP() << "Using the legacy view implementation.";
+#endif
+
+  test_view_stride_precondition_violation(
+      Kokkos::View<double, TEST_EXECSPACE>("v0"));
+  test_view_stride_precondition_violation(
+      Kokkos::View<float*, TEST_EXECSPACE>("v1", 5));
+  test_view_stride_precondition_violation(
+      Kokkos::View<int***, TEST_EXECSPACE>("v3", 3, 7, 13));
+  test_view_stride_precondition_violation(
+      Kokkos::View<int********, TEST_EXECSPACE>("v8", 1, 2, 3, 4, 5, 6, 7, 8));
+}
+
+template <typename V>
+  requires(Kokkos::is_view_v<V>)
+void test_view_extent_precondition_violation(V v) {
+  // workaround "pointless comparison of unsigned integer with zero" warnings
+  // with NVCC
+  if constexpr (V::rank() > 0) {
+    for (size_t r = 0; r < V::rank(); ++r) {
+      (void)v.extent(r);
+      (void)v.extent_int(r);
+    }
+  }
+
+  for (size_t r = V::rank(); r < 8; ++r) {
+#ifdef KOKKOS_ENABLE_DEPRECATED_CODE_5
+    ASSERT_EQ(v.extent(r), 1u);
+    ASSERT_EQ(v.extent_int(r), 1);
+#else
+    std::string const poor_msg =
+        "static_cast<int>\\(r\\) < static_cast<int>\\(rank\\(\\)\\)";
+    ASSERT_DEATH({ (void)v.extent(r); }, poor_msg);
+    ASSERT_DEATH({ (void)v.extent_int(r); }, poor_msg);
+#endif
+  }
+}
+
+TEST(TEST_CATEGORY_DEATH, view_extent_precondition_violation) {
+  ::testing::FLAGS_gtest_death_test_style = "threadsafe";
+  {
+    bool checked_assertions = false;
+    // NOLINTNEXTLINE(bugprone-assignment-in-if-condition)
+    KOKKOS_ASSERT(checked_assertions = true);
+    if (!checked_assertions) {
+      GTEST_SKIP() << "Preconditions are not checked.";
+    }
+  }
+
+#ifdef KOKKOS_ENABLE_IMPL_VIEW_LEGACY
+  GTEST_SKIP() << "Using the legacy view implementation.";
+#endif
+
+  test_view_extent_precondition_violation(
+      Kokkos::View<double, TEST_EXECSPACE>("v0"));
+  test_view_extent_precondition_violation(
+      Kokkos::View<float*, TEST_EXECSPACE>("v1", 5));
+  test_view_extent_precondition_violation(
+      Kokkos::View<int***, TEST_EXECSPACE>("v3", 3, 7, 13));
+  test_view_extent_precondition_violation(
+      Kokkos::View<int********, TEST_EXECSPACE>("v8", 1, 2, 3, 4, 5, 6, 7, 8));
 }
 
 inline void test_anonymous_space() {
@@ -275,12 +343,18 @@ struct TestViewAllocationLargeRank {
 
 // Orin and other Jetson devices come with smaller memory capacity, 8GB total
 TEST(TEST_CATEGORY, view_allocation_large_rank) {
-#ifdef KOKKOS_ARCH_AMPERE87
-  GTEST_SKIP() << "skipping for Jetson devices that have only 8GB memory";
+#ifdef KOKKOS_IMPL_32BIT
+  GTEST_SKIP() << "skipping for 32-bit builds";
 #endif
+// NVC++ warned about unreachable code without the
+// if/else construct here. Not worrying about 32bit
+// since we are not testing with NVHPC on those
+#ifndef KOKKOS_ENABLE_LARGE_MEM_TESTS
+  GTEST_SKIP() << "skipping for GPUs with not enough memory";
+#else
   using ExecutionSpace = typename TEST_EXECSPACE::execution_space;
   using MemorySpace    = typename TEST_EXECSPACE::memory_space;
-  constexpr int dim    = 16;
+  constexpr int dim    = 15;
   using FunctorType    = TestViewAllocationLargeRank<MemorySpace>;
   typename FunctorType::ViewType v("v", dim, dim, dim, dim, dim, dim, dim, dim);
 
@@ -291,6 +365,7 @@ TEST(TEST_CATEGORY, view_allocation_large_rank) {
   auto result =
       Kokkos::create_mirror_view_and_copy(Kokkos::HostSpace{}, v_single);
   ASSERT_EQ(result(0, 0, 0, 0, 0, 0, 0, 0), 42);
+#endif
 }
 
 template <typename ExecSpace, typename ViewType>

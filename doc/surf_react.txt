@@ -188,7 +188,7 @@ it supports is given on a separate
 :line
 
 If the ambipolar approximation is being used, via the "fix
-ambipolar"_fix_ambipolar.hmtl command, then reactions which involve
+ambipolar"_fix_ambipolar.html command, then reactions which involve
 either ambipolar ions or the ambipolar electron have more restricitve
 rules about the ordering of reactants and products, than those
 described in the preceeding section for the {prob} style.
@@ -214,8 +214,8 @@ All the surface reaction models calculate a global vector of values.
 The values can be used by the "stats_style"_stats_style.html command
 and by "variables"_variable.html that define formulas.  The latter
 means they can be used by any command that uses a variable as input,
-e.g. "the "fix ave/time"_fix_ave_time.html command.  See "Section
-4.4"_Section_howto.html#howto_4 for an overview of SPARTA output
+e.g. the "fix ave/time"_fix_ave_time.html command.  See "Section
+6.4"_Section_howto.html#howto_4 for an overview of SPARTA output
 options.
 
 The {global}, {prob}, and {adsorb} styles each compute a vector of

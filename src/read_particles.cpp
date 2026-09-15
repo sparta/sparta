@@ -86,9 +86,9 @@ void ReadParticles::command(int narg, char **arg)
   if (ntimestep != nrequest)
     error->all(FLERR,"Read_particles could not find timestep in file");
 
-  int np;
+  bigint np;
   if (me == 0) np = read_header();
-  MPI_Bcast(&np,1,MPI_INT,0,world);
+  MPI_Bcast(&np,1,MPI_SPARTA_BIGINT,0,world);
 
   // read, broadcast, and process particles from snapshot in chunks
   // for now, assume fields are ID,ispecies,x,y,z,vx,vy,vz
@@ -125,11 +125,13 @@ void ReadParticles::command(int narg, char **arg)
   for (int i = nlocal_previous; i < nlocal; i++)
     if (particles[i].ispecies > nspecies) flag++;
 
-  int flagall;
-  MPI_Allreduce(&flag,&flagall,1,MPI_INT,MPI_SUM,world);
-  if (flag) {
+  bigint flagme = flag;
+  bigint flagall;
+  MPI_Allreduce(&flagme,&flagall,1,MPI_SPARTA_BIGINT,MPI_SUM,world);
+  if (flagall) {
     char str[128];
-    sprintf(str,"%d read-in particles have invalid species",flag);
+    snprintf(str,sizeof(str),BIGINT_FORMAT " read-in particles have invalid species",
+            flagall);
     error->all(FLERR,str);
   }
 
@@ -141,10 +143,12 @@ void ReadParticles::command(int narg, char **arg)
   for (int i = nlocal_previous; i < nlocal; i++)
     if (cinfo[particles[i].icell].type == INSIDE) flag++;
 
-  MPI_Allreduce(&flag,&flagall,1,MPI_INT,MPI_SUM,world);
-  if (flag) {
+  flagme = flag;
+  MPI_Allreduce(&flagme,&flagall,1,MPI_SPARTA_BIGINT,MPI_SUM,world);
+  if (flagall) {
     char str[128];
-    sprintf(str,"%d read-in particles are inside surface",flag);
+    snprintf(str,sizeof(str),BIGINT_FORMAT " read-in particles are inside surface",
+            flagall);
     error->all(FLERR,str);
   }
 
@@ -162,12 +166,12 @@ void ReadParticles::command(int narg, char **arg)
   if (comm->me == 0) {
     if (screen) {
       fprintf(screen,"Read " BIGINT_FORMAT " particles out of "
-              "%d\n",nactual,np);
+              BIGINT_FORMAT "\n",nactual,np);
       fprintf(screen,"  CPU time = %g secs\n",time2-time1);
     }
     if (logfile) {
       fprintf(logfile,"Read " BIGINT_FORMAT " particles out of "
-              "%d\n",nactual,np);
+              BIGINT_FORMAT "\n",nactual,np);
       fprintf(logfile,"  CPU time = %g secs\n",time2-time1);
     }
   }

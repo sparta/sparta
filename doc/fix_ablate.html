@@ -37,11 +37,12 @@
 
 <LI>zero or more keyword/value pairs may be appended 
 
-<LI>keyword = <I>mindist</I> or <I>multiple</I> 
+<LI>keyword = <I>mindist</I> or <I>multiple</I> or <I>conserve</I> 
 
 <PRE>  <I>mindist</I> value = fraction
     fraction = minimum fractional distance along cell edge for triangle/line vertices (value > 0 and < 0.5)
-  <I>multiple</I> value = yes or no 
+  <I>multiple</I> value = yes or no
+  <I>conserve</I> value = yes or no 
 </PRE>
 
 </UL>
@@ -160,7 +161,7 @@ read_isurf          all 20 20 20 binary.21x21x21 99.5 ablate
 <A HREF = "read_isurf.html">read_isurf</A> command, because surfaces must exist
 before assigning collision and reaction models to them.  The <A HREF = "fix_ablate.html">fix
 ablate</A> command must come before the
-<A HREF = "read_isurf.html">read_isurf</A> command, since it uses the ID of the <A HREF = "fix_ablate">fix
+<A HREF = "read_isurf.html">read_isurf</A> command, since it uses the ID of the <A HREF = "fix_ablate.html">fix
 ablate</A> command as an argument to create implicit surfaces.
 The <A HREF = "fix_ablate.html">fix ablate</A> command takes a compute or fix as an
 argument, in this case the ID of the <A HREF = "compute_react_isurf_grid.html">compute
@@ -169,7 +170,7 @@ specify what calculation drives the ablation.  In this case, it is the
 <A HREF = "compute_react_isurf_grid.html">compute react/isurf/grid</A> command (or
 could be the <A HREF = "fix_ave_grid.html">fix ave/grid</A> command) which tallies
 counts of surface reactions for implicit triangles in each grid cell.
-The <A HREF = "compute">compute react/isurf/grid</A> react/isurf/grid command
+The <A HREF = "compute.html">compute react/isurf/grid</A> react/isurf/grid command
 requires the ID of a surface reaction model, so that it knows the list
 of possible reactions to tally.  In this case the reaction is set by
 the <A HREF = "surf_react.html">surf_react</A> command, which must therefore comes
@@ -202,13 +203,25 @@ smallest corner point value.  Except that a corner point value cannot
 become smaller than 0.0.  If this would occur, only a portion of the
 decrement is used to set the corner point to 0.0; the remainder is
 applid to the next smallest corner point value.  And so forth on
-successive corner points until all of the decrement is used.
+successive corner points until all of the decrement is used.  If the
+corner point values of the cell sum to less than its decrement value,
+they are all set to 0.0 and the rest of the decrement is dropped, since
+the cell has no material left to remove.  The dropped amount is
+reported; see the discussion of the global vector below.
 </P>
 <P>The amount of decrement applied to each corner point is next shared
 between all the grid cells (4 or 8) sharing each corner point value.
 The sum of those decrements is subtracted from the corner point,
 except that it's final value is set no smaller than 0.0.  All the
 copies of each corner point value are now identical.
+</P>
+<P>Several grid cells can decrement the same corner point in one ablation
+operation by more than its value, in which case each of them removes
+the fraction of that value its own decrement asked for, and the part of
+their decrements which the corner point could not cover is offered to
+the other corner points of their own cells, repeating the two steps
+above.  A grid cell whose decrement is fully applied in the first pass,
+which is the usual case, is not affected.
 </P>
 <HR>
 
@@ -298,18 +311,54 @@ and the entire surface contained within the ablated cell recedes.
 <P>No information about this fix is written to <A HREF = "restart.html">binary restart
 files</A>.
 </P>
-<P>This fix computes a global scalar and a global vector of length 2.
+<P>This fix computes a global scalar and a global vector of length 3.
 The global scalar is the current sum of unique corner point values
 across the entire grid (not counting duplicate values).  This sum
 assumes that corner point values are 0.0 on the boundary of the 2d or
 3d array of grid cells containing implicit surface elements.
 </P>
-<P>The 2 vector values are the (1) sum of decrement values for each grid
-cell in the most recent ablation operation, and (2) the # of particles
+<P>The 3 vector values are the (1) sum of decrement values for each grid
+cell in the most recent ablation operation, (2) the # of particles
 deleted during the most recent ablation operation that ended up
-"inside" the newly ablated surface.  The latter quantity should be 0.
-A non-zero value indicates a corner case in the marching cubes or
-marching squares algorithm the developers still need to address.
+"inside" the newly ablated surface, and (3) the cumulative amount of
+requested decrement which the corner point values could not pay.  The
+second quantity should be 0.  A non-zero value indicates a corner case
+in the marching cubes or marching squares algorithm the developers
+still need to address.
+</P>
+<P>The third quantity is normally 0.0 as well.  It becomes non-zero when a
+grid cell is asked to remove more material in one ablation operation
+than the sum of its corner point values, as described above.  That is
+expected for the <I>random</I> and <I>uniform</I> sources, which keep asking after
+a cell is empty, but for a <I>c_ID</I> or <I>f_ID</I> source it means the ablative
+source removed less material than it accounted for, e.g. surface
+chemistry created gas products for solid material that was never
+removed.  A warning is printed the first time it happens.  Note that
+this quantity is tallied for the single point decrement only.  With the
+<I>multiple</I> keyword the deficit is instead passed to the inside corner
+points, which are clamped at 0.0, and only a warning is printed.
+</P>
+<P>The <I>conserve</I> keyword applies to the single point decrement only.  With
+<I>conserve</I> set to yes, the default, a grid cell whose claim on a shared
+corner point was reduced because a neighbor cell claimed the same point
+in this ablation operation is offered the remainder of its claim again,
+from the other corner points of the same cell.  This is what makes the
+third vector value above account for the requested decrement exactly.
+An ablation operation which pays every claim in full stops after the
+first decrement, so a run that never over-claims a corner point costs
+nothing extra; one that cannot pay in full runs a second decrement to
+find that nothing more can be removed, which is a second round of corner
+point communication.  Setting <I>conserve</I> to no stops after the first
+decrement, so a claim a shared corner point could not cover is dropped
+and reported rather than retried.
+</P>
+<P>For the single point decrement the sum of this quantity and the removed
+corner point values accounts for the requested decrement exactly, so it
+is the only decrement which is not applied.  It means the <I>source</I> asked
+to remove material from a grid cell which has none left, so the two are
+inconsistent: with a <I>c_ID</I> or <I>f_ID</I> source the surface chemistry
+created gas products for solid material that was not there to remove,
+which no accounting inside this fix can repair.
 </P>
 <P>These values can be accessed by any command that uses global values
 from a fix as input.  See <A HREF = "Section_howto.html#howto_4">Section 6.4</A> for
@@ -321,6 +370,15 @@ an overview of SPARTA output options.
 </P>
 <P>This fix can only be used in simulations that define implicit surfaces.
 </P>
+<P>All surface elements must be assigned to the same surface collision
+model and (optionally) the same surface reaction model via the
+<A HREF = "surf_modify.html">surf_modify</A> command.  This is because each ablation
+operation discards and re-creates all the implicit surface elements,
+and this fix re-assigns the same pair of models to all the new
+elements.  Assigning different models to different groups of surface
+elements is not yet supported with ablation; an error is generated if
+that is the case.
+</P>
 <P><B>Related commands:</B>
 </P>
 <P><A HREF = "read_isurf.html">read isurf</A>
@@ -328,7 +386,8 @@ an overview of SPARTA output options.
 <P><B>Default:</B>
 </P>
 <P>The default for the <I>mindist</I> keyword = 0.0, i.e. the epsilon method
-is used.  The default for the <I>multiple</I> keyword = no.
+is used.  The default for the <I>multiple</I> keyword = no.  The default for
+the <I>conserve</I> keyword = yes.
 </P>
 <HR>
 

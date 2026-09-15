@@ -29,6 +29,7 @@ namespace SPARTA_NS {
 class ComputeReactBoundary : public Compute {
  public:
   ComputeReactBoundary(class SPARTA *, int, char **);
+  ComputeReactBoundary(class SPARTA* sparta) : Compute(sparta) {} // needed for Kokkos
   ~ComputeReactBoundary();
   virtual void init();
   virtual void compute_array();

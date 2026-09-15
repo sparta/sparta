@@ -47,7 +47,7 @@ ComputeCount::ComputeCount(SPARTA *sparta, int narg, char **arg) :
       if (imix < 0)
         error->all(FLERR,"Unknown species/mixture in compute count command");
       int igroup = particle->mixture[imix]->find_group(ptr+1);
-      if (imix < 0)
+      if (igroup < 0)
         error->all(FLERR,"Unknown mixture group in compute count command");
       *ptr = '/';
       if (nvalues == maxvalues) allocate(maxvalues+DELTAVALUES);

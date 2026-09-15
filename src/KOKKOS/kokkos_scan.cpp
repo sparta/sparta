@@ -4,9 +4,9 @@ namespace SPARTA_NS {
 
 template <typename Device>
 struct ExclScan {
-  using value_type = long;
+  using value_type = bigint;
   using view_type = Kokkos::View<int*, Device>;
-  using total_type = Kokkos::View<int, Device>;
+  using total_type = Kokkos::View<bigint, Device>;
   KOKKOS_INLINE_FUNCTION void init(value_type& update) const { update = 0; }
   KOKKOS_INLINE_FUNCTION void join(
       value_type& update, const value_type& input) const {
@@ -22,7 +22,7 @@ struct ExclScan {
     if (final_pass) {
       out_[0] = 0;
       out_[i + 1] = static_cast<int>(update);
-      if (i + 1 == int(in_.extent(0))) total_() = static_cast<int>(update);
+      if (i + 1 == int(in_.extent(0))) total_() = update;
     }
   }
   using execution_space = Device;
@@ -38,10 +38,18 @@ Kokkos::View<int*, Device> offset_scan(Kokkos::View<int*, Device> in, int& total
     out = Kokkos::View<int*, Device>(in.label() + "_scan",1);
   } else {
     out = Kokkos::View<int*, Device>(Kokkos::view_alloc(in.label() + "_scan",Kokkos::WithoutInitializing), in.size() + 1);
-    Kokkos::View<int, Device> total_dev(Kokkos::view_alloc("scan_total",Kokkos::WithoutInitializing));
-    typename Kokkos::View<int, Device>::HostMirror total_host(Kokkos::view_alloc("scan_total_mirror",Kokkos::WithoutInitializing));
+    Kokkos::View<bigint, Device> total_dev(Kokkos::view_alloc("scan_total",Kokkos::WithoutInitializing));
+    typename Kokkos::View<bigint, Device>::host_mirror_type total_host(Kokkos::view_alloc("scan_total_mirror",Kokkos::WithoutInitializing));
     Kokkos::parallel_scan(in.size(), ExclScan<Device>(in, out, total_dev));
     Kokkos::deep_copy(total_host, total_dev);
+
+    // the accumulation runs in 64-bit, but the output offsets and the
+    //   returned total are int, so abort with a clear message rather than
+    //   silently wrapping when the scan total exceeds 2^31
+
+    if (total_host() > (bigint) MAXSMALLINT)
+      Kokkos::abort("SPARTA offset_scan total exceeds 2^31, "
+                    "reduce per-proc particle count");
     total = total_host();
   }
   return out;

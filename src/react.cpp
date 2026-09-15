@@ -43,7 +43,6 @@ React::React(SPARTA *sparta, int, char **arg) : Pointers(sparta)
   random->reset(seed,comm->me,100);
 
   copy = copymode = 0;
-  uncopy = 1;
 }
 
 /* ---------------------------------------------------------------------- */

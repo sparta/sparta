@@ -47,7 +47,8 @@ class ReadRestart : protected Pointers {
   bigint nparticle_file;
   bigint nunsplit_file;
   int nsplit_file,nsub_file;
-  int npoint_file,nsurf_file;
+  int npoint_file;
+  bigint nsurf_file;        // global surf count can exceed 2^31
 
   // locally stored surfs
 

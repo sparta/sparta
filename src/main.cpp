@@ -15,8 +15,19 @@
 #include "mpi.h"
 #include "sparta.h"
 #include "input.h"
+#include "library.h"
+#include "spaexception.h"
+
+#include "stdlib.h"
 
 using namespace SPARTA_NS;
+
+// for convenience
+
+static void finalize()
+{
+  sparta_kokkos_finalize();
+}
 
 /* ----------------------------------------------------------------------
    main program to drive SPARTA
@@ -26,9 +37,21 @@ int main(int argc, char **argv)
 {
   MPI_Init(&argc,&argv);
 
-  SPARTA *sparta = new SPARTA(argc,argv,MPI_COMM_WORLD);
-  sparta->input->file();
-  delete sparta;
+  try {
+    SPARTA *sparta = new SPARTA(argc,argv,MPI_COMM_WORLD);
+    sparta->input->file();
+    delete sparta;
+  } catch (SpartaAbortException &e) {
+    finalize();
+    MPI_Abort(e.get_universe(),1);
+  } catch (SpartaException &) {
+    // error message was already printed by the Error class
+    finalize();
+    MPI_Finalize();
+    exit(1);
+  }
+
+  finalize();
 
   MPI_Finalize();
 }

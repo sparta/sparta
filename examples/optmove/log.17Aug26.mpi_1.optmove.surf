@@ -1,0 +1,132 @@
+SPARTA (24 Sep 2025)
+Running on 1 MPI task(s)
+################################################################################
+# 3d box with a surf_collide model on two box faces
+#
+# Exercises an {s} global boundary whose collision model is a plain specular
+# one.  On an axis-aligned box face that model is a reflection about the face
+# and nothing else, so the optimized move performs it itself and hands the
+# collisions to the model afterwards -- sc_ID[1] and sc_ID[2] below count the
+# same collisions either way.
+#
+# A specular model with the noslip option, or any other collision model, is
+# not a mirror and those faces still use the normal move.
+#
+# Run the same script with "-var opt no" to compare against the normal move.
+# On a single processor the two agree exactly, step for step, including the
+# two surf_collide tallies.
+#
+# Note:
+#  - The "comm/sort" option to the "global" command is used to match MPI runs.
+################################################################################
+
+variable            opt index yes
+
+seed	    	    12345
+dimension   	    3
+global              gridcut 0.0 comm/sort yes optmove ${opt}
+global              gridcut 0.0 comm/sort yes optmove yes
+
+boundary	    s p p
+
+create_box  	    0 0.001 0 0.001 0 0.001
+Created orthogonal box = (0 0 0) to (0.001 0.001 0.001)
+create_grid 	    10 10 10
+Created 1000 child grid cells
+  CPU time = 14.0898 secs
+  create/ghost percent = 0.00596539 99.994
+balance_grid        rcb part
+Balance grid migrated 0 cells
+  CPU time = 0.000469999 secs
+  reassign/sort/migrate/ghost percent = 77.2738 0.280639 4.99427 17.4513
+
+surf_collide        spec specular
+bound_modify        xlo xhi collide spec
+
+species		    ar.species Ar
+mixture		    air Ar vstream 200.0 100.0 -150.0 temp 300.0
+
+global		    nrho 1.e20 fnum 1.e7
+
+create_particles    air n 0
+Created 10000 particles
+  CPU time = 0.00182262 secs
+collide             vss air ar.vss
+
+fix                 gcheck grid/check 1 error
+
+# nsingle and ntotal of the surf_collide model, which the optimized move
+# keeps up to date for the collisions it performs itself
+
+variable            nsingle equal sc_spec[1]
+variable            ntotal  equal sc_spec[2]
+
+stats		    100
+stats_style	    step cpu np nbound v_nsingle v_ntotal
+
+timestep            1.e-6
+run 		    500
+Memory usage per proc in Mbytes:
+  particles (ave,min,max) = 1.5625 1.5625 1.5625
+  grid      (ave,min,max) = 1.51379 1.51379 1.51379
+  surf      (ave,min,max) = 0 0 0
+  modify    (ave,min,max) = 0 0 0
+  total     (ave,min,max) = 3.07629 3.07629 3.07629
+Step CPU Np Nbound v_nsingle v_ntotal 
+       0            0    10000        0            0            0 
+     100  0.036009278    10000     2287         2287       242969 
+     200  0.071961288    10000     2244         2244       467941 
+     300   0.10766313    10000     2168         2168       691130 
+     400   0.14529635    10000     2183         2183       911715 
+     500   0.18136585    10000     2287         2287      1132969 
+Loop time of 0.181377 on 1 procs for 500 steps with 10000 particles
+Performance: 2756.685 timesteps/s, 27.567 Mparticle-step/s
+
+MPI task timing breakdown:
+Section |  min time  |  avg time  |  max time  |%varavg| %total
+---------------------------------------------------------------
+Move    | 0.10788    | 0.10788    | 0.10788    |   0.0 | 59.48
+Coll    | 0.036073   | 0.036073   | 0.036073   |   0.0 | 19.89
+Sort    | 0.0087889  | 0.0087889  | 0.0087889  |   0.0 |  4.85
+Comm    | 0.00014262 | 0.00014262 | 0.00014262 |   0.0 |  0.08
+Modify  | 0.028236   | 0.028236   | 0.028236   |   0.0 | 15.57
+Output  | 8.4063e-05 | 8.4063e-05 | 8.4063e-05 |   0.0 |  0.05
+MPI Sync| 0.00013148 | 0.00013148 | 0.00013148 |   0.0 |  0.07
+Other   |            | 3.919e-05  |            |       |  0.02
+
+Particle moves    = 5000000 (5M)
+Cells touched (std move) = 10024 (10K)
+Particle comms    = 0 (0K)
+Boundary collides = 1132969 (1.13M)
+Boundary exits    = 0 (0K)
+SurfColl checks   = 0 (0K)
+SurfColl occurs   = 0 (0K)
+Surf reactions    = 0 (0K)
+Collide attempts  = 100383 (0.1M)
+Collide occurs    = 74968 (75K)
+Reactions         = 0 (0K)
+Particles stuck   = 0
+Axisymm bad moves = 0
+
+Particle-moves/CPUsec/proc: 2.75669e+07
+Particle-moves/step: 10000
+Cell-touches/particle/step (std move): 0.0020048
+Particle comm iterations/step: 1
+Particle fraction communicated: 0
+Particle fraction colliding with boundary: 0.226594
+Particle fraction exiting boundary: 0
+Surface-checks/particle/step: 0
+Surface-collisions/particle/step: 0
+Surf-reactions/particle/step: 0
+Collision-attempts/particle/step: 0.0200766
+Collisions/particle/step: 0.0149936
+Reactions/particle/step: 0
+
+Particles: 10000 ave 10000 max 10000 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+Cells:      1000 ave 1000 max 1000 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+GhostCell: 0 ave 0 max 0 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+EmptyCell: 0 ave 0 max 0 min
+Histogram: 1 0 0 0 0 0 0 0 0 0

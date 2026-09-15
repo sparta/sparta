@@ -53,7 +53,7 @@ class Custom : protected Pointers {
   int naction;
   Action *actions;
 
-  int ncoarse;
+  int ncoarse, filestyle;
   double **xyz_coarse;
   double **values_coarse;
 
@@ -67,6 +67,7 @@ class Custom : protected Pointers {
   void read_coarse_files(char *, int, int);
   bigint coarse_tree_neighbor_assign(int, int, int *, int *, int *, int *);
   int attribute_bracket(char *);
+  void check_attribute_column(int, int);
 };
 
 // K-D tree class
@@ -87,9 +88,12 @@ class KDTree : protected Pointers {
   double **points;
   int npoints;
 
-  int nsearch,nneigh;
+  // bigint since cumulative tree-walk counts can exceed 2^31
+  //   at large per-proc cell counts
+
+  bigint nsearch,nneigh;
   double avedist;
-  int count_node,count_leaf;
+  bigint count_node,count_leaf;
 
   struct Node {
     int which;       // STUB, BRANCH, LEAF

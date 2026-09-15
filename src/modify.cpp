@@ -56,10 +56,12 @@ Modify::Modify(SPARTA *sparta) : Pointers(sparta)
   ncompute = maxcompute = 0;
   compute = NULL;
 
-  // n_pergrid needs to be initialized here because ReadSurf calls
-  //  Modify::reset_grid_count without calling Modify::init
+  // these counts are computed by list_init_fixes(), called from Modify::init(),
+  //  but classes init'ed earlier in SPARTA::init() can read them first,
+  //  e.g. ReadSurf calls Modify::reset_grid_count without calling Modify::init
 
-  n_pergrid = 0;
+  n_pergrid = n_update_custom = n_gas_react = n_surf_react = 0;
+  n_custom_surf_changed = 0;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -340,7 +342,7 @@ void Modify::add_fix(int narg, char **arg)
   if (sparta->suffix_enable) {
     if (sparta->suffix) {
       char estyle[256];
-      sprintf(estyle,"%s/%s",arg[1],sparta->suffix);
+      snprintf(estyle,256,"%s/%s",arg[1],sparta->suffix);
 
       if (0) return;
 
@@ -436,7 +438,7 @@ void Modify::add_compute(int narg, char **arg)
   if (sparta->suffix_enable) {
     if (sparta->suffix) {
       char estyle[256];
-      sprintf(estyle,"%s/%s",arg[1],sparta->suffix);
+      snprintf(estyle,256,"%s/%s",arg[1],sparta->suffix);
 
       if (0) return;
 

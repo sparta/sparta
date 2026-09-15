@@ -45,5 +45,12 @@
 #define LINE_MASK        0x00000800
 #define TRI_MASK         0x00001000
 
+// surf, explicit distributed: the owned subset (mylines/mytris)
+// separate from LINE_MASK/TRI_MASK because they are separate DualViews
+//   with their own sync state, and grow_own() resizes only these
+
+#define MYLINE_MASK      0x00002000
+#define MYTRI_MASK       0x00004000
+
 
 #endif

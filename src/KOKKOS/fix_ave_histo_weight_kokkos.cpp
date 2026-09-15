@@ -184,8 +184,32 @@ void FixAveHistoWeightKokkos::calculate_weights()
         computeKKBase->compute_per_grid_kokkos();
         compute->invoked_flag |= INVOKED_PER_GRID;
       }
-      if (j == 0) {
-        d_weights = computeKKBase->d_vector_particle;
+      if (compute->post_process_grid_flag) {
+
+        // a post-process per-grid compute (e.g. compute grid) fills its
+        // vector on demand via post_process_grid_kokkos() and never
+        // allocates array_grid.  copy the requested column into a private
+        // device buffer so the subsequent binning of the value (which may
+        // post-process the same compute again) cannot overwrite the weights.
+        // mirrors FixAveHistoWeight::calculate_weights()
+
+        computeKKBase->post_process_grid_kokkos(j,1,DAT::t_float_2d_lr(),
+                                                NULL,DAT::t_float_1d_strided());
+        if (grid->maxlocal > maxvectorwt) {
+          memoryKK->destroy_kokkos(k_vectorwt,vectorwt);
+          maxvectorwt = grid->maxlocal;
+          memoryKK->create_kokkos(k_vectorwt,vectorwt,maxvectorwt,
+                                  "ave/histo/weight:vectorwt");
+        }
+        const int nglocal = grid->nlocal;
+        auto d_vectorwt = k_vectorwt.view_device();
+        auto range = std::make_pair(0,nglocal);
+        Kokkos::deep_copy(Kokkos::subview(d_vectorwt,range),
+                          Kokkos::subview(computeKKBase->d_vector_grid,range));
+        k_vectorwt.modify_device();
+        d_weights = d_vectorwt;
+      } else if (j == 0) {
+        d_weights = computeKKBase->d_vector_grid;
       } else if (compute->array_grid) {
         d_weights = Kokkos::subview(computeKKBase->d_array_grid,Kokkos::ALL(),j-1);
       }
@@ -198,7 +222,10 @@ void FixAveHistoWeightKokkos::calculate_weights()
     Fix *fix = modify->fix[m];
     if (!fix->kokkos_flag)
       error->all(FLERR,"Cannot (yet) use non-Kokkos fixes with fix ave/histo/weight/kk");
-      KokkosBase* fixKKBase = dynamic_cast<KokkosBase*>(fix);
+    KokkosBase* fixKKBase = dynamic_cast<KokkosBase*>(fix);
+    // a fix keeps its per-grid output between invocations and grid migration
+    // can leave it current on the host alone, so ask for the device copy
+    if (fixKKBase) fixKKBase->sync_pergrid_device_kokkos();
 
     if (kind == GLOBAL && mode == SCALAR) {
       if (j == 0) {
@@ -228,7 +255,7 @@ void FixAveHistoWeightKokkos::calculate_weights()
 
     } else if (kind == PERGRID) {
       if (j == 0) {
-        d_weights = fixKKBase->d_vector_particle;
+        d_weights = fixKKBase->d_vector_grid;
       } else if (fixKKBase->d_array_grid.data()) {
         d_weights = Kokkos::subview(fixKKBase->d_array_grid,Kokkos::ALL(),j-1);
       }
@@ -256,7 +283,8 @@ void FixAveHistoWeightKokkos::calculate_weights()
       if (grid->maxlocal > maxvectorwt) {
         memoryKK->destroy_kokkos(k_vectorwt,vectorwt);
         maxvectorwt = grid->maxlocal;
-        memory->create(vectorwt,maxvectorwt,"ave/histo/weight:vectorwt");
+        memoryKK->create_kokkos(k_vectorwt,vectorwt,maxvectorwt,
+                                "ave/histo/weight:vectorwt");
       }
       input->variable->compute_grid(m,vectorwt,1,0);
       k_vectorwt.modify_host();
@@ -268,7 +296,6 @@ void FixAveHistoWeightKokkos::calculate_weights()
   // explicit per-particle attributes
   // NOTE: need to allocate local storage
   } else {
-    printf("%d, %d\n", which[i] == VARIABLE, kind == PERGRID);
     error->all(FLERR,"Fix ave/histo/weight/kokkos option not yet supported");
   }
 }
@@ -280,6 +307,7 @@ void FixAveHistoWeightKokkos::bin_vector(
     minmax_type& reducer,
     int n, double *values, int stride)
 {
+  minmax_reset();
   using FixKokkosDetails::mirror_view_from_raw_host_array;
   this->stride = stride;
 
@@ -287,6 +315,7 @@ void FixAveHistoWeightKokkos::bin_vector(
 
   auto policy = Kokkos::RangePolicy<TagFixAveHistoWeight_BinVector,DeviceType>(0, n);
   Kokkos::parallel_reduce(policy, *this, reducer);
+  minmax_fold();
 }
 
 /* ----------------------------------------------------------------------
@@ -297,6 +326,7 @@ void FixAveHistoWeightKokkos::bin_particles(
     minmax_type& reducer,
     int attribute, int index)
 {
+  minmax_reset();
   using Kokkos::RangePolicy;
   using FixKokkosDetails::mirror_view_from_raw_host_array;
 
@@ -304,19 +334,20 @@ void FixAveHistoWeightKokkos::bin_particles(
   int n = particle->nlocal;
   int nmax = particle->maxlocal;
 
-  Region *region;
-  if (regionflag) region = domain->regions[iregion];
+  if (regionflag) {
+    Region *region = domain->regions[iregion];
 
-  if (!region->kokkos_flag)
-    error->all(FLERR,"KOKKOS package does not (yet) support chosen region style");
+    if (!region->kokkos_flag)
+      error->all(FLERR,"KOKKOS package does not (yet) support chosen region style");
 
-  KokkosBase* regionKKBase = dynamic_cast<KokkosBase*>(region);
+    KokkosBase* regionKKBase = dynamic_cast<KokkosBase*>(region);
 
-  if (k_match.extent(0) < nmax)
-    MemKK::realloc_kokkos(k_match,"fix_ave_histo_weight:match",nmax);
+    if (k_match.extent(0) < nmax)
+      MemKK::realloc_kokkos(k_match,"fix_ave_histo_weight:match",nmax);
 
-  regionKKBase->match_all_kokkos(k_match);
-  d_match = k_match.view_device();
+    regionKKBase->match_all_kokkos(k_match);
+    d_match = k_match.view_device();
+  }
 
   if (attribute == X) {
 
@@ -350,6 +381,7 @@ void FixAveHistoWeightKokkos::bin_particles(
       Kokkos::parallel_reduce(policy, *this, reducer);
     }
   }
+  minmax_fold();
 }
 
 /* ----------------------------------------------------------------------
@@ -359,6 +391,7 @@ void FixAveHistoWeightKokkos::bin_particles(
     minmax_type& reducer,
     double *values, int stride)
 {
+  minmax_reset();
   using Kokkos::RangePolicy;
   using FixKokkosDetails::mirror_view_from_raw_host_array;
 
@@ -368,19 +401,20 @@ void FixAveHistoWeightKokkos::bin_particles(
 
   d_values = mirror_view_from_raw_host_array<double,DeviceType>(values, n, stride);
 
-  Region *region;
-  if (regionflag) region = domain->regions[iregion];
+  if (regionflag) {
+    Region *region = domain->regions[iregion];
 
-  if (!region->kokkos_flag)
-    error->all(FLERR,"KOKKOS package does not (yet) support chosen region style");
+    if (!region->kokkos_flag)
+      error->all(FLERR,"KOKKOS package does not (yet) support chosen region style");
 
-  KokkosBase* regionKKBase = dynamic_cast<KokkosBase*>(region);
+    KokkosBase* regionKKBase = dynamic_cast<KokkosBase*>(region);
 
-  if (k_match.extent(0) > nmax)
-    MemKK::realloc_kokkos(k_match,"fix_ave_histo_weight:match",nmax);
+    if (k_match.extent(0) < nmax)
+      MemKK::realloc_kokkos(k_match,"fix_ave_histo_weight:match",nmax);
 
-  regionKKBase->match_all_kokkos(k_match);
-  d_match = k_match.view_device();
+    regionKKBase->match_all_kokkos(k_match);
+    d_match = k_match.view_device();
+  }
 
   if (regionflag && mixflag) {
     //auto policy = RangePolicy<TagFixAveHistoWeight_BinParticles1,DeviceType>(0, n);
@@ -395,6 +429,7 @@ void FixAveHistoWeightKokkos::bin_particles(
     auto policy = RangePolicy<TagFixAveHistoWeight_BinParticles4,DeviceType>(0, n);
     Kokkos::parallel_reduce(policy, *this, reducer);
   }
+  minmax_fold();
 }
 
 /* ----------------------------------------------------------------------
@@ -404,6 +439,7 @@ void FixAveHistoWeightKokkos::bin_grid_cells(
     minmax_type& reducer,
     DAT::t_float_1d_strided d_vec)
 {
+  minmax_reset();
   using Kokkos::RangePolicy;
   using FixKokkosDetails::mirror_view_from_raw_host_array;
 
@@ -420,6 +456,7 @@ void FixAveHistoWeightKokkos::bin_grid_cells(
     auto policy = RangePolicy<TagFixAveHistoWeight_BinGridCells2,DeviceType>(0, n);
     Kokkos::parallel_reduce(policy, *this, reducer);
   }
+  minmax_fold();
 }
 
 /* ------------------------------------------------------------------------- */

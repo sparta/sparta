@@ -16,6 +16,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
+#include "spatype.h"
 #include "fft3d.h"
 #include "remap3d.h"
 
@@ -24,6 +25,8 @@
 /* include kissfft implementation */
 #include "kissfft.h"
 #endif
+
+using SPARTA_NS::bigint;
 
 #define MIN(A,B) ((A) < (B) ? (A) : (B))
 #define MAX(A,B) ((A) > (B) ? (A) : (B))
@@ -286,10 +289,10 @@ struct fft_plan_3d *fft_3d_create_plan(
   } else {
     first_ilo = 0;
     first_ihi = nfast - 1;
-    first_jlo = ip1*nmid/np1;
-    first_jhi = (ip1+1)*nmid/np1 - 1;
-    first_klo = ip2*nslow/np2;
-    first_khi = (ip2+1)*nslow/np2 - 1;
+    first_jlo = (bigint) ip1*nmid/np1;
+    first_jhi = (bigint) (ip1+1)*nmid/np1 - 1;
+    first_klo = (bigint) ip2*nslow/np2;
+    first_khi = (bigint) (ip2+1)*nslow/np2 - 1;
     plan->pre_plan = remap_3d_create_plan(comm,in_ilo,in_ihi,in_jlo,in_jhi,in_klo,in_khi,
                                           first_ilo,first_ihi,first_jlo,first_jhi,
                                           first_klo,first_khi,2,0,0,FFT_PRECISION,0);
@@ -305,12 +308,12 @@ struct fft_plan_3d *fft_3d_create_plan(
   // choose which axis is split over np1 vs np2 to minimize communication
   // second indices = distribution after 2nd set of FFTs
 
-  second_ilo = ip1*nfast/np1;
-  second_ihi = (ip1+1)*nfast/np1 - 1;
+  second_ilo = (bigint) ip1*nfast/np1;
+  second_ihi = (bigint) (ip1+1)*nfast/np1 - 1;
   second_jlo = 0;
   second_jhi = nmid - 1;
-  second_klo = ip2*nslow/np2;
-  second_khi = (ip2+1)*nslow/np2 - 1;
+  second_klo = (bigint) ip2*nslow/np2;
+  second_khi = (bigint) (ip2+1)*nslow/np2 - 1;
   plan->mid1_plan = remap_3d_create_plan(comm, first_ilo,first_ihi,first_jlo,first_jhi,
                                          first_klo,first_khi,second_ilo,second_ihi,
                                          second_jlo,second_jhi,second_klo,second_khi,
@@ -342,10 +345,10 @@ struct fft_plan_3d *fft_3d_create_plan(
     third_klo = out_klo;
     third_khi = out_khi;
   } else {
-    third_ilo = ip1*nfast/np1;
-    third_ihi = (ip1+1)*nfast/np1 - 1;
-    third_jlo = ip2*nmid/np2;
-    third_jhi = (ip2+1)*nmid/np2 - 1;
+    third_ilo = (bigint) ip1*nfast/np1;
+    third_ihi = (bigint) (ip1+1)*nfast/np1 - 1;
+    third_jlo = (bigint) ip2*nmid/np2;
+    third_jhi = (bigint) (ip2+1)*nmid/np2 - 1;
     third_klo = 0;
     third_khi = nslow - 1;
   }
@@ -552,7 +555,7 @@ struct fft_plan_3d *fft_3d_create_plan(
     plan->scaled = 0;
   else {
     plan->scaled = 1;
-    plan->norm = 1.0/(nfast*nmid*nslow);
+    plan->norm = 1.0/((double) nfast*nmid*nslow);
     plan->normnum = (out_ihi-out_ilo+1) * (out_jhi-out_jlo+1) *
       (out_khi-out_klo+1);
   }

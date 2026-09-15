@@ -197,8 +197,8 @@ bigint RemoveSurf::remove(int groupbit)
   int nprocs = comm->nprocs;
 
   if (dim == 2) {
-    lines = (Surf::Line *) memory->smalloc(nsurf*nbytes,"remove/surf:lines");
-    if (distributed) memcpy(lines,surf->mylines,nsurf*nbytes);
+    lines = (Surf::Line *) memory->smalloc((bigint) nsurf*nbytes,"remove/surf:lines");
+    if (distributed) memcpy(lines,surf->mylines,(bigint) nsurf*nbytes);
     else {
       int nslocal = surf->nlocal;
       m = 0;
@@ -206,8 +206,8 @@ bigint RemoveSurf::remove(int groupbit)
 	memcpy(&lines[m++],&surf->lines[i],nbytes);
     }
   } else {
-    tris = (Surf::Tri *) memory->smalloc(nsurf*nbytes,"remove/surf:tris");
-    if (distributed) memcpy(tris,surf->mytris,nsurf*nbytes);
+    tris = (Surf::Tri *) memory->smalloc((bigint) nsurf*nbytes,"remove/surf:tris");
+    if (distributed) memcpy(tris,surf->mytris,(bigint) nsurf*nbytes);
     else {
       int nslocal = surf->nlocal;
       m = 0;

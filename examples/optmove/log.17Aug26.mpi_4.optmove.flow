@@ -1,0 +1,121 @@
+SPARTA (24 Sep 2025)
+Running on 4 MPI task(s)
+################################################################################
+# 3d inflow/outflow flow through a box
+#
+# Exercises the outflow face on the fast path.  Particles enter at xlo and
+# leave through the outflow faces; deleting one that ends the timestep
+# outside such a face is done by the optimized move rather than by walking
+# the particle to the face cell by cell.  This is the case an inflow/outflow
+# problem spends its boundary work on.
+#
+# Run the same script with "-var opt no" to compare against the normal move.
+# On a single processor the two agree exactly, step for step.
+#
+# Note:
+#  - The "comm/sort" option to the "global" command is used to match MPI runs.
+#  - The "twopass" option is used to match Kokkos runs.
+################################################################################
+
+variable            opt index yes
+
+seed	    	    12345
+dimension   	    3
+global              gridcut 0.0 comm/sort yes optmove ${opt}
+global              gridcut 0.0 comm/sort yes optmove yes
+
+boundary	    o o p
+
+create_box  	    0 0.001 0 0.001 0 0.001
+Created orthogonal box = (0 0 0) to (0.001 0.001 0.001)
+create_grid 	    10 10 10
+WARNING: Could not acquire nearby ghost cells b/c grid partition is not clumped (../grid.cpp:483)
+Created 1000 child grid cells
+  CPU time = 0.00415372 secs
+  create/ghost percent = 85.5901 14.4099
+balance_grid        rcb part
+Balance grid migrated 740 cells
+  CPU time = 0.00283497 secs
+  reassign/sort/migrate/ghost percent = 44.3391 0.0649038 13.2362 42.3597
+
+species		    ar.species Ar
+mixture		    air Ar vstream 300.0 200.0 0.0 temp 300.0
+
+global		    nrho 1.e20 fnum 1.e7
+
+create_particles    air n 0 twopass
+Created 9999 particles
+  CPU time = 0.00604021 secs
+fix                 in emit/face air xlo ylo twopass
+
+fix                 gcheck grid/check 1 error
+
+stats		    100
+stats_style	    step cpu np nbound nexit
+
+timestep            2.e-7
+run 		    500
+Memory usage per proc in Mbytes:
+  particles (ave,min,max) = 1.5625 1.5625 1.5625
+  grid      (ave,min,max) = 1.51379 1.51379 1.51379
+  surf      (ave,min,max) = 0 0 0
+  modify    (ave,min,max) = 0 0 0
+  total     (ave,min,max) = 3.07629 3.07629 3.07629
+Step CPU Np Nbound Nexit 
+       0            0     9999        0        0 
+     100  0.033001069     9035        0     1098 
+     200  0.054974679     8983        0     1084 
+     300  0.076668421     8991        0     1081 
+     400  0.098451737     9072        0     1051 
+     500   0.12033007     9022        0     1086 
+Loop time of 0.120371 on 4 procs for 500 steps with 9022 particles
+Performance: 4153.827 timesteps/s, 37.476 Mparticle-step/s
+
+MPI task timing breakdown:
+Section |  min time  |  avg time  |  max time  |%varavg| %total
+---------------------------------------------------------------
+Move    | 0.01737    | 0.02548    | 0.030313   |   3.2 | 21.17
+Coll    | 0          | 0          | 0          |   0.0 |  0.00
+Sort    | 0          | 0          | 0          |   0.0 |  0.00
+Comm    | 0.024141   | 0.025931   | 0.027106   |   0.7 | 21.54
+Modify  | 0.005523   | 0.034575   | 0.060836   |  10.8 | 28.72
+Output  | 6.3279e-05 | 0.00011721 | 0.00020337 |   0.0 |  0.10
+MPI Sync| 0.0025724  | 0.03423    | 0.070818   |  13.5 | 28.44
+Other   |            | 3.78e-05   |            |       |  0.03
+
+Particle moves    = 4510634 (4.51M)
+Cells touched (std move) = 47075 (47.1K)
+Particle comms    = 521963 (0.522M)
+Boundary collides = 0 (0K)
+Boundary exits    = 545049 (0.545M)
+SurfColl checks   = 0 (0K)
+SurfColl occurs   = 0 (0K)
+Surf reactions    = 0 (0K)
+Collide attempts  = 0 (0K)
+Collide occurs    = 0 (0K)
+Reactions         = 0 (0K)
+Particles stuck   = 0
+Axisymm bad moves = 0
+
+Particle-moves/CPUsec/proc: 9.3682e+06
+Particle-moves/step: 9021.27
+Cell-touches/particle/step (std move): 0.0104364
+Particle comm iterations/step: 2.524
+Particle fraction communicated: 0.115718
+Particle fraction colliding with boundary: 0
+Particle fraction exiting boundary: 0.120836
+Surface-checks/particle/step: 0
+Surface-collisions/particle/step: 0
+Surf-reactions/particle/step: 0
+Collision-attempts/particle/step: 0
+Collisions/particle/step: 0
+Reactions/particle/step: 0
+
+Particles: 2255.5 ave 2381 max 2067 min
+Histogram: 1 0 0 0 0 0 1 1 0 1
+Cells:      250 ave 250 max 250 min
+Histogram: 4 0 0 0 0 0 0 0 0 0
+GhostCell: 110 ave 110 max 110 min
+Histogram: 4 0 0 0 0 0 0 0 0 0
+EmptyCell: 110 ave 110 max 110 min
+Histogram: 4 0 0 0 0 0 0 0 0 0

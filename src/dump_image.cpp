@@ -31,6 +31,9 @@
 #include "compute.h"
 #include "math_extra.h"
 #include "math_const.h"
+#include "update.h"
+#include "output.h"
+#include "stats.h"
 #include "error.h"
 #include "memory.h"
 
@@ -59,6 +62,12 @@ DumpImage::DumpImage(SPARTA *sparta, int narg, char **arg) :
   DumpParticle(sparta, narg, arg)
 {
   if (binary || multiproc) error->all(FLERR,"Invalid dump image filename");
+
+  // PPM/JPG/PNG content is raw binary written to fp, so the file must be
+  //   opened in binary mode, even though the filename is not *.bin
+  // on Windows a text-mode stream expands \n to \r\n and corrupts the image
+
+  binaryopen = 1;
 
   // set filetype based on filename suffix
 
@@ -109,9 +118,16 @@ DumpImage::DumpImage(SPARTA *sparta, int narg, char **arg) :
   }
 
   boxcolor = image->color2rgb("yellow");
+  subboxcolor = image->color2rgb("yellow");
   surfcolorone = image->color2rgb("gray");
   glinecolor = image->color2rgb("white");
   slinecolor = image->color2rgb("white");
+
+  // all drawn objects are fully opaque by default
+
+  boxtrans = subboxtrans = axestrans = 1.0;
+  gtrans = glinetrans = 1.0;
+  strans = slinetrans = 1.0;
 
   // set defaults for optional args
 
@@ -128,9 +144,10 @@ DumpImage::DumpImage(SPARTA *sparta, int narg, char **arg) :
   cxstr = cystr = czstr = NULL;
   upxstr = upystr = upzstr = NULL;
   zoomstr = NULL;
-  perspstr = NULL;
   boxflag = 1;
   boxdiam = 0.02;
+  subboxflag = 0;
+  subboxdiam = 0.02;
   glineflag = 0;
   slineflag = 0;
   axesflag = 0;
@@ -324,8 +341,13 @@ DumpImage::DumpImage(SPARTA *sparta, int narg, char **arg) :
       int height = atoi(arg[iarg+2]);
       if (width <= 0 || height <= 0)
         error->all(FLERR,"Illegal dump image command");
-      image->width = width;
-      image->height = height;
+      if (image->fsaa) {
+        image->width = width*2;
+        image->height = height*2;
+      } else {
+        image->width = width;
+        image->height = height;
+      }
       iarg += 3;
 
     } else if (strcmp(arg[iarg],"view") == 0) {
@@ -388,7 +410,12 @@ DumpImage::DumpImage(SPARTA *sparta, int narg, char **arg) :
         int n = strlen(&arg[iarg+2][2]) + 1;
         upystr = new char[n];
         strcpy(upystr,&arg[iarg+2][2]);
-      } else image->up[1] = atof(arg[iarg+1]);
+        // arg[iarg+2], not arg[iarg+1]: the y component was read from the x
+        // argument, so "up Ux Uy Uz" rendered as (Ux,Ux,Uz).  It is only
+        // correct when Ux happens to equal Uy -- which "up 0 0 1" does, so
+        // the common cases look right and this stayed hidden.  "up 0 1 0",
+        // restating the default, collapses to (0,0,0).
+      } else image->up[1] = atof(arg[iarg+2]);
       if (strstr(arg[iarg+3],"v_") == arg[iarg+3]) {
         int n = strlen(&arg[iarg+3][2]) + 1;
         upzstr = new char[n];
@@ -409,20 +436,6 @@ DumpImage::DumpImage(SPARTA *sparta, int narg, char **arg) :
       }
       iarg += 2;
 
-    } else if (strcmp(arg[iarg],"persp") == 0) {
-      error->all(FLERR,"Dump image persp option is not yet supported");
-      if (iarg+2 > narg) error->all(FLERR,"Illegal dump image command");
-      if (strstr(arg[iarg+1],"v_") == arg[iarg+1]) {
-        int n = strlen(&arg[iarg+1][2]) + 1;
-        perspstr = new char[n];
-        strcpy(perspstr,&arg[iarg+1][2]);
-      } else {
-        double persp = atof(arg[iarg+1]);
-        if (persp < 0.0) error->all(FLERR,"Illegal dump image command");
-        image->persp = persp;
-      }
-      iarg += 2;
-
     } else if (strcmp(arg[iarg],"box") == 0) {
       if (iarg+3 > narg) error->all(FLERR,"Illegal dump image command");
       if (strcmp(arg[iarg+1],"yes") == 0) boxflag = 1;
@@ -430,6 +443,15 @@ DumpImage::DumpImage(SPARTA *sparta, int narg, char **arg) :
       else error->all(FLERR,"Illegal dump image command");
       boxdiam = atof(arg[iarg+2]);
       if (boxdiam < 0.0) error->all(FLERR,"Illegal dump image command");
+      iarg += 3;
+
+    } else if (strcmp(arg[iarg],"subbox") == 0) {
+      if (iarg+3 > narg) error->all(FLERR,"Illegal dump image command");
+      if (strcmp(arg[iarg+1],"yes") == 0) subboxflag = 1;
+      else if (strcmp(arg[iarg+1],"no") == 0) subboxflag = 0;
+      else error->all(FLERR,"Illegal dump image command");
+      subboxdiam = atof(arg[iarg+2]);
+      if (subboxdiam < 0.0) error->all(FLERR,"Illegal dump image command");
       iarg += 3;
 
     } else if (strcmp(arg[iarg],"gline") == 0) {
@@ -483,6 +505,81 @@ DumpImage::DumpImage(SPARTA *sparta, int narg, char **arg) :
       image->ssaoint = ssaoint;
       iarg += 4;
 
+    } else if (strcmp(arg[iarg],"fsaa") == 0) {
+
+      // with FSAA the image is rendered at twice the requested size,
+      // then scaled back down when it is written
+
+      if (iarg+2 > narg) error->all(FLERR,"Illegal dump image command");
+      int aa;
+      if (strcmp(arg[iarg+1],"yes") == 0) aa = 1;
+      else if (strcmp(arg[iarg+1],"no") == 0) aa = 0;
+      else error->all(FLERR,"Illegal dump image command");
+      if (aa && !image->fsaa) {
+        image->width = image->width*2;
+        image->height = image->height*2;
+      } else if (!aa && image->fsaa) {
+        image->width = image->width/2;
+        image->height = image->height/2;
+      }
+      image->fsaa = aa;
+      iarg += 2;
+
+    } else if (strcmp(arg[iarg],"depthcue") == 0) {
+      if (iarg+5 > narg) error->all(FLERR,"Illegal dump image command");
+      if (strcmp(arg[iarg+1],"yes") == 0) image->depthcue = 1;
+      else if (strcmp(arg[iarg+1],"no") == 0) image->depthcue = 0;
+      else error->all(FLERR,"Illegal dump image command");
+      double cfactor = atof(arg[iarg+2]);
+      if (cfactor < 0.0 || cfactor > 1.0)
+        error->all(FLERR,"Illegal dump image command");
+      image->depthcueint = cfactor;
+      if (strcmp(arg[iarg+3],"auto") == 0) {
+        image->depthcuecolor = NULL;
+      } else {
+        image->depthcuecolor = image->color2rgb(arg[iarg+3]);
+        if (image->depthcuecolor == NULL)
+          error->all(FLERR,"Invalid color in dump image command");
+      }
+      if (strcmp(arg[iarg+4],"auto") == 0) {
+        image->depthcuestartflag = 0;
+      } else {
+        image->depthcuestart = atof(arg[iarg+4]);
+        image->depthcuestartflag = 1;
+      }
+      iarg += 5;
+
+    } else if (strcmp(arg[iarg],"defocus") == 0) {
+      if (iarg+4 > narg) error->all(FLERR,"Illegal dump image command");
+      if (strcmp(arg[iarg+1],"yes") == 0) image->defocus = 1;
+      else if (strcmp(arg[iarg+1],"no") == 0) image->defocus = 0;
+      else error->all(FLERR,"Illegal dump image command");
+      double bfactor = atof(arg[iarg+2]);
+      if (bfactor < 0.0 || bfactor > 1.0)
+        error->all(FLERR,"Illegal dump image command");
+      image->defocusint = bfactor;
+      if (strcmp(arg[iarg+3],"auto") == 0) {
+        image->defocusstartflag = 0;
+      } else {
+        image->defocusstart = atof(arg[iarg+3]);
+        image->defocusstartflag = 1;
+      }
+      iarg += 4;
+
+    } else if (strcmp(arg[iarg],"outline") == 0) {
+      if (iarg+4 > narg) error->all(FLERR,"Illegal dump image command");
+      if (strcmp(arg[iarg+1],"yes") == 0) image->outline = 1;
+      else if (strcmp(arg[iarg+1],"no") == 0) image->outline = 0;
+      else error->all(FLERR,"Illegal dump image command");
+      int owidth = atoi(arg[iarg+2]);
+      if (owidth < 1 || owidth > 16)
+        error->all(FLERR,"Illegal dump image command");
+      image->outlinewidth = owidth;
+      image->outlinecolor = image->color2rgb(arg[iarg+3]);
+      if (image->outlinecolor == NULL)
+        error->all(FLERR,"Invalid color in dump image command");
+      iarg += 4;
+
     } else error->all(FLERR,"Illegal dump image command");
   }
 
@@ -500,9 +597,16 @@ DumpImage::DumpImage(SPARTA *sparta, int narg, char **arg) :
   int ntypes = particle->nspecies;
   pcolortype = new double*[ntypes+1];
   pdiamtype = new double[ntypes+1];
+  ptranstype = new double[ntypes+1];
+
+  // index 0 is the fallback used by create_image() when the species of a
+  // particle is not available in the dump buffer, see the ptrans keyword
+
+  ptranstype[0] = 1.0;
 
   for (int i = 1; i <= ntypes; i++) {
     pdiamtype[i] = 1.0;
+    ptranstype[i] = 1.0;
     if (i % 6 == 1) pcolortype[i] = image->color2rgb("red");
     else if (i % 6 == 2) pcolortype[i] = image->color2rgb("green");
     else if (i % 6 == 3) pcolortype[i] = image->color2rgb("blue");
@@ -536,7 +640,7 @@ DumpImage::DumpImage(SPARTA *sparta, int narg, char **arg) :
 
   viewflag = STATIC;
   if (thetastr || phistr || cflag == DYNAMIC ||
-      upxstr || upystr || upzstr || zoomstr || perspstr) viewflag = DYNAMIC;
+      upxstr || upystr || upzstr || zoomstr) viewflag = DYNAMIC;
 
   if (cflag == STATIC) box_center();
   if (viewflag == STATIC) view_params();
@@ -556,6 +660,7 @@ DumpImage::~DumpImage()
 
   delete [] pcolortype;
   delete [] pdiamtype;
+  delete [] ptranstype;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -631,13 +736,6 @@ void DumpImage::init_style()
       error->all(FLERR,"Variable name for dump image zoom does not exist");
     if (!input->variable->equal_style(zoomvar))
       error->all(FLERR,"Variable for dump image zoom is invalid style");
-  }
-  if (perspstr) {
-    perspvar = input->variable->find(perspstr);
-    if (perspvar < 0)
-      error->all(FLERR,"Variable name for dump image persp does not exist");
-    if (!input->variable->equal_style(perspvar))
-      error->all(FLERR,"Variable for dump image persp is invalid style");
   }
 
   // setup grid/surf references to computes, fixes, variables
@@ -1058,6 +1156,17 @@ void DumpImage::write()
       fp = NULL;
     }
   }
+
+  // record completed image filename, e.g. for a GUI to display.
+  //
+  // Only when there is one.  DumpMovie inherits this write() but overrides
+  // openfile() to open an ffmpeg pipe, and that override never reaches the
+  // assignment in Dump::openfile() that sets filelast -- so a movie reports
+  // NULL here, which clears the name a "dump image" in the same deck had just
+  // recorded.  A movie has no per-frame file to name, so it should leave the
+  // record alone rather than blank it.
+
+  if (filelast) output->stats->set_last_image(filelast);
 }
 
 /* ----------------------------------------------------------------------
@@ -1123,12 +1232,10 @@ void DumpImage::view_params()
   if (upystr) image->up[1] = input->variable->compute_equal(upyvar);
   if (upzstr) image->up[2] = input->variable->compute_equal(upzvar);
 
-  // zoom and perspective
+  // zoom
 
   if (zoomstr) image->zoom = input->variable->compute_equal(zoomvar);
   if (image->zoom <= 0.0) error->all(FLERR,"Invalid dump image zoom value");
-  if (perspstr) image->persp = input->variable->compute_equal(perspvar);
-  if (image->persp < 0.0) error->all(FLERR,"Invalid dump image persp value");
 
   // current simulation box bounds
 
@@ -1161,6 +1268,11 @@ void DumpImage::create_image()
     for (i = 0; i < nchoose; i++) {
       j = clist[i];
 
+      // the species of a particle is only in the dump buffer when the color
+      // or diameter setting is TYPE; index 0 is the fallback otherwise
+
+      itype = 0;
+
       if (pcolor == TYPE) {
         itype = ubuf(buf[m]).i;
         color = pcolortype[itype];
@@ -1179,7 +1291,7 @@ void DumpImage::create_image()
         diameter = buf[m+1];
       }
 
-      image->draw_sphere(particles[j].x,color,diameter);
+      image->draw_sphere(particles[j].x,color,diameter,ptranstype[itype]);
       m += size_one;
     }
   }
@@ -1252,7 +1364,7 @@ void DumpImage::create_image()
 
       if (region && !region->match(x)) continue;
 
-      image->draw_brick(x,color,diam);
+      image->draw_brick(x,color,diam,gtrans);
     }
   }
 
@@ -1359,7 +1471,7 @@ void DumpImage::create_image()
           x[0] = gridxcoord;
           x[1] = 0.5*(lo[1]+hi[1]);
           x[2] = 0.5*(lo[2]+hi[2]);
-          if (!region || region->match(x)) image->draw_brick(x,color,diam);
+          if (!region || region->match(x)) image->draw_brick(x,color,diam,gtrans);
         }
       }
 
@@ -1383,7 +1495,7 @@ void DumpImage::create_image()
           x[0] = 0.5*(lo[0]+hi[0]);
           x[1] = gridycoord;
           x[2] = 0.5*(lo[2]+hi[2]);
-          if (!region || region->match(x)) image->draw_brick(x,color,diam);
+          if (!region || region->match(x)) image->draw_brick(x,color,diam,gtrans);
         }
       }
 
@@ -1407,7 +1519,7 @@ void DumpImage::create_image()
           x[0] = 0.5*(lo[0]+hi[0]);
           x[1] = 0.5*(lo[1]+hi[1]);
           x[2] = gridzcoord;
-          if (!region || region->match(x)) image->draw_brick(x,color,diam);
+          if (!region || region->match(x)) image->draw_brick(x,color,diam,gtrans);
         }
       }
     }
@@ -1452,7 +1564,7 @@ void DumpImage::create_image()
             box[1][0] = gridxcoord; box[1][1] = hi[1]; box[1][2] = lo[2];
             box[2][0] = gridxcoord; box[2][1] = lo[1]; box[2][2] = hi[2];
             box[3][0] = gridxcoord; box[3][1] = hi[1]; box[3][2] = hi[2];
-            image->draw_box2d(box,glinecolor,diameter);
+            image->draw_box2d(box,glinecolor,diameter,glinetrans);
           }
         }
       }
@@ -1466,7 +1578,7 @@ void DumpImage::create_image()
             box[1][0] = hi[0]; box[1][1] = gridycoord; box[1][2] = lo[2];
             box[2][0] = lo[0]; box[2][1] = gridycoord; box[2][2] = hi[2];
             box[3][0] = hi[0]; box[3][1] = gridycoord; box[3][2] = hi[2];
-            image->draw_box2d(box,glinecolor,diameter);
+            image->draw_box2d(box,glinecolor,diameter,glinetrans);
           }
         }
       }
@@ -1480,7 +1592,7 @@ void DumpImage::create_image()
             box[1][0] = hi[0]; box[1][1] = lo[1]; box[1][2] = gridzcoord;
             box[2][0] = lo[0]; box[2][1] = hi[1]; box[2][2] = gridzcoord;
             box[3][0] = hi[0]; box[3][1] = hi[1]; box[3][2] = gridzcoord;
-            image->draw_box2d(box,glinecolor,diameter);
+            image->draw_box2d(box,glinecolor,diameter,glinetrans);
           }
         }
       }
@@ -1529,7 +1641,7 @@ void DumpImage::create_image()
       box[6][0] = lo[0]; box[6][1] = hi[1]; box[6][2] = hi[2];
       box[7][0] = hi[0]; box[7][1] = hi[1]; box[7][2] = hi[2];
 
-      image->draw_box(box,glinecolor,diameter);
+      image->draw_box(box,glinecolor,diameter,glinetrans);
     }
   }
 
@@ -1602,11 +1714,11 @@ void DumpImage::create_image()
       else m = isurf;
 
       if (dim == 2) {
-        if (!(lines[isurf].mask & surf_groupbit)) continue;
-        image->draw_line(lines[m].p1,lines[m].p2,color,diameter);
+        if (!(lines[m].mask & surf_groupbit)) continue;
+        image->draw_line(lines[m].p1,lines[m].p2,color,diameter,strans);
       } else {
-        if (!(tris[isurf].mask & surf_groupbit)) continue;
-        image->draw_triangle(tris[m].p1,tris[m].p2,tris[m].p3,color);
+        if (!(tris[m].mask & surf_groupbit)) continue;
+        image->draw_triangle(tris[m].p1,tris[m].p2,tris[m].p3,color,strans);
       }
     }
   }
@@ -1649,16 +1761,16 @@ void DumpImage::create_image()
         if (strided) m = me + isurf*nprocs;
         else m = isurf;
         if (!(lines[m].mask & surf_groupbit)) continue;
-        image->draw_line(lines[m].p1,lines[m].p2,slinecolor,diameter);
+        image->draw_line(lines[m].p1,lines[m].p2,slinecolor,diameter,slinetrans);
       }
     } else {
       for (int isurf = 0; isurf < nsurf; isurf++) {
         if (strided) m = me + isurf*nprocs;
         else m = isurf;
         if (!(tris[m].mask & surf_groupbit)) continue;
-        image->draw_line(tris[m].p1,tris[m].p2,slinecolor,diameter);
-        image->draw_line(tris[m].p2,tris[m].p3,slinecolor,diameter);
-        image->draw_line(tris[m].p3,tris[m].p1,slinecolor,diameter);
+        image->draw_line(tris[m].p1,tris[m].p2,slinecolor,diameter,slinetrans);
+        image->draw_line(tris[m].p2,tris[m].p3,slinecolor,diameter,slinetrans);
+        image->draw_line(tris[m].p3,tris[m].p1,slinecolor,diameter,slinetrans);
       }
     }
   }
@@ -1680,7 +1792,7 @@ void DumpImage::create_image()
     box[6][0] = boxxlo; box[6][1] = boxyhi; box[6][2] = boxzhi;
     box[7][0] = boxxhi; box[7][1] = boxyhi; box[7][2] = boxzhi;
 
-    image->draw_box(box,boxcolor,diameter);
+    image->draw_box(box,boxcolor,diameter,boxtrans);
   }
 
   // render XYZ axes in red/green/blue
@@ -1715,30 +1827,41 @@ void DumpImage::create_image()
     axes[3][1] = axes[0][1] + axeslen*(axes[3][1]-axes[0][1]);
     axes[3][2] = axes[0][2] + axeslen*(axes[3][2]-axes[0][2]);
 
-    image->draw_axes(axes,diameter);
+    image->draw_axes(axes,diameter,axestrans);
   }
 
-  // DEBUG - render each proc's RCB box
-  // need to add logic for 3d to this
+  // render each proc's RCB sub-box
+  // only possible if an RCB balance has assigned a sub-box to each proc,
+  // e.g. via balance_grid rcb or fix balance rcb
 
-#ifdef RCB_DEBUG
+  if (subboxflag && update->rcbflag) {
+    diameter = MIN(boxxhi-boxxlo,boxyhi-boxylo);
+    if (domain->dimension == 3) diameter = MIN(diameter,boxzhi-boxzlo);
+    diameter *= subboxdiam;
 
-  diameter = MIN(boxxhi-boxxlo,boxyhi-boxylo);
-  if (domain->dimension == 3) diameter = MIN(diameter,boxzhi-boxzlo);
-  diameter *= 0.5*boxdiam;
+    double *rcblo = update->rcblo;
+    double *rcbhi = update->rcbhi;
 
-  double *rcblo = update->rcblo;
-  double *rcbhi = update->rcbhi;
-
-  double box[4][3];
-  box[0][0] = rcblo[0]; box[0][1] = rcblo[1]; box[0][2] = boxzhi;
-  box[1][0] = rcbhi[0]; box[1][1] = rcblo[1]; box[1][2] = boxzhi;
-  box[2][0] = rcblo[0]; box[2][1] = rcbhi[1]; box[2][2] = boxzhi;
-  box[3][0] = rcbhi[0]; box[3][1] = rcbhi[1]; box[3][2] = boxzhi;
-  image->draw_box2d(box,boxcolor,diameter);
-
-#endif
-
+    if (domain->dimension == 2) {
+      double box[4][3];
+      box[0][0] = rcblo[0]; box[0][1] = rcblo[1]; box[0][2] = boxzhi;
+      box[1][0] = rcbhi[0]; box[1][1] = rcblo[1]; box[1][2] = boxzhi;
+      box[2][0] = rcblo[0]; box[2][1] = rcbhi[1]; box[2][2] = boxzhi;
+      box[3][0] = rcbhi[0]; box[3][1] = rcbhi[1]; box[3][2] = boxzhi;
+      image->draw_box2d(box,subboxcolor,diameter,subboxtrans);
+    } else {
+      double box[8][3];
+      box[0][0] = rcblo[0]; box[0][1] = rcblo[1]; box[0][2] = rcblo[2];
+      box[1][0] = rcbhi[0]; box[1][1] = rcblo[1]; box[1][2] = rcblo[2];
+      box[2][0] = rcblo[0]; box[2][1] = rcbhi[1]; box[2][2] = rcblo[2];
+      box[3][0] = rcbhi[0]; box[3][1] = rcbhi[1]; box[3][2] = rcblo[2];
+      box[4][0] = rcblo[0]; box[4][1] = rcblo[1]; box[4][2] = rcbhi[2];
+      box[5][0] = rcbhi[0]; box[5][1] = rcblo[1]; box[5][2] = rcbhi[2];
+      box[6][0] = rcblo[0]; box[6][1] = rcbhi[1]; box[6][2] = rcbhi[2];
+      box[7][0] = rcbhi[0]; box[7][1] = rcbhi[1]; box[7][2] = rcbhi[2];
+      image->draw_box(box,subboxcolor,diameter,subboxtrans);
+    }
+  }
 }
 
 /* ---------------------------------------------------------------------- */
@@ -1758,11 +1881,147 @@ int DumpImage::modify_param(int narg, char **arg)
     return 2;
   }
 
+  if (strcmp(arg[0],"backcolor2") == 0) {
+
+    // second background color for a vertical gradient
+    // "none" turns the gradient off
+
+    if (narg < 2) error->all(FLERR,"Illegal dump_modify command");
+    if (strcmp(arg[1],"none") == 0) {
+      image->background2[0] = image->background2[1] =
+        image->background2[2] = -1;
+      return 2;
+    }
+    double *color = image->color2rgb(arg[1]);
+    if (color == NULL) error->all(FLERR,"Invalid color in dump_modify command");
+    image->background2[0] = static_cast<int> (color[0]*255.0);
+    image->background2[1] = static_cast<int> (color[1]*255.0);
+    image->background2[2] = static_cast<int> (color[2]*255.0);
+    return 2;
+  }
+
   if (strcmp(arg[0],"boxcolor") == 0) {
     if (narg < 2) error->all(FLERR,"Illegal dump_modify command");
     boxcolor = image->color2rgb(arg[1]);
     if (boxcolor == NULL)
       error->all(FLERR,"Invalid color in dump_modify command");
+    return 2;
+  }
+
+  if (strcmp(arg[0],"axestrans") == 0) {
+    if (narg < 2) error->all(FLERR,"Illegal dump_modify command");
+    axestrans = atof(arg[1]);
+    if (axestrans < 0.0 || axestrans > 1.0)
+      error->all(FLERR,"Illegal dump_modify command");
+    return 2;
+  }
+
+  if (strcmp(arg[0],"boxtrans") == 0) {
+    if (narg < 2) error->all(FLERR,"Illegal dump_modify command");
+    boxtrans = atof(arg[1]);
+    if (boxtrans < 0.0 || boxtrans > 1.0)
+      error->all(FLERR,"Illegal dump_modify command");
+    return 2;
+  }
+
+  if (strcmp(arg[0],"subboxcolor") == 0) {
+    if (narg < 2) error->all(FLERR,"Illegal dump_modify command");
+    subboxcolor = image->color2rgb(arg[1]);
+    if (subboxcolor == NULL)
+      error->all(FLERR,"Invalid color in dump_modify command");
+    return 2;
+  }
+
+  if (strcmp(arg[0],"subboxtrans") == 0) {
+    if (narg < 2) error->all(FLERR,"Illegal dump_modify command");
+    subboxtrans = atof(arg[1]);
+    if (subboxtrans < 0.0 || subboxtrans > 1.0)
+      error->all(FLERR,"Illegal dump_modify command");
+    return 2;
+  }
+
+  if (strcmp(arg[0],"lights") == 0) {
+
+    // grayscale intensities of the ambient, key, fill, and back lights
+
+    if (narg < 5) error->all(FLERR,"Illegal dump_modify command");
+    double ambient = atof(arg[1]);
+    double key = atof(arg[2]);
+    double fill = atof(arg[3]);
+    double back = atof(arg[4]);
+    if (ambient < 0.0 || ambient > 1.0 || key < 0.0 || key > 1.0 ||
+        fill < 0.0 || fill > 1.0 || back < 0.0 || back > 1.0)
+      error->all(FLERR,"Illegal dump_modify command");
+    image->ambientColor[0] = image->ambientColor[1] =
+      image->ambientColor[2] = ambient;
+    image->keyLightColor[0] = image->keyLightColor[1] =
+      image->keyLightColor[2] = key;
+    image->fillLightColor[0] = image->fillLightColor[1] =
+      image->fillLightColor[2] = fill;
+    image->backLightColor[0] = image->backLightColor[1] =
+      image->backLightColor[2] = back;
+    return 5;
+  }
+
+  if (strcmp(arg[0],"gamma") == 0) {
+    if (narg < 2) error->all(FLERR,"Illegal dump_modify command");
+    double gvalue = atof(arg[1]);
+    if (gvalue < 0.1 || gvalue > 10.0)
+      error->all(FLERR,"Illegal dump_modify command");
+    image->gamma = gvalue;
+    return 2;
+  }
+
+  if (strcmp(arg[0],"ssaosamples") == 0) {
+    if (narg < 2) error->all(FLERR,"Illegal dump_modify command");
+    int nsamples = atoi(arg[1]);
+    if (nsamples < 4 || nsamples > 64)
+      error->all(FLERR,"Illegal dump_modify command");
+    image->ssaosamples = nsamples;
+    return 2;
+  }
+
+  if (strcmp(arg[0],"specular") == 0) {
+    if (narg < 2) error->all(FLERR,"Illegal dump_modify command");
+    if (strcmp(arg[1],"none") == 0) {
+      image->nospecular = 1;
+      image->specularIntensity = 0.0;
+      return 2;
+    }
+    if (strcmp(arg[1],"wide") == 0) image->specularHardness = 10.0;
+    else if (strcmp(arg[1],"narrow") == 0) image->specularHardness = 50.0;
+    else if (strcmp(arg[1],"tight") == 0) image->specularHardness = 250.0;
+    else error->all(FLERR,"Illegal dump_modify command");
+    image->specularflag = 1;
+    image->nospecular = 0;
+    image->specularIntensity = image->shiny;
+    return 2;
+  }
+
+  if (strcmp(arg[0],"metal") == 0) {
+    if (narg < 2) error->all(FLERR,"Illegal dump_modify command");
+    double mvalue = atof(arg[1]);
+    if (mvalue < 0.0 || mvalue > 1.0)
+      error->all(FLERR,"Illegal dump_modify command");
+    image->metallic = mvalue;
+    return 2;
+  }
+
+  if (strcmp(arg[0],"metalfinish") == 0) {
+    if (narg < 2) error->all(FLERR,"Illegal dump_modify command");
+    if (strcmp(arg[1],"satin") == 0) {
+      image->finishMirror = 0;
+      image->finishBand = 0.6;
+      image->finishWidth = 2.0;
+    } else if (strcmp(arg[1],"polished") == 0) {
+      image->finishMirror = 0;
+      image->finishBand = 0.6;
+      image->finishWidth = 4.0;
+    } else if (strcmp(arg[1],"mirror") == 0) {
+      image->finishMirror = 1;
+      image->finishBand = 0.4;
+      image->finishWidth = 3.0;
+    } else error->all(FLERR,"Illegal dump_modify command");
     return 2;
   }
 
@@ -1777,8 +2036,11 @@ int DumpImage::modify_param(int narg, char **arg)
     else if (strcmp(arg[1],"gridz") == 0) which = ZPLANE;
     else error->all(FLERR,"Illegal dump_modify command");
     if (strlen(arg[4]) != 2) error->all(FLERR,"Illegal dump_modify command");
-    int factor = 2;
+    int factor;
     if (arg[4][0] == 's') factor = 1;
+    else if (arg[4][0] == 'c') factor = 2;
+    else if (arg[4][0] == 'd') factor = 3;
+    else error->all(FLERR,"Illegal dump_modify command");
     int nentry = atoi(arg[6]);
     if (nentry < 1) error->all(FLERR,"Illegal dump_modify command");
     int n = 7 + factor*nentry;
@@ -1839,6 +2101,22 @@ int DumpImage::modify_param(int narg, char **arg)
     glinecolor = image->color2rgb(arg[1]);
     if (glinecolor == NULL)
       error->all(FLERR,"Invalid color in dump_modify command");
+    return 2;
+  }
+
+  if (strcmp(arg[0],"glinetrans") == 0) {
+    if (narg < 2) error->all(FLERR,"Illegal dump_modify command");
+    glinetrans = atof(arg[1]);
+    if (glinetrans < 0.0 || glinetrans > 1.0)
+      error->all(FLERR,"Illegal dump_modify command");
+    return 2;
+  }
+
+  if (strcmp(arg[0],"gtrans") == 0) {
+    if (narg < 2) error->all(FLERR,"Illegal dump_modify command");
+    gtrans = atof(arg[1]);
+    if (gtrans < 0.0 || gtrans > 1.0)
+      error->all(FLERR,"Illegal dump_modify command");
     return 2;
   }
 
@@ -1911,6 +2189,23 @@ int DumpImage::modify_param(int narg, char **arg)
     return 3;
   }
 
+  if (strcmp(arg[0],"ptrans") == 0) {
+    if (narg < 3) error->all(FLERR,"Illegal dump_modify command");
+    int err,nlo,nhi;
+    err = MathExtra::bounds(arg[1],particle->nspecies,nlo,nhi);
+    if (err) error->all(FLERR,"Illegal dump_modify command");
+    double opacity = atof(arg[2]);
+    if (opacity < 0.0 || opacity > 1.0)
+      error->all(FLERR,"Illegal dump_modify command");
+    for (int i = nlo; i <= nhi; i++) ptranstype[i] = opacity;
+
+    // a full-range setting also sets the fallback used by create_image()
+    // when the particle species is not available in the dump buffer
+
+    if (nlo == 1 && nhi == particle->nspecies) ptranstype[0] = opacity;
+    return 3;
+  }
+
   if (strcmp(arg[0],"scolor") == 0) {
     if (narg < 3) error->all(FLERR,"Illegal dump_modify command");
     int err,nlo,nhi;
@@ -1961,6 +2256,22 @@ int DumpImage::modify_param(int narg, char **arg)
     slinecolor = image->color2rgb(arg[1]);
     if (slinecolor == NULL)
       error->all(FLERR,"Invalid color in dump_modify command");
+    return 2;
+  }
+
+  if (strcmp(arg[0],"slinetrans") == 0) {
+    if (narg < 2) error->all(FLERR,"Illegal dump_modify command");
+    slinetrans = atof(arg[1]);
+    if (slinetrans < 0.0 || slinetrans > 1.0)
+      error->all(FLERR,"Illegal dump_modify command");
+    return 2;
+  }
+
+  if (strcmp(arg[0],"strans") == 0) {
+    if (narg < 2) error->all(FLERR,"Illegal dump_modify command");
+    strans = atof(arg[1]);
+    if (strans < 0.0 || strans > 1.0)
+      error->all(FLERR,"Illegal dump_modify command");
     return 2;
   }
 

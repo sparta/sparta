@@ -68,6 +68,12 @@ namespace SPARTA_NS {
     t_cinfo_1d d_cinfo;
     DAT::t_int_1d d_cellcount;
 
+    // copy the first N cells of a source per-grid vector into a destination
+    // the two views need not have equal extents, so they cannot be
+    //   deep_copied whole
+
+    void copy_source(DAT::t_float_1d, DAT::t_float_1d, int);
+
     DAT::t_float_1d d_tau_vector;
     DAT::t_float_1d d_temp_vector;
     DAT::t_float_1d d_usq_vector;

@@ -72,7 +72,7 @@ job on your machine, please find a local expert to help you.
 
 SPARTA requires that the compiler supports C++11. SPARTA will throw an error
 if this is not the case. If you are building SPARTA with Kokkos, the compiler
-must support C++17.
+must support C++20.
 
 If you have a build problem that you are convinced is a SPARTA issue
 (e.g. the compiler complains about a line of SPARTA source code), then
@@ -81,7 +81,8 @@ please send an email to the
 
 If you succeed in building SPARTA on a new kind of machine, for which
 there isn't a similar Makefile in the src/MAKE directory or .cmake file
-in cmake/presets, send it to the 
+in cmake/presets (for KOKKOS builds, a .cmake file in cmake/presets),
+send it to the 
 "developers"_https://sparta.github.io/authors.html and we'll include it in future SPARTA releases.
 
 :line
@@ -112,6 +113,9 @@ Note that by default none of the SPARTA optional packages are
 installed.  To build SPARTA with optional packages, see "this
 section"_#start_3 below.
 
+IMPORTANT NOTE: The optional KOKKOS accelerator package does not
+support Makefiles and must be built using CMake instead (see below).
+
 [Step 1]
 
 If Step 0 did not work, you will need to create a low-level Makefile
@@ -137,7 +141,7 @@ compiler it wraps.  Vendor compilers often produce faster code.  On
 boxes with Intel CPUs, we suggest using the commercial Intel icc
 compiler, which can be downloaded from "Intel's compiler site"_intel.
 
-:link(intel,http://www.intel.com/software/products/noncom)
+:link(intel,https://www.intel.com/content/www/us/en/developer/tools/oneapi/toolkits.html)
 
 If building a C++ code on your machine requires additional libraries,
 then you should list them as part of the LIB variable.
@@ -207,7 +211,7 @@ have a regular grid with more than ~2 billion grid cells or a
 hierarchical grid with enough levels that grid cell IDs cannot fit in
 a 32-bit integer.  In either case, SPARTA will generate an error
 message for "Cell ID has too many bits".  See "Section
-4.8"_Section_howto.html#howto_8 of the manual for details on how cell
+6.8"_Section_howto.html#howto_8 of the manual for details on how cell
 IDs are formatted.  The only reason to use the SMALL setting is if
 your machine does not support 64-bit integers.
 
@@ -252,7 +256,7 @@ Makefile.serial for an example of how this can be done.
 If you are installing MPI yourself, we recommend MPICH 1.2 or 2.0 or
 OpenMPI.  MPICH can be downloaded from the "Argonne MPI
 site"_https://www.mpich.org.  OpenMPI can be downloaded from the
-"OpenMPI site"_http://www.open-mpi.org.  If you are running on a big
+"OpenMPI site"_https://www.open-mpi.org.  If you are running on a big
 parallel platform, your system admins or the vendor should have
 already installed a version of MPI, which will be faster than MPICH or
 OpenMPI, so find out how to build and link with it.  If you use MPICH
@@ -285,7 +289,7 @@ contains commands that invoke FFTs.
 
 SPARTA supports various open-source or vendor-supplied FFT libraries
 for this purpose.  If you leave these 3 variables blank, SPARTA will
-use the open-source "KISS FFT library"_http://kissfft.sf.net, which is
+use the open-source "KISS FFT library"_https://github.com/mborgerding/kissfft, which is
 included in the SPARTA distribution.  This library is portable to all
 platforms and for typical SPARTA simulations is almost as fast as FFTW
 or vendor optimized libraries.  If you are not including the FFT
@@ -299,7 +303,7 @@ Selecting -DFFT_FFTW will use the FFTW3 library.
 
 Similarly a separate FFT library can be specified for KOKKOS package.
 By default, SPARTA will use a Kokkos version of the open-source "KISS
-FFT library"_http://kissfft.sf.net, which is included in the SPARTA
+FFT library"_https://github.com/mborgerding/kissfft, which is included in the SPARTA
 distribution. Note that using the KISS FFT library on GPUs may give
 suboptimal performance. Other options can be specified using the form
 -DFFT_KOKKOS_XXX. Available values for XXX when using Kokkos are:
@@ -329,7 +333,7 @@ trouble finding.
 
 FFTW is a fast, portable library that should also work on any
 platform.  You can download it from
-"www.fftw.org"_http://www.fftw.org. The 3.X versions are supported
+"www.fftw.org"_https://www.fftw.org. The 3.X versions are supported
 as -DFFT_FFTW3.
 Building FFTW for your box should be as simple as ./configure; make.
 
@@ -468,8 +472,8 @@ If your cmake command line is getting too long, consider placing it in a bash
 script and escaping newlines. For example:
 
 cmake \
--C  /path/to/sparta/cmake/presets/NAME.cmake \
--D  -D<OPTION_NAME>=<VALUE> \
+-C /path/to/sparta/cmake/presets/NAME.cmake \
+-D<OPTION_NAME>=<VALUE> \
 /path/to/sparta/cmake :pre
 
 [Step 4]
@@ -527,7 +531,7 @@ have a regular grid with more than ~2 billion grid cells or a
 hierarchical grid with enough levels that grid cell IDs cannot fit in
 a 32-bit integer.  In either case, SPARTA will generate an error
 message for "Cell ID has too many bits".  See "Section
-4.8"_Section_howto.html#howto_8 of the manual for details on how cell
+6.8"_Section_howto.html#howto_8 of the manual for details on how cell
 IDs are formatted.  The only reason to use the SMALL setting is if
 your machine does not support 64-bit integers.
 
@@ -566,7 +570,7 @@ cmake -C /path/to/sparta/cmake/presets/NEW.cmake /path/to/sparta/cmake
 make :pre
 
 consider sharing and vetting NEW.cmake by opening a pull request at
-https://github.com/sparta/sparta/.
+https://github.com/sparta/sparta.
 
 [Step 6]
 
@@ -621,7 +625,7 @@ between 3 thiry party libraries (TPLs) for 1d FFTs, which SPARTA uses when
 configured with cmake -DFFT={FFTW3,MKL,KISS}.
 
 By default SPARTA will use the open-source "KISS FFT
-library"_http://kissfft.sf.net, which is included in the SPARTA distribution.
+library"_https://github.com/mborgerding/kissfft, which is included in the SPARTA distribution.
 This library is portable to all platforms and for typical SPARTA simulations is
 almost as fast as FFTW or vendor optimized libraries.
 
@@ -631,7 +635,7 @@ which SPARTA uses when configured with cmake
 FFT package which can be selected with cmake -DPKG_FFT=ON.
 
 By default, SPARTA will use a Kokkos version of the open-source "KISS FFT
-library"_http://kissfft.sf.net, which is included in the SPARTA distribution.
+library"_https://github.com/mborgerding/kissfft, which is included in the SPARTA distribution.
 Note that using the KISS FFT library on GPUs may give suboptimal performance.
 Other options for -DFFT_KOKKOS are CUFFT, HIPFFT, MKL or FFTW3. When using the
 Kokkos CUDA backend, either CUFFT or KISS must be used. When using the Kokkos
@@ -721,6 +725,83 @@ depending on how many cores your compilation machine has. N is the number of
 cores the build runs on.
 
 You should get build/src/spa_tutorial and build/src/libsparta.a.
+
+[Building with the KOKKOS package:]
+
+The KOKKOS package must be built with CMake (GNU Makefile builds are not
+supported for KOKKOS). The presets in cmake/presets/ set up all required
+Kokkos options for each supported backend and target platform. Choose the
+preset that matches your hardware:
+
+kokkos_omp.cmake      - Multi-core CPUs via OpenMP threading
+kokkos_mpi_only.cmake - Multi-core CPUs, MPI only (no threading)
+kokkos_cuda.cmake     - NVIDIA GPUs via CUDA (default: Hopper/H100)
+kokkos_hip.cmake      - AMD GPUs via HIP (default: MI250X)
+elcapitan_kokkos.cmake - AMD MI300A APU via HIP (Cray MPICH)
+kokkos_sycl.cmake     - Intel Ponte Vecchio GPUs via SYCL :ul
+
+Example: build for multi-core CPUs with OpenMP threading:
+
+mkdir build
+cd build
+cmake -C /path/to/sparta/cmake/presets/kokkos_omp.cmake /path/to/sparta/cmake
+make -j 4 :pre
+
+The executable will be named spa_kokkos_omp (the suffix comes from the preset).
+
+Example: build for NVIDIA A100 GPUs (override the default Hopper arch):
+
+mkdir build
+cd build
+cmake -C /path/to/sparta/cmake/presets/kokkos_cuda.cmake \
+      -DKokkos_ARCH_HOPPER90=OFF -DKokkos_ARCH_AMPERE80=ON \
+      /path/to/sparta/cmake
+make -j 4 :pre
+
+Example: build for NVIDIA V100 GPUs:
+
+mkdir build
+cd build
+cmake -C /path/to/sparta/cmake/presets/kokkos_cuda.cmake \
+      -DKokkos_ARCH_HOPPER90=OFF -DKokkos_ARCH_VOLTA70=ON \
+      /path/to/sparta/cmake
+make -j 4 :pre
+
+Example: build for AMD MI300X GPUs:
+
+mkdir build
+cd build
+cmake -C /path/to/sparta/cmake/presets/kokkos_hip.cmake \
+      -DKokkos_ARCH_VEGA90A=OFF -DKokkos_ARCH_AMD_GFX942=ON \
+      /path/to/sparta/cmake
+make -j 4 :pre
+
+After building, run SPARTA with the KOKKOS package using the -k, -sf,
+and -pk command-line switches. The -k on g Ng switch specifies Ng GPUs
+per node. Examples (assuming a node with 4 GPUs):
+
+For CUDA (NVIDIA) or HIP (AMD) GPUs, 4 MPI tasks using 4 GPUs:
+
+mpirun -np 4 spa_kokkos_cuda -k on g 4 -sf kk -in in.collide :pre
+
+For OpenMP on 16-core CPUs, 2 MPI tasks each using 8 threads:
+
+mpirun -np 2 spa_kokkos_omp -k on t 8 -sf kk -in in.collide :pre
+
+If you are migrating from the GNU Makefile build system, the Kokkos
+KOKKOS_DEVICES and KOKKOS_ARCH Makefile variables map to CMake options as
+follows:
+
+KOKKOS_DEVICES=OpenMP  ->  -DKokkos_ENABLE_OPENMP=ON
+KOKKOS_DEVICES=Cuda    ->  -DKokkos_ENABLE_CUDA=ON
+KOKKOS_ARCH=Volta70    ->  -DKokkos_ARCH_VOLTA70=ON
+KOKKOS_ARCH=Ampere80   ->  -DKokkos_ARCH_AMPERE80=ON
+KOKKOS_ARCH=Hopper90   ->  -DKokkos_ARCH_HOPPER90=ON
+KOKKOS_ARCH=Power9     ->  -DKokkos_ARCH_POWER9=ON
+KOKKOS_ARCH=ARMv8-TX2  ->  -DKokkos_ARCH_ARMV8_THUNDERX2=ON :ul
+
+See "Section 5.3"_Section_accelerate.html#acc_3 for the full list of
+architecture options and detailed instructions for each KOKKOS backend.
 
 :line
 
@@ -1043,7 +1124,7 @@ library"_mpich, a popular open-source version of MPI, distributed by
 Argonne National Labs, as a shared library in the default
 /usr/local/lib location:
 
-:link(mpich,http://www-unix.mcs.anl.gov/mpi)
+:link(mpich,https://www.mcs.anl.gov/research/projects/mpi/)
 
 ./configure --enable-shared
 make
@@ -1085,7 +1166,7 @@ When used from a C or Fortran program or a scripting language like
 Python, the library has a simple function-style interface, provided in
 src/library.cpp and src/library.h.
 
-See "Section_howto 4.7"_Section_howto.html#howto_7 of the manual for
+See "Section_howto 6.7"_Section_howto.html#howto_7 of the manual for
 ideas on how to couple SPARTA to other codes via its library
 interface.  See "Section_python"_Section_python.html of the manual for
 a description of the Python wrapper provided with SPARTA that operates
@@ -1093,7 +1174,7 @@ through the SPARTA library interface.
 
 The files src/library.cpp and library.h define the C-style API for
 using SPARTA as a library.  See "Section_howto
-4.6"_Section_howto.html#howto_6 of the manual for a description of the
+6.6"_Section_howto.html#howto_6 of the manual for a description of the
 interface and how to extend it for your needs.
 
 :line
@@ -1110,7 +1191,7 @@ sparta:
 cmake -C /path/to/sparta/cmake/presets/NAME.cmake \
   -DSPARTA_MACHINE=basic-test-tutorial \
   -DSPARTA_ENABLE_TESTING=ON \
-  /path/to/sparta/cmake
+  /path/to/sparta/cmake :pre
 
 Setting SPARTA_ENABLE_TESTING to ON, adds tests in 
 /path/to/sparta/examples/**/in.* to be run via ctest. Each in.* file corresponds
@@ -1118,11 +1199,11 @@ to an individual test. If BUILD_MPI is ON, tests will be configured to run with
 both 1 and 4 mpi ranks. If the binaries are built, tests can be run via ctest:
 
 make
-ctest
+ctest :pre
 
 This will run all the tests in serial. To run the tests in parallel, use -j:
 
-ctest -j4
+ctest -j4 :pre
 
 This will run up to four single rank, single thread per rank mpi_1 tests in parallel
 or up to one 4 rank, single thread per rank mpi_4 tests. ctest has many options
@@ -1147,7 +1228,7 @@ configuring sparta:
 cmake -C /path/to/sparta/cmake/presets/NAME.cmake \
   -DSPARTA_MACHINE=advanced-test-tutorial \
   -DSPARTA_DSMC_TESTING_PATH=/path/to/dsmc_testing \
-  /path/to/sparta/cmake
+  /path/to/sparta/cmake :pre
 
 Setting SPARTA_DSMC_TESTING_PATH to a valid dsmc_testing path adds tests in
 SPARTA_DSMC_TESTING_PATH to be run by SPARTA_DSMC_TESTING_PATH/regression.py
@@ -1156,7 +1237,7 @@ via ctest.
 After configuring, build the binaries and run the tests via ctest:
 
 make
-ctest
+ctest :pre
 
 This will run all tests found in SPARTA_DSMC_TESTING_PATH/examples by
 SPARTA_DSMC_TESTING_PATH/regression.py. If SPARTA_ENABLE_TESTING is ON,
@@ -1187,13 +1268,13 @@ cmake -C /path/to/sparta/cmake/presets/NAME.cmake \
   -DSPARTA_SPA_ARGS_PARALLEL=spa_parallel_args \
   -DSPARTA_DSMC_TESTING_DRIVER_ARGS_PARALLEL=driver_parallel_args \
   -DSPARTA_DSMC_TESTING_DRIVER_ARGS_PARALLEL=driver_serial_args \
-  /path/to/sparta/cmake
+  /path/to/sparta/cmake :pre
 
 To verify that the binaries are being run with the proper arguments:
 
 make
 ctest -C SERIAL -VV
-ctest -C PARALLEL -VV
+ctest -C PARALLEL -VV :pre
 
 The SPARTA_MULTIBUILD_CONFIGS option allows the user to run different sets of
 binaries for the same input decks. SPARTA_MULTIBUILD_CONFIGS lets the user add
@@ -1203,7 +1284,7 @@ with the cache file located in
 
 cmake -DSPARTA_MULTIBUILD_CONFIGS="test_mac;test_mac_mpi" \
       -DSPARTA_MULTIBUILD_PRESET_DIR=/path/to/sparta/cmake/presets/ \
-      /path/to/sparta/cmake
+      /path/to/sparta/cmake :pre
 
 This cmake command assumes that 
 /path/to/sparta/cmake/presets/{test_mac_mpi,test_mac}.cmake exist.
@@ -1211,7 +1292,7 @@ This cmake command assumes that
 To verify that the correct binaries are being run:
 
 make
-ctest -VV
+ctest -VV :pre
 
 :line
 
@@ -1337,9 +1418,14 @@ since multiple processors cannot all read from stdin.
 
 -help :pre
 
-Print a list of options compiled into this executable for each SPARTA
-style (fix, compute, collide, etc).  SPARTA will print the info and
-immediately exit if this switch is used.
+Print a detailed report about this executable and immediately exit.
+The report includes a banner (the SPARTA version, the git commit and
+branch it was built from, the build date, the compiler and C++
+standard, and the target operating system and architecture), the build
+configuration (serial vs. MPI, the KOKKOS accelerator, and PNG, JPEG,
+FFmpeg and gzip support), the list of command-line switches, and the
+list of options (fix, compute, collide, etc.) compiled into this
+executable.
 
 -kokkos on/off keyword/value ... :pre
 
@@ -1373,7 +1459,8 @@ n or numa :ul
 
 device Nd :pre
 
-This option is only relevant if you built SPARTA with KOKKOS_DEVICES=Cuda, you
+This option is only relevant if you built SPARTA with a GPU backend
+(e.g. Kokkos_ENABLE_CUDA=ON), you
 have more than one GPU per node, and if you are running with only one
 MPI task per node.  The Nd setting is the ID of the GPU on the node to
 run on.  By default Nd = 0.  If you have multiple GPUs per node, they
@@ -1383,7 +1470,8 @@ MPI task per node, and assign each job to run on a different GPU.
 
 gpus Ng Ns :pre
 
-This option is only relevant if you built SPARTA with KOKKOS_DEVICES=Cuda, you
+This option is only relevant if you built SPARTA with a GPU backend
+(e.g. Kokkos_ENABLE_CUDA=ON), you
 have more than one GPU per node, and you are running with multiple MPI
 tasks per node.  The Ng setting is how many GPUs
 you will use per node.  The Ns setting is optional.  If set, it is the ID of a
@@ -1411,7 +1499,8 @@ performing work when Kokkos is executing in OpenMP or pthreads mode.
 The default is Nt = 1, which essentially runs in MPI-only mode.  If
 there are Np MPI tasks per physical node, you generally want Np*Nt =
 the number of physical cores per node, to use your available hardware
-optimally. If SPARTA is compiled with KOKKOS_DEVICES=Cuda,
+optimally. If SPARTA is compiled with a GPU backend (e.g.
+Kokkos_ENABLE_CUDA=ON),
 this setting has no effect.
 
 -log file :pre
@@ -1583,7 +1672,8 @@ Sort    | 0.01733    | 0.040286   | 0.063573   |  10.6 |  6.29
 Comm    | 0.02276    | 0.023555   | 0.02493    |   0.6 |  3.68
 Modify  | 0.00018167 | 0.024758   | 0.051345   |  15.6 |  3.87
 Output  | 0.0002172  | 0.0007354  | 0.0012152  |   0.0 |  0.11
-Other   |            | 0.2471     |            |       | 38.61 :pre
+MPI Sync| 0.070519   | 0.23166    | 0.39965    |  24.7 | 36.20
+Other   |            | 0.01544    |            |       |  2.41 :pre
 
 Particle moves    = 38096354 (38.1M)
 Cells touched     = 43236871 (43.2M)
@@ -1641,16 +1731,20 @@ The first line gives the total CPU run time for the simulation, in
 seconds.
 
 The next section gives a breakdown of the CPU timing (in seconds) in
-7 categories.  The first four are timings for particles moves, which
+8 categories.  The first four are timings for particles moves, which
 includes interaction with surface elements, then particle collisions,
 then sorting of particles (required to perform collisions), and
 communication of particles between processors.  The Modify section is
 time for operations invoked by fixes and computes.  The Output section
-is for dump command and statistical output.  The Other category is
-typically for load-imbalance, as some MPI tasks wait for others MPI
-tasks to complete.  In each category the min,ave,max time across
-processors is shown, as well as a variation, and the percentage of
-total time.
+is for dump command and statistical output.  The MPI Sync section is
+time spent waiting in the global collectives of the run loop: the
+per-timestep reduction in the move and the barrier that closes the
+loop.  On an MPI task that arrives early that wait is idle time, so
+this category is where load-imbalance shows up.  The Other category is
+the loop time minus all of the named categories above; it should be
+near zero, and a large value means some part of the loop is not being
+timed.  In each category the min,ave,max time across processors is
+shown, as well as a variation, and the percentage of total time.
 
 The next section gives some statistics about the run.  These are total
 counts of particle moves, grid cells touched by particles, the number

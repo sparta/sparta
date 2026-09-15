@@ -50,7 +50,7 @@ class Irregular : protected Pointers {
   int num_self;              // # of datums to copy to self
   int indexmax;              // current size of index_send
   int indexselfmax;          // current size of index_self
-  int bufmax;                // current size of buf in bytes
+  bigint bufmax;             // current size of buf in bytes, can exceed 2 GB
   int *proc_send;            // list of procs to send to
   int *num_send;             // # of datums to send to each proc
   int *proc_recv;            // list of procs to recv from
@@ -61,14 +61,20 @@ class Irregular : protected Pointers {
   int *work1,*work2;         // work vectors
   MPI_Request *request;      // MPI requests for posted recvs
   MPI_Status *status;        // MPI statuses for WaitAll
+  MPI_Datatype datum_type;   // committed MPI type for one uniform datum
+  int datum_nbytes;          // nbytes datum_type was built for, -1 = none yet
   char *buf;                 // buffer for largest single send message
   int copymode;              // 1 if copy of class (prevents deallocation of
                              //   base class when child copy is destroyed)
 
+  MPI_Datatype uniform_datum_type(int);
+
   // only defined for variable sized datums
 
   int sendmaxbytes;          // # of bytes in largest send message
-  int size_self;             // # of bytes in datums copied to self
+  bigint size_self;          // # of bytes in datums copied to self
+                             //   self copies are memcpy, not MPI,
+                             //   so can exceed 2 GB
   int offsetmax;             // current size of offset_send
   int *size_send;            // # of bytes of send to each proc
   int *size_recv;            // # of bytes to recv from each proc

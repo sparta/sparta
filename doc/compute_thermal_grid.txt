@@ -181,7 +181,7 @@ effectively.
 
 [Related commands:]
 
-"compute grid"_compute_grid.txt, "fix ave/grid"_fix_ave_grid.html,
+"compute grid"_compute_grid.html, "fix ave/grid"_fix_ave_grid.html,
 "dump grid"_dump.html
 
 [Default:] none

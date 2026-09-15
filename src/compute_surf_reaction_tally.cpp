@@ -288,7 +288,7 @@ int ComputeSurfReactionTally::datatype(int icol)
     if (sizeof(surfint) == sizeof(bigint)) return BIGINT;
   }
   if (which[icol-1] == IDPRE) return INT;
-  if (which[icol-1] == ID2POST || which[icol-1] == ID2POST) return INT;
+  if (which[icol-1] == ID1POST || which[icol-1] == ID2POST) return INT;
   if (which[icol-1] == TYPEPRE) return INT;
   if (which[icol-1] == TYPE1POST || which[icol-1] == TYPE2POST) return INT;
 
@@ -310,6 +310,6 @@ void ComputeSurfReactionTally::grow_tally()
 bigint ComputeSurfReactionTally::memory_usage()
 {
   bigint bytes = 0;
-  bytes += nvalue*maxtally * sizeof(double);    // array_tally
+  bytes += (bigint) nvalue*maxtally * sizeof(double);    // array_tally
   return bytes;
 }

@@ -411,6 +411,6 @@ bigint ComputePFluxGrid::memory_usage()
 {
   bigint bytes;
   bytes = nglocal * sizeof(double);
-  bytes = ntotal*nglocal * sizeof(double);
+  bytes += (bigint) ntotal*nglocal * sizeof(double);
   return bytes;
 }

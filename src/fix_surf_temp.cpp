@@ -145,7 +145,7 @@ FixSurfTemp::FixSurfTemp(SPARTA *sparta, int narg, char **arg) :
   } else if (strcmp(update->unit_style,"cgs") == 0) {
     prefactor = 1.0 / (emi * SB_CGS);
     threshold = 1.0e-3;
-  }
+  } else error->all(FLERR,"Fix surf/temp requires si or cgs units");
 
   // trigger one-time initialization of custom per-surf temperatures
 
@@ -173,6 +173,16 @@ int FixSurfTemp::setmask()
 
 void FixSurfTemp::init()
 {
+  if (source == COMPUTE) {
+    icompute = modify->find_compute(id_qw);
+    if (icompute < 0) error->all(FLERR,"Could not find fix surf/temp compute ID");
+    cqw = modify->compute[icompute];
+  } else if (source == FIX) {
+    ifix = modify->find_fix(id_qw);
+    if (ifix < 0) error->all(FLERR,"Could not find fix surf/temp fix ID");
+    fqw = modify->fix[ifix];
+  }
+
   if (!firstflag) return;
   firstflag = 0;
 

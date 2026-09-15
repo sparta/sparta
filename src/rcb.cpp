@@ -35,9 +35,6 @@ using namespace SPARTA_NS;
 #define MYHUGE 1.0e30
 #define TINY 1.0e-6
 
-// set this to bigger number after debugging
-
-#define DELTA 10
 
 // prototypes for non-class functions
 
@@ -73,6 +70,12 @@ RCB::RCB(SPARTA *sparta) : Pointers(sparta)
   MPI_Type_contiguous(sizeof(Median),MPI_CHAR,&med_type);
   MPI_Type_commit(&med_type);
 
+  // Dot exchange messages are sent as counts of dot_type, not bytes,
+  // so that the byte count cannot overflow the int arg of MPI calls
+
+  MPI_Type_contiguous(sizeof(Dot),MPI_CHAR,&dot_type);
+  MPI_Type_commit(&dot_type);
+
   MPI_Op_create(box_merge,1,&box_op);
   MPI_Op_create(median_merge,1,&med_op);
 
@@ -98,6 +101,7 @@ RCB::~RCB()
 
   MPI_Type_free(&med_type);
   MPI_Type_free(&box_type);
+  MPI_Type_free(&dot_type);
   MPI_Op_free(&box_op);
   MPI_Op_free(&med_op);
 }
@@ -132,7 +136,7 @@ void RCB::compute(int n, double **x, double *wt, char *eligible, int flip)
 
   // create list of my Dots
 
-  ndot = nkeep = noriginal = n;
+  ndot = nkeep = noriginal = ndotorig = n;
 
   if (ndot > maxdot) {
     maxdot = ndot;
@@ -499,7 +503,12 @@ void RCB::compute(int n, double **x, double *wt, char *eligible, int flip)
 
     int ndotnew = ndot - outgoing + incoming;
     if (ndotnew > maxdot) {
-      while (maxdot < ndotnew) maxdot += DELTA;
+      // grow geometrically, but compute the target in bigint: maxdot is an
+      //   int and maxdot+maxdot/2 overflows above 2/3 of MAXSMALLINT
+      bigint newmax = MAX((bigint) ndotnew,(bigint) maxdot + maxdot/2);
+      if (newmax > MAXSMALLINT)
+        error->one(FLERR,"Per-processor RCB dot count is too big");
+      maxdot = newmax;
       dots = (Dot *) memory->srealloc(dots,maxdot*sizeof(Dot),"RCB::dots");
       counters[6]++;
     }
@@ -531,11 +540,11 @@ void RCB::compute(int n, double **x, double *wt, char *eligible, int flip)
     // post receives for dots
 
     if (readnumber > 0) {
-      MPI_Irecv(&dots[keep],incoming*sizeof(Dot),MPI_CHAR,
+      MPI_Irecv(&dots[keep],incoming,dot_type,
                 procpartner,1,world,&request);
       if (readnumber == 2) {
         keep += incoming - incoming2;
-        MPI_Irecv(&dots[keep],incoming2*sizeof(Dot),MPI_CHAR,
+        MPI_Irecv(&dots[keep],incoming2,dot_type,
                   procpartner2,1,world,&request2);
       }
     }
@@ -550,7 +559,7 @@ void RCB::compute(int n, double **x, double *wt, char *eligible, int flip)
 
     // send dots to partner
 
-    MPI_Rsend(buf,outgoing*sizeof(Dot),MPI_CHAR,procpartner,1,world);
+    MPI_Rsend(buf,outgoing,dot_type,procpartner,1,world);
 
     // wait until all dots are received
 
@@ -742,16 +751,21 @@ void RCB::invert()
 
 void RCB::check()
 {
-  int i,iflag,total1,total2;
+  int i,iflag;
+  bigint total1,total2;
   double weight,wtmax,wtmin,wtone,tolerance;
 
   // check that total # of dots remained the same
+  // global counts can exceed 2^31, so sum in bigint
 
-  MPI_Allreduce(&ndotorig,&total1,1,MPI_INT,MPI_SUM,world);
-  MPI_Allreduce(&ndot,&total2,1,MPI_INT,MPI_SUM,world);
+  bigint ndotorig_big = ndotorig;
+  bigint ndot_big = ndot;
+  MPI_Allreduce(&ndotorig_big,&total1,1,MPI_SPARTA_BIGINT,MPI_SUM,world);
+  MPI_Allreduce(&ndot_big,&total2,1,MPI_SPARTA_BIGINT,MPI_SUM,world);
   if (total1 != total2) {
     if (me == 0)
-      printf("ERROR: Points before RCB = %d, Points after RCB = %d\n",
+      printf("ERROR: Points before RCB = " BIGINT_FORMAT
+             ", Points after RCB = " BIGINT_FORMAT "\n",
              total1,total2);
   }
 
@@ -802,7 +816,8 @@ void RCB::check()
 
 void RCB::stats(int flag)
 {
-  int i,sum,min,max;
+  int i;
+  bigint sum,min,max;
   double ave,weight,wttot,wtmin,wtmax;
 
   if (me == 0) printf("RCB Statistics:\n");
@@ -836,83 +851,83 @@ void RCB::stats(int flag)
 
   // counter info
 
-  MPI_Allreduce(&counters[0],&sum,1,MPI_INT,MPI_SUM,world);
-  MPI_Allreduce(&counters[0],&min,1,MPI_INT,MPI_MIN,world);
-  MPI_Allreduce(&counters[0],&max,1,MPI_INT,MPI_MAX,world);
+  MPI_Allreduce(&counters[0],&sum,1,MPI_SPARTA_BIGINT,MPI_SUM,world);
+  MPI_Allreduce(&counters[0],&min,1,MPI_SPARTA_BIGINT,MPI_MIN,world);
+  MPI_Allreduce(&counters[0],&max,1,MPI_SPARTA_BIGINT,MPI_MAX,world);
   ave = ((double) sum)/nprocs;
   if (me == 0)
-    printf(" Median iter: ave = %g, min = %d, max = %d\n",ave,min,max);
+    printf(" Median iter: ave = %g, min = " BIGINT_FORMAT ", max = " BIGINT_FORMAT "\n",ave,min,max);
   if (flag) {
     MPI_Barrier(world);
-    printf("    Proc %d median count = %d\n",me,counters[0]);
+    printf("    Proc %d median count = " BIGINT_FORMAT "\n",me,counters[0]);
   }
 
-  MPI_Allreduce(&counters[1],&sum,1,MPI_INT,MPI_SUM,world);
-  MPI_Allreduce(&counters[1],&min,1,MPI_INT,MPI_MIN,world);
-  MPI_Allreduce(&counters[1],&max,1,MPI_INT,MPI_MAX,world);
+  MPI_Allreduce(&counters[1],&sum,1,MPI_SPARTA_BIGINT,MPI_SUM,world);
+  MPI_Allreduce(&counters[1],&min,1,MPI_SPARTA_BIGINT,MPI_MIN,world);
+  MPI_Allreduce(&counters[1],&max,1,MPI_SPARTA_BIGINT,MPI_MAX,world);
   ave = ((double) sum)/nprocs;
   if (me == 0)
-    printf(" Send count: ave = %g, min = %d, max = %d\n",ave,min,max);
+    printf(" Send count: ave = %g, min = " BIGINT_FORMAT ", max = " BIGINT_FORMAT "\n",ave,min,max);
   if (flag) {
     MPI_Barrier(world);
-    printf("    Proc %d send count = %d\n",me,counters[1]);
+    printf("    Proc %d send count = " BIGINT_FORMAT "\n",me,counters[1]);
   }
 
-  MPI_Allreduce(&counters[2],&sum,1,MPI_INT,MPI_SUM,world);
-  MPI_Allreduce(&counters[2],&min,1,MPI_INT,MPI_MIN,world);
-  MPI_Allreduce(&counters[2],&max,1,MPI_INT,MPI_MAX,world);
+  MPI_Allreduce(&counters[2],&sum,1,MPI_SPARTA_BIGINT,MPI_SUM,world);
+  MPI_Allreduce(&counters[2],&min,1,MPI_SPARTA_BIGINT,MPI_MIN,world);
+  MPI_Allreduce(&counters[2],&max,1,MPI_SPARTA_BIGINT,MPI_MAX,world);
   ave = ((double) sum)/nprocs;
   if (me == 0)
-    printf(" Recv count: ave = %g, min = %d, max = %d\n",ave,min,max);
+    printf(" Recv count: ave = %g, min = " BIGINT_FORMAT ", max = " BIGINT_FORMAT "\n",ave,min,max);
   if (flag) {
     MPI_Barrier(world);
-    printf("    Proc %d recv count = %d\n",me,counters[2]);
+    printf("    Proc %d recv count = " BIGINT_FORMAT "\n",me,counters[2]);
   }
 
-  MPI_Allreduce(&counters[3],&sum,1,MPI_INT,MPI_SUM,world);
-  MPI_Allreduce(&counters[3],&min,1,MPI_INT,MPI_MIN,world);
-  MPI_Allreduce(&counters[3],&max,1,MPI_INT,MPI_MAX,world);
+  MPI_Allreduce(&counters[3],&sum,1,MPI_SPARTA_BIGINT,MPI_SUM,world);
+  MPI_Allreduce(&counters[3],&min,1,MPI_SPARTA_BIGINT,MPI_MIN,world);
+  MPI_Allreduce(&counters[3],&max,1,MPI_SPARTA_BIGINT,MPI_MAX,world);
   ave = ((double) sum)/nprocs;
   if (me == 0)
-    printf(" Max dots: ave = %g, min = %d, max = %d\n",ave,min,max);
+    printf(" Max dots: ave = %g, min = " BIGINT_FORMAT ", max = " BIGINT_FORMAT "\n",ave,min,max);
   if (flag) {
     MPI_Barrier(world);
-    printf("    Proc %d max dots = %d\n",me,counters[3]);
+    printf("    Proc %d max dots = " BIGINT_FORMAT "\n",me,counters[3]);
   }
 
-  MPI_Allreduce(&counters[4],&sum,1,MPI_INT,MPI_SUM,world);
-  MPI_Allreduce(&counters[4],&min,1,MPI_INT,MPI_MIN,world);
-  MPI_Allreduce(&counters[4],&max,1,MPI_INT,MPI_MAX,world);
+  MPI_Allreduce(&counters[4],&sum,1,MPI_SPARTA_BIGINT,MPI_SUM,world);
+  MPI_Allreduce(&counters[4],&min,1,MPI_SPARTA_BIGINT,MPI_MIN,world);
+  MPI_Allreduce(&counters[4],&max,1,MPI_SPARTA_BIGINT,MPI_MAX,world);
   ave = ((double) sum)/nprocs;
   if (me == 0)
-    printf(" Max memory: ave = %g, min = %d, max = %d\n",ave,min,max);
+    printf(" Max memory: ave = %g, min = " BIGINT_FORMAT ", max = " BIGINT_FORMAT "\n",ave,min,max);
   if (flag) {
     MPI_Barrier(world);
-    printf("    Proc %d max memory = %d\n",me,counters[4]);
+    printf("    Proc %d max memory = " BIGINT_FORMAT "\n",me,counters[4]);
   }
 
   if (reuse) {
-    MPI_Allreduce(&counters[5],&sum,1,MPI_INT,MPI_SUM,world);
-    MPI_Allreduce(&counters[5],&min,1,MPI_INT,MPI_MIN,world);
-    MPI_Allreduce(&counters[5],&max,1,MPI_INT,MPI_MAX,world);
+    MPI_Allreduce(&counters[5],&sum,1,MPI_SPARTA_BIGINT,MPI_SUM,world);
+    MPI_Allreduce(&counters[5],&min,1,MPI_SPARTA_BIGINT,MPI_MIN,world);
+    MPI_Allreduce(&counters[5],&max,1,MPI_SPARTA_BIGINT,MPI_MAX,world);
     ave = ((double) sum)/nprocs;
     if (me == 0)
-      printf(" # of Reuse: ave = %g, min = %d, max = %d\n",ave,min,max);
+      printf(" # of Reuse: ave = %g, min = " BIGINT_FORMAT ", max = " BIGINT_FORMAT "\n",ave,min,max);
     if (flag) {
       MPI_Barrier(world);
-      printf("    Proc %d # of Reuse = %d\n",me,counters[5]);
+      printf("    Proc %d # of Reuse = " BIGINT_FORMAT "\n",me,counters[5]);
     }
   }
 
-  MPI_Allreduce(&counters[6],&sum,1,MPI_INT,MPI_SUM,world);
-  MPI_Allreduce(&counters[6],&min,1,MPI_INT,MPI_MIN,world);
-  MPI_Allreduce(&counters[6],&max,1,MPI_INT,MPI_MAX,world);
+  MPI_Allreduce(&counters[6],&sum,1,MPI_SPARTA_BIGINT,MPI_SUM,world);
+  MPI_Allreduce(&counters[6],&min,1,MPI_SPARTA_BIGINT,MPI_MIN,world);
+  MPI_Allreduce(&counters[6],&max,1,MPI_SPARTA_BIGINT,MPI_MAX,world);
   ave = ((double) sum)/nprocs;
   if (me == 0)
-    printf(" # of OverAlloc: ave = %g, min = %d, max = %d\n",ave,min,max);
+    printf(" # of OverAlloc: ave = %g, min = " BIGINT_FORMAT ", max = " BIGINT_FORMAT "\n",ave,min,max);
   if (flag) {
     MPI_Barrier(world);
-    printf("    Proc %d # of OverAlloc = %d\n",me,counters[6]);
+    printf("    Proc %d # of OverAlloc = " BIGINT_FORMAT "\n",me,counters[6]);
   }
 
   // RCB boxes for each proc

@@ -80,7 +80,7 @@ void WriteGrid::command(int narg, char **arg)
     fp = fopen(arg[0],"w");
     if (!fp) {
       char str[128];
-      sprintf(str,"Cannot open file %s",arg[0]);
+      snprintf(str,128,"Cannot open file %s",arg[0]);
       error->one(FLERR,str);
     }
   }
@@ -206,6 +206,8 @@ void WriteGrid::write()
     fprintf(fp,"\nCells\n\n");
     for (int iproc = 0; iproc < nprocs; iproc++) {
       if (iproc) {
+        if (ncustom && (bigint) nmax*nvalues_custom > MAXSMALLINT)
+          error->one(FLERR,"Too much custom grid data to communicate");
         MPI_Irecv(idbuf,nmax,MPI_SPARTA_BIGINT,iproc,0,world,&request);
 	if (ncustom) MPI_Irecv(&cbuf[0][0],nmax*nvalues_custom,MPI_DOUBLE,
 			       iproc,0,world,&crequest);

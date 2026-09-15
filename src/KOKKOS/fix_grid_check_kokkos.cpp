@@ -35,8 +35,18 @@ FixGridCheckKokkos::FixGridCheckKokkos(SPARTA *sparta, int narg, char **arg) :
 {
   kokkos_flag = 1;
   execution_space = Device;
-  datamask_read = EMPTY_MASK;
+  datamask_read = PARTICLE_MASK;
   datamask_modify = EMPTY_MASK;
+
+  // With outside set the base class also checks whether a particle in a cell
+  // holding surfs is inside them.  That test needs grid->point_outside_surfs()
+  // and the cut2d/cut3d machinery behind it, none of which has a device
+  // implementation, so this style cannot honour the keyword.  Refuse it rather
+  // than accept it and quietly run the smaller check: a grid checker that
+  // tests less than it was asked to is worse than one that is not there.
+
+  if (outside_check)
+    error->all(FLERR,"Cannot (yet) use fix grid/check/kk with outside yes");
 }
 
 /* ---------------------------------------------------------------------- */
@@ -45,15 +55,24 @@ void FixGridCheckKokkos::end_of_step()
 {
   if (update->ntimestep % nevery) return;
 
+  // sync through ParticleKokkos::sync()/GridKokkos::sync() rather than calling
+  // sync_device() on the dual views directly.  The wrappers declare the host
+  // modified first when automatic syncing is on, which is what carries writes
+  // made through the plain particles/cells/cinfo pointers by non-Kokkos code
+  // down to the device; the bare dual-view call sees no claim, copies nothing
+  // and leaves the kernel below reading whatever the device happened to hold.
+  // This fix runs at end_of_step, right after grid adaptation and load
+  // balancing have rewritten those arrays on the host, so it is exactly the
+  // caller that cannot afford to skip it.  GridKokkos::sync() also carries the
+  // prewrap guard.
+
   auto particleKK = dynamic_cast<ParticleKokkos*>(particle);
-  particleKK->k_particles.sync_device();
+  particleKK->sync(Device,PARTICLE_MASK);
   auto d_particles = particleKK->k_particles.view_device();
   auto gridKK = dynamic_cast<GridKokkos*>(grid);
-  gridKK->k_cells.sync_device();
+  gridKK->sync(Device,CELL_MASK|CINFO_MASK|SINFO_MASK);
   auto d_cells = gridKK->k_cells.view_device();
-  gridKK->k_cinfo.sync_device();
   auto d_cinfo = gridKK->k_cinfo.view_device();
-  gridKK->k_sinfo.sync_device();
   auto d_sinfo = gridKK->k_sinfo.view_device();
   int nglocal = grid->nlocal;
   int nlocal = particle->nlocal;
@@ -71,14 +90,21 @@ void FixGridCheckKokkos::end_of_step()
   // check if icell is a valid cell for owning particles
   // check for split cell is whether particle is inside parent cell
 
-  int nflag = 0;
-  Kokkos::parallel_reduce(nlocal, KOKKOS_LAMBDA(int i, int& local_nflag) {
+  // bigint accumulator: each particle can increment up to 5 times,
+  //   so this exceeds 2^31 in one step at large per-proc particle counts
+  //   (matches bigint nflag in the non-Kokkos FixGridCheck)
+
+  bigint nflag = 0;
+  Kokkos::parallel_reduce(nlocal, KOKKOS_LAMBDA(int i, bigint& local_nflag) {
     auto icell = d_particles(i).icell;
 
     // is icell a valid index
+    // return, do not fall through: every check below indexes d_cells[icell],
+    //   which would be an out-of-bounds device read (matches FixGridCheck)
     if (icell < 0 || icell >= nglocal) {
       d_particle_problems(i) |= IS_IN_INVALID_CELL;
       local_nflag++;
+      return;
     }
 
     // does particle coord match icell bounds
@@ -129,7 +155,7 @@ void FixGridCheckKokkos::end_of_step()
     //if (!flag) {
     //  if (outflag == ERROR) {
     //    char str[128];
-    //    sprintf(str,
+    //    snprintf(str,sizeof(str),
     //            "Particle %d,%d on proc %d is inside surfs in cell "
     //            CELLINT_FORMAT " on timestep " BIGINT_FORMAT,
     //            i,particles[i].id,comm->me,cells[icell].id,
@@ -147,7 +173,7 @@ void FixGridCheckKokkos::end_of_step()
     //  if (subcell != icell) {
     //    if (outflag == ERROR) {
     //      char str[128];
-    //      sprintf(str,
+    //      snprintf(str,sizeof(str),
     //              "Particle %d,%d on proc %d is in wrong sub cell %d not %d"
     //              " on timestep " BIGINT_FORMAT,
     //              i,particles[i].id,comm->me,icell,subcell,
@@ -165,11 +191,11 @@ void FixGridCheckKokkos::end_of_step()
   // warning message instead of error
 
   if (outflag == WARNING) {
-    int all;
-    MPI_Allreduce(&nflag,&all,1,MPI_INT,MPI_SUM,world);
+    bigint all;
+    MPI_Allreduce(&nflag,&all,1,MPI_SPARTA_BIGINT,MPI_SUM,world);
     if (all && comm->me == 0) {
       char str[128];
-      sprintf(str,"%d particles were in wrong cells on timestep "
+      snprintf(str,sizeof(str),BIGINT_FORMAT " particles were in wrong cells on timestep "
               BIGINT_FORMAT,all,update->ntimestep);
       error->warning(FLERR,str);
     }
@@ -183,14 +209,14 @@ void FixGridCheckKokkos::end_of_step()
     for (int i = 0; i < nlocal; ++i) {
       auto icell = particles[i].icell;
       if (h_particle_problems(i) & IS_IN_INVALID_CELL) {
-        sprintf(str,
-                "Particle %d,%d on proc %d is in invalid cell " CELLINT_FORMAT
+        snprintf(str,sizeof(str),
+                "Particle %d,%d on proc %d is in invalid cell index %d"
                 " on timestep " BIGINT_FORMAT,
-                i,particles[i].id,comm->me,cells[icell].id,update->ntimestep);
+                i,particles[i].id,comm->me,icell,update->ntimestep);
         error->one(FLERR,str);
       }
       if (h_particle_problems(i) & IS_OUTSIDE_CELL) {
-        sprintf(str,
+        snprintf(str,sizeof(str),
                 "Particle %d,%d on proc %d is outside cell " CELLINT_FORMAT
                 " on timestep " BIGINT_FORMAT,
                 i,particles[i].id,comm->me,cells[icell].id,
@@ -198,7 +224,7 @@ void FixGridCheckKokkos::end_of_step()
         error->one(FLERR,str);
       }
       if (h_particle_problems(i) & IS_IN_SPLIT_CELL) {
-        sprintf(str,
+        snprintf(str,sizeof(str),
                 "Particle %d,%d on proc %d is in split cell " CELLINT_FORMAT
                 " on timestep " BIGINT_FORMAT,
                 i,particles[i].id,comm->me,cells[icell].id,
@@ -206,14 +232,14 @@ void FixGridCheckKokkos::end_of_step()
         error->one(FLERR,str);
       }
       if (h_particle_problems(i) & IS_IN_INTERIOR_CELL) {
-        sprintf(str,
+        snprintf(str,sizeof(str),
                 "Particle %d,%d on proc %d is in interior cell " CELLINT_FORMAT
                 " on timestep " BIGINT_FORMAT,
                 i,particles[i].id,comm->me,cells[icell].id,update->ntimestep);
         error->one(FLERR,str);
       }
       if (h_particle_problems(i) & IS_IN_ZERO_VOLUME_CELL) {
-        sprintf(str,
+        snprintf(str,sizeof(str),
                 "Particle %d,%d on proc %d is in volume=0 cell " CELLINT_FORMAT
                 " on timestep " BIGINT_FORMAT,
                 i,particles[i].id,comm->me,cells[icell].id,update->ntimestep);

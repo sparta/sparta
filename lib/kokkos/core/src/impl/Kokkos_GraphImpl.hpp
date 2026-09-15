@@ -1,18 +1,5 @@
-//@HEADER
-// ************************************************************************
-//
-//                        Kokkos v. 4.0
-//       Copyright (2022) National Technology & Engineering
-//               Solutions of Sandia, LLC (NTESS).
-//
-// Under the terms of Contract DE-NA0003525 with NTESS,
-// the U.S. Government retains certain rights in this software.
-//
-// Part of Kokkos, under the Apache License v2.0 with LLVM Exceptions.
-// See https://kokkos.org/LICENSE for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-//
-//@HEADER
+// SPDX-FileCopyrightText: Copyright Contributors to the Kokkos project
 
 #ifndef KOKKOS_IMPL_KOKKOS_GRAPHIMPL_HPP
 #define KOKKOS_IMPL_KOKKOS_GRAPHIMPL_HPP
@@ -23,13 +10,22 @@
 #include <Kokkos_Graph_fwd.hpp>
 
 #include <Kokkos_Concepts.hpp>  // is_execution_policy
-#include <Kokkos_PointerOwnership.hpp>
 #include <impl/Kokkos_GraphImpl_fwd.hpp>
 
+#include <concepts>
 #include <memory>  // std::make_shared
 
 namespace Kokkos {
 namespace Impl {
+
+template <Kokkos::ExecutionSpace Exec>
+using root_impl_t =
+    Kokkos::Impl::GraphNodeImpl<Exec, Kokkos::Experimental::GraphNodeRootTag,
+                                Kokkos::Experimental::TypeErasedTag>;
+
+template <typename T>
+constexpr bool is_graph_root_v =
+    std::same_as<T, Kokkos::Experimental::GraphNodeRootTag>;
 
 template <typename T>
 struct is_graph_capture<
@@ -72,7 +68,7 @@ struct GraphAccess {
   template <class NodeRef>
   static auto get_node_ptr(NodeRef&& node_ref) {
     static_assert(
-        is_specialization_of<remove_cvref_t<NodeRef>,
+        is_specialization_of<std::remove_cvref_t<NodeRef>,
                              Kokkos::Experimental::GraphNodeRef>::value,
         "Kokkos Internal Implementation error (bad argument to "
         "`GraphAccess::get_node_ptr()`)");
@@ -82,7 +78,7 @@ struct GraphAccess {
   template <class NodeRef>
   static auto get_graph_weak_ptr(NodeRef&& node_ref) {
     static_assert(
-        is_specialization_of<remove_cvref_t<NodeRef>,
+        is_specialization_of<std::remove_cvref_t<NodeRef>,
                              Kokkos::Experimental::GraphNodeRef>::value,
         "Kokkos Internal Implementation error (bad argument to "
         "`GraphAccess::get_graph_weak_ptr()`)");

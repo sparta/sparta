@@ -1,18 +1,5 @@
-//@HEADER
-// ************************************************************************
-//
-//                        Kokkos v. 4.0
-//       Copyright (2022) National Technology & Engineering
-//               Solutions of Sandia, LLC (NTESS).
-//
-// Under the terms of Contract DE-NA0003525 with NTESS,
-// the U.S. Government retains certain rights in this software.
-//
-// Part of Kokkos, under the Apache License v2.0 with LLVM Exceptions.
-// See https://kokkos.org/LICENSE for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-//
-//@HEADER
+// SPDX-FileCopyrightText: Copyright Contributors to the Kokkos project
 
 #ifndef KOKKOS_KOKKOS_CUDA_GRAPHNODEKERNEL_IMPL_HPP
 #define KOKKOS_KOKKOS_CUDA_GRAPHNODEKERNEL_IMPL_HPP
@@ -27,7 +14,6 @@
 
 #include <Kokkos_Parallel.hpp>
 #include <Kokkos_Parallel_Reduce.hpp>
-#include <Kokkos_PointerOwnership.hpp>
 
 #include <Cuda/Kokkos_Cuda.hpp>
 
@@ -98,11 +84,22 @@ class GraphNodeKernelImpl<Kokkos::Cuda, PolicyType, Functor, PatternTag,
   // These are really functioning as optional references, though I'm not sure
   // that the cudaGraph_t one needs to be since it's a pointer under the
   // covers and we're not modifying it
-  Kokkos::ObservingRawPtr<const cudaGraph_t> m_graph_ptr    = nullptr;
-  Kokkos::ObservingRawPtr<cudaGraphNode_t> m_graph_node_ptr = nullptr;
+  cudaGraph_t const* m_graph_ptr    = nullptr;
+  cudaGraphNode_t* m_graph_node_ptr = nullptr;
+
+  struct DriverStorageDeleter {
+    std::string label;
+    CudaSpace mem;
+
+    void operator()(base_t* const ptr) const {
+      mem.deallocate(label.c_str(), ptr, sizeof(base_t));
+    }
+  };
+
   // Basically, we have to make this mutable for the same reasons that the
   // global kernel buffers in the Cuda instance are mutable...
-  mutable std::shared_ptr<base_t> m_driver_storage = nullptr;
+  mutable std::unique_ptr<base_t, DriverStorageDeleter> m_driver_storage =
+      nullptr;
   std::string label;
 
  public:
@@ -137,21 +134,23 @@ class GraphNodeKernelImpl<Kokkos::Cuda, PolicyType, Functor, PatternTag,
   cudaGraphNode_t* get_cuda_graph_node_ptr() const { return m_graph_node_ptr; }
   cudaGraph_t const* get_cuda_graph_ptr() const { return m_graph_ptr; }
 
-  Kokkos::ObservingRawPtr<base_t> allocate_driver_memory_buffer(
-      const CudaSpace& mem) const {
+  base_t* allocate_driver_memory_buffer() const {
     KOKKOS_EXPECTS(m_driver_storage == nullptr)
+
+    const auto& exec = this->get_policy().space();
+
     std::string alloc_label =
         label + " - GraphNodeKernel global memory functor storage";
-    m_driver_storage = std::shared_ptr<base_t>(
-        static_cast<base_t*>(mem.allocate(alloc_label.c_str(), sizeof(base_t))),
-        [alloc_label, mem](base_t* ptr) {
-          mem.deallocate(alloc_label.c_str(), ptr, sizeof(base_t));
-        });
+    auto mem =
+        Kokkos::CudaSpace::impl_create(exec.cuda_device(), exec.cuda_stream());
+    auto* ptr = static_cast<base_t*>(
+        mem.allocate(exec, alloc_label.c_str(), sizeof(base_t)));
+    m_driver_storage = std::unique_ptr<base_t, DriverStorageDeleter>(
+        ptr, DriverStorageDeleter{.label = std::move(alloc_label),
+                                  .mem   = std::move(mem)});
     KOKKOS_ENSURES(m_driver_storage != nullptr)
     return m_driver_storage.get();
   }
-
-  auto get_driver_storage() const { return m_driver_storage; }
 };
 
 struct CudaGraphNodeAggregate {};
@@ -160,12 +159,12 @@ template <class KernelType,
           class Tag =
               typename PatternTagFromImplSpecialization<KernelType>::type>
 struct get_graph_node_kernel_type
-    : type_identity<
+    : std::type_identity<
           GraphNodeKernelImpl<Kokkos::Cuda, typename KernelType::Policy,
                               typename KernelType::functor_type, Tag>> {};
 template <class KernelType>
 struct get_graph_node_kernel_type<KernelType, Kokkos::ParallelReduceTag>
-    : type_identity<GraphNodeKernelImpl<
+    : std::type_identity<GraphNodeKernelImpl<
           Kokkos::Cuda, typename KernelType::Policy,
           CombinedFunctorReducer<typename KernelType::functor_type,
                                  typename KernelType::reducer_type>,
@@ -175,36 +174,24 @@ struct get_graph_node_kernel_type<KernelType, Kokkos::ParallelReduceTag>
 // <editor-fold desc="get_cuda_graph_*() helper functions"> {{{1
 
 template <class KernelType>
-auto* allocate_driver_storage_for_kernel(const CudaSpace& mem,
-                                         KernelType const& kernel) {
+auto const& get_graph_node_kernel(KernelType const& kernel) {
   using graph_node_kernel_t =
       typename get_graph_node_kernel_type<KernelType>::type;
-  auto const& kernel_as_graph_kernel =
-      static_cast<graph_node_kernel_t const&>(kernel);
-  // TODO @graphs we need to somehow indicate the need for a fence in the
-  //              destructor of the GraphImpl object (so that we don't have to
-  //              just always do it)
-  return kernel_as_graph_kernel.allocate_driver_memory_buffer(mem);
+  return static_cast<graph_node_kernel_t const&>(kernel);
 }
 
 template <class KernelType>
 auto const& get_cuda_graph_from_kernel(KernelType const& kernel) {
-  using graph_node_kernel_t =
-      typename get_graph_node_kernel_type<KernelType>::type;
-  auto const& kernel_as_graph_kernel =
-      static_cast<graph_node_kernel_t const&>(kernel);
-  cudaGraph_t const* graph_ptr = kernel_as_graph_kernel.get_cuda_graph_ptr();
+  cudaGraph_t const* graph_ptr =
+      get_graph_node_kernel(kernel).get_cuda_graph_ptr();
   KOKKOS_EXPECTS(graph_ptr != nullptr);
   return *graph_ptr;
 }
 
 template <class KernelType>
 auto& get_cuda_graph_node_from_kernel(KernelType const& kernel) {
-  using graph_node_kernel_t =
-      typename get_graph_node_kernel_type<KernelType>::type;
-  auto const& kernel_as_graph_kernel =
-      static_cast<graph_node_kernel_t const&>(kernel);
-  auto* graph_node_ptr = kernel_as_graph_kernel.get_cuda_graph_node_ptr();
+  auto* graph_node_ptr =
+      get_graph_node_kernel(kernel).get_cuda_graph_node_ptr();
   KOKKOS_EXPECTS(graph_node_ptr != nullptr);
   return *graph_node_ptr;
 }

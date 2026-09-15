@@ -13,7 +13,7 @@ region command :h3
 region ID style args keyword value ... :pre
 
 ID = user-assigned name for the region :ulb,l
-style = {block} or {cylinder} or {plane} or {sphere} or {union} or {intersect} or {block/kk} or {cylinder/kk} or {plane/kk} or {sphere/kk} :l
+style = {block} or {cylinder} or {plane} or {sphere} or {union} or {intersect} or {block/kk} or {cylinder/kk} or {plane/kk} or {sphere/kk} or {union/kk} or {intersect/kk} :l
   {block} or {block/kk} args = xlo xhi ylo yhi zlo zhi
     xlo,xhi,ylo,yhi,zlo,zhi = bounds of block in all dimensions (distance units)
   {cylinder} or {cylinder/kk} args = dim c1 c2 radius lo hi

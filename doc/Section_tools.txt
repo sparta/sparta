@@ -22,8 +22,8 @@ plotting, and visualization for SPARTA simulations.  Pizza.py is
 written in "Python"_python and is available for download from "the
 Pizza.py web site"_pizza.
 
-:link(pizza,http://pizza.sandia.gov)
-:link(python,http://www.python.org)
+:link(pizza,https://lammps.github.io/pizza)
+:link(python,https://www.python.org)
 
 Some of the Pizza.py tools relevant to SPARTA are as follows:
 
@@ -52,7 +52,7 @@ SPARTA distribution.  Each is described in more detail below.
 "surf_create"_#surfcreate - create a surface file with simple objects
 "surf_transform"_#surftransform - transform surface via tranlate/scale/rotate operations :ul
 
-:link(paraview,http://www.paraview.org)
+:link(paraview,https://www.paraview.org)
 
 :line
 :line
@@ -61,7 +61,7 @@ dump2cfg tool :h4,link(dump2cfg)
 
 This is a Python script that converts a SPARTA particle dump file into
 extended CFG format so that it can be visualized by the
-"AtomEye"_http://mt.seas.upenn.edu/Archive/Graphics/A visualization
+"AtomEye"_http://li.mit.edu/Archive/Graphics/A/ visualization
 program.  AtomEye is a very fast particle visualizer, capable of
 interactive visualizations of millions of particles on a desktop
 machine.  It is commonly used in the materials modeling community.
@@ -81,7 +81,7 @@ dump2xyz tool :h4,link(dump2xyz)
 This is a Python script that converts a SPARTA particle dump file into
 XYZ format so that it can be visualized by various visualization
 packages that read XYZ formatted files.  An example is
-"VMD"_http://www.ks.uiuc.edu/Research/vmd package, commonly used in
+"VMD"_https://www.ks.uiuc.edu/Research/vmd package, commonly used in
 the molecular dynamics modeling community.
 
 See the header of the script for the syntax used to run it.
@@ -106,7 +106,7 @@ are supported, and the syntax used to run it.
 
 :line
 
-implicit_grid tool :h4,link(jagged)
+implicit_grid tool :h4,link(implicit)
 
 This is a Python script which can be used to generate binary files
 representing porous media samples, as read by the
@@ -224,7 +224,7 @@ one or more simple objects whose surface is represented as triangules
 "read_surf"_read_surf.html command.  The 3d objects it supports are a
 sphere, box, and spikysphere (randomized radius at each point).  The
 2d objects it supports are a circle, rectangle, triangle, and
-spikycircly (randomized radius at each point).
+spikycircle (randomized radius at each point).
 
 See the header of the script for the syntax used to run it.
 

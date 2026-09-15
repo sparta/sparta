@@ -1,23 +1,16 @@
-//@HEADER
-// ************************************************************************
-//
-//                        Kokkos v. 4.0
-//       Copyright (2022) National Technology & Engineering
-//               Solutions of Sandia, LLC (NTESS).
-//
-// Under the terms of Contract DE-NA0003525 with NTESS,
-// the U.S. Government retains certain rights in this software.
-//
-// Part of Kokkos, under the Apache License v2.0 with LLVM Exceptions.
-// See https://kokkos.org/LICENSE for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-//
-//@HEADER
+// SPDX-FileCopyrightText: Copyright Contributors to the Kokkos project
 
 #include <gtest/gtest.h>
 #include <type_traits>
 
+#include <Kokkos_Macros.hpp>
+#ifdef KOKKOS_ENABLE_EXPERIMENTAL_CXX20_MODULES
+import kokkos.core;
+import kokkos.core_impl;
+#else
 #include <Kokkos_Core.hpp>
+#endif
 #include "experimental/__p0009_bits/layout_stride.hpp"
 
 namespace {
@@ -509,6 +502,9 @@ TEST(TEST_CATEGORY, view_mdspan_conversion) {
   TestViewMDSpanConversion<int, TEST_EXECSPACE>::run_test();
 }
 
+// FIXME_NVHPC: Skipping for NVHPC with the Serial backend because running this
+// test causes a race condition in serial.self_similar_range_policy_computation.
+#if !(defined(KOKKOS_COMPILER_NVHPC) && defined(KOKKOS_ENABLE_OPENACC))
 TEST(TEST_CATEGORY, view_mdspan_conversion_with_stride) {
   {
     Kokkos::View<int ***, Kokkos::LayoutLeft> source("S", 20, 40, 70);
@@ -558,4 +554,5 @@ TEST(TEST_CATEGORY, view_mdspan_conversion_with_stride) {
     ASSERT_EQ(static_cast<int>(sub_v2.stride(1)), 1);
   }
 }
+#endif
 }  // namespace

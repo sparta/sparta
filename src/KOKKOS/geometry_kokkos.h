@@ -156,10 +156,20 @@ bool axi_horizontal_line(double tdelta, double *x, double *v,
   double arg = yhoriz*yhoriz*a - v[2]*v[2]*x[1]*x[1];
   if (arg < 0.0) return false;
   double sarg = sqrt(arg);
+  double c = x[1]*x[1] - yhoriz*yhoriz;
 
   nc = 2;
-  double tone = (b - sarg) / a;
-  double ttwo = (b + sarg) / a;
+  double tone, ttwo;
+  if (b > 0.0) {
+    ttwo = (b + sarg) / a;
+    tone = c / (b + sarg);
+  } else if (b < 0.0) {
+    tone = (b - sarg) / a;
+    ttwo = c / (b - sarg);
+  } else {
+    tone = -sarg / a;
+    ttwo = sarg / a;
+  }
   t1 = MIN(tone,ttwo);
   t2 = MAX(tone,ttwo);
 
@@ -265,20 +275,33 @@ bool axi_line_intersect(double tdelta, double *x, double *v,
     double dconst = x21*v1[1] - y21*v1[0];
 
     double a = x21sq*(v[1]*v[1] + v[2]*v[2]) - y21sq*v[0]*v[0];
-    if (a == 0.0) return false;
     double b = x21sq*x[1]*v[1] - y21sq*x[0]*v[0] - y21*v[0]*dconst;
     double c = x21sq*x[1]*x[1] - y21sq*x[0]*x[0] -
       2.0*y21*x[0]*dconst - dconst*dconst;
 
-    double arg = b*b - a*c;
-    if (arg < 0.0) return false;
-    double sarg = sqrt(arg);
-
-    nc = 2;
-    double tone = (-b - sarg) / a;
-    double ttwo = (-b + sarg) / a;
-    t1 = MIN(tone,ttwo);
-    t2 = MAX(tone,ttwo);
+    if (a == 0.0) {
+      if (b == 0.0) return false;
+      nc = 1;
+      t1 = t2 = -0.5 * c / b;
+    } else {
+      double arg = b*b - a*c;
+      if (arg < 0.0) return false;
+      double sarg = sqrt(arg);
+      nc = 2;
+      double tone, ttwo;
+      if (b > 0.0) {
+        tone = (-b - sarg) / a;
+        ttwo = c / (-b - sarg);
+      } else if (b < 0.0) {
+        tone = c / (-b + sarg);
+        ttwo = (-b + sarg) / a;
+      } else {
+        tone = -sarg / a;
+        ttwo = sarg / a;
+      }
+      t1 = MIN(tone,ttwo);
+      t2 = MAX(tone,ttwo);
+    }
   }
 
   // if selfflag, particle starts on surf line segment
@@ -341,11 +364,16 @@ bool axi_line_intersect(double tdelta, double *x, double *v,
     if (v1[1] == v2[1]) xc[1] = v1[1];
     xc[2] = 0.0;
 
-    double rn = ynew / xc[1];
-    double wn = znew / xc[1];
     vc[0] = v[0];
-    vc[1] = v[1]*rn + v[2]*wn;
-    vc[2] = -v[1]*wn + v[2]*rn;
+    if (xc[1] > 0.0) {
+      double rn = ynew / xc[1];
+      double wn = znew / xc[1];
+      vc[1] = v[1]*rn + v[2]*wn;
+      vc[2] = -v[1]*wn + v[2]*rn;
+    } else {
+      vc[1] = v[1];
+      vc[2] = v[2];
+    }
 
     // test that xc is within line segment bounds
     // y-test for vertical line, else x-test

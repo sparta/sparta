@@ -69,6 +69,17 @@ the grid corner point values for each grid cell.
 <P>The output file is written in the same binary format as the
 <A HREF = "read_isurf.html">read_isurf</A> command reads in.
 </P>
+<P>Because implicit-surface corner point values are not stored in restart
+files, a write_isurf followed by a later <A HREF = "read_isurf.html">read_isurf</A>
+is the way to save and restore the state of an ablating surface.  To
+reproduce the saved state exactly, write the file with <I>precision
+double</I> (the default) so partially decremented corner point values are
+not truncated to integers, and read it back with the read_isurf
+<I>precision double</I> and <I>push no</I> options.  The default read_isurf
+<I>push yes</I> re-normalizes corner point values as they are read and so
+will not reproduce a mid-ablation state exactly; see the <I>push</I> keyword
+discussion on the <A HREF = "read_isurf.html">read_isurf</A> doc page.
+</P>
 <P><B>Restrictions:</B> none
 </P>
 <P><B>Related commands:</B>

@@ -23,6 +23,10 @@
 #include "error.h"
 #include "kokkos.h"
 #include "sparta_masks.h"
+#include "surf_kokkos.h"
+#include "particle_kokkos.h"
+
+#include <type_traits>
 
 using namespace SPARTA_NS;
 using namespace MathConst;
@@ -30,12 +34,7 @@ using namespace MathConst;
 #define DELTA 8192
 #define DELTAPARENT 1024
 #define BIG 1.0e20
-#define MAXGROUP 32
 #define MAXLEVEL 32
-
-// default value, can be overridden by global command
-
-#define MAXSURFPERCELL 100
 
 enum{XLO,XHI,YLO,YHI,ZLO,ZHI,INTERIOR};         // same as Domain
 enum{PERIODIC,OUTFLOW,REFLECT,SURFACE,AXISYM};  // same as Domain
@@ -199,8 +198,8 @@ void GridKokkos::wrap_kokkos_graphs()
 
   // csurfs
 
-  Kokkos::Crs<int, SPAHostType, void, int> h_csurfs;
-  auto csurfs_lambda = [=](int icell, int* fill) {
+  Kokkos::Crs<int, SPAHostType, void, crs_size_type> h_csurfs;
+  auto csurfs_lambda = [&](int icell, int* fill) {
     int nsurf = cells[icell].nsurf;
     if (nsurf < 0) nsurf = 0;
     else if (fill) {
@@ -221,8 +220,8 @@ void GridKokkos::wrap_kokkos_graphs()
 
   if (sinfo != NULL) {
 
-    Kokkos::Crs<int, SPAHostType, void, int> h_csplits;
-    auto csplits_lambda = [=](int isplit, int* fill) {
+    Kokkos::Crs<int, SPAHostType, void, crs_size_type> h_csplits;
+    auto csplits_lambda = [&](int isplit, int* fill) {
       int icell = sinfo[isplit].icell;
       int nsurf = cells[icell].nsurf;
       int nsplit = cells[icell].nsplit;
@@ -241,8 +240,8 @@ void GridKokkos::wrap_kokkos_graphs()
     Kokkos::deep_copy(d_csplits.row_map, h_csplits.row_map);
     Kokkos::deep_copy(d_csplits.entries, h_csplits.entries);
 
-    Kokkos::Crs<int, SPAHostType, void, int> h_csubs;
-    auto csubs_lambda = [=](int isplit, int* fill) {
+    Kokkos::Crs<int, SPAHostType, void, crs_size_type> h_csubs;
+    auto csubs_lambda = [&](int isplit, int* fill) {
       int icell = sinfo[isplit].icell;
       int nsurf = cells[icell].nsurf;
       int nsplit = cells[icell].nsplit;
@@ -314,6 +313,33 @@ void GridKokkos::wrap_kokkos()
 
   k_plevels.modify_host();
   k_plevels.sync_device();
+}
+
+/* ---------------------------------------------------------------------- */
+
+/* ----------------------------------------------------------------------
+   re-establish device state after a host fix rebuilt the grid and surfs
+   (fix ablate regenerating implicit surfaces); the host is authoritative,
+   so push it to the device, rebuild the per-cell surf graphs and cell hash,
+   and declare the device particle sort invalid, since the fix may have
+   deleted particles and reassigned split cell particles to new sub cells
+   must run before anything else reads the grid or the per-cell lists, i.e.
+   immediately after the fix rather than after the whole end-of-step batch
+------------------------------------------------------------------------- */
+
+void GridKokkos::resync_after_host_change()
+{
+  modify(Host,ALL_MASK);
+  update_hash();
+
+  if (surf->exist) {
+    ((SurfKokkos*) surf)->modify(Host,ALL_MASK);
+    wrap_kokkos_graphs();
+  }
+
+  ((ParticleKokkos*) particle)->sorted_kk = 0;
+
+  changed = 0;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -444,4 +470,66 @@ void GridKokkos::modify(ExecutionSpace space, unsigned int mask)
       }
     }
   }
+}
+
+/* ----------------------------------------------------------------------
+   memory usage of Kokkos-managed data
+   Grid::memory_usage() is deliberately not called: the cells/cinfo/sinfo
+     arrays it measures are the host mirrors of the DualViews below.  its
+     other two terms, the csurfs and csplits host pages, have no Kokkos
+     counterpart and are carried over here
+   the flattened Crs graphs, the per-cell particle lists and the halo index
+     are device-only in both backends
+------------------------------------------------------------------------- */
+
+bigint GridKokkos::memory_usage()
+{
+  const bool device_distinct =
+    !std::is_same<DeviceType::memory_space,Kokkos::HostSpace>::value;
+
+  bigint bytes = csurfs->size();
+  bytes += csplits->size();
+
+  bytes += MemKK::memory_usage(k_cells.view_host());
+  bytes += MemKK::memory_usage(k_cinfo.view_host());
+  bytes += MemKK::memory_usage(k_sinfo.view_host());
+  bytes += MemKK::memory_usage(k_pcells.view_host());
+  bytes += MemKK::memory_usage(k_plevels.view_host());
+  for (int i = 0; i < ncustom_ivec; i++)
+    bytes += MemKK::memory_usage(k_eivec.view_host()[i].k_view.view_host());
+  for (int i = 0; i < ncustom_iarray; i++)
+    bytes += MemKK::memory_usage(k_eiarray.view_host()[i].k_view.view_host());
+  for (int i = 0; i < ncustom_dvec; i++)
+    bytes += MemKK::memory_usage(k_edvec.view_host()[i].k_view.view_host());
+  for (int i = 0; i < ncustom_darray; i++)
+    bytes += MemKK::memory_usage(k_edarray.view_host()[i].k_view.view_host());
+
+  if (device_distinct) {
+    bytes += MemKK::memory_usage(k_cells.view_device());
+    bytes += MemKK::memory_usage(k_cinfo.view_device());
+    bytes += MemKK::memory_usage(k_sinfo.view_device());
+    bytes += MemKK::memory_usage(k_pcells.view_device());
+    bytes += MemKK::memory_usage(k_plevels.view_device());
+    for (int i = 0; i < ncustom_ivec; i++)
+      bytes += MemKK::memory_usage(k_eivec.view_host()[i].k_view.view_device());
+    for (int i = 0; i < ncustom_iarray; i++)
+      bytes += MemKK::memory_usage(k_eiarray.view_host()[i].k_view.view_device());
+    for (int i = 0; i < ncustom_dvec; i++)
+      bytes += MemKK::memory_usage(k_edvec.view_host()[i].k_view.view_device());
+    for (int i = 0; i < ncustom_darray; i++)
+      bytes += MemKK::memory_usage(k_edarray.view_host()[i].k_view.view_device());
+  }
+
+  bytes += MemKK::memory_usage(d_csurfs.entries);
+  bytes += MemKK::memory_usage(d_csurfs.row_map);
+  bytes += MemKK::memory_usage(d_csplits.entries);
+  bytes += MemKK::memory_usage(d_csplits.row_map);
+  bytes += MemKK::memory_usage(d_csubs.entries);
+  bytes += MemKK::memory_usage(d_csubs.row_map);
+
+  bytes += MemKK::memory_usage(d_cellcount);
+  bytes += MemKK::memory_usage(d_plist);
+  bytes += MemKK::memory_usage(d_halo_index);
+
+  return bytes;
 }

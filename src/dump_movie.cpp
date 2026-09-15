@@ -46,7 +46,7 @@ void DumpMovie::openfile()
   if ((comm->me == 0) && (fp == NULL)) {
 
 #ifdef SPARTA_FFMPEG
-    sprintf(moviecmd,"ffmpeg -v error -y -r %.2f -f image2pipe -c:v ppm -i - "
+    snprintf(moviecmd,1024,"ffmpeg -v error -y -r %.2f -f image2pipe -c:v ppm -i - "
             "-r 24.0 -b:v %dk %s ", framerate, bitrate, filename);
 #else
     error->one(FLERR,"Support for writing movies not included");
@@ -60,7 +60,7 @@ void DumpMovie::openfile()
 
     if (fp == NULL) {
       char str[128];
-      sprintf(str,"Failed to open FFmpeg pipeline to file %s",filename);
+      snprintf(str,128,"Failed to open FFmpeg pipeline to file %s",filename);
       error->one(FLERR,str);
     }
   }

@@ -36,6 +36,12 @@ template<int NEED_ATOMICS, int REORDER_FLAG>
 struct TagParticleSort{};
 
 
+// map entry used by post_weight(): source particle index, the new particle
+//   id, and the weight ratio that decides clone/delete.  ratio rides along
+//   in the same struct so only one array crosses the bus per timestep
+
+struct PostWeightPair { int i; int id; double ratio; };
+
 class ParticleKokkos : public Particle {
  public:
   typedef int value_type;
@@ -60,6 +66,8 @@ class ParticleKokkos : public Particle {
   int add_custom(char *, int, int) override;
   void grow_custom(int, int, int) override;
   void remove_custom(int) override;
+  void zero_custom(int) override;
+  bigint memory_usage() override;
   void copy_custom(int, int) override;
   void pack_custom(int, char *) override;
   void unpack_custom(char *, int) override;
@@ -67,7 +75,26 @@ class ParticleKokkos : public Particle {
   KOKKOS_INLINE_FUNCTION
   void copy_custom_kokkos(int, int) const;
 
+  // zero the custom attributes of particles LO through HI-1
+  // Particle::add_particle() calls zero_custom() for every particle it
+  //   creates, so a device path which adds particles must do the same or
+  //   the new particle inherits whatever the slot last held
+  // the no-arg version zeroes the unused slots NLOCAL to MAXLOCAL-1 and is
+  //   for kernels which create a particle and then set its custom attributes
+  //   before the kernel ends, see comment in the .cpp file
+
+  void zero_custom_kokkos(int, int);
+  void zero_custom_kokkos();
+
 #ifndef SPARTA_KOKKOS_EXACT
+  // pool for post_weight_device().  only the EXACT path needs to match the
+  //   host RNG stream, so this exists only off EXACT.  unlike every other
+  //   Kokkos class it cannot be seeded in the ctor initializer list -- see
+  //   ParticleKokkos::ParticleKokkos() -- so it is seeded on first use
+  Kokkos::Random_XorShift64_Pool<DeviceType> weight_rand_pool;
+  int weight_rand_pool_seeded;
+  void post_weight_device();
+
   typedef typename Kokkos::Random_XorShift64_Pool<DeviceType>::generator_type rand_type;
 
   //typedef typename Kokkos::Random_XorShift1024_Pool<DeviceType>::generator_type rand_type;
@@ -174,6 +201,10 @@ class ParticleKokkos : public Particle {
   // work memory for reduced memory reordering
   t_particle_1d d_pswap1;
   t_particle_1d d_pswap2;
+
+  // persistent scratch for post_weight(); grown, never reallocated per step
+  Kokkos::DualView<PostWeightPair*,SPADeviceType> k_map;
+  t_particle_1d d_newparticles;
 };
 
 KOKKOS_INLINE_FUNCTION
@@ -262,9 +293,12 @@ double ParticleKokkos::erot(int isp, double temp_thermal, rand_type &erandom) co
    eng = -log(erandom.drand()) * boltz * temp_thermal;
  else {
    a = 0.5*d_species[isp].rotdof-1.0;
+   // candidate range must cover the tail of x^a*exp(-x) (mode a, mean a+1,
+   // std dev sqrt(a+1)); scale the cut-off with dof rather than fixing it
+   // at 10 kT, which is below the mean for large dof
+   double xmax = a + 1.0 + 9.0*sqrt(a+1.0);
    while (1) {
-     // energy cut-off at 10 kT
-     erm = 10.0*erandom.drand();
+     erm = xmax*erandom.drand();
      b = pow(erm/a,a) * exp(a-erm);
      if (b > erandom.drand()) break;
    }
@@ -297,9 +331,12 @@ double ParticleKokkos::evib(int isp, double temp_thermal, rand_type &erandom) co
       eng = -log(erandom.drand()) * boltz * temp_thermal;
     else if (d_species[isp].vibdof > 2) {
       a = 0.5*d_species[isp].vibdof-1.;
+      // candidate range must cover the tail of x^a*exp(-x) (mode a, mean a+1,
+      // std dev sqrt(a+1)); scale the cut-off with dof rather than fixing it
+      // at 10 kT, which is below the mean for large dof
+      double xmax = a + 1.0 + 9.0*sqrt(a+1.0);
       while (1) {
-        // energy cut-off at 10 kT
-        erm = 10.0*erandom.drand();
+        erm = xmax*erandom.drand();
         b = pow(erm/a,a) * exp(a-erm);
         if (b > erandom.drand()) break;
       }

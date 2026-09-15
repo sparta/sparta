@@ -43,15 +43,6 @@ SurfCollideAdiabatic::SurfCollideAdiabatic(SPARTA *sparta, int narg, char **arg)
   random->reset(seed,comm->me,100);
 }
 
-/* ---------------------------------------------------------------------- */
-
-SurfCollideAdiabatic::~SurfCollideAdiabatic()
-{
-  if (copy) return;
-
-  delete random;
-}
-
 /* ----------------------------------------------------------------------
    particle collision with surface with optional chemistry
    ip = particle with current x = collision pt, current v = incident v

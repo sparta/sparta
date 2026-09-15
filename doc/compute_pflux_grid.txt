@@ -179,9 +179,9 @@ effectively.
 
 [Related commands:]
 
-"compute grid"_compute_grid.txt, "compute
-thermal/grid"_compute_thermal_grid.txt, "compute
-eflux/grid"_compute_eflux_grid.txt, "fix ave/grid"_fix_ave_grid.html,
+"compute grid"_compute_grid.html, "compute
+thermal/grid"_compute_thermal_grid.html, "compute
+eflux/grid"_compute_eflux_grid.html, "fix ave/grid"_fix_ave_grid.html,
 "dump grid"_dump.html
 
 [Default:] none

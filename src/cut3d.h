@@ -23,7 +23,7 @@ namespace SPARTA_NS {
 
 class Cut3d : protected Pointers {
  public:
-  int ntiny,nshrink;
+  bigint ntiny,nshrink;   // cumulative counts, can exceed 2^31
 
   Cut3d(class SPARTA *);
   ~Cut3d();

@@ -60,14 +60,17 @@ void FixBalanceKokkos::end_of_step()
   ParticleKokkos* particle_kk = (ParticleKokkos*) particle;
   SurfKokkos* surf_kk = (SurfKokkos*) surf;
 
-  grid_kk->sync(Host,CELL_MASK|CINFO_MASK|SINFO_MASK|PCELL_MASK);
-  particle_kk->sync(Host,PARTICLE_MASK);
+  // include CUSTOM_MASK: migrating cells packs both grid and particle
+  //   custom data on the host, which may have been modified on the device
+
+  grid_kk->sync(Host,CELL_MASK|CINFO_MASK|SINFO_MASK|PCELL_MASK|CUSTOM_MASK);
+  particle_kk->sync(Host,PARTICLE_MASK|CUSTOM_MASK);
   surf_kk->sync(Host,ALL_MASK);
 
   FixBalance::end_of_step();
 
-  grid_kk->modify(Host,CELL_MASK|CINFO_MASK|SINFO_MASK|PCELL_MASK);
-  particle_kk->modify(Host,PARTICLE_MASK);
+  grid_kk->modify(Host,CELL_MASK|CINFO_MASK|SINFO_MASK|PCELL_MASK|CUSTOM_MASK);
+  particle_kk->modify(Host,PARTICLE_MASK|CUSTOM_MASK);
   surf_kk->modify(Host,ALL_MASK);
   particle_kk->sorted_kk = 0;
 

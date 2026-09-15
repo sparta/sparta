@@ -107,13 +107,13 @@ class RCB : protected Pointers {
   class Irregular *irregular;
 
   MPI_Op box_op,med_op;
-  MPI_Datatype box_type,med_type;
+  MPI_Datatype box_type,med_type,dot_type;
 
   int reuse;        // 1/0 to use/not use previous cuts
   int dottop;       // dots >= this index are new
   BBox rcbbox;      // bounding box of final RCB sub-domain
   Tree *tree;       // tree of RCB cuts, used by reuse()
-  int counters[7];  // diagnostic counts
+  bigint counters[7];  // diagnostic counts
                     // 0 = # of median iterations
                     // 1 = # of points sent
                     // 2 = # of points received

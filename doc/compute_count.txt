@@ -62,7 +62,7 @@ global scalar.  If there are multiple counts accumulated, it
 calculates a global vector with a length = number of counts.  These
 results can be used by any command that uses global scalar or vector
 values from a compute as input.  See "Section
-4.4"_Section_howto.html#howto_4 for an overview of SPARTA output
+6.4"_Section_howto.html#howto_4 for an overview of SPARTA output
 options.
 
 The values will all be unitless counts.

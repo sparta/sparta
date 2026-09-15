@@ -61,12 +61,21 @@ class FixAblate : public Fix {
   int multi_val_flag;
   int multi_dec_flag;
   int minmaxflag;
+  int conserve_flag;
   int ncorner;
   int nmultiv;
   int sgroupbit;
+  int isc_default;        // default isc index for newly created implicit surfs
+  int isr_default;        // default isr index for newly created implicit surfs
   double thresh;
   double sum_delta;
-  int ndelete;
+  double sum_unpaid;      // cumulative decrement no corner point could pay
+  double unpaid_mine;     // this proc's unpaid decrement, current epoch
+  double clamp_mine;      // 1.0 if this proc clamped an inside corner point
+                          // at zero this epoch, else 0.0
+  int firstwarn_unpaid;   // 1 until warned once about an unpaid decrement
+  int firstwarn_clamp;    // 1 until warned once about a clamped corner point
+  bigint ndelete;
 
   int nglocal;            // # of owned grid cells
 
@@ -84,6 +93,8 @@ class FixAblate : public Fix {
   int **mcflags;
 
   double *celldelta;       // per-cell delta from compute or fix source
+                           // reduced to what the cell still owes as it is paid
+  double *credit;          // per-cell decrement its claims actually removed
   double **cdelta;         // per-corner point deltas
   double **cdelta_ghost;   // ditto for my ghost cells communicated to me
   double ***mdelta;        // cdelta for multivalues
@@ -139,8 +150,8 @@ class FixAblate : public Fix {
   void mark_corners_3d(int);
   int find_ninter();
 
-  void epsilon_adjust();
-  void epsilon_adjust_multiv();
+  void epsilon_adjust(int);
+  void epsilon_adjust_multiv(int);
   void push_lohi();
   void comm_neigh_corners(int);
   int walk_to_neigh(int, int, int, int);

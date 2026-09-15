@@ -1,18 +1,5 @@
-//@HEADER
-// ************************************************************************
-//
-//                        Kokkos v. 4.0
-//       Copyright (2022) National Technology & Engineering
-//               Solutions of Sandia, LLC (NTESS).
-//
-// Under the terms of Contract DE-NA0003525 with NTESS,
-// the U.S. Government retains certain rights in this software.
-//
-// Part of Kokkos, under the Apache License v2.0 with LLVM Exceptions.
-// See https://kokkos.org/LICENSE for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-//
-//@HEADER
+// SPDX-FileCopyrightText: Copyright Contributors to the Kokkos project
 
 #ifndef KOKKOS_GRAPH_HPP
 #define KOKKOS_GRAPH_HPP
@@ -29,6 +16,7 @@
 
 // GraphAccess needs to be defined, not just declared
 #include <impl/Kokkos_GraphImpl.hpp>
+#include <impl/Kokkos_GraphNodeCtorProps.hpp>
 
 #include <functional>
 #include <memory>
@@ -49,12 +37,14 @@ struct [[nodiscard]] Graph {
 
   using execution_space = ExecutionSpace;
   using graph           = Graph;
-  using root_t          = GraphNodeRef<ExecutionSpace>;
+  using root_t          = GraphNodeRef<ExecutionSpace, GraphNodeRootTag>;
 
   // </editor-fold> end public member types }}}2
   //----------------------------------------------------------------------------
 
  private:
+  using device_handle_t = Kokkos::Impl::DeviceHandle<ExecutionSpace>;
+
   //----------------------------------------------------------------------------
   // <editor-fold desc="friends"> {{{2
 
@@ -66,19 +56,18 @@ struct [[nodiscard]] Graph {
   //----------------------------------------------------------------------------
   // <editor-fold desc="private data members"> {{{2
 
-  using impl_t      = Kokkos::Impl::GraphImpl<ExecutionSpace>;
-  using root_impl_t = typename impl_t::root_node_impl_t;
+  using impl_t = Kokkos::Impl::GraphImpl<ExecutionSpace>;
 
-  std::shared_ptr<impl_t> m_impl_ptr  = nullptr;
-  std::shared_ptr<root_impl_t> m_root = nullptr;
+  std::shared_ptr<impl_t> m_impl_ptr                                = nullptr;
+  std::shared_ptr<Kokkos::Impl::root_impl_t<ExecutionSpace>> m_root = nullptr;
 
   // </editor-fold> end private data members }}}2
   //----------------------------------------------------------------------------
 
  public:
   // Construct an empty graph with a root node.
-  Graph(ExecutionSpace exec = ExecutionSpace{})
-      : m_impl_ptr{std::make_shared<impl_t>(std::move(exec))},
+  Graph(const device_handle_t& device_handle = device_handle_t{})
+      : m_impl_ptr{std::make_shared<impl_t>(device_handle)},
         m_root{m_impl_ptr->create_root_node_ptr()} {}
 
 #if defined(KOKKOS_ENABLE_CUDA) || defined(KOKKOS_ENABLE_HIP) || \
@@ -88,15 +77,15 @@ struct [[nodiscard]] Graph {
 #if defined(KOKKOS_ENABLE_CXX20)
     requires std::same_as<ExecutionSpace, Kokkos::DefaultExecutionSpace>
 #endif
-  Graph(ExecutionSpace exec, T&& native_graph)
-      : m_impl_ptr{std::make_shared<impl_t>(std::move(exec),
+  Graph(const device_handle_t& device_handle, T&& native_graph)
+      : m_impl_ptr{std::make_shared<impl_t>(device_handle,
                                             std::forward<T>(native_graph))},
         m_root{m_impl_ptr->create_root_node_ptr()} {
   }
 #endif
 
-  ExecutionSpace const& get_execution_space() const {
-    return m_impl_ptr->get_execution_space();
+  const auto& get_device_handle() const {
+    return m_impl_ptr->get_device_handle();
   }
 
   // Once the graph is instantiated, it is undefined behavior to add nodes.
@@ -109,16 +98,43 @@ struct [[nodiscard]] Graph {
 
   auto root_node() const { return root_t{m_impl_ptr, m_root}; }
 
-  void submit(const execution_space& exec) const {
+  // The graph is started once previous work on the execution space has
+  // finished.
+  // TODO: The graph nodes are created with user-provided device handles.
+  //       However, preliminary work (e.g., copying the driver to the device for
+  //       global launch) is enqueued in the device handle execution space
+  //       instance. Currently, the user is responsible for adding proper
+  //       synchronization for node preliminary work. Ideally, the graph itself
+  //       should handle this synchronization on first submission.
+  void submit(const execution_space& exec = execution_space{}) const {
     KOKKOS_EXPECTS(bool(m_impl_ptr))
     (*m_impl_ptr).submit(exec);
   }
 
-  void submit() const { submit(get_execution_space()); }
-
-  decltype(auto) native_graph();
-
-  decltype(auto) native_graph_exec();
+#if defined(KOKKOS_ENABLE_CUDA)
+  cudaGraph_t cuda_graph() const
+  // FIXME_MSVC Did not work with Visual Studio 17 2022.
+#if !defined(KOKKOS_COMPILER_MSVC)
+    requires std::same_as<ExecutionSpace, Kokkos::Cuda>
+#endif
+  ;
+  cudaGraphExec_t cuda_graph_exec() const
+  // FIXME_MSVC Did not work with Visual Studio 17 2022.
+#if !defined(KOKKOS_COMPILER_MSVC)
+    requires std::same_as<ExecutionSpace, Kokkos::Cuda>
+#endif
+  ;
+#elif defined(KOKKOS_ENABLE_HIP)
+  hipGraph_t hip_graph() const
+    requires std::same_as<ExecutionSpace, Kokkos::HIP>;
+  hipGraphExec_t hip_graph_exec() const
+    requires std::same_as<ExecutionSpace, Kokkos::HIP>;
+#elif defined(KOKKOS_ENABLE_SYCL) && defined(KOKKOS_IMPL_SYCL_GRAPH_SUPPORT)
+  const auto& sycl_graph() const
+    requires std::same_as<ExecutionSpace, Kokkos::SYCL>;
+  const auto& sycl_graph_exec() const
+    requires std::same_as<ExecutionSpace, Kokkos::SYCL>;
+#endif
 };
 
 // </editor-fold> end Graph }}}1
@@ -156,13 +172,15 @@ auto when_all(PredecessorRefs&&... arg_pred_refs) {
 // <editor-fold desc="create_graph"> {{{1
 
 template <class ExecutionSpace, class Closure>
-Graph<ExecutionSpace> create_graph(ExecutionSpace ex, Closure&& arg_closure) {
+Graph<ExecutionSpace> create_graph(
+    const Kokkos::Impl::DeviceHandle<ExecutionSpace>& device_handle,
+    Closure&& arg_closure) {
   // Create a shared pointer to the graph:
   // We need an attorney class here so we have an implementation friend to
   // create a Graph class without graph having public constructors. We can't
   // just make `create_graph` itself a friend because of the way that friend
   // function template injection works.
-  Graph<ExecutionSpace> rv{std::move(ex)};
+  Graph<ExecutionSpace> rv{device_handle};
   // Invoke the user's graph construction closure
   ((Closure&&)arg_closure)(rv.root_node());
   // and given them back the graph
@@ -173,51 +191,68 @@ Graph<ExecutionSpace> create_graph(ExecutionSpace ex, Closure&& arg_closure) {
 template <
     class ExecutionSpace = DefaultExecutionSpace,
     class Closure = Kokkos::Impl::DoNotExplicitlySpecifyThisTemplateParameter>
-std::enable_if_t<
-    !Kokkos::is_execution_space_v<Kokkos::Impl::remove_cvref_t<Closure>>,
-    Graph<ExecutionSpace>>
+std::enable_if_t<!Kokkos::is_execution_space_v<std::remove_cvref_t<Closure>>,
+                 Graph<ExecutionSpace>>
 create_graph(Closure&& arg_closure) {
-  return create_graph(ExecutionSpace{}, (Closure&&)arg_closure);
+  return create_graph(Kokkos::Impl::DeviceHandle<ExecutionSpace>{},
+                      (Closure&&)arg_closure);
 }
 
 // </editor-fold> end create_graph }}}1
 //==============================================================================
 
-template <class ExecutionSpace>
-decltype(auto) Graph<ExecutionSpace>::native_graph() {
-  KOKKOS_EXPECTS(bool(m_impl_ptr));
 #if defined(KOKKOS_ENABLE_CUDA)
-  if constexpr (std::is_same_v<ExecutionSpace, Kokkos::Cuda>) {
-    return m_impl_ptr->cuda_graph();
-  }
-#elif defined(KOKKOS_ENABLE_HIP) && defined(KOKKOS_IMPL_HIP_NATIVE_GRAPH)
-  if constexpr (std::is_same_v<ExecutionSpace, Kokkos::HIP>) {
-    return m_impl_ptr->hip_graph();
-  }
-#elif defined(KOKKOS_ENABLE_SYCL) && defined(KOKKOS_IMPL_SYCL_GRAPH_SUPPORT)
-  if constexpr (std::is_same_v<ExecutionSpace, Kokkos::SYCL>) {
-    return m_impl_ptr->sycl_graph();
-  }
-#endif
-}
-
 template <class ExecutionSpace>
-decltype(auto) Graph<ExecutionSpace>::native_graph_exec() {
-  KOKKOS_EXPECTS(bool(m_impl_ptr));
-#if defined(KOKKOS_ENABLE_CUDA)
-  if constexpr (std::is_same_v<ExecutionSpace, Kokkos::Cuda>) {
-    return m_impl_ptr->cuda_graph_exec();
-  }
-#elif defined(KOKKOS_ENABLE_HIP) && defined(KOKKOS_IMPL_HIP_NATIVE_GRAPH)
-  if constexpr (std::is_same_v<ExecutionSpace, Kokkos::HIP>) {
-    return m_impl_ptr->hip_graph_exec();
-  }
-#elif defined(KOKKOS_ENABLE_SYCL) && defined(KOKKOS_IMPL_SYCL_GRAPH_SUPPORT)
-  if constexpr (std::is_same_v<ExecutionSpace, Kokkos::SYCL>) {
-    return m_impl_ptr->sycl_graph_exec();
-  }
+cudaGraph_t Graph<ExecutionSpace>::cuda_graph() const
+// FIXME_MSVC Did not work with Visual Studio 17 2022.
+#if !defined(KOKKOS_COMPILER_MSVC)
+  requires std::same_as<ExecutionSpace, Kokkos::Cuda>
 #endif
+{
+  KOKKOS_EXPECTS(bool(m_impl_ptr));
+  return m_impl_ptr->cuda_graph();
 }
+template <class ExecutionSpace>
+cudaGraphExec_t Graph<ExecutionSpace>::cuda_graph_exec() const
+// FIXME_MSVC Did not work with Visual Studio 17 2022.
+#if !defined(KOKKOS_COMPILER_MSVC)
+  requires std::same_as<ExecutionSpace, Kokkos::Cuda>
+#endif
+{
+  KOKKOS_EXPECTS(bool(m_impl_ptr));
+  return m_impl_ptr->cuda_graph_exec();
+}
+#elif defined(KOKKOS_ENABLE_HIP)
+template <class ExecutionSpace>
+hipGraph_t Graph<ExecutionSpace>::hip_graph() const
+  requires std::same_as<ExecutionSpace, Kokkos::HIP>
+{
+  KOKKOS_EXPECTS(bool(m_impl_ptr));
+  return m_impl_ptr->hip_graph();
+}
+template <class ExecutionSpace>
+hipGraphExec_t Graph<ExecutionSpace>::hip_graph_exec() const
+  requires std::same_as<ExecutionSpace, Kokkos::HIP>
+{
+  KOKKOS_EXPECTS(bool(m_impl_ptr));
+  return m_impl_ptr->hip_graph_exec();
+}
+#elif defined(KOKKOS_ENABLE_SYCL) && defined(KOKKOS_IMPL_SYCL_GRAPH_SUPPORT)
+template <class ExecutionSpace>
+const auto& Graph<ExecutionSpace>::sycl_graph() const
+  requires std::same_as<ExecutionSpace, Kokkos::SYCL>
+{
+  KOKKOS_EXPECTS(bool(m_impl_ptr));
+  return m_impl_ptr->sycl_graph();
+}
+template <class ExecutionSpace>
+const auto& Graph<ExecutionSpace>::sycl_graph_exec() const
+  requires std::same_as<ExecutionSpace, Kokkos::SYCL>
+{
+  KOKKOS_EXPECTS(bool(m_impl_ptr));
+  return m_impl_ptr->sycl_graph_exec();
+}
+#endif
 
 }  // end namespace Experimental
 }  // namespace Kokkos
@@ -231,10 +266,7 @@ decltype(auto) Graph<ExecutionSpace>::native_graph_exec() {
 #include <impl/Kokkos_Default_Graph_Impl.hpp>
 #include <Cuda/Kokkos_Cuda_Graph_Impl.hpp>
 #if defined(KOKKOS_ENABLE_HIP)
-// The implementation of hipGraph in ROCm 5.2 is bugged, so we cannot use it.
-#if defined(KOKKOS_IMPL_HIP_NATIVE_GRAPH)
 #include <HIP/Kokkos_HIP_Graph_Impl.hpp>
-#endif
 #endif
 #ifdef KOKKOS_IMPL_SYCL_GRAPH_SUPPORT
 #include <SYCL/Kokkos_SYCL_Graph_Impl.hpp>

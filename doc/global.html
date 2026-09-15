@@ -309,7 +309,7 @@ there may be no particle migration needed to upwind processors, so the
 <I>all</I> method can generate smaller counts of neighboring processors.
 </P>
 <P>Note that the <I>neigh</I> style only has an effect (at run time) when the
-grid is decomposed by the RCB option of the <A HREF = "balance.html">balance</A> or
+grid is decomposed by the RCB option of the <A HREF = "balance_grid.html">balance_grid</A> or
 <A HREF = "fix_balance.html">fix balance</A> commands.  If that is not the case,
 SPARTA performs the particle communication as if the <I>all</I> setting
 were in place.
@@ -361,16 +361,15 @@ deleted with probability 0.3.
 are not cloned or destroyed by the new weights.  The second
 calculation only happens when a simulation is run.
 </P>
-<P>The <I>particle/reorder</I> keyword determines how often the list of 
-particles on each processor is reordered to store particles in the same 
-grid cell contiguously in memory. This operation is performed every 
-<I>nsteps</I> as specified. A value of 0 means no reordering is ever done. 
-This option is only available when using the KOKKOS package and can 
-improve performance on certain hardware such as GPUs, but is typically 
-slower on CPUs except when running on thousands of nodes. Reordering
-requires sorting the particles, which is done automatically when
-collisions are enabled. If collisions are not enabled, then sorting
-will also be performed in addition to reordering. 
+<P>The <I>particle/reorder</I> keyword determines how often the list of
+particles on each processor is reordered to store particles in the same
+grid cell contiguously in memory. This operation is performed every
+<I>nsteps</I> as specified. A value of 0 means no reordering is ever done.
+This option can improve performance on certain hardware such as GPUs (when
+using the KOKKOS package), and can also improve performance on CPUs in some
+cases too. Reordering requires sorting the particles, which is done
+automatically when collisions are enabled. If collisions are not enabled, then
+sorting will also be performed in addition to reordering.
 </P>
 <P>The <I>mem/limit</I> keyword limits the amount of memory allocated for 
 several operations: load balancing, reordering of particles, and restart 
@@ -388,16 +387,17 @@ store particles because it is performed out-of-place by default. Reading
 and writing restart files also requires temporary buffers to hold grid 
 cells and particles and can double the memory required. 
 </P>
-<P>Specifying the value for <I>mem/limit</I> as <I>grid</I>, will allocate extra 
-memory limited to the size of memory for storing grid cells on each 
-processor. For most simulations this is typically much smaller than the 
-memory used to store particles. Specifying a numeric value for <I>bytes</I> 
-will allocate extra memory limited to that many MBytes on each 
-processor. <I>Bytes</I> can be specified as a floating point value or an 
-integer, e.g. 0.5 if you want to use 1/2 MByte of extra memory or 100 
-for a 100 MByte buffer. Specifying a value of 0 (the default) means no 
-limit is used. The value used for <I>mem/limit</I> must not exceed 2GB or an
-error will occur.
+<P>Specifying the value for <I>mem/limit</I> as <I>grid</I>, will allocate extra
+memory limited to the size of memory for storing grid cells on each
+processor. For most simulations this is typically much smaller than the
+memory used to store particles. If the grid memory exceeds the 2GB limit,
+it is capped at 2GB. Specifying a numeric value for <I>bytes</I>
+will allocate extra memory limited to that many MBytes on each
+processor, where 1 MByte = 1024*1024 bytes. <I>Bytes</I> can be specified as a
+floating point value or an integer, e.g. 0.5 if you want to use 1/2 MByte
+of extra memory or 100 for a 100 MByte buffer. Specifying a value of 0
+(the default) means no limit is used. The numeric value used for
+<I>mem/limit</I> must not exceed 2GB or an error will occur.
 </P>
 <P>For load-balancing, the communication of grid and particle data to new 
 processors will then be performed in multiple passes (if necessary) so 
@@ -425,12 +425,63 @@ However, if there are no surfaces and the grid is uniform (only a
 single level for all cells without further refinement) and the
 <I>optmove</I> keyword is set to <I>yes</I> then the particle will be moved to
 its final position in a single step, skipping all intermediate grid
-cell crossings, which can improve performance. If a particle hits a
-box boundary or leaves the owning proc's subdomain (including the
-ghost cell region), then the normal (non-optimized) move algorithm
-will be used for that specific particle on that timestep. The <I>optmove
-yes</I> option cannot be used when surfaces are defined, the grid is not
-uniform, or when fix adapt is enabled, otherwise an error will result.
+cell crossings, which can improve performance. If a particle leaves
+the owning proc's subdomain (including the ghost cell region), then
+the normal (non-optimized) move algorithm will be used for that
+specific particle on that timestep.
+</P>
+<P>A particle that ends the timestep outside the global box needs a
+<A HREF = "boundary.html">boundary</A> condition applied. For a <I>p</I> (periodic) or
+<I>r</I> (specular reflection) face this is a translation or a reflection
+about the face, and for an <I>o</I> (outflow) face it is deleting the
+particle; the optimized move performs all three itself. An <I>s</I>
+(surface) face runs a <A HREF = "surf_collide.html">surf_collide</A> model, which the
+optimized move does not do in general, so the particle uses the normal
+move algorithm for that timestep. The exception is a face whose model
+is a plain <I>specular</I> one with no <A HREF = "surf_react.html">surf_react</A> model
+assigned: that is a reflection about the face and nothing else, so the
+optimized move performs it, and adds the collisions to the model's own
+tally so its output is unchanged. A <I>specular</I> model with the <I>noslip</I>
+option is not such a face, since it reverses all three velocity
+components rather than reflecting. A particle that leaves through an
+outflow face also uses the normal move if it is outside a normal-move
+<I>s</I> face in another dimension, since the collision there could turn it
+around before it ever reaches the outflow face. This matters for performance
+because the processors that own the edges of the global box are the
+only ones with such particles, so leaving those faces to the normal
+move makes those processors slower than the rest, which in a parallel
+run costs every processor the difference. Note also that on a GPU the
+particles are moved in lockstep in groups, so one particle taking the
+normal move algorithm slows down every other particle in its group.
+</P>
+<P>On any timestep where a <A HREF = "compute_boundary.html">compute boundary</A> is
+being invoked, all box boundary crossings use the normal move
+algorithm, since only it tallies them.
+</P>
+<P>The <I>optmove yes</I> option cannot be used when surfaces are defined, the
+grid is not uniform, or when fix adapt is enabled, otherwise an error
+will result.
+</P>
+<P>The optimized move supports <A HREF = "dimension.html">axisymmetric</A> models.  One
+remap of the end-of-step position into the axisymmetric plane replaces
+the remap the normal move performs at every cell crossing, which gives
+the same result because each remap is a rotation applied to the position
+and the velocity together and the radial coordinate is unchanged by it.
+The axis needs no boundary condition, since the remap always returns a
+non-negative radius.  There is one restriction: at the outer radial
+boundary, an <I>r</I> face or an <I>s</I> face carrying a <I>specular</I> model uses the
+normal move algorithm, because that face is a cylinder and reflecting off
+it turns the particle out of the plane it was moving in, so the radial
+path after the reflection is not a continuation of the one before.  An
+<I>o</I> face at the outer radius is handled by the optimized move as usual.
+</P>
+<P>Note that the "Cells touched" and "Cell-touches/particle/step"
+statistics printed at the end of a run count only particles that used
+the normal move algorithm, since the optimized move never visits the
+intermediate cells. With <I>optmove yes</I> these values are therefore a
+measure of how often the optimized move was not applicable, not of how
+far particles moved. A value near zero means it was used for nearly
+every particle.
 </P>
 <P>The <I>rigid</I> keyword enables a mobile rigid-body object composed of
 surface elements (lines in 2d, triangles in 3d) to be simulated.  The

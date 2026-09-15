@@ -103,7 +103,15 @@ effectively.
 </P>
 <HR>
 
-<P><B>Restrictions:</B> none
+<P><B>Restrictions:</B>
+</P>
+<P>The KOKKOS version of this fix does not (yet) support the <I>outside yes</I>
+option.  That check tests whether a particle in a cell containing surface
+elements is inside one of them, which requires the same cut/split geometry
+machinery the fix uses on the host and which has no device implementation.
+Rather than silently perform only the smaller check, <I>fix grid/check/kk</I>
+generates an error if <I>outside yes</I> is specified.  Run the fix without the
+<I>kk</I> suffix to use that option.
 </P>
 <P><B>Related commands:</B> none
 </P>

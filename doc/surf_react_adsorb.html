@@ -11,13 +11,15 @@
 
 <H3>surf_react adsorb command 
 </H3>
+<H3>surf_react adsorb/kk command 
+</H3>
 <P><B>Syntax:</B>
 </P>
 <PRE>surf_react ID adsorb model infile(s) Nsync type temp n_sites adsp1 adsp2 ... 
 </PRE>
 <UL><LI>ID = user-assigned name for the surface reaction model 
 
-<LI>style = <I>adsorb</I> 
+<LI>style = <I>adsorb</I> or <I>adsorb/kk</I> 
 
 <LI>model = <I>gs</I> or <I>ps</I> or <I>gs/ps</I> 
 
@@ -41,6 +43,20 @@
 n_sites = # of available adsorption sites per unit area (3D) or length (2D) 
 
 <LI>adsp1,adsp2,... = list of species that can adsorb on surface 
+
+
+</UL>
+<P>The reaction file(s) read by this command can also include the optional
+per-reaction keywords <I>kisliuk</I> and <I>energy</I>, which modify how the
+reaction rate constant is computed.  See the discussion of the reaction
+file format below for details.
+</P>
+<UL><LI><I>kisliuk</I> = scale the adsorption rate constant by the Kisliuk
+  precursor-mediated sticking factor (only for adsorption reactions: AA,
+  DA, LH1, LH3, CD) 
+
+<LI><I>energy</I> = scale the rate constant by an incident-energy and
+  angle-dependent factor (only for CI) 
 
 
 </UL>
@@ -327,6 +343,17 @@ reactants. The reaction probability is obtained by normalized all the
 reaction rates. A detailed description can be found in Swaminathan
 Gopalan <I>et al.</I> <A HREF = "#SG18">(SG18)</A>.
 </P>
+<P>Note that adsorption events are accumulated against the surface state
+stored at the most recent sync, so the influx of an entire <I>Nsync</I>
+window can adsorb more particles on a face or surface element than the
+<I>n_sites</I> value gives it room for.  When that happens, the coverage
+which scales the adsorption reactions is clamped at one, so that those
+reactions stop until the coverage drops, and a warning is printed the
+first time it happens.  Since the stored count of adsorbed particles is
+then larger than the number of sites, which is not physical, the run
+should be repeated with a smaller <I>Nsync</I> or <I>fnum</I>, or a larger
+<I>n_sites</I> value.
+</P>
 <HR>
 
 <P>If there are gas-phase products, there is an option to specify the
@@ -353,7 +380,7 @@ The values can be used by the <A HREF = "stats_style.html">stats_style</A> comma
 and by <A HREF = "variable.html">variables</A> that define formulas.  The latter
 means they can be used by any command that uses a variable as input,
 e.g. the <A HREF = "fix_ave_time.html">fix ave/time</A> command.  See <A HREF = "Section_howto.html#howto_4">Section
-4.4</A> for an overview of SPARTA output
+6.4</A> for an overview of SPARTA output
 options.
 </P>
 <P>This <I>adsorb</I> style compute a vector of length 2 + 2*nlist.  Nlist is
@@ -369,6 +396,29 @@ beginning of the current run.  The next nlist elements are the count
 of each individual reaction that occurred during the current timestep.
 The final nlist elements are the cummulative count of each individual
 reaction since the beginning of the current run.
+</P>
+<HR>
+
+<P>Styles with a <I>kk</I> suffix are functionally the same as the
+corresponding style without the suffix.  They have been optimized to
+run faster, depending on your available hardware, as discussed in the
+<A HREF = "Section_accelerate.html">Accelerating SPARTA</A> section of the manual.
+The accelerated styles take the same arguments and should produce the
+same results, except for different random number, round-off and
+precision issues.
+</P>
+<P>These accelerated styles are part of the KOKKOS package. They are only
+enabled if SPARTA was built with that package.  See the <A HREF = "Section_start.html#start_3">Making
+SPARTA</A> section for more info.
+</P>
+<P>You can specify the accelerated styles explicitly in your input script
+by including their suffix, or you can use the <A HREF = "Section_start.html#start_7">-suffix command-line
+switch</A> when you invoke SPARTA, or you can
+use the <A HREF = "suffix.html">suffix</A> command in your input script.
+</P>
+<P>See the <A HREF = "Section_accelerate.html">Accelerating SPARTA</A> section of the
+manual for more instructions on how to use the accelerated styles
+effectively.
 </P>
 <HR>
 
@@ -389,7 +439,7 @@ appropriately when that occurs.
 </P>
 <P><B>Related commands:</B>
 </P>
-<P><A HREF = "aurf_react.html">surf_react</A>, <A HREF = "react.html">react</A>, 
+<P><A HREF = "surf_react.html">surf_react</A>, <A HREF = "react.html">react</A>, 
 <A HREF = "surf_modify.html">surf_modify</A>,
 <A HREF = "bound_modify.html">bound_modify</A>, 
 </P>

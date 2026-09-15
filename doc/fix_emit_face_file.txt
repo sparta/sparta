@@ -19,11 +19,12 @@ face = {xlo} or {xhi} or {ylo} or {yhi} or {zlo} or {zhi} :l
 filename = input data file with boundary values for the emission :l
 boundary-ID = section of data file to read :l
 zero or more keyword/value pairs may be appended :l
-keyword = {frac} or {nevery} or {perspecies} or {region} :l
+keyword = {frac} or {nevery} or {perspecies} or {region} or {twopass} :l
   {frac} value = fraction = 0.0 to 1.0 fraction of particles to insert
   {nevery} value = Nstep = insert every this many timesteps
   {perspecies} value = {yes} or {no}
-  {region} value = region-ID :pre
+  {region} value = region-ID
+  {twopass} values = none :pre
 :ule
 
 [Examples:]
@@ -65,7 +66,7 @@ equation 4.22 of "(Bird94)"_#Bird94.  The number of particles {M} to
 add on a particular grid cell face is based on this flux and
 additional global, flow, and cell face properties:
 
-global property: {fnum} ratio as specified by the "global"_global.html" command
+global property: {fnum} ratio as specified by the "global"_global.html command
 flow properties: number density, streaming velocity, and thermal temperature
 cell face properties: area of face and its orientation relative to the streaming velocity :ul
 
@@ -270,7 +271,7 @@ populated.
 
 IMPORTANT NOTE: When using a subsonic prsesure boundary condition, you
 should also use an appropriate boundary collision or chemistry model
-via the "boundary"_boundary.htmo or "bound_modify"_bound_modify.html
+via the "boundary"_boundary.html or "bound_modify"_bound_modify.html
 or "surf_collide"_surf_collide.html or "surf_react"_surf_react.html
 commands, so that particles hitting the surface disappear as if they
 were exiting the simulation domain.  That is necessary to produce the
@@ -355,6 +356,16 @@ that the {side} option for the "region"_region.html command can be
 used to define whether the inside or outside of the geometric region
 is considered to be "in" the region.
 
+The {twopass} keyword does not require a value.  If used, the
+insertion procedure will loop over the insertion grid cells twice, the
+same as the KOKKOS package version of this fix does, so that it can
+reallocate memory efficiently, e.g. on a GPU.  If this keyword is used
+the non-KOKKOS and KOKKOS version will generate exactly the same set
+of particles, which makes debugging easier.  If the keyword is not
+used, the non-KOKKOS and KOKKOS runs will use random numbers
+differently and thus generate different particles, though they will be
+statistically similar.
+
 :line
 
 [Restart, output info:]
@@ -375,7 +386,7 @@ Particles cannot be added on periodic faces of the simulation box.
 Particles cannot be added on {z} faces of the simluation box for a 2d
 simulation.
 
-Unlike the "fix emit/face"_fix_emit/face.html command, no warning is
+Unlike the "fix emit/face"_fix_emit_face.html command, no warning is
 issued if the specified emission face has an inward normal in a
 direction opposing the streaming velocity, as defined by the mixture.
 This is because the streaming velocity as defined by the specified
@@ -395,10 +406,14 @@ emit/face"_fix_emit_face.html
 [Default:]
 
 The keyword defaults are frac = 1.0, nevery = 1, perspecies = yes,
-region = none.
+region = none, no twopass setting.
 
 :line
 
 :link(Bird94)
 [(Bird94)] G. A. Bird, Molecular Gas Dynamics and the Direct
 Simulation of Gas Flows, Clarendon Press, Oxford (1994).
+
+:link(Fang02)
+[(Fang02)] Y. Fang and W. W. Liou, Microfluid Flow Computations 
+Using a Parallel DSMC Code, AIAA 2002-1057. (2002).

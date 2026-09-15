@@ -19,6 +19,7 @@
 #include "compute_dt_grid_kokkos.h"
 #include "update.h"
 #include "grid_kokkos.h"
+#include "particle_kokkos.h"
 #include "domain.h"
 #include "fix.h"
 #include "compute.h"
@@ -96,7 +97,7 @@ void ComputeDtGridKokkos::compute_per_grid_kokkos()
       computeKKBase->post_process_grid_kokkos(tau_index,1,DAT::t_float_2d_lr(),NULL,DAT::t_float_1d_strided());
 
     if (tau_index == 0 || ctau->post_process_grid_flag)
-      Kokkos::deep_copy(d_tau_vector, computeKKBase->d_vector_grid);
+      copy_source(d_tau_vector,computeKKBase->d_vector_grid,nglocal);
     else {
       d_array = computeKKBase->d_array_grid;
       copymode = 1;
@@ -107,6 +108,9 @@ void ComputeDtGridKokkos::compute_per_grid_kokkos()
     if (!ftau->kokkos_flag)
       error->all(FLERR,"Cannot (yet) use non-Kokkos fixes with compute dt/grid/kk");
     KokkosBase* computeKKBase = dynamic_cast<KokkosBase*>(ftau);
+    // a fix keeps its per-grid output between invocations and grid migration
+    // can leave it current on the host alone, so ask for the device copy
+    if (computeKKBase) computeKKBase->sync_pergrid_device_kokkos();
     if (tau_index == 0)
       d_tau_vector = computeKKBase->d_vector_grid;
     else {
@@ -129,7 +133,7 @@ void ComputeDtGridKokkos::compute_per_grid_kokkos()
       computeKKBase->post_process_grid_kokkos(temp_index,1,DAT::t_float_2d_lr(),NULL,DAT::t_float_1d_strided());
 
     if (temp_index == 0 || ctemp->post_process_grid_flag)
-      Kokkos::deep_copy(d_temp_vector, computeKKBase->d_vector_grid);
+      copy_source(d_temp_vector,computeKKBase->d_vector_grid,nglocal);
     else {
       d_array = computeKKBase->d_array_grid;
       copymode = 1;
@@ -140,6 +144,9 @@ void ComputeDtGridKokkos::compute_per_grid_kokkos()
     if (!ftemp->kokkos_flag)
       error->all(FLERR,"Cannot (yet) use non-Kokkos fixes with compute dt/grid/kk");
     KokkosBase* computeKKBase = dynamic_cast<KokkosBase*>(ftemp);
+    // a fix keeps its per-grid output between invocations and grid migration
+    // can leave it current on the host alone, so ask for the device copy
+    if (computeKKBase) computeKKBase->sync_pergrid_device_kokkos();
     if (temp_index == 0)
       d_temp_vector = computeKKBase->d_vector_grid;
     else {
@@ -162,7 +169,7 @@ void ComputeDtGridKokkos::compute_per_grid_kokkos()
       computeKKBase->post_process_grid_kokkos(usq_index,1,DAT::t_float_2d_lr(),NULL,DAT::t_float_1d_strided());
 
     if (usq_index == 0 || cusq->post_process_grid_flag)
-      Kokkos::deep_copy(d_usq_vector, computeKKBase->d_vector_grid);
+      copy_source(d_usq_vector,computeKKBase->d_vector_grid,nglocal);
     else {
       d_array = computeKKBase->d_array_grid;
       copymode = 1;
@@ -173,6 +180,9 @@ void ComputeDtGridKokkos::compute_per_grid_kokkos()
     if (!fusq->kokkos_flag)
       error->all(FLERR,"Cannot (yet) use non-Kokkos fixes with compute dt/grid/kk");
     KokkosBase* computeKKBase = dynamic_cast<KokkosBase*>(fusq);
+    // a fix keeps its per-grid output between invocations and grid migration
+    // can leave it current on the host alone, so ask for the device copy
+    if (computeKKBase) computeKKBase->sync_pergrid_device_kokkos();
     if (usq_index == 0)
       d_usq_vector = computeKKBase->d_vector_grid;
     else {
@@ -195,7 +205,7 @@ void ComputeDtGridKokkos::compute_per_grid_kokkos()
       computeKKBase->post_process_grid_kokkos(vsq_index,1,DAT::t_float_2d_lr(),NULL,DAT::t_float_1d_strided());
 
     if (vsq_index == 0 || cvsq->post_process_grid_flag)
-      Kokkos::deep_copy(d_vsq_vector, computeKKBase->d_vector_grid);
+      copy_source(d_vsq_vector,computeKKBase->d_vector_grid,nglocal);
     else {
       d_array = computeKKBase->d_array_grid;
       copymode = 1;
@@ -206,6 +216,9 @@ void ComputeDtGridKokkos::compute_per_grid_kokkos()
     if (!fvsq->kokkos_flag)
       error->all(FLERR,"Cannot (yet) use non-Kokkos fixes with compute dt/grid/kk");
     KokkosBase* computeKKBase = dynamic_cast<KokkosBase*>(fvsq);
+    // a fix keeps its per-grid output between invocations and grid migration
+    // can leave it current on the host alone, so ask for the device copy
+    if (computeKKBase) computeKKBase->sync_pergrid_device_kokkos();
     if (vsq_index == 0)
       d_vsq_vector = computeKKBase->d_vector_grid;
     else {
@@ -228,7 +241,7 @@ void ComputeDtGridKokkos::compute_per_grid_kokkos()
       computeKKBase->post_process_grid_kokkos(wsq_index,1,DAT::t_float_2d_lr(),NULL,DAT::t_float_1d_strided());
 
     if (wsq_index == 0 || cwsq->post_process_grid_flag)
-      Kokkos::deep_copy(d_wsq_vector, computeKKBase->d_vector_grid);
+      copy_source(d_wsq_vector,computeKKBase->d_vector_grid,nglocal);
     else {
       d_array = computeKKBase->d_array_grid;
       copymode = 1;
@@ -239,6 +252,9 @@ void ComputeDtGridKokkos::compute_per_grid_kokkos()
     if (!fwsq->kokkos_flag)
       error->all(FLERR,"Cannot (yet) use non-Kokkos fixes with compute dt/grid/kk");
     KokkosBase* computeKKBase = dynamic_cast<KokkosBase*>(fwsq);
+    // a fix keeps its per-grid output between invocations and grid migration
+    // can leave it current on the host alone, so ask for the device copy
+    if (computeKKBase) computeKKBase->sync_pergrid_device_kokkos();
     if (wsq_index == 0)
       d_wsq_vector = computeKKBase->d_vector_grid;
     else {
@@ -249,9 +265,17 @@ void ComputeDtGridKokkos::compute_per_grid_kokkos()
     }
   }
 
+  // the per-cell particle counts below belong to the last particle sort,
+  //   and grid adaptation invalidates it.  this compute is reachable from
+  //   fix dt/reset's end_of_step, which runs after fix adapt has changed
+  //   the grid and before the next sort, so re-sort if that has happened
+
+  ParticleKokkos* particle_kk = ((ParticleKokkos*)particle);
+  if (!particle_kk->sorted_kk) particle_kk->sort_kokkos();
+
   // calculate per grid cell timestep for cells in group
   GridKokkos* grid_kk = ((GridKokkos*)grid);
-  grid_kk->sync(Device,CELL_MASK);
+  grid_kk->sync(Device,CELL_MASK|CINFO_MASK);
   d_cinfo = grid_kk->k_cinfo.view_device();
   d_cells = grid_kk->k_cells.view_device();
   d_cellcount = grid_kk->d_cellcount;
@@ -367,6 +391,23 @@ void ComputeDtGridKokkos::operator()(TagComputeDtGrid_ComputePerGrid, const int 
   }
 
   d_vector_grid(i) = cell_dt_desired;
+}
+
+/* ----------------------------------------------------------------------
+   copy the first N cells of a source per-grid vector into DEST
+   the source belongs to another compute or fix, which may have grown its
+     own view past the current cell count, so the two cannot be deep_copied
+     whole.  the non-Kokkos style memcpy's exactly N values
+------------------------------------------------------------------------- */
+
+void ComputeDtGridKokkos::copy_source(DAT::t_float_1d d_dst,
+                                      DAT::t_float_1d d_src, int n)
+{
+  if (n <= 0) return;
+  auto range = Kokkos::make_pair(0,n);
+  auto d_dst_n = Kokkos::subview(d_dst,range);
+  auto d_src_n = Kokkos::subview(d_src,range);
+  Kokkos::deep_copy(d_dst_n,d_src_n);
 }
 
 /* ----------------------------------------------------------------------

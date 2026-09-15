@@ -1,0 +1,47 @@
+################################################################################
+# a moving piston compressing a gas, with a vanishing outflow wall
+#
+# Covers surf_collide piston and surf_collide vanish, neither of which appears
+# in any other deck.  piston drives xlo inward so the gas is compressed and the
+# temperature rises; vanish deletes anything reaching xhi, so Np falls.  Both
+# effects are visible in stats, which is what makes this a test rather than a
+# smoke check.
+#
+# Note:
+#  - The "comm/sort" option to the "global" command is used to match MPI runs.
+#  - The "twopass" option is used to match Kokkos runs.
+################################################################################
+
+seed                12345
+dimension           3
+global              gridcut 1.0e-5 comm/sort yes
+boundary            s s p
+create_box          0 0.0001 0 0.0001 0 0.0001
+create_grid         10 10 10
+balance_grid        rcb part
+
+species             air.species N2 N
+mixture             air N2 N vstream 0.0 0.0 0.0 temp 300.0
+mixture             air N2 frac 1.0
+mixture             air N frac 0.0
+
+global              nrho 7.07043E22 fnum 7.07043E6
+
+collide             vss air air.vss
+
+surf_collide        pist piston 400.0
+surf_collide        gone vanish
+surf_collide        wall specular
+
+bound_modify        xlo collide pist
+bound_modify        xhi collide gone
+bound_modify        ylo collide wall
+bound_modify        yhi collide wall
+
+create_particles    air n 20000 twopass
+
+compute             t temp
+stats               50
+stats_style         step np nattempt ncoll c_t
+timestep            1.0e-9
+run                 300

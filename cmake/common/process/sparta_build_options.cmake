@@ -55,14 +55,6 @@ list(APPEND TARGET_SPARTA_BUILD_TPLS ${TARGET_SPARTA_BUILD_MPI})
 
 # ################### BEGIN PROCESS FFT TPL/PKG ####################
 
-if((NOT PKG_FFT) AND (NOT (FFT_KOKKOS STREQUAL "OFF")))
-  message(FATAL_ERROR  "Setting FFT_KOKKOS library requires PKG_FFT: ON.")
-endif()
-
-if((NOT PKG_FFT) AND (NOT (FFT STREQUAL "OFF")))
-  message(FATAL_ERROR  "Setting FFT library requires PKG_FFT: ON.")
-endif()
-
 if(PKG_FFT)
 
   if(FFT STREQUAL "OFF")
@@ -171,10 +163,10 @@ endif()
 
 if(PKG_KOKKOS)
 
-  # As of version 4.0.0 Kokkos requires C++17
-  if(CMAKE_CXX_STANDARD LESS 17)
+  # As of version 5.0.0 Kokkos requires C++20
+  if(CMAKE_CXX_STANDARD LESS 20)
     message(FATAL_ERROR "The KOKKOS package requires the C++ standard to
-  be set to at least C++17")
+  be set to at least C++20")
   endif()
 
 ########################################################################
@@ -200,8 +192,37 @@ endif()
   list(APPEND TARGET_SPARTA_PKGS ${TARGET_SPARTA_PKG_KOKKOS})
   set(SPARTA_DEFAULT_CXX_COMPILE_FLAGS -DSPARTA_KOKKOS
                                        ${SPARTA_DEFAULT_CXX_COMPILE_FLAGS})
+  # SPARTA_KOKKOS_EXACT makes the KOKKOS package reproduce non-KOKKOS results
+  # exactly, which allows the KOKKOS build to be regression tested against the
+  # existing (non-KOKKOS) gold-standard log files.
+  if(SPARTA_KOKKOS_EXACT)
+    set(SPARTA_DEFAULT_CXX_COMPILE_FLAGS -DSPARTA_KOKKOS_EXACT
+                                         ${SPARTA_DEFAULT_CXX_COMPILE_FLAGS})
+  endif()
+  # SPARTA_KOKKOS_FIXED_LISTS restores the fixed-size KKCopy arrays for the
+  # per-type tally compute lists instead of runtime-sized device buffers.  The
+  # buffers lift the instance caps; the arrays keep every compute inside the
+  # kernel functor.  Which performs better is hardware-dependent -- functor
+  # size trades against occupancy and data locality -- so both are buildable.
+  if(SPARTA_KOKKOS_FIXED_LISTS)
+    set(SPARTA_DEFAULT_CXX_COMPILE_FLAGS -DSPARTA_KOKKOS_FIXED_LISTS
+                                         ${SPARTA_DEFAULT_CXX_COMPILE_FLAGS})
+  endif()
   # PKG_KOKKOS depends on BUILD_KOKKOS
   set(BUILD_KOKKOS ON)
+endif()
+
+if(PKG_VTK)
+  set(TARGET_SPARTA_PKG_VTK pkg_vtk)
+  list(APPEND TARGET_SPARTA_PKGS ${TARGET_SPARTA_PKG_VTK})
+  set(SPARTA_DEFAULT_CXX_COMPILE_FLAGS -DSPARTA_VTK
+                                       ${SPARTA_DEFAULT_CXX_COMPILE_FLAGS})
+  # PKG_VTK depends on the VTK third-party library
+  set(BUILD_VTK ON)
+  # the examples/vtk regression suite requires the VTK dump styles
+  if(SPARTA_ENABLE_TESTING)
+    set(SPARTA_ENABLED_TEST_SUITES ${SPARTA_ENABLED_TEST_SUITES} "vtk")
+  endif()
 endif()
 # ################### END PROCESS PKGS ####################
 
@@ -234,6 +255,17 @@ if(BUILD_PNG)
   set(TARGET_SPARTA_BUILD_PNG PNG::PNG)
   list(APPEND TARGET_SPARTA_BUILD_TPLS ${TARGET_SPARTA_BUILD_PNG})
   set(SPARTA_DEFAULT_CXX_COMPILE_FLAGS -DSPARTA_PNG
+                                       ${SPARTA_DEFAULT_CXX_COMPILE_FLAGS})
+endif()
+
+if(BUILD_VTK)
+  # VTK 9+ uses component-based modules; set VTK_ROOT (CMP0074 is NEW) to
+  # point at a non-standard install.  VTK_LIBRARIES holds the module targets.
+  find_package(VTK REQUIRED
+               COMPONENTS CommonCore CommonDataModel IOLegacy IOXML)
+  set(TARGET_SPARTA_BUILD_VTK ${VTK_LIBRARIES})
+  list(APPEND TARGET_SPARTA_BUILD_TPLS ${TARGET_SPARTA_BUILD_VTK})
+  set(SPARTA_DEFAULT_CXX_COMPILE_FLAGS -DSPARTA_VTK
                                        ${SPARTA_DEFAULT_CXX_COMPILE_FLAGS})
 endif()
 

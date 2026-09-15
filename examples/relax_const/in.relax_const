@@ -37,7 +37,23 @@ compute             Ttrans reduce ave c_T[1]
 compute             rot grid all all trot
 compute             Trot reduce ave c_rot[1]
 
-stats_style	    step cpu np nattempt ncoll c_Ttrans c_Trot
+# per-grid flux and Sonine moment diagnostics, reduced to scalars for stats
+
+compute             ef eflux/grid all all heatx heaty heatz
+compute             EF reduce ave c_ef[1] c_ef[3]
+compute             pf pflux/grid all all momxx momyy momxy
+compute             PF reduce ave c_pf[1] c_pf[3]
+compute             sn sonine/grid all all a x 1 b xy 1
+compute             SN reduce ave c_sn[1] c_sn[2]
+
+# ke/particle needs a deck with collisions: without them particle velocities
+#   never change and any reduction of it is constant for the whole run
+
+compute             kep ke/particle
+compute             KE reduce max c_kep
+
+stats_style	    step cpu np nattempt ncoll c_Ttrans c_Trot &
+                    c_EF[1] c_EF[2] c_PF[1] c_PF[2] c_SN[1] c_SN[2] c_KE
 
 timestep 	    1.00E-9
 run 		    200

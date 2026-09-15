@@ -30,12 +30,37 @@ namespace SPARTA_NS {
 class FixEmitFaceFile : public FixEmit {
  public:
   FixEmitFaceFile(class SPARTA *, int, char **);
-  ~FixEmitFaceFile();
-  void init();
+  ~FixEmitFaceFile() override;
+  void init() override;
 
- private:
+  // one insertion task for a cell and a face
+
+  struct Task {
+    double lo[3];               // lower-left corner of overlap of cell/file
+    double hi[3];               // upper-right corner of overlap of cell/file
+    double area;                // area of face
+    double ntarget;             // # of mols to insert for all species
+    double *ntargetsp;          // # of mols to insert for each species,
+                                //   only defined for PERSPECIES
+
+    int icell;                  // associated cell index, unsplit or split cell
+    int pcell;                  // associated cell index for particles
+                                // unsplit or sub cell (not split cell)
+
+    // interpolated file values or defaults from mixture params
+
+    double nrho;
+    double temp_thermal,temp_rot,temp_vib;
+    double press;
+    double vstream[3];
+    double *fraction;
+    double *cummulative;
+    double *vscale;
+  };
+
+ protected:
   int imix,iface,subsonic,subsonic_style,subsonic_warning;
-  int npertask,nthresh;
+  int npertask,nthresh,twopass;
   double frac_user;
   double tprefactor,soundspeed_mixture;
 
@@ -71,30 +96,6 @@ class FixEmitFaceFile : public FixEmit {
 
   Mesh mesh;
 
-  // one insertion task for a cell and a face
-
-  struct Task {
-    double lo[3];               // lower-left corner of overlap of cell/file
-    double hi[3];               // upper-right corner of overlap of cell/file
-    double area;                // area of face
-    double ntarget;             // # of mols to insert for all species
-    double *ntargetsp;          // # of mols to insert for each species,
-                                //   only defined for PERSPECIES
-
-    int icell;                  // associated cell index, unsplit or split cell
-    int pcell;                  // associated cell index for particles
-                                // unsplit or sub cell (not split cell)
-
-    // interpolated file values or defaults from mixture params
-
-    double nrho;
-    double temp_thermal,temp_rot,temp_vib;
-    double press;
-    double vstream[3];
-    double *fraction;
-    double *cummulative;
-    double *vscale;
-  };
 
                          // ntask = # of tasks is stored by parent class
   Task *tasks;           // list of particle insertion tasks
@@ -121,13 +122,15 @@ class FixEmitFaceFile : public FixEmit {
 
   int split(int);
 
-  void subsonic_inflow();
-  void subsonic_sort();
-  void subsonic_grid();
+  virtual void subsonic_inflow();
+  virtual void subsonic_sort();
+  virtual void subsonic_grid();
 
-  void create_task(int);
-  void perform_task();
-  void grow_task();
+  virtual void create_task(int);
+  virtual void perform_task();
+  void perform_task_onepass();
+  virtual void perform_task_twopass();
+  virtual void grow_task();
 
   int option(int, char **);
   void print_task(int);

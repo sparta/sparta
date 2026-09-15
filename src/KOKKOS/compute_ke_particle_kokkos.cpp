@@ -45,6 +45,14 @@ ComputeKEParticleKokkos::~ComputeKEParticleKokkos()
   if (copymode) return;
   memoryKK->destroy_kokkos(k_vector_particle,vector_particle);
   vector_particle = NULL;
+
+  // ke aliases vector_particle in the host implementation
+  //   (compute_ke_particle.cpp:71 "vector_particle = ke"), and
+  //   ~ComputeKEParticle() frees ke.  Without clearing it here that base
+  //   destructor frees the allocation just released above -- a double free
+  //   at shutdown, after a run that produced entirely correct output
+
+  ke = NULL;
 }
 
 /* ---------------------------------------------------------------------- */

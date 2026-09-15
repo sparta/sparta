@@ -29,6 +29,7 @@ namespace SPARTA_NS {
 class ComputeGasReactionTally : public Compute {
  public:
   ComputeGasReactionTally(class SPARTA *, int, char **);
+  ComputeGasReactionTally(class SPARTA* sparta) : Compute(sparta) {} // needed for Kokkos
   ~ComputeGasReactionTally();
   void compute_per_tally();
   void clear();

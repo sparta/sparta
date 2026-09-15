@@ -43,7 +43,9 @@ class IrregularKokkos : public Irregular {
   void pack_buffer_serial(const int, const int) const;
 
  private:
-  int offset_send;
+  int offset_send;      // datum-count cursor into index_send, not bytes:
+                        //   bounded by total # of datums sent (< 2^31 since
+                        //   create_data_uniform() takes an int count)
 
   DAT::tdual_int_1d k_index_send;
   DAT::t_int_1d d_index_send;

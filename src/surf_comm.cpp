@@ -75,8 +75,8 @@ void Surf::redistribute_surfs(int n, Line *newlines, Tri *newtris,
   int *proclist;
   memory->create(proclist,n,"readsurf:proclist");
 
-  int surfperproc = nsurf_new / nprocs;
-  int ncontig = surfperproc;
+  bigint surfperproc = nsurf_new / nprocs;
+  bigint ncontig = surfperproc;
   if (me == nprocs-1) ncontig = nsurf_new - (nprocs-1)*surfperproc;
 
   Line *lines_contig = NULL;
@@ -144,20 +144,26 @@ void Surf::redistribute_surfs(int n, Line *newlines, Tri *newtris,
     memory->create(recvcounts,nprocs,"readsurf:recvcounts");
     memory->create(displs,nprocs,"readsurf:displs");
 
-    int nbsize;
-    if (dim == 2) nbsize = ncontig * sizeof(Line);
-    else nbsize = ncontig * sizeof(Tri);
+    // gather as counts of a contiguous surf datatype, not bytes:
+    //   int byte counts/displacements overflow at ~16M surfs (2 GB)
 
-    MPI_Allgather(&nbsize,1,MPI_INT,recvcounts,1,MPI_INT,world);
+    MPI_Datatype surf_type;
+    MPI_Type_contiguous(nbytes,MPI_CHAR,&surf_type);
+    MPI_Type_commit(&surf_type);
+
+    int ncount = ncontig;
+    MPI_Allgather(&ncount,1,MPI_INT,recvcounts,1,MPI_INT,world);
     displs[0] = 0;
     for (int i = 1; i < nprocs; i++) displs[i] = displs[i-1] + recvcounts[i-1];
 
     if (dim == 2)
-      MPI_Allgatherv(lines_contig,ncontig*sizeof(Line),MPI_CHAR,
-		     &lines[nsurf_old],recvcounts,displs,MPI_CHAR,world);
+      MPI_Allgatherv(lines_contig,ncount,surf_type,
+		     &lines[nsurf_old],recvcounts,displs,surf_type,world);
     else
-      MPI_Allgatherv(tris_contig,ncontig*sizeof(Tri),MPI_CHAR,
-		     &tris[nsurf_old],recvcounts,displs,MPI_CHAR,world);
+      MPI_Allgatherv(tris_contig,ncount,surf_type,
+		     &tris[nsurf_old],recvcounts,displs,surf_type,world);
+
+    MPI_Type_free(&surf_type);
 
     // clean up
 
@@ -233,7 +239,7 @@ int Surf::rendezvous_redistribute_surfs(int n, char *inbuf, int &flag,
   // Surf class variables peculiar to this rendevous operation
 
   bigint nsurf_old = sptr->redistribute_nsurf_old;
-  int surfperproc = sptr->redistribute_surfperproc;
+  bigint surfperproc = sptr->redistribute_surfperproc;
   Line *lines_contig = sptr->redistribute_lines_contig;
   Tri *tris_contig = sptr->redistribute_tris_contig;
 
@@ -435,7 +441,7 @@ void Surf::compress_explicit()
 
   // compress nlocal surfs based on keep flags
 
-  m = 0;
+  i = m = 0;
   while (i < nlocal) {
     if (!keep[i]) {
       if (dim == 2) memcpy(&lines[i],&lines[nlocal-1],sizeof(Line));
@@ -844,6 +850,7 @@ void Surf::assign_unique()
   int dim = domain->dimension;
   surfint surfID;
 
+  m = 0;
   for (i = 0; i < nlocal; i++) {
     if (dim == 2) surfID = lines[i].id;
     else surfID = tris[i].id;

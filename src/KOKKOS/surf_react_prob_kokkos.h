@@ -41,6 +41,7 @@ class SurfReactProbKokkos : public SurfReactProb {
   void tally_update();
 
   void pre_react();
+  void post_react();
   void backup();
   void restore();
 
@@ -69,14 +70,25 @@ class SurfReactProbKokkos : public SurfReactProb {
 
   RanKnuth* random_backup;
 
-  DAT::t_int_1d d_scalars;
-  HAT::t_int_1d h_scalars;
+  // nsingle stays int, matching SurfReact::nsingle; the per-reaction tallies
+  //   mirror bigint SurfReact::tally_single[], which can exceed 2^31 in one
+  //   step at large per-proc particle counts
+
+  DAT::tdual_int_scalar k_nsingle;
+  DAT::tdual_bigint_1d k_tally_single;
 
   DAT::t_int_scalar d_nsingle;
-  DAT::t_int_1d d_tally_single;
+  DAT::t_bigint_1d d_tally_single;
+
+  // react/retry rolls the move pass back: the per-step reaction counts must be
+  //   restored to their pre-pass values, not zeroed, or counts tallied by
+  //   earlier move iterations of the same step are lost
+
+  DAT::t_int_scalar d_nsingle_backup;
+  DAT::t_bigint_1d d_tally_single_backup;
 
   HAT::t_int_scalar h_nsingle;
-  HAT::t_int_1d h_tally_single;
+  HAT::t_bigint_1d h_tally_single;
 
   t_particle_1d d_particles;
 

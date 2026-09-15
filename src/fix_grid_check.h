@@ -36,7 +36,8 @@ class FixGridCheck : public Fix {
   double compute_scalar();
 
  protected:
-  int ntotal,outflag;
+  bigint ntotal;            // cumulative count, can exceed 2^31
+  int outflag;
   int outside_check;
   int dim;
 

@@ -36,7 +36,7 @@ parallel machine that compiles C++ and supports the "MPI"_mpi
 message-passing library.  This includes distributed- or shared-memory
 parallel machines as well as commodity clusters.
 
-:link(mpi,http://www-unix.mcs.anl.gov/mpi)
+:link(mpi,https://www.mcs.anl.gov/research/projects/mpi/)
 
 SPARTA can model systems with only a few particles up to millions or
 billions.  See "Section 8"_Section_perf.html for information on SPARTA
@@ -45,13 +45,13 @@ WWW Site"_sws.
 
 SPARTA is a freely-available open-source code, distributed under the
 terms of the "GNU Public License"_gnu, or sometimes by request under
-the terms of the "GNU Lesser General Public License (LGPL)"_gnu2,
+the terms of the "GNU Lesser General Public License (LGPL)"_https://www.gnu.org/licenses/old-licenses/lgpl-2.1.html,
 which means you can use or modify the code however you wish.  The only
 restrictions imposed by the GPL or LGPL are on how you distribute the
 code further.  See "Section 1.4"_#intro_4 below for a brief discussion
 of the open-source philosophy.
 
-:link(gnu,http://www.gnu.org/copyleft/gpl.html)
+:link(gnu,https://www.gnu.org/licenses/old-licenses/gpl-2.0.html)
 
 SPARTA is designed to be easy to modify or extend with new
 capabilities, such as new collision or chemistry models, boundary
@@ -68,7 +68,7 @@ Laboratories"_snl, a US Department of Energy lab.  See "Section
 1.5"_#intro_5 below for more information on SPARTA funding and
 individuals who have contributed to SPARTA.
 
-:link(snl,http://www.sandia.gov)
+:link(snl,https://www.sandia.gov)
 
 :line
 
@@ -113,7 +113,7 @@ Geometry :h4
 
   "Cartesian, heirarchical grids"_#intro_3 with multiple levels of local refinement
   "create grid from input script"_create_grid.html or "read from file"_read_grid.html
-  embed :triangulated (3d) or line-segmented (2d) surfaces"_#intro_3 in grid, "read in from file"_read_surf.html :ul
+  embed "triangulated (3d) or line-segmented (2d) surfaces"_#intro_3 in grid, "read in from file"_read_surf.html :ul
 
 Gas-phase collisions and chemistry :h4
 
@@ -161,7 +161,7 @@ written in "Python"_python and is available for download from "the
 Pizza.py WWW site"_pizza. :l,ule
 
 :link(pizza,https://lammps.github.io/pizza)
-:link(python,http://www.python.org)
+:link(python,https://www.python.org)
 
 :line
 
@@ -194,7 +194,7 @@ simulation box.  Click on the image for a larger picture.
 
 :c,image(JPG/shuttle_small.jpg,JPG/shuttle.jpg)
 
-See "Sections 4.9"_Section_howto.html#howto_9 and
+See "Sections 6.9"_Section_howto.html#howto_9 and
 "4.10"_Section_howto.html# for more details of both the grids and
 surface objects that SPARTA supports and how to define them.
 
@@ -211,7 +211,7 @@ details.  The legal text of the GPL is in the LICENSE file that is
 included in the SPARTA distribution.
 
 :link(gnuorg,http://www.gnu.org)
-:link(opensource,http://www.opensource.org)
+:link(opensource,https://opensource.org)
 
 Here is a summary of what the GPL means for SPARTA users:
 
@@ -281,11 +281,11 @@ encouraged. :ule,l
 SPARTA development has been funded by the "US Department of
 Energy"_doe (DOE).
 
-:link(doe,http://www.doe.gov)
+:link(doe,https://www.energy.gov)
 
 If you use SPARTA results in your published work, please cite the
 paper(s) listed under the "Citing SPARTA
-link"_https://sparta.github.io/cite.html of the SPARTA WWW page, and
+link"_https://sparta.github.io/papers.html of the SPARTA WWW page, and
 include a pointer to the "SPARTA WWW Site"_sws
 (https://sparta.github.io):
 
@@ -294,7 +294,7 @@ SPARTA WWW page lists papers that have cited SPARTA.  If your paper is
 not listed there, feel free to send us the info.  If the simulations
 in your paper produced cool pictures or animations, we'll be pleased
 to add them to the "Pictures"_https://sparta.github.io/pictures.html
-or "Movies"_https://sparta.github.io/movies.html pages of the SPARTA
+or "Movies"_https://sparta.github.io/pictures.html pages of the SPARTA
 WWW site.
 
 The core group of SPARTA developers is at Sandia National Labs:

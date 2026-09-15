@@ -165,7 +165,7 @@ command.
 
 The {ngrid} keyword is the number of grid cells which includes both
 unsplit and split cells.  The {nsplit} keyword is the number of split
-cells.  See "Section howto 4.8"_Section_howto.html#howto_8 for a
+cells.  See "Section howto 6.8"_Section_howto.html#howto_8 for a
 description of the hierarchical grid used by SPARTA and a definition
 of these kinds of grid cells.
 

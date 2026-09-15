@@ -106,7 +106,7 @@ void ComputeFFTGridKokkos::post_constructor()
 
   fft_create();
 
-  MemKK::realloc_kokkos(d_fft, "fft/grid:fft", 2*nfft);
+  MemKK::realloc_kokkos(d_fft, "fft/grid:fft", (bigint) 2*nfft);
   d_fft_char = DAT::t_char_1d((char *)d_fft.data(),d_fft.size()*sizeof(FFT_SCALAR));
 
   memoryKK->create_kokkos(k_fftwork, fftwork, nfft, "fft/grid:fftwork");
@@ -207,8 +207,11 @@ void ComputeFFTGridKokkos::compute_per_grid_kokkos()
       Fix *fix = modify->fix[vidx];
 
       KokkosBase* fixKKBase = dynamic_cast<KokkosBase*>(fix);
+      // a fix keeps its per-grid output between invocations and grid migration
+      // can leave it current on the host alone, so ask for the device copy
+      if (fixKKBase) fixKKBase->sync_pergrid_device_kokkos();
 
-      if (!fixKKBase || !fix->per_grid_flag)
+      if (!fixKKBase || !fix->kokkos_flag || !fix->per_grid_flag)
         error->all(FLERR,"Unsupported fix used by compute fft/grid/kk");
 
       if (update->ntimestep % modify->fix[vidx]->per_grid_freq)
@@ -329,7 +332,10 @@ void ComputeFFTGridKokkos::compute_per_grid_kokkos()
 
   // scale results if requested
 
-  if (scalefactor == 1.0) return;
+  if (scalefactor == 1.0) {
+    copymode = 0;
+    return;
+  }
 
   if (ncol == 1) {
     Kokkos::parallel_for(nglocal, SPARTA_CLASS_LAMBDA(int i) {
@@ -374,7 +380,8 @@ void ComputeFFTGridKokkos::reallocate()
   }
 
   if (!conjugate) {
-    MemKK::realloc_kokkos(d_gridworkcomplex,"fft/grid:gridworkcomplex",2*nglocal);
+    MemKK::realloc_kokkos(d_gridworkcomplex,"fft/grid:gridworkcomplex",
+                          (bigint) 2*nglocal);
     d_gridworkcomplex_char = DAT::t_char_1d((char *)d_gridworkcomplex.data(),d_gridworkcomplex.size()*sizeof(FFT_SCALAR));
   }
 
@@ -392,7 +399,10 @@ void ComputeFFTGridKokkos::reallocate()
   // convert to distance from (0,0,0) cell using PBC
   // klen = length of K-space vector
 
-  if (!startcol) return;
+  if (!startcol) {
+    copymode = 0;
+    return;
+  }
 
   int i,j,k;
   double ikx,iky,ikz;
@@ -503,7 +513,10 @@ void ComputeFFTGridKokkos::fft_create()
   nyfft = nyhi - nylo + 1;
   nzfft = nzhi - nzlo + 1;
 
-  nfft = nxfft * nyfft * nzfft;
+  bigint nfftbig = (bigint) nxfft * nyfft * nzfft;
+  if (2*nfftbig > MAXSMALLINT)
+    error->all(FLERR,"Compute fft/grid FFT size exceeds 2^31 per proc");
+  nfft = nfftbig;
 
   //printf("FFT %d: nxyz %d %d %d np xyz %d %d %d: "
   //       "x %d %d y %d %d z %d %d: %d\n",
@@ -516,7 +529,13 @@ void ComputeFFTGridKokkos::fft_create()
 
   // create FFT plan
 
-  int collective_flag = 0; // not yet supported in Kokkos version
+  // collective remap is not implemented in the Kokkos remap (see the comment
+  //   in RemapKokkos2d::remap_2d_kokkos).  this matches the host on every
+  //   platform that is not Blue Gene: ComputeFFTGrid sets collective_flag
+  //   from #ifdef __bg__ and uses 0 otherwise, so there is no user-visible
+  //   setting being dropped here
+
+  int collective_flag = 0;
   int gpu_aware_flag = sparta->kokkos->gpu_aware_flag;
 
   int tmp;
@@ -577,7 +596,7 @@ void ComputeFFTGridKokkos::irregular_create()
   Kokkos::parallel_for(nglocal, SPARTA_CLASS_LAMBDA(int i) {
     const cellint gid = d_cells[i].id;
     const int iy = ((gid-1) / nx) % ny;
-    const int iz = (gid-1) / (nx*ny);
+    const int iz = (gid-1) / ((bigint) nx*ny);
 
     int ipy = static_cast<int> (1.0*iy/ny * npy);
     while (1) {
@@ -620,7 +639,7 @@ void ComputeFFTGridKokkos::irregular_create()
     const cellint gid = d_idrecv[i];
     const int ix = (gid-1) % nx;
     const int iy = ((gid-1) / nx) % ny;
-    const int iz = (gid-1) / (nx*ny);
+    const int iz = (gid-1) / ((bigint) nx*ny);
     d_map1[i] = (iz-nzlo)*nxfft*nyfft + (iy-nylo)*nxfft + (ix-nxlo);
   });
 
@@ -700,7 +719,7 @@ void ComputeFFTGridKokkos::print_FFT_info()
 {
   if (comm->me == 0) {
     char str[64];
-    sprintf(str,"Using " SPARTA_FFT_PREC " precision " SPARTA_FFT_KOKKOS_LIB " for FFTs\n");
+    snprintf(str,sizeof(str),"Using " SPARTA_FFT_PREC " precision " SPARTA_FFT_KOKKOS_LIB " for FFTs\n");
     if (screen) fprintf(screen,"%s",str);
     if (logfile) fprintf(logfile,"%s",str);
   }

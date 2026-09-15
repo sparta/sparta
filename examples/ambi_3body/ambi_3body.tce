@@ -1,0 +1,15 @@
+# Reactions exercising an ambipolar ion (O2+) as an inert third body.
+# These formats were rejected as "Invalid ambipolar reaction" before the
+# fix for issue #176.
+
+# Dissociation with O2+ as the inert third body (collision partner).
+# The ion third body must be written as the middle product, so that it
+# maps to the unaltered second colliding particle.
+O2 + O2+ --> O + O2+ + O
+D A 1.0 8.197e-19 3.321e-9 -1.5 -8.197e-19
+
+# Recombination with O2+ as the inert third body.
+# The ion third body is the 2nd product P2; it is a spectator whose
+# species selects the recombination rate.
+O + O --> O2 + O2+
+R A 1.0 0.0 1.0e-28 0.0 8.197e-19

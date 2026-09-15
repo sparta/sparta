@@ -15,6 +15,7 @@
 #include <mpi.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include "spatype.h"
 #include "fft2d.h"
 #include "remap2d.h"
 
@@ -23,6 +24,8 @@
 /* include kissfft implementation */
 #include "kissfft.h"
 #endif
+
+using SPARTA_NS::bigint;
 
 #define MIN(A,B) ((A) < (B) ? (A) : (B))
 #define MAX(A,B) ((A) > (B) ? (A) : (B))
@@ -236,8 +239,8 @@ struct fft_plan_2d *fft_2d_create_plan(
   } else {
     first_ilo = 0;
     first_ihi = nfast - 1;
-    first_jlo = me*nslow/nprocs;
-    first_jhi = (me+1)*nslow/nprocs - 1;
+    first_jlo = (bigint) me*nslow/nprocs;
+    first_jhi = (bigint) (me+1)*nslow/nprocs - 1;
     plan->pre_plan =
       remap_2d_create_plan(comm,in_ilo,in_ihi,in_jlo,in_jhi,
                            first_ilo,first_ihi,first_jlo,first_jhi,
@@ -267,8 +270,8 @@ struct fft_plan_2d *fft_2d_create_plan(
     second_jhi = out_jhi;
   }
   else {
-    second_ilo = me*nfast/nprocs;
-    second_ihi = (me+1)*nfast/nprocs - 1;
+    second_ilo = (bigint) me*nfast/nprocs;
+    second_ihi = (bigint) (me+1)*nfast/nprocs - 1;
     second_jlo = 0;
     second_jhi = nslow - 1;
   }
@@ -415,7 +418,7 @@ struct fft_plan_2d *fft_2d_create_plan(
     plan->scaled = 0;
   else {
     plan->scaled = 1;
-    plan->norm = 1.0/(nfast*nslow);
+    plan->norm = 1.0/((double) nfast*nslow);
     plan->normnum = (out_ihi-out_ilo+1) * (out_jhi-out_jlo+1);
   }
 

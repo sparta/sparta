@@ -76,6 +76,7 @@ int corners[6][4] = {{0,2,4,6}, {1,3,5,7}, {0,1,4,5}, {2,3,6,7},
 Grid::Grid(SPARTA *sparta) : Pointers(sparta)
 {
   exist = exist_ghost = clumped = 0;
+  changed = 0;
   MPI_Comm_rank(world,&me);
 
   gnames = (char **) memory->smalloc(MAXGROUP*sizeof(char *),"grid:gnames");
@@ -91,11 +92,17 @@ Grid::Grid(SPARTA *sparta) : Pointers(sparta)
   gnames[0] = new char[n];
   strcpy(gnames[0],"all");
 
+  halo_index = NULL;
+  maxhalo = 0;
+  halo_ilo = halo_jlo = halo_klo = 0;
+  halo_nx = halo_ny = halo_nz = 0;
+
   ncell = nunsplit = nsplit = nsub = 0;
 
   nlocal = nghost = maxlocal = maxcell = 0;
   nsplitlocal = nsplitghost = maxsplit = 0;
   nsublocal = nsubghost = 0;
+  nempty = 0;
   nparent = maxparent = 0;
   maxlevel = 0;
   plevel_limit = MAXLEVEL;
@@ -156,7 +163,6 @@ Grid::Grid(SPARTA *sparta) : Pointers(sparta)
   hashfilled = 0;
 
   copy = copymode = 0;
-  uncopy = 1;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -174,6 +180,8 @@ Grid::~Grid()
   memory->sfree(cinfo);
   memory->sfree(sinfo);
   memory->sfree(pcells);
+
+  memory->destroy(halo_index);
 
   if (plevels)
     delete [] plevels;
@@ -236,6 +244,7 @@ void Grid::remove()
   nlocal = nghost = maxlocal = maxcell = 0;
   nsplitlocal = nsplitghost = maxsplit = 0;
   nsublocal = nsubghost = 0;
+  nempty = 0;
   maxlevel = 0;
 
   hash->clear();
@@ -367,6 +376,8 @@ void Grid::add_sub_cell(int icell, int ownflag)
 
 void Grid::notify_changed()
 {
+  changed = 1;
+
   if (modify->n_pergrid) modify->grid_changed();
 
   Compute **compute = modify->compute;
@@ -422,8 +433,10 @@ void Grid::setup_owned()
   MPI_Allreduce(&one,&ncell,1,MPI_SPARTA_BIGINT,MPI_SUM,world);
   one = nunsplitlocal = nlocal - nsplitlocal - nsublocal;
   MPI_Allreduce(&one,&nunsplit,1,MPI_SPARTA_BIGINT,MPI_SUM,world);
-  MPI_Allreduce(&nsplitlocal,&nsplit,1,MPI_INT,MPI_SUM,world);
-  MPI_Allreduce(&nsublocal,&nsub,1,MPI_INT,MPI_SUM,world);
+  one = nsplitlocal;
+  MPI_Allreduce(&one,&nsplit,1,MPI_SPARTA_BIGINT,MPI_SUM,world);
+  one = nsublocal;
+  MPI_Allreduce(&one,&nsub,1,MPI_SPARTA_BIGINT,MPI_SUM,world);
 
   // set cell_epsilon to 1/2 the smallest dimension of any grid cell
 
@@ -451,7 +464,7 @@ void Grid::remove_ghosts()
 {
   hashfilled = 0;
   exist_ghost = 0;
-  nghost = nunsplitghost = nsplitghost = nsubghost = 0;
+  nghost = nunsplitghost = nsplitghost = nsubghost = nempty = 0;
   surf->remove_ghosts();
 }
 
@@ -492,17 +505,24 @@ void Grid::acquire_ghosts_all(int surfflag)
   nempty = 0;
 
   // compute total # of ghosts so can pre-allocate cells array
+  // sum in bigint since global cell count can exceed 2^31,
+  //   in which case replicating all cells on each proc is not possible
   // issue a memory warning if grid cell count >= LARGE and
   //   user has not specified a grid cutoff
 
-  int nghost_new;
-  MPI_Allreduce(&nlocal,&nghost_new,1,MPI_INT,MPI_SUM,world);
+  bigint nlocal_big = nlocal;
+  bigint nghost_big;
+  MPI_Allreduce(&nlocal_big,&nghost_big,1,MPI_SPARTA_BIGINT,MPI_SUM,world);
 
-  if (nghost_new >= LARGE && comm->nprocs > 1 && comm->me == 0)
+  if (nghost_big >= LARGE && comm->nprocs > 1 && comm->me == 0)
     error->warning(FLERR,"Per-processor grid cell memory will be large "
                    "because global gridcut < 0.0");
 
-  nghost_new -= nlocal;
+  nghost_big -= nlocal;
+  if (nghost_big > MAXSMALLINT)
+    error->one(FLERR,"Global grid cell count exceeds 2^31, cannot replicate "
+               "all cells on each proc, use a global gridcut >= 0.0");
+  int nghost_new = nghost_big;
   grow_cells(nghost_new,0);
 
   // create buf for holding all of my cells, not including sub cells
@@ -519,7 +539,7 @@ void Grid::acquire_ghosts_all(int surfflag)
 
   char *sbuf;
   memory->create(sbuf,sendsize,"grid:sbuf");
-  memset(sbuf,0,sendsize);
+  if (sendsize) memset(sbuf,0,sendsize);
 
   // pack each unsplit or split cell
   // subcells will be packed by split cell
@@ -595,6 +615,24 @@ void Grid::acquire_ghosts_near(int surfflag)
       ebbhi[i] += cell_epsilon;
   }
 
+  // touchflag = 1 if a cell which only touches the ebbox is acquired as an
+  //   EMPTY ghost, 0 if it is ignored
+  // for cutoff = 0.0, ebbox = my bbox (except across periodic boundaries),
+  //   so the cells which touch it are the immediate neighbors of my owned
+  //   cells and are the minimal set of ghosts I must store
+  //   the touch is also detected exactly, since ebblo/ebbhi are copies of
+  //   owned cell coords, not the result of any arithmetic
+  // for cutoff > 0.0, an immediate neighbor overlaps the ebbox by a finite
+  //   volume, so a cell which only touches the ebbox lies an entire layer
+  //   beyond the cutoff and is needed by no owned cell
+  //   acquiring it is also unreliable, since box_overlap() detects a touch
+  //   with an == comparison on doubles, and ebblo/ebbhi = bblo/bbhi -/+ cutoff
+  //   may or may not round exactly onto a cell face
+  //   that differs between the lo and hi side of the bbox, so acquiring these
+  //   cells made nghost vary from proc to proc for a symmetric decomposition
+
+  int touchflag = (cutoff == 0.0);
+
   // box = ebbox split across periodic BC
   // 27 is max number of periodic images in 3d
 
@@ -626,7 +664,9 @@ void Grid::acquire_ghosts_near(int surfflag)
 
   // nlist = # of boxes that overlap with my bbox, skipping self boxes
   // list = indices into boxall of overlaps
-  // overlap = true overlap or just touching
+  // overlap = true overlap, or just touching if touchflag is set
+  // if my whole bbox only touches a box, then so does each of my cells,
+  //   so that box can be skipped when touchflag is not set
 
   int nlist = 0;
   int *list;
@@ -634,15 +674,18 @@ void Grid::acquire_ghosts_near(int surfflag)
 
   for (i = 0; i < nboxall; i++) {
     if (boxall[i].proc == me) continue;
-    if (box_overlap(bblo,bbhi,boxall[i].lo,boxall[i].hi)) list[nlist++] = i;
+    int boxflag = box_overlap(bblo,bbhi,boxall[i].lo,boxall[i].hi);
+    if (!boxflag) continue;
+    if (boxflag == 2 && !touchflag) continue;
+    list[nlist++] = i;
   }
 
   // loop over my owned cells, not including sub cells
   // each may overlap with multiple boxes in list
   // on 1st pass, just tally memory to send copies of my cells
   // use lastproc to insure a cell only overlaps once per other proc
-  // if oflag = 2 = my cell just touches box,
-  // so flag grid cell as EMPTY ghost by setting nsurf = -1
+  // if oflag = 2 = my cell just touches box, skip it unless touchflag is set,
+  // else flag grid cell as EMPTY ghost by setting nsurf = -1
 
   int j,oflag,lastproc,nsurf_hold;
 
@@ -658,6 +701,7 @@ void Grid::acquire_ghosts_near(int surfflag)
       j = list[i];
       oflag = box_overlap(lo,hi,boxall[j].lo,boxall[j].hi);
       if (!oflag) continue;
+      if (oflag == 2 && !touchflag) continue;
       if (boxall[j].proc == lastproc) continue;
       lastproc = boxall[j].proc;
 
@@ -679,7 +723,7 @@ void Grid::acquire_ghosts_near(int surfflag)
 
   char *sbuf;
   memory->create(sbuf,sendsize,"grid:sbuf");
-  memset(sbuf,0,sendsize);
+  if (sendsize) memset(sbuf,0,sendsize);
 
   int *proclist,*sizelist;
   memory->create(proclist,nsend,"grid:proclist");
@@ -687,8 +731,8 @@ void Grid::acquire_ghosts_near(int surfflag)
 
   // on 2nd pass over local cells, fill the send buf
   // use lastproc to insure a cell only overlaps once per other proc
-  // if oflag = 2 = my cell just touches box,
-  // so flag grid cell as EMPTY ghost by setting nsurf = -1
+  // if oflag = 2 = my cell just touches box, skip it unless touchflag is set,
+  // else flag grid cell as EMPTY ghost by setting nsurf = -1
 
   nsend = 0;
   sendsize = 0;
@@ -701,6 +745,7 @@ void Grid::acquire_ghosts_near(int surfflag)
       j = list[i];
       oflag = box_overlap(lo,hi,boxall[j].lo,boxall[j].hi);
       if (!oflag) continue;
+      if (oflag == 2 && !touchflag) continue;
       if (boxall[j].proc == lastproc) continue;
       lastproc = boxall[j].proc;
 
@@ -733,14 +778,15 @@ void Grid::acquire_ghosts_near(int surfflag)
 
   char *rbuf;
   rbuf = (char *) memory->smalloc(recvsize,"grid:rbuf");
-  memset(rbuf,0,recvsize);
+  if (recvsize) memset(rbuf,0,recvsize);
 
   irregular->exchange_variable(sbuf,sizelist,rbuf);
   delete irregular;
 
   // unpack received grid cells as ghost cells
+  // rbuf and offset can be larger than 2 GB
 
-  int offset = 0;
+  bigint offset = 0;
   for (i = 0; i < nrecv; i++)
     offset += grid->unpack_one(&rbuf[offset],0,0,surfflag);
 
@@ -752,6 +798,8 @@ void Grid::acquire_ghosts_near(int surfflag)
   memory->destroy(rbuf);
 
   // set nempty = # of EMPTY ghost cells I store
+  // is always 0 for cutoff > 0.0, since only cells which just touch the ebbox
+  //   are flagged EMPTY, and those are not acquired in that case
 
   nempty = 0;
   for (int icell = nlocal; icell < nlocal+nghost; icell++)
@@ -811,6 +859,24 @@ void Grid::acquire_ghosts_near_less_memory(int surfflag)
       ebbhi[i] += cell_epsilon;
   }
 
+  // touchflag = 1 if a cell which only touches the ebbox is acquired as an
+  //   EMPTY ghost, 0 if it is ignored
+  // for cutoff = 0.0, ebbox = my bbox (except across periodic boundaries),
+  //   so the cells which touch it are the immediate neighbors of my owned
+  //   cells and are the minimal set of ghosts I must store
+  //   the touch is also detected exactly, since ebblo/ebbhi are copies of
+  //   owned cell coords, not the result of any arithmetic
+  // for cutoff > 0.0, an immediate neighbor overlaps the ebbox by a finite
+  //   volume, so a cell which only touches the ebbox lies an entire layer
+  //   beyond the cutoff and is needed by no owned cell
+  //   acquiring it is also unreliable, since box_overlap() detects a touch
+  //   with an == comparison on doubles, and ebblo/ebbhi = bblo/bbhi -/+ cutoff
+  //   may or may not round exactly onto a cell face
+  //   that differs between the lo and hi side of the bbox, so acquiring these
+  //   cells made nghost vary from proc to proc for a symmetric decomposition
+
+  int touchflag = (cutoff == 0.0);
+
   // box = ebbox split across periodic BC
   // 27 is max number of periodic images in 3d
 
@@ -842,7 +908,9 @@ void Grid::acquire_ghosts_near_less_memory(int surfflag)
 
   // nlist = # of boxes that overlap with my bbox, skipping self boxes
   // list = indices into boxall of overlaps
-  // overlap = true overlap or just touching
+  // overlap = true overlap, or just touching if touchflag is set
+  // if my whole bbox only touches a box, then so does each of my cells,
+  //   so that box can be skipped when touchflag is not set
 
   int nlist = 0;
   int *list;
@@ -850,15 +918,18 @@ void Grid::acquire_ghosts_near_less_memory(int surfflag)
 
   for (i = 0; i < nboxall; i++) {
     if (boxall[i].proc == me) continue;
-    if (box_overlap(bblo,bbhi,boxall[i].lo,boxall[i].hi)) list[nlist++] = i;
+    int boxflag = box_overlap(bblo,bbhi,boxall[i].lo,boxall[i].hi);
+    if (!boxflag) continue;
+    if (boxflag == 2 && !touchflag) continue;
+    list[nlist++] = i;
   }
 
   // loop over my owned cells, not including sub cells
   // each may overlap with multiple boxes in list
   // on 1st pass, just tally memory to send copies of my cells
   // use lastproc to insure a cell only overlaps once per other proc
-  // if oflag = 2 = my cell just touches box,
-  // so flag grid cell as EMPTY ghost by setting nsurf = -1
+  // if oflag = 2 = my cell just touches box, skip it unless touchflag is set,
+  // else flag grid cell as EMPTY ghost by setting nsurf = -1
 
   int j,oflag,lastproc,nsurf_hold;
 
@@ -887,10 +958,11 @@ void Grid::acquire_ghosts_near_less_memory(int surfflag)
         j = list[i];
         oflag = box_overlap(lo,hi,boxall[j].lo,boxall[j].hi);
         if (!oflag) continue;
+        if (oflag == 2 && !touchflag) continue;
         if (boxall[j].proc == lastproc) continue;
         lastproc = boxall[j].proc;
 
-        int n = pack_one(icell,NULL,0,0,surfflag,0);
+        bigint n = pack_one(icell,NULL,0,0,surfflag,0);
         if (n > 0 && bsendsize > 0 && bsendsize+n > update->global_mem_limit) {
           i_end = i;
           break_flag = 1;
@@ -910,7 +982,7 @@ void Grid::acquire_ghosts_near_less_memory(int surfflag)
 
     char *sbuf;
     memory->create(sbuf,sendsize,"grid:sbuf");
-    memset(sbuf,0,sendsize);
+    if (sendsize) memset(sbuf,0,sendsize);
 
     int *proclist,*sizelist;
     memory->create(proclist,nsend,"grid:proclist");
@@ -918,8 +990,8 @@ void Grid::acquire_ghosts_near_less_memory(int surfflag)
 
     // on 2nd pass over local cells, fill the send buf
     // use lastproc to insure a cell only overlaps once per other proc
-    // if oflag = 2 = my cell just touches box,
-    // so flag grid cell as EMPTY ghost by setting nsurf = -1
+    // if oflag = 2 = my cell just touches box, skip it unless touchflag is set,
+    // else flag grid cell as EMPTY ghost by setting nsurf = -1
 
     nsend = 0;
     sendsize = 0;
@@ -936,6 +1008,7 @@ void Grid::acquire_ghosts_near_less_memory(int surfflag)
         j = list[i];
         oflag = box_overlap(lo,hi,boxall[j].lo,boxall[j].hi);
         if (!oflag) continue;
+        if (oflag == 2 && !touchflag) continue;
         if (boxall[j].proc == lastproc) continue;
         lastproc = boxall[j].proc;
 
@@ -963,15 +1036,16 @@ void Grid::acquire_ghosts_near_less_memory(int surfflag)
 
     char *rbuf;
     rbuf = (char *) memory->smalloc(recvsize,"grid:rbuf");
-    memset(rbuf,0,recvsize);
+    if (recvsize) memset(rbuf,0,recvsize);
 
     irregular->exchange_variable(sbuf,sizelist,rbuf);
     delete irregular;
     irregular = NULL;
 
     // unpack received grid cells as ghost cells
+    // rbuf and offset can be larger than 2 GB
 
-    int offset = 0;
+    bigint offset = 0;
     for (i = 0; i < nrecv; i++)
       offset += grid->unpack_one(&rbuf[offset],0,0,surfflag);
 
@@ -1118,6 +1192,154 @@ void Grid::rehash()
   }
 
   hashfilled = 1;
+
+  update_halo_index();
+}
+
+/* ----------------------------------------------------------------------
+   build halo_index, the dense cell-position -> local-index map used by the
+     uniform-grid fast path in Update::move()
+   built alongside the hash, since the two answer the same question and go
+     stale at the same moment
+   leaves halo_index NULL whenever it is not wanted or cannot be built
+     cheaply, in which case callers use hash instead
+------------------------------------------------------------------------- */
+
+void Grid::update_halo_index()
+{
+  // only the optimized move reads this, so do not pay for it otherwise:
+  // rehash() is called by several commands that have nothing to do with move
+
+  if (!update->optmove_flag) {
+    memory->destroy(halo_index);
+    halo_index = NULL;
+    maxhalo = 0;
+    return;
+  }
+
+  int *old_index = halo_index;
+  halo_index = NULL;
+
+  if (!uniform || unx <= 0 || uny <= 0 || unz <= 0) { halo_free(old_index); return; }
+
+  const int ntotal = nlocal + nghost;
+  if (ntotal <= 0) { halo_free(old_index); return; }
+
+  // place cells on the lattice the same way the fast path places particles,
+  //   from coordinates rather than from the cell ID, so the two cannot
+  //   disagree about which site a cell occupies.  spacing is computed with the
+  //   identical expression Update::move() uses for dx/dy/dz
+  // a cell's lo corner is a whole multiple of the spacing, so round to nearest
+
+  const int un[3] = {unx,uny,unz};
+  double inv[3];
+  for (int d = 0; d < 3; d++)
+    inv[d] = un[d]/(domain->boxhi[d]-domain->boxlo[d]);
+
+  // halo arc per dimension: mark the lattice planes this proc holds, then take
+  //   the complement of the widest empty run on the ring.  the complement of
+  //   any single empty run contains every occupied plane, so this is correct
+  //   for a non-arc decomposition too; taking the widest one makes it minimal
+  // deriving the arc from nearest-image offsets to a reference cell instead
+  //   would have to break a tie at exactly half the dimension, and that is
+  //   precisely where the wrapped ghost layer sits when a dimension is split
+  //   over two procs.  getting that tie wrong stretches the arc to the whole
+  //   dimension, which either wastes memory or trips the bounding-box test
+  //   below and silently drops this proc back to the hash
+
+  int *occ[3];
+  for (int d = 0; d < 3; d++) {
+    memory->create(occ[d],un[d],"grid:halo_occupied");
+    for (int i = 0; i < un[d]; i++) occ[d][i] = 0;
+  }
+
+  // one pass over the cells, marking all three dimensions, since ntotal is the
+  //   whole owned plus ghost list and is much larger than unx+uny+unz
+
+  for (int m = 0; m < ntotal; m++)
+    for (int d = 0; d < 3; d++) {
+      const int s =
+        static_cast<int> ((cells[m].lo[d]-domain->boxlo[d])*inv[d]+0.5);
+      if (s >= 0 && s < un[d]) occ[d][s] = 1;
+    }
+
+  int lo[3],n[3],empty = 0;
+  double box = 1.0;
+
+  for (int d = 0; d < 3; d++) {
+
+    // scan the ring starting from an occupied plane so no empty run is split
+    //   by the wrap.  gapend is the first occupied plane after the widest run,
+    //   which is where the arc begins
+
+    int first = -1;
+    for (int i = 0; i < un[d]; i++)
+      if (occ[d][i]) { first = i; break; }
+    if (first < 0) { empty = 1; break; }
+
+    int gapbest = 0,gapend = first,run = 0;
+    for (int k = 1; k <= un[d]; k++) {
+      const int i = (first+k) % un[d];
+      if (!occ[d][i]) run++;
+      else {
+        if (run > gapbest) { gapbest = run; gapend = i; }
+        run = 0;
+      }
+    }
+
+    n[d] = un[d] - gapbest;
+    lo[d] = gapend;
+    box *= n[d];
+  }
+
+  for (int d = 0; d < 3; d++) memory->destroy(occ[d]);
+  if (empty) { halo_free(old_index); return; }
+
+  // refuse when the bounding box holds far more sites than cells, i.e. the
+  // halo is not a box and a dense map would mostly be holes.  a rectangular
+  // decomposition of a uniform grid gives an exact box even under RCB, so
+  // this is about ragged halos, from adaptation or from a partition that a
+  // rebalance left non-clumped
+
+  if (box > 4.0*ntotal) { halo_free(old_index); return; }
+
+  halo_ilo = lo[0]; halo_jlo = lo[1]; halo_klo = lo[2];
+  halo_nx = n[0];   halo_ny = n[1];   halo_nz = n[2];
+
+  // reuse the previous allocation when it is already big enough: rehash() runs
+  // often and this array is the size of the halo
+
+  const int nindex = halo_nx*halo_ny*halo_nz;
+  halo_index = old_index;
+  if (nindex > maxhalo) {
+    memory->destroy(halo_index);
+    halo_index = NULL;
+    maxhalo = nindex;
+    memory->create(halo_index,maxhalo,"grid:halo_index");
+  }
+
+  for (int i = 0; i < nindex; i++) halo_index[i] = -1;
+
+  for (int m = 0; m < ntotal; m++) {
+    int l[3],ok = 1;
+    for (int d = 0; d < 3; d++) {
+      l[d] =
+        static_cast<int> ((cells[m].lo[d]-domain->boxlo[d])*inv[d]+0.5)-lo[d];
+      if (l[d] < 0) l[d] += un[d];
+      if (l[d] >= n[d]) ok = 0;
+    }
+    if (ok) halo_index[(l[2]*halo_ny + l[1])*halo_nx + l[0]] = m;
+  }
+}
+
+/* ----------------------------------------------------------------------
+   release a halo_index allocation abandoned by update_halo_index()
+------------------------------------------------------------------------- */
+
+void Grid::halo_free(int *ptr)
+{
+  memory->destroy(ptr);
+  maxhalo = 0;
 }
 
 /* ----------------------------------------------------------------------
@@ -1282,7 +1504,7 @@ void Grid::find_neighbors()
 
   if (nall) {
     char str[128];
-    sprintf(str,"Owned cells with unknown neighbors = %d",nall);
+    snprintf(str,sizeof(str),"Owned cells with unknown neighbors = %d",nall);
     error->all(FLERR,str);
   }
 }
@@ -1885,7 +2107,7 @@ void Grid::type_check(int outflag)
 
   if (unknownall) {
     char str[128];
-    sprintf(str,"Grid cells marked as unknown = %d",unknownall);
+    snprintf(str,sizeof(str),"Grid cells marked as unknown = %d",unknownall);
     error->all(FLERR,str);
   }
 
@@ -1936,7 +2158,7 @@ void Grid::type_check(int outflag)
   MPI_Allreduce(&inside,&insideall,1,MPI_INT,MPI_SUM,world);
   if (insideall) {
     char str[128];
-    sprintf(str,"Grid cell interior corner points marked as unknown "
+    snprintf(str,sizeof(str),"Grid cell interior corner points marked as unknown "
             "(volume will be wrong if cell is effectively outside) = %d",
             insideall);
     if (comm->me == 0) error->warning(FLERR,str);
@@ -1946,7 +2168,7 @@ void Grid::type_check(int outflag)
   MPI_Allreduce(&outside,&outsideall,1,MPI_INT,MPI_SUM,world);
   if (outsideall) {
     char str[128];
-    sprintf(str,"Grid cell corner points on boundary marked as unknown = %d",
+    snprintf(str,sizeof(str),"Grid cell corner points on boundary marked as unknown = %d",
             outsideall);
     error->all(FLERR,str);
   }
@@ -1960,7 +2182,7 @@ void Grid::type_check(int outflag)
   MPI_Allreduce(&volzero,&volzeroall,1,MPI_INT,MPI_SUM,world);
   if (outsideall) {
     char str[128];
-    sprintf(str,"Grid cells marked outside, but with zero volume = %d",
+    snprintf(str,sizeof(str),"Grid cells marked outside, but with zero volume = %d",
             volzeroall);
     error->all(FLERR,str);
   }
@@ -2237,7 +2459,10 @@ void Grid::group(int narg, char **arg)
     int jgroup;
     for (int iarg = 3; iarg < narg; iarg++) {
       jgroup = find_group(arg[iarg]);
-      if (jgroup == -1) error->all(FLERR,"Group ID does not exist");
+      if (jgroup == -1) {
+        delete [] list;
+        error->all(FLERR,"Group ID does not exist");
+      }
       list[iarg-3] = jgroup;
     }
 
@@ -2272,7 +2497,10 @@ void Grid::group(int narg, char **arg)
     int jgroup;
     for (int iarg = 3; iarg < narg; iarg++) {
       jgroup = find_group(arg[iarg]);
-      if (jgroup == -1) error->all(FLERR,"Group ID does not exist");
+      if (jgroup == -1) {
+        delete [] list;
+        error->all(FLERR,"Group ID does not exist");
+      }
       list[iarg-3] = jgroup;
     }
 
@@ -2299,7 +2527,10 @@ void Grid::group(int narg, char **arg)
     int jgroup;
     for (int iarg = 3; iarg < narg; iarg++) {
       jgroup = find_group(arg[iarg]);
-      if (jgroup == -1) error->all(FLERR,"Group ID does not exist");
+      if (jgroup == -1) {
+        delete [] list;
+        error->all(FLERR,"Group ID does not exist");
+      }
       list[iarg-3] = jgroup;
     }
 
@@ -2429,7 +2660,7 @@ int Grid::check_uniform_group(int igroup, int *nxyz,
   MPI_Allreduce(&sflag,&allsflag,1,MPI_INT,MPI_SUM,world);
   if (allsflag && surf->implicit) {
     char str[128];
-    sprintf(str,
+    snprintf(str,sizeof(str),
             "Read_isurfs adding surfs to %d cells which already have surfs",
             allsflag);
     error->all(FLERR,str);
@@ -2541,43 +2772,44 @@ void Grid::read_restart(FILE *fp)
 /* ----------------------------------------------------------------------
    return size of child grid restart info for this proc
    using count of all owned cells
-   NOTE: worry about N overflowing int, and in IROUNDUP ???
+   return bigint since can exceed 2 GB at large per-proc cell counts
 ------------------------------------------------------------------------- */
 
-int Grid::size_restart()
+bigint Grid::size_restart()
 {
-  int n = 2*sizeof(int);
-  n = IROUNDUP(n);
+  bigint n = 2*sizeof(int);
+  n = BIROUNDUP(n);
   n += nlocal * sizeof(cellint);
-  n = IROUNDUP(n);
+  n = BIROUNDUP(n);
   n += nlocal * sizeof(int);
-  n = IROUNDUP(n);
+  n = BIROUNDUP(n);
   n += nlocal * sizeof(int);
-  n = IROUNDUP(n);
+  n = BIROUNDUP(n);
   n += nlocal * sizeof(int);
-  n = IROUNDUP(n);
-  n += nlocal * sizeof_custom();
+  n = BIROUNDUP(n);
+  n += (bigint) nlocal * sizeof_custom();
   return n;
 }
 
 /* ----------------------------------------------------------------------
    return size of child grid restart info
    using nlocal_restart count of all owned cells
+   return bigint since can exceed 2 GB at large per-proc cell counts
 ------------------------------------------------------------------------- */
 
-int Grid::size_restart(int nlocal_restart)
+bigint Grid::size_restart(int nlocal_restart)
 {
-  int n = 2*sizeof(int);
-  n = IROUNDUP(n);
+  bigint n = 2*sizeof(int);
+  n = BIROUNDUP(n);
   n += nlocal_restart * sizeof(cellint);
-  n = IROUNDUP(n);
+  n = BIROUNDUP(n);
   n += nlocal_restart * sizeof(int);
-  n = IROUNDUP(n);
+  n = BIROUNDUP(n);
   n += nlocal_restart * sizeof(int);
-  n = IROUNDUP(n);
+  n = BIROUNDUP(n);
   n += nlocal_restart * sizeof(int);
-  n = IROUNDUP(n);
-  n += nlocal_restart * sizeof_custom();
+  n = BIROUNDUP(n);
+  n += (bigint) nlocal_restart * sizeof_custom();
   return n;
 }
 
@@ -2587,42 +2819,41 @@ int Grid::size_restart(int nlocal_restart)
    ID, level, nsplit, mask as vectors for all owned cells
    custom data as ints and doubles
    return n = # of packed bytes
-   NOTE: worry about N overflowing int, and in IROUNDUP ???
 ------------------------------------------------------------------------- */
 
-int Grid::pack_restart(char *buf)
+bigint Grid::pack_restart(char *buf)
 {
-  int n;
+  bigint n;
 
   int *ibuf = (int *) buf;
   ibuf[0] = nlocal;
   ibuf[1] = clumped;
   n = 2*sizeof(int);
-  n = IROUNDUP(n);
+  n = BIROUNDUP(n);
 
   cellint *cbuf = (cellint *) &buf[n];
   for (int i = 0; i < nlocal; i++)
     cbuf[i] = cells[i].id;
   n += nlocal * sizeof(cellint);
-  n = IROUNDUP(n);
+  n = BIROUNDUP(n);
 
   ibuf = (int *) &buf[n];
   for (int i = 0; i < nlocal; i++)
     ibuf[i] = cells[i].level;
   n += nlocal * sizeof(int);
-  n = IROUNDUP(n);
+  n = BIROUNDUP(n);
 
   ibuf = (int *) &buf[n];
   for (int i = 0; i < nlocal; i++)
     ibuf[i] = cells[i].nsplit;
   n += nlocal * sizeof(int);
-  n = IROUNDUP(n);
+  n = BIROUNDUP(n);
 
   ibuf = (int *) &buf[n];
   for (int i = 0; i < nlocal; i++)
     ibuf[i] = cinfo[i].mask;
   n += nlocal * sizeof(int);
-  n = IROUNDUP(n);
+  n = BIROUNDUP(n);
 
   if (ncustom) {
     for (int i = 0; i < nlocal; i++)
@@ -2640,16 +2871,16 @@ int Grid::pack_restart(char *buf)
    allocate vectors here, will be deallocated by ReadRestart
 ------------------------------------------------------------------------- */
 
-int Grid::unpack_restart(char *buf)
+bigint Grid::unpack_restart(char *buf)
 {
-  int n;
+  bigint n;
   int csize = sizeof_custom();
 
   int *ibuf = (int *) buf;
   nlocal_restart = ibuf[0];
   clumped = ibuf[1];
   n = 2*sizeof(int);
-  n = IROUNDUP(n);
+  n = BIROUNDUP(n);
 
   memory->create(id_restart,nlocal_restart,"grid:id_restart");
   memory->create(level_restart,nlocal_restart,"grid:nlevel_restart");
@@ -2657,35 +2888,36 @@ int Grid::unpack_restart(char *buf)
   memory->create(mask_restart,nlocal_restart,"grid:mask_restart");
   cvalues_restart = NULL;
   if (ncustom)
-    memory->create(cvalues_restart,nlocal_restart*csize,"grid::cvalues_restart");
+    memory->create(cvalues_restart,(bigint) nlocal_restart*csize,
+                   "grid::cvalues_restart");
 
   cellint *cbuf = (cellint *) &buf[n];
   for (int i = 0; i < nlocal_restart; i++)
     id_restart[i] = cbuf[i];
   n += nlocal_restart * sizeof(cellint);
-  n = IROUNDUP(n);
+  n = BIROUNDUP(n);
 
   ibuf = (int *) &buf[n];
   for (int i = 0; i < nlocal_restart; i++)
     level_restart[i] = ibuf[i];
   n += nlocal_restart * sizeof(int);
-  n = IROUNDUP(n);
+  n = BIROUNDUP(n);
 
   ibuf = (int *) &buf[n];
   for (int i = 0; i < nlocal_restart; i++)
     nsplit_restart[i] = ibuf[i];
   n += nlocal_restart * sizeof(int);
-  n = IROUNDUP(n);
+  n = BIROUNDUP(n);
 
   ibuf = (int *) &buf[n];
   for (int i = 0; i < nlocal_restart; i++)
     mask_restart[i] = ibuf[i];
   n += nlocal_restart * sizeof(int);
-  n = IROUNDUP(n);
+  n = BIROUNDUP(n);
 
   if (ncustom) {
     for (int i = 0; i < nlocal_restart; i++) {
-      memcpy(&cvalues_restart[i*csize],&buf[n],csize);
+      memcpy(&cvalues_restart[(bigint) i*csize],&buf[n],csize);
       n += csize;
     }
   }

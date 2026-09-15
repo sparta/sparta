@@ -894,10 +894,6 @@ Self-explanatory. :dd
 
 Self-explanatory. :dd
 
-{Dump image persp option is not yet supported} :dt
-
-Self-explanatory. :dd
-
 {Dump image requires one snapshot per file} :dt
 
 Use a "*" in the filename. :dd
@@ -1402,6 +1398,11 @@ sign, or a minus sign. :dd
 
 The choice of collision style is unknown. :dd
 
+{Invalid color in dump image command} :dt
+
+The specified color name was not in the list of recognized colors.
+See the dump image doc page. :dd
+
 {Invalid color in dump_modify command} :dt
 
 The specified color name was not in the list of recognized colors.
@@ -1442,10 +1443,6 @@ Self-explanatory. :dd
 
 The file produced by dump image cannot be binary and must
 be for a single processor. :dd
-
-{Invalid dump image persp value} :dt
-
-Persp value must be >= 0.0. :dd
 
 {Invalid dump image theta value} :dt
 
@@ -1539,6 +1536,11 @@ Self-explanatory. :dd
 {Invalid point index in triangle} :dt
 
 Self-explanatory. :dd
+
+{Invalid power expression in variable formula} :dt
+
+A zero base cannot be raised to a negative power in a variable
+formula, since the result is infinite. :dd
 
 {Invalid react style} :dt
 
@@ -1871,10 +1873,6 @@ issue to the SPARTA developers. :dd
 This is an error when calculating how a 2d grid is cut or split by
 surface elements.  It should not normally occur.  Please report the
 issue to the SPARTA developers. :dd
-
-{Power by 0 in variable formula} :dt
-
-Self-explanatory. :dd
 
 {Processor partitions are inconsistent} :dt
 
@@ -2311,10 +2309,6 @@ Only equal-style variables can be used. :dd
 
 Must be an equal-style variable. :dd
 
-{Variable for dump image persp is invalid style} :dt
-
-Must be an equal-style variable. :dd
-
 {Variable for dump image phi is invalid style} :dt
 
 Must be an equal-style variable. :dd
@@ -2370,10 +2364,6 @@ Self-explanatory. :dd
 Self-explanatory. :dd
 
 {Variable name for dump image center does not exist} :dt
-
-Self-explanatory. :dd
-
-{Variable name for dump image persp does not exist} :dt
 
 Self-explanatory. :dd
 

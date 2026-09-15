@@ -1,0 +1,48 @@
+################################################################################
+# thermal gas in a 3d box with collisions
+# particles reflect off global box boundaries
+#
+# collision partners selected with the near-collision-partner method
+#   (see the collide_modify doc page)
+#
+# gas is Ar at 273.15 K with nrho = 5.65634e23 /m^3
+# mean free path lambda ~ 2.4e-6 m, mean collision time tau ~ 6e-9 s
+# grid cells are 1e-5 m ~ 4x lambda, coarser than the lambda/3 rule,
+#   which is the regime where near-neighbor partner selection
+#   (collide_modify partners nearcp or subcell) reduces the mean
+#   collision separation
+#
+# Notes:
+#  - the "comm/sort" option to the "global" command is used to match MPI runs
+#  - the "twopass" option is used to match Kokkos runs
+#  - the "comm/sort" and "twopass" options should not be used for production runs
+################################################################################
+
+seed               12345
+dimension          3
+global             gridcut 1.0e-5 comm/sort yes
+
+boundary           rr rr rr
+
+create_box         0 0.0001 0 0.0001 0 0.0001
+create_grid        10 10 10
+
+balance_grid       rcb part
+
+species            ar.species Ar
+mixture            air Ar vstream 0.0 0.0 0.0 temp 273.15
+
+global             nrho 5.65634E23
+global             fnum 7.07043E6
+
+collide            vss air ar.vss
+collide_modify     partners nearcp 30
+
+create_particles   air n 80000 twopass
+
+stats              100
+compute            temp temp
+stats_style        step cpu np nattempt ncoll c_temp
+
+timestep           2.00E-9
+run                1000

@@ -38,9 +38,9 @@ enum{INT,DOUBLE};                       // several files
 enum{TEXT,BINARY};
 
 #define MAXLINE 1024
-#define CHUNK 4     // NOTE: make this larger after debugging
+#define CHUNK 1024  // # of file lines read and broadcast at a time
 #define BIG 1.0e20
-#define MAXTIE 16   // NOTE: make this larger after debugging
+#define MAXTIE 64   // max # of coarse points equidistant from a cell center
 #define EPSCUT 1.0e-6
 #define MAXCOARSE 1000000    // threshold of 1M coarse points
 
@@ -56,7 +56,7 @@ Custom::~Custom()
 
   for (int i = 0; i < naction; i++) {
     int action = actions[i].action;
-    if (action == FILESTYLE) {
+    if (action == FILESTYLE || action == FILECOARSE) {
       delete [] actions[i].fname;
       delete [] actions[i].cindex_file;
       delete [] actions[i].ctype_file;
@@ -240,10 +240,7 @@ bigint Custom::process_actions(int narg, char **arg, int external)
         csize = surf->esize[cindex];
       }
 
-      if (csize && ccol == 0)
-        error->all(FLERR,"Custom attribute array requires bracketed index");
-      if (csize == 0 && ccol)
-        error->all(FLERR,"Custom attribute vector cannot use bracketed index");
+      check_attribute_column(csize,ccol);
 
       // variable name
 
@@ -370,10 +367,7 @@ bigint Custom::process_actions(int narg, char **arg, int external)
           ctype[i] = surf->etype[cindex[i]];
           csize[i] = surf->esize[cindex[i]];
         }
-        if (csize[i] && ccol[i] == 0)
-          error->all(FLERR,"Custom attribute array requires bracketed index");
-        if (csize[i] == 0 && ccol[i])
-          error->all(FLERR,"Custom attribute vector cannot use bracketed index");
+        check_attribute_column(csize[i],ccol[i]);
         delete [] aname;
       }
 
@@ -431,9 +425,9 @@ bigint Custom::process_actions(int narg, char **arg, int external)
       // # of coarse files and filestyle
 
       int numfile = input->inumeric(FLERR,arg[iarg+1]);
-      int filestyle;
       if (strcmp(arg[iarg+2],"text") == 0) filestyle = TEXT;
       else if (strcmp(arg[iarg+2],"binary") == 0) filestyle = BINARY;
+      else error->all(FLERR,"Illegal custom command");
 
       // file name
       // if numfile > 1, fname must have "%" wildcard char
@@ -472,10 +466,7 @@ bigint Custom::process_actions(int narg, char **arg, int external)
           error->all(FLERR,"Custom attribute name does not exist");
         ctype[i] = grid->etype[cindex[i]];
         csize[i] = grid->esize[cindex[i]];
-        if (csize[i] && ccol[i] == 0)
-          error->all(FLERR,"Custom attribute array requires bracketed index");
-        if (csize[i] == 0 && ccol[i])
-          error->all(FLERR,"Custom attribute vector cannot use bracketed index");
+        check_attribute_column(csize[i],ccol[i]);
         delete [] aname;
       }
 
@@ -650,6 +641,9 @@ bigint Custom::process_actions()
       // assign grid cell attributes from ave of neighbor coarse point values
 
       count += coarse_tree_neighbor_assign(1,colcount,cindex,ctype,csize,ccol);
+
+      memory->destroy(xyz_coarse);
+      memory->destroy(values_coarse);
 
       // for mode = GRID
       //   set estatus of all changed custom vecs/arrays to 0
@@ -963,8 +957,10 @@ bigint Custom::set_surf(int groupbit, Region *region,
   int flag;
   double point[3];
 
+  int m = 0;
+
   bigint count = 0;
-  for (int i = start ; i < stop; i += skip) {
+  for (int i = start ; i < stop; i += skip, m++) {
     flag = 1;
     if (dim == 2) {
       if (!(lines[i].mask & groupbit)) flag = 0;
@@ -974,7 +970,7 @@ bigint Custom::set_surf(int groupbit, Region *region,
     if (flag && region) {
       if (dim == 2) {
 	point[0] = 0.5 * (lines[i].p1[0] + lines[i].p2[0]);
-	point[1] = 0.5 * (lines[i].p1[0] + lines[i].p2[0]);
+	point[1] = 0.5 * (lines[i].p1[1] + lines[i].p2[1]);
 	point[2] = 0.0;
       } else {
 	point[0] = MathConst::THIRD *
@@ -988,7 +984,8 @@ bigint Custom::set_surf(int groupbit, Region *region,
     }
     if (!flag) continue;
 
-    choose[count++] = 1;
+    choose[m] = 1;
+    count++;
   }
 
   // set custom values via scalar or vector
@@ -1140,9 +1137,10 @@ bigint Custom::read_file(int mode, int colcount,
   // read header portion of file
   // comments or blank lines are allowed
   // nfile = count of attribute lines in file
-  // NOTE: allow for nfile to be a bigint ?
+  // nfile is a bigint since the file can span > 2^31 cells or surfs
 
-  int nfile,nvalues;
+  bigint nfile;
+  int nvalues;
 
   if (me == 0) {
     char *eof,*ptr;
@@ -1162,11 +1160,10 @@ bigint Custom::read_file(int mode, int colcount,
 
     // line: Nfile Nvalues
 
-    sscanf(line,"%d %d",&nfile,&nvalues);
-    //sscanf(line,BIGINT_FORMAT,&nfile);
+    sscanf(line,BIGINT_FORMAT " %d",&nfile,&nvalues);
   }
 
-  MPI_Bcast(&nfile,1,MPI_INT,0,world);
+  MPI_Bcast(&nfile,1,MPI_SPARTA_BIGINT,0,world);
   MPI_Bcast(&nvalues,1,MPI_INT,0,world);
 
   if (nvalues != colcount)
@@ -1309,7 +1306,7 @@ void Custom::read_coarse_files(char *fname, int numfile, int colcount)
 {
   // binary files not yet supported
 
-  if (mode == BINARY) error->all(FLERR,"Custom file/coarse binary files not yet supported");
+  if (filestyle == BINARY) error->all(FLERR,"Custom file/coarse binary files not yet supported");
 
   // setup
 
@@ -1377,7 +1374,7 @@ void Custom::read_coarse_files(char *fname, int numfile, int colcount)
       eof = fgets(line,MAXLINE,fp);
       if (eof == NULL) error->one(FLERR,"Unexpected end of custom coarse file");
 
-      if (i == 0) {
+      if (i == ncoarse_me) {
         int nwords = input->count_words(line);
         if (nwords != colcount + 1 + domain->dimension)
           error->one(FLERR,"Incorrect line format in custom coarse file");
@@ -1418,7 +1415,9 @@ void Custom::read_coarse_files(char *fname, int numfile, int colcount)
   MPI_Allreduce(&count,&count_all,1,MPI_INT,MPI_SUM,world);
 
   if (count_all) {
-    error->all(FLERR,"How many coarse grid points are outside simulation box");
+    char str[128];
+    snprintf(str,sizeof(str),"%d coarse grid points are outside simulation box",count_all);
+    error->all(FLERR,str);
   }
 
   // perform Allgatherv() so each proc has copy of all coarse points read by all procs
@@ -1620,7 +1619,7 @@ bigint Custom::coarse_tree_neighbor_assign(int external, int colcount,
           else iarray[j][i][ccol[j]-1] /= ncount;
         } else if (ctype[j] == DOUBLE) {
           if (csize[j] == 0) dvec[j][i] /= ncount;
-          else darray[j][i][ccol[j]-1] /- ncount;
+          else darray[j][i][ccol[j]-1] /= ncount;
         }
       }
     }
@@ -1665,6 +1664,23 @@ int Custom::attribute_bracket(char *aname)
   return ccol;
 }
 
+/* ----------------------------------------------------------------------
+   check a bracketed index CCOL against the attribute size CSIZE
+   csize = 0 for a vector attribute, N = # of columns for an array attribute
+   ccol = 0 if no brackets, else the value inside the brackets
+   error if the two are inconsistent or the column is out of range
+---------------------------------------------------------------------- */
+
+void Custom::check_attribute_column(int csize, int ccol)
+{
+  if (csize && ccol == 0)
+    error->all(FLERR,"Custom attribute array requires bracketed index");
+  if (csize == 0 && ccol)
+    error->all(FLERR,"Custom attribute vector cannot use bracketed index");
+  if (csize && (ccol < 1 || ccol > csize))
+    error->all(FLERR,"Custom attribute array is accessed out-of-range");
+}
+
 // ----------------------------------------------------------------------
 // ----------------------------------------------------------------------
 // KDTree class
@@ -1672,7 +1688,7 @@ int Custom::attribute_bracket(char *aname)
 // ----------------------------------------------------------------------
 
 enum{BRANCH,LEAF};
-#define DELTANODE 4       // NOTE: make this larger after debugging
+#define DELTANODE 1024    // # of KD tree nodes allocated at a time
 
 /* ---------------------------------------------------------------------- */
 
@@ -1706,6 +1722,11 @@ KDTree::~KDTree()
 
 void KDTree::create_tree(int iparent, int n, int *plist)
 {
+  // no points is not a valid subtree
+  // would recurse forever below, since an empty bbox splits into 2 empty lists
+
+  if (n == 0) error->one(FLERR,"KDTree split produced an empty branch");
+
   // single point, create LEAF node
 
   if (n == 1) {
@@ -1754,7 +1775,7 @@ void KDTree::create_tree(int iparent, int n, int *plist)
       bboxlo[2] == bboxhi[2]) flag = 1;
   if (flag) error->one(FLERR,"Multiple coarse grid points with same coords");
 
-  // splitdim = which dim to split points in (minimum bbox edge)
+  // splitdim = which dim to split points in (maximum bbox edge)
   // split = splitting value in that dim
 
   double xdelta = bboxhi[0] - bboxlo[0];
@@ -1893,7 +1914,7 @@ void KDTree::find_within_cutoff(double *x, int inode, double cutsq,
   else dz = 0.0;
   double distsq = dx*dx + dy*dy + dz*dz;
 
-  if (distsq < cutsq) {
+  if (distsq <= cutsq) {
     if (ncount == MAXTIE)
       error->one(FLERR,"KDTree cutoff induces too may ties");
     plist[ncount] = ipoint;
@@ -1983,28 +2004,30 @@ int KDTree::depthwalk(int inode, int depth, int maxdepth)
 
 void KDTree::stats_search()
 {
-  int nsearch_all;
-  MPI_Allreduce(&nsearch,&nsearch_all,1,MPI_INT,MPI_SUM,world);
+  // sum in bigint, global search/walk counts can exceed 2^31
+
+  bigint nsearch_all;
+  MPI_Allreduce(&nsearch,&nsearch_all,1,MPI_SPARTA_BIGINT,MPI_SUM,world);
   double avedist_all;
   MPI_Allreduce(&avedist,&avedist_all,1,MPI_DOUBLE,MPI_SUM,world);
   avedist_all /= nsearch_all;
 
-  int count_node_all;
-  MPI_Allreduce(&count_node,&count_node_all,1,MPI_INT,MPI_SUM,world);
+  bigint count_node_all;
+  MPI_Allreduce(&count_node,&count_node_all,1,MPI_SPARTA_BIGINT,MPI_SUM,world);
   double avecount_node = (double) count_node_all / nsearch_all;
-  int count_leaf_all;
-  MPI_Allreduce(&count_leaf,&count_leaf_all,1,MPI_INT,MPI_SUM,world);
+  bigint count_leaf_all;
+  MPI_Allreduce(&count_leaf,&count_leaf_all,1,MPI_SPARTA_BIGINT,MPI_SUM,world);
   double avecount_leaf = (double) count_leaf_all / nsearch_all;
 
   if (comm->me == 0) {
     if (screen) {
-      fprintf(screen,"    %d = number of grid cell searches\n",nsearch_all);
+      fprintf(screen,"    " BIGINT_FORMAT " = number of grid cell searches\n",nsearch_all);
       fprintf(screen,"    %g = ave distance of nearest points\n",avedist_all);
       fprintf(screen,"    %g = ave node count to find nearest points\n",avecount_node);
       fprintf(screen,"    %g = ave leaf count to find nearest points\n",avecount_leaf);
     }
     if (logfile) {
-      fprintf(logfile,"    %d = number of grid cell searches\n",nsearch_all);
+      fprintf(logfile,"    " BIGINT_FORMAT " = number of grid cell searches\n",nsearch_all);
       fprintf(logfile,"    %g = ave distance of nearest points\n",avedist_all);
       fprintf(logfile,"    %g = ave node count to find nearest points\n",avecount_node);
       fprintf(logfile,"    %g = ave leaf count to find nearest points\n",avecount_leaf);
@@ -2021,16 +2044,18 @@ void KDTree::stats_search()
 
 void KDTree::stats_neighbor()
 {
-  int nsearch_all;
-  MPI_Allreduce(&nsearch,&nsearch_all,1,MPI_INT,MPI_SUM,world);
-  int nneigh_all;
-  MPI_Allreduce(&nneigh,&nneigh_all,1,MPI_INT,MPI_SUM,world);
+  // sum in bigint, global search/walk counts can exceed 2^31
 
-  int count_node_all;
-  MPI_Allreduce(&count_node,&count_node_all,1,MPI_INT,MPI_SUM,world);
+  bigint nsearch_all;
+  MPI_Allreduce(&nsearch,&nsearch_all,1,MPI_SPARTA_BIGINT,MPI_SUM,world);
+  bigint nneigh_all;
+  MPI_Allreduce(&nneigh,&nneigh_all,1,MPI_SPARTA_BIGINT,MPI_SUM,world);
+
+  bigint count_node_all;
+  MPI_Allreduce(&count_node,&count_node_all,1,MPI_SPARTA_BIGINT,MPI_SUM,world);
   double avecount_node = (double) count_node_all / nsearch_all;
-  int count_leaf_all;
-  MPI_Allreduce(&count_leaf,&count_leaf_all,1,MPI_INT,MPI_SUM,world);
+  bigint count_leaf_all;
+  MPI_Allreduce(&count_leaf,&count_leaf_all,1,MPI_SPARTA_BIGINT,MPI_SUM,world);
   double avecount_leaf = (double) count_leaf_all / nsearch_all;
 
   if (comm->me == 0) {

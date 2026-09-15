@@ -177,7 +177,7 @@ x-dimension, and similarly for y and z.  The "xx yy zz" represent 6
 characters that encode the style of boundary for each of the 6
 simulation box boundaries (xlo,xhi and ylo,yhi and zlo,zhi).  Each of
 the 6 characters is either o = outflow, p = periodic, or s = specular.
-See the <A HREF = "doc/boundary.html">boundary</A> command for details.
+See the <A HREF = "boundary.html">boundary</A> command for details.
 </P>
 <P>The "ITEM: NUMBER OF ATOMS" or "ITEM: NUMBER OF CELLS" or "ITEM:
 NUMBER OF SURFS" or "ITEM: NUMBER OF TALLIES" entry in each snapshot
@@ -229,8 +229,7 @@ large number of small dump files!
 "%" is also used) is written in binary format.  A binary dump file
 will be about the same size as a text version, but will typically
 write out much faster.  Of course, when post-processing, you will need
-to convert it back to text format (see the <A HREF = "Section_tools.html#binary">binary2txt
-tool</A>) or write your own code to read the
+to convert it back to text format (see the binary2txt tool) or write your own code to read the
 binary file.  The format of the binary file can be understood by
 looking at the tools/binary2txt.cpp file.
 </P>
@@ -283,7 +282,7 @@ the appropriate distance <A HREF = "units.html">units</A>.  Use <I>xs</I>, <I>ys
 vibrational energies of the particle.  A particle's kinetic energy is
 given by 1/2 m (vx^2 + vy^2 + vz^2).  The way that rotational and
 vibrational energy is treated in collisions and stored by particles is
-affected by the <A HREF = "collid_modify.html">collide_modify</A> command.
+affected by the <A HREF = "collide_modify.html">collide_modify</A> command.
 </P>
 <P>The <I>c_ID</I> and <I>c_ID[N]</I> attributes allow per-particle vectors or
 arrays calculated by a <A HREF = "compute.html">compute</A> to be output.  The ID in
@@ -387,7 +386,7 @@ they are part of.
 </P>
 <P>The <I>vol</I> attribute is the flow volume of the grid cell (or area in
 2d) for unsplit or cut or sub cells.  <A HREF = "Section_howto.html#howto_8">Section
-4.8</A> of the manual gives details of how
+6.8</A> of the manual gives details of how
 SPARTA defines unsplit and sub cells.  Flow volume is the portion of
 the grid cell that is accessible to particles, i.e. outside any closed
 surface that may intersect the cell.  Note that unsplit cells which
@@ -436,8 +435,7 @@ vectors or arrays defined by some other command to be output.  The
 name should be replaced by the name of the attribute.  See <A HREF = "Section_howto.html#howto_17">Section
 6.17</A> for more discussion of custom
 attributes and command that define them.  For example, the
-<A HREF = "read_grid.html">read_grid</A> and <A HREF = "surf_react_implicit.html">surf_react
-implicit</A> commands can define per-grid
+<A HREF = "read_grid.html">read_grid</A> and surf_react implicit commands can define per-grid
 attributes.  (The surf/react implicit command has not yet been
 released in public SPARTA).
 </P>

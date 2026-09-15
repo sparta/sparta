@@ -28,6 +28,7 @@
 #include "update.h"
 #include "utils.h"
 #include "variable.h"
+#include "sparta_masks.h"
 
 #include <cmath>
 #include <cstring>
@@ -58,7 +59,7 @@ FixHalt::FixHalt(SPARTA *sparta, int narg, char **arg) :
   } else {
     if (!utils::strmatch(arg[iarg],"^v_")) {
       char msg[128];
-      sprintf(msg, "Invalid fix halt attribute %s", arg[iarg]);
+      snprintf(msg,sizeof(msg), "Invalid fix halt attribute %s", arg[iarg]);
       error->all(FLERR, msg);
     }
 
@@ -101,7 +102,7 @@ FixHalt::FixHalt(SPARTA *sparta, int narg, char **arg) :
       else if (strcmp(arg[iarg + 1], "continue") == 0) eflag = CONTINUE;
       else {
         char msg[128];
-        sprintf(msg, "Unknown fix halt error condition %s", arg[iarg]);
+        snprintf(msg,sizeof(msg), "Unknown fix halt error condition %s", arg[iarg]);
         error->all(FLERR, msg);
       }
       iarg += 2;
@@ -111,7 +112,7 @@ FixHalt::FixHalt(SPARTA *sparta, int narg, char **arg) :
       iarg += 2;
     } else {
       char msg[128];
-      sprintf(msg, "Unknown fix halt keyword %s", arg[iarg]);
+      snprintf(msg,sizeof(msg), "Unknown fix halt keyword %s", arg[iarg]);
       error->all(FLERR, msg);
     }
   }
@@ -125,6 +126,23 @@ FixHalt::FixHalt(SPARTA *sparta, int narg, char **arg) :
     const bigint nfirst = (update->ntimestep / nevery) * nevery + nevery;
     modify->addstep_compute_all(nfirst);
   }
+
+  // tlimit reads no simulation data, so keep the Kokkos path from syncing the
+  //   particle array to the host every nevery steps -- at production sizes that
+  //   is a full device/host round trip per check, and the cost is far worse on
+  //   a discrete GPU than on an APU with aliased memory
+  // a variable attribute is different: compute_equal() may invoke computes
+  //   (which is why end_of_step() wraps it in clearstep/addstep), and a
+  //   non-Kokkos compute reads particle data on the host directly, so it has to
+  //   be synced first
+  // datamask_read only ever reaches ParticleKokkos::sync(), so these 3 bits are
+  //   everything it can sync -- naming them is the same work as ALL_MASK and
+  //   does not suggest the grid or surf data is involved
+  // this fix never writes particle data either way
+
+  datamask_read = (attribute == TLIMIT) ?
+    EMPTY_MASK : (PARTICLE_MASK|SPECIES_MASK|CUSTOM_MASK);
+  datamask_modify = EMPTY_MASK;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -154,11 +172,11 @@ void FixHalt::init()
     ivar = input->variable->find(idvar);
     char msg[128];
     if (ivar < 0) {
-      sprintf(msg, "Could not find fix halt variable %s", idvar);
+      snprintf(msg,sizeof(msg), "Could not find fix halt variable %s", idvar);
       error->all(FLERR, msg);
     }
     if (input->variable->equal_style(ivar) == 0) {
-      sprintf(msg, "Fix halt variable %s is not equal-style variable", idvar);
+      snprintf(msg,sizeof(msg), "Fix halt variable %s is not equal-style variable", idvar);
       error->all(FLERR, msg);
     }
   }
@@ -180,16 +198,21 @@ void FixHalt::end_of_step()
 
   if (attribute == TLIMIT) {
     if (update->ntimestep != nextstep) return;
+
+    // tlimit() has already broadcast its value: it has to, because every rank
+    //   must project the same nextstep from it or they would stop calling this
+    //   fix on different steps and deadlock in the broadcast below
+
     attvalue = tlimit();
   } else {
     modify->clearstep_compute();
     attvalue = input->variable->compute_equal(ivar);
     modify->addstep_compute(update->ntimestep + nevery);
+
+    // ensure that the attribute is *exactly* the same on all ranks
+
+    MPI_Bcast(&attvalue, 1, MPI_DOUBLE, 0, world);
   }
-
-  // ensure that the attribute is *exactly* the same on all ranks
-
-  MPI_Bcast(&attvalue, 1, MPI_DOUBLE, 0, world);
 
   // check if halt is triggered, else just return
 
@@ -214,13 +237,18 @@ void FixHalt::end_of_step()
   // print message with ID of fix halt in case multiple instances
 
   char message[128];
-  sprintf(message, "Fix halt condition for fix-id %s met on step %ld with value %g",
+  snprintf(message,sizeof(message), "Fix halt condition for fix-id %s met on step " BIGINT_FORMAT " with value %g",
                                     id, update->ntimestep, attvalue);
   if (eflag == HARD) {
     error->all(FLERR, message);
   } else if ((eflag == SOFT) || (eflag == CONTINUE)) {
     if ((comm->me == 0) && (msgflag == YESMSG)) error->message(FLERR, message);
-    timer->force_timeout();
+
+    // a soft halt is documented to skip subsequent run commands, so its
+    //   expiry has to survive the reset_timeout() at the top of
+    //   Run::command().  a continue halt does not: post_run() below undoes it
+
+    timer->force_timeout(eflag == SOFT);
   }
 }
 
@@ -247,8 +275,27 @@ double FixHalt::tlimit()
   MPI_Bcast(&cpu, 1, MPI_DOUBLE, 0, world);
 
   if (cpu < value) {
+
+    // no measurable time yet: dividing by cpu would give inf, and casting that
+    //   to bigint is undefined, so just look again after another nevery steps
+
+    if (cpu <= 0.0) {
+      nextstep += nevery;
+      return cpu;
+    }
+
     bigint elapsed = update->ntimestep - update->firststep;
-    bigint final = update->firststep + static_cast<bigint>(tratio * value / cpu * elapsed);
+    double project = tratio * value / cpu * elapsed;
+
+    // a fast start projects a step far in the future, possibly past what a
+    //   bigint holds.  clamp instead of overflowing the cast: landing beyond
+    //   the end of the run simply means no further checks, which is correct
+
+    bigint final;
+    if (project >= (double) (MAXBIGINT - update->firststep - nevery))
+      final = MAXBIGINT - nevery;
+    else final = update->firststep + static_cast<bigint>(project);
+
     nextstep = (final / nevery) * nevery + nevery;
     if (nextstep == update->ntimestep) nextstep += nevery;
     tratio = 1.0;

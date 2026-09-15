@@ -66,6 +66,10 @@ FFT2dKokkos<DeviceType>::FFT2dKokkos(SPARTA *sparta, MPI_Comm comm, int nfast, i
   //  recursive function calls in KISS FFT and the default per-thread
   //  stack size on GPUs needs to be increased to prevent stack overflows
   //  for reasonably sized FFTs
+  // NOTE: only CUDA is handled below.  HIP has the same recursion and the
+  //  same default-stack problem, and hipDeviceSetLimit(hipLimitStackSize,...)
+  //  is the equivalent call, but it is untested here -- a KISS FFT large
+  //  enough to recurse deeply may still overflow the stack on AMD GPUs.
   #if defined (KOKKOS_ENABLE_CUDA)
     size_t stack_size;
     cudaDeviceGetLimit(&stack_size,cudaLimitStackSize);
@@ -392,8 +396,8 @@ struct fft_plan_2d_kokkos<DeviceType>* FFT2dKokkos<DeviceType>::fft_2d_create_pl
   else {
     first_ilo = 0;
     first_ihi = nfast - 1;
-    first_jlo = me*nslow/nprocs;
-    first_jhi = (me+1)*nslow/nprocs - 1;
+    first_jlo = (bigint) me*nslow/nprocs;
+    first_jhi = (bigint) (me+1)*nslow/nprocs - 1;
     plan->pre_plan =
       remapKK->remap_2d_create_plan_kokkos(comm,in_ilo,in_ihi,in_jlo,in_jhi,
                   first_ilo,first_ihi,first_jlo,first_jhi,
@@ -424,8 +428,8 @@ struct fft_plan_2d_kokkos<DeviceType>* FFT2dKokkos<DeviceType>::fft_2d_create_pl
     second_jhi = out_jhi;
   }
   else {
-    second_ilo = me*nfast/nprocs;
-    second_ihi = (me+1)*nfast/nprocs - 1;
+    second_ilo = (bigint) me*nfast/nprocs;
+    second_ihi = (bigint) (me+1)*nfast/nprocs - 1;
     second_jlo = 0;
     second_jhi = nslow - 1;
   }
@@ -633,7 +637,7 @@ struct fft_plan_2d_kokkos<DeviceType>* FFT2dKokkos<DeviceType>::fft_2d_create_pl
     plan->scaled = 0;
   else {
     plan->scaled = 1;
-    plan->norm = 1.0/(nfast*nslow);
+    plan->norm = 1.0/((double) nfast*nslow);
     plan->normnum = (out_ihi-out_ilo+1) * (out_jhi-out_jlo+1);
   }
 
@@ -714,7 +718,7 @@ void FFT2dKokkos<DeviceType>::fft_2d_1d_only_kokkos(typename FFT_AT::t_FFT_DATA_
   // data is just an array of 0.0
 
 #if defined(FFT_KOKKOS_MKL_GPU)
-  if (flag == -1) {
+  if (flag == 1) {
     oneapi::mkl::dft::compute_forward(*(plan->desc_fast), (FFT_SCALAR*)d_data.data());
     oneapi::mkl::dft::compute_forward(*(plan->desc_slow), (FFT_SCALAR*)d_data.data());
   } else {
@@ -722,7 +726,7 @@ void FFT2dKokkos<DeviceType>::fft_2d_1d_only_kokkos(typename FFT_AT::t_FFT_DATA_
     oneapi::mkl::dft::compute_backward(*(plan->desc_slow), (FFT_SCALAR*)d_data.data());
   }
 #elif defined(FFT_KOKKOS_MKL)
-  if (flag == -1) {
+  if (flag == 1) {
     DftiComputeForward(plan->handle_fast,d_data.data());
     DftiComputeForward(plan->handle_slow,d_data.data());
   } else {
@@ -730,7 +734,7 @@ void FFT2dKokkos<DeviceType>::fft_2d_1d_only_kokkos(typename FFT_AT::t_FFT_DATA_
     DftiComputeBackward(plan->handle_slow,d_data.data());
   }
 #elif defined(FFT_KOKKOS_FFTW3) || defined(FFT_KOKKOS_NVPL)
-  if (flag == -1) {
+  if (flag == 1) {
     FFTW_API(execute_dft)(plan->plan_fast_forward,(FFT_KOKKOS_DATA*)d_data.data(),(FFT_KOKKOS_DATA*)d_data.data());
     FFTW_API(execute_dft)(plan->plan_slow_forward,(FFT_KOKKOS_DATA*)d_data.data(),(FFT_KOKKOS_DATA*)d_data.data());
   } else {
@@ -747,7 +751,7 @@ void FFT2dKokkos<DeviceType>::fft_2d_1d_only_kokkos(typename FFT_AT::t_FFT_DATA_
   kiss_fft_functor<DeviceType> f;
     typename FFT_AT::t_FFT_DATA_1d d_tmp =
      typename FFT_AT::t_FFT_DATA_1d(Kokkos::view_alloc("fft_2d:tmp",Kokkos::WithoutInitializing),d_data.extent(0));
-  if (flag == -1) {
+  if (flag == 1) {
     f = kiss_fft_functor<DeviceType>(d_data,d_tmp,plan->cfg_fast_forward,length1);
     Kokkos::parallel_for(total1/length1,f);
 
@@ -765,7 +769,7 @@ void FFT2dKokkos<DeviceType>::fft_2d_1d_only_kokkos(typename FFT_AT::t_FFT_DATA_
   // scaling if required
   // limit num to size of data
 
-  if (flag == 1 && plan->scaled) {
+  if (flag == -1 && plan->scaled) {
     FFT_SCALAR norm = plan->norm;
     int num = MIN(plan->normnum,nsize);
 

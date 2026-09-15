@@ -41,6 +41,12 @@ SurfCollideSpecular::SurfCollideSpecular(SPARTA *sparta, int narg, char **arg) :
     } else
       error->all(FLERR,"Illegal surf_collide specular command");
   }
+
+  // plain specular is a reflection about the surface normal and nothing else,
+  //   so a caller with an axis-aligned normal can do it by negating one
+  //   velocity component.  noslip is not: it negates all three
+
+  mirror_flag = !noslip_flag;
 }
 
 /* ----------------------------------------------------------------------
@@ -160,7 +166,8 @@ void SurfCollideSpecular::wrapper(Particle::OnePart *p, double *norm,
   if (flags)
     noslip_flag = flags[0];
 
-  MathExtra::reflect3(p->v,norm);
+  if (noslip_flag) MathExtra::negate3(p->v);
+  else MathExtra::reflect3(p->v,norm);
 }
 
 /* ----------------------------------------------------------------------

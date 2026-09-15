@@ -139,8 +139,8 @@ class Compute : protected Pointers {
   // Kokkos methods
 
   int kokkos_flag;          // 1 if Kokkos-enabled
-  int copy,uncopy,copymode; // prevent deallocation of
-                            //  base class when child copy is destroyed
+  int copy,copymode; // prevent deallocation of
+                     //  base class when child copy is destroyed
 
  protected:
 

@@ -43,21 +43,21 @@ segments.  However each element is contained within a single grid
 cell.
 
 A related command which defines implicit surfaces is the
-"read_isurf"_read_isurf command which reads a file of corner point
+"read_isurf"_read_isurf.html command which reads a file of corner point
 values defined on a 2d or 3d grid, which is mapped to (a portion of)
 the SPARTA grid.  It then calculates appropriate implicit line
 segments or triangles within each grid cell based on its 4 or 8 corner
-points.  See the "read_isurf"_read_isurf command for details.
+points.  See the "read_isurf"_read_isurf.html command for details.
 
 This command derives the 2d or 3d grid of corner point values from the
 set of explicit surface elements, rather then reading them from a
-file "(Hong24)"_#Hong24.  It then proceeds similarly to the "read_isurf"_read_isurf
+file "(Hong24)"_#Hong24.  It then proceeds similarly to the "read_isurf"_read_isurf.html
 command where implicit line segments or triangles within each grid
 cell are calculated from the 4 or 8 corner points of the cell.  When
 the process is complete, all explicit surfaces are removed from the
 simulation.  This is because SPARTA does not currently allow both
 implicit and explicit surfaces to simulataneously exist.  The
-"read_isurf"_read_isurf doc page has additional information about
+"read_isurf"_read_isurf.html doc page has additional information about
 using implicit surfaces in a simulation, which also apply to this
 command.
 
@@ -77,7 +77,7 @@ command.  Click on each image for a larger version:
 
 :c,image(JPG/implicit_eggcarton_small.png,JPG/implicit_eggcarton.png)
 
-:c,image(JPG/implicit_cone_small.png,JGP/implicit_cone.png)
+:c,image(JPG/implicit_cone_small.png,JPG/implicit_cone.png)
 
 :line
 
@@ -129,6 +129,15 @@ inferred implicit surface elements will be.
 
 The threshold must be specified as a floating point value such that 0
 < thresh < 255.
+
+This command can be used in an axisymmetric domain (see the
+"dimension"_dimension.html and "boundary"_boundary.html commands).  The
+explicit surfaces are then a body of revolution about the y = 0
+symmetry axis, and the generated implicit surfaces may close on the
+axis, e.g. at the nose and base of a sphere-cone.  Subsequent ablation
+via "fix ablate"_fix_ablate.html uses the axisymmetric surface area of
+each surface element, so material recedes fastest where the incident
+flux is highest.
 
 The specified {mode} can be either {inout} or {ave}. The {inout} mode
 sets corner point values to zero if they are outside the volume or
@@ -251,7 +260,7 @@ after this command is used.
 This command can only be used after the simulation box is defined by
 the "create_box"_create_box.html command, and after a grid has been
 created by the "create_grid"_create_grid.html command.  Additionally,
-explicit surfaces must already be defined by the "read_surf"_read_surf
+explicit surfaces must already be defined by the "read_surf"_read_surf.html
 command.  Simulations with implicit surfaces cannot perform grid
 adaptation.
 

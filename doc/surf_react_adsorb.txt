@@ -7,13 +7,14 @@
 :line
 
 surf_react adsorb command :h3
+surf_react adsorb/kk command :h3
 
 [Syntax:]
 
 surf_react ID adsorb model infile(s) Nsync type temp n_sites adsp1 adsp2 ... :pre
 
 ID = user-assigned name for the surface reaction model :ulb,l
-style = {adsorb} :l
+style = {adsorb} or {adsorb/kk} :l
 model = {gs} or {ps} or {gs/ps} :l
   gs = gas-surface reactions
   ps = pure-surface reactions
@@ -28,6 +29,18 @@ type = {face} or {surf} :l
 temp = temperature of the surface
 n_sites = # of available adsorption sites per unit area (3D) or length (2D) :l
 adsp1,adsp2,... = list of species that can adsorb on surface :l
+:ule
+
+The reaction file(s) read by this command can also include the optional
+per-reaction keywords {kisliuk} and {energy}, which modify how the
+reaction rate constant is computed.  See the discussion of the reaction
+file format below for details.
+
+{kisliuk} = scale the adsorption rate constant by the Kisliuk
+  precursor-mediated sticking factor (only for adsorption reactions: AA,
+  DA, LH1, LH3, CD) :ulb,l
+{energy} = scale the rate constant by an incident-energy and
+  angle-dependent factor (only for CI) :l
 :ule
 
 [Examples:]
@@ -311,6 +324,17 @@ reactants. The reaction probability is obtained by normalized all the
 reaction rates. A detailed description can be found in Swaminathan
 Gopalan {et al.} "(SG18)"_#SG18.
 
+Note that adsorption events are accumulated against the surface state
+stored at the most recent sync, so the influx of an entire {Nsync}
+window can adsorb more particles on a face or surface element than the
+{n_sites} value gives it room for.  When that happens, the coverage
+which scales the adsorption reactions is clamped at one, so that those
+reactions stop until the coverage drops, and a warning is printed the
+first time it happens.  Since the stored count of adsorbed particles is
+then larger than the number of sites, which is not physical, the run
+should be repeated with a smaller {Nsync} or {fnum}, or a larger
+{n_sites} value.
+
 :line
 
 If there are gas-phase products, there is an option to specify the
@@ -337,7 +361,7 @@ The values can be used by the "stats_style"_stats_style.html command
 and by "variables"_variable.html that define formulas.  The latter
 means they can be used by any command that uses a variable as input,
 e.g. the "fix ave/time"_fix_ave_time.html command.  See "Section
-4.4"_Section_howto.html#howto_4 for an overview of SPARTA output
+6.4"_Section_howto.html#howto_4 for an overview of SPARTA output
 options.
 
 This {adsorb} style compute a vector of length 2 + 2*nlist.  Nlist is
@@ -353,6 +377,29 @@ beginning of the current run.  The next nlist elements are the count
 of each individual reaction that occurred during the current timestep.
 The final nlist elements are the cummulative count of each individual
 reaction since the beginning of the current run.
+
+:line
+
+Styles with a {kk} suffix are functionally the same as the
+corresponding style without the suffix.  They have been optimized to
+run faster, depending on your available hardware, as discussed in the
+"Accelerating SPARTA"_Section_accelerate.html section of the manual.
+The accelerated styles take the same arguments and should produce the
+same results, except for different random number, round-off and
+precision issues.
+
+These accelerated styles are part of the KOKKOS package. They are only
+enabled if SPARTA was built with that package.  See the "Making
+SPARTA"_Section_start.html#start_3 section for more info.
+
+You can specify the accelerated styles explicitly in your input script
+by including their suffix, or you can use the "-suffix command-line
+switch"_Section_start.html#start_7 when you invoke SPARTA, or you can
+use the "suffix"_suffix.html command in your input script.
+
+See the "Accelerating SPARTA"_Section_accelerate.html section of the
+manual for more instructions on how to use the accelerated styles
+effectively.
 
 :line
 
@@ -373,7 +420,7 @@ appropriately when that occurs.
 
 [Related commands:]
 
-"surf_react"_aurf_react.html, "react"_react.html, 
+"surf_react"_surf_react.html, "react"_react.html, 
 "surf_modify"_surf_modify.html,
 "bound_modify"_bound_modify.html, 
 

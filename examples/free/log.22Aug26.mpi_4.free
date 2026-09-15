@@ -1,0 +1,130 @@
+SPARTA (24 Sep 2025)
+Running on 4 MPI task(s)
+################################################################################
+# thermal gas in a 3d box with free molecular flow (no collisions)
+#
+# Note:
+#  - The "comm/sort” option to the “global” command is used to match MPI runs.
+#  - The “twopass” option is used to match Kokkos runs.
+# The "comm/sort" and "twopass" options should not be used for production runs.
+################################################################################
+# particles reflect off global box boundaries
+
+seed	    	    12345
+dimension   	    3
+global              gridcut 1.0e-5 comm/sort yes
+
+boundary	    rr rr rr
+
+create_box  	    0 0.0001 0 0.0001 0 0.0001
+Created orthogonal box = (0 0 0) to (0.0001 0.0001 0.0001)
+create_grid 	    10 10 10
+WARNING: Could not acquire nearby ghost cells b/c grid partition is not clumped (/home/user/sparta/src/grid.cpp:486)
+Created 1000 child grid cells
+  CPU time = 0.00102479 secs
+  create/ghost percent = 92.0182 7.9818
+
+balance_grid        rcb part
+Balance grid migrated 740 cells
+  CPU time = 0.000639433 secs
+  reassign/sort/migrate/ghost percent = 45.8145 0.375333 31.0391 22.7711
+
+species		    ar.species Ar
+mixture		    air Ar vstream 0.0 0.0 0.0 temp 273.15
+
+global              nrho 7.07043E22
+global              fnum 7.07043E6
+
+create_particles    air n 10000 twopass
+Created 10000 particles
+  CPU time = 0.00136636 secs
+
+stats		    100
+compute             temp temp
+
+# compute boundary drives the boundary-tally path in Update; every box face
+#   here is reflecting, so all six tally.  compute ke/particle is reduced to a
+#   scalar so it can appear in stats.
+
+# every box face here is specular (rr), which conserves energy and applies no
+#   shear, so ke/erot/evib and shx/shy/shz would be identically zero and could
+#   not detect a regression.  n/nwt/press are the values that actually vary.
+
+compute             bound boundary all n nwt press
+
+stats_style	    step cpu np nattempt ncoll c_temp                     c_bound[1][1] c_bound[1][3] c_bound[4][3] c_bound[6][3]
+
+#dump                2 image all 100 image.*.ppm type type pdiam 3.0e-6 #		    size 512 512 gline yes 0.005
+#dump_modify	    2 pad 4
+
+timestep 	    7.00E-9
+run 		    1000
+Memory usage per proc in Mbytes:
+  particles (ave,min,max) = 1.5625 1.5625 1.5625
+  grid      (ave,min,max) = 1.51379 1.51379 1.51379
+  surf      (ave,min,max) = 0 0 0
+  modify    (ave,min,max) = 0 0 0
+  total     (ave,min,max) = 3.07629 3.07629 3.07629
+Step CPU Np Natt Ncoll c_temp c_bound[1][1] c_bound[1][3] c_bound[4][3] c_bound[6][3] 
+       0            0    10000        0        0    274.13466            0            0            0            0 
+     100  0.006658057    10000        0        0    274.13466           67    280.47257    310.57573    303.11802 
+     200  0.014053502    10000        0        0    274.13466           69    266.48541    189.10393     339.2908 
+     300  0.020794501    10000        0        0    274.13466           56    253.65262    217.85743      237.829 
+     400  0.029173644    10000        0        0    274.13466           58    214.76266     295.1197    297.05966 
+     500  0.035688348    10000        0        0    274.13466           67    288.43361    248.34494    277.43574 
+     600  0.041702235    10000        0        0    274.13466           72    280.85757    230.33553    249.15976 
+     700  0.047866879    10000        0        0    274.13466           77    292.12969    279.57766    228.53605 
+     800  0.054243475    10000        0        0    274.13466           64    245.09374    241.32478    284.12465 
+     900  0.062382927    10000        0        0    274.13466           56    223.97301    257.58684    335.97284 
+    1000  0.069240341    10000        0        0    274.13466           77    294.09322    231.30629    318.03375 
+Loop time of 0.069314 on 4 procs for 1000 steps with 10000 particles
+Performance: 14427.093 timesteps/s, 144.271 Mparticle-step/s
+
+MPI task timing breakdown:
+Section |  min time  |  avg time  |  max time  |%varavg| %total
+---------------------------------------------------------------
+Move    | 0.042358   | 0.04421    | 0.045639   |   0.6 | 63.78
+Coll    | 0          | 0          | 0          |   0.0 |  0.00
+Sort    | 0          | 0          | 0          |   0.0 |  0.00
+Comm    | 0.012855   | 0.013225   | 0.013785   |   0.3 | 19.08
+Modify  | 0          | 0          | 0          |   0.0 |  0.00
+Output  | 0.00031984 | 0.00045113 | 0.00084144 |   0.0 |  0.65
+MPI Sync| 0.010032   | 0.011338   | 0.013173   |   1.1 | 16.36
+Other   |            | 9.023e-05  |            |       |  0.13
+
+Particle moves    = 10000000 (10M)
+Cells touched     = 13601534 (13.6M)
+Particle comms    = 264033 (0.264M)
+Boundary collides = 400226 (0.4M)
+Boundary exits    = 0 (0K)
+SurfColl checks   = 0 (0K)
+SurfColl occurs   = 0 (0K)
+Surf reactions    = 0 (0K)
+Collide attempts  = 0 (0K)
+Collide occurs    = 0 (0K)
+Reactions         = 0 (0K)
+Particles stuck   = 0
+Axisymm bad moves = 0
+
+Particle-moves/CPUsec/proc: 3.60677e+07
+Particle-moves/step: 10000
+Cell-touches/particle/step: 1.36015
+Particle comm iterations/step: 1
+Particle fraction communicated: 0.0264033
+Particle fraction colliding with boundary: 0.0400226
+Particle fraction exiting boundary: 0
+Surface-checks/particle/step: 0
+Surface-collisions/particle/step: 0
+Surf-reactions/particle/step: 0
+Collision-attempts/particle/step: 0
+Collisions/particle/step: 0
+Reactions/particle/step: 0
+
+Particles: 2500 ave 2571 max 2423 min
+Histogram: 1 0 0 0 0 2 0 0 0 1
+Cells:      250 ave 250 max 250 min
+Histogram: 4 0 0 0 0 0 0 0 0 0
+GhostCell: 110 ave 110 max 110 min
+Histogram: 4 0 0 0 0 0 0 0 0 0
+EmptyCell: 0 ave 0 max 0 min
+Histogram: 4 0 0 0 0 0 0 0 0 0

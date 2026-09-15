@@ -37,7 +37,7 @@ class Surf : protected Pointers {
   double bblo[3],bbhi[3];   // bounding box around surfs
   int tally_comm;           // style of comm for explicit surf tallies
 
-  int nreact_one;           // surface reactions in current step
+  bigint nreact_one;        // surface reactions in current step
   bigint nreact_running;    // running count of surface reactions
 
   int ngroup;               // # of defined groups
@@ -240,13 +240,13 @@ class Surf : protected Pointers {
   void write_restart(FILE *);
   void read_restart(FILE *);
   int size_restart_one();
-  int size_restart();
-  int pack_restart(char *);
+  bigint size_restart();
+  bigint pack_restart(char *);
 
   virtual void grow(int);
   virtual void grow_own(int);
 
-  bigint memory_usage();
+  virtual bigint memory_usage();
 
   // surf_collate.cpp
   // including callback functions
@@ -328,7 +328,7 @@ class Surf : protected Pointers {
   // redistribute_surfs rendezvous
 
   bigint redistribute_nsurf_old;
-  int redistribute_surfperproc;
+  bigint redistribute_surfperproc;
   Line *redistribute_lines_contig;
   Tri *redistribute_tris_contig;
 

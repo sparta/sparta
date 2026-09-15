@@ -1,0 +1,122 @@
+SPARTA (24 Sep 2025)
+Running on 4 MPI task(s)
+################################################################################
+# emit through composite regions
+#
+# Covers region union, intersect, plane and sphere, none of which appear in any
+# other deck, and exercises a union nested inside an intersect -- the case the
+# KOKKOS flattened-region path handles with an RPN token stream rather than a
+# flat primitive list.  fix emit/face is region-limited, so the particle count
+# is itself the check that the region test agrees between host and device.
+#
+# Note:
+#  - The "comm/sort" option to the "global" command is used to match MPI runs.
+#  - The "twopass" option is used to match Kokkos runs.
+################################################################################
+
+seed                12345
+dimension           3
+global              gridcut 0.0 comm/sort yes
+boundary            o o o
+create_box          0 10 0 10 0 10
+Created orthogonal box = (0 0 0) to (10 10 10)
+create_grid         8 8 8
+WARNING: Could not acquire nearby ghost cells b/c grid partition is not clumped (/home/user/sparta/src/grid.cpp:486)
+Created 512 child grid cells
+  CPU time = 0.00103162 secs
+  create/ghost percent = 95.0818 4.91817
+balance_grid        rcb cell
+Balance grid migrated 384 cells
+  CPU time = 0.000435365 secs
+  reassign/sort/migrate/ghost percent = 52.0556 0.443766 21.6731 25.8275
+
+species             air.species N O
+mixture             air N O vstream 100.0 0 0 temp 300.0
+global              nrho 1.0e18 fnum 1.0e15
+
+# primitives, then a union nested inside an intersect
+
+# two disjoint slabs whose union leaves a gap in y, intersected with a sphere
+#   centred on the emit face and a half space.  The union is nested inside the
+#   intersect, so a flat primitive list cannot express it
+
+region              lo   block  0 10 0 4 0 10
+region              hi   block  0 10 6 10 0 10
+region              band union  2 lo hi
+region              ball sphere 0 5 5 6
+region              cut  plane  0 0 4 0 0 1
+region              both intersect 3 band ball cut
+
+collide             vss air air.vss
+
+fix                 in emit/face air xlo region both perspecies no twopass
+
+compute             t temp
+compute             n reduce sum vx
+stats               50
+stats_style         step np nattempt ncoll c_t c_n
+timestep            1.0e-5
+run                 200
+Memory usage per proc in Mbytes:
+  particles (ave,min,max) = 0 0 0
+  grid      (ave,min,max) = 1.51379 1.51379 1.51379
+  surf      (ave,min,max) = 0 0 0
+  modify    (ave,min,max) = 0 0 0
+  total     (ave,min,max) = 1.51379 1.51379 1.51379
+Step Np Natt Ncoll c_t c_n 
+       0        0        0        0            0            0 
+      50     4865        0        0    433.93649    2739350.3 
+     100     9606        3        3    432.13116    5381787.5 
+     150    14212        5        2    431.30795      7988585 
+     200    18767        8        3    428.98491     10506060 
+Loop time of 0.0158631 on 4 procs for 200 steps with 18767 particles
+Performance: 12607.857 timesteps/s, 236.612 Mparticle-step/s
+
+MPI task timing breakdown:
+Section |  min time  |  avg time  |  max time  |%varavg| %total
+---------------------------------------------------------------
+Move    | 2.044e-05  | 0.0034843  | 0.0069663  |   5.9 | 21.97
+Coll    | 6.5659e-05 | 0.0009506  | 0.0018313  |   0.0 |  5.99
+Sort    | 1.9298e-05 | 0.00064624 | 0.001284   |   0.0 |  4.07
+Comm    | 0.00066779 | 0.00076078 | 0.00081874 |   0.0 |  4.80
+Modify  | 1.6977e-05 | 0.0020076  | 0.0040406  |   4.4 | 12.66
+Output  | 0.00015516 | 0.00021346 | 0.00025356 |   0.0 |  1.35
+MPI Sync| 0.00067965 | 0.0077919  | 0.014819   |   7.9 | 49.12
+Other   |            | 8.219e-06  |            |       |  0.05
+
+Particle moves    = 1916219 (1.92M)
+Cells touched     = 1926975 (1.93M)
+Particle comms    = 37 (0.037K)
+Boundary collides = 0 (0K)
+Boundary exits    = 1029 (1.03K)
+SurfColl checks   = 0 (0K)
+SurfColl occurs   = 0 (0K)
+Surf reactions    = 0 (0K)
+Collide attempts  = 561 (0.561K)
+Collide occurs    = 388 (0.388K)
+Reactions         = 0 (0K)
+Particles stuck   = 0
+Axisymm bad moves = 0
+
+Particle-moves/CPUsec/proc: 3.01993e+07
+Particle-moves/step: 9581.09
+Cell-touches/particle/step: 1.00561
+Particle comm iterations/step: 1.13
+Particle fraction communicated: 1.93089e-05
+Particle fraction colliding with boundary: 0
+Particle fraction exiting boundary: 0.000536995
+Surface-checks/particle/step: 0
+Surface-collisions/particle/step: 0
+Surf-reactions/particle/step: 0
+Collision-attempts/particle/step: 0.000292764
+Collisions/particle/step: 0.000202482
+Reactions/particle/step: 0
+
+Particles: 4691.75 ave 9408 max 0 min
+Histogram: 2 0 0 0 0 0 0 0 0 2
+Cells:      128 ave 128 max 128 min
+Histogram: 4 0 0 0 0 0 0 0 0 0
+GhostCell: 72 ave 72 max 72 min
+Histogram: 4 0 0 0 0 0 0 0 0 0
+EmptyCell: 72 ave 72 max 72 min
+Histogram: 4 0 0 0 0 0 0 0 0 0

@@ -65,7 +65,22 @@ Compute::Compute(SPARTA *sparta, int narg, char **arg) : Pointers(sparta)
 
   kokkos_flag = 0;
   copy = copymode = 0;
-  uncopy = 1;
+
+  // per-particle/grid/surf output pointers must start NULL.  A subclass only
+  //   assigns the ones it uses, and usually only on its first invocation, so a
+  //   compute that is defined but never consumed would otherwise carry garbage
+  //   here and free() it at teardown.  ComputeKEParticleKokkos's destructor
+  //   does exactly that, which corrupts the heap and surfaces much later as an
+  //   abort inside MPI_Finalize.
+
+  vector_particle = NULL;
+  array_particle = NULL;
+  vector_grid = NULL;
+  array_grid = NULL;
+  vector_surf = NULL;
+  array_surf = NULL;
+  vector_surf_tally = NULL;
+  array_surf_tally = NULL;
 }
 
 /* ---------------------------------------------------------------------- */

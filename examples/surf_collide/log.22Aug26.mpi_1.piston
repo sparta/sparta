@@ -1,0 +1,123 @@
+SPARTA (24 Sep 2025)
+Running on 1 MPI task(s)
+################################################################################
+# a moving piston compressing a gas, with a vanishing outflow wall
+#
+# Covers surf_collide piston and surf_collide vanish, neither of which appears
+# in any other deck.  piston drives xlo inward so the gas is compressed and the
+# temperature rises; vanish deletes anything reaching xhi, so Np falls.  Both
+# effects are visible in stats, which is what makes this a test rather than a
+# smoke check.
+#
+# Note:
+#  - The "comm/sort" option to the "global" command is used to match MPI runs.
+#  - The "twopass" option is used to match Kokkos runs.
+################################################################################
+
+seed                12345
+dimension           3
+global              gridcut 1.0e-5 comm/sort yes
+boundary            s s p
+create_box          0 0.0001 0 0.0001 0 0.0001
+Created orthogonal box = (0 0 0) to (0.0001 0.0001 0.0001)
+create_grid         10 10 10
+Created 1000 child grid cells
+  CPU time = 0.000950893 secs
+  create/ghost percent = 77.3777 22.6223
+balance_grid        rcb part
+Balance grid migrated 0 cells
+  CPU time = 0.00026696 secs
+  reassign/sort/migrate/ghost percent = 56.3897 1.69126 8.12182 33.7972
+
+species             air.species N2 N
+mixture             air N2 N vstream 0.0 0.0 0.0 temp 300.0
+mixture             air N2 frac 1.0
+mixture             air N frac 0.0
+
+global              nrho 7.07043E22 fnum 7.07043E6
+
+collide             vss air air.vss
+
+surf_collide        pist piston 400.0
+surf_collide        gone vanish
+surf_collide        wall specular
+
+bound_modify        xlo collide pist
+bound_modify        xhi collide gone
+bound_modify        ylo collide wall
+bound_modify        yhi collide wall
+
+create_particles    air n 20000 twopass
+Created 20000 particles
+  CPU time = 0.00418998 secs
+
+compute             t temp
+stats               50
+stats_style         step np nattempt ncoll c_t
+timestep            1.0e-9
+run                 300
+Memory usage per proc in Mbytes:
+  particles (ave,min,max) = 3.125 3.125 3.125
+  grid      (ave,min,max) = 1.51379 1.51379 1.51379
+  surf      (ave,min,max) = 0 0 0
+  modify    (ave,min,max) = 0 0 0
+  total     (ave,min,max) = 4.63879 4.63879 4.63879
+Step Np Natt Ncoll c_t 
+       0    20000        0        0     300.3378 
+      50    17627      558      386    286.27355 
+     100    15127      421      270    271.81282 
+     150    12594      287      181    252.10156 
+     200    10244      202      124    229.37031 
+     250     8260      131       80    206.44468 
+     300     6808       88       48    191.70048 
+Loop time of 0.0765553 on 1 procs for 300 steps with 6808 particles
+Performance: 3918.734 timesteps/s, 26.679 Mparticle-step/s
+
+MPI task timing breakdown:
+Section |  min time  |  avg time  |  max time  |%varavg| %total
+---------------------------------------------------------------
+Move    | 0.037459   | 0.037459   | 0.037459   |   0.0 | 48.93
+Coll    | 0.030355   | 0.030355   | 0.030355   |   0.0 | 39.65
+Sort    | 0.0079577  | 0.0079577  | 0.0079577  |   0.0 | 10.39
+Comm    | 0.00022831 | 0.00022831 | 0.00022831 |   0.0 |  0.30
+Modify  | 0          | 0          | 0          |   0.0 |  0.00
+Output  | 0.00040014 | 0.00040014 | 0.00040014 |   0.0 |  0.52
+MPI Sync| 0.00010937 | 0.00010937 | 0.00010937 |   0.0 |  0.14
+Other   |            | 4.625e-05  |            |       |  0.06
+
+Particle moves    = 3863687 (3.86M)
+Cells touched     = 4102976 (4.1M)
+Particle comms    = 0 (0K)
+Boundary collides = 8618 (8.62K)
+Boundary exits    = 0 (0K)
+SurfColl checks   = 0 (0K)
+SurfColl occurs   = 0 (0K)
+Surf reactions    = 0 (0K)
+Collide attempts  = 97073 (97.1K)
+Collide occurs    = 63400 (63.4K)
+Reactions         = 0 (0K)
+Particles stuck   = 0
+Axisymm bad moves = 0
+
+Particle-moves/CPUsec/proc: 5.04692e+07
+Particle-moves/step: 12879
+Cell-touches/particle/step: 1.06193
+Particle comm iterations/step: 1
+Particle fraction communicated: 0
+Particle fraction colliding with boundary: 0.00223051
+Particle fraction exiting boundary: 0
+Surface-checks/particle/step: 0
+Surface-collisions/particle/step: 0
+Surf-reactions/particle/step: 0
+Collision-attempts/particle/step: 0.0251244
+Collisions/particle/step: 0.0164092
+Reactions/particle/step: 0
+
+Particles: 6808 ave 6808 max 6808 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+Cells:      1000 ave 1000 max 1000 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+GhostCell: 0 ave 0 max 0 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+EmptyCell: 0 ave 0 max 0 min
+Histogram: 1 0 0 0 0 0 0 0 0 0

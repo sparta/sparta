@@ -238,6 +238,14 @@ void CreateParticlesKokkos::create_local(bigint np)
   auto h_id = Kokkos::create_mirror_view(d_id);
   auto h_v = Kokkos::create_mirror_view(d_v);
 
+  // host only, and only needed if a fix has an update_custom() method
+
+  const int ncands_custom = nfix_update_custom ? ncands : 0;
+  Kokkos::View<double*, Kokkos::HostSpace>
+    h_tempscale("cand_tempscale", ncands_custom);
+  Kokkos::View<double*[3], Kokkos::HostSpace>
+    h_vstream_custom("cand_vstream_custom", ncands_custom);
+
   for (int icell = 0; icell < nglocal; icell++) {
     if (cinfo[icell].type == INSIDE) continue;
     if (cells[icell].nsplit > 1) continue;
@@ -266,7 +274,9 @@ void CreateParticlesKokkos::create_local(bigint np)
       // generate random position X for new particle
 
       x[0] = lo[0] + random->uniform() * (hi[0]-lo[0]);
-      x[1] = lo[1] + random->uniform() * (hi[1]-lo[1]);
+      if (domain->axisymmetric)
+        x[1] = sqrt(lo[1]*lo[1] + random->uniform() * (hi[1]*hi[1]-lo[1]*lo[1]));
+      else x[1] = lo[1] + random->uniform() * (hi[1]-lo[1]);
       x[2] = lo[2] + random->uniform() * (hi[2]-lo[2]);
       if (dimension == 2) x[2] = 0.0;
 
@@ -288,7 +298,10 @@ void CreateParticlesKokkos::create_local(bigint np)
           nattempt++;
 
           x[0] = lo[0] + random->uniform() * (hi[0]-lo[0]);
-          x[1] = lo[1] + random->uniform() * (hi[1]-lo[1]);
+          if (domain->axisymmetric)
+            x[1] = sqrt(lo[1]*lo[1] +
+                        random->uniform() * (hi[1]*hi[1]-lo[1]*lo[1]));
+          else x[1] = lo[1] + random->uniform() * (hi[1]-lo[1]);
           x[2] = lo[2] + random->uniform() * (hi[2]-lo[2]);
           if (dimension == 2) x[2] = 0.0;
         }
@@ -365,6 +378,17 @@ void CreateParticlesKokkos::create_local(bigint np)
         v[2] = vstream[2] + vr*sin(theta2);
       }
       for (int d = 0; d < 3; ++d) h_v(cand, d) = v[d];
+
+      // tempscale and vstream_update_custom vary per candidate when the
+      //   temperature or vstream is per-grid.  update_custom() is called
+      //   from a later loop, once the particles exist, by which point both
+      //   hold whatever the last candidate left behind, so save them here
+
+      if (nfix_update_custom) {
+        h_tempscale(cand) = tempscale;
+        for (int d = 0; d < 3; ++d)
+          h_vstream_custom(cand,d) = vstream_update_custom[d];
+      }
     }
   }
 
@@ -408,6 +432,7 @@ void CreateParticlesKokkos::create_local(bigint np)
   particleKK->modify(Device,PARTICLE_MASK);
   particleKK->sync(Host,PARTICLE_MASK);
   particleKK->nlocal += nnew;
+  particleKK->zero_custom_kokkos(nlocal_before,particleKK->nlocal);
 
   auto h_cands2new = Kokkos::create_mirror_view(d_cands2new);
   Kokkos::deep_copy(h_cands2new, d_cands2new);
@@ -419,13 +444,15 @@ void CreateParticlesKokkos::create_local(bigint np)
       if (!h_keep(cand)) continue;
       auto inew = h_cands2new(cand) + nlocal_before;
 
-      // tempscale and vstream_update_custom are set appropriately
-      // if using per-grid variables or per-grid custom attributes
+      // use this candidate's own tempscale and vstream, saved above,
+      // so per-grid variables or per-grid custom attributes are honored
 
-      if (nfix_update_custom)
-        modify->update_custom(particle->nlocal-1,tempscale*temp_thermal,
-                              tempscale*temp_rot,tempscale*temp_vib,
-                              vstream_update_custom);
+      if (nfix_update_custom) {
+        const double ts = h_tempscale(cand);
+        double vs[3];
+        for (int d = 0; d < 3; ++d) vs[d] = h_vstream_custom(cand,d);
+        modify->update_custom(inew,ts*temp_thermal,ts*temp_rot,ts*temp_vib,vs);
+      }
     }
   }
 

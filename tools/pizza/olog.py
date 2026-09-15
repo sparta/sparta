@@ -289,15 +289,22 @@ class olog:
 
       # split chunk into entries
       # parse each entry for numeric fields, append to data
+      # skip blank lines and any non-numeric line (e.g. a WARNING message
+      #   emitted mid-run) so embedded messages do not break the parse
 
       lines = chunk.split("\n")
       for line in lines:
         words = line.split()
-        self.data.append([float(i) for i in words])
+        if not words: continue
+        try:
+          self.data.append([float(i) for i in words])
+        except ValueError:
+          continue
 
       # print last timestep of chunk
 
-      print(int(self.data[len(self.data)-1][0]), end=' ')
-      sys.stdout.flush()
+      if self.data:
+        print(int(self.data[len(self.data)-1][0]), end=' ')
+        sys.stdout.flush()
 
     return eof

@@ -40,7 +40,7 @@ using namespace SPARTA_NS;
    called from Grid::acquire_ghosts(), Comm::migrate_cells()
 ------------------------------------------------------------------------- */
 
-int Grid::pack_one(int icell, char *buf,
+bigint Grid::pack_one(int icell, char *buf,
                    int ownflag, int partflag, int surfflag, int memflag)
 {
   char *ptr = buf;
@@ -174,7 +174,7 @@ void Grid::unpack_ghosts(int nsize, char *buf, void *ptr)
   Grid *gptr = (Grid *) ptr;
   int surfflag = gptr->unpack_ghosts_surfflag;
 
-  int n = 0;
+  bigint n = 0;
   while (n < nsize)
     n += gptr->unpack_one(&buf[n],0,0,surfflag);
 }
@@ -190,7 +190,7 @@ void Grid::unpack_ghosts(int nsize, char *buf, void *ptr)
    return length of unpacking in bytes
 ------------------------------------------------------------------------- */
 
-int Grid::unpack_one(char *buf,
+bigint Grid::unpack_one(char *buf,
                      int ownflag, int partflag, int surfflag, int sortflag)
 {
   char *ptr = buf;
@@ -415,7 +415,7 @@ int Grid::unpack_one(char *buf,
    return length of packing in bytes
 ------------------------------------------------------------------------- */
 
-int Grid::pack_one_adapt(char *inbuf, char *buf, int memflag)
+bigint Grid::pack_one_adapt(char *inbuf, char *buf, int memflag)
 {
   int isub;
 
@@ -519,7 +519,7 @@ int Grid::pack_one_adapt(char *inbuf, char *buf, int memflag)
       }
     }
 
-  } else ptr += np * nbytes_particle_total;
+  } else ptr += (bigint) np * nbytes_particle_total;
 
   ptr = ROUNDUP(ptr);
   return ptr-buf;
@@ -532,7 +532,7 @@ int Grid::pack_one_adapt(char *inbuf, char *buf, int memflag)
    return length of packing in bytes
 ------------------------------------------------------------------------- */
 
-int Grid::pack_particles(int icell, char *buf, int memflag)
+bigint Grid::pack_particles(int icell, char *buf, int memflag)
 {
   char *ptr = buf;
 
@@ -557,7 +557,7 @@ int Grid::pack_particles(int icell, char *buf, int memflag)
       particles[ip].icell = -1;
       ip = next[ip];
     }
-  } else ptr += np * nbytes_particle_total;
+  } else ptr += (bigint) np * nbytes_particle_total;
 
   ptr = ROUNDUP(ptr);
   return ptr-buf;
@@ -571,7 +571,7 @@ int Grid::pack_particles(int icell, char *buf, int memflag)
    return length of unpacking in bytes
 ------------------------------------------------------------------------- */
 
-int Grid::unpack_particles(char *buf, int icell, int sortflag)
+bigint Grid::unpack_particles(char *buf, int icell, int sortflag)
 {
   char *ptr = buf;
 
@@ -595,8 +595,8 @@ int Grid::unpack_particles(char *buf, int icell, int sortflag)
       n++;
     }
   } else {
-    memcpy(&particles[nplocal],ptr,np*nbytes_particle);
-    ptr += np * nbytes_particle_total;
+    memcpy(&particles[nplocal],ptr,(bigint) np*nbytes_particle);
+    ptr += (bigint) np * nbytes_particle_total;
   }
 
   ptr = ROUNDUP(ptr);
@@ -641,7 +641,7 @@ void Grid::unpack_particles_adapt(int np, char *buf)
       nplocal++;
     }
   } else {
-    memcpy(&particles[nplocal],buf,np*nbytes_particle);
+    memcpy(&particles[nplocal],buf,(bigint) np*nbytes_particle);
     nplocal += np;
   }
 

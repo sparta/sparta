@@ -97,7 +97,7 @@ their values.
 
 The vector or array can be accessed by any command that uses per-atom
 values from a compute as input.  See "Section
-4.4"_Section_howto.html#howto_4 for an overview of SPARTA output
+6.4"_Section_howto.html#howto_4 for an overview of SPARTA output
 options.
 
 The vector or array values will be in whatever "units"_units.html the

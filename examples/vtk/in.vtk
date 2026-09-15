@@ -1,0 +1,39 @@
+# 2d flow around a circle, writing native VTK dump files
+# exercises dump particle/vtk, grid/vtk, and surf/vtk (VTK package)
+
+seed        12345
+dimension   2
+global      gridcut 0.0 comm/sort yes
+
+boundary    o r p
+
+create_box  0 10 0 10 -0.5 0.5
+create_grid 20 20 1
+balance_grid rcb cell
+
+global      nrho 1.0 fnum 0.001
+
+species     air.species N O
+mixture     air N O vstream 100.0 0 0
+
+read_surf   data.circle
+surf_collide 1 diffuse 300.0 0.0
+surf_modify all collide 1
+
+collide     vss air air.vss
+
+fix         in emit/face air xlo twopass
+
+timestep    0.0001
+
+# VTK dumps: particles as points, grid cells as pixels, surf as lines
+# '*' in the filename is required (one file per timestep)
+# use '%' (e.g. tmp.grid.%.*.vtu) for per-processor pieces + a .pvtu summary
+
+dump        1 particle/vtk air 250 tmp.particle.*.vtu id type x y z vx vy vz
+dump        2 grid/vtk     all 250 tmp.grid.*.vtu     id proc vol
+dump        3 surf/vtk     all 250 tmp.surf.*.vtp     id type
+
+stats       250
+stats_style step cpu np nattempt ncoll nscoll nscheck
+run         500

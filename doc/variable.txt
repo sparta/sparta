@@ -52,7 +52,7 @@ style = {delete} or {index} or {loop} or {world} or {universe} or {uloop} or {st
                      sin(x), cos(x), tan(x), asin(x), acos(x), atan(x), atan2(y,x), erf(x),
                      random(x,y), normal(x,y), ceil(x), floor(x), round(x)
                      ramp(x,y), stagger(x,y), logfreq(x,y,z), stride(x,y,z), vdisplace(x,y), swiggle(x,y,z), cwiggle(x,y,z)
-    special functions = sum(x), min(x), max(x), ave(x), trap(x), slope(x), next(x), grid2part(x), is_file(x)
+    special functions = sum(x), min(x), max(x), ave(x), trap(x), slope(x), next(x), grid2part(x), is_file(x), extract_setting(name)
     python function wrapper = py_varname(x,y,z,...)
     particle vectors = id, type, mass, q, mu, x, y, z, vx, vy, vz
     grid vectors = cxlo, cxhi, cylo, cyhi, czlo, czhi
@@ -334,7 +334,7 @@ specified before the Python function is invoked for the first time.
 Each time the variable is evaluated, the associated Python function is
 invoked, and the value it returns is also returned by the variable.
 Since the Python function can use other SPARTA variables as input, or
-query interal SPARTA quantities to perform its computation, this means
+query internal SPARTA quantities to perform its computation, this means
 the variable can return a different value each time it is evaluated.
 
 The type of value stored in the variable is determined by the {format}
@@ -369,12 +369,12 @@ each particle whenever it is evaluated.  For {grid} style variables
 the formula computes one quantity for each grid cell whenever it is
 evaluated.  A {grid} style variable computes quantites for all flavors
 of child grid cells in the simulation, which includes unsplit, cut,
-split, and sub cells.  See "Section 4.8"_Section_howto.html#howto_8 of
+split, and sub cells.  See "Section 6.8"_Section_howto.html#howto_8 of
 the manual gives details of how SPARTA defines child, unsplit, split,
 and sub cells.  For {surf} style variables the formula computes one
 quantity for each surface element (line or triangle) whenever it is
 evaluated.  They can only be defined for explicit surfaces, not
-implicit surfaces.  See "Section 4.9"_Section_howto.html#howto_9 of
+implicit surfaces.  See "Section 6.9"_Section_howto.html#howto_9 of
 the manual for a description of both kinds of surface elements.
 
 Note that {equal}, {particle}, {grid}, and {surf} variables can
@@ -410,7 +410,7 @@ Math functions: sqrt(x), exp(x), ln(x), log(x), abs(x), sin(x), cos(x), tan(x), 
      asin(x), acos(x), atan(x), atan2(y,x), erf(x), random(x,y,z), normal(x,y,z), \
      ceil(x), floor(x), round(x), ramp(x,y), stagger(x,y), logfreq(x,y,z), \
      stride(x,y,z), vdisplace(x,y), swiggle(x,y,z), cwiggle(x,y,z)
-Special functions: sum(x), min(x), max(x), ave(x), trap(x), slope(x), next(x), grid2part(x), is_file(x)
+Special functions: sum(x), min(x), max(x), ave(x), trap(x), slope(x), next(x), grid2part(x), is_file(x), extract_setting(name)
 Python function wrapper: py_varname(x,y,z,...)
 Particle vectors: id, type, mass, q, mu, x, y, z, vx, vy, vz
 Grid vectors: cxlo, cxhi, cylo, cyhi, czlo, czhi
@@ -473,6 +473,10 @@ exponentiation, the formula "-2^2" will evaluate to 4, not -4.  This
 convention is compatible with some programming languages, but not
 others.  As mentioned, this behavior can be easily overridden with
 parenthesis; the formula "-(2^2)" will evaluate to -4.
+
+The exponentiation operator "x^y" evaluates to 1.0 whenever y is zero,
+for any value of x.  An error is generated if x is zero and y is
+negative, since the result would be infinite.
 
 The 6 relational operators return either a 1.0 or 0.0 depending on
 whether the relationship between x and y is TRUE or FALSE.  For
@@ -701,6 +705,41 @@ which column of the per-grid array is being referenced.
 The is_file(x) function is a test whether "x" is a (readable) file and
 returns 1 in this case, otherwise it returns 0. For this test, "x" is taken
 as a literal string and must not have any blanks in it.
+
+The extract_setting(name) function returns the value of the setting
+{name} as a number.  It gives an input script access to basic settings
+of the SPARTA executable and of the running simulation, by calling the
+sparta_extract_setting() library function; "Section
+howto"_Section_howto.html#howto_6 lists the settings {name} may be.
+It is an error if {name} is not one of them.  Note that {name} is taken
+as a literal string and must not have any blanks in it, and that it is
+not enclosed in quotes.
+
+This is how an input script asks for something it has no other way to
+see, most usefully the number of MPI ranks it is running on.  A script
+whose decomposition must match the launcher would otherwise have to be
+told the rank count with the "-var"_Section_start.html#start_7
+command-line switch, and when the two disagree it builds a processor
+grid for the wrong size; the mismatch then surfaces much later as a
+"Bad grid of processors" error that cannot say what was intended.  For
+example, this computes a processor grid from the rank count itself:
+
+variable nprocs equal extract_setting(world_size)
+variable px equal 2^floor(log(v_nprocs)/log(2)/3) :pre
+
+Two cautions.  A setting is read locally on each rank rather than
+through a collective, so nothing is added to the collective path and
+partitions that evaluate the variable on different code paths cannot
+deadlock on it -- but by the same token {world_rank} differs from rank
+to rank, and a variable built from it has a different value on every
+rank.  That is fine for a "print"_print.html of per-rank information
+and wrong for anything that must agree across ranks, such as a
+"region"_region.html or a "create_grid"_create_grid.html argument.
+Second, under the "-partition"_Section_start.html#start_7 switch,
+{world_size} and {world_rank} are the size of and the rank within the
+partition running the script, matching every other per-partition
+quantity a script sees; use {universe_size} and {universe_rank} for the
+totals across all partitions.
 
 :line
 
@@ -998,7 +1037,7 @@ sign (e.g. $x or $\{abc\}) versus with a leading "v_" (e.g. v_x or
 v_abc).  The former can be used in any input script command, including
 a variable command.  The input script parser evaluates the reference
 variable immediately and substitutes its value into the command.  As
-explained in "Section commands 3.2"_Section_commands.html#3_2 for
+explained in "Section commands 3.2"_Section_commands.html#cmd_2 for
 "Parsing rules", you can also use un-named "immediate" variables for
 this purpose.  For example, a string like this
 $((xlo+xhi)/2+sqrt(v_area)) in an input script command evaluates the
@@ -1006,7 +1045,7 @@ string between the parenthesis as an equal-style variable formula.
 
 Referencing a variable with a leading "v_" is an optional or required
 kind of argument for some commands (e.g. the "fix
-ave/spatial"_fix_ave_spatial.html or "dump custom"_dump.html or
+ave/grid"_fix_ave_grid.html or "dump custom"_dump.html or
 "stats_style"_stats_style.html commands) if you wish it to evaluate a
 variable periodically during a run.  It can also be used in a variable
 formula if you wish to reference a second variable.  The second
@@ -1046,7 +1085,7 @@ if it contains variables preceeded by $ signs.  For example,
 variable nratio equal "$\{nfinal\}/$\{n0\}" :pre
 
 This is because the quotes prevent variable substitution (see "Section
-2.2"_Section_commands.html#cmd_2 of the manual on parsing input script
+3.2"_Section_commands.html#cmd_2 of the manual on parsing input script
 commands), and thus an error will occur when the formula for "nratio"
 is evaluated later.
 

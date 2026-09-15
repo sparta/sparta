@@ -1,18 +1,5 @@
-//@HEADER
-// ************************************************************************
-//
-//                        Kokkos v. 4.0
-//       Copyright (2022) National Technology & Engineering
-//               Solutions of Sandia, LLC (NTESS).
-//
-// Under the terms of Contract DE-NA0003525 with NTESS,
-// the U.S. Government retains certain rights in this software.
-//
-// Part of Kokkos, under the Apache License v2.0 with LLVM Exceptions.
-// See https://kokkos.org/LICENSE for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-//
-//@HEADER
+// SPDX-FileCopyrightText: Copyright Contributors to the Kokkos project
 
 module;
 
@@ -26,17 +13,12 @@ export {
   using ::Kokkos::Experimental::adjacent_find;
   using ::Kokkos::Experimental::all_of;
   using ::Kokkos::Experimental::any_of;
-  using ::Kokkos::Experimental::begin;
-  using ::Kokkos::Experimental::cbegin;
-  using ::Kokkos::Experimental::cend;
   using ::Kokkos::Experimental::copy;
   using ::Kokkos::Experimental::copy_backward;
   using ::Kokkos::Experimental::copy_if;
   using ::Kokkos::Experimental::copy_n;
   using ::Kokkos::Experimental::count;
   using ::Kokkos::Experimental::count_if;
-  using ::Kokkos::Experimental::distance;
-  using ::Kokkos::Experimental::end;
   using ::Kokkos::Experimental::equal;
   using ::Kokkos::Experimental::exclusive_scan;
   using ::Kokkos::Experimental::fill;

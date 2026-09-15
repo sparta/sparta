@@ -36,12 +36,16 @@ timestep 	    0.0001
 #                    surf proc 0.01 size 512 512 zoom 1.75
 #dump_modify	    2 pad 4
 
-#compute             csurf surf all all nflux mflux fx fy fz
-#fix                 save ave/surf all 10 10 100 c_csurf[*]
+# a surf tally compute driven by fix emit/surf: this is the only deck that
+#   exercises that dispatch path (see fix_emit_surf_kokkos.cpp)
+
+compute             csurf surf all all nflux mflux fx fy fz
+fix                 save ave/surf all 10 10 100 c_csurf[*]
+compute             cs reduce sum f_save[1] f_save[3]
 #dump                surf surf all 100 tmp.surf id f_save[*]
 
 fix                 1 balance 10 1.0 rcb part
 
 stats		    100
-stats_style	    step cpu np nattempt ncoll nscoll nscheck
+stats_style	    step cpu np nattempt ncoll nscoll nscheck c_cs[1] c_cs[2]
 run 		    300

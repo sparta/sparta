@@ -23,9 +23,6 @@
 #include "string.h"
 #include "image.h"
 #include "math_extra.h"
-#include "update.h"
-#include "random_mars.h"
-#include "random_knuth.h"
 #include "math_const.h"
 #include "error.h"
 #include "memory.h"
@@ -45,7 +42,6 @@ using namespace SPARTA_NS;
 using namespace MathConst;
 
 #define NCOLORS 140
-#define NELEMENTS 109
 #define BIG 1.0e20
 #define EPSILON 1.0e-6
 
@@ -53,6 +49,109 @@ enum{NUMERIC,MINVALUE,MAXVALUE};
 enum{CONTINUOUS,DISCRETE,SEQUENTIAL};
 enum{ABSOLUTE,FRACTIONAL};
 enum{NO,YES};
+
+// the surroundings mirrored by metallic surfaces: a bright sky above a dark
+// ground.  these are not adjustable on purpose.  the effect is a cheap
+// imitation, and a fake environment with more settings still cannot compete
+// with rendering the same scene in a ray tracer
+
+static const double SKYCOLOR[3] = {0.90, 0.94, 1.00};
+static const double GROUNDCOLOR[3] = {0.10, 0.10, 0.12};
+
+// screen-door transparency is realized with an ordered dither: a pixel of an
+// object is only drawn when the threshold at its position in a repeating
+// 16x16 Bayer matrix is at or below the requested opacity.  the pattern is
+// anchored to the screen and not to the object, so it is the same on every
+// MPI rank and costs a single table lookup per pixel.  pixels that are
+// skipped are never passed to draw_pixel(), so every pixel that is drawn
+// stays fully opaque and the depth buffer and the merge() compositing work
+// unchanged.  see https://en.wikipedia.org/wiki/Ordered_dithering
+//
+// the matrix can be generated for any power of 2 rank with this python code:
+//
+// import numpy as np
+//
+// def bayer_matrix(n: int) -> np.ndarray:
+//     """Generate an n x n Bayer (ordered dither) matrix for n a power of 2."""
+//     if n == 1:
+//         return np.array([[0]], dtype=int)
+//     m = n // 2
+//     B = bayer_matrix(m)
+//     return np.block([[4 * B + 0, 4 * B + 2],
+//                      [4 * B + 3, 4 * B + 1]])
+//
+// n = 16
+// matrix = (bayer_matrix(n) + 0.5) / (n * n)
+// for iy in range(0,n):
+//     print([ "%.9f" % matrix[ix][iy] for ix in range(0,n) ])
+
+static const int TRANK = 16;
+static const double transthresh[TRANK][TRANK] = {
+  {0.001953125, 0.751953125, 0.189453125, 0.939453125, 0.048828125,
+   0.798828125, 0.236328125, 0.986328125, 0.013671875, 0.763671875,
+   0.201171875, 0.951171875, 0.060546875, 0.810546875, 0.248046875,
+   0.998046875},
+  {0.501953125, 0.251953125, 0.689453125, 0.439453125, 0.548828125,
+   0.298828125, 0.736328125, 0.486328125, 0.513671875, 0.263671875,
+   0.701171875, 0.451171875, 0.560546875, 0.310546875, 0.748046875,
+   0.498046875},
+  {0.126953125, 0.876953125, 0.064453125, 0.814453125, 0.173828125,
+   0.923828125, 0.111328125, 0.861328125, 0.138671875, 0.888671875,
+   0.076171875, 0.826171875, 0.185546875, 0.935546875, 0.123046875,
+   0.873046875},
+  {0.626953125, 0.376953125, 0.564453125, 0.314453125, 0.673828125,
+   0.423828125, 0.611328125, 0.361328125, 0.638671875, 0.388671875,
+   0.576171875, 0.326171875, 0.685546875, 0.435546875, 0.623046875,
+   0.373046875},
+  {0.033203125, 0.783203125, 0.220703125, 0.970703125, 0.017578125,
+   0.767578125, 0.205078125, 0.955078125, 0.044921875, 0.794921875,
+   0.232421875, 0.982421875, 0.029296875, 0.779296875, 0.216796875,
+   0.966796875},
+  {0.533203125, 0.283203125, 0.720703125, 0.470703125, 0.517578125,
+   0.267578125, 0.705078125, 0.455078125, 0.544921875, 0.294921875,
+   0.732421875, 0.482421875, 0.529296875, 0.279296875, 0.716796875,
+   0.466796875},
+  {0.158203125, 0.908203125, 0.095703125, 0.845703125, 0.142578125,
+   0.892578125, 0.080078125, 0.830078125, 0.169921875, 0.919921875,
+   0.107421875, 0.857421875, 0.154296875, 0.904296875, 0.091796875,
+   0.841796875},
+  {0.658203125, 0.408203125, 0.595703125, 0.345703125, 0.642578125,
+   0.392578125, 0.580078125, 0.330078125, 0.669921875, 0.419921875,
+   0.607421875, 0.357421875, 0.654296875, 0.404296875, 0.591796875,
+   0.341796875},
+  {0.009765625, 0.759765625, 0.197265625, 0.947265625, 0.056640625,
+   0.806640625, 0.244140625, 0.994140625, 0.005859375, 0.755859375,
+   0.193359375, 0.943359375, 0.052734375, 0.802734375, 0.240234375,
+   0.990234375},
+  {0.509765625, 0.259765625, 0.697265625, 0.447265625, 0.556640625,
+   0.306640625, 0.744140625, 0.494140625, 0.505859375, 0.255859375,
+   0.693359375, 0.443359375, 0.552734375, 0.302734375, 0.740234375,
+   0.490234375},
+  {0.134765625, 0.884765625, 0.072265625, 0.822265625, 0.181640625,
+   0.931640625, 0.119140625, 0.869140625, 0.130859375, 0.880859375,
+   0.068359375, 0.818359375, 0.177734375, 0.927734375, 0.115234375,
+   0.865234375},
+  {0.634765625, 0.384765625, 0.572265625, 0.322265625, 0.681640625,
+   0.431640625, 0.619140625, 0.369140625, 0.630859375, 0.380859375,
+   0.568359375, 0.318359375, 0.677734375, 0.427734375, 0.615234375,
+   0.365234375},
+  {0.041015625, 0.791015625, 0.228515625, 0.978515625, 0.025390625,
+   0.775390625, 0.212890625, 0.962890625, 0.037109375, 0.787109375,
+   0.224609375, 0.974609375, 0.021484375, 0.771484375, 0.208984375,
+   0.958984375},
+  {0.541015625, 0.291015625, 0.728515625, 0.478515625, 0.525390625,
+   0.275390625, 0.712890625, 0.462890625, 0.537109375, 0.287109375,
+   0.724609375, 0.474609375, 0.521484375, 0.271484375, 0.708984375,
+   0.458984375},
+  {0.166015625, 0.916015625, 0.103515625, 0.853515625, 0.150390625,
+   0.900390625, 0.087890625, 0.837890625, 0.162109375, 0.912109375,
+   0.099609375, 0.849609375, 0.146484375, 0.896484375, 0.083984375,
+   0.833984375},
+  {0.666015625, 0.416015625, 0.603515625, 0.353515625, 0.650390625,
+   0.400390625, 0.587890625, 0.337890625, 0.662109375, 0.412109375,
+   0.599609375, 0.349609375, 0.646484375, 0.396484375, 0.583984375,
+   0.333984375}
+};
 
 /* ---------------------------------------------------------------------- */
 
@@ -67,9 +166,24 @@ Image::Image(SPARTA *sparta, int nmap_caller) : Pointers(sparta)
   theta = 60.0 * MY_PI/180.0;
   phi = 30.0 * MY_PI/180.0;
   zoom = 1.0;
-  persp = 0.0;
   shiny = 1.0;
+  gamma = 1.0;
   ssao = NO;
+  ssaosamples = 0;
+  fsaa = NO;
+  depthcue = NO;
+  depthcueint = 0.0;
+  depthcuecolor = NULL;
+  depthcuestartflag = 0;
+  depthcuestart = 0.0;
+  defocus = NO;
+  defocusint = 0.0;
+  defocusstartflag = 0;
+  defocusstart = 0.0;
+  outline = NO;
+  outlinewidth = 0;
+  outlinecolor = NULL;
+  for (int i = 0; i < 6; i++) boxbounds[i] = 0.0;
 
   up[0] = 0.0;
   up[1] = 0.0;
@@ -83,6 +197,7 @@ Image::Image(SPARTA *sparta, int nmap_caller) : Pointers(sparta)
 
   boxcolor = color2rgb("yellow");
   background[0] = background[1] = background[2] = 0;
+  background2[0] = background2[1] = background2[2] = -1;
 
   // define nmap colormaps, all with default settings
 
@@ -116,7 +231,19 @@ Image::Image(SPARTA *sparta, int nmap_caller) : Pointers(sparta)
   backLightColor[1] = 0.9;
   backLightColor[2] = 0.9;
 
-  random = NULL;
+  specularflag = 0;
+  nospecular = 0;
+  specularHardness = 16.0;
+  specularIntensity = 1.0;
+
+  // metallic shading is off by default, so that images are unchanged.
+  // the default surroundings are a bright sky over a dark ground, which
+  // is what makes a polished surface read as metal rather than as plastic
+
+  metallic = 0.0;
+  finishMirror = 0;
+  finishBand = 0.6;
+  finishWidth = 2.0;
 
   // MPI_Gatherv vectors
 
@@ -141,8 +268,6 @@ Image::~Image()
   memory->destroy(depthcopy);
   memory->destroy(surfacecopy);
   memory->destroy(rgbcopy);
-
-  if (random) delete random;
 
   memory->destroy(recvcounts);
   memory->destroy(displs);
@@ -173,6 +298,15 @@ void Image::buffers()
 void Image::view_params(double boxxlo, double boxxhi, double boxylo,
                         double boxyhi, double boxzlo, double boxzhi)
 {
+  // keep box bounds for projecting the box onto the view direction
+
+  boxbounds[0] = boxxlo;
+  boxbounds[1] = boxxhi;
+  boxbounds[2] = boxylo;
+  boxbounds[3] = boxyhi;
+  boxbounds[4] = boxzlo;
+  boxbounds[5] = boxzhi;
+
   // camDir points at the camera, view direction = -camDir
 
   camDir[0] = sin(theta)*cos(phi);
@@ -236,6 +370,39 @@ void Image::view_params(double boxxlo, double boxxhi, double boxylo,
 
   // light directions in terms of -camDir = z
 
+  setup_lights();
+
+  // the brightness of the specular highlights follows shiny; their width
+  // also follows shiny unless set with a dump_modify specular preset;
+  // dump_modify specular none disables the highlights entirely
+
+  specularIntensity = nospecular ? 0.0 : shiny;
+  if (!specularflag) specularHardness = 16.0 * shiny;
+
+  // adjust strength of the SSAO
+
+  if (ssao) {
+    SSAORadius = maxdel * 0.05 * ssaoint;
+    SSAOSamples = static_cast<int> (8.0 + 32.0*ssaoint);
+    SSAOJitter = MY_PI / 12;
+    ambientColor[0] = 0.5;
+    ambientColor[1] = 0.5;
+    ambientColor[2] = 0.5;
+  }
+
+  // param for rasterizing spheres
+
+  tanPerPixel = -(maxdel / (double) height);
+}
+
+/* ----------------------------------------------------------------------
+   compute light directions from their theta/phi angles
+   the angles are relative to the viewer with z pointing at the camera:
+   theta > 0 moves a light above the view direction, phi > 0 to the right
+------------------------------------------------------------------------- */
+
+void Image::setup_lights()
+{
   keyLightDir[0] = cos(keyLightTheta) * sin(keyLightPhi);
   keyLightDir[1] = sin(keyLightTheta);
   keyLightDir[2] = cos(keyLightTheta) * cos(keyLightPhi);
@@ -252,31 +419,6 @@ void Image::view_params(double boxxlo, double boxxhi, double boxylo,
   keyHalfDir[1] = 0 + keyLightDir[1];
   keyHalfDir[2] = 1 + keyLightDir[2];
   MathExtra::norm3(keyHalfDir);
-
-  // adjust shinyness of the reflection
-
-  specularHardness = 16.0 * shiny;
-  specularIntensity = shiny;
-
-  // adjust strength of the SSAO
-
-  if (ssao) {
-    if (!random) {
-      random = new RanKnuth(update->ranmaster->uniform());
-      double seed = update->ranmaster->uniform();
-      random->reset(seed,me,100);
-    }
-    SSAORadius = maxdel * 0.05 * ssaoint;
-    SSAOSamples = static_cast<int> (8.0 + 32.0*ssaoint);
-    SSAOJitter = MY_PI / 12;
-    ambientColor[0] = 0.5;
-    ambientColor[1] = 0.5;
-    ambientColor[2] = 0.5;
-  }
-
-  // param for rasterizing spheres
-
-  tanPerPixel = -(maxdel / (double) height);
 }
 
 /* ----------------------------------------------------------------------
@@ -291,13 +433,35 @@ void Image::clear()
   int blue = background[2];
 
   int ix,iy;
-  for (iy = 0; iy < height; iy ++)
-    for (ix = 0; ix < width; ix ++) {
-      imageBuffer[iy * width * 3 + ix * 3 + 0] = red;
-      imageBuffer[iy * width * 3 + ix * 3 + 1] = green;
-      imageBuffer[iy * width * 3 + ix * 3 + 2] = blue;
-      depthBuffer[iy * width + ix] = -1;
+
+  if (background2[0] < 0) {
+    for (iy = 0; iy < height; iy ++)
+      for (ix = 0; ix < width; ix ++) {
+        imageBuffer[iy * width * 3 + ix * 3 + 0] = red;
+        imageBuffer[iy * width * 3 + ix * 3 + 1] = green;
+        imageBuffer[iy * width * 3 + ix * 3 + 2] = blue;
+        depthBuffer[iy * width + ix] = -1;
+      }
+
+  // vertical gradient from background at bottom to background2 at top
+
+  } else {
+    for (iy = 0; iy < height; iy ++) {
+      double fraction = (double) iy / (double) height;
+      red = static_cast<int>
+        (fraction*background2[0] + (1.0-fraction)*background[0]);
+      green = static_cast<int>
+        (fraction*background2[1] + (1.0-fraction)*background[1]);
+      blue = static_cast<int>
+        (fraction*background2[2] + (1.0-fraction)*background[2]);
+      for (ix = 0; ix < width; ix ++) {
+        imageBuffer[iy * width * 3 + ix * 3 + 0] = red;
+        imageBuffer[iy * width * 3 + ix * 3 + 1] = green;
+        imageBuffer[iy * width * 3 + ix * 3 + 2] = blue;
+        depthBuffer[iy * width + ix] = -1;
+      }
     }
+  }
 }
 
 /* ----------------------------------------------------------------------
@@ -386,47 +550,90 @@ void Image::merge()
   } else {
     writeBuffer = imageBuffer;
   }
+
+  // draw outlines at depth discontinuities
+
+  if (outline && me == 0) compute_outline();
+
+  // apply depth cueing to the final composited image
+
+  if (depthcue && me == 0) compute_depthcue();
+
+  // blur the more distant objects in the final composited image
+
+  if (defocus && me == 0) compute_defocus();
+
+  // scale down image for anti-aliasing
+  // can be done in place with simple averaging
+
+  if (fsaa) {
+    for (int h = 0; h < height; h += 2) {
+      for (int w = 0; w < width; w += 2) {
+        int idx1 = 3*width*h + 3*w;
+        int idx2 = 3*width*h + 3*(w+1);
+        int idx3 = 3*width*(h+1) + 3*w;
+        int idx4 = 3*width*(h+1) + 3*(w+1);
+
+        int out = 3*(width/2)*(h/2) + 3*(w/2);
+        for (int i = 0; i < 3; ++i) {
+          writeBuffer[out+i] = (unsigned char)
+            (0.25*((int)(unsigned char)writeBuffer[idx1+i]
+                   +(int)(unsigned char)writeBuffer[idx2+i]
+                   +(int)(unsigned char)writeBuffer[idx3+i]
+                   +(int)(unsigned char)writeBuffer[idx4+i]));
+        }
+      }
+    }
+  }
 }
 
 /* ----------------------------------------------------------------------
    draw a line as a cylinder
 ------------------------------------------------------------------------- */
 
-void Image::draw_line(double *x1, double *x2, double *color, double diameter)
+void Image::draw_line(double *x1, double *x2, double *color, double diameter,
+                      double opacity)
 {
-  draw_cylinder(x1,x2,color,diameter,3);
+  if (opacity <= 0.0) return;
+  draw_cylinder(x1,x2,color,diameter,3,opacity);
 }
 
 /* ----------------------------------------------------------------------
    draw outline of a 3d box as 12 cylinders
 ------------------------------------------------------------------------- */
 
-void Image::draw_box(double (*corners)[3], double *color, double diameter)
+void Image::draw_box(double (*corners)[3], double *color, double diameter,
+                     double opacity)
 {
-  draw_cylinder(corners[0],corners[1],color,diameter,3);
-  draw_cylinder(corners[2],corners[3],color,diameter,3);
-  draw_cylinder(corners[0],corners[2],color,diameter,3);
-  draw_cylinder(corners[1],corners[3],color,diameter,3);
-  draw_cylinder(corners[0],corners[4],color,diameter,3);
-  draw_cylinder(corners[1],corners[5],color,diameter,3);
-  draw_cylinder(corners[2],corners[6],color,diameter,3);
-  draw_cylinder(corners[3],corners[7],color,diameter,3);
-  draw_cylinder(corners[4],corners[5],color,diameter,3);
-  draw_cylinder(corners[6],corners[7],color,diameter,3);
-  draw_cylinder(corners[4],corners[6],color,diameter,3);
-  draw_cylinder(corners[5],corners[7],color,diameter,3);
+  if (opacity <= 0.0) return;
+
+  draw_cylinder(corners[0],corners[1],color,diameter,3,opacity);
+  draw_cylinder(corners[2],corners[3],color,diameter,3,opacity);
+  draw_cylinder(corners[0],corners[2],color,diameter,3,opacity);
+  draw_cylinder(corners[1],corners[3],color,diameter,3,opacity);
+  draw_cylinder(corners[0],corners[4],color,diameter,3,opacity);
+  draw_cylinder(corners[1],corners[5],color,diameter,3,opacity);
+  draw_cylinder(corners[2],corners[6],color,diameter,3,opacity);
+  draw_cylinder(corners[3],corners[7],color,diameter,3,opacity);
+  draw_cylinder(corners[4],corners[5],color,diameter,3,opacity);
+  draw_cylinder(corners[6],corners[7],color,diameter,3,opacity);
+  draw_cylinder(corners[4],corners[6],color,diameter,3,opacity);
+  draw_cylinder(corners[5],corners[7],color,diameter,3,opacity);
 }
 
 /* ----------------------------------------------------------------------
    draw outline of a 2d rectangle as 4 cylinders
 ------------------------------------------------------------------------- */
 
-void Image::draw_box2d(double (*corners)[3], double *color, double diameter)
+void Image::draw_box2d(double (*corners)[3], double *color, double diameter,
+                       double opacity)
 {
-  draw_cylinder(corners[0],corners[1],color,diameter,3);
-  draw_cylinder(corners[2],corners[3],color,diameter,3);
-  draw_cylinder(corners[0],corners[2],color,diameter,3);
-  draw_cylinder(corners[1],corners[3],color,diameter,3);
+  if (opacity <= 0.0) return;
+
+  draw_cylinder(corners[0],corners[1],color,diameter,3,opacity);
+  draw_cylinder(corners[2],corners[3],color,diameter,3,opacity);
+  draw_cylinder(corners[0],corners[2],color,diameter,3,opacity);
+  draw_cylinder(corners[1],corners[3],color,diameter,3,opacity);
 }
 
 /* ----------------------------------------------------------------------
@@ -434,11 +641,13 @@ void Image::draw_box2d(double (*corners)[3], double *color, double diameter)
    axes = 4 end points
 ------------------------------------------------------------------------- */
 
-void Image::draw_axes(double (*axes)[3], double diameter)
+void Image::draw_axes(double (*axes)[3], double diameter, double opacity)
 {
-  draw_cylinder(axes[0],axes[1],color2rgb("red"),diameter,3);
-  draw_cylinder(axes[0],axes[2],color2rgb("green"),diameter,3);
-  draw_cylinder(axes[0],axes[3],color2rgb("blue"),diameter,3);
+  if (opacity <= 0.0) return;
+
+  draw_cylinder(axes[0],axes[1],color2rgb("red"),diameter,3,opacity);
+  draw_cylinder(axes[0],axes[2],color2rgb("green"),diameter,3,opacity);
+  draw_cylinder(axes[0],axes[3],color2rgb("blue"),diameter,3,opacity);
 }
 
 /* ----------------------------------------------------------------------
@@ -446,8 +655,11 @@ void Image::draw_axes(double (*axes)[3], double diameter)
    render pixel by pixel onto image plane with depth buffering
 ------------------------------------------------------------------------- */
 
-void Image::draw_sphere(double *x, double *surfaceColor, double diameter)
+void Image::draw_sphere(double *x, double *surfaceColor, double diameter,
+                        double opacity)
 {
+  if (opacity <= 0.0) return;
+
   int ix,iy;
   double projRad;
   double xlocal[3],surface[3];
@@ -483,6 +695,8 @@ void Image::draw_sphere(double *x, double *surfaceColor, double diameter)
   for (iy = yc - pixelRadius; iy <= yc + pixelRadius; iy++) {
     for (ix = xc - pixelRadius; ix <= xc + pixelRadius; ix++) {
       if (iy < 0 || iy >= height || ix < 0 || ix >= width) continue;
+      if (opacity < 1.0 && transthresh[ix % TRANK][iy % TRANK] > opacity)
+        continue;
 
       surface[1] = ((iy - yc) - height_error) * pixelWidth;
       surface[0] = ((ix - xc) - width_error) * pixelWidth;
@@ -508,8 +722,13 @@ void Image::draw_sphere(double *x, double *surfaceColor, double diameter)
    render pixel by pixel onto image plane with depth buffering
 ------------------------------------------------------------------------- */
 
-void Image::draw_brick(double *x, double *surfaceColor, double *diameter)
+void Image::draw_brick(double *x, double *surfaceColor, double *diameter,
+                       double opacity)
 {
+  // no test on diameter, the grid cutting planes pass a zero extent
+
+  if (opacity <= 0.0) return;
+
   double xlocal[3],surface[3],normal[3];
   double t,tdir[3];
   double depth;
@@ -550,6 +769,8 @@ void Image::draw_brick(double *x, double *surfaceColor, double *diameter)
   for (int iy = yc - pixelHalfWidth; iy <= yc + pixelHalfWidth; iy ++) {
     for (int ix = xc - pixelHalfWidth; ix <= xc + pixelHalfWidth; ix ++) {
       if (iy < 0 || iy >= height || ix < 0 || ix >= width) continue;
+      if (opacity < 1.0 && transthresh[ix % TRANK][iy % TRANK] > opacity)
+        continue;
 
       double sy = ((iy - yc) - height_error) * pixelWidth;
       double sx = ((ix - xc) - width_error) * pixelWidth;
@@ -621,15 +842,18 @@ void Image::draw_brick(double *x, double *surfaceColor, double *diameter)
 ------------------------------------------------------------------------- */
 
 void Image::draw_cylinder(double *x, double *y,
-                          double *surfaceColor, double diameter, int sflag)
+                          double *surfaceColor, double diameter, int sflag,
+                          double opacity)
 {
+  if (opacity <= 0.0) return;
+
   double surface[3], normal[3];
   double mid[3],xaxis[3],yaxis[3],zaxis[3];
   double camLDir[3], camLRight[3], camLUp[3];
   double zmin, zmax;
 
-  if (sflag % 2) draw_sphere(x,surfaceColor,diameter);
-  if (sflag/2) draw_sphere(y,surfaceColor,diameter);
+  if (sflag % 2) draw_sphere(x,surfaceColor,diameter,opacity);
+  if (sflag/2) draw_sphere(y,surfaceColor,diameter,opacity);
 
   double radius = 0.5*diameter;
   double radsq = radius*radius;
@@ -704,6 +928,8 @@ void Image::draw_cylinder(double *x, double *y,
   for (int iy = yc - pixelHalfHeight; iy <= yc + pixelHalfHeight; iy ++) {
     for (int ix = xc - pixelHalfWidth; ix <= xc + pixelHalfWidth; ix ++) {
       if (iy < 0 || iy >= height || ix < 0 || ix >= width) continue;
+      if (opacity < 1.0 && transthresh[ix % TRANK][iy % TRANK] > opacity)
+        continue;
 
       double sy = ((iy - yc) - height_error) * pixelWidth;
       double sx = ((ix - xc) - width_error) * pixelWidth;
@@ -750,8 +976,11 @@ void Image::draw_cylinder(double *x, double *y,
    draw triangle with 3 corner points x,y,z and surfaceColor
 ------------------------------------------------------------------------- */
 
-void Image::draw_triangle(double *x, double *y, double *z, double *surfaceColor)
+void Image::draw_triangle(double *x, double *y, double *z,
+                          double *surfaceColor, double opacity)
 {
+  if (opacity <= 0.0) return;
+
   double d1[3], d1len, d2[3], d2len, normal[3], invndotd;
   double xlocal[3], ylocal[3], zlocal[3];
   double surface[3];
@@ -849,6 +1078,8 @@ void Image::draw_triangle(double *x, double *y, double *z, double *surfaceColor)
   for (int iy = yc - pixelDown; iy <= yc + pixelUp; iy ++) {
     for (int ix = xc - pixelLeft; ix <= xc + pixelRight; ix ++) {
       if (iy < 0 || iy >= height || ix < 0 || ix >= width) continue;
+      if (opacity < 1.0 && transthresh[ix % TRANK][iy % TRANK] > opacity)
+        continue;
 
       double sy = ((iy - yc) - height_error) * pixelWidth;
       double sx = ((ix - xc) - width_error) * pixelWidth;
@@ -918,33 +1149,116 @@ void Image::draw_pixel(int ix, int iy, double depth,
   diffuseKey = saturate(MathExtra::dot3(surface, keyLightDir));
   diffuseFill = saturate(MathExtra::dot3(surface, fillLightDir));
   diffuseBack = saturate(MathExtra::dot3(surface, backLightDir));
-  specularKey = pow(saturate(MathExtra::dot3(surface, keyHalfDir)),
-                    specularHardness) * specularIntensity;
+
+  // a metal reflects nearly all light directly and tints the reflection with
+  // its own color, while a non-conductor scatters light diffusely and reflects
+  // it without tinting.  "metallic" blends between those two limits: it scales
+  // down the diffuse contributions and turns "reflect" into the color of the
+  // reflected light.  for metallic = 0.0 this reproduces the plain shading.
+
+  const double diffuse = 1.0 - metallic;
+  double reflect[3];
+  reflect[0] = metallic * surfaceColor[0] + diffuse;
+  reflect[1] = metallic * surfaceColor[1] + diffuse;
+  reflect[2] = metallic * surfaceColor[2] + diffuse;
+
+  // the view dependent terms below need a camera facing normal.  draw_sphere
+  // and draw_cylinder supply one, but draw_triangle passes the outward normal
+  // of the element, which for a drawn face points away from the camera
+  // because of the back face cull there.  flip a copy so both conventions
+  // give the same result; the diffuse and specular terms above keep using the
+  // normal as passed, so images without metallic shading are unchanged.
+
+  double vnormal[3];
+  if (surface[2] < 0.0) {
+    vnormal[0] = -surface[0];
+    vnormal[1] = -surface[1];
+    vnormal[2] = -surface[2];
+  } else {
+    vnormal[0] = surface[0];
+    vnormal[1] = surface[1];
+    vnormal[2] = surface[2];
+  }
+
+  // every surface becomes mirror-like when viewed at a grazing angle, which
+  // brightens the outline of a curved object.  the amount follows Schlick's
+  // approximation.  the viewing direction is (0,0,1) in these coordinates,
+  // so its dot product with the surface normal is simply the z component
+
+  const double viewdot = saturate(vnormal[2]);
+  const double grazing =
+    (1.0-viewdot)*(1.0-viewdot)*(1.0-viewdot)*(1.0-viewdot)*(1.0-viewdot);
+  reflect[0] += (1.0 - reflect[0]) * grazing;
+  reflect[1] += (1.0 - reflect[1]) * grazing;
+  reflect[2] += (1.0 - reflect[2]) * grazing;
 
   double c[3];
-  c[0] = surfaceColor[0] * ambientColor[0];
-  c[1] = surfaceColor[1] * ambientColor[1];
-  c[2] = surfaceColor[2] * ambientColor[2];
+  c[0] = surfaceColor[0] * ambientColor[0] * diffuse;
+  c[1] = surfaceColor[1] * ambientColor[1] * diffuse;
+  c[2] = surfaceColor[2] * ambientColor[2] * diffuse;
 
-  c[0] += surfaceColor[0] * keyLightColor[0] * diffuseKey;
-  c[1] += surfaceColor[1] * keyLightColor[1] * diffuseKey;
-  c[2] += surfaceColor[2] * keyLightColor[2] * diffuseKey;
+  c[0] += surfaceColor[0] * keyLightColor[0] * diffuseKey * diffuse;
+  c[1] += surfaceColor[1] * keyLightColor[1] * diffuseKey * diffuse;
+  c[2] += surfaceColor[2] * keyLightColor[2] * diffuseKey * diffuse;
 
-  c[0] += keyLightColor[0] * specularKey;
-  c[1] += keyLightColor[1] * specularKey;
-  c[2] += keyLightColor[2] * specularKey;
+  // specular highlights are disabled with dump_modify specular none.
+  // check the flag here since view_params() may not run again after
+  // dump_modify for static views
 
-  c[0] += surfaceColor[0] * fillLightColor[0] * diffuseFill;
-  c[1] += surfaceColor[1] * fillLightColor[1] * diffuseFill;
-  c[2] += surfaceColor[2] * fillLightColor[2] * diffuseFill;
+  if (!nospecular && specularIntensity > 0.0) {
+    specularKey = pow(saturate(MathExtra::dot3(surface, keyHalfDir)),
+                      specularHardness) * specularIntensity;
 
-  c[0] += surfaceColor[0] * backLightColor[0] * diffuseBack;
-  c[1] += surfaceColor[1] * backLightColor[1] * diffuseBack;
-  c[2] += surfaceColor[2] * backLightColor[2] * diffuseBack;
+    c[0] += keyLightColor[0] * reflect[0] * specularKey;
+    c[1] += keyLightColor[1] * reflect[1] * specularKey;
+    c[2] += keyLightColor[2] * reflect[2] * specularKey;
+  }
+
+  c[0] += surfaceColor[0] * fillLightColor[0] * diffuseFill * diffuse;
+  c[1] += surfaceColor[1] * fillLightColor[1] * diffuseFill * diffuse;
+  c[2] += surfaceColor[2] * fillLightColor[2] * diffuseFill * diffuse;
+
+  c[0] += surfaceColor[0] * backLightColor[0] * diffuseBack * diffuse;
+  c[1] += surfaceColor[1] * backLightColor[1] * diffuseBack * diffuse;
+  c[2] += surfaceColor[2] * backLightColor[2] * diffuseBack * diffuse;
+
+  // a metal also mirrors its surroundings, which are approximated by a sky
+  // color above and a ground color below.  the direction into which the
+  // surface reflects the viewer is 2 (n.v) n - v, and only its vertical
+  // component is needed to pick the color from that gradient
+
+  if (metallic > 0.0) {
+    const double updir = finishMirror ? 2.0*viewdot*vnormal[1] : vnormal[1];
+    double updown = saturate(0.5 * (updir + 1.0));
+    updown = updown * updown * (3.0 - 2.0*updown);    // narrow the horizon
+
+    // brighten a band around the horizon, where the surroundings of a real
+    // scene are brightest.  this is what produces the light streak across a
+    // polished surface that reads as "shiny metal" rather than "dark paint"
+
+    double band = 0.0;
+    if (finishBand > 0.0)
+      band = finishBand * pow(1.0 - fabs(2.0*updown - 1.0), finishWidth);
+
+    c[0] += metallic * reflect[0] *
+      (GROUNDCOLOR[0] + updown*(SKYCOLOR[0]-GROUNDCOLOR[0]) + band);
+    c[1] += metallic * reflect[1] *
+      (GROUNDCOLOR[1] + updown*(SKYCOLOR[1]-GROUNDCOLOR[1]) + band);
+    c[2] += metallic * reflect[2] *
+      (GROUNDCOLOR[2] + updown*(SKYCOLOR[2]-GROUNDCOLOR[2]) + band);
+  }
 
   c[0] = saturate(c[0]);
   c[1] = saturate(c[1]);
   c[2] = saturate(c[2]);
+
+  // apply gamma adjustment to the summed up light contributions
+
+  if (gamma != 1.0) {
+    c[0] = pow(c[0], 1.0 / gamma);
+    c[1] = pow(c[1], 1.0 / gamma);
+    c[2] = pow(c[2], 1.0 / gamma);
+  }
 
   imageBuffer[0 + ix*3 + iy*width*3] = static_cast<int>(c[0] * 255.0);
   imageBuffer[1 + ix*3 + iy*width*3] = static_cast<int>(c[1] * 255.0);
@@ -955,9 +1269,14 @@ void Image::draw_pixel(int ix, int iy, double depth,
 
 void Image::compute_SSAO()
 {
+  // number of horizon directions per pixel.  a chosen value must override
+  // the automatic one here, since view_params() may have run before it was set
+
+  const int nsamples = (ssaosamples > 0) ? ssaosamples : SSAOSamples;
+
   // used for rasterizing the spheres
 
-  double delTheta = 2.0*MY_PI / SSAOSamples;
+  double delTheta = 2.0*MY_PI / nsamples;
 
   // typical neighborhood value for shading
 
@@ -974,6 +1293,19 @@ void Image::compute_SSAO()
   int pixelstart = static_cast<int> (1.0*me/nprocs * npixels);
   int pixelstop = static_cast<int> (1.0*(me+1)/nprocs * npixels);
 
+  // shift of the jitter noise pattern derived from the seed value
+
+  const double seedshift = fmod(0.618033988749895 * (double) seed, 1.0);
+
+  // table of evenly spaced horizon directions, computed once; each pixel
+  // rotates the whole table by its per-pixel jitter angle
+
+  double *dirTable = new double[2*nsamples];
+  for (int s = 0; s < nsamples; s++) {
+    dirTable[2*s]   = cos(s * delTheta);
+    dirTable[2*s+1] = sin(s * delTheta);
+  }
+
   for (int index = pixelstart; index < pixelstop; index++) {
     int x = index % width;
     int y = index / width;
@@ -985,15 +1317,19 @@ void Image::compute_SSAO()
     double sy = surfaceBuffer[index * 2 + 1];
     double sin_t = -sqrt(sx*sx + sy*sy);
 
-    // DEBUG - remove randomness so image is same on any proc count
-    //double mytheta = 0.5 * SSAOJitter;
-    double mytheta = random->uniform() * SSAOJitter;
+    // deterministic per-pixel jitter from interleaved gradient noise, so
+    // shading is independent of the number of MPI ranks and images of
+    // unchanged scenes are reproducible
+
+    double ign = fmod(0.06711056 * x + 0.00583715 * y + seedshift, 1.0);
+    const double mytheta = fmod(52.9829189 * ign, 1.0) * SSAOJitter;
+    const double cosj = cos(mytheta);
+    const double sinj = sin(mytheta);
     double ao = 0.0;
 
-    for (int s = 0; s < SSAOSamples; s ++) {
-      double hx = cos(mytheta);
-      double hy = sin(mytheta);
-      mytheta += delTheta;
+    for (int s = 0; s < nsamples; s ++) {
+      double hx = cosj * dirTable[2*s] - sinj * dirTable[2*s+1];
+      double hy = sinj * dirTable[2*s] + cosj * dirTable[2*s+1];
 
       // multiply by z cross surface tangent
       // so that dot (aka cos) works here
@@ -1066,7 +1402,7 @@ void Image::compute_SSAO()
         ao += saturate(-scaled_sin_t);
       }
     }
-    ao /= (double)SSAOSamples;
+    ao /= (double)nsamples;
 
     double c[3];
     c[0] = (double) (*(unsigned char *) &imageBuffer[index * 3 + 0]);
@@ -1079,6 +1415,369 @@ void Image::compute_SSAO()
     imageBuffer[index * 3 + 1] = (int) c[1];
     imageBuffer[index * 3 + 2] = (int) c[2];
   }
+
+  delete [] dirTable;
+}
+
+/* ----------------------------------------------------------------------
+   largest of the 3 doubled box extents, the length scale the renderer
+   uses for the view; same quantity view_params() derives from its args
+------------------------------------------------------------------------- */
+
+double Image::box_maxdel() const
+{
+  const double delx = 2.0 * (boxbounds[1] - boxbounds[0]);
+  const double dely = 2.0 * (boxbounds[3] - boxbounds[2]);
+  const double delz = 2.0 * (boxbounds[5] - boxbounds[4]);
+  double maxdel = MAX(delx,dely);
+  return MAX(maxdel,delz);
+}
+
+/* ----------------------------------------------------------------------
+   draw outlines on the composited image on the output rank: color
+   drawn pixels that have a significantly more distant pixel or the
+   background within the outline width.  the outline hugs the nearer
+   object at depth discontinuities, which gives the flat illustration
+   look known from hand-drawn molecular graphics.
+------------------------------------------------------------------------- */
+
+void Image::compute_outline()
+{
+  // only depth jumps between immediately adjacent pixels that are larger
+  // than a small fraction of the box size count as edges.  the smooth but
+  // steep depth changes where a curved surface turns away from the viewer
+  // must not be outlined, so the threshold is of the order of typical
+  // particle sizes and the comparison spans only one pixel
+
+  const double threshold = 0.02 * box_maxdel();
+
+  // the outline width follows the internal image size with FSAA
+
+  int w = outlinewidth;
+  if (fsaa) w *= 2;
+
+  const char red   = (char) static_cast<unsigned char> (outlinecolor[0] * 255.0);
+  const char green = (char) static_cast<unsigned char> (outlinecolor[1] * 255.0);
+  const char blue  = (char) static_cast<unsigned char> (outlinecolor[2] * 255.0);
+
+  // mark drawn pixels that have a much more distant immediate neighbor
+  // or border on the background
+
+  char *edges = new char[npixels];
+  memset(edges,0,npixels);
+
+  for (int iy = 0; iy < height; iy++) {
+    for (int ix = 0; ix < width; ix++) {
+      const double d = depthBuffer[iy*width + ix];
+      if (d < 0.0) continue;
+
+      static const int xoff[4] = {-1, 1, 0, 0};
+      static const int yoff[4] = {0, 0, -1, 1};
+      for (int k = 0; k < 4; k++) {
+        const int jx = ix + xoff[k];
+        const int jy = iy + yoff[k];
+        if (jx < 0 || jx >= width || jy < 0 || jy >= height) continue;
+        const double dj = depthBuffer[jy*width + jx];
+        if (dj < 0.0 || (dj - d) > threshold) {
+          edges[iy*width + ix] = 1;
+          break;
+        }
+      }
+    }
+  }
+
+  // widen the outline: color drawn pixels near an edge pixel, but only
+  // on the near side of the depth jump so the outline hugs the nearer
+  // object and does not bleed onto more distant objects
+
+  for (int iy = 0; iy < height; iy++) {
+    for (int ix = 0; ix < width; ix++) {
+      const double d = depthBuffer[iy*width + ix];
+      if (d < 0.0) continue;
+
+      bool paint = false;
+      for (int dy = -w+1; dy < w && !paint; dy++) {
+        const int jy = iy + dy;
+        if (jy < 0 || jy >= height) continue;
+        for (int dx = -w+1; dx < w; dx++) {
+          const int jx = ix + dx;
+          if (jx < 0 || jx >= width) continue;
+          if (!edges[jy*width + jx]) continue;
+          if ((d - depthBuffer[jy*width + jx]) < threshold) {
+            paint = true;
+            break;
+          }
+        }
+      }
+
+      if (paint) {
+        const int i = iy*width + ix;
+        writeBuffer[i*3+0] = red;
+        writeBuffer[i*3+1] = green;
+        writeBuffer[i*3+2] = blue;
+      }
+    }
+  }
+
+  delete [] edges;
+}
+
+/* ----------------------------------------------------------------------
+   depth range of the drawn pixels of the composited image.  returns
+   false if nothing was drawn; background pixels have a depth < 0
+------------------------------------------------------------------------- */
+
+bool Image::depth_minmax(double &dmin, double &dmax) const
+{
+  bool first = true;
+  dmin = dmax = 0.0;
+  for (int i = 0; i < npixels; i++) {
+    const double d = depthBuffer[i];
+    if (d < 0.0) continue;
+    if (first) {
+      dmin = dmax = d;
+      first = false;
+    } else {
+      dmin = MIN(dmin,d);
+      dmax = MAX(dmax,d);
+    }
+  }
+  return !first;
+}
+
+/* ----------------------------------------------------------------------
+   distance of the near and far side of the simulation box from the
+   camera, by projecting the eight box corners onto the view direction
+------------------------------------------------------------------------- */
+
+void Image::box_depth_minmax(double &dnear, double &dfar) const
+{
+  const double dcam = MathExtra::dot3(camPos,camDir);
+  dnear = dfar = 0.0;
+  for (int ic = 0; ic < 8; ic++) {
+    double corner[3];
+    corner[0] = ((ic & 1) ? boxbounds[1] : boxbounds[0]) - xctr;
+    corner[1] = ((ic & 2) ? boxbounds[3] : boxbounds[2]) - yctr;
+    corner[2] = ((ic & 4) ? boxbounds[5] : boxbounds[4]) - zctr;
+    const double d = dcam - MathExtra::dot3(corner,camDir);
+    if (ic == 0) {
+      dnear = dfar = d;
+    } else {
+      dnear = MIN(dnear,d);
+      dfar = MAX(dfar,d);
+    }
+  }
+}
+
+/* ----------------------------------------------------------------------
+   apply depth cueing to the composited image on the output rank:
+   fade drawn pixels toward the fog color with increasing distance from
+   the viewer.  the fade ends at the most distant drawn pixel and starts
+   at the nearest drawn pixel or at a chosen fraction of the simulation
+   box projected onto the view direction.
+------------------------------------------------------------------------- */
+
+void Image::compute_depthcue()
+{
+  // determine depth range of drawn pixels; nothing to do without drawn
+  // pixels or without depth variation
+
+  // the depth spread carries simulation length units, so the test for a
+  // degenerate range must scale with the box rather than use a fixed value
+
+  const double deps = EPSILON * box_maxdel();
+
+  double dmin,dmax;
+  if (!depth_minmax(dmin,dmax)) return;
+  if (dmax - dmin <= deps) return;
+
+  // start of the fade: by default the nearest drawn pixel.  with a start
+  // fraction set, place it at that fraction between the near and far side
+  // of the simulation box as seen from the camera
+
+  double dstart = dmin;
+  if (depthcuestartflag) {
+    double dnear,dfar;
+    box_depth_minmax(dnear,dfar);
+    dstart = dnear + depthcuestart * (dfar - dnear);
+    if (dstart >= dmax - deps) return;      // fading starts behind all pixels
+  }
+  const double dscale = depthcueint / (dmax - dstart);
+
+  // blend pixel colors toward the fog color.  by default this is the
+  // background color, with a gradient enabled the same per-row color as
+  // in clear(); a custom fog color is used for all rows unchanged
+
+  for (int iy = 0; iy < height; iy++) {
+    int red,green,blue;
+    if (depthcuecolor) {
+      red   = static_cast<int> (depthcuecolor[0] * 255.0);
+      green = static_cast<int> (depthcuecolor[1] * 255.0);
+      blue  = static_cast<int> (depthcuecolor[2] * 255.0);
+    } else if (background2[0] >= 0) {
+      const double fraction = (double) iy / (double) height;
+      red   = static_cast<int> (fraction*background2[0] + (1.0-fraction)*background[0]);
+      green = static_cast<int> (fraction*background2[1] + (1.0-fraction)*background[1]);
+      blue  = static_cast<int> (fraction*background2[2] + (1.0-fraction)*background[2]);
+    } else {
+      red   = background[0];
+      green = background[1];
+      blue  = background[2];
+    }
+    for (int ix = 0; ix < width; ix++) {
+      const int i = iy * width + ix;
+      const double d = depthBuffer[i];
+      if (d < 0.0 || d <= dstart) continue;
+      const double f = MIN(1.0, (d - dstart) * dscale);
+      for (int k = 0; k < 3; k++) {
+        const double oldc = (double) (unsigned char) writeBuffer[i*3+k];
+        const double newc = (k == 0) ? red : ((k == 1) ? green : blue);
+        writeBuffer[i*3+k] = (char)
+          static_cast<unsigned char> ((1.0 - f) * oldc + f * newc);
+      }
+    }
+  }
+}
+
+/* ----------------------------------------------------------------------
+   defocus the background of the composited image on the output rank:
+   objects are blurred more the further they are behind the start of the
+   blur, which puts the visual emphasis on the objects in front of it.
+   everything closer than the start stays sharp, so this is not the full
+   depth of field of a camera lens, which would blur the foreground too.
+------------------------------------------------------------------------- */
+
+void Image::compute_defocus()
+{
+  // largest blur radius in pixels, expressed as a fraction of the image
+  // height so that the effect does not depend on the image size.  the
+  // internal image is twice as large with FSAA, which scales the radius
+  // along with it
+
+  const double maxradius = defocusint * 0.01 * height;
+  if (maxradius < 1.0) return;    // blur is smaller than a pixel
+
+  // determine depth range of drawn pixels; nothing to do without drawn
+  // pixels or without depth variation
+
+  // the depth spread carries simulation length units, so the test for a
+  // degenerate range must scale with the box rather than use a fixed value
+
+  const double deps = EPSILON * box_maxdel();
+
+  double dmin,dmax;
+  if (!depth_minmax(dmin,dmax)) return;
+  if (dmax - dmin <= deps) return;
+
+  // start of the blur: by default the nearest drawn pixel, so that the
+  // front of the scene stays sharp.  with a start fraction set, place it
+  // at that fraction between the near and far side of the simulation box
+  // as seen from the camera
+
+  double dstart = dmin;
+  if (defocusstartflag) {
+    double dnear,dfar;
+    box_depth_minmax(dnear,dfar);
+    dstart = dnear + defocusstart * (dfar - dnear);
+    if (dstart >= dmax - deps) return;      // blurring starts behind all pixels
+  }
+  const double dscale = maxradius / (dmax - dstart);
+
+  // blur radius of each pixel.  pixels in front of the start of the blur
+  // stay sharp, behind it the radius grows with the distance from the
+  // viewer.  the background has no depth and is treated as maximally
+  // blurred, so that blurred objects in the back dissolve into it
+  // instead of keeping a sharp silhouette
+
+  double *radiusBuffer = new double[npixels];
+
+  for (int i = 0; i < npixels; i++) {
+    const double d = depthBuffer[i];
+    if (d < 0.0) radiusBuffer[i] = maxradius;
+    else if (d <= dstart) radiusBuffer[i] = 0.0;
+    else radiusBuffer[i] = (d - dstart) * dscale;
+  }
+
+  // sample positions on a unit disk, placed on a spiral with the golden
+  // angle between them, which spreads them evenly.  using the disk shape
+  // of a camera aperture rather than a bell shaped blur keeps the blurred
+  // objects looking out of focus instead of looking like fog.  the number
+  // of samples follows the largest blur radius, so that wide blurs do not
+  // show the individual samples
+
+  int nsamples = static_cast<int> (4.0 * maxradius);
+  nsamples = MAX(nsamples,16);
+  nsamples = MIN(nsamples,64);
+
+  const double GOLDEN_ANGLE = 2.39996322972865332;
+  double *sample = new double[3*nsamples];
+  for (int s = 0; s < nsamples; s++) {
+    const double r = sqrt((s + 0.5) / nsamples);
+    const double angle = s * GOLDEN_ANGLE;
+    sample[3*s+0] = r * cos(angle);
+    sample[3*s+1] = r * sin(angle);
+    sample[3*s+2] = r;
+  }
+
+  // collect the blur from an unmodified copy of the composited image
+
+  char *source = new char[3*npixels];
+  memcpy(source,writeBuffer,3*npixels);
+
+  for (int iy = 0; iy < height; iy++) {
+    for (int ix = 0; ix < width; ix++) {
+      const int i = iy*width + ix;
+      const double radius = radiusBuffer[i];
+      if (radius < 0.5) continue;   // in focus, the pixel is left alone
+
+      // turn the whole sample pattern by a per-pixel angle taken from
+      // interleaved gradient noise.  this replaces the rings that the
+      // repeated sample pattern would leave in wide blurs by a fine
+      // grain, and does not depend on the number of MPI ranks
+
+      const double noise = fmod(0.06711056*ix + 0.00583715*iy, 1.0);
+      const double angle = fmod(52.9829189*noise, 1.0) * MY_2PI;
+      const double cosa = cos(angle);
+      const double sina = sin(angle);
+
+      // a sample only contributes if its own blur circle reaches this
+      // pixel.  that keeps sharp objects in front from bleeding into the
+      // blurred background, which would show up as a halo around them.
+      // the contribution fades out over the last pixel of that reach, so
+      // that the blur does not gain visible steps
+
+      double c[3];
+      c[0] = (double) (unsigned char) source[3*i+0];
+      c[1] = (double) (unsigned char) source[3*i+1];
+      c[2] = (double) (unsigned char) source[3*i+2];
+      double wsum = 1.0;
+
+      for (int s = 0; s < nsamples; s++) {
+        const double dx = radius * (cosa*sample[3*s+0] - sina*sample[3*s+1]);
+        const double dy = radius * (sina*sample[3*s+0] + cosa*sample[3*s+1]);
+        const int jx = ix + static_cast<int> (lround(dx));
+        const int jy = iy + static_cast<int> (lround(dy));
+        if (jx < 0 || jx >= width || jy < 0 || jy >= height) continue;
+
+        const int j = jy*width + jx;
+        const double weight = saturate(radiusBuffer[j] - radius * sample[3*s+2]);
+        if (weight <= 0.0) continue;
+
+        c[0] += weight * (double) (unsigned char) source[3*j+0];
+        c[1] += weight * (double) (unsigned char) source[3*j+1];
+        c[2] += weight * (double) (unsigned char) source[3*j+2];
+        wsum += weight;
+      }
+
+      for (int k = 0; k < 3; k++)
+        writeBuffer[3*i+k] = (char)
+          static_cast<unsigned char> (lround(c[k]/wsum));
+    }
+  }
+
+  delete [] source;
+  delete [] sample;
+  delete [] radiusBuffer;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -1090,11 +1789,17 @@ void Image::write_JPG(FILE *fp)
   struct jpeg_error_mgr jerr;
   JSAMPROW row_pointer;
 
+  // with FSAA the image was rendered at 2x and downsampled in merge()
+
+  const int aafactor = fsaa ? 2 : 1;
+  const int outwidth = width/aafactor;
+  const int outheight = height/aafactor;
+
   cinfo.err = jpeg_std_error(&jerr);
   jpeg_create_compress(&cinfo);
   jpeg_stdio_dest(&cinfo,fp);
-  cinfo.image_width = width;
-  cinfo.image_height = height;
+  cinfo.image_width = outwidth;
+  cinfo.image_height = outheight;
   cinfo.input_components = 3;
   cinfo.in_color_space = JCS_RGB;
 
@@ -1104,7 +1809,8 @@ void Image::write_JPG(FILE *fp)
 
   while (cinfo.next_scanline < cinfo.image_height) {
     row_pointer = (JSAMPROW)
-      &writeBuffer[(cinfo.image_height - 1 - cinfo.next_scanline) * 3 * width];
+      &writeBuffer[(cinfo.image_height - 1 - cinfo.next_scanline) *
+                   3 * outwidth];
     jpeg_write_scanlines(&cinfo,&row_pointer,1);
   }
 
@@ -1140,9 +1846,15 @@ void Image::write_PNG(FILE *fp)
     return;
   }
 
+  // with FSAA the image was rendered at 2x and downsampled in merge()
+
+  const int aafactor = fsaa ? 2 : 1;
+  const int outwidth = width/aafactor;
+  const int outheight = height/aafactor;
+
   png_init_io(png_ptr, fp);
   png_set_compression_level(png_ptr,Z_BEST_COMPRESSION);
-  png_set_IHDR(png_ptr,info_ptr,width,height,8,PNG_COLOR_TYPE_RGB,
+  png_set_IHDR(png_ptr,info_ptr,outwidth,outheight,8,PNG_COLOR_TYPE_RGB,
     PNG_INTERLACE_NONE,PNG_COMPRESSION_TYPE_DEFAULT,PNG_FILTER_TYPE_DEFAULT);
 
   png_text text_ptr[2];
@@ -1162,9 +1874,9 @@ void Image::write_PNG(FILE *fp)
   png_set_text(png_ptr,info_ptr,text_ptr,1);
   png_write_info(png_ptr,info_ptr);
 
-  png_bytep row_pointers[height];
-  for (int i=0; i < height; ++i)
-    row_pointers[i] = (png_bytep) &writeBuffer[(height-i-1)*3*width];
+  png_bytep row_pointers[outheight];
+  for (int i=0; i < outheight; ++i)
+    row_pointers[i] = (png_bytep) &writeBuffer[(outheight-i-1)*3*outwidth];
 
   png_write_image(png_ptr, row_pointers);
   png_write_end(png_ptr, info_ptr);
@@ -1181,11 +1893,17 @@ void Image::write_PNG(FILE *)
 
 void Image::write_PPM(FILE *fp)
 {
-  fprintf(fp,"P6\n%d %d\n255\n",width,height);
+  // with FSAA the image was rendered at 2x and downsampled in merge()
+
+  const int aafactor = fsaa ? 2 : 1;
+  const int outwidth = width/aafactor;
+  const int outheight = height/aafactor;
+
+  fprintf(fp,"P6\n%d %d\n255\n",outwidth,outheight);
 
   int y;
-  for (y = height-1; y >= 0; y--)
-    fwrite(&writeBuffer[y*width*3],3,width,fp);
+  for (y = outheight-1; y >= 0; y--)
+    fwrite(&writeBuffer[y*outwidth*3],3,outwidth,fp);
 }
 
 /* ----------------------------------------------------------------------
@@ -1579,186 +2297,6 @@ int Image::default_colors()
   return NCOLORS;
 }
 
-/* ----------------------------------------------------------------------
-   search the list of element names for the string element
-   return a pointer to the 3 floating point RGB values
-   this list is used by AtomEye and is taken from its Mendeleyev.c file
-------------------------------------------------------------------------- */
-
-double *Image::element2color(char *element)
-{
-  static const char *name[NELEMENTS] = {
-    "H", "He", "Li", "Be", "B", "C", "N", "O", "F", "Ne",
-    "Na", "Mg", "Al", "Si", "P", "S", "Cl", "Ar", "K", "Ca",
-    "Sc", "Ti", "V", "Cr", "Mn", "Fe", "Co", "Ni", "Cu", "Zn",
-    "Ga", "Ge", "As", "Se", "Br", "Kr", "Rb", "Sr", "Y", "Zr",
-    "Nb", "Mo", "Tc", "Ru", "Rh", "Pd", "Ag", "Cd", "In", "Sn",
-    "Sb", "Te", "I", "Xe", "Cs", "Ba", "La", "Ce", "Pr", "Nd",
-    "Pm", "Sm", "Eu", "Gd", "Tb", "Dy", "Ho", "Er", "Tm", "Yb",
-    "Lu", "Hf", "Ta", "W", "Re", "Os", "Ir", "Pt", "Au", "Hg",
-    "Tl", "Pb", "Bi", "Po", "At", "Rn", "Fr", "Ra", "Ac", "Th",
-    "Pa", "U", "Np", "Pu", "Am", "Cm", "Bk", "Cf", "Es", "Fm",
-    "Md", "No", "Lr", "Rf", "Db", "Sg", "Bh", "Hs", "Mt"
-  };
-
-  static double rgb[NELEMENTS][3] = {
-    {0.8, 0.8, 0.8},
-    {0.6431372549, 0.6666666667, 0.6784313725},
-    {0.7, 0.7, 0.7},
-    {0.6431372549, 0.6666666667, 0.6784313725},
-    {0.9, 0.4, 0},
-    {0.35, 0.35, 0.35},
-    {0.2, 0.2, 0.8},
-    {0.8, 0.2, 0.2},
-    {0.7, 0.85, 0.45},
-    {0.6431372549, 0.6666666667, 0.6784313725},
-    {0.6, 0.6, 0.6},
-    {0.6, 0.6, 0.7},
-    {0.6431372549, 0.6666666667, 0.6784313725},
-    {0.6901960784, 0.768627451, 0.8705882353},
-    {0.1, 0.7, 0.3},
-    {0.95, 0.9, 0.2},
-    {0.15, 0.5, 0.1},
-    {0.6431372549, 0.6666666667, 0.6784313725},
-    {0.5, 0.5, 0.5},
-    {0.8, 0.8, 0.7},
-    {0.6431372549, 0.6666666667, 0.6784313725},
-    {0.6431372549, 0.6666666667, 0.6784313725},
-    {0.6431372549, 0.6666666667, 0.6784313725},
-    {0, 0.8, 0},
-    {0.6431372549, 0.6666666667, 0.6784313725},
-    {0.5176470588, 0.5764705882, 0.6529411765},
-    {0.6431372549, 0.6666666667, 0.6784313725},
-    {0.257254902, 0.2666666667, 0.271372549},
-    {0.95, 0.7900735294, 0.01385869565},
-    {0.6431372549, 0.6666666667, 0.6784313725},
-    {0.9, 0, 1},
-    {0.6431372549, 0.6666666667, 0.6784313725},
-    {1, 1, 0.3},
-    {0.6431372549, 0.6666666667, 0.6784313725},
-    {0.5, 0.08, 0.12},
-    {0.6431372549, 0.6666666667, 0.6784313725},
-    {0.6431372549, 0.6666666667, 0.6784313725},
-    {0.6431372549, 0.6666666667, 0.6784313725},
-    {0.6431372549, 0.6666666667, 0.6784313725},
-    {0.6431372549, 0.6666666667, 0.6784313725},
-    {0.6431372549, 0.6666666667, 0.6784313725},
-    {0.6431372549, 0.6666666667, 0.6784313725},
-    {0.6431372549, 0.6666666667, 0.6784313725},
-    {0.6431372549, 0.6666666667, 0.6784313725},
-    {0.6431372549, 0.6666666667, 0.6784313725},
-    {0.6431372549, 0.6666666667, 0.6784313725},
-    {0.6431372549, 0.6666666667, 0.6784313725},
-    {0.6431372549, 0.6666666667, 0.6784313725},
-    {0.6431372549, 0.6666666667, 0.6784313725},
-    {0.6431372549, 0.6666666667, 0.6784313725},
-    {0.6431372549, 0.6666666667, 0.6784313725},
-    {0.6431372549, 0.6666666667, 0.6784313725},
-    {0.5, 0.1, 0.5},
-    {0.6431372549, 0.6666666667, 0.6784313725},
-    {0.6431372549, 0.6666666667, 0.6784313725},
-    {0.6431372549, 0.6666666667, 0.6784313725},
-    {0.6431372549, 0.6666666667, 0.6784313725},
-    {0.8, 0.8, 0},
-    {0.6431372549, 0.6666666667, 0.6784313725},
-    {0.6431372549, 0.6666666667, 0.6784313725},
-    {0.6431372549, 0.6666666667, 0.6784313725},
-    {0.6431372549, 0.6666666667, 0.6784313725},
-    {0.6431372549, 0.6666666667, 0.6784313725},
-    {1, 0.8431372549, 0},
-    {0.6431372549, 0.6666666667, 0.6784313725},
-    {0.6431372549, 0.6666666667, 0.6784313725},
-    {0.6431372549, 0.6666666667, 0.6784313725},
-    {0.6431372549, 0.6666666667, 0.6784313725},
-    {0.6431372549, 0.6666666667, 0.6784313725},
-    {0.6431372549, 0.6666666667, 0.6784313725},
-    {0.6431372549, 0.6666666667, 0.6784313725},
-    {0.6431372549, 0.6666666667, 0.6784313725},
-    {0.6431372549, 0.6666666667, 0.6784313725},
-    {0.6431372549, 0.6666666667, 0.6784313725},
-    {0.6431372549, 0.6666666667, 0.6784313725},
-    {0.6431372549, 0.6666666667, 0.6784313725},
-    {0.6431372549, 0.6666666667, 0.6784313725},
-    {0.6431372549, 0.6666666667, 0.6784313725},
-    {0.9, 0.8, 0},
-    {0.6431372549, 0.6666666667, 0.6784313725},
-    {0.6431372549, 0.6666666667, 0.6784313725},
-    {0.6431372549, 0.6666666667, 0.6784313725},
-    {0.6431372549, 0.6666666667, 0.6784313725},
-    {0.6431372549, 0.6666666667, 0.6784313725},
-    {0.8, 0.2, 0.2},
-    {0.6431372549, 0.6666666667, 0.6784313725},
-    {0.6431372549, 0.6666666667, 0.6784313725},
-    {0.6431372549, 0.6666666667, 0.6784313725},
-    {0.6431372549, 0.6666666667, 0.6784313725},
-    {0.6431372549, 0.6666666667, 0.6784313725},
-    {0.6431372549, 0.6666666667, 0.6784313725},
-    {0.6431372549, 0.6666666667, 0.6784313725},
-    {0.6431372549, 0.6666666667, 0.6784313725},
-    {0.6431372549, 0.6666666667, 0.6784313725},
-    {0.6431372549, 0.6666666667, 0.6784313725},
-    {0.6431372549, 0.6666666667, 0.6784313725},
-    {0.6431372549, 0.6666666667, 0.6784313725},
-    {0.1, 0.7, 0.3},
-    {0.1, 0.3, 0.7},
-    {0.6431372549, 0.6666666667, 0.6784313725},
-    {0.6431372549, 0.6666666667, 0.6784313725},
-    {0.6431372549, 0.6666666667, 0.6784313725},
-    {0.6431372549, 0.6666666667, 0.6784313725},
-    {0.6431372549, 0.6666666667, 0.6784313725},
-    {0.9, 0.8, 0},
-    {0.6431372549, 0.6666666667, 0.6784313725},
-    {0.6431372549, 0.6666666667, 0.6784313725},
-    {0.6431372549, 0.6666666667, 0.6784313725},
-    {0.6431372549, 0.6666666667, 0.6784313725}
-  };
-
-  for (int i = 0; i < NELEMENTS; i++)
-    if (strcmp(element,name[i]) == 0) return rgb[i];
-  return NULL;
-}
-
-/* ----------------------------------------------------------------------
-   search the list of element names for the string element
-   return a pointer to the 3 floating point RGB values
-   this list is used by AtomEye and is taken from its Mendeleyev.c file
-------------------------------------------------------------------------- */
-
-double Image::element2diam(char *element)
-{
-  static const char *name[NELEMENTS] = {
-    "H", "He", "Li", "Be", "B", "C", "N", "O", "F", "Ne",
-    "Na", "Mg", "Al", "Si", "P", "S", "Cl", "Ar", "K", "Ca",
-    "Sc", "Ti", "V", "Cr", "Mn", "Fe", "Co", "Ni", "Cu", "Zn",
-    "Ga", "Ge", "As", "Se", "Br", "Kr", "Rb", "Sr", "Y", "Zr",
-    "Nb", "Mo", "Tc", "Ru", "Rh", "Pd", "Ag", "Cd", "In", "Sn",
-    "Sb", "Te", "I", "Xe", "Cs", "Ba", "La", "Ce", "Pr", "Nd",
-    "Pm", "Sm", "Eu", "Gd", "Tb", "Dy", "Ho", "Er", "Tm", "Yb",
-    "Lu", "Hf", "Ta", "W", "Re", "Os", "Ir", "Pt", "Au", "Hg",
-    "Tl", "Pb", "Bi", "Po", "At", "Rn", "Fr", "Ra", "Ac", "Th",
-    "Pa", "U", "Np", "Pu", "Am", "Cm", "Bk", "Cf", "Es", "Fm",
-    "Md", "No", "Lr", "Rf", "Db", "Sg", "Bh", "Hs", "Mt"
-  };
-
-  static double diameter[NELEMENTS] = {
-    0.35, 1.785, 1.45, 1.05, 0.85, 0.72, 0.65, 0.6, 0.5, 1.5662,
-    1.8, 1.5, 1.4255, 1.07, 1, 1, 1, 1.8597, 2.2, 1.8,
-    1.6, 1.4, 1.51995, 1.44225, 1.4, 1.43325, 1.35, 1.35, 1.278, 1.35,
-    1.3, 1.25, 1.15, 1.15, 1.15, 2.0223, 2.35, 2, 1.8, 1.55,
-    1.6504, 1.3872, 1.35, 1.3, 1.35, 1.4, 1.6, 1.55, 1.55, 1.45,
-    1.45, 1.4, 1.4, 2.192, 2.6, 2.15, 1.95, 1.85, 1.85, 1.85,
-    1.85, 1.85, 1.85, 1.8, 1.75, 1.75, 1.75, 1.75, 1.75, 1.75,
-    1.75, 1.55, 1.6529, 1.5826, 1.35, 1.3, 1.35, 1.35, 1.35, 1.5,
-    1.9, 1.8, 1.6, 1.9, 1.6, 1.0, 1.0, 2.15, 1.95, 1.8,
-    1.8, 1.75, 1.75, 1.75, 1.75, 1.0, 1.0, 1.6, 1.6, 1.0,
-    1.0, 1.0, 1.0, 1.0, 1.6, 1.0, 1.0, 1.0, 1.0
-  };
-
-  for (int i = 0; i < NELEMENTS; i++)
-    if (strcmp(element,name[i]) == 0) return diameter[i];
-  return 0.0;
-}
-
 // ----------------------------------------------------------------------
 // ----------------------------------------------------------------------
 // ColorMap class
@@ -1855,14 +2393,14 @@ int ColorMap::reset(int narg, char **arg)
       if (!islower(arg[n][0])) {
         mentry[i].lo = NUMERIC;
         mentry[i].lvalue = atof(arg[n]);
-      } else if (strcmp(arg[n],"min") == 0) mentry[i].single = MINVALUE;
-      else if (strcmp(arg[n],"max") == 0) mentry[i].single = MAXVALUE;
+      } else if (strcmp(arg[n],"min") == 0) mentry[i].lo = MINVALUE;
+      else if (strcmp(arg[n],"max") == 0) mentry[i].lo = MAXVALUE;
       else return 1;
       if (!islower(arg[n+1][0])) {
         mentry[i].hi = NUMERIC;
         mentry[i].hvalue = atof(arg[n+1]);
-      } else if (strcmp(arg[n+1],"min") == 0) mentry[i].single = MINVALUE;
-      else if (strcmp(arg[n+1],"max") == 0) mentry[i].single = MAXVALUE;
+      } else if (strcmp(arg[n+1],"min") == 0) mentry[i].hi = MINVALUE;
+      else if (strcmp(arg[n+1],"max") == 0) mentry[i].hi = MAXVALUE;
       else return 1;
       mentry[i].color = image->color2rgb(arg[n+2]);
       n += 3;

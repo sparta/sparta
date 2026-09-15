@@ -118,7 +118,7 @@ void ComputeThermalGridKokkos::compute_per_grid_kokkos()
   }
 
   d_particles = t_particle_1d(); // destroy reference to reduce memory use
-  d_plist = DAT::t_int_2d(); // destroy reference to reduce memory use
+  d_plist = {}; // destroy reference to reduce memory use
 }
 
 /* ---------------------------------------------------------------------- */
@@ -166,7 +166,7 @@ void ComputeThermalGridKokkos::operator()(TagComputeThermalGrid_compute_per_grid
 
     const int ispecies = d_particles[i].ispecies;
     const int igroup = d_s2g(imix,ispecies);
-  if (igroup < 0) return;
+  if (igroup < 0) continue;
 
     const int icell = d_particles[i].icell;
 

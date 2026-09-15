@@ -28,14 +28,48 @@ class Image : protected Pointers {
   double xctr,yctr,zctr;        // center of image in user coords
   double up[3];                 // up direction in image
   double zoom;                  // zoom factor
-  double persp;                 // perspective factor
   double shiny;                 // shininess of objects
+  double gamma;                 // gamma correction of rendered objects, 1.0 = off
   int ssao;                     // SSAO on or off
   int seed;                     // RN seed for SSAO
   double ssaoint;               // strength of shading from 0 to 1
+  int ssaosamples;              // SSAO samples per pixel; 0 = derived from ssaoint
+  int fsaa;                     // full scene anti-aliasing on or off
+  int depthcue;                 // depth cueing on or off
+  double depthcueint;           // strength of depth cueing from 0 to 1
+  double *depthcuecolor;        // fog color; fade toward background color if NULL
+  int depthcuestartflag;        // 1 if fading starts at a box fraction,
+                                //   0 at nearest object
+  double depthcuestart;         // start of fading as box fraction along view dir
+  int defocus;                  // background defocus on or off
+  double defocusint;            // strength of the defocus blur from 0 to 1
+  int defocusstartflag;         // 1 if blurring starts at a box fraction,
+                                //   0 at nearest object
+  double defocusstart;          // start of blurring as box fraction along view dir
+  int outline;                  // outline drawing on or off
+  int outlinewidth;             // width of outlines in pixels
+  double *outlinecolor;         // color of the outlines
   double *boxcolor;             // color to draw box outline with
-  double *gridcolor;            // color to draw grid lines with
   int background[3];            // RGB values of background
+  int background2[3];           // RGB values of second background color
+                                // for a gradient (off if < 0)
+
+  double ambientColor[3];       // light color settings
+  double keyLightColor[3];      //   adjustable via dump_modify lights
+  double fillLightColor[3];
+  double backLightColor[3];
+
+  int specularflag;             // 1 if the specular exponent is set explicitly
+  int nospecular;               // 1 = disable the specular highlight entirely
+  double specularHardness;      // exponent of the specular highlight
+  double specularIntensity;     // strength of the specular highlight
+
+  double metallic;              // 0.0 = dielectric ("plastic"),
+                                // 1.0 = conductor ("metal")
+  int finishMirror;             // 1 = mirror the surroundings,
+                                // 0 = soft light from above
+  double finishBand;            // extra brightness of the horizon band, 0.0 = off
+  double finishWidth;           // exponent setting the width of the horizon band
 
   Image(class SPARTA *, int);
   ~Image();
@@ -47,14 +81,18 @@ class Image : protected Pointers {
   void write_PPM(FILE *);
   void view_params(double, double, double, double, double, double);
 
-  void draw_line(double *, double *, double *, double);
-  void draw_box(double (*)[3], double *, double);
-  void draw_box2d(double (*)[3], double *, double);
-  void draw_axes(double (*)[3], double);
-  void draw_sphere(double *, double *, double);
-  void draw_brick(double *, double *, double *);
-  void draw_cylinder(double *, double *, double *, double, int);
-  void draw_triangle(double *, double *, double *, double *);
+  // all draw methods take an optional opacity for screen-door transparency
+
+  void draw_line(double *, double *, double *, double, double opacity = 1.0);
+  void draw_box(double (*)[3], double *, double, double opacity = 1.0);
+  void draw_box2d(double (*)[3], double *, double, double opacity = 1.0);
+  void draw_axes(double (*)[3], double, double opacity = 1.0);
+  void draw_sphere(double *, double *, double, double opacity = 1.0);
+  void draw_brick(double *, double *, double *, double opacity = 1.0);
+  void draw_cylinder(double *, double *, double *, double, int,
+                     double opacity = 1.0);
+  void draw_triangle(double *, double *, double *, double *,
+                     double opacity = 1.0);
 
   int map_dynamic(int);
   int map_reset(int, int, char **);
@@ -62,8 +100,6 @@ class Image : protected Pointers {
   double *map_value2color(int, double);
 
   int addcolor(char *, double, double, double);
-  double *element2color(char *);
-  double element2diam(char *);
   double *color2rgb(const char *, int index=0);
   int default_colors();
 
@@ -85,22 +121,15 @@ class Image : protected Pointers {
   // constant view params
 
   double FOV;
-  double ambientColor[3];
 
   double keyLightTheta;
   double keyLightPhi;
-  double keyLightColor[3];
 
   double fillLightTheta;
   double fillLightPhi;
-  double fillLightColor[3];
 
   double backLightTheta;
   double backLightPhi;
-  double backLightColor[3];
-
-  double specularHardness;
-  double specularIntensity;
 
   double SSAORadius;
   int SSAOSamples;
@@ -110,6 +139,7 @@ class Image : protected Pointers {
 
   double zdist;
   double tanPerPixel;
+  double boxbounds[6];          // box bounds from the last view_params() call
   double camDir[3],camUp[3],camRight[4],camPos[3];
   double keyLightDir[3],fillLightDir[3],backLightDir[3];
   double keyHalfDir[3];
@@ -132,14 +162,17 @@ class Image : protected Pointers {
   int nentry;
   double interpolate[3];
 
-  // SSAO RNG
-
-  class RanKnuth *random;
-
   // internal methods
 
   void draw_pixel(int, int, double, double *, double*);
+  void setup_lights();
   void compute_SSAO();
+  void compute_outline();
+  void compute_depthcue();
+  void compute_defocus();
+  bool depth_minmax(double &, double &) const;
+  void box_depth_minmax(double &, double &) const;
+  double box_maxdel() const;
 
   // inline functions
 

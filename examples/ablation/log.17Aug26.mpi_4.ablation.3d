@@ -1,0 +1,153 @@
+SPARTA (24 Sep 2025)
+Running on 4 MPI task(s)
+################################################################################
+# 3d flow through porous media ablating cylindrical fibers
+#
+# Note:
+#  - The "comm/sort” option to the “global” command is used to match MPI runs.
+#  - The “twopass” option is used to match Kokkos runs.
+# The "comm/sort" and "twopass" options should not be used for production runs.
+################################################################################
+
+seed	    	    12345
+dimension   	    3
+global              gridcut 0.0 comm/sort yes
+
+boundary	    r r o
+
+create_box  	    0 100 0 100 0 100
+Created orthogonal box = (0 0 0) to (100 100 100)
+create_grid 	    100 100 100 block * * *
+Created 1000000 child grid cells
+  CPU time = 0.151369 secs
+  create/ghost percent = 28.3186 71.6814
+
+balance_grid        rcb cell
+Balance grid migrated 500000 cells
+  CPU time = 0.211038 secs
+  reassign/sort/migrate/ghost percent = 22.0932 0.985079 41.7023 35.2194
+
+global		    nrho 1 fnum 1
+
+species		    air.species N O
+mixture		    air N O vstream 0 0 -100.0
+
+compute             COMP isurf/grid all all n
+fix                 FIX ave/grid all 1 10 10 c_COMP[*] ave one
+fix                 ablate ablate all 10 5.0 f_FIX
+
+global              surfs implicit
+
+read_isurf          all 100 100 100 fibers-101x101x101.binary 127.5 ablate
+  1030301 corner points
+  5646176 2353824 pushed corner pt values
+  0.5 99.5 xlo xhi
+  0.5 99.5 ylo yhi
+  0.5 99.5 zlo zhi
+  0.707107 min triangle edge length
+  0.216506 min triangle area
+  190990 = cells with surfs
+  381924 = total surfs in all grid cells
+  4 = max surfs in one grid cell
+  0.707107 = min surf-size/cell-size ratio
+  190990 0 = cells overlapping surfs, overlap cells with unmarked corner pts
+  603700 205310 190990 = cells outside/inside/overlapping surfs
+  190794 196 = surf cells with 1,2,etc splits
+  708904 708904 = cell-wise and global flow volume
+  CPU time = 1.362 secs
+  read/create-surfs percent = 10.9397 89.0603
+
+surf_collide	    1 diffuse 300.0 0.0
+surf_modify         all collide 1
+
+collide             vss air air.vss
+
+create_particles    air n 0 twopass
+Created 708903 particles
+  CPU time = 0.16552 secs
+fix		    in emit/face air zhi twopass
+
+timestep 	    1e-3
+
+#dump                2 image all 10 binary.*.ppm type type #                    pdiam 0.0000015 particle yes #                    sline no 0.002 surf proc 0.03 size 1024 1024 #                    axes yes 1 0.01 zoom 1.2
+#dump_modify	    2 pad 4 pcolor * blue backcolor white
+
+stats		    10
+stats_style	    step cpu np nattempt ncoll nscoll nscheck f_ablate
+
+# run 3-5x longer for a better movie
+
+run 		    100
+Memory usage per proc in Mbytes:
+  particles (ave,min,max) = 17.1875 17.1875 17.1875
+  grid      (ave,min,max) = 46.2946 46.2946 46.2946
+  surf      (ave,min,max) = 11.6554 11.1716 12.1392
+  modify    (ave,min,max) = 57.1066 57.1066 57.1066
+  total     (ave,min,max) = 132.244 131.76 132.728
+Step CPU Np Natt Ncoll Nscoll Nscheck f_ablate 
+       0            0   708903        0        0        0        0     75028140 
+      10    1.6016739   700322        0        0    25828   447156     73725900 
+      20    3.2476179   692361        0        0    25134   449366     72465020 
+      30    5.3124098   685587        0        0    24650   455801     71231055 
+      40    7.4488759   679305        0        0    24295   468018     70018315 
+      50    10.144786   673319        0        0    24364   495437     68809785 
+      60    12.836235   667922        0        0    24439   531037     67597310 
+      70    15.597599   663277        0        0    24748   562258     66365485 
+      80    18.473533   659074        0        0    25183   585958     65120075 
+      90    21.379278   655105        0        0    25286   598676     63869745 
+     100    24.245056   651406        0        0    25300   606560     62624900 
+Loop time of 24.252 on 4 procs for 100 steps with 651406 particles
+Performance: 4.123 timesteps/s, 2.686 Mparticle-step/s
+
+MPI task timing breakdown:
+Section |  min time  |  avg time  |  max time  |%varavg| %total
+---------------------------------------------------------------
+Move    | 3.9864     | 4.0287     | 4.053      |   1.3 | 16.61
+Coll    | 0.32965    | 0.33856    | 0.34511    |   1.1 |  1.40
+Sort    | 0.52184    | 0.53185    | 0.54037    |   1.0 |  2.19
+Comm    | 0.043805   | 0.045598   | 0.049044   |   1.0 |  0.19
+Modify  | 19.096     | 19.098     | 19.099     |   0.0 | 78.75
+Output  | 0.067372   | 0.067596   | 0.068203   |   0.1 |  0.28
+MPI Sync| 0.090791   | 0.12005    | 0.18379    |  10.7 |  0.50
+Other   |            | 0.02199    |            |       |  0.09
+
+Particle moves    = 67544152 (67.5M)
+Cells touched     = 130102951 (130M)
+Particle comms    = 446464 (0.446M)
+Boundary collides = 577422 (0.577M)
+Boundary exits    = 265937 (0.266M)
+SurfColl checks   = 51750130 (51.8M)
+SurfColl occurs   = 2480648 (2.48M)
+Surf reactions    = 0 (0K)
+Collide attempts  = 0 (0K)
+Collide occurs    = 0 (0K)
+Reactions         = 0 (0K)
+Particles stuck   = 0
+Axisymm bad moves = 0
+
+Particle-moves/CPUsec/proc: 696274
+Particle-moves/step: 675442
+Cell-touches/particle/step: 1.92619
+Particle comm iterations/step: 3.05
+Particle fraction communicated: 0.00660996
+Particle fraction colliding with boundary: 0.00854881
+Particle fraction exiting boundary: 0.00393723
+Surface-checks/particle/step: 0.766167
+Surface-collisions/particle/step: 0.0367263
+Surf-reactions/particle/step: 0
+Collision-attempts/particle/step: 0
+Collisions/particle/step: 0
+Reactions/particle/step: 0
+
+Particles: 162852 ave 166924 max 159075 min
+Histogram: 2 0 0 0 0 0 0 0 1 1
+Cells:      254466 ave 254610 max 254181 min
+Histogram: 1 0 0 0 0 0 0 1 1 1
+GhostCell: 10100 ave 10100 max 10100 min
+Histogram: 4 0 0 0 0 0 0 0 0 0
+EmptyCell: 10100 ave 10100 max 10100 min
+Histogram: 4 0 0 0 0 0 0 0 0 0
+Surfs:    144770 ave 150356 max 138830 min
+Histogram: 2 0 0 0 0 0 0 0 0 2
+GhostSurf: 0 ave 0 max 0 min
+Histogram: 4 0 0 0 0 0 0 0 0 0

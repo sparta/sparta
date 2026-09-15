@@ -668,7 +668,7 @@ void ReadSurf::base(char *file)
     fp = fopen(hfile,"r");
     if (fp == NULL) {
       char str[128];
-      sprintf(str,"Cannot open surface base file %s",hfile);
+      snprintf(str,128,"Cannot open surface base file %s",hfile);
       error->one(FLERR,str);
     }
     delete [] hfile;
@@ -1996,13 +1996,13 @@ void ReadSurf::check_bounds()
 
   if (sminall != 1) {
     char str[128];
-    sprintf(str,"Read_surf minimum surface ID is " BIGINT_FORMAT,sminall);
+    snprintf(str,sizeof(str),"Read_surf minimum surface ID is " BIGINT_FORMAT,sminall);
     error->all(FLERR,str);
   }
 
   if (smaxall != nsurf_all) {
     char str[128];
-    sprintf(str,"Read_surf maximum surface ID is " BIGINT_FORMAT,smaxall);
+    snprintf(str,sizeof(str),"Read_surf maximum surface ID is " BIGINT_FORMAT,smaxall);
     error->all(FLERR,str);
   }
 }
@@ -2140,13 +2140,13 @@ void ReadSurf::check_neighbor_norm_2d()
 
   if (nerror) {
     char str[128];
-    sprintf(str,"Surface check failed with %d "
+    snprintf(str,sizeof(str),"Surface check failed with %d "
             "infinitely thin line pairs",nerror);
     error->all(FLERR,str);
   }
   if (nwarn) {
     char str[128];
-    sprintf(str,"Surface check found %d "
+    snprintf(str,sizeof(str),"Surface check found %d "
             "nearly infinitely thin line pairs",nwarn);
     if (me == 0) error->warning(FLERR,str);
   }
@@ -2223,13 +2223,13 @@ void ReadSurf::check_neighbor_norm_3d()
 
   if (nerror) {
     char str[128];
-    sprintf(str,"Surface check failed with %d "
+    snprintf(str,sizeof(str),"Surface check failed with %d "
             "infinitely thin triangle pairs",nerror);
     error->all(FLERR,str);
   }
   if (nwarn) {
     char str[128];
-    sprintf(str,"Surface check found %d "
+    snprintf(str,sizeof(str),"Surface check found %d "
             "nearly infinitely thin triangle pairs",nwarn);
     if (me == 0) error->warning(FLERR,str);
   }
@@ -2251,7 +2251,7 @@ void ReadSurf::open(char *file)
   else {
 #ifdef SPARTA_GZIP
     char gunzip[128];
-    sprintf(gunzip,"gunzip -c %s",file);
+    snprintf(gunzip,128,"gunzip -c %s",file);
     fp = popen(gunzip,"r");
 #else
     error->one(FLERR,"Cannot open gzipped file");
@@ -2260,7 +2260,7 @@ void ReadSurf::open(char *file)
 
   if (fp == NULL) {
     char str[128];
-    sprintf(str,"Cannot open file %s",file);
+    snprintf(str,128,"Cannot open file %s",file);
     error->one(FLERR,str);
   }
 }
@@ -2339,9 +2339,15 @@ void ReadSurf::file_search(char *infile, char *outfile)
   // create outfile with maxint substituted for "*"
   // use original infile, not pattern, since need to retain "%" in filename
 
+  // outfile is the caller's buffer, sized new char[strlen(arg[0]) + 16] with
+  //   arg[0] == infile, so that is the bound.  it must be computed before
+  //   *ptr = '\0' truncates infile at the wildcard: taken after, it is the
+  //   prefix length and snprintf silently drops the tail of the name
+
+  size_t nout = strlen(infile) + 16;
   ptr = strchr(infile,'*');
   *ptr = '\0';
-  sprintf(outfile,"%s" BIGINT_FORMAT "%s",infile,maxnum,ptr+1);
+  snprintf(outfile,nout,"%s" BIGINT_FORMAT "%s",infile,maxnum,ptr+1);
   *ptr = '*';
 
   // clean up
@@ -2531,7 +2537,7 @@ void ReadSurf::check_point_pairs()
 
   if (nbad) {
     char str[128];
-    sprintf(str,"%d read_surf point pairs are too close",nbad);
+    snprintf(str,sizeof(str),"%d read_surf point pairs are too close",nbad);
     error->all(FLERR,str);
   }
 
@@ -2584,7 +2590,7 @@ void ReadSurf::check_point_pairs()
 
   if (nbad) {
     char str[128];
-    sprintf(str,"%d read_surf point pairs are too close",nbad);
+    snprintf(str,sizeof(str),"%d read_surf point pairs are too close",nbad);
     error->all(FLERR,str);
   }
 

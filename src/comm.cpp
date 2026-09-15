@@ -183,14 +183,26 @@ int Comm::migrate_particles(int nmigrate, int *plist)
 
   // compress my list of particles
 
-  // for optimized particle moves, call compress_reactions rather than
-  //  compress_migrate since mlist is not guaranteed to be in ascending
-  //  order
+  // compress_migrate() requires ascending indices, compress_reactions() does
+  //   not but is more expensive and leaves the surviving particles in a
+  //   different order
+  // the optimized move appends from two places in its particle loop, so test
+  //   the list rather than assume either way.  keying off optmove_flag instead
+  //   would take the compress_reactions() path on every step of an optimized
+  //   run, even though a serial loop over particles emits ascending indices,
+  //   and the reordering that follows makes "optmove yes" and "optmove no"
+  //   consume the collision RNG differently -- which costs the ability to
+  //   validate the fast path against the standard move
 
-  if (update->optmove_flag)
-    particle->compress_reactions(nmigrate,plist);
-  else
-    particle->compress_migrate(nmigrate,plist);
+  int ascending = 1;
+  for (i = 1; i < nmigrate; i++)
+    if (plist[i] <= plist[i-1]) {
+      ascending = 0;
+      break;
+    }
+
+  if (ascending) particle->compress_migrate(nmigrate,plist);
+  else particle->compress_reactions(nmigrate,plist);
 
   int ncompress = particle->nlocal;
 
@@ -252,7 +264,8 @@ void Comm::migrate_cells(int nmigrate)
   if (update->have_mem_limit())
     return migrate_cells_less_memory(nmigrate);
 
-  int i,n;
+  int i;
+  bigint n;
 
   Grid::ChildCell *cells = grid->cells;
   int nglocal = grid->nlocal;
@@ -277,6 +290,9 @@ void Comm::migrate_cells(int nmigrate)
     if (cells[icell].proc == me) continue;
     gproc[nsend] = cells[icell].proc;
     n = grid->pack_one(icell,NULL,1,1,1,0);
+    if (n > MAXSMALLINT)
+      error->one(FLERR,"Single grid cell + particle info exceeds 2 GB "
+                       "in migrate cells");
     gsize[nsend++] = n;
     offset += n;
   }
@@ -323,7 +339,7 @@ void Comm::migrate_cells(int nmigrate)
 
   if (!igrid) igrid = new Irregular(sparta);
   bigint recvsize;
-  int nrecv = igrid->create_data_variable(nmigrate,gproc,gsize,
+  int nrecv = igrid->create_data_variable(nsend,gproc,gsize,
                                           recvsize,commsortflag);
 
   // reallocate rbuf as needed
@@ -355,7 +371,8 @@ void Comm::migrate_cells(int nmigrate)
 
 void Comm::migrate_cells_less_memory(int nmigrate)
 {
-  int i,n;
+  int i;
+  bigint n;
 
   // grow proc and size lists if needed
 
@@ -386,6 +403,9 @@ void Comm::migrate_cells_less_memory(int nmigrate)
       if (cells[icell].proc == me) continue;
       gproc[nsend] = cells[icell].proc;
       n = grid->pack_one(icell,NULL,1,1,1,0);
+      if (n > MAXSMALLINT)
+        error->one(FLERR,"Single grid cell + particle info exceeds 2 GB "
+                         "in migrate cells");
       if (n > 0 && offset > 0 && offset+n > update->global_mem_limit) {
         icell_end -= 1;
         break;
@@ -487,7 +507,8 @@ void Comm::migrate_cells_less_memory(int nmigrate)
 
 int Comm::send_cells_adapt(int nsend, int *procsend, char *inbuf, char **outbuf)
 {
-  int i,n;
+  int i;
+  bigint n;
 
   AdaptGrid::SendAdapt *sadapt = (AdaptGrid::SendAdapt *) inbuf;
 
@@ -507,6 +528,9 @@ int Comm::send_cells_adapt(int nsend, int *procsend, char *inbuf, char **outbuf)
   bigint offset = 0;
   for (i = 0; i < nsend; i++) {
     n = grid->pack_one_adapt((char *) &sadapt[i],NULL,0);
+    if (n > MAXSMALLINT)
+      error->one(FLERR,"Single grid cell + particle info exceeds 2 GB "
+                       "in adapt grid");
     gsize[i] = n;
     offset += n;
   }
@@ -546,7 +570,6 @@ int Comm::send_cells_adapt(int nsend, int *procsend, char *inbuf, char **outbuf)
     memory->sfree(rbuf);
     maxrecvbuf = recvsize;
     rbuf = (char *) memory->smalloc(maxrecvbuf,"comm:rbuf");
-    memory->create(rbuf,maxrecvbuf,"comm:rbuf");
     memset(rbuf,0,maxrecvbuf);
   }
 
@@ -659,7 +682,14 @@ void Comm::ring(int n, int nper, void *inbuf, int messtag,
   MPI_Request request;
   MPI_Status status;
 
-  int nbytes = n*nper;
+  // check for overflow of the ring message size,
+  //   each message travels through MPI as a single buffer
+
+  bigint nbytes_big = (bigint) n*nper;
+  if (nbytes_big > MAXSMALLINT)
+    error->one(FLERR,"Ring comm message exceeds 2 GB");
+
+  int nbytes = nbytes_big;
   int maxbytes;
   MPI_Allreduce(&nbytes,&maxbytes,1,MPI_INT,MPI_MAX,world);
 
@@ -850,7 +880,7 @@ rendezvous_all2all(int n, char *inbuf, int insize, int inorder, int *procs,
 
     offsets[0] = 0;
     for (int i = 1; i < nprocs; i++)
-      offsets[i] = offsets[i-1] + insize*procs_a2a[i-1];
+      offsets[i] = offsets[i-1] + (bigint) insize*procs_a2a[i-1];
 
     bigint offset = 0;
     for (int i = 0; i < n; i++) {
@@ -960,7 +990,7 @@ rendezvous_all2all(int n, char *inbuf, int insize, int inorder, int *procs,
 
     offsets[0] = 0;
     for (int i = 1; i < nprocs; i++)
-      offsets[i] = offsets[i-1] + outsize*procs_a2a[i-1];
+      offsets[i] = offsets[i-1] + (bigint) outsize*procs_a2a[i-1];
 
     bigint offset = 0;
     for (int i = 0; i < nrvous_out; i++) {

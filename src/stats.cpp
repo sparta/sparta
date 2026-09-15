@@ -68,6 +68,11 @@ Stats::Stats(SPARTA *sparta) : Pointers(sparta)
 
   line = new char[MAXLINE];
 
+  cache_step = 0;
+  cache_num = 0;
+  cache_setup = 1;
+  cache_line = 0;
+
   keyword = NULL;
   vfunc = NULL;
   vtype = NULL;
@@ -163,9 +168,10 @@ void Stats::init()
     }
 
     n = strlen(format[i]);
-    sprintf(&format[i][n],"%s ",ptr);
+    snprintf(&format[i][n],32-n,"%s ",ptr);
   }
-  strcat(format[nfield-1],"\n");
+  n = strlen(format[nfield-1]);
+  snprintf(&format[nfield-1][n],32-n,"\n");
 
   delete [] format_line;
 
@@ -217,9 +223,11 @@ void Stats::init()
 void Stats::header()
 {
   int loc = 0;
-  for (int i = 0; i < nfield; i++)
-    loc += sprintf(&line[loc],"%s ",keyword[i]);
-  sprintf(&line[loc],"\n");
+  for (int i = 0; i < nfield; i++) {
+    loc += snprintf(&line[loc],MAXLINE-loc,"%s ",keyword[i]);
+    if (loc > MAXLINE-2) loc = MAXLINE-2;
+  }
+  snprintf(&line[loc],MAXLINE-loc,"\n");
 
   if (me == 0) {
     if (screen) fprintf(screen,"%s",line);
@@ -256,16 +264,40 @@ void Stats::compute(int flag)
     }
 
   // add each stat value to line with its specific format
+  // also store each value in the cache for the library interface,
+  // guarded by the cache mutex since another thread may read it
 
-  int loc = 0;
-  for (ifield = 0; ifield < nfield; ifield++) {
-    (this->*vfunc[ifield])();
-    if (vtype[ifield] == FLOAT)
-      loc += sprintf(&line[loc],format[ifield],dvalue);
-    else if (vtype[ifield] == INT)
-      loc += sprintf(&line[loc],format[ifield],ivalue);
-    else if (vtype[ifield] == BIGINT) {
-      loc += sprintf(&line[loc],format[ifield],bivalue);
+  {
+    std::lock_guard<std::mutex> guard(cache_mutex);
+
+    cache_step = update->ntimestep;
+    cache_num = nfield;
+    cache_setup = (flag == 0);
+    cache_line = input->line_num;
+    cache_keyword.resize(nfield);
+    cache_type.resize(nfield);
+    cache_data.resize(nfield);
+
+    int loc = 0;
+    for (ifield = 0; ifield < nfield; ifield++) {
+      (this->*vfunc[ifield])();
+      cache_keyword[ifield] = keyword[ifield];
+      if (vtype[ifield] == FLOAT) {
+        loc += snprintf(&line[loc],MAXLINE-loc,format[ifield],dvalue);
+        if (loc > MAXLINE-1) loc = MAXLINE-1;
+        cache_type[ifield] = 2;                  // SPARTA_DOUBLE
+        cache_data[ifield].d = dvalue;
+      } else if (vtype[ifield] == INT) {
+        loc += snprintf(&line[loc],MAXLINE-loc,format[ifield],ivalue);
+        if (loc > MAXLINE-1) loc = MAXLINE-1;
+        cache_type[ifield] = 0;                  // SPARTA_INT
+        cache_data[ifield].i = ivalue;
+      } else if (vtype[ifield] == BIGINT) {
+        loc += snprintf(&line[loc],MAXLINE-loc,format[ifield],bivalue);
+        if (loc > MAXLINE-1) loc = MAXLINE-1;
+        cache_type[ifield] = (sizeof(bigint) == 8) ? 4 : 0;  // SPARTA_INT64
+        cache_data[ifield].b = bivalue;
+      }
     }
   }
 
@@ -278,6 +310,83 @@ void Stats::compute(int flag)
       if (flushflag) fflush(logfile);
     }
   }
+}
+
+/* ----------------------------------------------------------------------
+   access the cache of the last computed stats data
+   called by sparta_last_thermo() in the library interface,
+   possibly from a different thread than the one running a simulation
+   what = "lock"/"unlock" acquire/release the cache mutex, so a caller
+     can consistently read multiple entries while a run progresses
+   returns pointer to the requested entry, NULL if unknown
+------------------------------------------------------------------------- */
+
+void *Stats::last_thermo(const char *what, int index)
+{
+  if (strcmp(what,"lock") == 0) {
+    cache_mutex.lock();
+    return NULL;
+  }
+  if (strcmp(what,"unlock") == 0) {
+    cache_mutex.unlock();
+    return NULL;
+  }
+
+  if (strcmp(what,"step") == 0) return (void *) &cache_step;
+  if (strcmp(what,"num") == 0) return (void *) &cache_num;
+  if (strcmp(what,"setup") == 0) return (void *) &cache_setup;
+  // "line" reports the *live* line number of the command currently being
+  // executed by the library command processor (Input::line_num, updated per
+  // command in sparta_commands_string), not the value cached at the last
+  // thermo output.  This is what lets the GUI highlight the exact input line
+  // that triggered an error even when the error happens before any thermo
+  // output has been produced (e.g. a bad "global" command): cache_line would
+  // still be 0 there and wrongly point at the first line.  During a run it is
+  // the line of the executing "run" command, so the progress highlight is
+  // unchanged.
+  if (strcmp(what,"line") == 0) return (void *) &input->line_num;
+  if (strcmp(what,"imagename") == 0) {
+    if (cache_imagename.empty()) return NULL;
+    return (void *) cache_imagename.c_str();
+  }
+
+  if (index < 0 || index >= cache_num) return NULL;
+
+  if (strcmp(what,"keyword") == 0)
+    return (void *) cache_keyword[index].c_str();
+  if (strcmp(what,"type") == 0) return (void *) &cache_type[index];
+  if (strcmp(what,"data") == 0) {
+    if (cache_type[index] == 0) return (void *) &cache_data[index].i;
+    if (cache_type[index] == 2) return (void *) &cache_data[index].d;
+    if (cache_type[index] == 4) return (void *) &cache_data[index].b;
+    return NULL;
+  }
+
+  return NULL;
+}
+
+/* ----------------------------------------------------------------------
+   record name of most recently written dump image file
+   called by DumpImage so a GUI can display images as they are created
+------------------------------------------------------------------------- */
+
+void Stats::set_last_image(const char *fname)
+{
+  std::lock_guard<std::mutex> guard(cache_mutex);
+  if (fname) cache_imagename = fname;
+  else cache_imagename.clear();
+}
+
+/* ----------------------------------------------------------------------
+   invalidate the cache at the beginning of a run
+------------------------------------------------------------------------- */
+
+void Stats::reset_cache()
+{
+  std::lock_guard<std::mutex> guard(cache_mutex);
+  cache_num = 0;
+  cache_setup = 1;
+  cache_imagename.clear();
 }
 
 /* ----------------------------------------------------------------------
@@ -350,7 +459,7 @@ void Stats::modify_params(int narg, char **arg)
           error->all(FLERR,
                      "Stats_modify int format does not contain d character");
         char str[8];
-        sprintf(str,"%s",BIGINT_FORMAT);
+        snprintf(str,sizeof(str),"%s",BIGINT_FORMAT);
         *ptr = '\0';
         sprintf(format_bigint_user,"%s%s%s",format_int_user,&str[1],ptr+1);
         *ptr = 'd';
@@ -557,7 +666,7 @@ void Stats::set_fields(int narg, char **arg)
     } else if (strcmp(arg[i],"ngrid") == 0) {
       addfield("Ngrid",&Stats::compute_ngrid,BIGINT);
     } else if (strcmp(arg[i],"nsplit") == 0) {
-      addfield("Nsplit",&Stats::compute_nsplit,INT);
+      addfield("Nsplit",&Stats::compute_nsplit,BIGINT);
     } else if (strcmp(arg[i],"maxlevel") == 0) {
       addfield("Maxlevel",&Stats::compute_maxlevel,INT);
 
@@ -1093,7 +1202,7 @@ void Stats::compute_tpcpu()
 void Stats::compute_spcpu()
 {
   double new_cpu;
-  int new_step = update->ntimestep;
+  bigint new_step = update->ntimestep;
 
   if (firststep == 0) {
     new_cpu = 0.0;
@@ -1101,7 +1210,7 @@ void Stats::compute_spcpu()
   } else {
     new_cpu = timer->elapsed(TIME_LOOP);
     double cpu_diff = new_cpu - last_spcpu;
-    int step_diff = new_step - last_step;
+    bigint step_diff = new_step - last_step;
     if (cpu_diff > 0.0) dvalue = step_diff/cpu_diff;
     else dvalue = 0.0;
   }
@@ -1345,7 +1454,7 @@ void Stats::compute_ngrid()
 
 void Stats::compute_nsplit()
 {
-  ivalue = grid->nsplit;
+  bivalue = grid->nsplit;
 }
 
 /* ---------------------------------------------------------------------- */

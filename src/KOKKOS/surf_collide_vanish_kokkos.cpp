@@ -25,7 +25,7 @@ SurfCollideVanishKokkos::SurfCollideVanishKokkos(SPARTA *sparta, int narg, char 
 {
   kokkosable = 1;
 
-  k_nsingle = DAT::tdual_int_scalar("SurfCollide:nsingle");
+  k_nsingle = DAT::tdual_bigint_scalar("SurfCollide:nsingle");
   d_nsingle = k_nsingle.view_device();
   h_nsingle = k_nsingle.view_host();
 
@@ -56,4 +56,23 @@ void SurfCollideVanishKokkos::post_collide()
   int m = surf->find_collide(id);
   auto sc = surf->sc[m];
   sc->nsingle += h_nsingle();
+}
+
+/* ----------------------------------------------------------------------
+   nothing to save: this model keeps no state across a move beyond its
+     collision counter, which restore() rewinds
+------------------------------------------------------------------------- */
+
+void SurfCollideVanishKokkos::backup() {}
+
+/* ----------------------------------------------------------------------
+   a retried move re-runs every collision this model already counted, so the
+     counter has to go back to zero.  Without this the retried attempt adds
+     on top of the aborted one and SurfCollide::nsingle -- reported as
+     "Surface-collisions/particle/step" -- comes out too high
+------------------------------------------------------------------------- */
+
+void SurfCollideVanishKokkos::restore()
+{
+  Kokkos::deep_copy(d_nsingle,0);
 }

@@ -110,7 +110,7 @@ void ReadRestart::command(int narg, char **arg)
     fp = fopen(hfile,"rb");
     if (fp == NULL) {
       char str[128];
-      sprintf(str,"Cannot open restart file %s",hfile);
+      snprintf(str,128,"Cannot open restart file %s",hfile);
       error->one(FLERR,str);
     }
     if (multiproc) delete [] hfile;
@@ -462,9 +462,15 @@ void ReadRestart::file_search(char *infile, char *outfile)
   // create outfile with maxint substituted for "*"
   // use original infile, not pattern, since need to retain "%" in filename
 
+  // outfile is the caller's buffer, sized new char[strlen(arg[0]) + 16] with
+  //   arg[0] == infile, so that is the bound.  it must be computed before
+  //   *ptr = '\0' truncates infile at the wildcard: taken after, it is the
+  //   prefix length and snprintf silently drops the tail of the name
+
+  size_t nout = strlen(infile) + 16;
   ptr = strchr(infile,'*');
   *ptr = '\0';
-  sprintf(outfile,"%s" BIGINT_FORMAT "%s",infile,maxnum,ptr+1);
+  snprintf(outfile,nout,"%s" BIGINT_FORMAT "%s",infile,maxnum,ptr+1);
   *ptr = '*';
 
   // clean up
@@ -689,7 +695,7 @@ void ReadRestart::grid_params()
   int nbits = grid->plevels[maxlevel-1].nbits + grid->plevels[maxlevel-1].newbits;
   if (nbits > sizeof(cellint)*8) {
     char str[128];
-    sprintf(str,"Hierarchical grid induces cell IDs that exceed %d bits",
+    snprintf(str,sizeof(str),"Hierarchical grid induces cell IDs that exceed %d bits",
             (int) sizeof(cellint)*8);
     error->all(FLERR,str);
   }
@@ -905,7 +911,7 @@ void ReadRestart::read_gp_multi_file_less_procs(char *file)
     fp = fopen(procfile,"rb");
     if (fp == NULL) {
       char str[128];
-      sprintf(str,"Cannot open restart file %s",procfile);
+      snprintf(str,128,"Cannot open restart file %s",procfile);
       error->one(FLERR,str);
     }
 
@@ -991,7 +997,7 @@ void ReadRestart::read_gp_multi_file_more_procs(char *file)
     fp = fopen(procfile,"rb");
     if (fp == NULL) {
       char str[128];
-      sprintf(str,"Cannot open restart file %s",procfile);
+      snprintf(str,128,"Cannot open restart file %s",procfile);
       error->one(FLERR,str);
     }
     delete [] procfile;
@@ -1093,7 +1099,7 @@ void ReadRestart::read_gp_multi_file_less_procs_memlimit(char *file)
     fp = fopen(procfile,"rb");
     if (fp == NULL) {
       char str[128];
-      sprintf(str,"Cannot open restart file %s",procfile);
+      snprintf(str,128,"Cannot open restart file %s",procfile);
       error->one(FLERR,str);
     }
 
@@ -1121,7 +1127,11 @@ void ReadRestart::read_gp_multi_file_less_procs_memlimit(char *file)
       int grid_nlocal;
       tmp = fread(&grid_nlocal,sizeof(int),1,fp);
       fseek(fp,-sizeof(int),SEEK_CUR);
-      int grid_read_size = grid->size_restart(grid_nlocal);
+      bigint grid_read_size_big = grid->size_restart(grid_nlocal);
+      if (grid_read_size_big > MAXSMALLINT)
+        error->one(FLERR,"Restart file grid info exceeds 2 GB per proc, "
+                   "run on more processors");
+      int grid_read_size = grid_read_size_big;
       bigint particle_read_size = n_big - grid_read_size;
       int particle_nlocal;
       fseek(fp,grid_read_size,SEEK_CUR);
@@ -1148,7 +1158,7 @@ void ReadRestart::read_gp_multi_file_less_procs_memlimit(char *file)
 
       // number of particles per pass
 
-      step_size = MIN(particle_nlocal,update->global_mem_limit/nbytes);
+      step_size = MAX(1,MIN(particle_nlocal,update->global_mem_limit/nbytes));
 
       // extra pass for grid
 
@@ -1238,7 +1248,7 @@ void ReadRestart::read_gp_multi_file_more_procs_memlimit(char *file)
     fp = fopen(procfile,"rb");
     if (fp == NULL) {
       char str[128];
-      sprintf(str,"Cannot open restart file %s",procfile);
+      snprintf(str,128,"Cannot open restart file %s",procfile);
       error->one(FLERR,str);
     }
     delete [] procfile;
@@ -1281,7 +1291,11 @@ void ReadRestart::read_gp_multi_file_more_procs_memlimit(char *file)
       int grid_nlocal;
       tmp = fread(&grid_nlocal,sizeof(int),1,fp);
       fseek(fp,-sizeof(int),SEEK_CUR);
-      int grid_read_size = grid->size_restart(grid_nlocal);
+      bigint grid_read_size_big = grid->size_restart(grid_nlocal);
+      if (grid_read_size_big > MAXSMALLINT)
+        error->one(FLERR,"Restart file grid info exceeds 2 GB per proc, "
+                   "run on more processors");
+      int grid_read_size = grid_read_size_big;
       bigint particle_read_size = n_big - grid_read_size;
       int particle_nlocal;
       fseek(fp,grid_read_size,SEEK_CUR);
@@ -1308,7 +1322,7 @@ void ReadRestart::read_gp_multi_file_more_procs_memlimit(char *file)
 
       // number of particles per pass
 
-      step_size = MIN(particle_nlocal,update->global_mem_limit/nbytes);
+      step_size = MAX(1,MIN(particle_nlocal,update->global_mem_limit/nbytes));
 
       // extra pass for grid
 
@@ -1633,7 +1647,7 @@ void ReadRestart::read_surfs_multi_file_less_procs(char *file)
     fp = fopen(procfile,"rb");
     if (fp == NULL) {
       char str[128];
-      sprintf(str,"Cannot open restart file %s",procfile);
+      snprintf(str,128,"Cannot open restart file %s",procfile);
       error->one(FLERR,str);
     }
 
@@ -1726,7 +1740,7 @@ void ReadRestart::read_surfs_multi_file_more_procs(char *file)
     fp = fopen(procfile,"rb");
     if (fp == NULL) {
       char str[128];
-      sprintf(str,"Cannot open restart file %s",procfile);
+      snprintf(str,128,"Cannot open restart file %s",procfile);
       error->one(FLERR,str);
     }
     delete [] procfile;
@@ -2082,6 +2096,8 @@ void ReadRestart::read_double_vec(int n, double *vec)
 
 void ReadRestart::read_char_vec(bigint n, char *vec)
 {
+  if (n > MAXSMALLINT)
+    error->all(FLERR,"Restart file read buffer exceeds 2 GB");
   if (me == 0) int tmp = fread(vec,sizeof(char),n,fp);
   MPI_Bcast(vec,(int)n,MPI_CHAR,0,world);
 }

@@ -27,7 +27,7 @@ class VariableKokkos : public Variable {
 //  using Variable::Tree;
 
  private:
-  double evaluate(char *, Tree **) override;
+  void custom_sync(int) override;
   double eval_tree(Tree *, int) override;
   void particle_vector(char *, Tree **, Tree **, int &) override;
   void grid_vector(char *, Tree **, Tree **, int &) override;
@@ -210,9 +210,10 @@ E: Modulo 0 in variable formula
 
 Self-explanatory.
 
-E: Power by 0 in variable formula
+E: Invalid power expression in variable formula
 
-Self-explanatory.
+A zero base cannot be raised to a negative power in a variable
+formula, since the result is infinite.
 
 E: Sqrt of negative value in variable formula
 

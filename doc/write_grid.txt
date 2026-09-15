@@ -36,7 +36,7 @@ to N.  They also encode the cell's logical position within the grid
 hierarchy.
 
 The file is in the following format which is the same as the input
-file used by the "read_grid"_read_grid.html" command.  Thus the file
+file used by the "read_grid"_read_grid.html command.  Thus the file
 can be used to start a subsequent simulation with the same grid
 topology.
 

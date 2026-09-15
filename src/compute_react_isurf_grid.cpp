@@ -75,7 +75,6 @@ ComputeReactISurfGrid(SPARTA *sparta, int narg, char **arg) :
       char *ptr = copy;
       while ((ptr = strtok(ptr,"/")) != (char *) NULL) {
         for (int ireaction = 0; ireaction < ntotal; ireaction++) {
-          reaction2col[ireaction][icol] = 0;
           if (which == REACTANT) {
             if (surf->sr[isr]->match_reactant(ptr,ireaction))
               reaction2col[ireaction][icol] = 1;
@@ -117,6 +116,8 @@ ComputeReactISurfGrid(SPARTA *sparta, int narg, char **arg) :
 
 ComputeReactISurfGrid::~ComputeReactISurfGrid()
 {
+  if (copy || copymode) return;
+
   memory->destroy(reaction2col);
   memory->destroy(array_surf_tally);
   memory->destroy(tally2surf);
@@ -158,7 +159,7 @@ void ComputeReactISurfGrid::init()
 
   if (flagall && comm->me == 0) {
     char str[128];
-    sprintf(str,
+    snprintf(str,sizeof(str),
             "Compute react/isurf/grid " BIGINT_FORMAT " surfs "
             "are not assigned to surf react model",flagall);
     error->warning(FLERR,str);
@@ -353,8 +354,8 @@ void ComputeReactISurfGrid::grow_tally()
 bigint ComputeReactISurfGrid::memory_usage()
 {
   bigint bytes = 0;
-  bytes += ntotal*maxgrid * sizeof(double);     // array_grid
-  bytes += ntotal*maxtally * sizeof(double);    // array_surf_tally
+  bytes += (bigint) ntotal*maxgrid * sizeof(double);     // array_grid
+  bytes += (bigint) ntotal*maxtally * sizeof(double);    // array_surf_tally
   bytes += maxtally * sizeof(surfint);          // tally2surf
   return bytes;
 }

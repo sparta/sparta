@@ -21,7 +21,7 @@ file = name of file to write image to :l
 color = particle attribute that determines color of each particle :l
 diameter = particle attribute that determines size of each particle :l
 zero or more keyword/value pairs may be appended :l
-keyword = {particle} or {pdiam} or {grid} or {gridx} or {gridy} or {gridz} or {surf} or {size} or {view} or {center} or {up} or {zoom} or {persp} or {box} or {gline} or {sline} or {axes} or {shiny} or {ssao} :l
+keyword = {particle} or {pdiam} or {grid} or {gridx} or {gridy} or {gridz} or {surf} or {size} or {view} or {center} or {up} or {zoom} or {box} or {subbox} or {gline} or {sline} or {axes} or {shiny} or {ssao} or {fsaa} or {depthcue} or {defocus} or {outline} :l
   {particle} = yes/no = do or do not draw particles
   {pdiam} value = number = numeric value for particle diameter (distance units)
   {grid} values = color
@@ -55,12 +55,12 @@ keyword = {particle} or {pdiam} or {grid} or {gridx} or {gridy} or {gridz} or {s
   {zoom} value = zfactor = size that simulation box appears in image
     zfactor = scale image size by factor > 1 to enlarge, factor < 1 to shrink
     zfactor can be a variable (see below)
-  {persp} value = pfactor = amount of "perspective" in image
-    pfactor = amount of perspective (0 = none, < 1 = some, > 1 = highly skewed)
-    pfactor can be a variable (see below)
   {box} values = yes/no diam = draw outline of simulation box
     yes/no = do or do not draw simulation box lines
     diam = diameter of box lines as fraction of shortest box length
+  {subbox} values = yes/no diam = draw outline of processor sub-boxes
+    yes/no = do or do not draw processor sub-box lines
+    diam = diameter of sub-box lines as fraction of shortest box length
   {gline} values = yes/no diam = draw outline of each grid cell
     yes/no = do or do not draw grid cell outlines
     diam = diameter of grid outlines as fraction of shortest box length
@@ -76,7 +76,22 @@ keyword = {particle} or {pdiam} or {grid} or {gridx} or {gridy} or {gridz} or {s
   {ssao} value = yes/no seed dfactor = SSAO depth shading
     yes/no = turn depth shading on/off
     seed = random # seed (positive integer)
-    dfactor = strength of shading from 0.0 to 1.0 :pre
+    dfactor = strength of shading from 0.0 to 1.0
+  {fsaa} value = yes/no = full scene anti-aliasing
+    yes/no = do or do not anti-alias the image
+  {depthcue} values = yes/no cfactor color start = depth cueing
+    yes/no = turn depth cueing on/off
+    cfactor = strength of fading from 0.0 to 1.0
+    color = fog color name or {auto} = fade toward the background color
+    start = box fraction along the view direction where fading starts, or {auto} = nearest rendered object
+  {defocus} values = yes/no bfactor start = defocus of distant objects
+    yes/no = turn defocusing on/off
+    bfactor = strength of the blur from 0.0 to 1.0
+    start = box fraction along the view direction where blurring starts, or {auto} = nearest rendered object
+  {outline} values = yes/no width color = outlines at depth jumps
+    yes/no = turn outline drawing on/off
+    width = width of the outlines in pixels (from 1 to 16)
+    color = color name of the outlines :pre
 :ule
 
 [Examples:]
@@ -84,7 +99,7 @@ keyword = {particle} or {pdiam} or {grid} or {gridx} or {gridy} or {gridz} or {s
 dump myDump image all 100 dump.*.jpg type type
 dump myDump movie all 100 movie.mpg type type :pre
 
-These commands will dump shapshot images of all particles whose
+These commands will dump snapshot images of all particles whose
 species are in the {mix-ID} to a file every 100 steps.  The last two
 shell command will make a movie from the JPG files (once the run has
 finished) and play it in the Firefox browser:
@@ -246,7 +261,7 @@ except that proc P corresponds to type P+1.
 If {type} is specified for the {diameter} setting then the diameter of
 each particle is determined by its type = species index.  By default
 all types have diameter 1.0.  This mapping can be changed by the
-"dump_modify adiam"_dump_modify.html command.
+"dump_modify pdiam"_dump_modify.html command.
 
 If {proc} is specified for the {diameter} setting then the diameter of
 each particle will be the proc ID (0 up to Nprocs-1) in whatever
@@ -407,11 +422,11 @@ i.e. the number of pixels in each direction.
 
 :line
 
-The {view}, {center}, {up}, {zoom}, and {persp} values determine how
+The {view}, {center}, {up}, and {zoom} values determine how
 3d simulation space is mapped to the 2d plane of the image.  Basically
 they control how the simulation box appears in the image.
 
-All of the {view}, {center}, {up}, {zoom}, and {persp} values can be
+All of the {view}, {center}, {up}, and {zoom} values can be
 specified as numeric quantities, whose meaning is explained below.
 Any of them can also be specified as an "equal-style
 variable"_variable.html, by using v_name as the value, where "name" is
@@ -463,17 +478,6 @@ image mostly filled by the particles in the simulation box.  A {zfactor} >
 1 will make the simulation box larger; a {zfactor} < 1 will make it
 smaller.  {Zfactor} must be a value > 0.0.
 
-The {persp} keyword determines how much depth perspective is present
-in the image.  Depth perspective makes lines that are parallel in
-simulation space appear non-parallel in the image.  A {pfactor} value
-of 0.0 means that parallel lines will meet at infininty (1.0/pfactor),
-which is an orthographic rendering with no persepctive.  A {pfactor}
-value between 0.0 and 1.0 will introduce more perspective.  A {pfactor}
-value > 1 will create a highly skewed image with a large amount of
-perspective.
-
-IMPORTANT NOTE: The {persp} keyword is not yet supported as an option.
-
 :line
 
 The {box} keyword determines how the simulation box boundaries are
@@ -483,6 +487,17 @@ is set, the 12 edges of the box are drawn, with a diameter that is a
 fraction of the shortest box length in x,y,z (for 3d) or x,y (for 2d).
 The color of the box boundaries can be set with the "dump_modify
 boxcolor"_dump_modify.html command.
+
+The {subbox} keyword determines how the boundaries of each
+processor's sub-domain are rendered as thin cylinders in the image,
+in the same manner as the {box} keyword.  Sub-domain boundaries can
+only be drawn if a recursive coordinate bisectioning (RCB) balance
+has assigned a sub-box to each processor, via the
+"balance_grid rcb"_balance_grid.html or "fix balance rcb"_fix_balance.html
+commands; otherwise this keyword is ignored.  This can be used to
+visualize the parallel load balance of a simulation.  The color of
+the sub-box boundaries can be set with the "dump_modify
+subboxcolor"_dump_modify.html command.
 
 The {gline} keyword determines how the outlines of grid cells are
 rendered as thin cylinders in the image.  If the {gridx} or {gridy} or
@@ -534,6 +549,117 @@ increase the cost of computing the image by roughly 2x.  The strength
 of the effect can be scaled by the {dfactor} parameter.  If {no} is
 set, no depth shading is performed.
 
+The randomization of the SSAO shading is computed from a deterministic
+noise pattern derived from the pixel position and the {seed} value.
+Rendered images do not depend on the number of MPI ranks, and images
+of an unchanged scene are exactly reproducible, which avoids
+flickering shading in movies.  Different {seed} values shift the noise
+pattern.  The number of sampling directions per pixel can be selected
+with the "dump_modify ssaosamples"_dump_modify.html option.
+
+If any object is drawn transparently via the transparency options of
+the "dump_modify"_dump_modify.html command, the pixels its dither
+pattern leaves out are treated as background by the SSAO calculation.
+Transparent objects therefore receive weaker and slightly patterned
+depth shading.  Enabling the {fsaa} keyword averages most of that
+pattern away.
+
+The {fsaa} keyword turns on/off full scene anti-aliasing (FSAA).  If
+{yes} is set, the image is rendered internally at twice the requested
+size and then scaled back down by averaging, which smooths jagged
+edges of rendered objects.  This increases the cost of computing the
+image by roughly 4x.  The written image has the size requested by the
+{size} keyword, regardless of this setting.  If {no} is set, no
+anti-aliasing is performed.
+
+Enabling FSAA is also recommended whenever any of the transparency
+options of the "dump_modify"_dump_modify.html command are used, since
+the averaging is what blends the drawn and undrawn pixels of a
+transparent object together.
+
+The {depthcue} keyword turns on/off depth cueing.  If {yes} is set,
+rendered objects fade toward the fog color the more distant from the
+viewer they are, similar to looking through fog.  This is perceived as
+depth and helps to visually untangle dense systems.  The {cfactor}
+value scales the strength of the fading: with {cfactor} = 1.0 the most
+distant objects blend completely into the fog color, smaller values
+reduce the maximum amount of fading.  The {color} setting selects the
+fog color: with {auto} the objects fade toward the background color,
+following the background gradient when one is set with the
+{backcolor2} option; any color name known to SPARTA selects that color
+instead, e.g. white or gray fog over a dark background.  The {start}
+setting determines where the fading begins.  With {auto} it begins at
+the nearest rendered object, so the front of the scene never fades.  A
+numeric value instead positions the start as a fraction of the
+simulation box projected onto the view direction, similar to the
+fractions of the {center} keyword but reduced to a single number: 0.0
+starts the fading at the side of the box nearest to the camera, 0.5 at
+its middle, and 1.0 at its far side; values outside this range are
+allowed.  Objects in front of the start position are not faded, which
+avoids darkening most of the scene when the rendered objects span a
+large depth range.  The fading always ends at the most distant
+rendered object.  Unlike the {ssao} keyword, depth cueing adds no
+significant computational cost, and both can be combined.
+
+The pixels that a transparent object leaves out are not faded, since
+they carry no depth.  A distant transparent object therefore appears
+somewhat less faded than an opaque one at the same distance.  This is
+only noticeable with a fog color that differs markedly from the
+background color.
+
+The {defocus} keyword turns on/off defocusing of distant objects.  If
+{yes} is set, objects are blurred the more distant from the viewer
+they are, as if the camera were focused on the front of the scene.
+This draws the attention to the objects in front and is often more
+effective for that purpose than the {depthcue} keyword, since it
+leaves the colors of the distant objects untouched.  Both can also be
+combined.
+
+The {bfactor} value scales the strength of the blur: with {bfactor} =
+1.0 the most distant objects are blurred over a radius of 1 percent of
+the image height, smaller values reduce the blur accordingly.
+Blurring over much more than the size of the rendered particles turns
+them into a uniform haze, which looks like fog rather than like a
+photograph taken with a shallow depth of field, so moderate values
+usually give the best result.  The {start} setting determines where
+the blurring begins and uses the same convention as the {start}
+setting of the {depthcue} keyword: with {auto} it begins at the
+nearest rendered object, so the front of the scene stays sharp, while
+a numeric value positions the start as a fraction of the simulation
+box projected onto the view direction, with 0.0 at the side of the box
+nearest to the camera, 0.5 at its middle, and 1.0 at its far side.
+Objects in front of the start position are not blurred, and the blur
+always reaches its maximum at the most distant rendered object.
+
+Only objects behind the start position are blurred; unlike a camera
+lens this does not blur objects in front of the plane of focus.  The
+cost of the blurring is much smaller than that of the {ssao} keyword
+and grows with the {bfactor} value, since wider blurs need more
+samples per pixel.  As with the {ssao} keyword, the result does not
+depend on the number of MPI ranks, so images of an unchanged scene are
+exactly reproducible.
+
+Defocusing combines well with the transparency options of the
+"dump_modify"_dump_modify.html command: the pixels a transparent object
+leaves out are treated as maximally blurred background and are covered
+over by their drawn neighbors, which turns a distant transparent object
+into a genuine translucent haze.
+
+The {outline} keyword turns on/off drawing outlines where the distance from the
+viewer jumps, i.e. along the visible edges of particles and other objects in
+front of the background or in front of more distant objects.  This produces a
+flat, illustration-like appearance similar to hand-drawn graphics, especially
+when combined with reduced shininess or increased ambient lighting.  The
+{width} value sets the width of the outlines in pixels of the final image; the
+{color} value sets their color, e.g. black.
+
+IMPORTANT NOTE: The {outline} keyword should not be combined with the
+transparency options of the "dump_modify"_dump_modify.html command.
+Outlines are drawn where the distance to the viewer jumps, and every
+pixel left out by the dither pattern of a transparent object looks like
+such a jump, so a transparent object is outlined pixel by pixel and is
+filled almost entirely with the outline color.
+
 :line
 
 A series of JPEG, PNG, or PPM images can be converted into a movie
@@ -573,7 +699,7 @@ cat snap.*.jpg | ffmpeg -y -f image2pipe -c:v mjpeg -i - -b:v 2000k movie.m4v
 cat snap.*.ppm | ffmpeg -y -f image2pipe -c:v ppm -i - -b:v 2400k movie.avi :pre
 
 Frontends for FFmpeg exist for multiple platforms. For more
-information see the "FFmpeg homepage"_http://www.ffmpeg.org/
+information see the "FFmpeg homepage"_https://ffmpeg.org/
 
 :ule
 
@@ -594,7 +720,7 @@ variety of file formats and decoders. :l
 % ffplay bar.avi :pre
 
 c) Use the "Pizza.py"_https://lammps.github.io/pizza
-"animate tool"_https://lammps.gitbug.io/pizza/doc/animate.html,
+"animate tool"_https://lammps.github.io/pizza/doc/animate.html,
 which works directly on a series of image files. :l
 
 a = animate("foo*.jpg") :pre
@@ -620,7 +746,7 @@ building SPARTA.  The FFmpeg executable must also be available on the
 machine where SPARTA is being run.  Typically it's name is lowercase,
 i.e. ffmpeg.
 
-See "Section 2.2.2"_Section_start.html#start_2_2 section of the
+See "Section 2.2.2"_Section_start.html#start_2_2_2 section of the
 documentation for details on how to compile with optional switches.
 
 Note that since FFmpeg is run as an external program via a pipe,
@@ -666,10 +792,14 @@ center = s 0.5 0.5 0.5
 up = 0 0 1 (for 3d)
 up = 0 1 0 (for 2d)
 zoom = 1.0
-persp = 0.0
 box = yes 0.02
+subbox = no 0.02
 gline = no 0.0
 sline = no 0.0
 axes = no 0.0 0.0
 shiny = 1.0
-ssao = no :ul
+ssao = no
+fsaa = no
+depthcue = no
+defocus = no
+outline = no :ul

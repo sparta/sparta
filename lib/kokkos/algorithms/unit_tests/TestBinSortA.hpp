@@ -1,33 +1,23 @@
-//@HEADER
-// ************************************************************************
-//
-//                        Kokkos v. 4.0
-//       Copyright (2022) National Technology & Engineering
-//               Solutions of Sandia, LLC (NTESS).
-//
-// Under the terms of Contract DE-NA0003525 with NTESS,
-// the U.S. Government retains certain rights in this software.
-//
-// Part of Kokkos, under the Apache License v2.0 with LLVM Exceptions.
-// See https://kokkos.org/LICENSE for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-//
-//@HEADER
+// SPDX-FileCopyrightText: Copyright Contributors to the Kokkos project
 
 #ifndef KOKKOS_ALGORITHMS_UNITTESTS_TEST_BINSORTA_HPP
 #define KOKKOS_ALGORITHMS_UNITTESTS_TEST_BINSORTA_HPP
 
 #include <gtest/gtest.h>
-#include <Kokkos_Core.hpp>
 #include <Kokkos_Macros.hpp>
 #ifdef KOKKOS_ENABLE_EXPERIMENTAL_CXX20_MODULES
+import kokkos.core;
 import kokkos.random;
 import kokkos.sort;
 #else
+#include <Kokkos_Core.hpp>
 #include <Kokkos_Random.hpp>
 #include <Kokkos_Sort.hpp>
 #endif
+
 #include <random>
+#include <algorithm>
 
 namespace Test {
 namespace BinSortSetA {
@@ -214,8 +204,7 @@ void test_sort_integer_overflow() {
 
   // array with two extrema in reverse order to expose integer overflow bug in
   // bin calculation
-  T a[2]  = {Kokkos::Experimental::finite_max<T>::value,
-             Kokkos::Experimental::finite_min<T>::value};
+  T a[2]  = {Kokkos::finite_max<T>::value, Kokkos::finite_min<T>::value};
   auto vd = Kokkos::create_mirror_view_and_copy(
       ExecutionSpace(), Kokkos::View<T[2], Kokkos::HostSpace>(a));
   Kokkos::sort(vd);
@@ -227,10 +216,6 @@ void test_sort_integer_overflow() {
 }  // namespace BinSortSetA
 
 TEST(TEST_CATEGORY, BinSortGenericTests) {
-  // FIXME_OPENMPTARGET - causes runtime failure with CrayClang compiler
-#if defined(KOKKOS_COMPILER_CRAY_LLVM) && defined(KOKKOS_ENABLE_OPENMPTARGET)
-  GTEST_SKIP() << "known to fail with OpenMPTarget+Cray LLVM";
-#endif
   using ExecutionSpace = TEST_EXECSPACE;
   using key_type       = unsigned;
   constexpr int N      = 171;

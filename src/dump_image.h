@@ -42,11 +42,16 @@ class DumpImage : public DumpParticle {
   int cxvar,cyvar,czvar;           // index to box center vars
   char *upxstr,*upystr,*upzstr;    // view up vector variables
   int upxvar,upyvar,upzvar;        // index to up vector vars
-  char *zoomstr,*perspstr;         // view zoom and perspective variables
-  int zoomvar,perspvar;            // index to zoom,persp vars
+  char *zoomstr;                   // view zoom variable
+  int zoomvar;                     // index to zoom var
   int boxflag,axesflag;            // 0/1 for draw box and axes
   double boxdiam,axeslen,axesdiam; // params for drawing box and axes
+  int subboxflag;                  // 0/1 for draw per-proc RCB sub-boxes
+  double subboxdiam;               // params for drawing sub-boxes
+  double *subboxcolor;
   double *boxcolor;                // colors for drawing box/grid/surf lines
+  double boxtrans,subboxtrans;     // opacity of box and sub-box lines
+  double axestrans;                // opacity of the XYZ axes
 
   int viewflag;                    // overall view is static or dynamic
 
@@ -59,6 +64,7 @@ class DumpImage : public DumpParticle {
 
   double **pcolortype;             // per-type particle colors
   double *pdiamtype;               // per-type particle diameters
+  double *ptranstype;              // per-type particle opacities
   double *pcolorproc;              // particle color for me
 
   // grid drawing
@@ -72,6 +78,7 @@ class DumpImage : public DumpParticle {
   int grid_groupbit;               // bit mask for dump_modify gridgroup
 
   double *gcolorproc;              // grid color for me
+  double gtrans;                   // opacity of grid cells and cutting planes
 
   // grid plane drawing
 
@@ -92,6 +99,7 @@ class DumpImage : public DumpParticle {
   int glineflag;                   // 0/1 for draw grid cell lines
   double glinediam;                // diameter of lines
   double *glinecolor;              // color of lines
+  double glinetrans;               // opacity of grid cell/plane outlines
 
   // surf drawing
 
@@ -106,12 +114,14 @@ class DumpImage : public DumpParticle {
   int surf_groupbit;               // bit mask for dump_modify surfgroup
 
   double *scolorproc;              // surf color for me
+  double strans;                   // opacity of surf elements
 
   // surf line drawing
 
   int slineflag;                   // 0/1 for draw surf lines
   double slinediam;                // diameter of lines
   double *slinecolor;              // color of lines
+  double slinetrans;               // opacity of surf element outlines
 
   // methods
 
@@ -156,10 +166,6 @@ E: Invalid dump image theta value
 
 Theta must be between 0.0 and 180.0 inclusive.
 
-E: Dump image persp option is not yet supported
-
-Self-explanatory.
-
 E: Dump image cannot use grid and gridx/gridy/gridz
 
 Can only use grid option or one or more of grid x,y,z options
@@ -198,14 +204,6 @@ E: Variable name for dump image zoom does not exist
 Self-explanatory.
 
 E: Variable for dump image zoom is invalid style
-
-Must be an equal-style variable.
-
-E: Variable name for dump image persp does not exist
-
-Self-explanatory.
-
-E: Variable for dump image persp is invalid style
 
 Must be an equal-style variable.
 
@@ -263,9 +261,10 @@ E: Invalid dump image zoom value
 
 Zoom value must be > 0.0.
 
-E: Invalid dump image persp value
+E: Invalid color in dump image command
 
-Persp value must be >= 0.0.
+The specified color name was not in the list of recognized colors.
+See the dump image doc page.
 
 E: Invalid color in dump_modify command
 

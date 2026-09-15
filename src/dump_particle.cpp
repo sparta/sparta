@@ -1263,14 +1263,18 @@ void DumpParticle::pack_custom(int n)
     if (particle->esize[index] == 0) {
       int *vector = particle->eivec[particle->ewhich[index]];
       for (int i = 0; i < nchoose; i++) {
-        buf[n] = vector[clist[i]];
+        // store bit-punned (ubuf), NOT numeric: write_text/write_binary decode
+        // INT columns via ubuf(buf[m]).i. Numeric storage made every INT
+        // custom attribute print as 0 (low 32 bits of IEEE-754 double).
+        buf[n] = ubuf(vector[clist[i]]).d;
         n += size_one;
       }
     } else {
       int icol = argindex[n]-1;
       int **array = particle->eiarray[particle->ewhich[index]];
       for (int i = 0; i < nchoose; i++) {
-        buf[n] = array[clist[i]][icol];
+        // see comment above: bit-punned encoding required for INT decode
+        buf[n] = ubuf(array[clist[i]][icol]).d;
         n += size_one;
       }
     }
@@ -1337,13 +1341,14 @@ void DumpParticle::pack_cellid(int n)
   Particle::OnePart *particles = particle->particles;
   Grid::ChildCell *cells = grid->cells;
 
-  // NOTE: cellint (bigint) won't fit in double in some cases
-
   int icell;
 
   for (int i = 0; i < nchoose; i++) {
     icell = particles[clist[i]].icell;
-    buf[n] = cells[icell].id;
+    // store bit-punned (ubuf), NOT numeric: write_text/write_binary decode
+    // the cellid column via ubuf(buf[m]).i (vtype INT/BIGINT). Numeric storage
+    // printed 0/garbage and could not hold a cellint that overflows a double.
+    buf[n] = ubuf(cells[icell].id).d;
     n += size_one;
   }
 }

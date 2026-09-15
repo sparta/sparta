@@ -320,6 +320,12 @@ void SurfKokkos::reallocate_custom()
   k_eiarray.sync_device();
   k_edvec.sync_device();
   k_edarray.sync_device();
+
+  // record the new allocated length, as Surf::reallocate_custom() does
+  // without this size_custom stays 0 for the whole run, so the
+  //   "nnew == nold" short circuit above never matches reality
+
+  size_custom = nown;
 }
 
 /* ----------------------------------------------------------------------
@@ -371,6 +377,7 @@ void SurfKokkos::remove_custom(int index)
   } else if (etype[index] == DOUBLE) {
     if (esize[index] == 0) {
       memoryKK->destroy_kokkos(k_edvec.view_host()[ewhich[index]].k_view,edvec[ewhich[index]]);
+      memoryKK->destroy_kokkos(k_edvec_local.view_host()[ewhich[index]].k_view,edvec_local[ewhich[index]]);
       ncustom_dvec--;
       for (int i = ewhich[index]; i < ncustom_dvec; i++) {
         icustom_dvec[i] = icustom_dvec[i+1];

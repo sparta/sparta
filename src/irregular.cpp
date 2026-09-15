@@ -59,6 +59,8 @@ Irregular::Irregular(SPARTA *sparta) : Pointers(sparta)
   memory->create(work1,nprocs,"irregular:work1");
   memory->create(work2,nprocs,"irregular:work2");
 
+  datum_nbytes = -1;
+
   indexmax = 0;
   index_send = NULL;
   indexselfmax = 0;
@@ -92,6 +94,8 @@ Irregular::~Irregular()
   memory->destroy(index_self);
   memory->destroy(offset_send);
   memory->destroy(buf);
+
+  if (datum_nbytes >= 0) MPI_Type_free(&datum_type);
 }
 
 /* ----------------------------------------------------------------------
@@ -604,12 +608,16 @@ int Irregular::create_data_variable(int n, int *proclist, int *sizes,
 
   bigint offset = 0;
   for (i = 0; i < n; i++) {
+    if (sizes[i] < 0)
+      error->one(FLERR,"Irregular comm datum size overflowed a 32-bit int");
     offset_send[i] = offset;
     offset += sizes[i];
   }
 
   // work1 = # of bytes to send to each proc, including self
   // check for integer overflow
+  // self datums are exempt: they are copied with memcpy, not sent via MPI,
+  //   so their total may exceed 2 GB and is kept in bigint size_self
 
   bigint *work1_big;
   memory->create(work1_big,nprocs,"irregular:work1_big");
@@ -617,13 +625,20 @@ int Irregular::create_data_variable(int n, int *proclist, int *sizes,
   for (i = 0; i < nprocs; i++) work1_big[i] = 0;
   for (i = 0; i < n; i++) work1_big[proclist[i]] += sizes[i];
 
+  size_self = work1_big[me];
+
+  // self datums are exempt from the 2 GB check (they are memcpy'd, not sent),
+  //   so skip me entirely rather than narrowing a possibly out-of-range value
+
   for (i = 0; i < nprocs; i++) {
-    if (i != me && work1_big[i] > MAXSMALLINT)
+    if (i == me) continue;
+    if (work1_big[i] > MAXSMALLINT)
       error->one(FLERR,"Irregular comm send buffer exceeds 2 GB, try using"
                        "'global mem/limit' command");
 
     work1[i] = work1_big[i];
   }
+  work1[me] = 0;
 
   memory->destroy(work1_big);
 
@@ -637,7 +652,7 @@ int Irregular::create_data_variable(int n, int *proclist, int *sizes,
   for (i = 0; i < nprocs; i++) {
     iproc++;
     if (iproc == nprocs) iproc = 0;
-    if (iproc == me) size_self = work1[iproc];
+    if (iproc == me) continue;         // size_self already set above
     else if (work1[iproc] > 0) size_send[isend++] = work1[iproc];
   }
 
@@ -770,9 +785,35 @@ int Irregular::augment_data_uniform(int n, int *proclist)
    recvbuf = received datums, including copied from me
 ------------------------------------------------------------------------- */
 
+/* ----------------------------------------------------------------------
+   return a committed MPI datatype for one uniform datum of nbytes
+   cached in the Irregular instance and rebuilt only when nbytes changes,
+     so the per-timestep exchange does not create/commit/free a type each call
+   freed in the destructor
+------------------------------------------------------------------------- */
+
+MPI_Datatype Irregular::uniform_datum_type(int nbytes)
+{
+  if (datum_nbytes != nbytes) {
+    if (datum_nbytes >= 0) MPI_Type_free(&datum_type);
+    MPI_Type_contiguous(nbytes,MPI_CHAR,&datum_type);
+    MPI_Type_commit(&datum_type);
+    datum_nbytes = nbytes;
+  }
+  return datum_type;
+}
+
 void Irregular::exchange_uniform(char *sendbuf, int nbytes, char *recvbuf)
 {
   int i,n,m,count;
+
+  // datum_type = MPI datatype for one datum of nbytes
+  // all message sizes become datum counts < 2^31,
+  //   so the int count arg of MPI calls cannot overflow
+  //   even when a message byte count exceeds 2 GB
+  // cached across calls: this runs every timestep from migrate_particles
+
+  MPI_Datatype datum_type = uniform_datum_type(nbytes);
 
   // enable send/recv buf to be larger than 2 GB
 
@@ -782,21 +823,19 @@ void Irregular::exchange_uniform(char *sendbuf, int nbytes, char *recvbuf)
 
   offset = (bigint)num_self*nbytes;
   for (int irecv = 0; irecv < nrecv; irecv++) {
-    MPI_Irecv(&recvbuf[offset],num_recv[irecv]*nbytes,MPI_CHAR,
+    MPI_Irecv(&recvbuf[offset],num_recv[irecv],datum_type,
               proc_recv[irecv],0,world,&request[irecv]);
     offset += (bigint)num_recv[irecv]*nbytes;
   }
 
   // reallocate buf for largest send if necessary
+  // must use smalloc since buf can be larger than 2 GB
 
-  if ((bigint)sendmax*nbytes > MAXSMALLINT)
-    error->one(FLERR,"Irregular comm send buffer exceeds 2 GB, try using"
-                     "'global mem/limit' command");
-
-  if (sendmax*nbytes > bufmax) {
-    memory->destroy(buf);
-    bufmax = sendmax*nbytes;
-    memory->create(buf,bufmax,"irregular:buf");
+  bigint sendbytes = (bigint)sendmax*nbytes;
+  if (sendbytes > bufmax) {
+    memory->sfree(buf);
+    bufmax = sendbytes;
+    buf = (char *) memory->smalloc(bufmax,"irregular:buf");
   }
 
   // send each message
@@ -810,7 +849,7 @@ void Irregular::exchange_uniform(char *sendbuf, int nbytes, char *recvbuf)
       m = index_send[n++];
       memcpy(&buf[(bigint)i*nbytes],&sendbuf[(bigint)m*nbytes],nbytes);
     }
-    MPI_Send(buf,count*nbytes,MPI_CHAR,proc_send[isend],0,world);
+    MPI_Send(buf,count,datum_type,proc_send[isend],0,world);
   }
 
   // copy datums to self, put at beginning of recvbuf
@@ -859,11 +898,13 @@ void Irregular::exchange_variable(char *sendbuf, int *nbytes, char *recvbuf)
   }
 
   // reallocate buf for largest send if necessary
+  // sendmaxbytes is guaranteed < 2 GB by create_data_variable(),
+  //   but use smalloc since bufmax may be > 2 GB from exchange_uniform()
 
   if (sendmaxbytes > bufmax) {
-    memory->destroy(buf);
+    memory->sfree(buf);
     bufmax = sendmaxbytes;
-    memory->create(buf,bufmax,"irregular:buf");
+    buf = (char *) memory->smalloc(bufmax,"irregular:buf");
   }
 
   // send each message

@@ -22,7 +22,7 @@ together.
 <LI>11.6 <A HREF = "#py_6">Example Python scripts that use SPARTA</A>
 <LI>11.7 <A HREF = "#py_7">Calling Python from SPARTA</A> 
 </UL>
-<P>If you are not familiar with <A HREF = "<https://www.python.org>">Python</A>, it is
+<P>If you are not familiar with <A HREF = "https://www.python.org">Python</A>, it is
 a powerful scripting and programming language which can do almost
 everything that compiled languages like C, C++, or Fortran can do in
 fewer lines of code. It also comes with a large collection of add-on
@@ -180,10 +180,10 @@ as a library and allow MPI functions to be called from Python.
 <P>These include
 </P>
 <UL><LI><A HREF = "http://pympi.sourceforge.net/">pyMPI</A>
-<LI><A HREF = "http://code.google.com/p/maroonmpi/">maroonmpi</A>
-<LI><A HREF = "http://code.google.com/p/mpi4py/">mpi4py</A>
-<LI><A HREF = "http://nbcr.sdsc.edu/forum/viewtopic.php?t=89&sid=c997fefc3933bd66204875b436940f16">myMPI</A>
-<LI><A HREF = "http://code.google.com/p/pypar">Pypar</A> 
+<LI><A HREF = "https://code.google.com/archive/p/maroonmpi">maroonmpi</A>
+<LI><A HREF = "https://github.com/mpi4py/mpi4py">mpi4py</A>
+<LI>myMPI
+<LI><A HREF = "https://code.google.com/archive/p/pypar">Pypar</A> 
 </UL>
 <P>All of these except pyMPI work by wrapping the MPI library and
 exposing (some portion of) its interface to your Python script.  This
@@ -202,7 +202,7 @@ with their installation.  It's not clear if some of the packages are
 still being actively developed and supported.
 </P>
 <P>The one I recommend, since I have successfully used it with SPARTA, is
-Pypar.  Pypar requires the ubiquitous <A HREF = "http://numpy.scipy.org">Numpy
+Pypar.  Pypar requires the ubiquitous <A HREF = "https://numpy.org">Numpy
 package</A> be installed in your Python.  After
 launching python, type
 </P>
@@ -324,7 +324,7 @@ variables, through the Python interface.
 <H5><B>Test SPARTA and Python in parallel:</B> 
 </H5>
 <P>To run SPARTA in parallel, assuming you have installed the
-<A HREF = "http://datamining.anu.edu.au/~ole/pypar">Pypar</A> package as discussed
+<A HREF = "https://code.google.com/archive/p/pypar">Pypar</A> package as discussed
 above, create a test.py file containing these lines:
 </P>
 <PRE>import pypar
@@ -521,7 +521,7 @@ code directly from an input script:
 <P>There are SPARTA input script commands which can invoke Python code directly.
 </P>
 <UL><LI><A HREF = "python.html">python</A>
-<LI><A HREF = "varaible.html">python-style variables</A>
+<LI><A HREF = "variable.html">python-style variables</A>
 <LI><A HREF = "variable.html">equal-style and grid-style variables with formulas containing Python function wrappers</A> 
 </UL>
 <P>The <A HREF = "python.html">python</A> command can be used to define and execute a

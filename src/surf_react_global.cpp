@@ -24,6 +24,8 @@
 
 using namespace SPARTA_NS;
 
+#define SMALL 1.0e-6              // roundoff tolerance for summed-probability check
+
 /* ---------------------------------------------------------------------- */
 
 SurfReactGlobal::SurfReactGlobal(SPARTA *sparta, int narg, char **arg) :
@@ -34,7 +36,7 @@ SurfReactGlobal::SurfReactGlobal(SPARTA *sparta, int narg, char **arg) :
   prob_destroy = input->numeric(FLERR,arg[2]);
   prob_create = input->numeric(FLERR,arg[3]);
 
-  if (prob_destroy + prob_create > 1.0)
+  if (prob_destroy + prob_create > 1.0 + SMALL)
     error->all(FLERR,"Illegal surf_react global command");
 
   // setup the reaction tallies
@@ -42,10 +44,10 @@ SurfReactGlobal::SurfReactGlobal(SPARTA *sparta, int narg, char **arg) :
   nsingle = ntotal = 0;
 
   nlist = 2;
-  tally_single = new int[nlist];
-  tally_total = new int[nlist];
-  tally_single_all = new int[nlist];
-  tally_total_all = new int[nlist];
+  tally_single = new bigint[nlist];
+  tally_total = new bigint[nlist];
+  tally_single_all = new bigint[nlist];
+  tally_total_all = new bigint[nlist];
 
   size_vector = 2 + 2*nlist;
 

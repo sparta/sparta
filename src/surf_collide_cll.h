@@ -29,14 +29,14 @@ namespace SPARTA_NS {
 class SurfCollideCLL : public SurfCollide {
  public:
   SurfCollideCLL(class SPARTA *, int, char **);
-  ~SurfCollideCLL();
+  SurfCollideCLL(class SPARTA *sparta) : SurfCollide(sparta) {} // needed for Kokkos
   void init();
   Particle::OnePart *collide(Particle::OnePart *&, double &,
                              int, double *, int, int &);
   void wrapper(Particle::OnePart *, double *, int *, double*);
   void flags_and_coeffs(int *, double *);
 
- private:
+ protected:
   double acc_n,acc_t,acc_rot,acc_vib;   // surface accomodation coeffs
   double vx,vy,vz;                      // translational velocity of surface
   double wx,wy,wz;                      // angular velocity of surface
@@ -50,7 +50,6 @@ class SurfCollideCLL : public SurfCollide {
                              // with partial/fully diffuse scattering
 
   double vstream[3];
-  class RanKnuth *random;     // RNG for particle reflection
 
   void cll(Particle::OnePart *, double *);
 };

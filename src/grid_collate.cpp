@@ -146,7 +146,7 @@ void Grid::collate_array_implicit(int nrow, int ncol, cellint *ids,
 
   // zero output values for owned cells
 
-  if (nlocal) memset(&out[0][0],0,nlocal*ncol*sizeof(double));
+  if (nlocal) memset(&out[0][0],0,(bigint) nlocal*ncol*sizeof(double));
 
   // if I own grid cell, sum in values to out values directly
   // else nsend = # of tallies to contribute to rendezvous
@@ -171,9 +171,11 @@ void Grid::collate_array_implicit(int nrow, int ncol, cellint *ids,
   int *proclist;
   memory->create(proclist,nsend,"grid:proclist");
   double *in_rvous;
+  if ((bigint) (1+ncol)*nsend > MAXSMALLINT)
+    error->one(FLERR,"Grid collate buffer exceeds 2 GB");
   memory->create(in_rvous,(1+ncol)*nsend,"grid:in_rvous");
 
-  int m = 0;
+  bigint m = 0;
   nsend = 0;
   for (i = 0; i < nrow; i++) {
     icell = (*hash)[ids[i]];
@@ -251,7 +253,7 @@ void Grid::owned_to_ghost_array(int nrequest, int ncol, cellint *ghostIDs,
 
   // zero output values for ghost cells
 
-  if (out) memset(&out[nlocal][0],0,nghost*ncol*sizeof(double));
+  if (out) memset(&out[nlocal][0],0,(bigint) nghost*ncol*sizeof(double));
 
   // send ghost cell IDs to owning procs as request for data
   // datum = sending proc, ghost cell ID
@@ -261,7 +263,7 @@ void Grid::owned_to_ghost_array(int nrequest, int ncol, cellint *ghostIDs,
   double *in_rvous;
   memory->create(in_rvous,2*nrequest,"grid:in_rvous");
 
-  int m = 0;
+  bigint m = 0;
   int nsend = 0;
   for (i = 0; i < nrequest; i++) {
     icell = (*hash)[ghostIDs[i]];
@@ -320,7 +322,8 @@ int Grid::rendezvous_owned_to_ghost(int n, char *inbuf,
                                     int &flag, int *&proclist, char *&outbuf,
                                     void *ptr)
 {
-  int i,j,k,m,proc;
+  int i,j,proc;
+  bigint k,m;
   cellint cellID;
 
   Grid *gptr = (Grid *) ptr;
@@ -333,6 +336,8 @@ int Grid::rendezvous_owned_to_ghost(int n, char *inbuf,
 
   memory->create(proclist,n,"grid:proclist");
   double *out;
+  if ((bigint) n*(ncol+1) > MAXSMALLINT)
+    gptr->error->one(FLERR,"Grid collate buffer exceeds 2 GB");
   memory->create(out,n*(ncol+1),"grid:out");
 
   // loop over (proc,cellID) datums in inbuf

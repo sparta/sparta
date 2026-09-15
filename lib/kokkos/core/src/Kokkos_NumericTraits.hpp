@@ -1,18 +1,5 @@
-//@HEADER
-// ************************************************************************
-//
-//                        Kokkos v. 4.0
-//       Copyright (2022) National Technology & Engineering
-//               Solutions of Sandia, LLC (NTESS).
-//
-// Under the terms of Contract DE-NA0003525 with NTESS,
-// the U.S. Government retains certain rights in this software.
-//
-// Part of Kokkos, under the Apache License v2.0 with LLVM Exceptions.
-// See https://kokkos.org/LICENSE for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-//
-//@HEADER
+// SPDX-FileCopyrightText: Copyright Contributors to the Kokkos project
 
 #ifndef KOKKOS_NUMERIC_TRAITS_HPP
 #define KOKKOS_NUMERIC_TRAITS_HPP
@@ -22,13 +9,11 @@
 #endif
 
 #include <Kokkos_Macros.hpp>
-#ifdef KOKKOS_ENABLE_DEPRECATED_CODE_4
-#include <Kokkos_ReductionIdentity.hpp>
-#endif
+
 #include <type_traits>
 #include <limits>
 
-namespace Kokkos::Experimental {
+namespace Kokkos {
 
 #define KOKKOS_IMPL_DEFINE_TRAIT(TRAIT, NUMERIC_LIMITS_MEMBER, CONSTRAINT)  \
   namespace Impl {                                                          \
@@ -43,7 +28,11 @@ namespace Kokkos::Experimental {
   template <class T>                                                        \
   struct TRAIT : Impl::TRAIT##_helper<T> {};                                \
   template <class T>                                                        \
-  inline constexpr auto TRAIT##_v = TRAIT<T>::value;
+  inline constexpr auto TRAIT##_v = TRAIT<T>::value;                        \
+  namespace Experimental {                                                  \
+  using Kokkos::TRAIT;                                                      \
+  using Kokkos::TRAIT##_v;                                                  \
+  }
 
 // clang-format off
 // Numeric distinguished value traits
@@ -70,7 +59,7 @@ KOKKOS_IMPL_DEFINE_TRAIT(max_exponent10, max_exponent10,  floating_point)
 
 #undef KOKKOS_IMPL_DEFINE_TRAIT
 
-}  // namespace Kokkos::Experimental
+}  // namespace Kokkos
 
 #ifdef KOKKOS_IMPL_PUBLIC_INCLUDE_NOTDEFINED_NUMERIC_TRAITS
 #undef KOKKOS_IMPL_PUBLIC_INCLUDE

@@ -30,7 +30,10 @@ enum{DISSOCIATION,EXCHANGE,IONIZATION,RECOMBINATION};   // other files
 /* ---------------------------------------------------------------------- */
 
 ReactTCE::ReactTCE(SPARTA *sparta, int narg, char **arg) :
-  ReactBird(sparta, narg, arg) {}
+  ReactBird(sparta, narg, arg)
+{
+  prob_warn_flag = 0;
+}
 
 /* ---------------------------------------------------------------------- */
 
@@ -38,6 +41,8 @@ void ReactTCE::init()
 {
   if (!collide || strcmp(collide->style,"vss") != 0)
     error->all(FLERR,"React tce can only be used with collide vss");
+
+  prob_warn_flag = 0;
 
   ReactBird::init();
 }
@@ -179,12 +184,28 @@ int ReactTCE::attempt(Particle::OnePart *ip, Particle::OnePart *jp,
         break;
       }
 
-    if (react_prob < 0) error->warning(FLERR,"Negative reaction probability");
-    else if (react_prob > 1) error->warning(FLERR,"Reaction probability greater than 1");
-
     default:
       error->one(FLERR,"Unknown outcome in reaction");
       break;
+    }
+
+    // sum of reaction probabilities should be < 1 for a valid TCE scheme,
+    //   else reaction rates are biased by clipping
+    // warn only once per run to avoid flooding output
+
+    if (!prob_warn_flag) {
+      if (react_prob < 0.0) {
+        prob_warn_flag = 1;
+        error->warning(FLERR,"Negative TCE reaction probability, "
+                       "check reaction file coefficients "
+                       "(further warnings suppressed)");
+      } else if (react_prob > 1.0) {
+        prob_warn_flag = 1;
+        error->warning(FLERR,"TCE reaction probability exceeded 1.0, "
+                       "chemistry may be under-resolved, "
+                       "consider reducing timestep or fnum "
+                       "(further warnings suppressed)");
+      }
     }
 
     // test against random number to see if this reaction occurs
@@ -236,6 +257,8 @@ int ReactTCE::attempt(Particle::OnePart *ip, Particle::OnePart *jp,
 
         return list[i] + 1;
       }
+
+      break;
     }
   }
 
@@ -253,7 +276,7 @@ double ReactTCE::bird_Evib(int nmode, double Tvib,
   // Comutes f for Newton's search method outlined in newtonTvib()
 
   double f = -Evib;
-  double kb = 1.38064852e-23;
+  double kb = update->boltz;
 
   for (int i = 0; i < nmode; i++) {
     const double vti = vibtemp[i];
@@ -270,7 +293,7 @@ double ReactTCE::bird_dEvib(int nmode, double Tvib, double vibtemp[])
   // Comutes df for Newton's search method
 
   double df = 0.0;
-  double kb = 1.38064852e-23;
+  double kb = update->boltz;
 
   for (int i = 0; i < nmode; i++) {
     const double vti = vibtemp[i];

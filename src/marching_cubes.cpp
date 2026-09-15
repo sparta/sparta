@@ -51,6 +51,18 @@ MarchingCubes::MarchingCubes(SPARTA *sparta, int ggroup_caller,
 
   ggroup = ggroup_caller;
   thresh = thresh_caller;
+
+  nfacetri = NULL;
+  facetris = NULL;
+  maxfacecell = 0;
+}
+
+/* ---------------------------------------------------------------------- */
+
+MarchingCubes::~MarchingCubes()
+{
+  memory->destroy(nfacetri);
+  memory->destroy(facetris);
 }
 
 /* ----------------------------------------------------------------------
@@ -579,10 +591,18 @@ void MarchingCubes::cleanup()
 
   // count # of tris on each face of every cell I own
 
-  int **nfacetri;
-  int ***facetris;
-  memory->create(nfacetri,nglocal,6,"readisurf:nfacetri");
-  memory->create(facetris,nglocal,6,2,"readisurf:facetris");
+  // scratch for the per face triangle lists
+  // grown and kept rather than created and destroyed on every call: ablation
+  //   re-runs this every time the isosurface is rebuilt, and for N grid cells
+  //   it is 18N ints allocated and freed each time
+
+  if (nglocal > maxfacecell) {
+    maxfacecell = nglocal;
+    memory->destroy(nfacetri);
+    memory->destroy(facetris);
+    memory->create(nfacetri,maxfacecell,6,"marchingcubes:nfacetri");
+    memory->create(facetris,maxfacecell,6,2,"marchingcubes:facetris");
+  }
 
   for (icell = 0; icell < nglocal; icell++) {
     nfacetri[icell][0] = nfacetri[icell][1] = nfacetri[icell][2] =
@@ -900,8 +920,6 @@ void MarchingCubes::cleanup()
   }
 
   memory->sfree(bufrecv);
-  memory->destroy(nfacetri);
-  memory->destroy(facetris);
 
   // compress Surf::tris list to remove deleted tris
   // must sort dellist, so as to compress tris in DESCENDING index order

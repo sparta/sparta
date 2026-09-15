@@ -63,11 +63,14 @@ void WriteISurf::command(int narg, char **arg)
   char *ptr;
   int n = strlen(arg[4]) + 16;
   char *file = new char[n];
+  char *arg4_copy = new char[strlen(arg[4]) + 1];
+  strcpy(arg4_copy, arg[4]);
 
-  if ((ptr = strchr(arg[4],'*'))) {
+  if ((ptr = strchr(arg4_copy,'*'))) {
     *ptr = '\0';
-    sprintf(file,"%s" BIGINT_FORMAT "%s",arg[4],update->ntimestep,ptr+1);
-  } else strcpy(file,arg[4]);
+    sprintf(file,"%s" BIGINT_FORMAT "%s",arg4_copy,update->ntimestep,ptr+1);
+  } else strcpy(file,arg4_copy);
+  delete [] arg4_copy;
 
   // ablation fix ID
 
@@ -124,7 +127,7 @@ void WriteISurf::command(int narg, char **arg)
     fp = fopen(file,"wb");
     if (!fp) {
       char str[128];
-      sprintf(str,"Cannot open grid corner point file %s",file);
+      snprintf(str,128,"Cannot open grid corner point file %s",file);
       error->one(FLERR,str);
     }
   }
@@ -160,6 +163,8 @@ void WriteISurf::command(int narg, char **arg)
               100.0*(time2-time1)/time_total,100.0*(time3-time2)/time_total);
     }
   }
+
+  delete [] file;
 }
 
 /* ----------------------------------------------------------------------
@@ -187,6 +192,15 @@ void WriteISurf::collect_values()
 
   int ix,iy,iz,index;
   double **array_grid = ablate->array_grid;
+
+  // a multivalue fix ablate (multiple yes / create_isurf multi) stores its
+  // corner state in mvalues, not cvalues, so array_grid is NULL.  isurf files
+  // are single-valued, so error cleanly instead of dereferencing NULL below.
+
+  if (array_grid == NULL)
+    error->all(FLERR,"Write_isurf does not support a multivalue fix ablate "
+               "(multiple yes); its corner state cannot be written to an "
+               "isurf file");
 
   for (int icell = 0; icell < nglocal; icell++) {
     if (!(cinfo[icell].mask & groupbit)) continue;

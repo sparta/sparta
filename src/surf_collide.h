@@ -28,11 +28,15 @@ class SurfCollide : protected Pointers {
   int allowreact;           // 1 if allows for surface reactions
   int dynamicflag;          // 1 if any param is dynamically updated
   int transparent;          // 1 if transparent collision model
+  int mirror_flag;          // 1 if this model does nothing but reflect the
+                            //   velocity about the surface normal, so a caller
+                            //   with an axis-aligned normal can negate one
+                            //   velocity component instead of calling collide()
   int vector_flag;          // 0/1 if compute_vector() function exists
   int size_vector;          // length of global vector
   int kokkosable;           // 1 if Kokkos version
-  int copy,uncopy,copymode; // used by Kokkos, prevent deallocation of
-                            //  base class when child copy is destroyed
+  int copy,copymode; // used by Kokkos, prevent deallocation of
+                     //  base class when child copy is destroyed
   SurfCollide(class SPARTA *, int, char **);
   SurfCollide(class SPARTA *sparta) : Pointers(sparta) {} // needed for Kokkos
   virtual ~SurfCollide();
@@ -40,6 +44,7 @@ class SurfCollide : protected Pointers {
   virtual Particle::OnePart *collide(Particle::OnePart *&, double &,
                                      int, double *, int, int &) = 0;
   virtual void wrapper(Particle::OnePart *, double *, int *, double *) {}
+  void persurf_wrapper(Particle::OnePart *, double *, int);
   virtual void flags_and_coeffs(int *, double *) {}
 
   virtual void dynamic();
@@ -49,7 +54,12 @@ class SurfCollide : protected Pointers {
 
   // nsingle = all collisions in one step
 
-  int nsingle;
+  bigint nsingle;
+
+  // RNG used to scatter a particle, NULL for styles that do not scatter
+  //   randomly; owned by this class, allocated by the styles that use it
+
+  class RanKnuth *random;
 
  protected:
 
@@ -57,7 +67,7 @@ class SurfCollide : protected Pointers {
   // ntotal = cumulative nsingle across all steps
   // one,all used in compute_vector()
 
-  int ntotal;
+  bigint ntotal;
   double one[2],all[2];
 
   // variables used by all SC classes which define Tsurf

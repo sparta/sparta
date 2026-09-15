@@ -46,6 +46,8 @@ cmake -C /path/to/<NAME>.cmake /path/to/sparta/cmake
   * Whether to enable the SPARTA KOKKOS package.
 * PKG_MPI_STUBS
   * Whether to enable the SPARTA MPI_STUBS package.
+* PKG_VTK
+  * Whether to enable the SPARTA VTK dump package (requires BUILD_VTK).
 
 ## Third Party Library (TPL) options
 * BUILD_KOKKOS
@@ -56,6 +58,8 @@ cmake -C /path/to/<NAME>.cmake /path/to/sparta/cmake
   * Whether to enable the SPARTA JPEG TPL.
 * BUILD_PNG
   * Whether to enable the SPARTA PNG TPL.
+* BUILD_VTK
+  * Whether to enable the VTK TPL (external Kitware VTK, v9+; set VTK_ROOT).
 * BUILD_MPI
   * Whether to enable the SPARTA MPI TPL.
 * FFT

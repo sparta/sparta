@@ -12,17 +12,6 @@ export LC_ALL
 action () {
   if (test $mode = 0) then
     rm -f ../$1
-  elif (! cmp -s $1 ../$1) then
-    if (test -z "$2" || test -e ../$2) then
-      cp $1 ..
-      if (test $mode = 2) then
-        echo "  updating src/$1"
-      fi
-    fi
-  elif (test -n "$2") then
-    if (test ! -e ../$2) then
-      rm -f ../$1
-    fi
   fi
 }
 
@@ -57,8 +46,32 @@ action compute_dt_grid_kokkos.cpp
 action compute_dt_grid_kokkos.h
 action compute_eflux_grid_kokkos.cpp
 action compute_eflux_grid_kokkos.h
+action compute_gas_collision_grid_kokkos.cpp
+action compute_gas_collision_grid_kokkos.h
+action compute_gas_reaction_grid_kokkos.cpp
+action compute_gas_reaction_grid_kokkos.h
+action compute_gas_collision_tally_kokkos.cpp
+action compute_gas_collision_tally_kokkos.h
+action compute_gas_reaction_tally_kokkos.cpp
+action compute_gas_reaction_tally_kokkos.h
+action compute_surf_collision_tally_kokkos.cpp
+action compute_surf_collision_tally_kokkos.h
+action compute_surf_reaction_tally_kokkos.cpp
+action compute_surf_reaction_tally_kokkos.h
 action compute_grid_kokkos.cpp
 action compute_grid_kokkos.h
+action compute_isurf_grid_kokkos.cpp
+action compute_isurf_grid_kokkos.h
+action compute_property_surf_kokkos.cpp
+action compute_property_surf_kokkos.h
+action compute_react_boundary_kokkos.cpp
+action compute_react_boundary_kokkos.h
+action compute_react_isurf_grid_kokkos.cpp
+action compute_react_isurf_grid_kokkos.h
+action compute_react_surf_kokkos.cpp
+action compute_react_surf_kokkos.h
+action compute_reduce_kokkos.cpp
+action compute_reduce_kokkos.h
 action compute_ke_particle_kokkos.cpp
 action compute_ke_particle_kokkos.h
 action compute_lambda_grid_kokkos.cpp
@@ -99,6 +112,8 @@ action fix_surf_temp_kokkos.cpp
 action fix_surf_temp_kokkos.h
 action fix_move_surf_kokkos.cpp
 action fix_move_surf_kokkos.h
+action fix_temp_global_rescale_kokkos.cpp
+action fix_temp_global_rescale_kokkos.h
 action fix_temp_rescale_kokkos.cpp
 action fix_temp_rescale_kokkos.h
 action fix_vibmode_kokkos.cpp
@@ -126,14 +141,26 @@ action rand_pool_wrap.cpp
 action rand_pool_wrap.h
 action react_bird_kokkos.cpp
 action react_bird_kokkos.h
+action react_qk_kokkos.cpp
+action react_qk_kokkos.h
 action react_tce_kokkos.cpp
 action react_tce_kokkos.h
+action react_tce_qk_kokkos.cpp
+action react_tce_qk_kokkos.h
+action surf_collide_adiabatic_kokkos.cpp
+action surf_collide_adiabatic_kokkos.h
+action surf_collide_cll_kokkos.cpp
+action surf_collide_cll_kokkos.h
 action surf_collide_diffuse_kokkos.cpp
 action surf_collide_diffuse_kokkos.h
+action surf_collide_impulsive_kokkos.cpp
+action surf_collide_impulsive_kokkos.h
 action surf_collide_piston_kokkos.cpp
 action surf_collide_piston_kokkos.h
 action surf_collide_specular_kokkos.cpp
 action surf_collide_specular_kokkos.h
+action surf_collide_td_kokkos.cpp
+action surf_collide_td_kokkos.h
 action surf_collide_transparent_kokkos.cpp
 action surf_collide_transparent_kokkos.h
 action surf_collide_vanish_kokkos.cpp
@@ -141,6 +168,8 @@ action surf_collide_vanish_kokkos.h
 action surf_custom_kokkos.cpp
 action surf_kokkos.cpp
 action surf_kokkos.h
+action surf_react_adsorb_kokkos.cpp
+action surf_react_adsorb_kokkos.h
 action surf_react_global_kokkos.cpp
 action surf_react_global_kokkos.h
 action surf_react_prob_kokkos.cpp
@@ -152,8 +181,15 @@ action create_particles_kokkos.cpp
 action create_particles_kokkos.h
 action fix_emit_face_kokkos.cpp
 action fix_emit_face_kokkos.h
+action fix_emit_face_file_kokkos.cpp
+action fix_emit_face_file_kokkos.h
+action fix_emit_kokkos.h
 action fix_emit_surf_kokkos.cpp
 action fix_emit_surf_kokkos.h
+action fix_field_grid_kokkos.cpp
+action fix_field_grid_kokkos.h
+action fix_field_particle_kokkos.cpp
+action fix_field_particle_kokkos.h
 action fix_grid_check_kokkos.cpp
 action fix_grid_check_kokkos.h
 action read_surf_kokkos.cpp
@@ -162,6 +198,11 @@ action region_block_kokkos.cpp
 action region_block_kokkos.h
 action region_cylinder_kokkos.cpp
 action region_cylinder_kokkos.h
+action region_intersect_kokkos.cpp
+action region_intersect_kokkos.h
+action region_prim_kokkos.h
+action region_union_kokkos.cpp
+action region_union_kokkos.h
 action region_plane_kokkos.cpp
 action region_plane_kokkos.h
 action region_sphere_kokkos.cpp
@@ -188,35 +229,10 @@ action remap3d_kokkos.h remap3d.h
 action kokkos_base_fft.h fftdata.h
 
 # edit 2 Makefile.package files to include/exclude package info
-# allow user to specify sed.  Useful on Mac OSX to specify SED=gsed
-SED="${SED:-sed}"
-if (test $1 = 1) then
 
-  if (test -e ../Makefile.package) then
-    $SED -i -e 's/[^ \t]*kokkos[^ \t]* //g' ../Makefile.package
-    $SED -i -e 's/[^ \t]*KOKKOS[^ \t]* //g' ../Makefile.package
-    $SED -i -e 's|^PKG_INC =[ \t]*|&-DSPARTA_KOKKOS |' ../Makefile.package
-#    $SED -i -e 's|^PKG_PATH =[ \t]*|&-L..\/..\/lib\/kokkos\/core\/src |' ../Makefile.package
-    $SED -i -e 's|^PKG_CPP_DEPENDS =[ \t]*|&$(KOKKOS_CPP_DEPENDS) |' ../Makefile.package
-    $SED -i -e 's|^PKG_LIB =[ \t]*|&$(KOKKOS_LIBS) |' ../Makefile.package
-    $SED -i -e 's|^PKG_LINK_DEPENDS =[ \t]*|&$(KOKKOS_LINK_DEPENDS) |' ../Makefile.package
-    $SED -i -e 's|^PKG_SYSINC =[ \t]*|&$(KOKKOS_CPPFLAGS) $(KOKKOS_CXXFLAGS) |' ../Makefile.package
-    $SED -i -e 's|^PKG_SYSLIB =[ \t]*|&$(KOKKOS_LDFLAGS) |' ../Makefile.package
-#    $SED -i -e 's|^PKG_SYSPATH =[ \t]*|&$(kokkos_SYSPATH) |' ../Makefile.package
-  fi
-
-  if (test -e ../Makefile.package.settings) then
-    $SED -i -e '/CXX\ =\ \$(CC)/d' ../Makefile.package.settings
-    $SED -i -e '/^include.*kokkos.*$/d' ../Makefile.package.settings
-    # multiline form needed for BSD $SED on Macs
-    $SED -i -e '4 i \
-CXX = $(CC)
-' ../Makefile.package.settings
-
-    $SED -i -e '5 i \
-include ..\/..\/lib\/kokkos\/Makefile.kokkos
-' ../Makefile.package.settings
-  fi
+if (test $1 = 1 || test $1 = 2) then
+  echo "The KOKKOS package no longer supports the GNU Makefile build system. Please build SPARTA with CMake instead."
+  exit 1
 
 elif (test $1 = 0) then
 

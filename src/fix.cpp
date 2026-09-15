@@ -61,7 +61,6 @@ Fix::Fix(SPARTA *sparta, int, char **arg) : Pointers(sparta)
 
   kokkos_flag = 0;
   copy = copymode = 0;
-  uncopy = 1;
 
   execution_space = Host;
   datamask_read = ALL_MASK;

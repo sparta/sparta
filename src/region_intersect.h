@@ -32,7 +32,7 @@ class RegIntersect : public Region {
   void init();
   int inside(double *);
 
- private:
+ protected:            // Kokkos subclasses flatten these to the device
   int nregion;
   int *list;
 };

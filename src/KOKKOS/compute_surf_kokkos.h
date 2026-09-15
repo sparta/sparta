@@ -41,6 +41,7 @@ class ComputeSurfKokkos : public ComputeSurf {
   void init_normflux();
   void clear();
   int tallyinfo(surfint *&);
+  void post_process_surf();
   void update_hash();
   void pre_surf_tally();
   void post_surf_tally();
@@ -403,13 +404,14 @@ void surf_tally_kk(double /*dtremain*/, int isurf, int icell, int reaction,
       break;
     case ECHEM:
       if (reaction && !transparent) {
-        int sr_type = sr_type_list[isr];
-        int m = sr_map[isr];
+        int sr_type = KK_SR_TYPE(isr);
+        int m = KK_SR_MAP(isr);
         double r_coeff = 0.0;
         if (sr_type == 1)
-          r_coeff = sr_kk_prob_copy[m].obj.d_coeffs(reaction-1,1);
-        a_array_surf_tally(itally,k++) += weight * r_coeff * fluxscale;
+          r_coeff = KK_SR_PROB(m).d_coeffs(reaction-1,1);
+        a_array_surf_tally(itally,k) += weight * r_coeff * fluxscale;
       }
+      k++;
       break;
     case ETOT:
       if (iorig) vsqpre = origmass * MathExtraKokkos::lensq3(vorig);
@@ -429,11 +431,11 @@ void surf_tally_kk(double /*dtremain*/, int isurf, int icell, int reaction,
         etot = 0.5*mvv2e*(ivsqpost + jvsqpost - vsqpre) +
           weight * (iother + jother - otherpre);
         if (reaction) {
-          int sr_type = sr_type_list[isr];
-          int m = sr_map[isr];
+          int sr_type = KK_SR_TYPE(isr);
+          int m = KK_SR_MAP(isr);
           double r_coeff = 0.0;
           if (sr_type == 1)
-            r_coeff = sr_kk_prob_copy[m].obj.d_coeffs(reaction-1,1);
+            r_coeff = KK_SR_PROB(m).d_coeffs(reaction-1,1);
           etot -= weight * r_coeff;
         }
       }
@@ -445,6 +447,7 @@ void surf_tally_kk(double /*dtremain*/, int isurf, int icell, int reaction,
 
  private:
   int mvv2e;
+  int compressed;     // 1 once the device tallies have been copied and compressed
 
   DAT::t_int_1d d_which;
 
@@ -467,10 +470,22 @@ void surf_tally_kk(double /*dtremain*/, int isurf, int icell, int reaction,
   t_line_1d d_lines;
   t_tri_1d d_tris;
 
+  // the active surf react models this compute may be asked about, partitioned
+  //   by style.  Two representations, selected by SPARTA_KOKKOS_FIXED_LISTS
+  //   (see kokkos_type.h); the device sites in surf_tally_kk() above are
+  //   written once, against the KK_SR_* accessors defined there.
+
+#ifdef SPARTA_KOKKOS_FIXED_LISTS
   int sr_type_list[KOKKOS_MAX_TOT_SURF_REACT];
   int sr_map[KOKKOS_MAX_TOT_SURF_REACT];
   KKCopy<SurfReactGlobalKokkos> sr_kk_global_copy[KOKKOS_MAX_SURF_REACT_PER_TYPE];
   KKCopy<SurfReactProbKokkos> sr_kk_prob_copy[KOKKOS_MAX_SURF_REACT_PER_TYPE];
+#else
+  DAT::tdual_int_1d k_sr_type_list,k_sr_map;
+  DAT::t_int_1d d_sr_type_list,d_sr_map;
+  DAT::tdual_char_1d k_sr_global,k_sr_prob;
+  DAT::t_char_1d d_sr_global,d_sr_prob;
+#endif
 
   void grow_tally();
 };

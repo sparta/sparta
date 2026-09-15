@@ -268,14 +268,15 @@ void Surf::collate_array_reduce(int nrow, int ncol, surfint *tally2surf,
 void Surf::collate_array_rendezvous(int nrow, int ncol, surfint *tally2surf,
                                     double **in, double **out)
 {
-  int j,m;
+  int j;
+  bigint m;
 
   // allocate memory for rvous input
 
   int *proclist;
   memory->create(proclist,nrow,"surf:proclist");
   double *in_rvous = (double *)
-    memory->smalloc(nrow*(ncol+1)*sizeof(double*),"surf:in_rvous");
+    memory->smalloc((bigint) nrow*(ncol+1)*sizeof(double),"surf:in_rvous");
 
   // create rvous inputs
   // proclist = owner of each surf
@@ -322,7 +323,8 @@ int Surf::rendezvous_array(int n, char *inbuf,
                            int &flag, int *&proclist, char *&outbuf,
                            void *ptr)
 {
-  int j,k,m;
+  int j;
+  bigint k,m;
 
   Surf *sptr = (Surf *) ptr;
   int nown = sptr->nown;

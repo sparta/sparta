@@ -155,7 +155,7 @@ void ComputePropertyGrid::reallocate()
 bigint ComputePropertyGrid::memory_usage()
 {
   bigint bytes;
-  bytes = nvalues*nglocal * sizeof(double);
+  bytes = (bigint) nvalues*nglocal * sizeof(double);
   return bytes;
 }
 

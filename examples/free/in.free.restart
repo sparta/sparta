@@ -1,0 +1,65 @@
+################################################################################
+# restart round trip: write a restart file, read it back, continue the run
+#
+# This is the only deck that exercises read_restart in CI -- the four
+# examples/custom/in.custom.*.restart decks are all in SPARTA_DISABLED_TESTS.
+#
+# All three filename-substitution paths are driven deliberately:
+#   restart        -> Output::write()        (periodic restart output)
+#   write_restart  -> WriteRestart::command()
+#   read_restart   -> ReadRestart::file_search()  (the "*" wildcard search)
+# Each replaces "*" with a timestep, and each sizes the substituted name
+# itself.  The ".equil.restart" suffix is deliberately long: a name is
+# truncated only when (timestep digits + suffix length) exceeds 15, so a
+# short suffix would let a sizing bug through unnoticed.
+#
+# The file name carries the MPI rank count, because ctest runs the mpi_1 and
+# mpi_4 copies of a test concurrently in one shared suite directory and they
+# would otherwise write the same file (compare the note on
+# in.exp2imp.axi.spherecone.readback in SPARTA_DISABLED_TESTS).
+#
+# Note:
+#  - The "comm/sort" option to the "global" command is used to match MPI runs.
+#  - The "twopass" option is used to match Kokkos runs.
+# The "comm/sort" and "twopass" options should not be used for production runs.
+################################################################################
+
+seed	    	    12345
+dimension   	    3
+global              gridcut 1.0e-5 comm/sort yes
+
+boundary	    rr rr rr
+
+create_box  	    0 0.0001 0 0.0001 0 0.0001
+create_grid 	    4 4 4
+balance_grid        rcb part
+
+species		    ar.species Ar
+mixture		    air Ar vstream 0.0 0.0 0.0 temp 273.15
+
+global              nrho 7.07043E22 fnum 7.07043E7
+
+create_particles    air n 2000 twopass
+
+compute             temp temp
+stats		    10
+stats_style	    step np c_temp
+
+timestep 	    7.00E-9
+
+variable            np equal extract_setting(world_size)
+restart             10 tmp.free.periodic.np${np}.*.equil.restart
+run                 20
+write_restart       tmp.free.np${np}.*.equil.restart
+
+# read the restart back through the "*" wildcard search and continue
+
+clear
+seed                12345
+variable            np equal extract_setting(world_size)
+read_restart        tmp.free.np${np}.*.equil.restart
+
+compute             temp temp
+stats               10
+stats_style         step np c_temp
+run                 20

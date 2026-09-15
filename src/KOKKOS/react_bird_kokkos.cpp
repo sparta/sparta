@@ -37,7 +37,6 @@ using namespace MathConst;
 enum{DISSOCIATION,EXCHANGE,IONIZATION,RECOMBINATION};  // other react files
 enum{ARRHENIUS,QUANTUM};                               // other react files
 
-#define MAXLINE 1024
 #define DELTALIST 16
 
 /* ---------------------------------------------------------------------- */

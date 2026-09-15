@@ -1,0 +1,264 @@
+SPARTA (24 Sep 2025)
+Running on 4 MPI task(s)
+################################################################################
+# beam of particles striking the surface at an inclined angle
+# free molecular flow (no collisions)
+#
+# Note:
+#  - The "comm/sort” option to the “global” command is used to match MPI runs.
+# The "comm/sort" option should not be used for production runs.
+################################################################################
+
+seed	    	    123456
+dimension   	    3
+global              gridcut 0.0 comm/sort yes
+
+boundary	    	oo oo oo
+
+
+create_box          -11 11 -11 11 0 10
+Created orthogonal box = (-11 -11 0) to (11 11 10)
+create_grid 	    2 2 2
+WARNING: Could not acquire nearby ghost cells b/c grid partition is not clumped (/home/user/sparta/src/grid.cpp:486)
+Created 8 child grid cells
+  CPU time = 0.00125255 secs
+  create/ghost percent = 94.6611 5.33889
+balance_grid        rcb cell
+Balance grid migrated 4 cells
+  CPU time = 0.000404383 secs
+  reassign/sort/migrate/ghost percent = 74.4732 0.54305 10.2737 14.7101
+
+global		    	nrho 1e10 fnum 1e6
+
+species		    	air.species O CO CO2 O2 C
+mixture		    	air O O2 vstream 0 1000 -1000
+
+mixture             air O   frac 1.0
+mixture             air CO  frac 0.0
+mixture             air CO2 frac 0.0
+mixture             air C   frac 0.0
+mixture 			air O2 	frac 0.0
+
+
+surf_collide        1 cll 300.0 0.5 0.5 0.5 0.5
+
+read_surf			base_plate.surf
+  12 triangles
+  -11 11 xlo xhi
+  -11 11 ylo yhi
+  0 1 zlo zhi
+  1 min triangle edge length
+  11 min triangle area
+  4 0 = cells overlapping surfs, overlap cells with unmarked corner pts
+  4 0 4 = cells outside/inside/overlapping surfs
+  4 = surf cells with 1,2,etc splits
+  4356 4356 = cell-wise and global flow volume
+  CPU time = 0.000689887 secs
+  read/check/sort/surf2grid/ghost/inout/particle percent = 5.63629 27.352 0.3115 55.8131 10.8871 8.0877 0.135819
+  surf2grid time = 0.000385047 secs
+  map/comm1/comm2/comm3/comm4/split percent = 34.1364 7.22016 4.94096 3.21805 31.491 14.9145
+
+##################################### SURF REACT ADSORB ######################################
+##################################### SURF OPTION ############################################
+
+#surf_react        	 adsorb_test_gs_ps1 adsorb gs/ps sample-GS_1.surf sample-PS_1.surf nsync 1 surf 1000 6.022e18 O CO
+#surf_modify 		 all collide 1 react adsorb_test_gs_ps1
+
+surf_react        	adsorb_test_gs_ps2 adsorb gs/ps sample-GS_2.surf sample-PS_2.surf nsync 1 surf 1000 6.022e18 O CO
+surf_modify 		all collide 1 react adsorb_test_gs_ps2
+
+########################## BEAM ############################################################
+# Beam at multiple points so that different processors handle the surface collisions
+
+region              circle2 cylinder z  6 -10 1 INF INF
+region              circle3 cylinder z -6 -10 1 INF INF
+
+fix                 in2 emit/face/file air zhi data.beam beam_area_2 nevery 100 region circle2 twopass
+fix                 in3 emit/face/file air zhi data.beam beam_area_3 nevery 100 region circle3 twopass
+
+################################################################################################
+
+#dump                2 image all 10 image.*.ppm type type pdiam 0.2 surf proc 0.01 size 512 512 zoom 1.75 gline no 0.005
+#dump_modify	     	2 pad 4
+
+timestep            0.0001
+
+stats		    	10
+stats_style	    	step cpu np nattempt ncoll nscoll nscheck
+run 		    	1000
+Memory usage per proc in Mbytes:
+  particles (ave,min,max) = 0 0 0
+  grid      (ave,min,max) = 1.51379 1.51379 1.51379
+  surf      (ave,min,max) = 0.00151062 0.00151062 0.00151062
+  modify    (ave,min,max) = 0 0 0
+  total     (ave,min,max) = 1.5153 1.5153 1.5153
+Step CPU Np Natt Ncoll Nscoll Nscheck 
+       0            0        0        0        0        0        0 
+      10  0.000224036        0        0        0        0        0 
+      20  0.000500325        0        0        0        0        0 
+      30  0.000656573        0        0        0        0        0 
+      40  0.000814442        0        0        0        0        0 
+      50  0.000993114        0        0        0        0        0 
+      60  0.001504357        0        0        0        0        0 
+      70   0.00188182        0        0        0        0        0 
+      80  0.002311785        0        0        0        0        0 
+      90  0.002656883        0        0        0        0        0 
+     100  0.005471142     6301        0        0        0        0 
+     110  0.007605491     6303        0        0        0       16 
+     120  0.008421247     6303        0        0        0       16 
+     130  0.009053036     6305        0        0        0       24 
+     140  0.009778189     6304        0        0        0       24 
+     150  0.010695277     6304        0        0        0    50216 
+     160  0.013581006     6304        0        0        0    50440 
+     170  0.016154246     6305        0        0        0    50432 
+     180  0.018846876     6305        0        0        0    50432 
+     190  0.023540313     1733        0        0     6209    51232 
+     200   0.02686686    11612        0        0        0    41248 
+     210  0.029350447    12081        0        0        0    46016 
+     220  0.031573904    12059        0        0        0    46048 
+     230  0.033689482    11947        0        0        0    44448 
+     240  0.035566956    11831        0        0        0    41272 
+     250  0.037593442    11692        0        0        0    87368 
+     260  0.041521312    11553        0        0        0    82680 
+     270  0.045404247    11362        0        0        0    78008 
+     280  0.048895877    11160        0        0        0    74144 
+     290  0.054167341     6891        0        0     6231    71744 
+     300  0.057804113    14691        0        0        0    48912 
+     310  0.060548761    15167        0        0        0    52392 
+     320  0.063318129    15066        0        0        0    51856 
+     330  0.065922387    14764        0        0        0    49512 
+     340  0.068341169    14388        0        0        0    46104 
+     350  0.070835679    14009        0        0        0    92344 
+     360  0.075063488    13626        0        0        0    88256 
+     370  0.079778442    13253        0        0        0    84072 
+     380  0.083500656    12846        0        0        0    79560 
+     390   0.08906784     7822        0        0     6252    76368 
+     400  0.093420987    16217        0        0        0    53088 
+     410   0.09656533    16589        0        0        0    57392 
+     420  0.099515547    16395        0        0        0    56352 
+     430   0.10254917    15997        0        0        0    53592 
+     440   0.10503694    15537        0        0        0    49568 
+     450   0.10772395    15077        0        0        0    95416 
+     460   0.11176682    14641        0        0        0    91008 
+     470   0.11580786    14212        0        0        0    86288 
+     480   0.11983539    13743        0        0        0    81928 
+     490   0.12532567     8608        0        0     6243    78608 
+     500   0.12895382    16562        0        0        0    53288 
+     510   0.13181428    16511        0        0        0    53752 
+     520    0.1344315    16147        0        0        0    51368 
+     530   0.13703732    16153        0        0        0    51568 
+     540   0.13956061    15958        0        0        0    50216 
+     550   0.14273403    15581        0        0        0    96392 
+     560   0.14722585    15153        0        0        0    92160 
+     570   0.15134218    14699        0        0        0    87792 
+     580   0.15550908    14253        0        0        0    83544 
+     590   0.16073947     9174        0        0     6150    80656 
+     600   0.16465203    17840        0        0        0    60264 
+     610     0.167616    17849        0        0        0    61528 
+     620    0.1703088    17458        0        0        0    59400 
+     630   0.17287801    16940        0        0        0    56000 
+     640   0.17570458    16408        0        0        0    51728 
+     650   0.18285647    15920        0        0        0    97264 
+     660   0.18714427    15412        0        0        0    92664 
+     670   0.19123538    14924        0        0        0    87672 
+     680    0.1951066    14448        0        0        0    82600 
+     690   0.20078913     9897        0        0     6218    79112 
+     700   0.20473163    17512        0        0        0    55624 
+     710   0.20779582    17633        0        0        0    57824 
+     720   0.21066693    17295        0        0        0    56336 
+     730   0.21381189    16799        0        0        0    53312 
+     740   0.21743778    16289        0        0        0    49600 
+     750   0.22024478    15798        0        0        0    95264 
+     760   0.22499027    15299        0        0        0    90568 
+     770   0.22889382    14815        0        0        0    86264 
+     780   0.23277836    14330        0        0        0    81792 
+     790   0.23776466     8938        0        0     6189    78656 
+     800   0.24192129    17320        0        0        0    54536 
+     810   0.24483788    17530        0        0        0    57112 
+     820   0.24809189    17405        0        0        0    57360 
+     830   0.25096426    17002        0        0        0    55208 
+     840   0.25350701    16515        0        0        0    51936 
+     850   0.25606767    16046        0        0        0    97840 
+     860   0.26012526    15557        0        0        0    93336 
+     870    0.2639586    15028        0        0        0    88528 
+     880   0.26779215    14556        0        0        0    83752 
+     890   0.27391928    10213        0        0     6197    80272 
+     900    0.2786567    17534        0        0        0    56552 
+     910   0.28160127    17521        0        0        0    56992 
+     920   0.28613302    17435        0        0        0    57232 
+     930   0.28894242    17046        0        0        0    55016 
+     940   0.29183853    16599        0        0        0    51232 
+     950   0.29876505    16129        0        0        0    96920 
+     960    0.3104408    15610        0        0        0    92832 
+     970   0.31459111    15155        0        0        0    88232 
+     980   0.31924264    14649        0        0        0    83784 
+     990   0.32476776     9967        0        0     6154    80600 
+    1000   0.32900958    18362        0        0        0    62080 
+Loop time of 0.329065 on 4 procs for 1000 steps with 18362 particles
+Performance: 3038.913 timesteps/s, 55.801 Mparticle-step/s
+
+MPI task timing breakdown:
+Section |  min time  |  avg time  |  max time  |%varavg| %total
+---------------------------------------------------------------
+Move    | 0.11792    | 0.1719     | 0.22427    |  12.4 | 52.24
+Coll    | 0          | 0          | 0          |   0.0 |  0.00
+Sort    | 0          | 0          | 0          |   0.0 |  0.00
+Comm    | 0.013082   | 0.014985   | 0.016944   |   1.5 |  4.55
+Modify  | 0.00018412 | 0.0046337  | 0.0091941  |   6.5 |  1.41
+Output  | 0.010518   | 0.011383   | 0.013966   |   1.4 |  3.46
+MPI Sync| 0.033551   | 0.092822   | 0.15396    |  19.2 | 28.21
+Other   |            | 0.03334    |            |       | 10.13
+
+Particle moves    = 12288800 (12.3M)
+Cells touched     = 12477838 (12.5M)
+Particle comms    = 17683 (17.7K)
+Boundary collides = 0 (0K)
+Boundary exits    = 36381 (36.4K)
+SurfColl checks   = 55089872 (55.1M)
+SurfColl occurs   = 56760 (56.8K)
+Surf reactions    = 56759 (56.8K)
+Collide attempts  = 0 (0K)
+Collide occurs    = 0 (0K)
+Reactions         = 0 (0K)
+Particles stuck   = 0
+Axisymm bad moves = 0
+
+Particle-moves/CPUsec/proc: 9.33615e+06
+Particle-moves/step: 12288.8
+Cell-touches/particle/step: 1.01538
+Particle comm iterations/step: 1.814
+Particle fraction communicated: 0.00143895
+Particle fraction colliding with boundary: 0
+Particle fraction exiting boundary: 0.0029605
+Surface-checks/particle/step: 4.48293
+Surface-collisions/particle/step: 0.00461884
+Surf-reactions/particle/step: 0.00461876
+Collision-attempts/particle/step: 0
+Collisions/particle/step: 0
+Reactions/particle/step: 0
+
+Surface reaction tallies:
+  id adsorb_test_gs_ps2 style adsorb #-of-reactions 14
+    reaction all: 106080
+    reaction O(g) --> O(s): 42345
+    reaction O(g) --> CO(s): 13180
+    reaction O(g) --> CO(g): 1233
+    reaction C(g) --> C(b): 1
+    reaction O(s) --> O(g): 24547
+    reaction CO(s) --> CO(g): 14765
+    reaction 2O(s) + C(b) --> CO2(g): 7772
+    reaction O(s) + C(b) --> CO(s): 2111
+    reaction C(b) --> C(g): 126
+
+Particles: 4590.5 ave 6270 max 2950 min
+Histogram: 2 0 0 0 0 0 0 0 0 2
+Cells:      2 ave 2 max 2 min
+Histogram: 4 0 0 0 0 0 0 0 0 0
+GhostCell: 6 ave 6 max 6 min
+Histogram: 4 0 0 0 0 0 0 0 0 0
+EmptyCell: 6 ave 6 max 6 min
+Histogram: 4 0 0 0 0 0 0 0 0 0
+Surfs:    12 ave 12 max 12 min
+Histogram: 4 0 0 0 0 0 0 0 0 0
+GhostSurf: 0 ave 0 max 0 min
+Histogram: 4 0 0 0 0 0 0 0 0 0

@@ -21,9 +21,10 @@
 
 <LI>these keywords apply to various dump styles 
 
-<LI>keyword = <I>append</I> or <I>buffer</I> or <I>every</I> or <I>fileper</I> or <I>first</I> or <I>flush</I> or <I>format</I> or <I>nfile</I> or <I>pad</I> or <I>region</I> or <I>thresh</I> 
+<LI>keyword = <I>append</I> or <I>binary</I> or <I>buffer</I> or <I>every</I> or <I>fileper</I> or <I>first</I> or <I>flush</I> or <I>format</I> or <I>nfile</I> or <I>pad</I> or <I>region</I> or <I>thresh</I> 
 
 <PRE>  <I>append</I> arg = <I>yes</I> or <I>no</I>
+  <I>binary</I> arg = <I>yes</I> or <I>no</I>
   <I>buffer</I> arg = <I>yes</I> or <I>no</I>
   <I>every</I> arg = N
     N = dump every this many timesteps
@@ -47,14 +48,20 @@
 </PRE>
 <LI>these keywords apply only to the (image</I> and <I>movie</I> <A HREF = "dump_image.html">styles</A> 
 
-<LI>keyword = <I>bcolor</I> or <I>bdiam</I> or <I>backcolor</I> or <I>bitrate</I> or <I>boxcolor</I> or <I>cmap</I> or <I>color</I> or <I>framerate</I> or <I>gcolor</I> or <I>glinecolor</I> or <I>pcolor</I> or <I>pdiam</I> or <I>scolor</I> or <I>slinecolor</I> 
+<LI>keyword = <I>axestrans</I> or <I>backcolor</I> or <I>backcolor2</I> or <I>bitrate</I> or <I>boxcolor</I> or <I>boxtrans</I> or <I>cmap</I> or <I>color</I> or <I>framerate</I> or <I>gamma</I> or <I>gcolor</I> or <I>glinecolor</I> or <I>glinetrans</I> or <I>gridgroup</I> or <I>gtrans</I> or <I>lights</I> or <I>metal</I> or <I>metalfinish</I> or <I>pcolor</I> or <I>pdiam</I> or <I>ptrans</I> or <I>scolor</I> or <I>slinecolor</I> or <I>slinetrans</I> or <I>specular</I> or <I>ssaosamples</I> or <I>strans</I> or <I>subboxcolor</I> or <I>subboxtrans</I> or <I>surfgroup</I> 
 
-<PRE>  <I>backcolor</I> arg = color
+<PRE>  <I>axestrans</I> arg = opacity
+    opacity = opacity of the XYZ axes, from 0.0 (invisible) to 1.0 (opaque)
+  <I>backcolor</I> arg = color
     color = name of color for background
+  <I>backcolor2</I> arg = color
+    color = name of second color for background gradient, or <I>none</I>
   <I>bitrate</I> arg = rate
     rate = target bitrate for movie in kbps
   <I>boxcolor</I> arg = color
     color = name of color for box lines
+  <I>boxtrans</I> arg = opacity
+    opacity = opacity of the simulation box lines, from 0.0 to 1.0
   <I>cmap</I> args = mode lo hi style delta N entry1 entry2 ... entryN
     mode = <I>particle</I> or <I>grid</I> or <I>surf</I> or <I>gridx</I> or <I>gridy</I> or <I>gridz</I>
     lo = number or <I>min</I> = lower bound of range of color map
@@ -81,24 +88,54 @@
     R,G,B = red/green/blue numeric values from 0.0 to 1.0
   <I>framerate</I> arg = fps
     fps = frames per second for movie
+  <I>gamma</I> arg = gvalue
+    gvalue = gamma adjustment applied to rendered objects (from 0.1 to 10.0, 1.0 = no change)
   <I>gcolor</I> args = proc color
     proc = proc ID or range of IDs (see below)
     color = name of color or color1/color2/...
   <I>glinecolor</I> arg = color
     color = name of color for grid cell outlines
+  <I>glinetrans</I> arg = opacity
+    opacity = opacity of the grid cell outlines, from 0.0 to 1.0
   <I>gridgroup</I> arg = group-ID
     group-ID = name of a user-defined grid group, see the <A HREF = "group.html">group</A> command
+  <I>gtrans</I> arg = opacity
+    opacity = opacity of the grid cells and cutting planes, from 0.0 to 1.0
+  <I>lights</I> args = ambient key fill back
+    ambient = intensity of ambient light from 0.0 to 1.0
+    key = intensity of key light from 0.0 to 1.0
+    fill = intensity of fill light from 0.0 to 1.0
+    back = intensity of back light from 0.0 to 1.0
+  <I>metal</I> arg = mfactor
+    mfactor = how metallic the rendered objects appear, from 0.0 (paint) to 1.0 (bare metal)
+  <I>metalfinish</I> arg = style
+    style = <I>satin</I> or <I>polished</I> or <I>mirror</I> = surface finish of metallic objects
   <I>pcolor</I> args = type color
     type = particle type or range of types or proc ID or range of IDs (see below)
     color = name of color or color1/color2/...
   <I>pdiam</I> args = type diam
     type = particle type or range of types (see below)
     diam = diameter of particles of that type (distance units)
+  <I>ptrans</I> args = type opacity
+    type = particle type or range of types (see below)
+    opacity = opacity of particles of that type, from 0.0 to 1.0
   <I>scolor</I> args = proc color
     proc = proc ID or range of IDs (see below)
     color = name of color for surf one option
   <I>slinecolor</I> arg = color
     color = name of color for surface element outlines
+  <I>slinetrans</I> arg = opacity
+    opacity = opacity of the surface element outlines, from 0.0 to 1.0
+  <I>specular</I> arg = style
+    style = <I>none</I> or <I>wide</I> or <I>narrow</I> or <I>tight</I> = specular highlights off or their width
+  <I>ssaosamples</I> arg = nsamples
+    nsamples = number of SSAO sampling directions per pixel (from 4 to 64)
+  <I>strans</I> arg = opacity
+    opacity = opacity of the surface elements, from 0.0 to 1.0
+  <I>subboxcolor</I> arg = color
+    color = name of color for processor sub-box lines
+  <I>subboxtrans</I> arg = opacity
+    opacity = opacity of the processor sub-box lines, from 0.0 to 1.0
   <I>surfgroup</I> arg = group-ID
     group-ID = name of a user-defined surf group, see the <A HREF = "group.html">group</A> command 
 </PRE>
@@ -140,6 +177,16 @@ this keyword has no further effect.
 </P>
 <HR>
 
+<P>The <I>binary</I> keyword applies only to the <A HREF = "dump_vtk.html">dump particle/vtk, dump grid/vtk, and
+dump surf/vtk</A> styles of the VTK package.  If specified as <I>yes</I>,
+the VTK data is written in compact binary form; if <I>no</I> (the default), it is
+written as ASCII which is human-readable but typically requires larger file
+sizes than binary. This is a per-dump setting because the VTK styles select
+their file format from the filename extension, which would otherwise conflict
+with SPARTA's usual ".bin" binary-file convention.
+</P>
+<HR>
+
 <P>The <I>buffer</I> keyword applies only all dump styles except <I>image</I> and
 <I>movie</I>.  It also applies only to text output files, not to binary or
 gzipped files.  If specified as <I>yes</I>, which is the default, then each
@@ -147,7 +194,7 @@ processor writes its output into an internal text buffer, which is
 then sent to the processor(s) which perform file writes, and written
 by those processors(s) as one large chunk of text.  If specified as
 <I>no</I>, each processor sends its per-atom data in binary format to the
-processor(s) which perform file wirtes, and those processor(s) format
+processor(s) which perform file writes, and those processor(s) format
 and write it line by line into the output file.
 </P>
 <P>The buffering mode is typically faster since each processor does the
@@ -309,10 +356,80 @@ movie</A> style.  The descriptions give details.
 </P>
 <HR>
 
+<P>The <I>axestrans</I>, <I>boxtrans</I>, <I>glinetrans</I>, <I>gtrans</I>, <I>ptrans</I>,
+<I>slinetrans</I>, <I>strans</I> and <I>subboxtrans</I> keywords can be used with the
+<A HREF = "dump_image.html">dump image</A> command to render an object as partially
+transparent.  Each sets the opacity of one kind of drawn object: the
+XYZ axes, the simulation box lines, the grid cell outlines, the grid
+cells and cutting planes, the particles, the surface element outlines,
+the surface elements, and the processor sub-box lines, respectively.
+The opacity value must be between 0.0 (invisible) and 1.0 (fully
+opaque); the default for all of them is 1.0.  An opacity of 0.0 renders
+exactly as if the object were not drawn at all.
+</P>
+<P>The most common use is to make a surface transparent with <I>strans</I> so
+that the particles and grid cells inside it become visible, or to thin
+out a dense particle field with <I>ptrans</I> so that a surface inside it can
+be seen.
+</P>
+<P>The <I>ptrans</I> keyword sets the opacity per particle species.  The
+specified <I>type</I> should be an integer from 1 to Nspecies, and a wildcard
+asterisk can be used in place of or in conjunction with the <I>type</I>
+argument to specify a range of species, in the same manner as described
+for the <I>pdiam</I> keyword.  Note that a per-species setting only takes
+effect if the particle color or diameter setting of the <A HREF = "dump_image.html">dump
+image</A> command is <I>type</I>, since only in that case is the
+species of each particle known to the dump.  A setting for the full
+range of species, e.g. <I>ptrans * 0.5</I>, is applied to all particles
+regardless of the color and diameter settings.
+</P>
+<P>Transparency is rendered with the so-called screen-door method: only a
+subset of the pixels of an object is drawn, chosen from a repeating
+16x16 ordered dither pattern.  No blending of colors is performed.  This
+has three consequences worth knowing about.
+</P>
+<P>First, the effect looks best when the <I>fsaa</I> keyword of the <A HREF = "dump_image.html">dump
+image</A> command is also enabled, since the image is then
+rendered at twice the size and averaged down, which blends the drawn and
+undrawn pixels together.  Recommended opacity values are 0.25, 0.5, and
+0.75.
+</P>
+<P>Second, the dither pattern is anchored to the screen and not to the
+object.  Two objects with the <I>same</I> opacity that overlap on the screen
+therefore leave out the same pixels, so the more distant of the two is
+not visible through the nearer one.  Objects only show through each
+other if their opacity values differ.
+</P>
+<P>Third, the pixels that are left out are indistinguishable from the
+background in the depth buffer, which the <I>ssao</I> keyword and the
+post-processing of the <I>outline</I>, <I>depthcue</I> and <I>defocus</I> keywords of
+the <A HREF = "dump_image.html">dump image</A> command all read.  See the discussion
+of those keywords on the <A HREF = "dump_image.html">dump image</A> doc page.
+</P>
+<P>IMPORTANT NOTE: Transparency should not be combined with the <I>outline</I>
+keyword of the <A HREF = "dump_image.html">dump image</A> command.  Outlines are drawn
+where the distance to the viewer jumps, and every pixel left out by the
+dither pattern looks like such a jump, so a transparent object is
+outlined pixel by pixel and is filled almost entirely with the outline
+color.
+</P>
+<HR>
+
 <P>The <I>backcolor</I> keyword can be used with the <A HREF = "dump_image.html">dump
 image</A> command to set the background color of the
 images.  The color name can be any of the 140 pre-defined colors (see
 below) or a color name defined by the dump_modify color option.
+</P>
+<HR>
+
+<P>The <I>backcolor2</I> keyword can be used with the <A HREF = "dump_image.html">dump
+image</A> command to set a second background color.  If
+set to a color name, the background of the images becomes a vertical
+gradient from the <I>backcolor</I> color at the bottom of the image to the
+<I>backcolor2</I> color at the top.  If set to <I>none</I>, the gradient is
+turned off and the uniform <I>backcolor</I> color is used.  The color name
+can be any of the 140 pre-defined colors (see below) or a color name
+defined by the dump_modify color option.
 </P>
 <HR>
 
@@ -484,6 +601,23 @@ images less frequently.
 </P>
 <HR>
 
+<P>The <I>gamma</I> keyword can be used with the <A HREF = "dump_image.html">dump
+image</A> command to adjust the gamma value of the
+rendered objects: the summed up light contributions of each pixel are
+raised to the power of 1/<I>gvalue</I> before they are converted to the
+8-bit color values of the image file, similar to the gamma adjustment
+of image manipulation programs.  A value larger than 1.0 lightens the
+image, most strongly in the darker regions, and thus can bring out
+shading detail on the dimly lit side of objects; a value smaller than
+1.0 darkens the image and increases the contrast.  The default
+rendering is already tuned to look right on typical displays, and no
+gamma information is stored in the image files, so this setting
+fine-tunes the tonal balance rather than applying a required display
+correction.  The adjustment applies only to rendered objects; the
+background colors are used exactly as specified.
+</P>
+<HR>
+
 <P>The <I>gcolor</I> keyword can be used one or more times with the <A HREF = "dump_image.html">dump
 image</A> command, only when its grid color setting is
 <I>proc</I>, to set the color that grid cells will be drawn in the image.
@@ -523,6 +657,57 @@ image</A> command to only draw a subset of the grid cells
 in the simulation.  By default all the grid cells are rendered.  The
 group-ID argument can be any valid grid group name, as defined by the
 <A HREF = "group.html">group grid</A> command.
+</P>
+<HR>
+
+<P>The <I>lights</I> keyword can be used with the <A HREF = "dump_image.html">dump
+image</A> command to adjust the lighting of the rendered
+scene.  The scene is illuminated by an ambient light, a key light, a
+fill light, and a back light, whose grayscale intensities are set by
+the four arguments, each a value from 0.0 (off) to 1.0 (brightest).
+The default lighting is ambient 0.0, key 0.9, fill 0.45, back 0.9.
+</P>
+<HR>
+
+<P>The <I>metal</I> keyword can be used with the <A HREF = "dump_image.html">dump image</A>
+command to make objects look like they are made of metal rather than
+of colored plastic.  Painted surfaces scatter light in all directions
+and reflect it without changing its color, which is what the rendering
+does by default; polished metal instead reflects light back directly
+and colors it in the process.  An <I>mfactor</I> value of 0.0 keeps the
+default appearance, 1.0 renders bare metal, and values in between
+blend the two.
+</P>
+<P>Since metal shows its surroundings rather than a color of its own, the
+rendering approximates them with a bright sky above and a dark ground
+below.  This is why metallic objects have a bright upper and a dark
+lower half, and why they need a dark background to look convincing.
+The color assigned to an object tints these reflections, so gold
+objects show a golden sheen and aluminum ones a neutral gray sheen.
+The pre-defined color <I>silver</I> is a good match for aluminum.  Colors
+chosen for paint are often too saturated for metal: for gold, for
+example, defining a color with the <I>color</I> keyword using the values
+1.0 0.766 0.336 looks more like the metal than the pre-defined color
+<I>gold</I> does.
+</P>
+<P>IMPORTANT NOTE: These settings imitate the appearance of metal with a
+few extra operations per pixel.  They do not compute how light
+actually travels through the scene.  For images where the appearance
+of the material matters, exporting the particle positions and
+rendering them with a ray tracing program will always give better
+results than any combination of these settings.
+</P>
+<HR>
+
+<P>The <I>metalfinish</I> keyword can be used with the <A HREF = "dump_image.html">dump
+image</A> command to select the surface finish used when
+the <I>metal</I> keyword is enabled.  A <I>satin</I> finish has a broad soft
+sheen and resembles brushed metal such as aluminum.  A <I>polished</I>
+finish concentrates the sheen into a narrower streak.  A <I>mirror</I>
+finish reflects the surroundings the way a curved mirror does, which
+makes spheres look like polished ball bearings, with a darker lower
+half than the other two settings.  This keyword has no effect unless
+the <I>metal</I> keyword is set to a value larger than 0.0.
 </P>
 <HR>
 
@@ -615,6 +800,43 @@ option.
 </P>
 <HR>
 
+<P>The <I>specular</I> keyword can be used with the <A HREF = "dump_image.html">dump
+image</A> command to adjust the specular highlights
+independently from the <I>shiny</I> keyword of the dump image command.  The
+<I>none</I> setting turns the highlights off entirely, which results in a
+rough, matte surface appearance from the remaining diffuse lighting.
+The other settings select the width of the highlights: <I>wide</I>
+highlights are close to the default appearance, <I>narrow</I> highlights
+are visibly smaller, and <I>tight</I> produces small sharp highlights with
+a plastic-like appearance.  The <I>sfactor</I> value of the <I>shiny</I> keyword
+scales the brightness of the highlights; without the <I>specular</I>
+keyword it also sets their width.
+</P>
+<HR>
+
+<P>The <I>ssaosamples</I> keyword can be used with the <A HREF = "dump_image.html">dump
+image</A> command to set the number of directions that
+the SSAO depth shading enabled by the <I>ssao</I> keyword examines around
+each pixel.  More directions produce smoother shading; fewer
+directions render proportionally faster but make the shading grainier.
+Without this setting the number of directions is derived from the
+<I>dfactor</I> value of the <I>ssao</I> keyword and ranges from 8 to 40.
+Reducing the number of directions is a simple way to trade some image
+quality for faster image output, for example for preview renderings.
+The graininess is less visible when the <I>fsaa</I> keyword of the dump
+image command is also enabled.
+</P>
+<HR>
+
+<P>The <I>subboxcolor</I> keyword can be used with the <A HREF = "dump_image.html">dump
+image</A> command to set the color of the processor
+sub-box boundaries drawn in each image.  See the "dump image subbox"
+command for how to specify that sub-box boundaries be drawn.  The
+color name can be any of the 140 pre-defined colors (see below) or a
+color name defined by the dump_modify color option.
+</P>
+<HR>
+
 <P>The <I>surfgroup</I> keyword can be used with the <A HREF = "dump_image.html">dump
 image</A> command to only draw a subset of the surface
 elements in the simulation.  By default all the surface elements are
@@ -635,8 +857,13 @@ defined by the <A HREF = "group.html">group surf</A> command.
 </P>
 <UL><LI>append = no
 <LI>buffer = yes for all dump styles except <I>image</I> and <I>movie</I>
+<LI>axestrans = 1.0
 <LI>backcolor = black
+<LI>backcolor2 = none
 <LI>boxcolor = yellow
+<LI>boxtrans = 1.0
+<LI>subboxcolor = yellow
+<LI>lights = 0.0 0.9 0.45 0.9
 <LI>cmap = mode min max cf 0.0 2 min blue max red, for all modes
 <LI>color = 140 color names are pre-defined as listed below
 <LI>every = whatever it was set to via the <A HREF = "dump.html">dump</A> command
@@ -644,16 +871,27 @@ defined by the <A HREF = "group.html">group surf</A> command.
 <LI>first = no
 <LI>flush = yes
 <LI>format = %d and %g for each integer or floating point value
+<LI>gamma = 1.0
 <LI>gcolor = * red/green/blue/yellow/aqua/cyan
 <LI>glinecolor = white
+<LI>glinetrans = 1.0
 <LI>gridgroup = all
+<LI>gtrans = 1.0
+<LI>metal = 0.0
+<LI>metalfinish = satin
 <LI>nfile = 1
 <LI>pad = 0
 <LI>pcolor = * red/green/blue/yellow/aqua/cyan
 <LI>pdiam = * 1.0
+<LI>ptrans = * 1.0
 <LI>region = none
 <LI>scolor = * gray
 <LI>slinecolor = white
+<LI>slinetrans = 1.0
+<LI>specular = width derived from the <I>shiny</I> keyword of the dump image command
+<LI>ssaosamples = number derived from the <I>dfactor</I> value of the <I>ssao</I> keyword
+<LI>strans = 1.0
+<LI>subboxtrans = 1.0
 <LI>surfgroup = all
 <LI>thresh = none 
 </UL>

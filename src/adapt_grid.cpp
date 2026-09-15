@@ -420,10 +420,10 @@ void AdaptGrid::process_args(int narg, char **arg)
   if (maxlevel_request && maxlevel < maxlevel_request && me == 0) {
     char str[256];
 #ifdef SPARTA_BIGBIG
-    sprintf(str,"Reduced maxlevel for grid adaptation from %d to %d because it induces "
+    snprintf(str,sizeof(str),"Reduced maxlevel for grid adaptation from %d to %d because it induces "
             "cell IDs that exceed %d bits",maxlevel_request,maxlevel,(int) sizeof(cellint)*8);
 #else
-    sprintf(str,"Reduced maxlevel for grid adaptation from %d to %d because it induces "
+    snprintf(str,sizeof(str),"Reduced maxlevel for grid adaptation from %d to %d because it induces "
             "cell IDs that exceed %d bits, compiling with -DSPARTA_BIGBIG may allow further adaptation"
             ,maxlevel_request,maxlevel,(int) sizeof(cellint)*8);
 #endif
@@ -1482,7 +1482,7 @@ void AdaptGrid::particle_surf_comm()
 
     alist[m].np[ichild] = s->np;
     alist[m].particles[ichild] = (char *) ptr;
-    ptr += s->np * nbytes_total;
+    ptr += (bigint) s->np * nbytes_total;
     ptr = ROUNDUP(ptr);
   }
 
@@ -1526,6 +1526,7 @@ int AdaptGrid::perform_coarsen()
 
     // coarsen parentID to become a new child cell
 
+    int nglocalprev = grid->nlocal;
     grid->coarsen_cell(parentID,plevel,plo,phi,nchild,
                        alist[i].index,alist[i].nsurf,alist[i].np,
                        alist[i].surfs,alist[i].particles,cut2d,cut3d);
@@ -1533,7 +1534,7 @@ int AdaptGrid::perform_coarsen()
     cells = grid->cells;
     cinfo = grid->cinfo;
     sinfo = grid->sinfo;
-    newcell = grid->nlocal - 1;
+    newcell = nglocalprev;
 
     // if new child has no surfs and any of its children was INSIDE
     // then type of new child cell = INSIDE

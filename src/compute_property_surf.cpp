@@ -135,13 +135,17 @@ void ComputePropertySurf::init()
 
   distributed = surf->distributed;
 
-  // one-time setup of cglobal list of owned elements in the group
-  // nsown = # of surf elements I own
-  // nchoose = # of nown surf elements in surface group
-  // cglobal[] = global indices for nchoose elements
-  //             used to access lines/tris in Surf
-  // clocal[] = local indices for nchoose elements
-  //            used to access nown data from per-surf computes,fixes,variables
+  // one-time setup of cglobal, the local -> global index map for the elements
+  //   this proc owns
+  // nsown = # of surf elements I own, and the number of output rows: the
+  //   per-surf output is sized nsown below and every consumer reads
+  //   surf->nown rows of it (fix_ave_surf.cpp:215)
+  // cglobal[] therefore has nsown entries, one per owned element, NOT one per
+  //   group member.  The pack methods zero the rows whose element is outside
+  //   the group, which is what their "else buf[n] = 0.0" branch is for; if
+  //   cglobal held only group members those loops would read past it and then
+  //   index lines[]/tris[] with whatever came back
+  // nchoose = # of owned elements that are in the group, reported only
 
   int me = comm->me;
   int nprocs = comm->nprocs;
@@ -160,20 +164,7 @@ void ComputePropertySurf::init()
   nsown = surf->nown;
   int m;
 
-  nchoose = 0;
-  for (int i = 0; i < nsown; i++) {
-    if (dimension == 2) {
-      if (!distributed) m = me + i*nprocs;
-      else m = i;
-      if (lines[m].mask & groupbit) nchoose++;
-    } else {
-      if (!distributed) m = me + i*nprocs;
-      else m = i;
-      if (tris[m].mask & groupbit) nchoose++;
-    }
-  }
-
-  memory->create(cglobal,nchoose,"property/surf:cglobal");
+  memory->create(cglobal,nsown,"property/surf:cglobal");
   if (nvalues == 1)
     memory->create(vector_surf,nsown,"property/surf:vector_surf");
   else
@@ -181,14 +172,13 @@ void ComputePropertySurf::init()
 
   nchoose = 0;
   for (int i = 0; i < nsown; i++) {
+    if (!distributed) m = me + i*nprocs;
+    else m = i;
+    cglobal[i] = m;
     if (dimension == 2) {
-      if (!distributed) m = me + i*nprocs;
-      else m = i;
-      if (lines[m].mask & groupbit) cglobal[nchoose++] = m;
+      if (lines[m].mask & groupbit) nchoose++;
     } else {
-      if (!distributed) m = me + i*nprocs;
-      else m = i;
-      if (tris[m].mask & groupbit) cglobal[nchoose++] = m;
+      if (tris[m].mask & groupbit) nchoose++;
     }
   }
 }
@@ -219,7 +209,7 @@ void ComputePropertySurf::compute_per_surf()
 bigint ComputePropertySurf::memory_usage()
 {
   bigint bytes;
-  bytes = nvalues*nsown * sizeof(double);
+  bytes = (bigint) nvalues*nsown * sizeof(double);
   return bytes;
 }
 
@@ -237,7 +227,7 @@ void ComputePropertySurf::pack_id(int n)
     Surf::Line *lines;
     if (distributed) lines = surf->mylines;
     else lines = surf->lines;
-    for (int i = 0; i < nchoose; i++) {
+    for (int i = 0; i < nsown; i++) {
       m = cglobal[i];
       if (lines[m].mask & groupbit) buf[n] = lines[m].id;
       else buf[n] = 0.0;

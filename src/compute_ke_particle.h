@@ -35,9 +35,8 @@ class ComputeKEParticle : public Compute {
 
  protected:
   int nmax;
-
- private:
-  double *ke;
+  double *ke;   // aliased by vector_particle; protected so the Kokkos
+                //   subclass can clear it before ~ComputeKEParticle() frees it
 };
 
 }

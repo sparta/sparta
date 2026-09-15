@@ -20,7 +20,7 @@ _Describe the expected behavior. Quote from the SPARTA manual where needed or ex
 
 ## Actual Behavior (Bug Report)
 
-_Describe the actual behavior, how it differs from the expected behavior, and how this can be observed. Try to be specific and do **not* use vague terms like "doesn't work" or "wrong result". Do not assume that the person reading this has any experience with or knowledge of your specific research._
+_Describe the actual behavior, how it differs from the expected behavior, and how this can be observed. Try to be specific and do **not** use vague terms like "doesn't work" or "wrong result". Do not assume that the person reading this has any experience with or knowledge of your specific research._
 
 ## Steps to Reproduce (Bug Report)
 

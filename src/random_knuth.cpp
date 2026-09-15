@@ -137,3 +137,30 @@ double RanKnuth::gaussian()
   }
   return first;
 }
+
+/* ----------------------------------------------------------------------
+   Poisson RN with specified mean
+   returned as a double with an exact integer value
+   Knuth multiplication method for small mean,
+   else normal approximation with continuity correction
+------------------------------------------------------------------------- */
+
+double RanKnuth::poisson(double mean)
+{
+  if (mean <= 0.0) return 0.0;
+
+  if (mean < 30.0) {
+    double L = exp(-mean);
+    double p = 1.0;
+    int k = 0;
+    do {
+      k++;
+      p *= uniform();
+    } while (p > L);
+    return (double) (k-1);
+  }
+
+  double value = floor(mean + sqrt(mean)*gaussian() + 0.5);
+  if (value < 0.0) return 0.0;
+  return value;
+}

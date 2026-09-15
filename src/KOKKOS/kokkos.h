@@ -33,9 +33,12 @@ class KokkosSPARTA : protected Pointers {
   int react_retry_flag;
   double react_extra;
 
+  static int is_finalized;
+
   KokkosSPARTA(class SPARTA *, int, char **);
   ~KokkosSPARTA();
   void accelerator(int, char **);
+  static void finalize();
 
   template<class DeviceType>
   int need_dup()
@@ -48,8 +51,6 @@ class KokkosSPARTA : protected Pointers {
     return value;
   }
 
- private:
-  static void my_signal_handler(int);
 };
 
 }

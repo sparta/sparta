@@ -34,7 +34,9 @@ class FixEmit : public Fix {
   int perspecies;
   class Region *region;
   class RanKnuth *random;
-  int nsingle,ntotal;
+  int nsingle;              // # of insertions in current step
+  bigint ntotal;            // cumulative insertions across all steps,
+                            //   bigint since it can exceed 2^31
 
   int ntask;           // # of insert tasks in underlying child class
 

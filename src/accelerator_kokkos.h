@@ -29,6 +29,7 @@
 #include "domain_kokkos.h"
 #include "surf_kokkos.h"
 #include "modify_kokkos.h"
+#include "variable_kokkos.h"
 
 #else
 
@@ -42,6 +43,7 @@
 #include "domain.h"
 #include "surf.h"
 #include "modify.h"
+#include "variable.h"
 
 namespace SPARTA_NS {
 
@@ -54,6 +56,7 @@ class KokkosSPARTA {
   KokkosSPARTA(class SPARTA *, int, char **) {kokkos_exists = 0;}
   ~KokkosSPARTA() {}
   void accelerator(int, char **) {}
+  static void finalize() {}
 };
 
 class Kokkos {
@@ -101,6 +104,12 @@ class ModifyKokkos : public Modify {
  public:
   ModifyKokkos(class SPARTA *sparta) : Modify(sparta) {}
   ~ModifyKokkos() {}
+};
+
+class VariableKokkos : public Variable {
+ public:
+  VariableKokkos(class SPARTA *sparta) : Variable(sparta) {}
+  ~VariableKokkos() {}
 };
 
 }

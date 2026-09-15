@@ -37,6 +37,7 @@ enum{NONE,DISCRETE,SMOOTH};            // several files
 enum{CONSTANT,VARIABLE};
 
 #define MAXLINE 1024
+#define EPSZERO 1.0e-14
 
 /* ---------------------------------------------------------------------- */
 
@@ -140,6 +141,13 @@ double CollideVSS::attempt_collision(int icell, int np, double volume)
 
   double nattempt;
 
+  // MCF scheme: attempt count is a Poisson variate whose mean is the
+  //   majorant collision frequency x timestep, remain is not used
+
+  if (mcflag)
+    return random->poisson(0.5 * np * (np-1) *
+                           vremax[icell][0][0] * dt * fnum / volume);
+
   if (remainflag) {
     nattempt = 0.5 * np * (np-1) *
       vremax[icell][0][0] * dt * fnum / volume + remain[icell][0][0];
@@ -164,12 +172,20 @@ double CollideVSS::attempt_collision(int icell, int igroup, int jgroup,
 
  // return 2x the value for igroup != jgroup, since no J,I pairing
 
+ // compute npairs in double, else the igroup != jgroup int*int product
+ //   can overflow a 32-bit int for large per-cell group counts
+
  double npairs;
  if (igroup == jgroup) npairs = 0.5 * ngroup[igroup] * (ngroup[igroup]-1);
- else npairs = ngroup[igroup] * (ngroup[jgroup]);
+ else npairs = (double) ngroup[igroup] * (ngroup[jgroup]);
  //else npairs = 0.5 * ngroup[igroup] * (ngroup[jgroup]);
 
  nattempt = npairs * vremax[icell][igroup][jgroup] * dt * fnum / volume;
+
+ // MCF scheme: attempt count is a Poisson variate whose mean is the
+ //   majorant collision frequency x timestep, remain is not used
+
+ if (mcflag) return random->poisson(nattempt);
 
  if (remainflag) {
    nattempt += remain[icell][igroup][jgroup];
@@ -196,13 +212,20 @@ int CollideVSS::test_collision(int icell, int igroup, int jgroup,
   double dv  = vi[1] - vj[1];
   double dw  = vi[2] - vj[2];
   double vr2 = du*du + dv*dv + dw*dw;
-  double vro  = pow(vr2,1.0-params[ispecies][jspecies].omega);
+
+  // prevent division by zero
+
+  if (vr2 < EPSZERO && params[ispecies][jspecies].omega >= 1.0)
+    return 0;
+
+  double vro = pow(vr2,1.0-params[ispecies][jspecies].omega);
 
   // although the vremax is calculated for the group,
   // the individual collisions calculated species dependent vre
 
   double vre = vro*prefactor[ispecies][jspecies];
   vremax[icell][igroup][jgroup] = MAX(vre,vremax[icell][igroup][jgroup]);
+  if (vremax[icell][igroup][jgroup] == 0.0) return 0;
   if (vre/vremax[icell][igroup][jgroup] < random->uniform()) return 0;
   precoln.vr2 = vr2;
   return 1;
@@ -457,6 +480,16 @@ void CollideVSS::EEXCHANGE_NonReactingEDisposal(Particle::OnePart *ip,
   } else {
     E_Dispose = precoln.etrans;
 
+    // This is pairwise Borgnakke-Larsen relaxation: each internal mode that
+    // relaxes adds back only its OWN energy (E_Dispose += p->erot; sample;
+    // E_Dispose -= p->erot), so it exchanges energy with the translational
+    // pool alone.  No shared multi-mode pool is formed, each exchange
+    // independently satisfies detailed balance, and the exponent is the plain
+    // translational one.  Do NOT add the reacting path's remaining_dof
+    // (Dirichlet stick-breaking) correction here -- that correction exists
+    // only because EEXCHANGE_ReactingEDisposal splits the full collision
+    // energy among all modes at once from a single depleting pool.
+
     for (i = 0; i < 2; i++) {
       if (i == 0) p = ip;
       else p = jp;
@@ -556,7 +589,7 @@ void CollideVSS::EEXCHANGE_NonReactingEDisposal(Particle::OnePart *ip,
                 E_Dispose -= pevib;
               }
             }
-          } // end of vibstyle/vibdof if
+          }
         }
         postcoln.evib += p->evib;
       } // end of vibdof if
@@ -669,10 +702,68 @@ void CollideVSS::EEXCHANGE_ReactingEDisposal(Particle::OnePart *ip,
                 params[kp->ispecies][kp->ispecies].omega)/3;
   }
 
-  // handle each kind of energy disposal for non-reacting reactants
-  // clean up memory for the products
+  // Phase 1: total effective internal DOF competing for the shared energy pool,
+  // used to correct the Larsen-Borgnakke exponent for sequential sampling
+  // (Dirichlet stick-breaking).  A discrete vibrational mode holds less energy
+  // than a classical 2-DOF oscillator, so it is counted by its instantaneous
+  // effective DOF zeta_m = eff_vib_dof(theta_m,Tcoll), evaluated at the
+  // collision temperature Tcoll of the whole pool, found self-consistently from
+  //   E = (2.5-aveomega + sum_classical_dof/2)*kB*Tcoll
+  //       + sum_m kB*theta_m/(exp(theta_m/Tcoll) - 1).
+  // Counting discrete modes as a static 2 DOF instead overstates the competing
+  // pool and starves rotation of energy.
 
   double E_Dispose = postcoln.etotal;
+  double boltz = update->boltz;
+  Particle::OnePart *plist[3] = {ip,jp,kp};
+
+  double shape_classical = 2.5 - aveomega;   // translational shape (2.5-omega)
+  double remaining_dof = 0.0;                // effective internal DOF left to draw
+  int ndiscrete = 0;
+
+  for (i = 0; i < numspecies; i++) {
+    int sp = plist[i]->ispecies;
+    if ((species[sp].rotdof > 0) && (rotstyle != NONE)) {
+      shape_classical += 0.5 * species[sp].rotdof;
+      remaining_dof += species[sp].rotdof;
+    }
+    if ((species[sp].vibdof > 0) && (vibstyle != NONE)) {
+      if (vibstyle == DISCRETE) ndiscrete += species[sp].nvibmode;
+      else {
+        shape_classical += 0.5 * species[sp].vibdof;
+        remaining_dof += species[sp].vibdof;
+      }
+    }
+  }
+
+  // collision temperature of the pool (classical unless discrete modes present)
+
+  double tcoll = (shape_classical > 0.0) ? E_Dispose/(boltz*shape_classical) : 0.0;
+
+  if (ndiscrete && E_Dispose > 0.0) {
+
+    // flatten the discrete-mode frequencies once, skipping any theta <= 0
+    // (a zero-frequency mode carries no energy and would make x/(exp(x)-1) NaN)
+
+    double theta[3*Particle::MAXVIBMODE];
+    int nflat = 0;
+    for (i = 0; i < numspecies; i++) {
+      int sp = plist[i]->ispecies;
+      if ((species[sp].vibdof > 0) && (vibstyle == DISCRETE))
+        for (int m = 0; m < species[sp].nvibmode; m++)
+          if (species[sp].vibtemp[m] > 0.0) theta[nflat++] = species[sp].vibtemp[m];
+    }
+
+    // solve for the pool collision temperature, then add each discrete mode's
+    // effective DOF at that temperature to the competing pool
+
+    tcoll = vib_pool_temp(shape_classical,nflat,theta,E_Dispose);
+    for (int m = 0; m < nflat; m++)
+      remaining_dof += eff_vib_dof(theta[m],tcoll);
+  }
+
+  // Phase 2: Handle energy disposal for products with remaining_dof correction
+  // to account for sequential sampling from shared pool (Dirichlet stick-breaking)
 
   for (i = 0; i < numspecies; i++) {
     if (i == 0) p = ip;
@@ -686,16 +777,19 @@ void CollideVSS::EEXCHANGE_ReactingEDisposal(Particle::OnePart *ip,
       if (rotstyle == NONE) {
         p->erot = 0.0;
       } else if (rotdof == 2) {
+        double b_rot = (1.5 - aveomega) + 0.5 * (remaining_dof - rotdof);
         Fraction_Rot =
-          1- pow(random->uniform(),(1/(2.5-aveomega)));
+          1.0 - pow(random->uniform(),(1.0/(1.0 + b_rot)));
         p->erot = Fraction_Rot * E_Dispose;
         E_Dispose -= p->erot;
+        remaining_dof -= rotdof;
 
       } else if (rotdof > 2) {
+        double b_rot = (1.5 - aveomega) + 0.5 * (remaining_dof - rotdof);
         p->erot = E_Dispose *
-          sample_bl(random,0.5*species[sp].rotdof-1.0,
-                    1.5-aveomega);
+          sample_bl(random,0.5*species[sp].rotdof-1.0, b_rot);
         E_Dispose -= p->erot;
+        remaining_dof -= rotdof;
       }
     }
 
@@ -705,29 +799,35 @@ void CollideVSS::EEXCHANGE_ReactingEDisposal(Particle::OnePart *ip,
       if (vibstyle == NONE) {
         p->evib = 0.0;
       } else if (vibdof == 2 && vibstyle == DISCRETE) {
+        double zeta = eff_vib_dof(species[sp].vibtemp[0],tcoll);
+        double b_vib = (1.5 - aveomega) + 0.5 * (remaining_dof - zeta);
         max_level = static_cast<int>
-          (E_Dispose / (update->boltz * species[sp].vibtemp[0]));
+          (E_Dispose / (boltz * species[sp].vibtemp[0]));
         do {
           ivib = static_cast<int>
             (random->uniform()*(max_level+AdjustFactor));
           p->evib = (double)
-            (ivib * update->boltz * species[sp].vibtemp[0]);
-          State_prob = pow((1.0 - p->evib / E_Dispose),
-                           (1.5 - aveomega));
+            (ivib * boltz * species[sp].vibtemp[0]);
+          State_prob = pow((1.0 - p->evib / E_Dispose), b_vib);
         } while (State_prob < random->uniform());
         E_Dispose -= p->evib;
+        remaining_dof -= zeta;
 
       } else if (vibdof == 2 && vibstyle == SMOOTH) {
+        double b_vib = (1.5 - aveomega) + 0.5 * (remaining_dof - vibdof);
         Fraction_Vib =
-          1.0 - pow(random->uniform(),(1.0 / (2.5-aveomega)));
+          1.0 - pow(random->uniform(),(1.0 / (1.0 + b_vib)));
         p->evib = Fraction_Vib * E_Dispose;
         E_Dispose -= p->evib;
+        remaining_dof -= vibdof;
 
       } else if (vibdof > 2 && vibstyle == SMOOTH) {
+          double b_vib = (1.5 - aveomega) + 0.5 * (remaining_dof - vibdof);
           p->evib = E_Dispose *
-          sample_bl(random,0.5*species[sp].vibdof-1.0,
-                   1.5-aveomega);
+            sample_bl(random,0.5*species[sp].vibdof-1.0, b_vib);
           E_Dispose -= p->evib;
+          remaining_dof -= vibdof;
+
       } else if (vibdof > 2 && vibstyle == DISCRETE) {
           p->evib = 0.0;
 
@@ -736,22 +836,21 @@ void CollideVSS::EEXCHANGE_ReactingEDisposal(Particle::OnePart *ip,
           int pindex = p - particle->particles;
 
           for (int imode = 0; imode < nmode; imode++) {
-            ivib = vibmode[pindex][imode];
-            E_Dispose += ivib * update->boltz *
-            particle->species[sp].vibtemp[imode];
+            double zeta = eff_vib_dof(species[sp].vibtemp[imode],tcoll);
             max_level = static_cast<int>
-            (E_Dispose / (update->boltz * species[sp].vibtemp[imode]));
+            (E_Dispose / (boltz * species[sp].vibtemp[imode]));
+            double b_vib = (1.5 - aveomega) + 0.5 * (remaining_dof - zeta);
             do {
               ivib = static_cast<int>
               (random->uniform()*(max_level+AdjustFactor));
-              pevib = ivib * update->boltz * species[sp].vibtemp[imode];
-              State_prob = pow((1.0 - pevib / E_Dispose),
-                               (1.5 - aveomega));
+              pevib = ivib * boltz * species[sp].vibtemp[imode];
+              State_prob = pow((1.0 - pevib / E_Dispose), b_vib);
             } while (State_prob < random->uniform());
 
             vibmode[pindex][imode] = ivib;
             p->evib += pevib;
             E_Dispose -= pevib;
+            remaining_dof -= zeta;
           }
         }
       }
@@ -771,6 +870,65 @@ void CollideVSS::EEXCHANGE_ReactingEDisposal(Particle::OnePart *ip,
 
   postcoln.eint = postcoln.erot + postcoln.evib;
   postcoln.etrans = E_Dispose;
+}
+
+/* ---------------------------------------------------------------------- */
+
+/* ----------------------------------------------------------------------
+   instantaneous effective vibrational DOF of a single discrete SHO mode
+   of characteristic temperature theta at collision temperature tcoll:
+     zeta = 2x/(exp(x)-1), x = theta/tcoll
+   returns 0 for a non-positive theta or tcoll (no energy, avoids 0/0)
+------------------------------------------------------------------------- */
+
+double CollideVSS::eff_vib_dof(double theta, double tcoll)
+{
+  if (theta <= 0.0 || tcoll <= 0.0) return 0.0;
+  double x = theta / tcoll;
+  return 2.0 * x / (exp(x) - 1.0);
+}
+
+/* ----------------------------------------------------------------------
+   collision temperature Tcoll of an energy pool E shared by shape_classical
+   translational+classical-internal shape (= 2.5-omega + sum classical dof/2)
+   and nmode discrete SHO modes of characteristic temperatures theta[]:
+     E = kB*( shape_classical*Tcoll + sum_m theta_m/(exp(theta_m/Tcoll)-1) )
+   f(T) is monotone increasing with f(0+) = -E < 0, and the classical estimate
+   Thi = E/(kB*shape_classical) ignores the vibrational heat capacity so
+   f(Thi) >= 0; hence [0,Thi] brackets the root.  Solved with a safeguarded
+   Newton iteration (bisection fallback) that converges quadratically in the
+   typical case and cannot overshoot to a nonphysical temperature.
+   Requires shape_classical > 0 and E > 0 (guaranteed by the caller).
+------------------------------------------------------------------------- */
+
+double CollideVSS::vib_pool_temp(double shape_classical, int nmode,
+                                 double *theta, double E)
+{
+  double boltz = update->boltz;
+  double Thi = E / (boltz * shape_classical);
+  double Tlo = 0.0;
+  double T = Thi;
+
+  for (int iter = 0; iter < 30; iter++) {
+    double f = boltz * shape_classical * T - E;
+    double df = boltz * shape_classical;
+    for (int m = 0; m < nmode; m++) {
+      double x = theta[m] / T;
+      if (x > 200.0) continue;             // frozen mode: exp overflow, ~0 term
+      double ex = exp(x);
+      double den = ex - 1.0;
+      f  += boltz * theta[m] / den;
+      df += boltz * theta[m]*theta[m] * ex / (T*T * den*den);
+    }
+    if (f > 0.0) Thi = T; else Tlo = T;    // keep [Tlo,Thi] bracketing the root
+    double Tnew = T - f/df;                // Newton step
+    if (!(Tnew > Tlo && Tnew < Thi))       // ... but stay inside the bracket
+      Tnew = 0.5 * (Tlo + Thi);
+    double delta = fabs(Tnew - T);
+    T = Tnew;
+    if (delta < 1.0e-4 * T) break;
+  }
+  return T;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -826,7 +984,7 @@ void CollideVSS::read_param_file(char *fname)
   FILE *fp = fopen(fname,"r");
   if (fp == NULL) {
     char str[128];
-    sprintf(str,"Cannot open VSS parameter file %s",fname);
+    snprintf(str,sizeof(str),"Cannot open VSS parameter file %s",fname);
     error->one(FLERR,str);
   }
 
@@ -892,7 +1050,7 @@ void CollideVSS::read_param_file(char *fname)
       params[isp][jsp].alpha = params[jsp][isp].alpha = atof(words[5]);
       if (relaxflag == VARIABLE) {
         params[isp][jsp].rotc1 = params[jsp][isp].rotc1 = atof(words[6]);
-        params[isp][jsp].rotc2 = atof(words[7]);
+        params[isp][jsp].rotc2 = params[jsp][isp].rotc2 = atof(words[7]);
         params[isp][jsp].rotc3 = params[jsp][isp].rotc3 =
                         (MY_PI+MY_PI2*MY_PI2)*params[isp][jsp].rotc2;
         if(params[isp][jsp].rotc2 > 0)
@@ -912,7 +1070,7 @@ void CollideVSS::read_param_file(char *fname)
 
     if (params[i][i].diam < 0.0) {
       char str[128];
-      sprintf(str,"Species %s did not appear in VSS parameter file",
+      snprintf(str,sizeof(str),"Species %s did not appear in VSS parameter file",
               particle->species[i].id);
       error->one(FLERR,str);
     }

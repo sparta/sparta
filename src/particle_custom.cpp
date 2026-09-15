@@ -156,7 +156,7 @@ void Particle::grow_custom(int index, int nold, int nnew)
       int **iarray = eiarray[ewhich[index]];
       memory->grow(iarray,nnew,esize[index],"particle:eiarray");
       if (iarray)
-        memset(&iarray[nold][0],0,(nnew-nold)*esize[index]*sizeof(int));
+        memset(&iarray[nold][0],0,(bigint) (nnew-nold)*esize[index]*sizeof(int));
       eiarray[ewhich[index]] = iarray;
     }
 
@@ -170,7 +170,7 @@ void Particle::grow_custom(int index, int nold, int nnew)
       double **darray = edarray[ewhich[index]];
       memory->grow(darray,nnew,esize[index],"particle:edarray");
       if (darray)
-        memset(&darray[nold][0],0,(nnew-nold)*esize[index]*sizeof(double));
+        memset(&darray[nold][0],0,(bigint) (nnew-nold)*esize[index]*sizeof(double));
       edarray[ewhich[index]] = darray;
     }
   }

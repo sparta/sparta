@@ -26,18 +26,15 @@ FixStyle(emit/face/kk,FixEmitFaceKokkos)
 #include "kokkos_base.h"
 #include "kokkos_copy.h"
 #include "particle_kokkos.h"
-#include "region_block_kokkos.h"
-#include "region_cylinder_kokkos.h"
-#include "region_plane_kokkos.h"
-#include "region_sphere_kokkos.h"
+#include "region_prim_kokkos.h"
 
 namespace SPARTA_NS {
 
-#define KOKKOS_MAX_REGION_PER_TYPE 2
-#define KOKKOS_MAX_TOT_REGION 10
 
 struct TagFixEmitFace_ninsert{};
 struct TagFixEmitFace_perform_task{};
+struct TagFixEmitFace_subsonic_inflow{};
+struct TagFixEmitFace_subsonic_grid{};
 
 class FixEmitFaceKokkos : public FixEmitFace {
  public:
@@ -46,6 +43,7 @@ class FixEmitFaceKokkos : public FixEmitFace {
   FixEmitFaceKokkos(class SPARTA *, int, char **);
   ~FixEmitFaceKokkos() override;
   void init() override;
+  void flatten_region();
   void perform_task() override;
   void perform_task_twopass() override { perform_task(); }
 
@@ -54,6 +52,12 @@ class FixEmitFaceKokkos : public FixEmitFace {
 
   KOKKOS_INLINE_FUNCTION
   void operator()(TagFixEmitFace_perform_task, const int&, int&) const;
+
+  KOKKOS_INLINE_FUNCTION
+  void operator()(TagFixEmitFace_subsonic_inflow, const int&) const;
+
+  KOKKOS_INLINE_FUNCTION
+  void operator()(TagFixEmitFace_subsonic_grid, const int&) const;
 
 #ifndef SPARTA_KOKKOS_EXACT
   Kokkos::Random_XorShift64_Pool<DeviceType> rand_pool;
@@ -67,13 +71,19 @@ class FixEmitFaceKokkos : public FixEmitFace {
 #endif
 
  private:
-  int prefactor, region_flag;
+  double prefactor;
+  int region_flag;
+  double boltz,temp_thermal_mix;
 
   KKCopy<ParticleKokkos> particle_kk_copy;
-  KKCopy<RegBlockKokkos> regblock_kk_copy;
-  KKCopy<RegCylinderKokkos> regcylinder_kk_copy;
-  KKCopy<RegPlaneKokkos> regplane_kk_copy;
-  KKCopy<RegSphereKokkos> regsphere_kk_copy;
+  // region flattened to a device-resident postfix token stream; replaces
+  //   the per-style KKCopy members and the caps that went with them.
+  //   region_flag says whether there is a region at all -- nregion_token and
+  //   d_region_tokens are only meaningful when it is 1
+
+  tdual_region_token_1d k_region_tokens;
+  t_region_token_1d d_region_tokens;
+  int nregion_token;
 
   typedef Kokkos::DualView<Task*, DeviceType::array_layout, DeviceType> tdual_task_1d;
   typedef tdual_task_1d::t_dev t_task_1d;
@@ -103,15 +113,31 @@ class FixEmitFaceKokkos : public FixEmitFace {
 
   DAT::tdual_float_1d k_mix_vscale;
   DAT::tdual_float_1d k_cummulative;
-  DAT::tdual_int_1d k_species;
+  DAT::tdual_int_1d k_mspecies;          // species indices of mixture
+  DAT::tdual_float_1d k_fraction;        // mixture fraction for each species
 
   DAT::t_float_1d d_mix_vscale;
   DAT::t_float_1d d_cummulative;
-  DAT::t_int_1d d_species;
+  DAT::t_int_1d d_mspecies;
+  DAT::t_float_1d d_fraction;
+
+  // data structs for subsonic emission
+
+  t_particle_1d d_particles;
+  t_species_1d d_species_all;            // all particle species (mass, rotdof)
+  t_cinfo_1d d_cinfo;
+  DAT::t_int_2d d_plist;
+  DAT::t_int_1d d_cellcount;
+  DAT::t_float_scalar d_tempmax;
+  int plist_descending;   // 1 if the host walks d_plist high index -> low
 
   void create_tasks() override;
   void grow_task() override;
   void realloc_nspecies() override;
+
+  void subsonic_inflow() override;
+  void subsonic_sort() override;
+  void subsonic_grid() override;
 };
 
 }

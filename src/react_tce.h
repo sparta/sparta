@@ -45,6 +45,9 @@ class ReactTCE : public ReactBird {
   double bird_Evib(int nmode, double Tvib,
                  double VibTemp[],
                  double Evib);
+
+ protected:
+  int prob_warn_flag;      // 1 after warning once about an invalid react_prob
 };
 
 }

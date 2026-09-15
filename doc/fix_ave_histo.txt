@@ -119,7 +119,7 @@ means all indices from m to n (inclusive).
 Using a wildcard is the same as if the individual elements of the
 vector or columns of the array had been listed one by one.  E.g. these
 2 fix ave/histo commands are equivalent, since the "compute
-grid"_compute_com_chunk.html command creates a per-grid array with 3
+grid"_compute_grid.html command creates a per-grid array with 3
 columns:
 
 compute myGrid grid all all u v w

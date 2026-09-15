@@ -104,6 +104,8 @@ void ComputeDistSurfGrid::compute_per_grid()
   int dim = domain->dimension;
   Surf::Line *lines = surf->lines;
   Surf::Tri *tris = surf->tris;
+  if (surf->nsurf > MAXSMALLINT)
+    error->one(FLERR,"Too many surfs for non-distributed surf operation");
   int ntotal = surf->nsurf;
 
   // nsurf = # of eligible surfs, based on group and sdir setting

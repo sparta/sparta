@@ -1,0 +1,140 @@
+SPARTA (24 Sep 2025)
+Running on 4 MPI task(s)
+################################################################################
+# Ambipolar ions as third bodies in dissociation and recombination (issue #176)
+#
+# A closed, periodic box of hot O2 / O / O2+ (+ ambipolar electrons).  The
+# only reactions defined are an ion-third-body dissociation and an
+# ion-third-body recombination, so any gas reactions that occur exercise the
+# new functionality directly.
+#
+# A single-group mixture keeps the case focused on the third-body chemistry
+# rather than on group binning; the KOKKOS package runs multigroup ambipolar
+# collisions too.  The "comm/sort" and "twopass" options make MPI and Kokkos
+# runs reproducible and should not be used for production runs.
+################################################################################
+
+seed                12345
+dimension           3
+global              gridcut 0.0 comm/sort yes
+boundary            p p p
+
+create_box          0.0 0.001 0.0 0.001 0.0 0.001
+Created orthogonal box = (0 0 0) to (0.001 0.001 0.001)
+create_grid         10 10 10
+WARNING: Could not acquire nearby ghost cells b/c grid partition is not clumped (/home/user/sparta/src/grid.cpp:486)
+Created 1000 child grid cells
+  CPU time = 0.0010655 secs
+  create/ghost percent = 88.428 11.572
+balance_grid        rcb cell
+Balance grid migrated 740 cells
+  CPU time = 0.000843833 secs
+  reassign/sort/migrate/ghost percent = 43.6789 0.328501 15.9548 40.0378
+
+global              nrho 1.0e22 fnum 1.0e8
+
+species             ambi_3body.species O2 O O2+ e
+
+# collide mixture: all species in one group
+mixture             plasma O2 O O2+ e temp 50000.0
+
+# create mixture: heavy species only (electrons are added by fix ambipolar)
+mixture             gas O2 O O2+ temp 50000.0
+mixture             gas O2 frac 0.5
+mixture             gas O frac 0.3
+mixture             gas O2+ frac 0.2
+
+fix                 ambi ambipolar e O2+
+
+collide             vss plasma ambi_3body.vss relax variable
+collide_modify      vremax 1000 yes vibrate discrete rotate smooth
+collide_modify      ambipolar yes
+react               tce ambi_3body.tce
+
+create_particles    gas n 0 twopass
+Created 99999 particles
+  CPU time = 0.0077028 secs
+
+timestep            1.0e-9
+
+compute             c count species
+stats_style         step cpu np nattempt ncoll nreact                     c_c[1] c_c[2] c_c[3] c_c[4]
+stats               50
+
+run                 500
+WARNING: Single-group ambipolar collisions are inefficient; grouping electrons separately (e.g. collide ... species) is recommended (/home/user/sparta/src/collide.cpp:355)
+Memory usage per proc in Mbytes:
+  particles (ave,min,max) = 4 4 4
+  grid      (ave,min,max) = 1.51379 1.51379 1.51379
+  surf      (ave,min,max) = 0 0 0
+  modify    (ave,min,max) = 0 0 0
+  total     (ave,min,max) = 5.51379 5.51379 5.51379
+Step CPU Np Natt Ncoll Nreact c_c[1] c_c[2] c_c[3] c_c[4] 
+       0            0    99999        0        0        0        50013        30006        19980            0 
+      50   0.25837697   100487   221613    15292        6        49525        30982        19980            0 
+     100   0.52969439   100950   223108    15093        7        49062        31908        19980            0 
+     150   0.79824022   101442   224889    15062        8        48570        32892        19980            0 
+     200    1.0543701   101917   226609    15212       12        48095        33842        19980            0 
+     250    1.3196561   102365   228250    15341       12        47647        34738        19980            0 
+     300    1.5836764   102790   229922    15254        9        47222        35588        19980            0 
+     350    1.8580471   103268   231700    15100        9        46744        36544        19980            0 
+     400    2.1300416   103717   233395    15259       10        46295        37442        19980            0 
+WARNING: TCE reaction probability exceeded 1.0, chemistry may be under-resolved, consider reducing timestep or fnum (further warnings suppressed) (/home/user/sparta/src/react_tce.cpp:204)
+     450    2.3947466   104180   235109    15127        9        45832        38368        19980            0 
+     500    2.6791988   104598   236855    15281        5        45414        39204        19980            0 
+Loop time of 2.67927 on 4 procs for 500 steps with 104598 particles
+Performance: 186.618 timesteps/s, 19.520 Mparticle-step/s
+
+MPI task timing breakdown:
+Section |  min time  |  avg time  |  max time  |%varavg| %total
+---------------------------------------------------------------
+Move    | 0.12656    | 0.13298    | 0.13651    |   1.1 |  4.96
+Coll    | 2.1289     | 2.2068     | 2.2432     |   3.1 | 82.37
+Sort    | 0.048117   | 0.050791   | 0.052483   |   0.8 |  1.90
+Comm    | 0.059006   | 0.061459   | 0.064185   |   0.8 |  2.29
+Modify  | 0          | 0          | 0          |   0.0 |  0.00
+Output  | 0.0019282  | 0.0037829  | 0.0053814  |   2.3 |  0.14
+MPI Sync| 0.1849     | 0.22321    | 0.30947    |  10.6 |  8.33
+Other   |            | 0.0002087  |            |       |  0.01
+
+Particle moves    = 51168099 (51.2M)
+Cells touched     = 56168020 (56.2M)
+Particle comms    = 666189 (0.666M)
+Boundary collides = 0 (0K)
+Boundary exits    = 0 (0K)
+SurfColl checks   = 0 (0K)
+SurfColl occurs   = 0 (0K)
+Surf reactions    = 0 (0K)
+Collide attempts  = 114139243 (114M)
+Collide occurs    = 7614092 (7.61M)
+Reactions         = 4609 (4.61K)
+Particles stuck   = 0
+Axisymm bad moves = 0
+
+Particle-moves/CPUsec/proc: 4.77445e+06
+Particle-moves/step: 102336
+Cell-touches/particle/step: 1.09772
+Particle comm iterations/step: 2.666
+Particle fraction communicated: 0.0130196
+Particle fraction colliding with boundary: 0
+Particle fraction exiting boundary: 0
+Surface-checks/particle/step: 0
+Surface-collisions/particle/step: 0
+Surf-reactions/particle/step: 0
+Collision-attempts/particle/step: 2.23067
+Collisions/particle/step: 0.148805
+Reactions/particle/step: 9.00757e-05
+
+Gas reaction tallies:
+  style tce #-of-reactions 2
+  reaction O2 + O2+ --> O + O2+ + O: 4604
+  reaction O + O --> O2 + O2+: 5
+
+Particles: 26149.5 ave 26219 max 26046 min
+Histogram: 1 0 0 0 0 1 0 0 1 1
+Cells:      250 ave 250 max 250 min
+Histogram: 4 0 0 0 0 0 0 0 0 0
+GhostCell: 240 ave 240 max 240 min
+Histogram: 4 0 0 0 0 0 0 0 0 0
+EmptyCell: 130 ave 130 max 130 min
+Histogram: 4 0 0 0 0 0 0 0 0 0

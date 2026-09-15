@@ -691,7 +691,7 @@ bigint ComputeDtGrid::memory_usage()
 {
   bigint bytes;
   bytes = nglocal * sizeof(double);      // vector_grid
-  bytes += 5*nglocal * sizeof(double);   // tau,temp,usq,vsq,wsq
+  bytes += 5*((bigint) nglocal) * sizeof(double);   // tau,temp,usq,vsq,wsq
   return bytes;
 }
 

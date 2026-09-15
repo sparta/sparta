@@ -53,6 +53,9 @@ class GridKokkos : public Grid {
 // operations with grid cell IDs
   void update_hash();
 
+  // re-establish device state after a host fix rebuilt the grid/surfs
+  void resync_after_host_change();
+
   /* ----------------------------------------------------------------------
      compute lo/hi extent of a specific child cell within a parent cell
      plevel = level of parent
@@ -164,9 +167,13 @@ class GridKokkos : public Grid {
   tdual_pcell_1d k_pcells;
   tdual_plevel_1d k_plevels;
 
-  Kokkos::Crs<int, DeviceType, void, int> d_csurfs;
-  Kokkos::Crs<int, DeviceType, void, int> d_csplits;
-  Kokkos::Crs<int, DeviceType, void, int> d_csubs;
+  // Crs row_map offsets index the flattened per-cell surf lists.  Under
+  //   BIGBIG the total entry count on a rank can exceed 2^31, so the offset
+  //   type must be 64-bit; under BIG it cannot, and a 32-bit row_map halves
+  //   the bytes touched by the per-particle surf lookups in the move kernel.
+  Kokkos::Crs<int, DeviceType, void, crs_size_type> d_csurfs;
+  Kokkos::Crs<int, DeviceType, void, crs_size_type> d_csplits;
+  Kokkos::Crs<int, DeviceType, void, crs_size_type> d_csubs;
 
   DAT::t_int_1d d_cellcount;
   DAT::t_int_2d d_plist;
@@ -174,6 +181,19 @@ class GridKokkos : public Grid {
   // hash for all cell IDs (owned,ghost,parent).  The _d postfix refers to the
   // fact that this hash lives on "device"
   hash_type hash_kk;
+
+  // device copy of Grid::halo_index, the dense alternative to hash_kk for the
+  //   uniform-grid fast path in UpdateKokkos::move(): maps a cell's position
+  //   within this proc's halo straight to its local index, so a lookup is one
+  //   indexed load rather than a dependent probe chain.
+  // the halo_* extents that key it are the base class members, since the map
+  //   is built there and this is only the upload.
+  // extent 0 means unavailable, and callers must fall back to hash_kk.
+
+  DAT::t_int_1d d_halo_index;
+
+  void update_halo_index();
+  bigint memory_usage() override;
 
   DAT::tdual_int_1d k_ewhich,k_eicol,k_edcol;
 

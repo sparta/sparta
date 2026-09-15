@@ -1,0 +1,178 @@
+<HTML>
+<CENTER><A HREF = "https://sparta.github.io">SPARTA WWW Site</A> - <A HREF = "Manual.html">SPARTA Documentation</A> - <A HREF = "Section_commands.html#comm">SPARTA Commands</A> 
+</CENTER>
+
+
+
+
+
+
+<HR>
+
+<H3>fix controller command 
+</H3>
+<P><B>Syntax:</B>
+</P>
+<PRE>fix ID controller Nevery alpha Kp Ki Kd pv setpoint cv 
+</PRE>
+<UL><LI>ID is documented in <A HREF = "fix.html">fix</A> command 
+
+<LI>controller = style name of this fix command 
+
+<LI>Nevery = invoke this fix every this many timesteps 
+
+<LI>alpha = coupling constant for converting the control variable to a change (see below) 
+
+<LI>Kp = proportional gain coefficient (see below) 
+
+<LI>Ki = integral gain coefficient (see below) 
+
+<LI>Kd = derivative gain coefficient (see below) 
+
+<LI>pv = process variable of the feedback loop, can be a compute, fix, or variable 
+
+<PRE>  c_ID = global scalar calculated by a compute with ID
+  c_ID[I] = Ith component of global vector calculated by a compute with ID
+  f_ID = global scalar calculated by a fix with ID
+  f_ID[I] = Ith component of global vector calculated by a fix with ID
+  v_name = value calculated by an equal-style variable with name 
+</PRE>
+<LI>setpoint = desired value of the process variable (target of the controller) 
+
+<LI>cv = name of the control variable, an internal-style <A HREF = "variable.html">variable</A> 
+
+
+</UL>
+<P><B>Examples:</B>
+</P>
+<PRE>compute myTemp all temp
+variable drive internal 0.0
+fix pid controller 100 0.1 1.0 0.0 0.0 c_myTemp 300.0 drive 
+</PRE>
+<P><B>Description:</B>
+</P>
+<P>Apply a "proportional-integral-derivative" (PID) feedback controller to
+a simulation.  Every <I>Nevery</I> timesteps the fix samples a <I>process
+variable</I> <I>pv</I>, compares it to a desired <I>setpoint</I>, and updates a
+<I>control variable</I> <I>cv</I> so as to drive the process variable toward the
+setpoint.  The control variable is an <A HREF = "variable.html">internal-style
+variable</A> whose value can be referenced by any other
+command in the input script that evaluates a variable, so the feedback
+loop can be used to steer essentially any property of a running
+simulation.
+</P>
+<P>A typical use is to maintain a target temperature, pressure, or flux by
+adjusting an input such as a wall temperature, an inflow velocity, or an
+applied field that is itself expressed through the control variable.
+The process variable to be controlled is computed by another command and
+passed to this fix as <I>pv</I>; the value that this fix adjusts is the
+internal-style variable named <I>cv</I>.
+</P>
+<P>The <I>process variable</I> <I>pv</I> can be the output of a <A HREF = "compute.html">compute</A>,
+a <A HREF = "fix.html">fix</A>, or an equal-style <A HREF = "variable.html">variable</A>:
+</P>
+<UL><LI>if <I>pv</I> begins with "c_", it is the global scalar (no bracket) or the
+Ith component of the global vector (with bracket) computed by the named
+compute 
+
+<LI>if <I>pv</I> begins with "f_", it is the global scalar or Ith vector
+component computed by the named fix 
+
+<LI>if <I>pv</I> begins with "v_", it is the value of the named equal-style
+variable 
+
+
+</UL>
+<P>The <I>control variable</I> <I>cv</I> must be the name of an <A HREF = "variable.html">internal-style
+variable</A>.  This fix overwrites the value of that variable
+each time it is invoked.  Some other command in the input script should
+reference this variable (e.g. as <I>v_name</I>) so that the new value
+produced by the controller takes effect.
+</P>
+<P>The controller works as follows.  Each time the fix is invoked, the
+current value of the process variable <I>pv</I> is compared to the
+<I>setpoint</I>, and the difference is the current error:
+</P>
+<PRE>err = pv - setpoint 
+</PRE>
+<P>The control variable is then updated from its previous value using the
+three PID terms:
+</P>
+<PRE>cv = cv - Kp*alpha*tau*err - Ki*alpha*tau*tau*sumerr - Kd*alpha*deltaerr 
+</PRE>
+<P>where <I>tau</I> = <I>Nevery</I> * dt is the elapsed time between invocations (dt
+is the timestep size), <I>sumerr</I> is the running sum (time integral) of
+the error, and <I>deltaerr</I> is the change in the error since the previous
+invocation (a finite-difference approximation to the time derivative).
+</P>
+<P>The <I>Kp</I>, <I>Ki</I>, and <I>Kd</I> coefficients are the dimensionless gains of
+the proportional, integral, and derivative terms, respectively.  The
+<I>alpha</I> coefficient is an overall coupling constant that carries the
+units of the equation, namely the control-variable units divided by the
+process-variable units divided by time units.  The advantage of this
+convention is that the values of <I>Kp</I>, <I>Ki</I>, <I>Kd</I> are invariant under a
+change of the timestep
+size or of <I>Nevery</I>; and if the <A HREF = "units.html">units</A> style is changed,
+only <I>alpha</I> needs to be adjusted, leaving the three gains unaltered.
+Setting one or more of <I>Kp</I>, <I>Ki</I>, <I>Kd</I> to zero disables the
+corresponding term, e.g. <I>Ki</I> = <I>Kd</I> = 0.0 yields a purely proportional
+controller.
+</P>
+<P>NOTE: The sign convention in the update formula above (the PID terms are
+subtracted) is appropriate when an increase of the control variable
+<I>decreases</I> the process variable.  If increasing the control variable
+<I>increases</I> the process variable, use a negative <I>alpha</I> (or negative
+gains) so that the feedback remains stabilizing.
+</P>
+<P>Choosing good values for the four constants depends on the system and
+typically requires some experimentation.  It is best to first choose a
+value and sign for <I>alpha</I> consistent with the magnitudes and signs of
+the process and control variables, then tune <I>Kp</I> (with <I>Ki</I> = <I>Kd</I> =
+0.0) for a fast response that does not overshoot the setpoint.  For many
+applications a purely proportional controller is sufficient.  A non-zero
+<I>Ki</I> can remove a steady-state offset when the process variable plateaus
+before reaching the setpoint, and a non-zero <I>Kd</I> can counteract lag in
+the response of the process variable to a change in the control variable.
+</P>
+<P>Because this fix updates the control variable but does not initialize
+it, its initial value is whatever the user assigned to the internal-style
+<A HREF = "variable.html">variable</A> in the input script.  That value is used (by
+every other command that references the variable) until this fix
+performs its first update after <I>Nevery</I> timesteps.  On that first
+update the derivative term is set to zero, because the previous error is
+not yet defined.
+</P>
+<HR>
+
+<P><B>Restart, output info:</B>
+</P>
+<P>No information about this fix is written to <A HREF = "restart.html">binary restart
+files</A>.
+</P>
+<P>This fix computes a global vector of length 3 which can be accessed by
+various output commands.  The values can be accessed on any timestep,
+though they are only updated on timesteps that are a multiple of
+<I>Nevery</I>.  The 3 quantities are the most recent updates made to the
+control variable by each of the three terms in the PID equation above:
+</P>
+<UL><LI>1 = proportional term = -Kp*alpha*tau*err
+<LI>2 = integral term = -Ki*alpha*tau*tau*sumerr
+<LI>3 = derivative term = -Kd*alpha*deltaerr 
+</UL>
+<P>These values can be useful for monitoring and tuning the relative
+contributions of the three terms.  The units of the vector values are
+whatever units the control variable is in.  The vector values calculated
+by this fix are "extensive".
+</P>
+<HR>
+
+<P><B>Restrictions:</B> none
+</P>
+<P><B>Related commands:</B>
+</P>
+<P><A HREF = "compute.html">compute</A>, <A HREF = "variable.html">variable</A>, <A HREF = "fix_adapt.html">fix
+adapt</A>
+</P>
+<P><B>Default:</B> none
+</P>
+</HTML>

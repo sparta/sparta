@@ -29,6 +29,7 @@ namespace SPARTA_NS {
 class ComputeGasCollisionGrid : public Compute {
  public:
   ComputeGasCollisionGrid(class SPARTA *, int, char **);
+  ComputeGasCollisionGrid(class SPARTA* sparta) : Compute(sparta) {} // needed for Kokkos
   ~ComputeGasCollisionGrid();
   void init();
   void compute_per_grid();

@@ -31,6 +31,7 @@ namespace SPARTA_NS {
 class ComputeReactISurfGrid : public Compute {
  public:
   ComputeReactISurfGrid(class SPARTA *, int, char **);
+  ComputeReactISurfGrid(class SPARTA* sparta) : Compute(sparta) {} // needed for Kokkos
   ~ComputeReactISurfGrid();
   virtual void init();
   void compute_per_grid();
@@ -38,7 +39,7 @@ class ComputeReactISurfGrid : public Compute {
   virtual void surf_tally(double, int, int, int, Particle::OnePart *,
                           Particle::OnePart *, Particle::OnePart *);
   virtual int tallyinfo(surfint *&);
-  void post_process_isurf_grid();
+  virtual void post_process_isurf_grid();
   bigint memory_usage();
 
  protected:
@@ -69,7 +70,7 @@ class ComputeReactISurfGrid : public Compute {
   Surf::Line *lines;
   Surf::Tri *tris;
 
-  void grow_tally();
+  virtual void grow_tally();
 };
 
 }

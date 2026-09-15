@@ -45,7 +45,3 @@ depend () {
 
 # add one if statement per parent package
 # add one depend() call per child package that depends on that parent
-
-if (test $1 = "FFT") then
-  depend KOKKOS
-fi

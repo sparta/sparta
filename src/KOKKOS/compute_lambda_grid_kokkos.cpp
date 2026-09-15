@@ -199,6 +199,9 @@ void ComputeLambdaGridKokkos::compute_per_grid_kokkos()
       if (!fix->kokkos_flag)
         error->all(FLERR,"Cannot (yet) use non-Kokkos fixes with compute lambda/grid/kk");
       KokkosBase* fKKBase = dynamic_cast<KokkosBase*>(fix);
+      // a fix keeps its per-grid output between invocations and grid migration
+      // can leave it current on the host alone, so ask for the device copy
+      if (fKKBase) fKKBase->sync_pergrid_device_kokkos();
 
       const int k = umap[m][0];
       if (j == 0) {
@@ -245,6 +248,9 @@ void ComputeLambdaGridKokkos::compute_per_grid_kokkos()
     if (!ftemp->kokkos_flag)
       error->all(FLERR,"Cannot (yet) use non-Kokkos fixes with compute lambda/grid/kk");
     KokkosBase* ftempKKBase = dynamic_cast<KokkosBase*>(ftemp);
+    // a fix keeps its per-grid output between invocations and grid migration
+    // can leave it current on the host alone, so ask for the device copy
+    if (ftempKKBase) ftempKKBase->sync_pergrid_device_kokkos();
 
     if (tempindex == 0) {
       DAT::t_float_1d ft_vector_grid = ftempKKBase->d_vector_grid;
@@ -326,12 +332,12 @@ void ComputeLambdaGridKokkos::compute_per_grid_kokkos()
 
       if (l_knyflag) {
         if (l_noutputs == 1) l_vector_grid[i] = lambda / sizey;
-        l_array_grid(i,l_output_order[KNY]) = lambda / sizey;
+        else l_array_grid(i,l_output_order[KNY]) = lambda / sizey;
       }
 
       if (l_knzflag) {
         if (l_noutputs == 1) l_vector_grid[i] = lambda / sizez;
-        l_array_grid(i,l_output_order[KNZ]) = lambda / sizez;
+        else l_array_grid(i,l_output_order[KNZ]) = lambda / sizez;
       }
     });
   }

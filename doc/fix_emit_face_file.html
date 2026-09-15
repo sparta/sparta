@@ -29,12 +29,13 @@
 
 <LI>zero or more keyword/value pairs may be appended 
 
-<LI>keyword = <I>frac</I> or <I>nevery</I> or <I>perspecies</I> or <I>region</I> 
+<LI>keyword = <I>frac</I> or <I>nevery</I> or <I>perspecies</I> or <I>region</I> or <I>twopass</I> 
 
 <PRE>  <I>frac</I> value = fraction = 0.0 to 1.0 fraction of particles to insert
   <I>nevery</I> value = Nstep = insert every this many timesteps
   <I>perspecies</I> value = <I>yes</I> or <I>no</I>
-  <I>region</I> value = region-ID 
+  <I>region</I> value = region-ID
+  <I>twopass</I> values = none 
 </PRE>
 
 </UL>
@@ -77,7 +78,7 @@ equation 4.22 of <A HREF = "#Bird94">(Bird94)</A>.  The number of particles <I>M
 add on a particular grid cell face is based on this flux and
 additional global, flow, and cell face properties:
 </P>
-<UL><LI>global property: <I>fnum</I> ratio as specified by the <A HREF = "global.html"">global</A> command
+<UL><LI>global property: <I>fnum</I> ratio as specified by the <A HREF = "global.html">global</A> command
 <LI>flow properties: number density, streaming velocity, and thermal temperature
 <LI>cell face properties: area of face and its orientation relative to the streaming velocity 
 </UL>
@@ -282,7 +283,7 @@ populated.
 </P>
 <P>IMPORTANT NOTE: When using a subsonic prsesure boundary condition, you
 should also use an appropriate boundary collision or chemistry model
-via the <A HREF = "boundary.htmo">boundary</A> or <A HREF = "bound_modify.html">bound_modify</A>
+via the <A HREF = "boundary.html">boundary</A> or <A HREF = "bound_modify.html">bound_modify</A>
 or <A HREF = "surf_collide.html">surf_collide</A> or <A HREF = "surf_react.html">surf_react</A>
 commands, so that particles hitting the surface disappear as if they
 were exiting the simulation domain.  That is necessary to produce the
@@ -367,6 +368,16 @@ that the <I>side</I> option for the <A HREF = "region.html">region</A> command c
 used to define whether the inside or outside of the geometric region
 is considered to be "in" the region.
 </P>
+<P>The <I>twopass</I> keyword does not require a value.  If used, the
+insertion procedure will loop over the insertion grid cells twice, the
+same as the KOKKOS package version of this fix does, so that it can
+reallocate memory efficiently, e.g. on a GPU.  If this keyword is used
+the non-KOKKOS and KOKKOS version will generate exactly the same set
+of particles, which makes debugging easier.  If the keyword is not
+used, the non-KOKKOS and KOKKOS runs will use random numbers
+differently and thus generate different particles, though they will be
+statistically similar.
+</P>
 <HR>
 
 <P><B>Restart, output info:</B>
@@ -387,7 +398,7 @@ a run is performed.
 Particles cannot be added on <I>z</I> faces of the simluation box for a 2d
 simulation.
 </P>
-<P>Unlike the <A HREF = "fix_emit/face.html">fix emit/face</A> command, no warning is
+<P>Unlike the <A HREF = "fix_emit_face.html">fix emit/face</A> command, no warning is
 issued if the specified emission face has an inward normal in a
 direction opposing the streaming velocity, as defined by the mixture.
 This is because the streaming velocity as defined by the specified
@@ -407,7 +418,7 @@ emit/face</A>
 <P><B>Default:</B>
 </P>
 <P>The keyword defaults are frac = 1.0, nevery = 1, perspecies = yes,
-region = none.
+region = none, no twopass setting.
 </P>
 <HR>
 
@@ -415,5 +426,10 @@ region = none.
 
 <P><B>(Bird94)</B> G. A. Bird, Molecular Gas Dynamics and the Direct
 Simulation of Gas Flows, Clarendon Press, Oxford (1994).
+</P>
+<A NAME = "Fang02"></A>
+
+<P><B>(Fang02)</B> Y. Fang and W. W. Liou, Microfluid Flow Computations 
+Using a Parallel DSMC Code, AIAA 2002-1057. (2002).
 </P>
 </HTML>

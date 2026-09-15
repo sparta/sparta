@@ -42,7 +42,7 @@ simply numbered from 1 to N.  They also encode the cell's logical
 position within the grid hierarchy.
 
 The specified file can be a text file or a gzipped text file (detected
-by a .gz suffix).  See the "write_grid"_write.grid.html command for a
+by a .gz suffix).  See the "write_grid"_write_grid.html command for a
 description of the format of the file.
 
 The grid cell IDs read from the file (one per line) are assigned to

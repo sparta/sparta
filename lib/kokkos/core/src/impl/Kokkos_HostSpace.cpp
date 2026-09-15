@@ -1,18 +1,5 @@
-//@HEADER
-// ************************************************************************
-//
-//                        Kokkos v. 4.0
-//       Copyright (2022) National Technology & Engineering
-//               Solutions of Sandia, LLC (NTESS).
-//
-// Under the terms of Contract DE-NA0003525 with NTESS,
-// the U.S. Government retains certain rights in this software.
-//
-// Part of Kokkos, under the Apache License v2.0 with LLVM Exceptions.
-// See https://kokkos.org/LICENSE for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-//
-//@HEADER
+// SPDX-FileCopyrightText: Copyright Contributors to the Kokkos project
 
 #ifndef KOKKOS_IMPL_PUBLIC_INCLUDE
 #define KOKKOS_IMPL_PUBLIC_INCLUDE
@@ -30,6 +17,7 @@
 #include <cstdlib>
 #include <cstdint>
 #include <cstring>
+#include <new>
 
 #include <iostream>
 #include <sstream>
@@ -40,18 +28,11 @@
 
 namespace Kokkos {
 
-#ifdef KOKKOS_ENABLE_DEPRECATED_CODE_4
-KOKKOS_DEPRECATED HostSpace::HostSpace(const HostSpace::AllocationMechanism &)
-    : HostSpace() {}
-#endif
-
 void *HostSpace::allocate(const size_t arg_alloc_size) const {
   return allocate("[unlabeled]", arg_alloc_size);
 }
 void *HostSpace::allocate(const char *arg_label, const size_t arg_alloc_size,
-                          const size_t
-
-                              arg_logical_size) const {
+                          const size_t arg_logical_size) const {
   return impl_allocate(arg_label, arg_alloc_size, arg_logical_size);
 }
 void *HostSpace::impl_allocate(
@@ -93,7 +74,8 @@ void HostSpace::deallocate(void *const arg_alloc_ptr,
 void HostSpace::deallocate(const char *arg_label, void *const arg_alloc_ptr,
                            const size_t arg_alloc_size,
                            const size_t arg_logical_size) const {
-  if (arg_alloc_ptr) Kokkos::fence("HostSpace::impl_deallocate before free");
+  if (arg_alloc_ptr)
+    Kokkos::fence("Kokkos::HostSpace::impl_deallocate before free");
   impl_deallocate(arg_label, arg_alloc_ptr, arg_alloc_size, arg_logical_size);
 }
 void HostSpace::impl_deallocate(

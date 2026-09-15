@@ -1,6 +1,6 @@
 "SPARTA WWW Site"_sws - "SPARTA Documentation"_sd - "SPARTA Commands"_sc :c
 
-:link(sws,http://sparta.sandia.gov)
+:link(sws,https://sparta.github.io)
 :link(sd,Manual.html)
 :link(sc,Section_commands.html#comm)
 
@@ -58,7 +58,7 @@ included.  See the "group grid"_group.html command for info on how
 surface elements can be assigned to surface groups.
 
 This compute can be used for simulations with either explicit or
-implicit surface elements.  See "Section 6.13"_Section_howto_13 for
+implicit surface elements.  See "Section 6.13"_Section_howto.html#howto_13 for
 more discussion of explicit and implicit surfaces.
 
 The results of this compute can be used by different commands in
@@ -81,13 +81,13 @@ number from 1 to N, where N is the number of reactions defined by the
 The {id/surf} value is the ID of the surface element.  For explicit
 surfaces, surface element IDs are unique.  For implicit surfaces, the
 surface ID of all the surface elements within a grid cell are the grid
-cell ID.  See "Section 6.13"_Section_howto_13 for more discussion of
+cell ID.  See "Section 6.13"_Section_howto.html#howto_13 for more discussion of
 explicit and implicit surfaces.
 
 The {id/pre} value is the ID of the incident particle.  Note that
 particle IDs are generated randomly.  Thus multiple particles in the
 system can potentially have the same ID.  See "Section
-6.17"_Section_howto_17 for more details on particle IDs.
+6.19"_Section_howto.html#howto_19 for more details on particle IDs.
 
 The {id1/post} and {id2/post} values are the post-collision IDs of the
 0, 1, or 2 resulting particles.  If the incident particle vanished in
@@ -99,7 +99,7 @@ created particle.
 The {type/pre} value is the integer index for the incident particle
 species.  It is a value from 1 to Nspecies. The value corresponds to
 the order in which species were defined via the "species"_species.html
-command.  See "Section 6.17"_Section_howto_17 for more details on
+command.  See "Section 6.19"_Section_howto.html#howto_19 for more details on
 particle types.
 
 The {type1/post} and {type2/post} values are the post-collision
@@ -151,11 +151,34 @@ as are {vx1/post}, {vy1/post}, {vz1/post} and {vx2/post}, {vy2/post},
 
 :line
 
+:line
+
+Styles with a {kk} suffix are functionally the same as the
+corresponding style without the suffix.  They have been optimized to
+run faster, depending on your available hardware, as discussed in the
+"Accelerating SPARTA"_Section_accelerate.html section of the manual.
+The accelerated styles take the same arguments and should produce the
+same results, except for different random number, round-off and
+precision issues.
+
+These accelerated styles are part of the KOKKOS package. They are only
+enabled if SPARTA was built with that package.  See the "Making
+SPARTA"_Section_start.html#start_3 section for more info.
+
+You can specify the accelerated styles explicitly in your input script
+by including their suffix, or you can use the "-suffix command-line
+switch"_Section_start.html#start_7 when you invoke SPARTA, or you can
+use the "suffix"_suffix.html command in your input script.
+
+See the "Accelerating SPARTA"_Section_accelerate.html section of the
+manual for more instructions on how to use the accelerated styles
+effectively.
+
 [Restrictions:] none
 
 [Related commands:]
 
-"compute surf/collision/tally"_compute_surf/collision_tally.html,
+"compute surf/collision/tally"_compute_surf_collision_tally.html,
 "compute gas/reaction/tally"_compute_gas_reaction_tally.html,
 "dump tally"_dump.html
 

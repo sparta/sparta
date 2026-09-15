@@ -1,18 +1,5 @@
-//@HEADER
-// ************************************************************************
-//
-//                        Kokkos v. 4.0
-//       Copyright (2022) National Technology & Engineering
-//               Solutions of Sandia, LLC (NTESS).
-//
-// Under the terms of Contract DE-NA0003525 with NTESS,
-// the U.S. Government retains certain rights in this software.
-//
-// Part of Kokkos, under the Apache License v2.0 with LLVM Exceptions.
-// See https://kokkos.org/LICENSE for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-//
-//@HEADER
+// SPDX-FileCopyrightText: Copyright Contributors to the Kokkos project
 
 #ifndef KOKKOS_IMPL_PUBLIC_INCLUDE
 #include <Kokkos_Macros.hpp>
@@ -73,9 +60,8 @@ namespace Kokkos {
 #ifdef KOKKOS_ENABLE_DEPRECATED_CODE_4
 using MemoryManaged KOKKOS_DEPRECATED = Kokkos::MemoryTraits<>;
 #endif
-using MemoryUnmanaged = Kokkos::MemoryTraits<Kokkos::Unmanaged>;
-using MemoryRandomAccess =
-    Kokkos::MemoryTraits<Kokkos::Unmanaged | Kokkos::RandomAccess>;
+using MemoryUnmanaged    = Kokkos::MemoryTraits<Kokkos::Unmanaged>;
+using MemoryRandomAccess = Kokkos::MemoryTraits<Kokkos::RandomAccess>;
 
 }  // namespace Kokkos
 
@@ -90,14 +76,8 @@ namespace Impl {
  *  Enable compatibility of views from different devices with static stride.
  *  Use compiler flag to enable overwrites.
  */
-#ifdef KOKKOS_ENABLE_DEPRECATED_CODE_4
-static constexpr unsigned MEMORY_ALIGNMENT = KOKKOS_IMPL_MEMORY_ALIGNMENT;
-static constexpr unsigned MEMORY_ALIGNMENT_THRESHOLD =
-    KOKKOS_IMPL_MEMORY_ALIGNMENT_THRESHOLD;
-#else
-static constexpr unsigned MEMORY_ALIGNMENT           = 64;
-static constexpr unsigned MEMORY_ALIGNMENT_THRESHOLD = 1;
-#endif
+inline constexpr unsigned MEMORY_ALIGNMENT           = 64;
+inline constexpr unsigned MEMORY_ALIGNMENT_THRESHOLD = 1;
 static_assert(has_single_bit(MEMORY_ALIGNMENT),
               "MEMORY_ALIGNMENT must be a power of 2");
 
