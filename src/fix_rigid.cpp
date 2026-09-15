@@ -135,6 +135,9 @@ FixRigid::FixRigid(SPARTA *sparta, int narg, char **arg) :
   slist = NULL;
   displace = NULL;
 
+  densityflag = 0;
+  density = 0.0;
+
   forceinfile = 0;
   fcm_infile[0] = fcm_infile[1] = fcm_infile[2] = 0.0;
   torque_infile[0] = torque_infile[1] = torque_infile[2] = 0.0;
@@ -208,6 +211,21 @@ FixRigid::FixRigid(SPARTA *sparta, int narg, char **arg) :
     read_infile(infile);
     iarg += 2;
 
+  } else if (strcmp(arg[iarg],"density") == 0) {
+
+    // mass, COM, and moi are computed from the body geometry in
+    //   setup_body(); vcom and angmom default to zero and may be
+    //   overridden by the optional vcom/angmom keywords below
+
+    if (iarg+2 > narg) error->all(FLERR,"Fix rigid density args not valid");
+    densityflag = 1;
+    density = input->numeric(FLERR,arg[iarg+1]);
+    if (density <= 0.0)
+      error->all(FLERR,"Fix rigid body density must be positive");
+    vcm[0] = vcm[1] = vcm[2] = 0.0;
+    angmom[0] = angmom[1] = angmom[2] = 0.0;
+    iarg += 2;
+
   } else error->all(FLERR,"Fix rigid define style not recognized");
 
   // optional args
@@ -272,6 +290,26 @@ FixRigid::FixRigid(SPARTA *sparta, int narg, char **arg) :
       fext[1] = input->numeric(FLERR,arg[iarg+2]);
       fext[2] = input->numeric(FLERR,arg[iarg+3]);
       iarg += 4;
+    } else if (strcmp(arg[iarg],"vcom") == 0) {
+
+      // only meaningful for dstyle = density, where vcom defaults to zero
+      //   and is not part of the define style's own args
+
+      if (iarg+4 > narg) error->all(FLERR,"Fix rigid body args not valid");
+      if (!densityflag)
+        error->all(FLERR,"Fix rigid vcom keyword requires density style");
+      vcm[0] = input->numeric(FLERR,arg[iarg+1]);
+      vcm[1] = input->numeric(FLERR,arg[iarg+2]);
+      vcm[2] = input->numeric(FLERR,arg[iarg+3]);
+      iarg += 4;
+    } else if (strcmp(arg[iarg],"angmom") == 0) {
+      if (iarg+4 > narg) error->all(FLERR,"Fix rigid body args not valid");
+      if (!densityflag)
+        error->all(FLERR,"Fix rigid angmom keyword requires density style");
+      angmom[0] = input->numeric(FLERR,arg[iarg+1]);
+      angmom[1] = input->numeric(FLERR,arg[iarg+2]);
+      angmom[2] = input->numeric(FLERR,arg[iarg+3]);
+      iarg += 4;
     } else if (strcmp(arg[iarg],"outfile") == 0) {
       if (iarg+3 > narg) error->all(FLERR,"Fix rigid body args not valid");
       int n = strlen(arg[iarg+1]) + 1;
@@ -287,21 +325,31 @@ FixRigid::FixRigid(SPARTA *sparta, int narg, char **arg) :
     error->all(FLERR,"Fix rigid pushbound, pushstyle, and pushdamp "
                "require push keyword");
 
-  if (massbody <= 0.0)
+  // for dstyle = density the mass is not known until setup_body() has
+  //   integrated the geometry, so it is validated there instead
+
+  if (!densityflag && massbody <= 0.0)
     error->all(FLERR,"Fix rigid body mass must be positive");
 
   // for 2d, insure all body params are consistent with in-plane motion
+  // for dstyle = density, xcm and moi are computed from the geometry,
+  //   which is planar in 2d, so only the user-settable values are checked
 
   if (dim == 2) {
-    if (xcm[2] != 0.0 || vcm[2] != 0.0)
+    if (vcm[2] != 0.0)
       error->all(FLERR,"Fix rigid z components of com and vcom "
                  "must be zero for 2d");
     if (angmom[0] != 0.0 || angmom[1] != 0.0)
       error->all(FLERR,"Fix rigid x,y components of angmom "
                  "must be zero for 2d");
-    if (moi[4] != 0.0 || moi[5] != 0.0)
-      error->all(FLERR,"Fix rigid ixz,iyz components of moi "
-                 "must be zero for 2d");
+    if (!densityflag) {
+      if (xcm[2] != 0.0)
+        error->all(FLERR,"Fix rigid z components of com and vcom "
+                   "must be zero for 2d");
+      if (moi[4] != 0.0 || moi[5] != 0.0)
+        error->all(FLERR,"Fix rigid ixz,iyz components of moi "
+                   "must be zero for 2d");
+    }
     if (fext[2] != 0.0)
       error->all(FLERR,"Fix rigid z component of force must be zero for 2d");
   }
@@ -1987,6 +2035,151 @@ void FixRigid::update_surf_copies()
 }
 
 /* ----------------------------------------------------------------------
+   compute massbody, xcm, and moi from the body geometry, for a body of
+     uniform density
+   called for dstyle = density, after gather_body() has built the
+     replicated element table and check_enclosed() has verified that the
+     body encloses a non-zero area/volume with outward normals, so the
+     signed measures accumulated below are guaranteed positive
+
+   the volume integrals which define the mass, COM and inertia tensor are
+     reduced to sums over the body elements
+
+   3d: each triangle (a,b,c) forms a tetrahedron with the coordinate
+     origin, signed by the triangle's winding.  the signed volumes of
+     those tets sum to the volume of the body, and their first and second
+     moments sum likewise, since the parts of the tets outside the body
+     cancel between triangles.  for one tet with the 4th vertex at the
+     origin
+       6V   = a . (b x c)
+       Mij  = (V/20) [ ai aj + bi bj + ci cj + si sj ],  s = a + b + c
+     where Mij = integral of xi xj over the tet.  both are exact, so no
+     quadrature and no per-element coordinate frame is needed
+   2d: the same reduction is Green's theorem on the polygon, whose area,
+     centroid and second moments have the standard closed forms.  a 2d
+     body is a plate of unit thickness in z, matching how the rest of
+     this fix and the surf collision models treat 2d
+
+   the sums above are taken about the origin.  the inertia tensor fix
+     rigid uses is about the COM, so the parallel-axis shift is applied
+     at the end.  the products of inertia carry the minus sign of the
+     ixy = -integral x y dm convention
+------------------------------------------------------------------------- */
+
+void FixRigid::body_properties(double density)
+{
+  int i,j,k;
+  double measure = 0.0;              // volume (3d) or area (2d)
+  double first[3];                   // integral of x over the body
+  double second[3][3];               // integral of xi xj over the body
+
+  for (k = 0; k < 3; k++) first[k] = 0.0;
+  for (i = 0; i < 3; i++)
+    for (j = 0; j < 3; j++) second[i][j] = 0.0;
+
+  if (dim == 3) {
+    double s[3],cr[3];
+
+    for (i = 0; i < nsurf; i++) {
+      double *a = bodypt[i][0];
+      double *b = bodypt[i][1];
+      double *c = bodypt[i][2];
+
+      MathExtra::cross3(b,c,cr);
+      double v6 = MathExtra::dot3(a,cr);      // 6 * signed tet volume
+      if (v6 == 0.0) continue;                // degenerate element
+
+      for (k = 0; k < 3; k++) s[k] = a[k] + b[k] + c[k];
+
+      measure += v6;
+      for (k = 0; k < 3; k++) first[k] += v6 * s[k];
+      for (j = 0; j < 3; j++)
+        for (k = 0; k < 3; k++)
+          second[j][k] += v6 * (a[j]*a[k] + b[j]*b[k] + c[j]*c[k] +
+                                s[j]*s[k]);
+    }
+
+    // 6V per element, so V = measure/6
+    // first moment: (v6/6) * (s/4) summed = measure-weighted s / 24
+    // second moment: (v6/6) * (1/20) of the bracket = bracket / 120
+
+    measure /= 6.0;
+    for (k = 0; k < 3; k++) first[k] /= 24.0;
+    for (j = 0; j < 3; j++)
+      for (k = 0; k < 3; k++) second[j][k] /= 120.0;
+
+  } else {
+    double sxx = 0.0, syy = 0.0, sxy = 0.0;
+
+    for (i = 0; i < nsurf; i++) {
+      double x0 = bodypt[i][0][0], y0 = bodypt[i][0][1];
+      double x1 = bodypt[i][1][0], y1 = bodypt[i][1][1];
+      double cross = x0*y1 - x1*y0;
+      if (cross == 0.0 && x0 == x1 && y0 == y1) continue;
+
+      measure += cross;
+      first[0] += (x0 + x1) * cross;
+      first[1] += (y0 + y1) * cross;
+      sxx += (x0*x0 + x0*x1 + x1*x1) * cross;
+      syy += (y0*y0 + y0*y1 + y1*y1) * cross;
+      sxy += (x0*y1 + 2.0*x0*y0 + 2.0*x1*y1 + x1*y0) * cross;
+    }
+
+    // check_enclosed() requires outward normals, which in 2d means a
+    //   clockwise traversal and hence a negative signed area; flip the
+    //   sign of every accumulated moment so all are positive measures
+
+    measure *= 0.5;
+    measure = -measure;
+    first[0] = -first[0] / 6.0;
+    first[1] = -first[1] / 6.0;
+    first[2] = 0.0;
+    second[0][0] = -syy / 12.0;      // integral of y^2, used for ixx
+    second[1][1] = -sxx / 12.0;      // integral of x^2, used for iyy
+    second[0][1] = second[1][0] = -sxy / 24.0;   // integral of x y
+  }
+
+  if (measure <= 0.0)
+    error->all(FLERR,"Fix rigid could not compute body properties");
+
+  massbody = density * measure;
+  if (massbody <= 0.0)
+    error->all(FLERR,"Fix rigid body mass must be positive");
+
+  xcm[0] = first[0] / measure;
+  xcm[1] = first[1] / measure;
+  xcm[2] = (dim == 3) ? first[2] / measure : 0.0;
+
+  // moments of inertia about the COM
+  // 3d: ixx = rho * (Myy + Mzz) - M (ycm^2 + zcm^2), etc
+  // 2d: a plate, so izz = ixx + iyy and ixz = iyz = 0
+
+  if (dim == 3) {
+    double rho = massbody / measure;
+
+    moi[0] = rho * (second[1][1] + second[2][2]) -
+      massbody * (xcm[1]*xcm[1] + xcm[2]*xcm[2]);
+    moi[1] = rho * (second[0][0] + second[2][2]) -
+      massbody * (xcm[0]*xcm[0] + xcm[2]*xcm[2]);
+    moi[2] = rho * (second[0][0] + second[1][1]) -
+      massbody * (xcm[0]*xcm[0] + xcm[1]*xcm[1]);
+    moi[3] = -rho * second[0][1] + massbody * xcm[0]*xcm[1];
+    moi[4] = -rho * second[0][2] + massbody * xcm[0]*xcm[2];
+    moi[5] = -rho * second[1][2] + massbody * xcm[1]*xcm[2];
+
+  } else {
+    double rho = massbody / measure;
+
+    moi[0] = rho * second[0][0] - massbody * xcm[1]*xcm[1];
+    moi[1] = rho * second[1][1] - massbody * xcm[0]*xcm[0];
+    moi[2] = moi[0] + moi[1];
+    moi[3] = -rho * second[0][1] + massbody * xcm[0]*xcm[1];
+    moi[4] = 0.0;
+    moi[5] = 0.0;
+  }
+}
+
+/* ----------------------------------------------------------------------
    one-time initialization of rigid body attributes
 ------------------------------------------------------------------------- */
 
@@ -2001,6 +2194,12 @@ void FixRigid::setup_body()
 
   check_watertight();
   check_enclosed();
+
+  // dstyle = density: compute mass, COM, and moi from the geometry
+  // done here, after the checks above have verified the body is closed
+  //   and its normals point outward, which the sums rely on
+
+  if (densityflag) body_properties(density);
 
   // tensor = inertia tensor in space frame
 

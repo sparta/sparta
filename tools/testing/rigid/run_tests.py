@@ -1090,6 +1090,132 @@ def test_zerothick(exe_cmd):
     return fails
 
 
+def read_state(name):
+    """Read the 16 (or 22) body parameters from a fix rigid outfile.
+       Returns the list of floats, or None if the file is missing."""
+    path = os.path.join(THISDIR, name)
+    if not os.path.exists(path):
+        return None
+    for line in open(path):
+        line = line.split('#')[0].strip()
+        if not line:
+            continue
+        return [float(w) for w in line.split()]
+    return None
+
+
+def test_density(exe_cmd):
+    """dstyle = density on a unit cube: mass, COM and moi from geometry.
+
+    A cube is exactly representable by flat triangles, so every value is
+    analytic and the only error is round-off.  The tolerance is set by the
+    outfile's 17-digit format, not by any property of the shape."""
+    fails = []
+    out_name = "tmp.density.state"
+    path = os.path.join(THISDIR, out_name)
+    if os.path.exists(path):
+        os.remove(path)
+
+    rc, out = run_deck(exe_cmd, "in.test.density")
+    if rc:
+        return ["run failed with exit code %d" % rc]
+
+    v = read_state(out_name)
+    if v is None:
+        return ["no state file written"]
+    if len(v) < 16:
+        return ["state file has %d values, expected at least 16" % len(v)]
+
+    # unit cube, density 1
+    TOL = 1.0e-12
+    if abs(v[0] - 1.0) > TOL:
+        fails.append("mass %.17g != 1 (unit cube, density 1)" % v[0])
+    for k, nm in enumerate("xyz"):
+        if abs(v[1+k]) > TOL:
+            fails.append("com %s %.3e != 0 (cube is centred on the origin)"
+                         % (nm, v[1+k]))
+    for k, nm in enumerate(("ixx", "iyy", "izz")):
+        if abs(v[4+k] - 1.0/6.0) > TOL:
+            fails.append("%s %.17g != M/6 = %.17g" % (nm, v[4+k], 1.0/6.0))
+    for k, nm in enumerate(("ixy", "ixz", "iyz")):
+        if abs(v[7+k]) > TOL:
+            fails.append("%s %.3e != 0 (cube has no products of inertia)"
+                         % (nm, v[7+k]))
+
+    os.remove(path)
+    return fails
+
+
+def test_density2d(exe_cmd):
+    """dstyle = density in 2d, plus the vcom/angmom keywords.
+
+    Unit square plate: izz = M/6, ixx = iyy = izz/2, all products zero,
+    and ixz = iyz = 0 exactly as 2d requires.  vcom and angmom are user
+    input even under density style, so they must round-trip unchanged."""
+    fails = []
+    out_name = "tmp.density2d.state"
+    path = os.path.join(THISDIR, out_name)
+    if os.path.exists(path):
+        os.remove(path)
+
+    rc, out = run_deck(exe_cmd, "in.test.density2d")
+    if rc:
+        return ["run failed with exit code %d" % rc]
+
+    v = read_state(out_name)
+    if v is None:
+        return ["no state file written"]
+    if len(v) < 16:
+        return ["state file has %d values, expected at least 16" % len(v)]
+
+    TOL = 1.0e-12
+    if abs(v[0] - 1.0) > TOL:
+        fails.append("mass %.17g != 1 (unit square, density 1)" % v[0])
+
+    # the body moves during the one step it is run, so the COM is compared
+    # against its start-of-step value plus the drift from vcom
+    if abs(v[3]) > TOL:
+        fails.append("com z %.3e != 0 for a 2d body" % v[3])
+
+    if abs(v[4] - 1.0/12.0) > TOL:
+        fails.append("ixx %.17g != M/12 = %.17g" % (v[4], 1.0/12.0))
+    if abs(v[5] - 1.0/12.0) > TOL:
+        fails.append("iyy %.17g != M/12 = %.17g" % (v[5], 1.0/12.0))
+    if abs(v[6] - 1.0/6.0) > TOL:
+        fails.append("izz %.17g != M/6 = %.17g" % (v[6], 1.0/6.0))
+    if abs(v[7]) > TOL:
+        fails.append("ixy %.3e != 0 (square has no product of inertia)" % v[7])
+
+    # a 2d body must have these exactly zero, not merely small: setup_body()
+    # requires a principal axis along z
+    if v[8] != 0.0 or v[9] != 0.0:
+        fails.append("ixz,iyz = %.3e,%.3e must be exactly 0 for 2d"
+                     % (v[8], v[9]))
+
+    # vcom and angmom are user input, unchanged by the geometry integration
+    for k, (got, want, nm) in enumerate(
+            ((v[10], 12.0, "vxcm"), (v[11], -3.0, "vycm"),
+             (v[12], 0.0, "vzcm"), (v[15], 5.0e-3, "lz"))):
+        if abs(got - want) > 1.0e-12 * max(abs(want), 1.0):
+            fails.append("%s %.17g != %.17g as given" % (nm, got, want))
+    if v[13] != 0.0 or v[14] != 0.0:
+        fails.append("lx,ly = %.3e,%.3e must be exactly 0 for 2d"
+                     % (v[13], v[14]))
+
+    os.remove(path)
+    return fails
+
+
+def test_baddensity(exe_cmd):
+    return negative_test(exe_cmd, "in.test.baddensity",
+                         "body density must be positive")
+
+
+def test_badvcom(exe_cmd):
+    return negative_test(exe_cmd, "in.test.badvcom",
+                         "vcom keyword requires density style")
+
+
 TESTS = [
     ("ballistic", test_ballistic),
     ("force", test_force),
@@ -1130,6 +1256,10 @@ TESTS = [
     ("rotwall3d", test_rotwall3d),
     ("axistuck", test_axistuck),
     ("tallyorder", test_tallyorder),
+    ("density", test_density),
+    ("density2d", test_density2d),
+    ("baddensity", test_baddensity),
+    ("badvcom", test_badvcom),
 ]
 
 # tests whose decks support -var dist 1 (global surfs explicit/distributed)

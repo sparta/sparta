@@ -16,7 +16,7 @@ ID is documented in "fix"_fix.html command :ulb,l
 rigid = style name of this fix command :l
 group-ID = ID of surface group containing surf elements which comprise the rigid body :l
 compute-ID = ID of "compute surf"_compute_surf.html command for force/torque calculation on rigid body :l
-dstyle = {body} or {infile}, followed by args :l
+dstyle = {body} or {infile} or {density}, followed by args :l
   {body} args = several keyword/values pairs, all keywords must appear, in any order
     keyword = {com} and {mass} and {moi} and {vcom} and {angmom}
       {mass} value = mtotal
@@ -32,8 +32,15 @@ dstyle = {body} or {infile}, followed by args :l
         lx, ly, lz = angular momentum of rigid body in space frame (mass-distance^2/time units) :pre
   {infile} args = filename
     filename = name of file containing all rigid body attributes on a single line :pre
+  {density} args = rho
+    rho = uniform mass density of the rigid body
+          (mass/distance^3 units for 3d, mass/distance^2 for 2d) :pre
 zero or more optional keyword/value pairs :l
-  keyword = {remap} or {rotate} or {push} or {pushbound} or {pushstyle} or {pushdamp} or {force} or {outfile}
+  keyword = {vcom} or {angmom} or {remap} or {rotate} or {push} or {pushbound} or {pushstyle} or {pushdamp} or {force} or {outfile}
+     {vcom} values = vxcm vycm vzcm
+       COM velocity of the rigid body, only with dstyle {density}
+     {angmom} values = lx ly lz
+       angular momentum of the rigid body, only with dstyle {density}
      {remap} value = {cutcell} or {incremental}
        method used to assign the moving body surfs to grid cells
      {rotate} value = {euler} or {richardson}
@@ -63,7 +70,9 @@ global rigid yes
 fix 1 rigid all csurf body mass 1.0 com 5 5 0 vcom 0 0 0 moi 2 2 3 0.5 0 0 angmom 0 0 0
 fix 1 rigid all csurf infile square.rigid outfile square.state 1000
 fix 1 rigid all csurf infile square.rigid push 1.0e-18 0.5 pushbound yes
-fix 1 rigid all csurf infile square.rigid force 0 -9.8e-22 0 :pre
+fix 1 rigid all csurf infile square.rigid force 0 -9.8e-22 0
+fix 1 rigid all csurf density 2700.0
+fix 1 rigid all csurf density 2700.0 vcom 60 0 0 angmom 0 0 6.8e-24 :pre
 
 [Description:]
 
@@ -127,8 +136,8 @@ always about the current COM of the body.
 This fix also insures the compute tallies collision info on every
 timestep of a run.
 
-The parameters of the rigid body can be specified in one of two ways
-via the {dstyle} setting: {body} or {infile}.  Note that all these
+The parameters of the rigid body can be specified in one of three
+ways via the {dstyle} setting: {body}, {infile}, or {density}.  Note that all these
 parameters are specified in the coordinate frame of the simulation
 box, also called the "space" frame.  See the discussion below of
 "space" versus "body" frames for rigid bodies.
@@ -158,12 +167,18 @@ Ixz = - Sum_i m_i x_i z_i
 Iyz = - Sum_i m_i y_i z_i :pre
 
 where the sum is over the mass distribution of the body and
-(x_i,y_i,z_i) are coordinates relative to its COM.  For simple shapes
-the values can be taken from analytic formulas, e.g. a uniform disk
-of mass M and radius R in the xy plane has Izz = 1/2 M R^2 and Ixx =
-Iyy = 1/4 M R^2, a uniform cube of edge length A has Ixx = Iyy = Izz
-= 1/6 M A^2 (in any orientation), with all off-diagonal components
-zero.  For 2d systems, the ixz and iyz components must be zero.
+(x_i,y_i,z_i) are coordinates relative to its COM.  For 2d systems,
+the ixz and iyz components must be zero.
+
+For simple shapes the values can be taken from analytic formulas,
+e.g. a uniform disk of mass M and radius R in the xy plane has Izz =
+1/2 M R^2 and Ixx = Iyy = 1/4 M R^2, a uniform cube of edge length A
+has Ixx = Iyy = Izz = 1/6 M A^2 (in any orientation), with all
+off-diagonal components zero.
+
+For a shape with no analytic formula, the {density} style described
+below computes the mass, COM, and all 6 moments of inertia from the
+body geometry itself.
 
 The {vcom} argument provides 3 values for the COM velocity of the
 rigid body.  For 2d systems, vzcm must be zero.
@@ -192,10 +207,55 @@ continuation run; see the discussion of restarting below.
 Note that these are the same 5 parameters, each with their respective
 values, as those specified directly in the input script by the
 {mass}, {com}, {moi}, {vcom}, and {angmom} keywords.  The meaning of
-the parameters and values is the same for both choices of {dstyle}.
+the parameters and values is the same for the {body} and {infile}
+styles.
 The {outfile} keyword described below writes a file in exactly this
 format, which enables a simulation with a rigid body to be continued
 in a subsequent run; see the discussion of restarting below.
+
+The {density} style computes the mass, the COM, and all 6 moments of
+inertia from the body geometry, for a body of uniform density {rho}.
+It is the simplest choice for a shape which has no analytic formula,
+such as a body read from an STL file or one of the meshes produced by
+the tools described in "Section tools"_Section_tools.html.  Only the
+density is given:
+
+fix 1 rigid body csurf density 2700.0 :pre
+
+The volume integrals which define these quantities are converted into
+sums over the body elements.  In 3d each triangle forms a tetrahedron
+with the coordinate origin, signed by the triangle's winding, and the
+volume, first moment, and second moments of those tetrahedra sum to
+those of the body, since the parts outside the body cancel between
+triangles.  In 2d the same reduction gives the standard closed forms
+for the area, centroid, and second moments of a polygon.  Both are
+evaluated in closed form, so the only error is round-off.  The
+resulting inertia tensor is shifted from the origin to the COM.  For
+2d the body is treated as a plate of unit thickness in z, consistent
+with the rest of this command, so {rho} is a mass per unit area and
+izz = ixx + iyy with ixz = iyz = 0 exactly.
+
+Because the integration measures the surface elements themselves, the
+values are those of the faceted body SPARTA actually simulates, which
+for a coarse mesh differs slightly from the ideal shape the mesh
+approximates.  A 1200-triangle sphere, for example, encloses about 1%
+less volume than the sphere it represents, since a polyhedron
+inscribed in a sphere is genuinely smaller.  This is usually what is
+wanted: the mass and inertia then match the geometry the gas collides
+with.  Note also that {read_surf} transformations such as {scale},
+{trans}, and {rotate} are applied before this fix is defined, so the
+computed values reflect the transformed geometry.
+
+The {density} style does not set the body's initial motion, which
+cannot be derived from its shape.  Both default to zero and may be
+given with the optional {vcom} and {angmom} keywords:
+
+fix 1 rigid body csurf density 2700.0 vcom 60 0 0 angmom 0 0 6.8e-24 :pre
+
+Those two keywords may only be used with the {density} style.  With
+the {body} style, {vcom} and {angmom} are already two of its five
+mandatory keywords, and with {infile} they are two of the 16 values in
+the file.
 
 :line
 
@@ -724,7 +784,8 @@ the {surf/kk} style, which "-sf kk" also selects.
 
 The option defaults are remap = incremental, rotate = euler,
 pushbound = no, pushstyle = linear, pushdamp = 0.0, force = 0 0 0,
-no push-off forces, no outfile.
+no push-off forces, no outfile.  For dstyle = density, vcom = 0 0 0
+and angmom = 0 0 0.
 
 :line
 

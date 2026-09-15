@@ -99,6 +99,9 @@ class FixRigid : public Fix {
 
   int dim;
   int massflag,comflag,vcomflag,moiflag,angmomflag;
+  int densityflag;        // 1 if dstyle = density: mass/com/moi are
+                          //   computed from the body geometry
+  double density;         // uniform body density for the above
 
   double fext[3];         // constant external force on the COM
 
@@ -259,6 +262,7 @@ class FixRigid : public Fix {
   void read_infile(char *);
   void write_outfile();
   void setup_body();
+  void body_properties(double);  // mass/com/moi from the body geometry
   void check_watertight();
   void set_recoil();            // set invmass/invinertia from current axes
   void final_kick();            // second half kick of velocity Verlet
