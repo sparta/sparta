@@ -1,0 +1,52 @@
+# TEST: ASYMMETRIC body-body contact via push-off springs
+# a heavy large body overtakes a light small body, offset in y so the
+# contact is corner-vs-face: the two contact-sampling families differ,
+# which exposes any violation of Newton's third law in body-body push
+# no particles: deterministic, total momentum of the two bodies must be
+# conserved to machine precision because contact forces are applied
+# equal-and-opposite to both bodies
+
+seed	    	    12345
+
+variable            dist index 0
+if "${dist} == 1" then "global surfs explicit/distributed"
+dimension   	    2
+boundary            r r p
+
+create_box  	    0 20 0 20 -0.5 0.5
+create_grid 	    20 20 1
+
+global		    nrho 1.0 fnum 0.001
+
+species		    air.species N
+mixture		    air N vstream 0 0 0 temp 273.0
+
+read_surf           data.square group body1 trans -1.0 4.0 0
+read_surf           data.square group body2 origin 5 5 0 &
+                    scale 0.5 0.5 1 trans 2.0 4.35 0
+surf_collide	    1 specular
+surf_modify         all collide 1
+
+timestep 	    0.0001
+
+compute             c1 surf body1 all fx fy fz tx ty tz com 4 9 0
+compute             c2 surf body2 all fx fy fz tx ty tz com 7 9.35 0
+
+global              rigid yes
+
+# body1: 1x1 square, mass 4e-22
+# body2: 0.5x0.5 square, mass 1e-22
+
+fix		    1 rigid body1 c1 body &
+		    mass 4.0e-22 com 4 9 0 vcom 40 0 0 &
+		    moi 3.3333e-23 3.3333e-23 6.6667e-23 0 0 0 angmom 0 0 0 &
+		    push 1.0e-18 0.3
+
+fix		    2 rigid body2 c2 body &
+		    mass 1.0e-22 com 7 9.35 0 vcom 0 0 0 &
+		    moi 2.0833e-24 2.0833e-24 4.1667e-24 0 0 0 angmom 0 0 0 &
+		    push 1.0e-18 0.3
+
+stats		    100
+stats_style         step f_1[4] f_1[5] f_2[4] f_2[5]
+run 		    800

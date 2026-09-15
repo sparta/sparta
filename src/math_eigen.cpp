@@ -10,6 +10,8 @@
    the GNU General Public License.
 
    See the README file in the top-level SPARTA directory.
+
+   Adapted from the LAMMPS math_eigen files (https://www.lammps.org/)
 ------------------------------------------------------------------------- */
 
 /* ----------------------------------------------------------------------
@@ -32,7 +34,7 @@ using namespace MathEigen;
 typedef Jacobi<double, double *, double (*)[3], double const (*)[3]> Jacobi_v1;
 typedef Jacobi<double, double *, double **, double const *const *> Jacobi_v2;
 
-int MathEigen::jacobi3(double const mat[3][3], double *eval, double evec[3][3])
+int MathEigen::jacobi3(double const mat[3][3], double *eval, double evec[3][3], int sort)
 {
   // make copy of const matrix
 
@@ -45,9 +47,17 @@ int MathEigen::jacobi3(double const mat[3][3], double *eval, double evec[3][3])
   // create instance of generic Jacobi class and get eigenvalues and -vectors
 
   Jacobi_v1 ecalc3(3, M, midx);
-  int ierror = ecalc3.Diagonalize(mat, eval, evec, Jacobi_v1::SORT_DECREASING_EVALS);
+  int ierror = 1;
+  if (sort == -1)
+    ierror = ecalc3.Diagonalize(mat, eval, evec, Jacobi_v1::SORT_DECREASING_EVALS);
+  else if (sort == 0)
+    ierror = ecalc3.Diagonalize(mat, eval, evec, Jacobi_v1::DO_NOT_SORT);
+  else if (sort == 1)
+    ierror = ecalc3.Diagonalize(mat, eval, evec, Jacobi_v1::SORT_INCREASING_EVALS);
 
   // transpose the evec matrix
+  // done even if the iteration did not converge, so that evec has the
+  //   documented layout for any caller which ignores the return value
 
   for (int i = 0; i < 3; i++)
     for (int j = i + 1; j < 3; j++) std::swap(evec[i][j], evec[j][i]);
@@ -55,7 +65,7 @@ int MathEigen::jacobi3(double const mat[3][3], double *eval, double evec[3][3])
   return ierror;
 }
 
-int MathEigen::jacobi3(double const *const *mat, double *eval, double **evec)
+int MathEigen::jacobi3(double const *const *mat, double *eval, double **evec, int sort)
 {
   // make copy of const matrix
 
@@ -68,9 +78,17 @@ int MathEigen::jacobi3(double const *const *mat, double *eval, double **evec)
   // create instance of generic Jacobi class and get eigenvalues and -vectors
 
   Jacobi_v2 ecalc3(3, M, midx);
-  int ierror = ecalc3.Diagonalize(mat, eval, evec, Jacobi_v2::SORT_DECREASING_EVALS);
+  int ierror = 1;
+  if (sort == -1)
+    ierror = ecalc3.Diagonalize(mat, eval, evec, Jacobi_v2::SORT_DECREASING_EVALS);
+  else if (sort == 0)
+    ierror = ecalc3.Diagonalize(mat, eval, evec, Jacobi_v2::DO_NOT_SORT);
+  else if (sort == 1)
+    ierror = ecalc3.Diagonalize(mat, eval, evec, Jacobi_v2::SORT_INCREASING_EVALS);
 
   // transpose the evec matrix
+  // done even if the iteration did not converge, so that evec has the
+  //   documented layout for any caller which ignores the return value
 
   for (int i = 0; i < 3; i++)
     for (int j = i + 1; j < 3; j++) std::swap(evec[i][j], evec[j][i]);

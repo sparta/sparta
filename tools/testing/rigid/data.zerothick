@@ -1,0 +1,15 @@
+# zero-thickness 2d body: one line traversed once in each direction
+# passes a watertight check but encloses no area
+
+2 points
+2 lines
+
+Points
+
+1 4.0 5.0
+2 6.0 5.0
+
+Lines
+
+1 1 2
+2 2 1

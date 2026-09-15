@@ -1,0 +1,61 @@
+# TEST: timestep-independence of a collision with a spinning body, in 3d
+# the 3d counterpart of in.test.rotwall, exercising the moving-triangle
+# intersection.  the body is a cube spinning about a tilted axis; its
+# three moments of inertia are equal, so omega is constant in direction
+# and magnitude and its pose is integrated exactly at any timestep.
+# the exact trajectory is therefore independent of the timestep.
+
+seed	    	    12345
+variable            dist index 0
+if "${dist} == 1" then "global surfs explicit/distributed"
+variable            dt index 1.0e-3
+variable            nsteps index 5
+
+dimension   	    3
+boundary            o o o
+
+create_box  	    0 10 0 10 0 10
+create_grid 	    5 5 5
+
+global		    nrho 1.0 fnum 1.0e10
+
+species		    air.species N
+mixture		    air N vstream 0 0 0 temp 273.0
+
+read_surf           sdata.cube group body trans 5 5 5
+surf_collide	    1 specular
+surf_modify         all collide 1
+
+timestep 	    ${dt}
+
+compute             c1 surf body all fx fy fz tx ty tz com 5 5 5
+
+global              rigid yes
+
+# equal moments of inertia, so omega = L/I is constant
+# |omega| = |L|/I = 1.8e-5/2.0e-7 = 90 rad/s, 0.09 radian per step
+
+fix		    1 rigid body c1 body &
+		    mass 1.0e-6 com 5 5 5 vcom 0 0 0 &
+		    moi 2.0e-7 2.0e-7 2.0e-7 0 0 0 &
+                    angmom 1.0e-5 0.0 1.4966629547e-5
+
+create_particles    air single N 1.0 4.6 5.3 1500.0 260.0 -60.0
+
+variable            px particle x
+variable            py particle y
+variable            pz particle z
+variable            pvx particle vx
+variable            pvy particle vy
+variable            pvz particle vz
+compute             rx reduce sum v_px
+compute             ry reduce sum v_py
+compute             rz reduce sum v_pz
+compute             rvx reduce sum v_pvx
+compute             rvy reduce sum v_pvy
+compute             rvz reduce sum v_pvz
+
+stats		    ${nsteps}
+stats_style         step np c_rx c_ry c_rz c_rvx c_rvy c_rvz
+stats_modify        format float %20.14e
+run 		    ${nsteps}

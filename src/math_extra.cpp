@@ -153,6 +153,173 @@ int mldivide4(const double m[4][4], const double *v, double *ans)
 }
 
 /* ----------------------------------------------------------------------
+   Richardson iteration to update quaternion from angular momentum
+   return new normalized quaternion q
+   also returns updated omega at 1/2 step
+------------------------------------------------------------------------- */
+
+void richardson(double *q, double *m, double *w, double *moments, double dtq)
+{
+  // full update from dq/dt = 1/2 w q
+
+  double wq[4];
+  MathExtra::vecquat(w,q,wq);
+
+  double qfull[4];
+  qfull[0] = q[0] + dtq * wq[0];
+  qfull[1] = q[1] + dtq * wq[1];
+  qfull[2] = q[2] + dtq * wq[2];
+  qfull[3] = q[3] + dtq * wq[3];
+  MathExtra::qnormalize(qfull);
+
+  // 1st half update from dq/dt = 1/2 w q
+
+  double qhalf[4];
+  qhalf[0] = q[0] + 0.5*dtq * wq[0];
+  qhalf[1] = q[1] + 0.5*dtq * wq[1];
+  qhalf[2] = q[2] + 0.5*dtq * wq[2];
+  qhalf[3] = q[3] + 0.5*dtq * wq[3];
+  MathExtra::qnormalize(qhalf);
+
+  // re-compute omega at 1/2 step from m at 1/2 step and q at 1/2 step
+  // recompute wq
+
+  MathExtra::mq_to_omega(m,qhalf,moments,w);
+  MathExtra::vecquat(w,qhalf,wq);
+
+  // 2nd half update from dq/dt = 1/2 w q
+
+  qhalf[0] += 0.5*dtq * wq[0];
+  qhalf[1] += 0.5*dtq * wq[1];
+  qhalf[2] += 0.5*dtq * wq[2];
+  qhalf[3] += 0.5*dtq * wq[3];
+  MathExtra::qnormalize(qhalf);
+
+  // corrected Richardson update
+
+  q[0] = 2.0*qhalf[0] - qfull[0];
+  q[1] = 2.0*qhalf[1] - qfull[1];
+  q[2] = 2.0*qhalf[2] - qfull[2];
+  q[3] = 2.0*qhalf[3] - qfull[3];
+  MathExtra::qnormalize(q);
+}
+
+/* ----------------------------------------------------------------------
+   compute omega from angular momentum, both in space frame
+   only know Idiag so need to do M = Iw in body frame
+   ex,ey,ez are column vectors of rotation matrix P
+   Mbody = P_transpose Mspace
+   wbody = Mbody / Idiag
+   wspace = P wbody
+   set wbody component to 0.0 if inertia component is 0.0
+     otherwise body can spin easily around that axis
+------------------------------------------------------------------------- */
+
+void angmom_to_omega(double *m, double *ex, double *ey, double *ez,
+                     double *idiag, double *w)
+{
+  double wbody[3];
+
+  if (idiag[0] == 0.0) wbody[0] = 0.0;
+  else wbody[0] = (m[0]*ex[0] + m[1]*ex[1] + m[2]*ex[2]) / idiag[0];
+  if (idiag[1] == 0.0) wbody[1] = 0.0;
+  else wbody[1] = (m[0]*ey[0] + m[1]*ey[1] + m[2]*ey[2]) / idiag[1];
+  if (idiag[2] == 0.0) wbody[2] = 0.0;
+  else wbody[2] = (m[0]*ez[0] + m[1]*ez[1] + m[2]*ez[2]) / idiag[2];
+
+  w[0] = wbody[0]*ex[0] + wbody[1]*ey[0] + wbody[2]*ez[0];
+  w[1] = wbody[0]*ex[1] + wbody[1]*ey[1] + wbody[2]*ez[1];
+  w[2] = wbody[0]*ex[2] + wbody[1]*ey[2] + wbody[2]*ez[2];
+}
+
+/* ----------------------------------------------------------------------
+   compute omega from angular momentum, both in space frame
+   w = omega = angular velocity in space frame
+   wbody = angular velocity in body frame
+   project space-frame angular momentum onto body axes
+     and divide by principal moments
+------------------------------------------------------------------------- */
+
+void mq_to_omega(double *m, double *q, double *moments, double *w)
+{
+  double wbody[3];
+  double rot[3][3];
+
+  MathExtra::quat_to_mat(q,rot);
+  MathExtra::transpose_matvec(rot,m,wbody);
+  if (moments[0] == 0.0) wbody[0] = 0.0;
+  else wbody[0] /= moments[0];
+  if (moments[1] == 0.0) wbody[1] = 0.0;
+  else wbody[1] /= moments[1];
+  if (moments[2] == 0.0) wbody[2] = 0.0;
+  else wbody[2] /= moments[2];
+  MathExtra::matvec(rot,wbody,w);
+}
+
+/* ----------------------------------------------------------------------
+   create unit quaternion from space-frame ex,ey,ez
+   ex,ey,ez are columns of a rotation matrix
+------------------------------------------------------------------------- */
+
+void exyz_to_q(double *ex, double *ey, double *ez, double *q)
+{
+  // squares of quaternion components
+
+  double q0sq = 0.25 * (ex[0] + ey[1] + ez[2] + 1.0);
+  double q1sq = q0sq - 0.5 * (ey[1] + ez[2]);
+  double q2sq = q0sq - 0.5 * (ex[0] + ez[2]);
+  double q3sq = q0sq - 0.5 * (ex[0] + ey[1]);
+
+  // some component must be greater than 1/4 since they sum to 1
+  // compute other components from it
+
+  if (q0sq >= 0.25) {
+    q[0] = sqrt(q0sq);
+    q[1] = (ey[2] - ez[1]) / (4.0*q[0]);
+    q[2] = (ez[0] - ex[2]) / (4.0*q[0]);
+    q[3] = (ex[1] - ey[0]) / (4.0*q[0]);
+  } else if (q1sq >= 0.25) {
+    q[1] = sqrt(q1sq);
+    q[0] = (ey[2] - ez[1]) / (4.0*q[1]);
+    q[2] = (ey[0] + ex[1]) / (4.0*q[1]);
+    q[3] = (ex[2] + ez[0]) / (4.0*q[1]);
+  } else if (q2sq >= 0.25) {
+    q[2] = sqrt(q2sq);
+    q[0] = (ez[0] - ex[2]) / (4.0*q[2]);
+    q[1] = (ey[0] + ex[1]) / (4.0*q[2]);
+    q[3] = (ez[1] + ey[2]) / (4.0*q[2]);
+  } else if (q3sq >= 0.25) {
+    q[3] = sqrt(q3sq);
+    q[0] = (ex[1] - ey[0]) / (4.0*q[3]);
+    q[1] = (ez[0] + ex[2]) / (4.0*q[3]);
+    q[2] = (ez[1] + ey[2]) / (4.0*q[3]);
+  }
+
+  qnormalize(q);
+}
+
+/* ----------------------------------------------------------------------
+   compute space-frame ex,ey,ez from current quaternion q
+   ex,ey,ez = space-frame coords of 1st,2nd,3rd principal axis
+   operation is ex = q' d q = Q d, where d is (1,0,0) = 1st axis in body frame
+------------------------------------------------------------------------- */
+
+void q_to_exyz(double *q, double *ex, double *ey, double *ez)
+{
+  ex[0] = q[0]*q[0] + q[1]*q[1] - q[2]*q[2] - q[3]*q[3];
+  ex[1] = 2.0 * (q[1]*q[2] + q[0]*q[3]);
+  ex[2] = 2.0 * (q[1]*q[3] - q[0]*q[2]);
+
+  ey[0] = 2.0 * (q[1]*q[2] - q[0]*q[3]);
+  ey[1] = q[0]*q[0] - q[1]*q[1] + q[2]*q[2] - q[3]*q[3];
+  ey[2] = 2.0 * (q[2]*q[3] + q[0]*q[1]);
+
+  ez[0] = 2.0 * (q[1]*q[3] + q[0]*q[2]);
+  ez[1] = 2.0 * (q[2]*q[3] - q[0]*q[1]);
+  ez[2] = q[0]*q[0] - q[1]*q[1] - q[2]*q[2] + q[3]*q[3];
+}
+
+/* ----------------------------------------------------------------------
    compute bounds implied by numeric str with a possible wildcard asterik
    1 = lower bound, Nmax = upper bound
    5 possibilities:

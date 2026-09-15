@@ -1,0 +1,32 @@
+# TEST: push-off contact with a faceted curved static surface conserves
+# energy: a square launched at a 200-segment static circle rebounds
+# through contacts whose closest feature is mostly a segment end
+# point, so the contact force must be the gradient of the spring
+# potential (directed from the closest point to the corner) for the
+# rebound speed to equal the launch speed; no gas, deterministic
+
+seed	    	    12345
+variable            dist index 0
+if "${dist} == 1" then "global surfs explicit/distributed"
+dimension   	    2
+boundary            r r p
+create_box  	    0 10 0 10 -0.5 0.5
+create_grid 	    20 20 1
+global		    nrho 1.0 fnum 0.001
+species		    air.species N
+mixture		    air N vstream 0 0 0 temp 273.0
+read_surf           data.square group body trans -2.0 -2.4 0
+read_surf           data.circle200 group wall
+surf_collide	    1 specular
+surf_modify         all collide 1
+timestep 	    0.0001
+compute             c1 surf body all fx fy fz tx ty tz com 3 2.6 0
+global              rigid yes
+fix		    1 rigid body c1 body mass 1.0e-21 com 3 2.6 0 &
+		    vcom 40 0 0 moi 1.7e-22 1.7e-22 3.4e-22 0 0 0 &
+		    angmom 0 0 0 push 2.0e-17 0.3
+variable            ke equal 0.5*1.0e-21*(f_1[4]^2+f_1[5]^2)+0.5*3.4e-22*f_1[15]^2
+stats		    100
+stats_style         step f_1[1] f_1[2] f_1[4] f_1[5] f_1[15] f_1[20] f_1[21] v_ke
+stats_modify        format float %.17g
+run 		    2000

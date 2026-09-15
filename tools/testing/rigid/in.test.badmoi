@@ -1,0 +1,30 @@
+# NEGATIVE TEST: 3d moments of inertia violating the triangle inequality
+# fix rigid must reject moi 1 1 5 (ixx + iyy < izz) with an error
+
+seed	    	    12345
+dimension   	    3
+boundary            o o o
+
+create_box  	    0 10 0 10 0 10
+create_grid 	    10 10 10
+
+global		    nrho 1.0 fnum 0.01
+
+species		    air.species N
+mixture		    air N vstream 0 0 0 temp 273.0
+
+read_surf           sdata.cube group body trans 5 5 5
+surf_collide	    1 specular
+surf_modify         all collide 1
+
+timestep 	    0.0001
+
+compute             c1 surf body all fx fy fz tx ty tz com 5 5 5
+
+global              rigid yes
+
+fix		    1 rigid body c1 body &
+		    mass 1.0e-22 com 5 5 5 vcom 0 0 0 &
+		    moi 1.0e-23 1.0e-23 5.0e-23 0 0 0 angmom 0 0 0
+
+run 		    10

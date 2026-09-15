@@ -1,0 +1,153 @@
+SPARTA (27 Aug 2026)
+Running on 4 MPI task(s)
+################################################################################
+# 3d flow around a mobile rigid-body cube
+#
+# a cubic particulate, rotated off-axis to the flow, is embedded in a
+# free-stream flow: particle collisions push it downstream, and the
+# statistical scatter of the collision torque sets it slowly rotating
+# (a cube has no mean aerodynamic torque about its center of mass)
+#
+# Note:
+#  - The "comm/sort" option to the "global" command is used to match MPI runs.
+#  - The "twopass" option is used to match Kokkos runs.
+# The "comm/sort" and "twopass" options should not be used for production runs.
+################################################################################
+
+seed	    	    12345
+dimension   	    3
+global              gridcut 0.0 comm/sort yes
+
+boundary	    o r r
+
+create_box  	    0 10 0 10 0 10
+Created orthogonal box = (0 0 0) to (10 10 10)
+create_grid 	    10 10 10
+WARNING: Could not acquire nearby ghost cells b/c grid partition is not clumped (/home/user/sparta/src/grid.cpp:486)
+Created 1000 child grid cells
+  CPU time = 0.0104169 secs
+  create/ghost percent = 96.724 3.27604
+balance_grid        rcb cell
+Balance grid migrated 740 cells
+  CPU time = 0.00233834 secs
+  reassign/sort/migrate/ghost percent = 54.3913 0.146429 29.1167 16.3455
+
+global		    nrho 1.0 fnum 0.01
+
+species		    air.species N O
+mixture		    air N O vstream 100.0 0 0
+
+# unit cube centered at (5,5,5), rotated 30 degrees about z,
+# treated as a mobile rigid body
+
+read_surf           sdata.cube group cube rotate 30 0 0 1 trans 5 5 5
+  12 triangles
+  4.31699 5.68301 xlo xhi
+  4.31699 5.68301 ylo yhi
+  4.5 5.5 zlo zhi
+  1 min triangle edge length
+  0.5 min triangle area
+  8 0 = cells overlapping surfs, overlap cells with unmarked corner pts
+  992 0 8 = cells outside/inside/overlapping surfs
+  8 = surf cells with 1,2,etc splits
+  999 999 = cell-wise and global flow volume
+  CPU time = 0.00387543 secs
+  read/check/sort/surf2grid/ghost/inout/particle percent = 2.23425 26.573 0.24934 62.3695 8.57388 3.5524 0.961492
+  surf2grid time = 0.00241709 secs
+  map/comm1/comm2/comm3/comm4/split percent = 75.8867 3.62854 5.38511 4.42896 4.28325 5.03841
+
+surf_collide	    1 diffuse 300.0 0.0
+surf_modify         all collide 1
+
+collide             vss air air.vss
+
+fix		    in emit/face air xlo twopass
+
+timestep 	    0.0001
+
+# per-surf force/torque tallies used to move the rigid body
+# moi of a uniform cube of edge A is isotropic: 1/6 M A^2 on the diagonal,
+# which is the same in any orientation
+
+compute             csurf surf cube all fx fy fz tx ty tz com 5 5 5
+
+global              rigid yes
+
+fix		    1 rigid cube csurf body                     mass 3.0e-21 com 5 5 5 vcom 0 0 0                     moi 5.0e-22 5.0e-22 5.0e-22 0 0 0 angmom 0 0 0
+
+stats		    100
+stats_style	    step cpu np nscoll f_1[1] f_1[4] f_1[13] f_1[14] f_1[15]
+run 		    1000
+Memory usage per proc in Mbytes:
+  particles (ave,min,max) = 0 0 0
+  grid      (ave,min,max) = 1.51379 1.51379 1.51379
+  surf      (ave,min,max) = 0.00151062 0.00151062 0.00151062
+  modify    (ave,min,max) = 0.254669 0.254669 0.254669
+  total     (ave,min,max) = 1.76997 1.76997 1.76997
+Step CPU Np Nscoll f_1[1] f_1[4] f_1[13] f_1[14] f_1[15] 
+       0            0        0        0            5            0            0            0            0 
+     100  0.043621748    20902        2    5.0000086 0.0046612882 -0.00063905152 0.00054148709 -0.0013607624 
+     200  0.082986743    35859        6    5.0001288  0.020314476 -0.00012366896 -0.0013771674 -0.0032140171 
+     300    0.1291408    43488        4    5.0004214  0.037525564 0.00095597621 -0.0061148118 -0.0018100143 
+     400   0.17845355    47659        7    5.0009072  0.057539027 -0.0026173341 -0.0069602238 0.0016108639 
+     500   0.22939564    50269        5    5.0015872   0.07906913 -0.0018334158 -0.0044269328 -0.00064420035 
+     600   0.28094088    52040        5    5.0024705  0.097380528 0.0017655465 -0.0025484092 -0.0019592241 
+     700    0.3347968    53332        5     5.003543   0.11653794 0.0076103199 -0.0049655094 0.0046595128 
+     800   0.40002248    54159        6    5.0048116   0.13709109 0.0057590505 -0.011600535 0.0016569162 
+     900   0.45508426    54760        7    5.0062816   0.15589084 0.0079596348 -0.0047826462 -0.00013756214 
+    1000    0.5101823    55452        3    5.0079414   0.17710291 0.0080890329 -0.0077756884 0.0050903951 
+Loop time of 0.510311 on 4 procs for 1000 steps with 55452 particles
+Performance: 1959.588 timesteps/s, 108.663 Mparticle-step/s
+
+MPI task timing breakdown:
+Section |  min time  |  avg time  |  max time  |%varavg| %total
+---------------------------------------------------------------
+Move    | 0.16529    | 0.1945     | 0.22462    |   6.2 | 38.11
+Coll    | 0.028126   | 0.034425   | 0.040703   |   3.1 |  6.75
+Sort    | 0.023693   | 0.028345   | 0.032705   |   2.4 |  5.55
+Comm    | 0.055994   | 0.058086   | 0.059692   |   0.6 | 11.38
+Modify  | 0.099822   | 0.11219    | 0.12441    |   3.6 | 21.98
+Output  | 0.00019152 | 0.00047376 | 0.0010383  |   0.0 |  0.09
+MPI Sync| 0.026558   | 0.081752   | 0.13556    |  17.6 | 16.02
+Other   |            | 0.0005458  |            |       |  0.11
+
+Particle moves    = 44219579 (44.2M)
+Cells touched     = 48486983 (48.5M)
+Particle comms    = 315700 (0.316M)
+Boundary collides = 275635 (0.276M)
+Boundary exits    = 155189 (0.155M)
+SurfColl checks   = 2032044 (2.03M)
+SurfColl occurs   = 4541 (4.54K)
+Surf reactions    = 0 (0K)
+Collide attempts  = 0 (0K)
+Collide occurs    = 0 (0K)
+Reactions         = 0 (0K)
+Particles stuck   = 0
+Axisymm bad moves = 0
+
+Particle-moves/CPUsec/proc: 2.1663e+07
+Particle-moves/step: 44219.6
+Cell-touches/particle/step: 1.0965
+Particle comm iterations/step: 2.405
+Particle fraction communicated: 0.00713937
+Particle fraction colliding with boundary: 0.00623332
+Particle fraction exiting boundary: 0.00350951
+Surface-checks/particle/step: 0.0459535
+Surface-collisions/particle/step: 0.000102692
+Surf-reactions/particle/step: 0
+Collision-attempts/particle/step: 0
+Collisions/particle/step: 0
+Reactions/particle/step: 0
+
+Particles: 13863 ave 14826 max 12971 min
+Histogram: 2 0 0 0 0 0 0 0 1 1
+Cells:      250 ave 250 max 250 min
+Histogram: 4 0 0 0 0 0 0 0 0 0
+GhostCell: 110 ave 110 max 110 min
+Histogram: 4 0 0 0 0 0 0 0 0 0
+EmptyCell: 110 ave 110 max 110 min
+Histogram: 4 0 0 0 0 0 0 0 0 0
+Surfs:    12 ave 12 max 12 min
+Histogram: 4 0 0 0 0 0 0 0 0 0
+GhostSurf: 0 ave 0 max 0 min
+Histogram: 4 0 0 0 0 0 0 0 0 0

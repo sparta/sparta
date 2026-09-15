@@ -480,6 +480,11 @@ void CollideVSSKokkos::operator()(TagCollideResetVremax, const int &icell) const
 
 void CollideVSSKokkos::collisions()
 {
+  // with a rigid body active, a zero-volume cell may hold particles
+  //   (see Collide::collisions): skip it instead of flagging an error
+
+  rigid_skip = update->rigidflag;
+
   // if requested, reset vrwmax & remain
 
   if (update->ntimestep == vre_next) {
@@ -1001,7 +1006,10 @@ void CollideVSSKokkos::operator()(TagCollideCollisionsOne< NEARCP, GASTALLY, ATO
   }
 
   const double volume = grid_kk_copy.obj.k_cinfo.view_device()[icell].volume / grid_kk_copy.obj.k_cinfo.view_device()[icell].weight;
-  if (volume == 0.0) d_error_flag() = 1;
+  if (volume == 0.0) {
+    if (rigid_skip) return;
+    d_error_flag() = 1;
+  }
 
   struct State precoln;       // state before collision
   struct State postcoln;      // state after collision
@@ -1432,7 +1440,10 @@ void CollideVSSKokkos::operator()(TagCollideCollisionsOneSubcell< DIM, GASTALLY,
     d_nn_last_partner(icell,ii) = 0;
 
   const double volume = grid_kk_copy.obj.k_cinfo.view_device()[icell].volume / grid_kk_copy.obj.k_cinfo.view_device()[icell].weight;
-  if (volume == 0.0) d_error_flag() = 1;
+  if (volume == 0.0) {
+    if (rigid_skip) return;
+    d_error_flag() = 1;
+  }
 
   struct State precoln;       // state before collision
   struct State postcoln;      // state after collision
@@ -2158,7 +2169,10 @@ void CollideVSSKokkos::operator()(TagCollideCollisionsGroup< NEARCP, GASTALLY, A
   if (np <= 1) return;
 
   const double volume = grid_kk_copy.obj.k_cinfo.view_device()[icell].volume / grid_kk_copy.obj.k_cinfo.view_device()[icell].weight;
-  if (volume == 0.0) d_error_flag() = 1;
+  if (volume == 0.0) {
+    if (rigid_skip) return;
+    d_error_flag() = 1;
+  }
 
   // build per-group particle lists for this cell
   // d_gcount(icell,g) = # of particles in group g
@@ -2708,7 +2722,10 @@ void CollideVSSKokkos::operator()(TagCollideCollisionsGroupAmbipolar< GASTALLY, 
   if (np <= 1) return;
 
   const double volume = grid_kk_copy.obj.k_cinfo.view_device()[icell].volume / grid_kk_copy.obj.k_cinfo.view_device()[icell].weight;
-  if (volume == 0.0) d_error_flag() = 1;
+  if (volume == 0.0) {
+    if (rigid_skip) return;
+    d_error_flag() = 1;
+  }
 
   // build the per-group particle lists for this cell and the electron list,
   //   in one pass over plist, exactly as collide.cpp:1792-1824 does
@@ -3380,7 +3397,10 @@ void CollideVSSKokkos::operator()(TagCollideCollisionsOneAmbipolar< GASTALLY, AT
   if (np <= 1) return;
 
   const double volume = grid_kk_copy.obj.k_cinfo.view_device()[icell].volume / grid_kk_copy.obj.k_cinfo.view_device()[icell].weight;
-  if (volume == 0.0) d_error_flag() = 1;
+  if (volume == 0.0) {
+    if (rigid_skip) return;
+    d_error_flag() = 1;
+  }
 
   struct State precoln;       // state before collision
   struct State postcoln;      // state after collision

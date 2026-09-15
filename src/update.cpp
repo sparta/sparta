@@ -30,6 +30,7 @@
 #include "surf.h"
 #include "surf_collide.h"
 #include "surf_react.h"
+#include "fix_rigid.h"
 #include "input.h"
 #include "output.h"
 #include "geometry.h"
@@ -52,6 +53,8 @@ enum{NOFIELD,CFIELD,PFIELD,GFIELD};             // several files
 enum{BCSTD,BCWRAP,BCMIRROR,BCEXIT};             // Update::bcopt values
 
 #define MAXSTUCK 20
+#define EPSREHIT 1.0e-6     // re-hit of just-hit moving surf below this
+                            //   fraction of the path is round-off
 #define EPSPARAM 1.0e-7
 
 // max value (bytes) for global_mem_limit = 2000 MiB = 2097152000
@@ -115,6 +118,21 @@ Update::Update(SPARTA *sparta) : Pointers(sparta)
   global_mem_limit = 0;
   mem_limit_grid_flag = 0;
 
+  rigidflag = 0;
+  rigid_notify_sr = 0;
+  nfixrigid = 0;
+  fixrigidlist = NULL;
+  rigidmap = NULL;
+
+  rigid_binvalid = 0;
+  rigid_ncellbin = 0;
+  rigid_binstart = NULL;
+  rigid_binlist = NULL;
+  rigid_cellstamp = NULL;
+  rigid_stampcur = 0;
+  rigid_cand = NULL;
+  maxrigidcand = 0;
+
   copymode = 0;
 }
 
@@ -126,6 +144,12 @@ Update::~Update()
 
   delete [] unit_style;
   delete [] fieldID;
+  delete [] fixrigidlist;
+  memory->destroy(rigidmap);
+  memory->destroy(rigid_binstart);
+  memory->destroy(rigid_binlist);
+  memory->destroy(rigid_cellstamp);
+  memory->destroy(rigid_cand);
   memory->destroy(mlist);
 
   delete [] glist_compute;
@@ -200,25 +224,27 @@ void Update::init()
   // choose the appropriate move method
 
   if (domain->dimension == 3) {
-    if (surf->exist)
-      moveptr = &Update::move<3,1,0>;
-    else {
-      if (optmove_flag) moveptr = &Update::move<3,0,1>;
-      else moveptr = &Update::move<3,0,0>;
+    if (surf->exist) {
+      if (!rigidflag) moveptr = &Update::move<3,1,0,0>;
+      else moveptr = &Update::move<3,1,0,1>;
+    } else {
+      if (optmove_flag) moveptr = &Update::move<3,0,1,0>;
+      else moveptr = &Update::move<3,0,0,0>;
     }
   } else if (domain->axisymmetric) {
     if (surf->exist)
-      moveptr = &Update::move<1,1,0>;
+      moveptr = &Update::move<1,1,0,0>;
     else {
-      if (optmove_flag) moveptr = &Update::move<1,0,1>;
-      else moveptr = &Update::move<1,0,0>;
+      if (optmove_flag) moveptr = &Update::move<1,0,1,0>;
+      else moveptr = &Update::move<1,0,0,0>;
     }
   } else if (domain->dimension == 2) {
-    if (surf->exist)
-      moveptr = &Update::move<2,1,0>;
-    else {
-      if (optmove_flag) moveptr = &Update::move<2,0,1>;
-      else moveptr = &Update::move<2,0,0>;
+    if (surf->exist) {
+      if (!rigidflag) moveptr = &Update::move<2,1,0,0>;
+      else moveptr = &Update::move<2,1,0,1>;
+    } else {
+      if (optmove_flag) moveptr = &Update::move<2,0,1,0>;
+      else moveptr = &Update::move<2,0,0,0>;
     }
   }
 
@@ -259,6 +285,285 @@ void Update::init()
 
   if (moveperturb) perturbflag = 1;
   else perturbflag = 0;
+
+  // setup when using fix rigid for rigid body objects comprised of surfs
+
+  init_rigid();
+}
+
+/* ----------------------------------------------------------------------
+   per-run setup for mobile rigid bodies (global rigid yes):
+     build the list of all fix rigid instances, one body per fix,
+     and the per-surf map from surf to body
+   also called by UpdateKokkos::init()
+------------------------------------------------------------------------- */
+
+void Update::init_rigid()
+{
+  if (!rigidflag) return;
+
+  if (domain->axisymmetric)
+    error->all(FLERR,"Cannot use global rigid with axisymmetric domain");
+
+  // the cell-bin index holds cell indices for the grid it was built
+  //   from; the grid may have been replaced between runs by a command
+  //   which does not notify fixes, so rebuild it on first use
+
+  rigid_bins_clear();
+
+  refresh_fixrigidlist();
+  if (!nfixrigid)
+    error->all(FLERR,"Global rigid is set but no fix rigid is defined");
+
+  // distributed surfs: establish the local copies of the body surfs
+  //   now, before the surface collision and reaction models init,
+  //   so that their per-surf state is sized for the final local+ghost
+  //   surf arrays of this run
+
+  if (surf->distributed) {
+    int changed = 0;
+    for (int m = 0; m < nfixrigid; m++)
+      if (fixrigidlist[m]->ensure_local_copies()) changed = 1;
+    build_rigidmap();
+    fixrigidlist[0]->surfs_changed(changed,1);
+  } else build_rigidmap();
+}
+
+/* ----------------------------------------------------------------------
+   invalidate the rigid cell-bin index
+   called whenever grid cells are rebuilt, migrated, or re-ghosted
+------------------------------------------------------------------------- */
+
+void Update::rigid_bins_clear()
+{
+  rigid_binvalid = 0;
+}
+
+/* ----------------------------------------------------------------------
+   return candidate local+ghost child cells whose bounding box may
+     overlap the box blo/bhi, in *list; return count
+   callers must still apply an exact cell-vs-box overlap test
+   the bin index is built lazily from the current cells on first query
+     and reused until the grid changes, so each query costs
+     O(cells near the box), not O(cells per rank)
+   bins are sized so the total bin count is comparable to the local
+     cell count; a cell is entered in every bin its bbox overlaps and
+     a per-cell stamp dedups multi-bin cells in query results
+------------------------------------------------------------------------- */
+
+int Update::rigid_cell_box(double *blo, double *bhi, int **list)
+{
+  int i,j,k,m,ibx,iby,ibz,ibin;
+  int lo[3],hi[3];
+
+  Grid::ChildCell *cells = grid->cells;
+  int ntotal = grid->nlocal + grid->nghost;
+  int dim = domain->dimension;
+
+  // (re)build the bin index if the grid changed since last query
+
+  if (!rigid_binvalid || rigid_ncellbin != ntotal) {
+
+    double *boxlo = domain->boxlo;
+    double *boxhi = domain->boxhi;
+
+    // total bins ~ local cell count, distributed over dims by extent
+
+    double vol = 1.0;
+    for (k = 0; k < dim; k++) vol *= boxhi[k] - boxlo[k];
+    double scale = pow(MAX(ntotal,1)/vol,1.0/dim);
+
+    for (k = 0; k < 3; k++) {
+      rigid_binlo[k] = boxlo[k];
+      double len = boxhi[k] - boxlo[k];
+      int n = (int) (len*scale);
+      n = MAX(n,1);
+      n = MIN(n,1024);
+      if (dim == 2 && k == 2) n = 1;
+      rigid_nbin[k] = n;
+      rigid_bininv[k] = n/len;
+    }
+    int nbins = rigid_nbin[0]*rigid_nbin[1]*rigid_nbin[2];
+
+    memory->destroy(rigid_binstart);
+    memory->destroy(rigid_binlist);
+    memory->destroy(rigid_cellstamp);
+    memory->create(rigid_binstart,nbins+1,"update:rigid_binstart");
+    memory->create(rigid_cellstamp,ntotal,"update:rigid_cellstamp");
+    for (i = 0; i < ntotal; i++) rigid_cellstamp[i] = 0;
+    rigid_stampcur = 0;
+
+    // two passes: count entries per bin, then fill
+    // skip sub cells; empty ghost cells are binned, callers skip them
+
+    for (int pass = 0; pass < 2; pass++) {
+      if (pass == 0)
+        for (i = 0; i <= nbins; i++) rigid_binstart[i] = 0;
+
+      for (m = 0; m < ntotal; m++) {
+        if (cells[m].nsplit <= 0) continue;
+        for (k = 0; k < 3; k++) {
+          lo[k] = (int) ((cells[m].lo[k]-rigid_binlo[k]) * rigid_bininv[k]);
+          hi[k] = (int) ((cells[m].hi[k]-rigid_binlo[k]) * rigid_bininv[k]);
+          lo[k] = MAX(0,MIN(lo[k],rigid_nbin[k]-1));
+          hi[k] = MAX(0,MIN(hi[k],rigid_nbin[k]-1));
+        }
+        for (ibz = lo[2]; ibz <= hi[2]; ibz++)
+          for (iby = lo[1]; iby <= hi[1]; iby++)
+            for (ibx = lo[0]; ibx <= hi[0]; ibx++) {
+              ibin = (ibz*rigid_nbin[1] + iby)*rigid_nbin[0] + ibx;
+              if (pass == 0) rigid_binstart[ibin+1]++;
+              else rigid_binlist[rigid_binstart[ibin]++] = m;
+            }
+      }
+
+      if (pass == 0) {
+        for (i = 0; i < nbins; i++) rigid_binstart[i+1] += rigid_binstart[i];
+        memory->create(rigid_binlist,rigid_binstart[nbins],
+                       "update:rigid_binlist");
+      } else {
+        for (i = nbins; i > 0; i--) rigid_binstart[i] = rigid_binstart[i-1];
+        rigid_binstart[0] = 0;
+      }
+    }
+
+    rigid_ncellbin = ntotal;
+    rigid_binvalid = 1;
+  }
+
+  // query: gather cells from bins overlapping the box, dedup by stamp
+
+  for (k = 0; k < 3; k++) {
+    lo[k] = (int) ((blo[k]-rigid_binlo[k]) * rigid_bininv[k]);
+    hi[k] = (int) ((bhi[k]-rigid_binlo[k]) * rigid_bininv[k]);
+    lo[k] = MAX(0,MIN(lo[k],rigid_nbin[k]-1));
+    hi[k] = MAX(0,MIN(hi[k],rigid_nbin[k]-1));
+  }
+
+  rigid_stampcur++;
+  int ncand = 0;
+
+  for (ibz = lo[2]; ibz <= hi[2]; ibz++)
+    for (iby = lo[1]; iby <= hi[1]; iby++)
+      for (ibx = lo[0]; ibx <= hi[0]; ibx++) {
+        ibin = (ibz*rigid_nbin[1] + iby)*rigid_nbin[0] + ibx;
+        for (i = rigid_binstart[ibin]; i < rigid_binstart[ibin+1]; i++) {
+          m = rigid_binlist[i];
+          if (rigid_cellstamp[m] == rigid_stampcur) continue;
+          rigid_cellstamp[m] = rigid_stampcur;
+          if (ncand == maxrigidcand) {
+            maxrigidcand += 4096;
+            memory->grow(rigid_cand,maxrigidcand,"update:rigid_cand");
+          }
+          rigid_cand[ncand++] = m;
+        }
+      }
+
+  *list = rigid_cand;
+  return ncand;
+}
+
+/* ----------------------------------------------------------------------
+   fixrigidlist = the FixRigid instances currently defined, in Modify
+     order (body index = position in this list)
+   rebuilt from Modify on every use, so an instance deleted by unfix or
+     by a re-definition between runs is never referenced: Modify does
+     not notify Update of the deletion, and a grid-changing command
+     issued before the next run reaches build_rigidmap()
+   the list is empty (NULL) when no fix rigid is defined, so a caught
+     error leaves nothing for the destructor to free twice
+------------------------------------------------------------------------- */
+
+void Update::refresh_fixrigidlist()
+{
+  int ifix,n;
+
+  // keep the current array when the set is unchanged: callers within
+  //   a run hold a pointer to it across build_rigidmap()
+
+  n = 0;
+  for (ifix = 0; ifix < modify->nfix; ifix++)
+    if (fix_rigid_style(modify->fix[ifix]->style)) n++;
+
+  if (n == nfixrigid) {
+    int m = 0;
+    for (ifix = 0; ifix < modify->nfix; ifix++)
+      if (fix_rigid_style(modify->fix[ifix]->style)) {
+        if (fixrigidlist[m] != (FixRigid *) modify->fix[ifix]) break;
+        m++;
+      }
+    if (m == n) return;
+  }
+
+  delete [] fixrigidlist;
+  fixrigidlist = NULL;
+  nfixrigid = n;
+  if (!nfixrigid) return;
+
+  fixrigidlist = new FixRigid*[nfixrigid];
+  n = 0;
+  for (ifix = 0; ifix < modify->nfix; ifix++)
+    if (fix_rigid_style(modify->fix[ifix]->style))
+      fixrigidlist[n++] = (FixRigid *) modify->fix[ifix];
+}
+
+/* ----------------------------------------------------------------------
+   rigidmap = map from each local or ghost surf to the rigid fix which
+     owns it, -1 = static surf
+   used by the move loop to dispatch moving-surf collision tests
+   covers ghost surfs too: the mover advects particles thru ghost cells
+     and tests collisions with the surfs stored for those cells
+   called from init(), and by FixRigid whenever the local/ghost surf
+     arrays change (setup, full grid re-map, balance or adapt)
+------------------------------------------------------------------------- */
+
+void Update::build_rigidmap()
+{
+  if (!rigidflag) return;
+  refresh_fixrigidlist();
+  if (!nfixrigid) return;
+
+  memory->destroy(rigidmap);
+  int nslocal = surf->nlocal;
+  int nstotal = surf->nlocal + surf->nghost;
+  memory->create(rigidmap,MAX(nstotal,1),"update:rigidmap");
+  for (int i = 0; i < nstotal; i++) rigidmap[i] = -1;
+
+  if (!surf->distributed) {
+
+    // map via each fix's per-surf irigid flags
+    // a fix's irigid may be shorter than nslocal if surfs were
+    //   appended after the fix was defined; appended surfs are
+    //   static, and FixRigid::init() (which runs after Update::init())
+    //   grows irigid or errors out if the change is not allowed
+
+    for (int m = 0; m < nfixrigid; m++) {
+      int *irigid = fixrigidlist[m]->irigid;
+      int nmap = MIN(nslocal,fixrigidlist[m]->nsurfall);
+      for (int i = 0; i < nmap; i++)
+        if (irigid[i] >= 0) rigidmap[i] = m;
+    }
+
+  } else {
+
+    // distributed: the local surf list changes as the grid is re-cut,
+    //   so map by global surf ID via each fix's body element table
+    // FixRigid::ensure_local_copies() keeps every body element in the
+    //   local range, so ghost entries are always static
+
+    Surf::Line *lines = surf->lines;
+    Surf::Tri *tris = surf->tris;
+    int dim = domain->dimension;
+
+    for (int i = 0; i < nstotal; i++) {
+      surfint id = (dim == 2) ? lines[i].id : tris[i].id;
+      for (int m = 0; m < nfixrigid; m++)
+        if (fixrigidlist[m]->body_elem(id) >= 0) {
+          rigidmap[i] = m;
+          break;
+        }
+    }
+  }
 }
 
 /* ---------------------------------------------------------------------- */
@@ -567,10 +872,12 @@ static inline int optmove_cell(const double *xp, const double *boxlo,
    advect particles thru grid
    DIM = 2/3 for 2d/3d, 1 for 2d axisymmetric
    SURF = 0/1 for no surfs or surfs
+   OPT = 0/1 for no optimized move or optimized (uniform grid, no surfs)
+   RIGID = 0/1 for no/yes use of fix rigid for mobile rigid-body surf objects
    use multiple iterations of move/comm if necessary
 ------------------------------------------------------------------------- */
 
-template < int DIM, int SURF, int OPT > void Update::move()
+template < int DIM, int SURF, int OPT, int RIGID > void Update::move()
 {
   bool hitflag;
   int m,icell,icell_original,nmask,outface,bflag,nflag,pflag,itmp;
@@ -580,6 +887,9 @@ template < int DIM, int SURF, int OPT > void Update::move()
   cellint *neigh;
   double dtremain,frac,newfrac,param,minparam,rnew,dtsurf,tc,tmp;
   double xnew[3],xhold[3],xc[3],vc[3],minxc[3],minvc[3];
+  int minmoving,minbody,mapbody;
+  double nhit[3],vwallhit[3],minnorm[3],minvwall[3],vpre[3];
+  double ymap0[3],ymap1[3];   // path endpoints mapped into the body frame
   double *x,*v,*lo,*hi;
   double Lx,Ly,Lz,dx,dy,dz;
   double *boxlo, *boxhi;
@@ -665,6 +975,8 @@ template < int DIM, int SURF, int OPT > void Update::move()
   Surf::Tri *tris = surf->tris;
   Surf::Line *lines = surf->lines;
   double dt = update->dt;
+  Particle::Species *species = particle->species;
+  int cellweightflag = grid->cellweightflag;
 
   // external per particle field
   // fix calculates field acting on all owned particles
@@ -872,7 +1184,8 @@ template < int DIM, int SURF, int OPT > void Update::move()
       stuck_iterate = 0;
       ntouch_one++;
 
-      // advect one particle from cell to cell and thru surf collides til done
+      // advect one particle from cell to cell until done
+      // also detect any collisions with surfs in each cell
 
       //int iterate = 0;
 
@@ -1083,40 +1396,94 @@ template < int DIM, int SURF, int OPT > void Update::move()
 
             // for axisymmetric, dtsurf = time that particle stays in cell
             // used as arg to axi_line_intersect()
+            // for RIGID, dtsurf = same quantity
+            // used as time window for moving surf intersection tests
 
-            if (DIM == 1) {
+            if (DIM == 1 || RIGID) {
               if (outface == INTERIOR) dtsurf = dtremain;
               else dtsurf = dtremain * frac;
             }
 
             // check for collisions with triangles or lines in cell
             // find 1st surface hit via minparam
-            // skip collisions with previous surf, but not for axisymmetric
+            // skip collisions with previous surf,
+            //   but not for axisymmetric or moving rigid-body surfs
+            //   a rotating surf can sweep back into a particle it just
+            //   reflected, but only after a finite fraction of the path,
+            //   so a re-hit of the previous surf at param ~ 0 is round-off
+            //   and is rejected below
             // not considered collision if 2 params are tied and one INSIDE surf
             // if collision occurs, perform collision with surface model
             // reset x,v,xnew,dtremain and continue single particle trajectory
+            // for RIGID: moving surf tests use the body motion for this step,
+            //   x is the particle position at time dt-dtremain from
+            //   the start of the step, its path to xnew spans the next dtsurf
+            //   xnew is the same cell-face-clipped endpoint used for static
+            //   surfs, so a body face on a cell boundary cannot be missed
 
             cflag = 0;
             minparam = 2.0;
+            minmoving = 0;
+            mapbody = -1;
             csurfs = cells[icell].csurfs;
 
             for (m = 0; m < nsurf; m++) {
               isurf = csurfs[m];
 
               if (DIM > 1) {
-                if (isurf == exclude) continue;
+                if (isurf == exclude) {
+                  if (!RIGID) continue;
+                  if (rigidmap[isurf] < 0) continue;
+                }
               }
+
+              // moving surf: the path endpoints mapped into the body's
+              //   frozen frame do not depend on which element is tested,
+              //   so they are computed once per body and reused for the
+              //   rest of that body's elements in this cell
+              // in 2d the mapped z is zero up to round-off; it is set to
+              //   zero exactly, as the static line test expects
+
+              if (RIGID && rigidmap[isurf] >= 0 && rigidmap[isurf] != mapbody) {
+                FixRigid *fr = fixrigidlist[rigidmap[isurf]];
+                Geometry::body_frame_path(x,xnew,dt-dtremain,dtsurf,
+                                          fr->xcm,fr->vcm,fr->omega,
+                                          ymap0,ymap1);
+                if (DIM == 2) ymap0[2] = ymap1[2] = 0.0;
+                mapbody = rigidmap[isurf];
+              }
+
               if (DIM == 3) {
                 tri = &tris[isurf];
-                hitflag = Geometry::
-                  line_tri_intersect(x,xnew,tri->p1,tri->p2,tri->p3,
-                                     tri->norm,xc,param,side);
+                if (RIGID && rigidmap[isurf] >= 0) {
+                  FixRigid *fr = fixrigidlist[rigidmap[isurf]];
+                  hitflag = Geometry::
+                    line_tri_moving_intersect(x,xnew,dt-dtremain,dtsurf,
+                                              tri->p1,tri->p2,tri->p3,
+                                              tri->norm,fr->xcm,
+                                              fr->vcm,fr->omega,ymap0,ymap1,
+                                              xc,nhit,vwallhit,param,side);
+                } else {
+                  hitflag = Geometry::
+                    line_tri_intersect(x,xnew,tri->p1,tri->p2,tri->p3,
+                                       tri->norm,xc,param,side);
+                }
               }
               if (DIM == 2) {
                 line = &lines[isurf];
-                hitflag = Geometry::
-                  line_line_intersect(x,xnew,line->p1,line->p2,
-                                      line->norm,xc,param,side);
+                if (RIGID && rigidmap[isurf] >= 0) {
+                  FixRigid *fr = fixrigidlist[rigidmap[isurf]];
+                  hitflag = Geometry::
+                    line_line_moving_intersect(x,xnew,dt-dtremain,dtsurf,
+                                               line->p1,line->p2,
+                                               line->norm,fr->xcm,
+                                               fr->vcm,fr->omega,ymap0,ymap1,
+                                               xc,nhit,vwallhit,param,side);
+                } else {
+                  hitflag = Geometry::
+                    line_line_intersect(x,xnew,line->p1,line->p2,
+                                        line->norm,xc,param,side);
+                }
               }
               if (DIM == 1) {
                 line = &lines[isurf];
@@ -1188,6 +1555,9 @@ template < int DIM, int SURF, int OPT > void Update::move()
               }
 #endif
 
+              if (RIGID && hitflag && isurf == exclude && param < EPSREHIT)
+                hitflag = 0;
+
               if (hitflag && param < minparam && side == OUTSIDE) {
                 cflag = 1;
                 minparam = param;
@@ -1199,6 +1569,22 @@ template < int DIM, int SURF, int OPT > void Update::move()
                 if (DIM == 1) {
                   minvc[1] = vc[1];
                   minvc[2] = vc[2];
+                }
+
+                // for hit on moving surf, save normal and
+                // wall velocity at hit time and hit point
+
+                if (RIGID) {
+                  if (rigidmap[isurf] >= 0) {
+                    minmoving = 1;
+                    minbody = rigidmap[isurf];
+                    minnorm[0] = nhit[0];
+                    minnorm[1] = nhit[1];
+                    minnorm[2] = nhit[2];
+                    minvwall[0] = vwallhit[0];
+                    minvwall[1] = vwallhit[1];
+                    minvwall[2] = vwallhit[2];
+                  } else minmoving = 0;
                 }
               }
 
@@ -1235,12 +1621,39 @@ template < int DIM, int SURF, int OPT > void Update::move()
               if (nsurf_tally)
                 memcpy(&iorig,&particles[i],sizeof(Particle::OnePart));
 
-              if (DIM == 3)
-                jpart = surf->sc[tri->isc]->
-                  collide(ipart,dtremain,minsurf,tri->norm,tri->isr,reaction);
-              if (DIM != 3)
-                jpart = surf->sc[line->isc]->
-                  collide(ipart,dtremain,minsurf,line->norm,line->isr,reaction);
+              // for hit on moving surf:
+              // perform the collision in the frame of the moving wall:
+              //   subtract wall velocity, collide with the surf normal
+              //   evaluated at the hit time, then add wall velocity back
+              // makes all collision models (specular, diffuse, CLL, ...)
+              //   correct in the local rest frame of the wall
+
+              if (RIGID && minmoving) {
+                vpre[0] = v[0];
+                vpre[1] = v[1];
+                vpre[2] = v[2];
+                v[0] -= minvwall[0];
+                v[1] -= minvwall[1];
+                v[2] -= minvwall[2];
+              }
+
+              if (DIM == 3) {
+                if (RIGID && minmoving)
+                  jpart = surf->sc[tri->isc]->
+                    collide(ipart,dtremain,minsurf,minnorm,tri->isr,reaction);
+                else
+                  jpart = surf->sc[tri->isc]->
+                    collide(ipart,dtremain,minsurf,tri->norm,tri->isr,reaction);
+              }
+              if (DIM != 3) {
+                if (RIGID && minmoving)
+                  jpart = surf->sc[line->isc]->
+                    collide(ipart,dtremain,minsurf,minnorm,line->isr,reaction);
+                else
+                  jpart = surf->sc[line->isc]->
+                    collide(ipart,dtremain,minsurf,line->norm,line->isr,
+                            reaction);
+              }
 
               if (jpart) {
                 particles = particle->particles;
@@ -1252,6 +1665,40 @@ template < int DIM, int SURF, int OPT > void Update::move()
                 pstop++;
               }
 
+              // add wall velocity to post-collision particle velocities,
+              //   so surf tallies below see space-frame velocities
+              //   and thus tally the full momentum exchange with the wall
+
+              if (RIGID && minmoving) {
+                if (ipart) {
+                  v[0] += minvwall[0];
+                  v[1] += minvwall[1];
+                  v[2] += minvwall[2];
+                }
+                if (jpart) {
+                  jpart->v[0] += minvwall[0];
+                  jpart->v[1] += minvwall[1];
+                  jpart->v[2] += minvwall[2];
+                }
+
+                // correct the reflected velocity for the recoil of the
+                //   finite-mass body, so the impulse tallied below and
+                //   applied to the body conserves energy as well as
+                //   momentum; skipped if a surface reaction occurred
+                // x = hit point, dt-dtremain = hit time from start of step
+
+                if (ipart && !jpart && !reaction) {
+                  FixRigid *fr = fixrigidlist[minbody];
+                  double msuper = fnum * species[ipart->ispecies].mass;
+                  if (cellweightflag) msuper *= ipart->weight;
+                  Geometry::rigid_recoil(DIM == 3 ? 3 : 2,msuper,
+                                         minnorm,minvwall,
+                                         vpre,v,x,dt-dtremain,
+                                         fr->xcm,fr->vcm,
+                                         fr->invmass,fr->invinertia);
+                }
+              }
+
               if (nsurf_tally)
                 for (m = 0; m < nsurf_tally; m++)
                   slist_active[m]->surf_tally(dtremain,minsurf,icell,reaction,
@@ -1259,7 +1706,13 @@ template < int DIM, int SURF, int OPT > void Update::move()
 
               // stuck_iterate = consecutive iterations particle is immobile
 
-              if (minparam <= 1.0e-14) stuck_iterate++;
+              // with moving surfs a re-hit of the surf just hit also
+              //   counts, so repeated re-hits by a sweeping surf end;
+              //   the excluded surf is otherwise a legitimate re-hit
+              //   (axisymmetric: repeated hits on the same line)
+
+              if (minparam <= 1.0e-14 || (RIGID && minsurf == exclude))
+                stuck_iterate++;
               else stuck_iterate = 0;
 
               // reset post-bounce xnew
@@ -2184,6 +2637,14 @@ void Update::global(int narg, char **arg)
         global_mem_limit = global_mem_limit_big;
       }
       iarg += 2;
+
+    } else if (strcmp(arg[iarg],"rigid") == 0) {
+      if (iarg+2 > narg) error->all(FLERR,"Illegal global command");
+      if (strcmp(arg[iarg+1],"yes") == 0) rigidflag = 1;
+      else if (strcmp(arg[iarg+1],"no") == 0) rigidflag = 0;
+      else error->all(FLERR,"Illegal global command");
+      iarg += 2;
+
     } else error->all(FLERR,"Illegal global command");
   }
 }
