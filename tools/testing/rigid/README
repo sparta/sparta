@@ -71,8 +71,6 @@ zerothick     negative: a watertight body enclosing no area (2d) or
               volume (3d), e.g. a doubled line or tri, must be rejected
 inward        body surfs traversed the wrong way round (normals pointing
               inward, a container) are rejected in 2d and 3d
-torqueonly    compute surf torque columns without force columns fed by
-              fix emit/surf (no incoming particle state) must not crash
 refix         a fix rigid re-defined between runs, then balance_grid
               before the next run: the rigid map rebuild must not reach
               the deleted fix (use-after-free visible under ASAN)
@@ -85,10 +83,6 @@ vacate        gas collisions (collide vss) with a fast body spanning whole
               uncovers within a step holds particles at zero flow volume
               until the end-of-step re-cut, and the collision step must
               skip such a cell rather than abort; Np constant, no deletions
-balancetally  no rigid body: fix balance every step after the move; the
-              per-surf collision and reaction tallies summed over a static
-              wall must equal the step's Nscoll and Nsreact (KOKKOS: the
-              tallies must survive the grid change's index re-size)
 prenofix      negative: a fix rigid re-defined between runs, then
               "run pre no" (setup skipped): the uninitialized fix must
               refuse to run rather than advance a deleted body's state

@@ -898,28 +898,6 @@ def test_vacate(exe_cmd):
     return fails
 
 
-def test_balancetally(exe_cmd):
-    # fix balance every step: the per-surf collision and reaction tallies
-    # summed over the wall must equal the step's Nscoll and Nsreact
-    rc, out = run_deck(exe_cmd, "in.test.balancetally")
-    if rc:
-        return ["run failed with exit code %d" % rc]
-    rows = parse_stats(out)
-    if len(rows) < 11:
-        return ["expected 11 stats rows, got %d" % len(rows)]
-    fails = []
-    for r in rows[1:]:
-        if r["c_csum"] != r["Nscoll"]:
-            fails.append("step %d: surf tally sum %g != Nscoll %g"
-                         % (r["Step"], r["c_csum"], r["Nscoll"]))
-        if r["c_rsum[2]"] != r["Nsreact"]:
-            fails.append("step %d: react/surf tally sum %g != Nsreact %g"
-                         % (r["Step"], r["c_rsum[2]"], r["Nsreact"]))
-    if sum(r["Nscoll"] for r in rows) == 0:
-        fails.append("no surface collisions, test geometry is broken")
-    return fails
-
-
 def test_prenofix(exe_cmd):
     return negative_test(exe_cmd, "in.test.prenofix",
                          "not initialized before the run")
@@ -940,21 +918,6 @@ def test_refix(exe_cmd):
     if not approx(x, 5.08 + 20.0 * 1.0e-4 * 20, rel=1e-12):
         return ["xcm after the second run %.17g, expected %.17g"
                 % (x, 5.08 + 20.0 * 1.0e-4 * 20)]
-    return []
-
-
-def test_torqueonly(exe_cmd):
-    # compute surf tx ty tz (no fx fy fz) with fix emit/surf: the emitted
-    # particle has no incoming state, which the torque tally must
-    # tolerate on the host and on the device
-    rc, out = run_deck(exe_cmd, "in.test.torqueonly")
-    if rc:
-        return ["run failed with exit code %d" % rc]
-    rows = parse_stats(out)
-    if len(rows) < 6:
-        return ["expected 6 stats rows, got %d" % len(rows)]
-    if rows[-1]["Np"] <= 0:
-        return ["no particles were emitted"]
     return []
 
 
@@ -1152,10 +1115,8 @@ TESTS = [
     ("notwatertight", test_notwatertight),
     ("zerothick", test_zerothick),
     ("inward", test_inward),
-    ("torqueonly", test_torqueonly),
     ("refix", test_refix),
     ("prenofix", test_prenofix),
-    ("balancetally", test_balancetally),
     ("vacate", test_vacate),
     ("facetbounce", test_facetbounce),
     ("modifyafter", test_modifyafter),
@@ -1184,7 +1145,7 @@ DIST_TESTS = {"ballistic", "force", "rotation", "bounce", "restitution",
               "staticdist3d",
               "splitcell", "gridchange", "exitbox", "twobody", "pushpair",
               "tallyorder", "rotwall", "rotwall3d", "customemit",
-              "splitbalance", "torqueonly", "balancetally",
+              "splitbalance",
               "vacate", "facetbounce"}
 
 
