@@ -43,6 +43,7 @@ enum{FLOW,CONSTANT,VARIABLE};
 enum{INT,DOUBLE};                                        // several files
 
 #define DELTATASK 256
+#define SMALL 1.0e-6
 #define TEMPLIMIT 1.0e5
 
 /* ---------------------------------------------------------------------- */
@@ -70,6 +71,7 @@ FixEmitSurf::FixEmitSurf(SPARTA *sparta, int narg, char **arg) :
   subsonic = 0;
   subsonic_style = NOSUBSONIC;
   subsonic_warning = 0;
+  nspecies = 0;
   subsonic_window = 0;
   nmodekeyword = 0;
   twopass = 0;
@@ -296,35 +298,6 @@ void FixEmitSurf::init()
                  "with columns = # of species in mixture");
   }
 
-  // if custom fractions is set, reset any fractions which are less than zero
-  // do this for owned custom surfs, grid_changed() will propagate to nlocal+nghost surfs
-
-  if (fractions_custom_flag) {
-    double **fractions = surf->edarray[surf->ewhich[fractions_custom_index]];
-
-    int isp,nunset;
-    double sum,newfrac;
-
-    int nsown = surf->nown;
-    for (int i = 0; i < nsown; i++) {
-      nunset = 0;
-      sum = 0.0;
-      for (isp = 0; isp < nspecies; isp++) {
-        if (fractions[i][isp] >= 0.0) sum += fractions[i][isp];
-        else nunset++;
-      }
-
-      if (nunset == 0) {
-        if (sum != 1.0) error->all(FLERR,"Fix emit/surf custom fractions do not sum to 1.0");
-      } else {
-        newfrac = (1.0 - sum) / nunset;
-        for (isp = 0; isp < nspecies; isp++) {
-          if (fractions[i][isp] < 0.0) fractions[i][isp] = newfrac;
-        }
-      }
-    }
-  }
-
   // create tasks for all grid cells
 
   grid_changed();
@@ -350,8 +323,15 @@ void FixEmitSurf::grid_changed()
     surf->spread_custom(vstream_custom_index);
   if (speed_custom_flag && surf->estatus[speed_custom_index] == 0)
     surf->spread_custom(speed_custom_index);
-  if (fractions_custom_flag && surf->estatus[fractions_custom_index] == 0)
+  // for custom fractions, owned values which are new (not yet spread)
+  //   are first checked and any negative values reset, see reset_fractions()
+  // this happens on the first init(), after a restart, after a rebalance
+  //   of distributed surfs, and after a fix custom changes the values
+
+  if (fractions_custom_flag && surf->estatus[fractions_custom_index] == 0) {
+    reset_fractions();
     surf->spread_custom(fractions_custom_index);
+  }
 
   // create tasks for grid cell / surf pairs
 
@@ -371,12 +351,16 @@ void FixEmitSurf::grid_changed()
     double **fractions = surf->edarray_local[surf->ewhich[fractions_custom_index]];
     int isp;
 
+    // set final cummulative value to exactly 1.0, same as Mixture does,
+    //   so roundoff in the sum cannot leave a gap a random number falls in
+
     for (int isurf = 0; isurf < nslocal; isurf++) {
       for (isp = 0; isp < nspecies; isp++) {
         if (isp) cummulative_custom[isurf][isp] =
                    cummulative_custom[isurf][isp-1] + fractions[isurf][isp];
         else cummulative_custom[isurf][isp] = fractions[isurf][isp];
       }
+      if (nspecies) cummulative_custom[isurf][nspecies-1] = 1.0;
     }
   }
 
@@ -405,6 +389,53 @@ void FixEmitSurf::grid_changed()
 void FixEmitSurf::custom_surf_changed()
 {
   grid_changed();
+}
+
+/* ----------------------------------------------------------------------
+   check and reset owned values of custom per-surf fractions array
+   called by grid_changed() when owned values are new,
+     i.e. before they are spread to nlocal+nghost surfs
+   for each owned surf, fractions must sum to 1.0, except that
+     any fractions < 0.0 are reset to an equal portion of the unset remainder
+   use a small tolerance when checking the sum against 1.0, so that
+     fractions which were reset by a previous call, or read from a restart file,
+     are not rejected due to floating-point roundoff in the sum,
+     which is more likely as the number of species grows
+------------------------------------------------------------------------- */
+
+void FixEmitSurf::reset_fractions()
+{
+  // nspecies is not set until init(), do nothing if grid_changed()
+  //   is invoked before then, init() will invoke it again
+
+  if (nspecies == 0) return;
+
+  double **fractions = surf->edarray[surf->ewhich[fractions_custom_index]];
+
+  int isp,nunset;
+  double sum,newfrac;
+
+  int nsown = surf->nown;
+  for (int i = 0; i < nsown; i++) {
+    nunset = 0;
+    sum = 0.0;
+    for (isp = 0; isp < nspecies; isp++) {
+      if (fractions[i][isp] >= 0.0) sum += fractions[i][isp];
+      else nunset++;
+    }
+
+    if (nunset == 0) {
+      if (fabs(sum-1.0) > SMALL)
+        error->all(FLERR,"Fix emit/surf custom fractions do not sum to 1.0");
+    } else {
+      if (sum > 1.0 + SMALL)
+        error->all(FLERR,"Fix emit/surf custom fractions sum to more than 1.0");
+      newfrac = MAX(0.0,(1.0 - sum) / nunset);
+      for (isp = 0; isp < nspecies; isp++) {
+        if (fractions[i][isp] < 0.0) fractions[i][isp] = newfrac;
+      }
+    }
+  }
 }
 
 /* ----------------------------------------------------------------------
