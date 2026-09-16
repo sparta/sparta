@@ -40,6 +40,9 @@ void ReactQK::init()
   if (!collide || strcmp(collide->style,"vss") != 0)
     error->all(FLERR,"React qk can only be used with collide vss");
 
+  if (vibEnergyMode == VIB_MICRO)
+    error->all(FLERR,"react_modify vib_energy micro requires react tce");
+
   ReactBird::init();
 
   // do not allow recombination reactions for now
@@ -57,7 +60,7 @@ void ReactQK::init()
 /* ---------------------------------------------------------------------- */
 
 int ReactQK::attempt(Particle::OnePart *ip, Particle::OnePart *jp,
-                     double pre_etrans, double pre_erot, double pre_evib,
+                     double pre_etrans, double pre_erot, double pre_evib, double pre_eelec,
                      double &post_etotal, int &kspecies)
 {
   double pre_etotal,ecc,e_excess;
@@ -90,7 +93,7 @@ int ReactQK::attempt(Particle::OnePart *ip, Particle::OnePart *jp,
 
     // ignore energetically impossible reactions
 
-    pre_etotal = pre_etrans + pre_erot + pre_evib;
+    pre_etotal = pre_etrans + pre_erot + pre_evib + pre_eelec;
 
     ecc = pre_etrans;
     if (pre_ave_rotdof > 0.1) ecc += pre_erot*r->coeff[0]/pre_ave_rotdof;

@@ -30,9 +30,33 @@ class ReactBird : public React {
   int recomb_exist(int, int);
   void ambi_check();
   virtual int attempt(Particle::OnePart *, Particle::OnePart *,
-                      double, double, double, double &, int &) = 0;
+                      double, double, double, double, double &, int &) = 0;
   char *reactionID(int);
   virtual double extract_tally(int);
+
+  // per-reaction tables of the microcanonical TCE energy factor over the
+  // joint vibrational (x electronic) ladder, for react_modify
+  // vib_energy micro; built by build_micro_tables() at init, shared by
+  // the CPU and Kokkos TCE variants
+
+  double **mtab;            // factor vs total collision energy, per rlist
+                            // entry; NULL if the reactants have no ladders
+  double *mtab_du;          // energy grid spacing (J) per table
+  int *mtab_n;              // # of grid points per table
+  int mtab_nlist;           // # of rlist entries tables were built for
+
+  void build_micro_tables();
+  void free_micro_tables();
+
+  inline double vib_micro_factor(int ireact, double ecc) const {
+    const double *tab = mtab[ireact];
+    const int n = mtab_n[ireact];
+    const double x = ecc / mtab_du[ireact];
+    const int k = (int) x;
+    if (k >= n-1) return tab[n-1];
+    const double f = x - k;
+    return (1.0-f)*tab[k] + f*tab[k+1];
+  }
 
  protected:
   FILE *fp;

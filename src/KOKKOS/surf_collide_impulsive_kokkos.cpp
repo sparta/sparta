@@ -49,6 +49,7 @@ SurfCollideImpulsiveKokkos::SurfCollideImpulsiveKokkos(SPARTA *sparta, int narg,
   SurfCollideImpulsive(sparta, narg, arg),
   fix_ambi_kk_copy(sparta),
   fix_vibmode_kk_copy(sparta),
+  fix_elecmode_kk_copy(sparta),
 #ifdef SPARTA_KOKKOS_FIXED_LISTS
   sr_kk_global_copy{VAL_2(KKCopy<SurfReactGlobalKokkos>(sparta))},
   sr_kk_prob_copy{VAL_2(KKCopy<SurfReactProbKokkos>(sparta))},
@@ -89,6 +90,7 @@ SurfCollideImpulsiveKokkos::SurfCollideImpulsiveKokkos(SPARTA *sparta) :
   SurfCollideImpulsive(sparta),
   fix_ambi_kk_copy(sparta),
   fix_vibmode_kk_copy(sparta),
+  fix_elecmode_kk_copy(sparta),
 #ifdef SPARTA_KOKKOS_FIXED_LISTS
   sr_kk_global_copy{VAL_2(KKCopy<SurfReactGlobalKokkos>(sparta))},
   sr_kk_prob_copy{VAL_2(KKCopy<SurfReactProbKokkos>(sparta))},
@@ -126,9 +128,10 @@ void SurfCollideImpulsiveKokkos::init()
   //  first: SPARTA::init() runs surf->init() before modify->init(), so that
   //  count still holds its value from the previous run (0 on the first one)
 
-  ambi_flag = vibmode_flag = 0;
+  ambi_flag = vibmode_flag = elecmode_flag = 0;
   afix_kk = NULL;
   vfix_kk = NULL;
+  efix_kk = NULL;
 
   for (int ifix = 0; ifix < modify->nfix; ifix++) {
     if (strcmp(modify->fix[ifix]->style,"ambipolar") == 0) {
@@ -143,6 +146,12 @@ void SurfCollideImpulsiveKokkos::init()
       if (!vfix->kokkos_flag)
         error->all(FLERR,"Must use fix vibmode/kk when Kokkos is enabled");
       vfix_kk = (FixVibmodeKokkos*)vfix;
+    } else if (strcmp(modify->fix[ifix]->style,"elecmode") == 0) {
+      elecmode_flag = 1;
+      FixElecmode *efix = (FixElecmode *) modify->fix[ifix];
+      if (!efix->kokkos_flag)
+        error->all(FLERR,"Must use fix elecmode/kk when Kokkos is enabled");
+      efix_kk = (FixElecmodeKokkos*)efix;
     }
   }
 }
@@ -240,6 +249,11 @@ void SurfCollideImpulsiveKokkos::pre_collide()
   if (vibmode_flag) {
     vfix_kk->pre_update_custom_kokkos();
     fix_vibmode_kk_copy.copy(vfix_kk);
+  }
+
+  if (elecmode_flag) {
+    efix_kk->pre_update_custom_kokkos();
+    fix_elecmode_kk_copy.copy(efix_kk);
   }
 
 #ifdef SPARTA_KOKKOS_FIXED_LISTS
@@ -351,7 +365,8 @@ void SurfCollideImpulsiveKokkos::pre_collide()
 void SurfCollideImpulsiveKokkos::post_collide()
 {
   ParticleKokkos* particle_kk = (ParticleKokkos*) particle;
-  if (ambi_flag || vibmode_flag) particle_kk->modify(Device,CUSTOM_MASK);
+  if (ambi_flag || vibmode_flag || elecmode_flag)
+    particle_kk->modify(Device,CUSTOM_MASK);
 
   Kokkos::deep_copy(h_scalars,d_scalars);
 

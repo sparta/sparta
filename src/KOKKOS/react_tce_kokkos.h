@@ -34,7 +34,7 @@ class ReactTCEKokkos : public ReactBirdKokkos {
   ReactTCEKokkos(class SPARTA* sparta) : ReactBirdKokkos(sparta) {copy = 1;}
   void init();
   int attempt(Particle::OnePart *, Particle::OnePart *,
-              double, double, double, double &, int &) {return 0;}
+              double, double, double, double, double &, int &) { return 0; }
 
 /* ---------------------------------------------------------------------- */
 
@@ -128,11 +128,16 @@ double newtonTvib(const int &nmode, const double& Evib, const double vibTemp[],
 enum{NONE,DISCRETE,SMOOTH};
 enum{DISSOCIATION,EXCHANGE,IONIZATION,RECOMBINATION};   // other files
 
+// idof/jdof: per-particle effective electronic DoF of ip/jp (used only when
+//   elecstyle == DISCRETE). The caller must precompute these from the
+//   particle's electronic state, passing 0.0 for species with no electronic
+//   states (d_nelecstates == 0); see CollideVSSKokkos::perform_collision_kokkos.
 KOKKOS_INLINE_FUNCTION
 int attempt_kk(Particle::OnePart *ip, Particle::OnePart *jp,
-         double pre_etrans, double pre_erot, double pre_evib,
+         double pre_etrans, double pre_erot, double pre_evib, double pre_eelec,
          double &post_etotal, int &kspecies,
-         int &recomb_species, double &recomb_density, const t_species_1d_const &d_species) const
+         int &recomb_species, double &recomb_density, const t_species_1d_const &d_species,
+         const double idof, const double jdof) const
 {
   OneReactionKokkos *r;
 
@@ -167,7 +172,7 @@ int attempt_kk(Particle::OnePart *ip, Particle::OnePart *jp,
 
     // ignore energetically impossible reactions
 
-    const double pre_etotal = pre_etrans + pre_erot + pre_evib;
+    const double pre_etotal = pre_etrans + pre_erot + pre_evib + pre_eelec;
 
     // two options for total energy in TCE model
     // 0: partialEnergy = true: rDOF model
@@ -185,6 +190,9 @@ int attempt_kk(Particle::OnePart *ip, Particle::OnePart *jp,
         ecc += pre_erot*z/pre_ave_rotdof;
     } else {
       ecc = pre_etotal;
+      // electronic energy coupling set by react_modify elec_energy,
+      // matching ReactTCE::attempt (ELEC_MICRO is the default)
+      if (elecEnergyMode == ELEC_EXCLUDE) ecc -= pre_eelec;
       z = pre_ave_rotdof;
     }
 
@@ -194,7 +202,7 @@ int attempt_kk(Particle::OnePart *ip, Particle::OnePart *jp,
     else e_excess = ecc + r->d_coeff[4];
     if (e_excess <= 0.0) continue;
 
-    if (!partialEnergy) {
+    if (!partialEnergy && vibEnergyMode != VIB_MICRO) {
 
        if (vibstyle == SMOOTH) z += (d_species[isp].vibdof + d_species[jsp].vibdof)/2.0;
        else if (vibstyle == DISCRETE) {
@@ -229,7 +237,64 @@ int attempt_kk(Particle::OnePart *ip, Particle::OnePart *jp,
             if (isnan(zi) || isnan(zj) || zi < 0 || zj < 0) Kokkos::abort("Root-Finding Error\n");
             z += 0.5 * (zi+zj);
        }
+
+       // electronic DoF read from per-state input (idof/jdof precomputed by
+       // caller); only participates when electronic energy is included in
+       // the reaction energy (react_modify elec_energy yes)
+
+       if (elecstyle == DISCRETE && elecEnergyMode == ELEC_INCLUDE) z += 0.5*(idof + jdof);
     }
+
+    // with vib_energy micro the ladders enter through the tabulated
+    // microcanonical factor; z stays at the rotational pair average
+    // (the vib/elec DOF blocks above are skipped via the same condition)
+
+    // energy-dependent factor of the TCE probability
+    // for elec_energy micro it is the microcanonical average of the
+    // standard factor over the pair's electronic ladder at fixed total
+    // collision energy, matching ReactTCE::elec_micro_factor exactly
+
+    double efactor;
+    if (!partialEnergy && vibEnergyMode == VIB_MICRO &&
+        d_mtab_n[d_list[i]] > 0) {
+      // tabulated microcanonical factor over the joint vib (x elec)
+      // ladder, matching ReactBird::vib_micro_factor exactly
+      const int ir = d_list[i];
+      const int n = d_mtab_n[ir];
+      const double x = ecc/d_mtab_du[ir];
+      const int k = (int) x;
+      if (k >= n-1) efactor = d_mtab(ir,n-1);
+      else {
+        const double f = x - k;
+        efactor = (1.0-f)*d_mtab(ir,k) + f*d_mtab(ir,k+1);
+      }
+    } else if (!partialEnergy && elecEnergyMode == ELEC_MICRO &&
+        elecstyle == DISCRETE &&
+        (d_nelecstates[isp] > 0 || d_nelecstates[jsp] > 0)) {
+      const double ea = r->d_coeff[1];
+      const double exp_num = z + r->d_coeff[3] + 0.5;
+      const double exp_den = z + 1.5 - r->d_coeff[5];
+      const int ni = MAX(d_nelecstates[isp],1);
+      const int nj = MAX(d_nelecstates[jsp],1);
+      double num = 0.0;
+      double den = 0.0;
+      for (int ii = 0; ii < ni; ii++) {
+        const double itemp = d_nelecstates[isp] ? d_elecstates(isp,ii).temp : 0.0;
+        const int idegen = d_nelecstates[isp] ? d_elecstates(isp,ii).degen : 1;
+        for (int jj = 0; jj < nj; jj++) {
+          const double jtemp = d_nelecstates[jsp] ? d_elecstates(jsp,jj).temp : 0.0;
+          const int jdegen = d_nelecstates[jsp] ? d_elecstates(jsp,jj).degen : 1;
+          const double x = ecc - boltz*(itemp + jtemp);
+          if (x <= 0.0) continue;
+          const double g = idegen * jdegen;
+          den += g * pow(x,exp_den);
+          if (x > ea) num += g * pow(x-ea,exp_num);
+        }
+      }
+      efactor = (den == 0.0) ? 0.0 : num/den;
+    } else
+      efactor = pow(ecc-r->d_coeff[1],r->d_coeff[3]-1+r->d_coeff[5]) *
+                pow(1.0-r->d_coeff[1]/ecc,z+1.5-r->d_coeff[5]);
 
     // compute probability of reaction
 
@@ -239,8 +304,7 @@ int attempt_kk(Particle::OnePart *ip, Particle::OnePart *jp,
     case EXCHANGE:
       {
         react_prob += r->d_coeff[2] * tgamma(z+2.5-r->d_coeff[5]) / MAX(1.0e-6,tgamma(z+r->d_coeff[3]+1.5)) *
-          pow(ecc-r->d_coeff[1],r->d_coeff[3]-1+r->d_coeff[5]) *
-          pow(1.0-r->d_coeff[1]/ecc,z+1.5-r->d_coeff[5]);
+          efactor;
         break;
       }
 
@@ -260,8 +324,7 @@ int attempt_kk(Particle::OnePart *ip, Particle::OnePart *jp,
 
         react_prob += recomb_boost * recomb_density * r->d_coeff[2] *
           tgamma(z+2.5-r->d_coeff[5]) / MAX(1.0e-6,tgamma(z+r->d_coeff[3]+1.5)) *
-          pow(ecc-r->d_coeff[1],r->d_coeff[3]-1+r->d_coeff[5]) *  // extended to general recombination case with non-zero activation energy
-          pow(1.0-r->d_coeff[1]/ecc,z+1.5-r->d_coeff[5]);
+          efactor;   // extended to general recombination case with non-zero activation energy
         break;
       }
 
@@ -342,7 +405,21 @@ int attempt_kk(Particle::OnePart *ip, Particle::OnePart *jp,
 
  protected:
   int vibstyle;
+  int elecstyle;
   double boltz;
+
+  // per-species electronic ladders (elec_energy micro), shared views
+  // owned by ParticleKokkos
+
+  DAT::t_int_1d d_nelecstates;
+  t_elecstate_2d d_elecstates;
+
+  // per-reaction microcanonical energy-factor tables (vib_energy micro),
+  // device mirror of the ReactBird host tables; n = 0 marks "no table"
+
+  DAT::t_float_2d d_mtab;
+  DAT::t_float_1d d_mtab_du;
+  DAT::t_int_1d d_mtab_n;
 
   DAT::tdual_int_scalar k_error_flag;
   DAT::t_int_scalar d_error_flag;

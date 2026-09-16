@@ -155,6 +155,7 @@ void CreateParticlesKokkos::create_local(bigint np)
   double temp_thermal = particle->mixture[imix]->temp_thermal;
   double temp_rot = particle->mixture[imix]->temp_rot;
   double temp_vib = particle->mixture[imix]->temp_vib;
+  double temp_elec = particle->mixture[imix]->temp_elec;
 
   int npercell,ncreate,isp,ispecies,id,pflag,subcell;
   double x[3],v[3],xcell[3],vstream_var[3];
@@ -451,7 +452,8 @@ void CreateParticlesKokkos::create_local(bigint np)
         const double ts = h_tempscale(cand);
         double vs[3];
         for (int d = 0; d < 3; ++d) vs[d] = h_vstream_custom(cand,d);
-        modify->update_custom(inew,ts*temp_thermal,ts*temp_rot,ts*temp_vib,vs);
+        modify->update_custom(inew,ts*temp_thermal,ts*temp_rot,ts*temp_vib,
+                              ts*temp_elec,vs);
       }
     }
   }

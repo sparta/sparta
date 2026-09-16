@@ -45,12 +45,28 @@ void ReactTCE::init()
   prob_warn_flag = 0;
 
   ReactBird::init();
+
+  // vib_energy micro: validate settings and build the per-reaction
+  // microcanonical energy-factor tables
+
+  if (vibEnergyMode == VIB_MICRO) {
+    if (partialEnergy)
+      error->all(FLERR,"react_modify vib_energy micro requires "
+                 "partial_energy no");
+    if (collide->vibstyle != DISCRETE)
+      error->all(FLERR,"react_modify vib_energy micro requires "
+                 "collide_modify vibrate discrete");
+    if (elecEnergyMode == ELEC_INCLUDE)
+      error->all(FLERR,"react_modify vib_energy micro cannot be combined "
+                 "with elec_energy yes");
+    build_micro_tables();
+  } else free_micro_tables();
 }
 
 /* ---------------------------------------------------------------------- */
 
 int ReactTCE::attempt(Particle::OnePart *ip, Particle::OnePart *jp,
-                      double pre_etrans, double pre_erot, double pre_evib,
+                      double pre_etrans, double pre_erot, double pre_evib, double pre_eelec,
                       double &post_etotal, int &kspecies)
 {
   double pre_etotal,ecc,e_excess,z;
@@ -87,7 +103,7 @@ int ReactTCE::attempt(Particle::OnePart *ip, Particle::OnePart *jp,
 
     // ignore energetically impossible reactions
 
-    pre_etotal = pre_etrans + pre_erot + pre_evib;
+    pre_etotal = pre_etrans + pre_erot + pre_evib + pre_eelec;
 
     // two options for total energy in TCE model
     // 0: partialEnergy = true: rDOF model
@@ -101,6 +117,16 @@ int ReactTCE::attempt(Particle::OnePart *ip, Particle::OnePart *jp,
        if (pre_ave_rotdof > 0.1) ecc += pre_erot*z/pre_ave_rotdof;
     } else {
        ecc = pre_etotal;
+       // input Arrhenius rates are equilibrium-calibrated, so the excited-
+       // state contribution is already contained in (A,eta,Ea). ELEC_MICRO
+       // (the default) keeps eelec in ecc and replaces the TCE energy factor
+       // by its microcanonical ladder average (see below), which keeps the
+       // equilibrium rate on the input Arrhenius rate. ELEC_EXCLUDE instead
+       // drops eelec from ecc entirely; ELEC_INCLUDE adds it with per-state
+       // DOF (historical behavior), which raises the equilibrium rate above
+       // the input rate. eelec stays in pre_etotal/post_etotal either way so
+       // energy is conserved.
+       if (elecEnergyMode == ELEC_EXCLUDE) ecc -= pre_eelec;
        z = pre_ave_rotdof;
     }
 
@@ -111,7 +137,12 @@ int ReactTCE::attempt(Particle::OnePart *ip, Particle::OnePart *jp,
     if (e_excess <= 0.0) continue;
 
 
-    if (!partialEnergy) {
+    // with vib_energy micro the vibrational (and electronic) ladders enter
+    // through the microcanonical energy-factor table instead of z:
+    // z stays at the rotational pair average and the instantaneous-DOF
+    // blocks below are skipped
+
+    if (!partialEnergy && vibEnergyMode != VIB_MICRO) {
 
        if (collide->vibstyle == SMOOTH) z += (species[isp].vibdof + species[jsp].vibdof)/2.0;
        else if (collide->vibstyle == DISCRETE) {
@@ -148,7 +179,47 @@ int ReactTCE::attempt(Particle::OnePart *ip, Particle::OnePart *jp,
             if (isnan(zi) || isnan(zj) || zi < 0 || zj < 0) error->one(FLERR,"Root-Finding Error");
             z += 0.5 * (zi+zj);
        }
+
+      // per-state electronic DoF only participates when electronic energy
+      // is included in the reaction energy (react_modify elec_energy yes)
+
+      if (collide->elecstyle == DISCRETE && elecEnergyMode == ELEC_INCLUDE) {
+        zi = 0.0;
+        if (species[isp].elecdat != NULL) {
+          int ielec = particle->eivec[particle->ewhich[collide->index_elecstate]][ip - particle->particles];
+          zi = species[isp].elecdat->states[ielec].dof;
+        }
+        zj = 0.0;
+        if (species[jsp].elecdat != NULL) {
+          int ielec = particle->eivec[particle->ewhich[collide->index_elecstate]][jp - particle->particles];
+          zj = species[jsp].elecdat->states[ielec].dof;
+        }
+        z += 0.5*(zi + zj);
+      }
     }
+
+    // energy-dependent factor of the TCE probability
+    // standard form: (ecc-Ea)^(eta-1+omega) * (1-Ea/ecc)^(z+1.5-omega)
+    // for elec_energy micro, ecc is the TOTAL collision energy including
+    // electronic, and the factor is replaced by its microcanonical average
+    // over the pair's electronic ladder at fixed total energy:
+    //   sum_p g_p (ecc-eps_p-Ea)_+^(z+eta+0.5)
+    //     / sum_p g_p (ecc-eps_p)_+^(z+1.5-omega)
+    // (identical to the standard form when neither species has electronic
+    // states). This lets electronic energy count toward the barrier while
+    // keeping the equilibrium rate on the input Arrhenius rate.
+
+    double efactor;
+    if (!partialEnergy && vibEnergyMode == VIB_MICRO &&
+        mtab && mtab[list[i]])
+      efactor = vib_micro_factor(list[i],ecc);
+    else if (!partialEnergy && elecEnergyMode == ELEC_MICRO &&
+        collide->elecstyle == DISCRETE &&
+        (species[isp].elecdat != NULL || species[jsp].elecdat != NULL))
+      efactor = elec_micro_factor(isp,jsp,ecc,z,r);
+    else
+      efactor = pow(ecc-r->coeff[1],r->coeff[3]-1+r->coeff[5]) *
+                pow(1.0-r->coeff[1]/ecc,z+1.5-r->coeff[5]);
 
     // compute probability of reaction
 
@@ -158,8 +229,7 @@ int ReactTCE::attempt(Particle::OnePart *ip, Particle::OnePart *jp,
     case EXCHANGE:
       {
         react_prob += r->coeff[2] * tgamma(z+2.5-r->coeff[5]) / MAX(1.0e-6,tgamma(z+r->coeff[3]+1.5)) *
-          pow(ecc-r->coeff[1],r->coeff[3]-1+r->coeff[5]) *
-          pow(1.0-r->coeff[1]/ecc,z+1.5-r->coeff[5]);
+          efactor;
         break;
       }
 
@@ -179,8 +249,7 @@ int ReactTCE::attempt(Particle::OnePart *ip, Particle::OnePart *jp,
 
         react_prob += recomb_boost * recomb_density * r->coeff[2] *
           tgamma(z+2.5-r->coeff[5]) / MAX(1.0e-6,tgamma(z+r->coeff[3]+1.5)) *
-          pow(ecc-r->coeff[1],r->coeff[3]-1+r->coeff[5]) *  // extended to general recombination case with non-zero activation energy
-          pow(1.0-r->coeff[1]/ecc,z+1.5-r->coeff[5]);
+          efactor;   // extended to general recombination case with non-zero activation energy
         break;
       }
 
@@ -265,6 +334,67 @@ int ReactTCE::attempt(Particle::OnePart *ip, Particle::OnePart *jp,
   // no reaction performed
 
   return 0;
+}
+
+/* ----------------------------------------------------------------------
+   energy factor of the TCE probability for react_modify elec_energy micro
+   ecc = TOTAL collision energy including the pair's electronic energy
+   returns the microcanonical (density-of-states weighted) average of the
+   standard TCE energy factor over the two reactants' electronic ladders:
+     sum_p g_p (ecc - eps_p - Ea)_+^(z+eta+0.5)
+       / sum_p g_p (ecc - eps_p)_+^(z+1.5-omega)
+   where p runs over pair states (eps_p = eps_i + eps_j, g_p = g_i g_j).
+   For a single pair state at eps = 0 this reduces to
+     (ecc-Ea)^(eta-1+omega) * (1-Ea/ecc)^(z+1.5-omega).
+   The average is chosen so the equilibrium reaction rate stays on the
+   input Arrhenius rate while electronic energy counts toward the barrier.
+------------------------------------------------------------------------- */
+
+double ReactTCE::elec_micro_factor(int isp, int jsp, double ecc, double z,
+                                   OneReaction *r)
+{
+  Particle::Species *species = particle->species;
+  double boltz = update->boltz;
+
+  static const Particle::ElecState ground = {0.0, 1, 1, 0.0};
+
+  const Particle::ElecState *istates,*jstates;
+  int ni,nj;
+
+  if (species[isp].elecdat) {
+    istates = species[isp].elecdat->states;
+    ni = species[isp].elecdat->nelecstate;
+  } else {
+    istates = &ground;
+    ni = 1;
+  }
+  if (species[jsp].elecdat) {
+    jstates = species[jsp].elecdat->states;
+    nj = species[jsp].elecdat->nelecstate;
+  } else {
+    jstates = &ground;
+    nj = 1;
+  }
+
+  double ea = r->coeff[1];
+  double exp_num = z + r->coeff[3] + 0.5;
+  double exp_den = z + 1.5 - r->coeff[5];
+
+  double num = 0.0;
+  double den = 0.0;
+
+  for (int i = 0; i < ni; i++) {
+    for (int j = 0; j < nj; j++) {
+      double x = ecc - boltz*(istates[i].temp + jstates[j].temp);
+      if (x <= 0.0) continue;
+      double g = istates[i].degen * jstates[j].degen;
+      den += g * pow(x,exp_den);
+      if (x > ea) num += g * pow(x-ea,exp_num);
+    }
+  }
+
+  if (den == 0.0) return 0.0;
+  return num/den;
 }
 
 /* ---------------------------------------------------------------------- */

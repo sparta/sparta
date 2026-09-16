@@ -39,6 +39,9 @@ void ReactTCEQK::init()
   if (!collide || strcmp(collide->style,"vss") != 0)
     error->all(FLERR,"React tce/qk can only be used with collide vss");
 
+  if (vibEnergyMode == VIB_MICRO)
+    error->all(FLERR,"react_modify vib_energy micro requires react tce");
+
   ReactBird::init();
 
   // do not allow recombination reactions for now
@@ -56,7 +59,7 @@ void ReactTCEQK::init()
 /* ---------------------------------------------------------------------- */
 
 int ReactTCEQK::attempt(Particle::OnePart *ip, Particle::OnePart *jp,
-                        double pre_etrans, double pre_erot, double pre_evib,
+                        double pre_etrans, double pre_erot, double pre_evib, double pre_eelec,
                         double &post_etotal, int &kspecies)
 {
   double pre_etotal;
@@ -78,9 +81,14 @@ int ReactTCEQK::attempt(Particle::OnePart *ip, Particle::OnePart *jp,
 
     // ignore energetically impossible reactions
 
-    pre_etotal = pre_etrans + pre_erot + pre_evib;
+    pre_etotal = pre_etrans + pre_erot + pre_evib + pre_eelec;
+
+    // energetic-impossibility screen: consistent with attempt_tce/attempt_qk
+    // below, electronic energy does not count toward crossing the barrier
+    // unless react_modify elec_energy yes or micro
 
     ecc = pre_etotal;
+    if (elecEnergyMode == ELEC_EXCLUDE) ecc -= pre_eelec;
 
     e_excess = ecc - r->coeff[1];
     if (e_excess <= 0.0) continue;
@@ -90,11 +98,11 @@ int ReactTCEQK::attempt(Particle::OnePart *ip, Particle::OnePart *jp,
     if (r->style == ARRHENIUS)
       reaction = attempt_tce(ip,jp,r,
                              pre_etrans,pre_erot,
-                             pre_evib,post_etotal,kspecies);
+                             pre_evib,pre_eelec,post_etotal,kspecies);
     else if (r->style == QUANTUM)
       reaction = attempt_qk(ip,jp,r,
                             pre_etrans,pre_erot,
-                            pre_evib,post_etotal,kspecies);
+                            pre_evib,pre_eelec,post_etotal,kspecies);
 
     // return reaction from 1 to N
 
@@ -113,7 +121,7 @@ int ReactTCEQK::attempt(Particle::OnePart *ip, Particle::OnePart *jp,
 
 int ReactTCEQK::attempt_tce(Particle::OnePart *ip, Particle::OnePart *jp,
                             OneReaction *r,
-                            double pre_etrans, double pre_erot, double pre_evib,
+                            double pre_etrans, double pre_erot, double pre_evib, double pre_eelec,
                             double &post_etotal, int &kspecies)
 {
   Particle::Species *species = particle->species;
@@ -127,7 +135,7 @@ int ReactTCEQK::attempt_tce(Particle::OnePart *ip, Particle::OnePart *jp,
   double react_prob = 0.0;
   double random_prob = random->uniform();
 
-  double pre_etotal = pre_etrans + pre_erot + pre_evib;
+  double pre_etotal = pre_etrans + pre_erot + pre_evib + pre_eelec;
 
   double ecc = pre_etrans;
   if (pre_ave_rotdof > 0.1) ecc += pre_erot*r->coeff[0]/pre_ave_rotdof;
@@ -172,7 +180,7 @@ int ReactTCEQK::attempt_tce(Particle::OnePart *ip, Particle::OnePart *jp,
 
 int ReactTCEQK::attempt_qk(Particle::OnePart *ip, Particle::OnePart *jp,
                            OneReaction * r,
-                           double pre_etrans, double pre_erot, double pre_evib,
+                           double pre_etrans, double pre_erot, double pre_evib, double pre_eelec,
                            double &post_etotal, int &kspecies)
 {
   double prob,evib,inverse_kT;
@@ -192,7 +200,7 @@ int ReactTCEQK::attempt_qk(Particle::OnePart *ip, Particle::OnePart *jp,
   double react_prob = 0.0;
   double random_prob = random->uniform();
 
-  double pre_etotal = pre_etrans + pre_erot + pre_evib;
+  double pre_etotal = pre_etrans + pre_erot + pre_evib + pre_eelec;
 
   double ecc = pre_etrans;
   if (pre_ave_rotdof > 0.1) ecc += pre_erot*r->coeff[0]/pre_ave_rotdof;

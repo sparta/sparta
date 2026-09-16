@@ -37,6 +37,8 @@ React::React(SPARTA *sparta, int, char **arg) : Pointers(sparta)
   recomb_boost_inverse = 0.001;
   computeChemRates = 0;
   partialEnergy = 1;
+  elecEnergyMode = ELEC_MICRO;
+  vibEnergyMode = VIB_DOF;
 
   random = new RanKnuth(update->ranmaster->uniform());
   double seed = update->ranmaster->uniform();
@@ -85,6 +87,19 @@ void React::modify_params(int narg, char **arg)
         if (iarg+2 > narg) error->all(FLERR,"Illegal react_modify command");
         if (strcmp(arg[iarg+1],"yes") == 0) partialEnergy = 1;
         else if (strcmp(arg[iarg+1],"no") == 0) partialEnergy = 0;
+        else error->all(FLERR,"Illegal react_modify command");
+        iarg += 2;
+    } else if (strcmp(arg[iarg],"elec_energy") == 0) {
+        if (iarg+2 > narg) error->all(FLERR,"Illegal react_modify command");
+        if (strcmp(arg[iarg+1],"yes") == 0) elecEnergyMode = ELEC_INCLUDE;
+        else if (strcmp(arg[iarg+1],"no") == 0) elecEnergyMode = ELEC_EXCLUDE;
+        else if (strcmp(arg[iarg+1],"micro") == 0) elecEnergyMode = ELEC_MICRO;
+        else error->all(FLERR,"Illegal react_modify command");
+        iarg += 2;
+    } else if (strcmp(arg[iarg],"vib_energy") == 0) {
+        if (iarg+2 > narg) error->all(FLERR,"Illegal react_modify command");
+        if (strcmp(arg[iarg+1],"dof") == 0) vibEnergyMode = VIB_DOF;
+        else if (strcmp(arg[iarg+1],"micro") == 0) vibEnergyMode = VIB_MICRO;
         else error->all(FLERR,"Illegal react_modify command");
         iarg += 2;
     } else error->all(FLERR,"Illegal react_modify command");

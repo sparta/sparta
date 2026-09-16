@@ -50,7 +50,7 @@ class FixEmitFaceFile : public FixEmit {
     // interpolated file values or defaults from mixture params
 
     double nrho;
-    double temp_thermal,temp_rot,temp_vib;
+    double temp_thermal,temp_rot,temp_vib,temp_elec;
     double press;
     double vstream[3];
     double *fraction;
@@ -72,7 +72,7 @@ class FixEmitFaceFile : public FixEmit {
 
   int dimension,nspecies;
   double fnum,dt;
-  double nrho_mix,temp_thermal_mix,temp_rot_mix,temp_vib_mix;
+  double nrho_mix,temp_thermal_mix,temp_rot_mix,temp_vib_mix,temp_elec_mix;
   double *vstream_mix,*vscale_mix,*fraction_mix;
   double *cummulative_mix,*fraction_user_mix;
   int *fraction_flag_mix,*species2species_mix;
@@ -95,7 +95,6 @@ class FixEmitFaceFile : public FixEmit {
   };
 
   Mesh mesh;
-
 
                          // ntask = # of tasks is stored by parent class
   Task *tasks;           // list of particle insertion tasks

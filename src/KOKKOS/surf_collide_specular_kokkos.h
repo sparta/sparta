@@ -28,7 +28,6 @@ SurfCollideStyle(specular/kk,SurfCollideSpecularKokkos)
 #include "rand_pool_wrap.h"
 #include "kokkos_copy.h"
 #include "fix_ambipolar_kokkos.h"
-#include "fix_vibmode_kokkos.h"
 #include "surf_react_global_kokkos.h"
 #include "surf_react_prob_kokkos.h"
 #include "surf_react_adsorb_kokkos.h"
@@ -67,11 +66,9 @@ class SurfCollideSpecularKokkos : public SurfCollideSpecular {
 
   t_particle_1d d_particles;
 
-  int ambi_flag,vibmode_flag;
+  int ambi_flag;
   FixAmbipolarKokkos* afix_kk;
-  FixVibmodeKokkos* vfix_kk;
   KKCopy<FixAmbipolarKokkos> fix_ambi_kk_copy;
-  KKCopy<FixVibmodeKokkos> fix_vibmode_kk_copy;
 
   // the active surf react models this model may dispatch to, partitioned by
   //   style.  Two representations, selected by SPARTA_KOKKOS_FIXED_LISTS (see
@@ -133,7 +130,8 @@ class SurfCollideSpecularKokkos : public SurfCollideSpecular {
     //   KK_SR_TYPE(-1) reads out of bounds and dispatches on garbage
 
     if (REACT && isr >= 0) {
-      if (ambi_flag || vibmode_flag) memcpy(&iorig,ip,sizeof(Particle::OnePart));
+      if (ambi_flag)
+        memcpy(&iorig,ip,sizeof(Particle::OnePart));
 
       int sr_type = KK_SR_TYPE(isr);
       int m = KK_SR_MAP(isr);
@@ -183,7 +181,7 @@ class SurfCollideSpecularKokkos : public SurfCollideSpecular {
 
       //if (modify->n_update_custom) {
       //  int i = ip - particle->particles;
-      //  modify->update_custom(i,twall,twall,twall,vstream);
+      //  modify->update_custom(i,twall,twall,twall,twall,vstream);
       //}
     }
 
@@ -205,7 +203,7 @@ class SurfCollideSpecularKokkos : public SurfCollideSpecular {
 
     //  if (modify->n_update_custom) {
     //    int j = jp - particle->particles;
-    //    modify->update_custom(j,twall,twall,twall,vstream);
+    //    modify->update_custom(j,twall,twall,twall,twall,vstream);
     //}
     }
 

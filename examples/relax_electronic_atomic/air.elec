@@ -1,0 +1,7 @@
+# Atomic oxygen electronic states (ground 3P and low-lying 1D, 1S), from
+# NIST energy levels, with a uniform relaxation probability and a single
+# spin class so every transition is allowed. Atomic O has no rotational or
+# vibrational modes, so this deck exercises electronic relaxation driven
+# purely by atom-atom collisions.
+#     3P            1D               1S
+O 3   0.0 0.5 5 1 0   22830.0 0.5 1 1 0   48621.0 0.5 5 1 0

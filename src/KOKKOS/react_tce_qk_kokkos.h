@@ -33,7 +33,7 @@ class ReactTCEQKKokkos : public ReactBirdKokkos {
   ReactTCEQKKokkos(class SPARTA* sparta) : ReactBirdKokkos(sparta) {copy = 1;}
   void init();
   int attempt(Particle::OnePart *, Particle::OnePart *,
-              double, double, double, double &, int &) {return 0;}
+              double, double, double, double, double &, int &) {return 0;}
 
   enum{DISSOCIATION,EXCHANGE,IONIZATION,RECOMBINATION};   // reaction types
   enum{ARRHENIUS,QUANTUM};                                // reaction styles
@@ -47,7 +47,7 @@ class ReactTCEQKKokkos : public ReactBirdKokkos {
 
 KOKKOS_INLINE_FUNCTION
 int attempt_kk(Particle::OnePart *ip, Particle::OnePart *jp,
-         double pre_etrans, double pre_erot, double pre_evib,
+         double pre_etrans, double pre_erot, double pre_evib, double pre_eelec,
          double &post_etotal, int &kspecies,
          int & /*recomb_species*/, double & /*recomb_density*/,
          const t_species_1d_const &d_species) const
@@ -67,11 +67,14 @@ int attempt_kk(Particle::OnePart *ip, Particle::OnePart *jp,
   for (int i = 0; i < n; i++) {
     OneReactionKokkos *r = &d_rlist[d_list[i]];
 
-    const double pre_etotal = pre_etrans + pre_erot + pre_evib;
+    const double pre_etotal = pre_etrans + pre_erot + pre_evib + pre_eelec;
 
     // top-level energetic-possibility screen (uses total energy)
+    // electronic energy does not count toward crossing the barrier unless
+    // react_modify elec_energy yes or micro
 
     double ecc = pre_etotal;
+    if (elecEnergyMode == ELEC_EXCLUDE) ecc -= pre_eelec;
     if (ecc - r->d_coeff[1] <= 0.0) continue;
 
     int fired = 0;

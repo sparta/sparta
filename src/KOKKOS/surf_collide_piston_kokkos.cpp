@@ -32,8 +32,7 @@ using namespace SPARTA_NS;
 
 SurfCollidePistonKokkos::SurfCollidePistonKokkos(SPARTA *sparta, int narg, char **arg) :
   SurfCollidePiston(sparta, narg, arg),
-  fix_ambi_kk_copy(sparta),
-  fix_vibmode_kk_copy(sparta)
+  fix_ambi_kk_copy(sparta)
 #ifdef SPARTA_KOKKOS_FIXED_LISTS
   , sr_kk_global_copy{VAL_2(KKCopy<SurfReactGlobalKokkos>(sparta))}
   , sr_kk_prob_copy{VAL_2(KKCopy<SurfReactProbKokkos>(sparta))}
@@ -57,8 +56,7 @@ SurfCollidePistonKokkos::SurfCollidePistonKokkos(SPARTA *sparta, int narg, char 
 
 SurfCollidePistonKokkos::SurfCollidePistonKokkos(SPARTA *sparta) :
   SurfCollidePiston(sparta),
-  fix_ambi_kk_copy(sparta),
-  fix_vibmode_kk_copy(sparta)
+  fix_ambi_kk_copy(sparta)
 #ifdef SPARTA_KOKKOS_FIXED_LISTS
   , sr_kk_global_copy{VAL_2(KKCopy<SurfReactGlobalKokkos>(sparta))}
   , sr_kk_prob_copy{VAL_2(KKCopy<SurfReactProbKokkos>(sparta))}
@@ -78,9 +76,8 @@ void SurfCollidePistonKokkos::init()
   //  first: SPARTA::init() runs surf->init() before modify->init(), so that
   //  count still holds its value from the previous run (0 on the first one)
 
-  ambi_flag = vibmode_flag = 0;
+  ambi_flag = 0;
   afix_kk = NULL;
-  vfix_kk = NULL;
 
   for (int ifix = 0; ifix < modify->nfix; ifix++) {
     if (strcmp(modify->fix[ifix]->style,"ambipolar") == 0) {
@@ -89,12 +86,6 @@ void SurfCollidePistonKokkos::init()
       if (!afix->kokkos_flag)
         error->all(FLERR,"Must use fix ambipolar/kk when Kokkos is enabled");
       afix_kk = (FixAmbipolarKokkos*)afix;
-    } else if (strcmp(modify->fix[ifix]->style,"vibmode") == 0) {
-      vibmode_flag = 1;
-      FixVibmode *vfix = (FixVibmode *) modify->fix[ifix];
-      if (!vfix->kokkos_flag)
-        error->all(FLERR,"Must use fix vibmode/kk when Kokkos is enabled");
-      vfix_kk = (FixVibmodeKokkos*)vfix;
     }
   }
 }
@@ -106,11 +97,6 @@ void SurfCollidePistonKokkos::pre_collide()
   if (ambi_flag) {
     afix_kk->pre_update_custom_kokkos();
     fix_ambi_kk_copy.copy(afix_kk);
-  }
-
-  if (vibmode_flag) {
-    vfix_kk->pre_update_custom_kokkos();
-    fix_vibmode_kk_copy.copy(vfix_kk);
   }
 
 #ifdef SPARTA_KOKKOS_FIXED_LISTS
@@ -202,7 +188,7 @@ void SurfCollidePistonKokkos::pre_collide()
 void SurfCollidePistonKokkos::post_collide()
 {
   ParticleKokkos* particle_kk = (ParticleKokkos*) particle;
-  if (ambi_flag || vibmode_flag) particle_kk->modify(Device,CUSTOM_MASK);
+  if (ambi_flag) particle_kk->modify(Device,CUSTOM_MASK);
 
   Kokkos::deep_copy(h_scalars,d_scalars);
 
@@ -240,11 +226,6 @@ void SurfCollidePistonKokkos::backup()
   if (ambi_flag) {
     afix_kk->pre_update_custom_kokkos();
     fix_ambi_kk_copy.copy(afix_kk);
-  }
-
-  if (vibmode_flag) {
-    vfix_kk->pre_update_custom_kokkos();
-    fix_vibmode_kk_copy.copy(vfix_kk);
   }
 
   if (surf->nsr > 0) {

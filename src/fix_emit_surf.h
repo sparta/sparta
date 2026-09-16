@@ -44,6 +44,7 @@ class FixEmitSurf : public FixEmit {
     double temp_thermal;        // from mixture or adjacent subsonic cell
     double temp_rot;            // from mixture or subsonic temp_thermal
     double temp_vib;            // from mixture or subsonic temp_thermal
+    double temp_elec;           // from mixture or subsonic temp_thermal
     double magvstream;          // from mixture
     double vstream[3];          // from mixture or adjacent subsonic cell
     double vcom[3];             // time-averaged cell COM velocity,
@@ -89,7 +90,7 @@ class FixEmitSurf : public FixEmit {
 
   int dimension,axisymmetric,nspecies;
   double fnum,dt;
-  double nrho,temp_thermal,temp_rot,temp_vib;
+  double nrho,temp_thermal,temp_rot,temp_vib,temp_elec;
   double *fraction,*cummulative;
 
   class Cut2d *cut2d;

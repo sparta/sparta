@@ -24,8 +24,6 @@
 
 using namespace SPARTA_NS;
 
-enum{NONE,COUNT,MASSWT,DOF};
-
 /* ---------------------------------------------------------------------- */
 
 ComputeTvibGrid::ComputeTvibGrid(SPARTA *sparta, int narg, char **arg) :

@@ -29,6 +29,7 @@ SurfCollideStyle(impulsive/kk,SurfCollideImpulsiveKokkos)
 #include "kokkos_copy.h"
 #include "fix_ambipolar_kokkos.h"
 #include "fix_vibmode_kokkos.h"
+#include "fix_elecmode_kokkos.h"
 #include "surf_react_global_kokkos.h"
 #include "surf_react_prob_kokkos.h"
 #include "surf_react_adsorb_kokkos.h"
@@ -85,11 +86,13 @@ class SurfCollideImpulsiveKokkos : public SurfCollideImpulsive {
   t_particle_1d d_particles;
   t_species_1d d_species;
 
-  int ambi_flag,vibmode_flag;
+  int ambi_flag,vibmode_flag,elecmode_flag;
   FixAmbipolarKokkos* afix_kk;
   FixVibmodeKokkos* vfix_kk;
+  FixElecmodeKokkos* efix_kk;
   KKCopy<FixAmbipolarKokkos> fix_ambi_kk_copy;
   KKCopy<FixVibmodeKokkos> fix_vibmode_kk_copy;
+  KKCopy<FixElecmodeKokkos> fix_elecmode_kk_copy;
 
   // the active surf react models this model may dispatch to, partitioned by
   //   style.  Two representations, selected by SPARTA_KOKKOS_FIXED_LISTS (see
@@ -144,7 +147,8 @@ class SurfCollideImpulsiveKokkos : public SurfCollideImpulsive {
     int velreset = 0;
 
     if (REACT && isr >= 0) {
-      if (ambi_flag || vibmode_flag) memcpy(&iorig,ip,sizeof(Particle::OnePart));
+      if (ambi_flag || vibmode_flag || elecmode_flag)
+        memcpy(&iorig,ip,sizeof(Particle::OnePart));
 
       int sr_type = KK_SR_TYPE(isr);
       int m = KK_SR_MAP(isr);
@@ -180,23 +184,28 @@ class SurfCollideImpulsiveKokkos : public SurfCollideImpulsive {
     // only if SurfReact did not already reset velocities
     // also both particles need to trigger any fixes
     //   to update per-particle properties which depend on
-    //   temperature of the particle, e.g. fix vibmode and fix ambipolar
+    //   temperature of the particle, e.g. fix vibmode, fix elecmode
+    //   and fix ambipolar
 
     if (ip) {
       if (!velreset) impulsive(ip,norm,tsurf_local);
       int i = ip - d_particles.data();
       if (ambi_flag)
-        fix_ambi_kk_copy.obj.update_custom_kokkos(i,tsurf_local,tsurf_local,tsurf_local,vstream);
+        fix_ambi_kk_copy.obj.update_custom_kokkos(i,tsurf_local,tsurf_local,tsurf_local,tsurf_local,vstream);
       if (vibmode_flag)
-        fix_vibmode_kk_copy.obj.update_custom_kokkos(i,tsurf_local,tsurf_local,tsurf_local,vstream);
+        fix_vibmode_kk_copy.obj.update_custom_kokkos(i,tsurf_local,tsurf_local,tsurf_local,tsurf_local,vstream);
+      if (elecmode_flag)
+        fix_elecmode_kk_copy.obj.update_custom_kokkos(i,tsurf_local,tsurf_local,tsurf_local,tsurf_local,vstream);
     }
     if (REACT && jp) {
       if (!velreset) impulsive(jp,norm,tsurf_local);
       int j = jp - d_particles.data();
       if (ambi_flag)
-        fix_ambi_kk_copy.obj.update_custom_kokkos(j,tsurf_local,tsurf_local,tsurf_local,vstream);
+        fix_ambi_kk_copy.obj.update_custom_kokkos(j,tsurf_local,tsurf_local,tsurf_local,tsurf_local,vstream);
       if (vibmode_flag)
-        fix_vibmode_kk_copy.obj.update_custom_kokkos(j,tsurf_local,tsurf_local,tsurf_local,vstream);
+        fix_vibmode_kk_copy.obj.update_custom_kokkos(j,tsurf_local,tsurf_local,tsurf_local,tsurf_local,vstream);
+      if (elecmode_flag)
+        fix_elecmode_kk_copy.obj.update_custom_kokkos(j,tsurf_local,tsurf_local,tsurf_local,tsurf_local,vstream);
     }
 
     // call any fixes with a surf_react() method

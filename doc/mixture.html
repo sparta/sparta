@@ -21,7 +21,7 @@
 
 <LI>zero or more keyword/arg pairs may be appended 
 
-<LI>keyword = <I>nrho</I> or <I>vstream</I> or <I>temp</I> or <I>frac</I> or <I>group</I> or <I>copy</I> or <I>delete</I> 
+<LI>keyword = <I>nrho</I> or <I>vstream</I> or <I>temp</I> or <I>trot</I> or <I>tvib</I> or <I>telec</I> or <I>frac</I> or <I>group</I> or <I>copy</I> or <I>delete</I> 
 
 <PRE>  <I>nrho</I> arg = density
     density = number density of entire mixture (# per length^3 units)
@@ -33,6 +33,8 @@
     Trot = rotational temperature of entire mixture (temperature units)
   <I>tvib</I> arg = Tvib
     Tvib = vibrational temperature of entire mixture (temperature units)
+  <I>telec</I> arg = Telec
+    Telec = electronic temperature of entire mixture (temperature units)
   <I>frac</I> arg = fraction
     fraction = number fraction for each listed species (0 to 1)
   <I>group</I> arg = SELF or group-ID
@@ -143,6 +145,15 @@ energy distribution to define each particle's vibrational energy.  If
 this keyword is not specified, the thermal temperature is used as the
 default.
 </P>
+<P>The <I>telec</I> keyword sets a global attribute of the mixture, namely the
+electronic temperature of its particles.  It must be a value >= zero.
+When particles are created with <A HREF = "fix_elecmode.html">fix elecmode</A>
+active, this value is used to sample each particle's discrete
+electronic state from the Boltzmann distribution over the states
+defined via the <I>elecfile</I> option of the <A HREF = "species.html">species</A>
+command.  If this keyword is not specified, the thermal temperature is
+used as the default.
+</P>
 <HR>
 
 <P>This keyword sets per-species attributes of the mixture.
@@ -248,8 +259,9 @@ both be zero.  A zero streaming velocity means a zero vector =
 </P>
 <P>The <I>nrho</I>, <I>vstream</I>, and <I>temp</I> defaults are those defined for the
 background gas density, as set by the <A HREF = "global.html">global</A> command.
-The <I>trot</I> and <I>tvib</I> defaults are to use the thermal temperature
-<I>temp</I>, either its default or the value specified by this command.
+The <I>trot</I>, <I>tvib</I>, and <I>telec</I> defaults are to use the thermal
+temperature <I>temp</I>, either its default or the value specified by this
+command.
 The <I>frac</I> default is described above.  The <I>group</I> keyword has no
 default; if it is not used, new species not already in the mixture are
 assigned to a group with a group ID = "default".

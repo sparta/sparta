@@ -18,6 +18,8 @@ multi-species abbreviations can also be used (see below) :l
 zero or more keyword/value pairs may be appended :l
 keyword = {vibfile} :l
   {vibfile} value = vfile = filename for extra vibrational info :pre
+keyword = {elecfile} :l
+  {elecfile} value = efile = filename for extra electronic info :pre
 :ule
 
 [Examples:]
@@ -167,6 +169,59 @@ defined in the species file (prop7 and prop6) when they are listed for
 the same species in the {vibfile}.
 
 :line
+
+The optional {elecfile} keyword can be used in conjuction with
+"collide_modify electronic discrete" and "fix elecmode" to model
+electronic excitation. If this option is used, then an entry must
+appear in {elecfile} for every species in this command.
+
+The format of a species electronic file is as follows. Comments or
+blank lines are allowed in the file. Comment lines start with a "#"
+character. All other lines must have one of the following formats:
+
+species-ID N temp1 relax1 degen1 spin1 dof1 temp2 relax2 degen2 spin2 dof2 ... tempN relaxN degenN spinN dofN :pre
+
+The species-ID is a string that will be matched against the requested species-ID.
+N is the number of electronic states. For each of the N states, 5 values are
+listed:
+
+tempI = electronic temperature of state I (temperature units)
+relaxI = inverse electronic relaxation number of state I (unitless)
+degenI = total degeneracy of state I (integer, unitless)
+spinI = spin degeneracy of state I (e.g. singlet = 1, triplet = 3, etc.)
+dofI = effective DOF of state I for the TCE chemistry model (unitless) :ul
+
+The {dofI} value is only used by the TCE reaction model when the
+"react_modify"_react_modify.html {elec_energy} option is set to {yes};
+with the default {elec_energy micro} setting (and with {elec_energy no})
+it is read but ignored.
+
+Note that the {relaxI} values enter a state-to-state transition twice:
+a relaxation event is attempted with probability relax(current state),
+and the destination state is then selected with a weight proportional
+to degen * relax(destination) times an available-energy factor.  The
+effective i->f transition rate therefore scales as relaxI*relaxF; this
+product form is what preserves detailed balance for state-dependent
+relaxation numbers, and should be accounted for when calibrating the
+inputs against measured relaxation times or state-to-state rates.
+
+The other accepted format is:
+
+species-ID1 species-ID2 conserve_spin relax1 ... relaxN :pre
+
+species-ID1 is a string of a species ID with electronic modes defined.
+species-ID2 is another species ID with which species-ID1 will collide.
+conserve_spin is either a "T" or a "F". When "F", then any electronic state
+for the relaxing particle is considered for the post-collision state. If "T"
+then only states with the same spin degeneracy number will be considered for relaxation.
+relaxI is the same as relaxI for the other format, i.e. inverse electronic
+relaxation number for state I of species-ID1 when colliding with species-ID2.
+These values override the default values set in the line with the first format.
+
+The states of a species must be listed in ascending energy order, and the
+first (ground) state must have a temperature of zero. A line in the second
+format must come after the line in the first format that defines the states
+of species-ID1.
 
 [Restrictions:] none
 

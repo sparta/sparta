@@ -61,6 +61,11 @@ ReactBird::ReactBird(SPARTA *sparta, int narg, char **arg) :
   reactions = NULL;
   list_ij = NULL;
   sp2recomb_ij = NULL;
+
+  mtab = NULL;
+  mtab_du = NULL;
+  mtab_n = NULL;
+  mtab_nlist = 0;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -73,6 +78,11 @@ ReactBird::ReactBird(SPARTA *sparta) : React(sparta)
   sp2recomb_ij = NULL;
   tally_reactions = NULL;
   tally_reactions_all = NULL;
+
+  mtab = NULL;
+  mtab_du = NULL;
+  mtab_n = NULL;
+  mtab_nlist = 0;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -80,6 +90,8 @@ ReactBird::ReactBird(SPARTA *sparta) : React(sparta)
 ReactBird::~ReactBird()
 {
   if (copy) return;
+
+  free_micro_tables();
 
   delete [] tally_reactions;
   delete [] tally_reactions_all;
@@ -919,3 +931,183 @@ double ReactBird::extract_tally(int m)
 
   return 1.0*tally_reactions_all[m];
 };
+
+/* ----------------------------------------------------------------------
+   convolve arr (length n, grid spacing du) with one discrete ladder:
+   arr_new(u) = sum_levels g * arr_old(u - eps), each level split linearly
+   onto the two neighboring grid points; work = scratch of length n
+------------------------------------------------------------------------- */
+
+static void ladder_convolve(double *arr, double *work, int n, double du,
+                            int nlevel, const double *eps, const double *g)
+{
+  memcpy(work,arr,n*sizeof(double));
+  memset(arr,0,n*sizeof(double));
+  for (int m = 0; m < nlevel; m++) {
+    if (g[m] == 0.0) continue;
+    double sh = eps[m]/du;
+    int i0 = (int) sh;
+    double frac = sh - i0;
+    if (i0 < n) {
+      double w0 = g[m]*(1.0-frac);
+      for (int k = i0; k < n; k++) arr[k] += w0*work[k-i0];
+    }
+    if (i0+1 < n) {
+      double w1 = g[m]*frac;
+      for (int k = i0+1; k < n; k++) arr[k] += w1*work[k-i0-1];
+    }
+  }
+}
+
+/* ----------------------------------------------------------------------
+   build the per-reaction tables of the microcanonical TCE energy factor
+   for react_modify vib_energy micro:
+     factor(E_tot) = sum_p g_p (E_tot - eps_p - Ea)_+^(zrot+eta+1/2)
+                   / sum_p g_p (E_tot - eps_p)_+^(zrot+3/2-omega)
+   where p runs over the joint discrete states of the two reactants: the
+   SHO levels of every vibrational mode (level degeneracy of a d-fold
+   degenerate mode = C(l+d-1,d-1)) and, when elec_energy micro is active,
+   the electronic states. The continuum is translation + rotation only
+   (Gamma-distributed at equilibrium), so this factor keeps the
+   equilibrium TCE rate on the input Arrhenius rate with DISCRETE
+   vibration, in place of the instantaneous-vibrational-DOF heuristic.
+   The numerator/denominator sums are accumulated on an energy grid by
+   convolution (shift-and-add per ladder level); runtime evaluation is a
+   single linear interpolation (vib_micro_factor() in react_bird.h).
+   Tables are clamped at umax = Ea + 40 eV; collisions beyond use the
+   last table value (their probability weight is negligible below
+   ~100000 K, and clamping keeps CPU/Kokkos evaluation identical).
+------------------------------------------------------------------------- */
+
+void ReactBird::build_micro_tables()
+{
+  free_micro_tables();
+
+  Particle::Species *species = particle->species;
+  double boltz = update->boltz;
+
+  mtab_nlist = nlist;
+  mtab = new double*[nlist];
+  memory->create(mtab_du,nlist,"react:mtab_du");
+  memory->create(mtab_n,nlist,"react:mtab_n");
+
+  int sps[2];
+  double *num,*den,*work,*leps,*lg;
+
+  for (int i = 0; i < nlist; i++) {
+    mtab[i] = NULL;
+    mtab_du[i] = 0.0;
+    mtab_n[i] = 0;
+
+    OneReaction *r = &rlist[i];
+    if (!r->active || r->nreactant != 2) continue;
+    sps[0] = r->reactants[0];
+    sps[1] = r->reactants[1];
+
+    // grid resolution from the smallest vibrational quantum;
+    // skip the table entirely if the reactants carry no discrete ladders
+    // (runtime then falls back to the standard / elec-micro factor)
+
+    double theta_min = 0.0;
+    int nladder = 0;
+    for (int s = 0; s < 2; s++) {
+      int sp = sps[s];
+      for (int m = 0; m < species[sp].nvibmode; m++) {
+        nladder++;
+        double th = species[sp].vibtemp[m];
+        if (theta_min == 0.0 || th < theta_min) theta_min = th;
+      }
+      if (elecEnergyMode == ELEC_MICRO && species[sp].elecdat) nladder++;
+    }
+    if (nladder == 0) continue;
+
+    double ea = r->coeff[1] > 0.0 ? r->coeff[1] : 0.0;
+    double umax = ea + 40.0*1.602176634e-19;
+    double du;
+    if (theta_min > 0.0) du = boltz*theta_min/16.0;
+    else du = umax/20000.0;
+    if (umax/du > 200000.0) du = umax/200000.0;
+    int n = (int) (umax/du) + 2;
+
+    mtab_du[i] = du;
+    mtab_n[i] = n;
+
+    memory->create(num,n,"react:mtab_num");
+    memory->create(den,n,"react:mtab_den");
+    memory->create(work,n,"react:mtab_work");
+
+    double zrot = 0.5*(species[sps[0]].rotdof + species[sps[1]].rotdof);
+    double omega = collide->extract(sps[0],sps[1],"omega");
+    double exp_num = zrot + r->coeff[3] + 0.5;
+    double exp_den = zrot + 1.5 - omega;
+
+    for (int k = 0; k < n; k++) {
+      double u = k*du;
+      den[k] = (u > 0.0) ? pow(u,exp_den) : 0.0;
+      num[k] = (u > ea) ? pow(u-ea,exp_num) : 0.0;
+    }
+
+    // convolve numerator and denominator with each ladder
+
+    int maxlev = (int) (umax/(boltz*(theta_min > 0.0 ? theta_min : 1.0))) + 2;
+    memory->create(leps,maxlev,"react:mtab_leps");
+    memory->create(lg,maxlev,"react:mtab_lg");
+
+    for (int s = 0; s < 2; s++) {
+      int sp = sps[s];
+
+      for (int m = 0; m < species[sp].nvibmode; m++) {
+        double th = species[sp].vibtemp[m];
+        int d = species[sp].vibdegen[m] > 1 ? species[sp].vibdegen[m] : 1;
+        int nlev = 0;
+        double g = 1.0;
+        for (int l = 0; l*th*boltz < umax && nlev < maxlev; l++) {
+          leps[nlev] = l*th*boltz;
+          // level degeneracy of a d-fold degenerate SHO mode:
+          // C(l+d-1,d-1), built iteratively
+          if (l > 0) g = g*(l+d-1)/l;
+          lg[nlev] = g;
+          nlev++;
+        }
+        ladder_convolve(num,work,n,du,nlev,leps,lg);
+        ladder_convolve(den,work,n,du,nlev,leps,lg);
+      }
+
+      if (elecEnergyMode == ELEC_MICRO && species[sp].elecdat) {
+        int nlev = species[sp].elecdat->nelecstate;
+        for (int l = 0; l < nlev; l++) {
+          leps[l] = boltz*species[sp].elecdat->states[l].temp;
+          lg[l] = species[sp].elecdat->states[l].degen;
+        }
+        ladder_convolve(num,work,n,du,nlev,leps,lg);
+        ladder_convolve(den,work,n,du,nlev,leps,lg);
+      }
+    }
+
+    mtab[i] = new double[n];
+    for (int k = 0; k < n; k++)
+      mtab[i][k] = (den[k] > 0.0) ? num[k]/den[k] : 0.0;
+
+    memory->destroy(leps);
+    memory->destroy(lg);
+    memory->destroy(num);
+    memory->destroy(den);
+    memory->destroy(work);
+  }
+}
+
+/* ---------------------------------------------------------------------- */
+
+void ReactBird::free_micro_tables()
+{
+  if (mtab) {
+    for (int i = 0; i < mtab_nlist; i++) delete [] mtab[i];
+    delete [] mtab;
+  }
+  memory->destroy(mtab_du);
+  memory->destroy(mtab_n);
+  mtab = NULL;
+  mtab_du = NULL;
+  mtab_n = NULL;
+  mtab_nlist = 0;
+}

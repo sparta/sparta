@@ -13,13 +13,15 @@ react_modify command :h3
 react_modify keyword values ...  :pre
 
 one or more keyword/value pairs may be listed :ulb,l
-keywords = {recomb} or {rboost} or {compute_chem_rates} or {partial_energy} :l
+keywords = {recomb} or {rboost} or {compute_chem_rates} or {partial_energy} or {elec_energy} or {vib_energy} :l
   {recomb} value = yes or no = enable or disable defined recombination reactions
   {rboost} value = rfactor
     rfactor = boost probability of recombination reactions by this factor
   {compute_chem_rates} value = yes or no = enable or disable computation of Arrhenius rate for chemical
   reaction without performing the reaction
-  {partial_energy} = yes or no = use partial energy or total energy for TCE chemistry :pre
+  {partial_energy} = yes or no = use partial energy or total energy for TCE chemistry
+  {elec_energy} = yes or no or micro = how electronic energy couples to the TCE reaction probability
+  {vib_energy} = dof or micro = how discrete vibrational energy couples to the TCE reaction probability :pre
 :ule
 
 [Examples:]
@@ -85,6 +87,93 @@ vibrational energy model used has an impact on the internal degrees of
 freedom used in the TCE model in that case. This option is ignored for
 the QK reaction model.
 
+The {elec_energy} keyword controls whether electronic energy (see the
+{elecfile} option of the "species"_species.html command and "fix
+elecmode"_fix_elecmode.html) counts toward the TCE reaction energy
+when {partial_energy} is set to {no}.
+
+If {elec_energy} is set to {no}, the electronic energy
+of the colliding pair is excluded from the collision energy compared
+against the reaction threshold, and the per-state electronic degrees
+of freedom listed in the electronic species file are ignored.
+Electronic energy is still conserved: it is part of the total
+collision energy that is redistributed over all modes of the products
+after a reaction.  This is the consistent choice for standard
+equilibrium-calibrated rate sets (Park, Gupta, etc.), whose Arrhenius
+coefficients already contain the equilibrium excited-state
+contribution; counting electronic energy again makes the equilibrium
+TCE rate exceed the input Arrhenius rate, most strongly at low
+temperature.
+
+If {elec_energy} is set to {yes}, the historical behavior is restored:
+electronic energy is added to the reaction energy and the per-state
+electronic degrees of freedom from the electronic species file
+contribute to the internal degree-of-freedom count.  This asserts that
+every quantum of electronic energy lowers the reaction barrier
+one-for-one, which is only appropriate if the input rates are true
+ground-state-specific rates.
+
+If {elec_energy} is set to {micro} (the default), electronic energy
+counts toward the reaction barrier AND the equilibrium rates still
+reproduce the input Arrhenius data: the energy-dependent factor of the
+TCE probability is replaced by its microcanonical average over the two
+reactants' electronic ladders at fixed total collision energy,
+
+sum_p g_p (Ec - eps_p - Ea)^(z+eta+1/2) / sum_p g_p (Ec - eps_p)^(z+3/2-omega) :pre
+
+where Ec is the total collision energy including electronic, and p runs
+over the pairs of electronic states with energies eps_p and degeneracies
+g_p.  This average keeps the equilibrium rate on the input Arrhenius
+data across temperature.  Out of
+equilibrium the reaction rate then responds to the actual electronic
+populations in both directions: an electronically cold gas reacts more
+slowly than the thermal rate (the tabulated rate contains the
+equilibrium excited-state contribution) and an electronically hot gas
+reacts faster, with excited particles preferentially selected.  The
+per-state DOF column of the electronic species file is ignored in this
+mode.  The exactness holds for a fixed internal degree-of-freedom count;
+with discrete vibration the instantaneous vibrational DOF fluctuates
+per collision, which shifts equilibrium rates by a few percent
+(comparable to the discrete-vibration TCE deviation that exists without
+electronic states).  Setting {vib_energy} to {micro} removes that
+residual as well.  When the colliding species carry no electronic
+states, this factor reduces to the standard TCE factor, so {micro}
+leaves non-electronic runs unchanged and is the default.
+
+The {vib_energy} keyword controls how discrete vibrational energy
+enters the TCE reaction probability when {partial_energy} is set to
+{no} and "collide_modify vibrate discrete"_collide_modify.html is used.
+
+If {vib_energy} is set to {dof} (the default), the historical behavior
+is used: vibrational energy is added to the collision energy and each
+molecule contributes an instantaneous vibrational degree-of-freedom
+count evaluated from its current vibrational energy.  Because that DOF
+count fluctuates from collision to collision, the equilibrium TCE rate
+deviates from the input Arrhenius rate; for typical air dissociation
+reactions the deviation reaches tens of percent at low temperature
+(e.g. +27% at 10000 K for O2/N2 dissociation).
+
+If {vib_energy} is set to {micro}, the energy-dependent factor of the
+TCE probability is replaced by its microcanonical average over the
+reactants' discrete vibrational ladders (simple harmonic levels of each
+vibrational mode) at fixed total collision energy, in the same way that
+{elec_energy micro} averages over the electronic ladder.  The average
+is precomputed once per reaction as a lookup table, so the runtime cost
+is one table interpolation per potential reaction.  The equilibrium TCE
+rate then reproduces the input Arrhenius rate essentially exactly at
+all temperatures, and out of equilibrium the rate responds to the
+actual vibrational populations with no fitted parameters (a
+vibrationally cold gas reacts more slowly than the thermal rate, a
+vibrationally hot gas faster).  If {elec_energy} is also set to
+{micro} and electronic species data is defined, the table averages over
+the joint vibrational-electronic ladder, making the two modes
+consistent with each other.
+
+The {vib_energy micro} setting requires the TCE reaction model with
+{partial_energy no} and "collide_modify vibrate
+discrete"_collide_modify.html, and cannot be combined with
+{elec_energy yes}.
+
 :line
 
 [Restrictions:] none
@@ -96,4 +185,9 @@ the QK reaction model.
 [Default:]
 
 The option defaults are recomb = yes, rboost = 1000.0,
-compute_chem_rates = no, partial_energy = yes.
+compute_chem_rates = no, partial_energy = yes, elec_energy = micro,
+vib_energy = dof.
+The {elec_energy micro} default reduces to the standard TCE factor when
+no electronic states are present, so it only affects runs with
+electronic excitation.  For those runs, {vib_energy micro} additionally
+removes the discrete-vibration TCE rate deviation.

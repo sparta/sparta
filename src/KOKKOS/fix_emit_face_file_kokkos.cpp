@@ -461,12 +461,14 @@ void FixEmitFaceFileKokkos::perform_task()
       auto temp_thermal = tasks[task].temp_thermal;
       auto temp_rot = tasks[task].temp_rot;
       auto temp_vib = tasks[task].temp_vib;
+      auto temp_elec = tasks[task].temp_elec;
       auto vstream = tasks[task].vstream;
 
       auto inew = h_cands2new(cand);
       auto ilocal = nlocal_before + inew;
 
-      modify->update_custom(ilocal,temp_thermal,temp_rot,temp_vib,vstream);
+      modify->update_custom(ilocal,temp_thermal,temp_rot,temp_vib,
+                            temp_elec,vstream);
     }
   }
 }
@@ -937,7 +939,8 @@ void FixEmitFaceFileKokkos::operator()(TagFixEmitFaceFile_subsonic_grid,
   }
 
   d_tasks(i).temp_thermal = temp_thermal_cell;
-  d_tasks(i).temp_rot = d_tasks(i).temp_vib = temp_thermal_cell;
+  d_tasks(i).temp_rot = d_tasks(i).temp_vib = d_tasks(i).temp_elec =
+    temp_thermal_cell;
 }
 
 /* ----------------------------------------------------------------------
