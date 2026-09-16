@@ -221,7 +221,18 @@ void Run::command(int narg, char **arg)
       sparta->init();
       update->setup();
       if (collide) collide->setup();
-    } else output->setup(0);
+    } else {
+
+      // the setup being skipped is what refreshes every cached ptr to a
+      //   fix or compute, so a definition added or deleted since the last
+      //   one leaves stale ptrs behind (stats fields, the fix call lists,
+      //   the per-grid fix list); refuse rather than use them
+
+      if (modify->ndefine != modify->ndefine_init)
+        error->all(FLERR,"Run pre no is invalid after a fix or compute "
+                   "has been defined or deleted");
+      output->setup(0);
+    }
 
     timer->init();
     timer->barrier_start(TIME_LOOP);

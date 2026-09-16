@@ -156,7 +156,10 @@ int ComputeReactSurfKokkos::tallyinfo(surfint *&ptr)
   auto h_surf2tally = Kokkos::create_mirror_view(d_surf2tally);
   Kokkos::deep_copy(h_surf2tally,d_surf2tally);
 
-  int nsurf = surf->nlocal + surf->nghost;
+  // walk the index as allocated: the local+ghost surf count may have
+  //   changed since (a grid change between the tallies and their use)
+
+  int nsurf = (int) d_surf2tally.extent(0);
   int istart = 0;
   int iend = nsurf-1;
 

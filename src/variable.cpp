@@ -4152,38 +4152,54 @@ void Variable::particle_vector(char *word, Tree **tree,
   newtree->nstride = sizeof(Particle::OnePart);
   treestack[ntreestack++] = newtree;
 
+  // field addresses are taken from a template particle, since the
+  //   particle array may not exist yet (no particles created);
+  //   the tree is then evaluated over zero particles
+
+  Particle::OnePart tmpl;
+  memset(&tmpl,0,sizeof(Particle::OnePart));
+  char *base = (char *) &tmpl;
+  char *pbase = (char *) particles;
+  size_t offset;
+
   if (strcmp(word,"x") == 0)
-    newtree->carray = (char *) &particles[0].x[0];
+    offset = (char *) &tmpl.x[0] - base;
   else if (strcmp(word,"y") == 0)
-    newtree->carray = (char *) &particles[0].x[1];
+    offset = (char *) &tmpl.x[1] - base;
   else if (strcmp(word,"z") == 0)
-    newtree->carray = (char *) &particles[0].x[2];
+    offset = (char *) &tmpl.x[2] - base;
   else if (strcmp(word,"vx") == 0)
-    newtree->carray = (char *) &particles[0].v[0];
+    offset = (char *) &tmpl.v[0] - base;
   else if (strcmp(word,"vy") == 0)
-    newtree->carray = (char *) &particles[0].v[1];
+    offset = (char *) &tmpl.v[1] - base;
   else if (strcmp(word,"vz") == 0)
-    newtree->carray = (char *) &particles[0].v[2];
+    offset = (char *) &tmpl.v[2] - base;
 
   else if (strcmp(word,"id") == 0) {
     newtree->type = PARTARRAYINT;
-    newtree->carray = (char *) &particles[0].id;
+    offset = (char *) &tmpl.id - base;
   } else if (strcmp(word,"type") == 0) {
     newtree->type = PARTARRAYINT;
-    newtree->carray = (char *) &particles[0].ispecies;
+    offset = (char *) &tmpl.ispecies - base;
   } else if (strcmp(word,"mass") == 0) {
     newtree->type = SPECARRAY;
     newtree->nstride = sizeof(Particle::Species);
     newtree->carray = (char *) &species[0].mass;
+    return;
   } else if (strcmp(word,"q") == 0) {
     newtree->type = SPECARRAY;
     newtree->nstride = sizeof(Particle::Species);
     newtree->carray = (char *) &species[0].charge;
+    return;
   } else if (strcmp(word,"mu") == 0) {
     newtree->type = SPECARRAY;
     newtree->nstride = sizeof(Particle::Species);
     newtree->carray = (char *) &species[0].magmoment;
-  }
+    return;
+  } else return;
+
+  if (pbase) newtree->carray = pbase + offset;
+  else newtree->carray = NULL;
 }
 
 /* ----------------------------------------------------------------------

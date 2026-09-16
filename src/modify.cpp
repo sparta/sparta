@@ -39,6 +39,7 @@ using namespace SPARTA_NS;
 Modify::Modify(SPARTA *sparta) : Pointers(sparta)
 {
   nfix = maxfix = 0;
+  ndefine = ndefine_init = 0;
   n_start_of_step = n_end_of_step = 0;
 
   fix = NULL;
@@ -99,6 +100,12 @@ Modify::~Modify()
 void Modify::init()
 {
   int i;
+
+  // every ptr to a fix or compute cached elsewhere is refreshed by this
+  //   init; record the definition count it is valid for, so that a run
+  //   which skips the init can refuse to use the stale ptrs
+
+  ndefine_init = ndefine;
 
   // create lists of fixes with masks for calling at each stage of run
 
@@ -376,6 +383,7 @@ void Modify::add_fix(int narg, char **arg)
 
   fmask[ifix] = fix[ifix]->setmask();
   if (newflag) nfix++;
+  ndefine++;
 }
 
 /* ----------------------------------------------------------------------
@@ -394,6 +402,7 @@ void Modify::delete_fix(const char *id)
   for (int i = ifix+1; i < nfix; i++) fix[i-1] = fix[i];
   for (int i = ifix+1; i < nfix; i++) fmask[i-1] = fmask[i];
   nfix--;
+  ndefine++;
 }
 
 /* ----------------------------------------------------------------------
@@ -470,6 +479,7 @@ void Modify::add_compute(int narg, char **arg)
   }
 
   ncompute++;
+  ndefine++;
 
   // post_constructor() can call virtual methods in parent or child
   //   which would otherwise not yet be visible in child class
@@ -491,6 +501,7 @@ void Modify::delete_compute(const char *id)
 
   for (int i = icompute+1; i < ncompute; i++) compute[i-1] = compute[i];
   ncompute--;
+  ndefine++;
 }
 
 /* ----------------------------------------------------------------------

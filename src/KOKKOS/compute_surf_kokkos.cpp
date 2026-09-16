@@ -88,6 +88,17 @@ void ComputeSurfKokkos::init()
 
 void ComputeSurfKokkos::init_normflux()
 {
+  // a tally cycle may be open (tallies on the device not yet used):
+  //   a grid change between the tallies and their output reaches here
+  //   via reallocate(), and the device index is replaced below; bring
+  //   the tallies to the host first, where their consumers read them
+  //   until the next clear()
+
+  if (!compressed && d_surf2tally.extent(0) > 0) {
+    surfint *dummy;
+    tallyinfo(dummy);
+  }
+
   ComputeSurf::init_normflux();
 
   int nsurf = surf->nlocal + surf->nghost;
@@ -265,7 +276,10 @@ int ComputeSurfKokkos::tallyinfo(surfint *&ptr)
 
   // compress array_surf_tally
 
-  int nsurf = surf->nlocal + surf->nghost;
+  // walk the index as allocated: the local+ghost surf count may have
+  //   changed since (a grid change between the tallies and their use)
+
+  int nsurf = (int) d_surf2tally.extent(0);
   int istart = 0;
   int iend = nsurf-1;
 
