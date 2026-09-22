@@ -1023,6 +1023,33 @@ void ParticleKokkos::sync(ExecutionSpace space, unsigned int mask)
 
 /* ---------------------------------------------------------------------- */
 
+void ParticleKokkos::sync_device_async(const DeviceType &exec,
+                                       unsigned int mask)
+{
+  if (sparta->kokkos->auto_sync) modify(Host,mask);
+  if (mask & PARTICLE_MASK) k_particles.sync_device(exec);
+  if (mask & SPECIES_MASK) k_species.sync_device(exec);
+  if (mask & CUSTOM_MASK && ncustom) {
+    if (ncustom_ivec)
+      for (int i = 0; i < ncustom_ivec; i++)
+        k_eivec.view_host()[i].k_view.sync_device(exec);
+
+    if (ncustom_iarray)
+      for (int i = 0; i < ncustom_iarray; i++)
+        k_eiarray.view_host()[i].k_view.sync_device(exec);
+
+    if (ncustom_dvec)
+      for (int i = 0; i < ncustom_dvec; i++)
+        k_edvec.view_host()[i].k_view.sync_device(exec);
+
+    if (ncustom_darray)
+      for (int i = 0; i < ncustom_darray; i++)
+        k_edarray.view_host()[i].k_view.sync_device(exec);
+  }
+}
+
+/* ---------------------------------------------------------------------- */
+
 void ParticleKokkos::modify(ExecutionSpace space, unsigned int mask)
 {
   if (space == Device) {

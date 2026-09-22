@@ -66,8 +66,10 @@ struct s_UPDATE_REDUCE {
     nscheck_one   = 0;
     nscollide_one = 0;
     nreact_one    = 0;
+    entryexit     = 0;
     nstuck        = 0;
     naxibad       = 0;
+    error_flag    = 0;
   }
 
   KOKKOS_INLINE_FUNCTION
@@ -166,6 +168,7 @@ class UpdateKokkos : public Update {
   // retake hash_kk and d_halo_index from the grid, see its definition
 
   void grid_index_refresh();
+  static DeviceType &move_execution_space();
 
   t_cell_1d d_cells;
   t_sinfo_1d d_sinfo;
@@ -351,6 +354,9 @@ class UpdateKokkos : public Update {
   typedef tdual_bigint_7::t_host t_host_bigint_7;
   t_bigint_7 d_scalars_big;
   t_host_bigint_7 h_scalars_big;
+
+  Kokkos::View<UPDATE_REDUCE,DeviceType> d_move_reduce;
+  Kokkos::View<UPDATE_REDUCE,SPAHostType> h_move_reduce;
 
   DAT::t_bigint_scalar d_ntouch_one;
   HAT::t_bigint_scalar h_ntouch_one;

@@ -40,6 +40,7 @@ class GridKokkos : public Grid {
   void wrap_kokkos();
   void wrap_kokkos_graphs();
   void sync(ExecutionSpace, unsigned int);
+  void sync_device_async(const DeviceType &, unsigned int);
   void modify(ExecutionSpace, unsigned int);
 
   int add_custom(char *, int, int) override;
