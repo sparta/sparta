@@ -759,7 +759,6 @@ void CollideVSSKokkos::clear_gas_tally()
 /* ----------------------------------------------------------------------
    NTC algorithm for a single group
 ------------------------------------------------------------------------- */
-
 template < int NEARCP, int GASTALLY > void CollideVSSKokkos::collisions_one(COLLIDE_REDUCE &reduce)
 {
   // loop over cells I own
@@ -783,7 +782,6 @@ template < int NEARCP, int GASTALLY > void CollideVSSKokkos::collisions_one(COLL
   if (NEARCP) {
     if (int(d_nn_last_partner.extent(0)) < nglocal || int(d_nn_last_partner.extent(1)) < d_plist.extent(1))
       MemKK::realloc_kokkos(d_nn_last_partner,"collide:nn_last_partner",nglocal,d_plist.extent(1));
-    //Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagCollideZeroNN>(0,nglocal),*this);
   }
 
   /* ATOMIC_REDUCTION: 1 = use atomics
@@ -975,8 +973,10 @@ template < int NEARCP, int GASTALLY > void CollideVSSKokkos::collisions_one(COLL
   if (vibstyle == DISCRETE) particle_kk->modify(Device,CUSTOM_MASK);
 
   d_particles = t_particle_1d(); // destroy reference to reduce memory use
+#if DEALLOC
   d_nn_last_partner = {};
   d_plist = {};
+#endif
 }
 
 KOKKOS_INLINE_FUNCTION
@@ -1023,6 +1023,7 @@ void CollideVSSKokkos::operator()(TagCollideCollisionsOne< NEARCP, GASTALLY, ATO
     rand_pool.free_state(rand_gen);
     return;
   }
+
   if (ATOMIC_REDUCTION == 1)
     Kokkos::atomic_add(&d_nattempt_one(),nattempt);
   else if (ATOMIC_REDUCTION == 0)
@@ -1079,6 +1080,7 @@ void CollideVSSKokkos::operator()(TagCollideCollisionsOne< NEARCP, GASTALLY, ATO
         //react->recomb_part3 = &particles[plist[k]];
         //react->recomb_species = react->recomb_part3->ispecies;
         //react->recomb_density = np * update->fnum / volume;
+        const double volume = grid_kk_copy.obj.k_cinfo.view_device()[icell].volume / grid_kk_copy.obj.k_cinfo.view_device()[icell].weight;
         recomb_part3 = &d_particles[d_plist(icell,k)];
         recomb_species = recomb_part3->ispecies;
         recomb_density = np * fnum / volume;
