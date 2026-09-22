@@ -35,7 +35,6 @@
 #include "geometry.h"
 #include "random_mars.h"
 #include "timer.h"
-#include "nvtx.h"
 #include "math_extra.h"
 #include "memory.h"
 #include "error.h"
@@ -330,29 +329,20 @@ void Update::run(int nsteps)
     // start of step fixes
 
     if (n_start_of_step) {
-      {
-        SPARTA_NVTX_RANGE("Modify");
-        modify->start_of_step();
-      }
+      modify->start_of_step();
       timer->stamp(TIME_MODIFY);
     }
 
     // move particles
 
-    {
-      SPARTA_NVTX_RANGE("Move");
-      if (cellweightflag) particle->pre_weight();
-      (this->*moveptr)();
-    }
+    if (cellweightflag) particle->pre_weight();
+    (this->*moveptr)();
     timer->stamp(TIME_MOVE);
 
     // communicate particles
 
-    {
-      SPARTA_NVTX_RANGE("Comm");
-      comm->migrate_particles(nmigrate,mlist);
-      if (cellweightflag) particle->post_weight();
-    }
+    comm->migrate_particles(nmigrate,mlist);
+    if (cellweightflag) particle->post_weight();
     timer->stamp(TIME_COMM);
 
     // sort particles by grid cell if collisions are enabled
@@ -365,19 +355,13 @@ void Update::run(int nsteps)
                         ntimestep % reorder_period == 0);
 
     if (collide || reorder_flag) {
-      {
-        SPARTA_NVTX_RANGE("Sort");
-        particle->sort();
-        if (reorder_flag) particle->reorder();
-      }
+      particle->sort();
+      if (reorder_flag) particle->reorder();
       timer->stamp(TIME_SORT);
     }
 
     if (collide) {
-      {
-        SPARTA_NVTX_RANGE("Collide");
-        collide->collisions();
-      }
+      collide->collisions();
       timer->stamp(TIME_COLLIDE);
     }
 
@@ -386,20 +370,14 @@ void Update::run(int nsteps)
     // diagnostic fixes
 
     if (n_end_of_step) {
-      {
-        SPARTA_NVTX_RANGE("Modify");
-        modify->end_of_step();
-      }
+      modify->end_of_step();
       timer->stamp(TIME_MODIFY);
     }
 
     // all output
 
     if (ntimestep == output->next) {
-      {
-        SPARTA_NVTX_RANGE("Output");
-        output->write(ntimestep);
-      }
+      output->write(ntimestep);
       timer->stamp(TIME_OUTPUT);
     }
   }

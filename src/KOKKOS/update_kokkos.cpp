@@ -35,7 +35,6 @@
 #include "geometry_kokkos.h"
 #include "random_mars.h"
 #include "timer.h"
-#include "nvtx.h"
 #include "math_extra.h"
 #include "memory_kokkos.h"
 #include "error.h"
@@ -85,12 +84,10 @@ enum{BCSTD,BCWRAP,BCMIRROR,BCEXIT};             // Update::bcopt values
 namespace {
 
   template<class T>
-  void tally_buf_resize(DAT::tdual_char_1d &k, DAT::t_char_1d &d, int n,
-                        const char *region_name)
+  void tally_buf_resize(DAT::tdual_char_1d &k, DAT::t_char_1d &d, int n)
   {
     const size_t need = (size_t) MAX(n,1) * sizeof(T);
     if (k.view_device().extent(0) < need) {
-      SPARTA_NVTX_RANGE(region_name);
       k = DAT::tdual_char_1d("update:tally_models",need);
       d = k.view_device();
     }
@@ -106,11 +103,9 @@ namespace {
 
   template<class ExecutionSpace>
   void tally_buf_sync_async(DAT::tdual_char_1d &k, DAT::t_char_1d &d,
-                            const ExecutionSpace &exec,
-                            const char *region_name)
+                            const ExecutionSpace &exec)
   {
     if (k.view_device().extent(0) == 0) return;
-    SPARTA_NVTX_RANGE(region_name);
     k.modify_host();
     k.sync_device(exec);
     d = k.view_device();
@@ -481,7 +476,6 @@ void UpdateKokkos::run(int nsteps)
 
     if (n_start_of_step) {
       {
-        SPARTA_NVTX_RANGE("Modify");
         modify->start_of_step();
       }
       timer->stamp(TIME_MODIFY);
@@ -496,7 +490,6 @@ void UpdateKokkos::run(int nsteps)
     // move particles
 
     {
-      SPARTA_NVTX_RANGE("Move");
       if (tallyflag) setup_surf_tally_copies();
       if (cellweightflag) particle->pre_weight();
       (this->*moveptr)();
@@ -512,7 +505,6 @@ void UpdateKokkos::run(int nsteps)
     auto mlist_small = k_mlist_small.view_host().data();
 
     {
-      SPARTA_NVTX_RANGE("Comm");
       ((CommKokkos*)comm)->migrate_particles(nmigrate,mlist_small,
                                              k_mlist_small.view_device());
       if (cellweightflag) particle->post_weight();
@@ -524,7 +516,6 @@ void UpdateKokkos::run(int nsteps)
 
     if (collide || reorder_flag) {
       {
-        SPARTA_NVTX_RANGE("Sort");
         particle_kk->sort_kokkos();
       }
       timer->stamp(TIME_SORT);
@@ -532,7 +523,6 @@ void UpdateKokkos::run(int nsteps)
 
     if (collide) {
       {
-        SPARTA_NVTX_RANGE("Collide");
         collide->collisions();
       }
       timer->stamp(TIME_COLLIDE);
@@ -544,7 +534,6 @@ void UpdateKokkos::run(int nsteps)
 
     if (n_end_of_step) {
       {
-        SPARTA_NVTX_RANGE("Modify");
         modify->end_of_step();
       }
       timer->stamp(TIME_MODIFY);
@@ -567,7 +556,6 @@ void UpdateKokkos::run(int nsteps)
 
     if (ntimestep == output->next) {
       {
-        SPARTA_NVTX_RANGE("Output");
         particle_kk->sync(Host,sparta->kokkos->sync_mask_for_output);
         output->write(ntimestep);
       }
@@ -610,7 +598,6 @@ template < int DIM, int SURF, int REACT, int OPT > void UpdateKokkos::move()
   if (particle->nlocal > maxmigrate) {
     maxmigrate = maxlocal;
     {
-      SPARTA_NVTX_RANGE("Kokkos::DualView::resize(k_mlist)");
       memoryKK->destroy_kokkos(k_mlist,mlist);
       memoryKK->create_kokkos(k_mlist,mlist,maxmigrate,"particle:mlist");
     }
@@ -674,7 +661,7 @@ template < int DIM, int SURF, int REACT, int OPT > void UpdateKokkos::move()
 
 
     if (bcmirror_any)
-      SPARTA_NVTX_DEEP_COPY_ASYNC(move_space,d_bcmirror,0);
+      Kokkos::deep_copy(move_space,d_bcmirror,0);
   }
 
   ParticleKokkos* particle_kk = ((ParticleKokkos*)particle);
@@ -735,7 +722,6 @@ template < int DIM, int SURF, int REACT, int OPT > void UpdateKokkos::move()
     if (surf->exist) {
       SurfKokkos* surf_kk = ((SurfKokkos*)surf);
       {
-        SPARTA_NVTX_RANGE("SurfKokkos::sync_device_async");
         surf_kk->sync_device_async(move_space,ALL_MASK);
       }
       d_lines = surf_kk->k_lines.view_device();
@@ -755,7 +741,6 @@ template < int DIM, int SURF, int REACT, int OPT > void UpdateKokkos::move()
         error->one(FLERR,"Per-processor particle count is too big");
       if ((bigint) d_particles.extent(0) < nlocal_extra) {
         {
-          SPARTA_NVTX_RANGE("ParticleKokkos::grow");
           particle->grow(nlocal_extra - particle->nlocal); // this!
         }
         d_particles = particle_kk->k_particles.view_device();
@@ -763,11 +748,9 @@ template < int DIM, int SURF, int REACT, int OPT > void UpdateKokkos::move()
     }
 
     {
-      SPARTA_NVTX_RANGE("ParticleKokkos::sync_device_async");
       particle_kk->sync_device_async(move_space,PARTICLE_MASK);
     }
     {
-      SPARTA_NVTX_RANGE("GridKokkos::sync_device_async");
       grid_kk->sync_device_async(move_space,
                                  CELL_MASK|PCELL_MASK|SINFO_MASK|PLEVEL_MASK);
     }
@@ -790,11 +773,9 @@ template < int DIM, int SURF, int REACT, int OPT > void UpdateKokkos::move()
       pstop = particle->nlocal;
 #if defined SPARTA_KOKKOS_GPU
       if ( fstyle == NOFIELD && not_updated.extent(0) < (size_t)pstop ) {
-        SPARTA_NVTX_RANGE("Kokkos::View::resize(not_updated)");
         not_updated = Kokkos::View<int*>("not_updated",(size_t)(pstop*1.05));
       }
       if ( fstyle == NOFIELD && !not_updated_cnt.data() ) {
-        SPARTA_NVTX_RANGE("Kokkos::View::initialize(not_updated counters)");
         not_updated_cnt = Kokkos::View<int>("not_updated_cnt");
         h_not_updated_cnt = Kokkos::View<int,SPAHostType>("h_not_updated_cnt");
       }
@@ -840,9 +821,9 @@ template < int DIM, int SURF, int REACT, int OPT > void UpdateKokkos::move()
       h_nlocal() = particle->nlocal;
       if (continue_loop_flag) h_nmigrate() = nmigrate;
 
-      SPARTA_NVTX_DEEP_COPY_ASYNC(move_space,d_scalars,h_scalars);
-      SPARTA_NVTX_DEEP_COPY_ASYNC(move_space,d_scalars_big,h_scalars_big);
-      SPARTA_NVTX_DEEP_COPY_ASYNC(move_space,d_move_reduce,h_move_reduce);
+      Kokkos::deep_copy(move_space,d_scalars,h_scalars);
+      Kokkos::deep_copy(move_space,d_scalars_big,h_scalars_big);
+      Kokkos::deep_copy(move_space,d_move_reduce,h_move_reduce);
 
       // zero the custom attributes of the slots a surf reaction can fill
       // must precede the kernel, not follow it: SurfCollide calls
@@ -873,10 +854,10 @@ template < int DIM, int SURF, int REACT, int OPT > void UpdateKokkos::move()
     if (can_recheck_two_pass && particle_count >= concurrency) {
       // on the first iteration, split the move on GPU: fast path for trivial
       // particles, indirect team-based path for complex ones
-      SPARTA_NVTX_DEEP_COPY_ASYNC(move_space,not_updated_cnt,0);
+      Kokkos::deep_copy(move_space,not_updated_cnt,0);
       Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType,
         TagUpdateMoveFirstPass<DIM> >(move_space,pstart,pstop),*this);
-      SPARTA_NVTX_DEEP_COPY_ASYNC(move_space,h_not_updated_cnt,not_updated_cnt);
+      Kokkos::deep_copy(move_space,h_not_updated_cnt,not_updated_cnt);
       move_space.fence("UpdateKokkos::move: read two-pass count");
       const double eliminated_fraction =
         static_cast<double>(particle_count - h_not_updated_cnt()) / particle_count;
@@ -931,9 +912,9 @@ template < int DIM, int SURF, int REACT, int OPT > void UpdateKokkos::move()
 
       copymode = 0;
 
-      SPARTA_NVTX_DEEP_COPY_ASYNC(move_space,h_scalars,d_scalars);
-      SPARTA_NVTX_DEEP_COPY_ASYNC(move_space,h_scalars_big,d_scalars_big);
-      SPARTA_NVTX_DEEP_COPY_ASYNC(move_space,h_move_reduce,d_move_reduce);
+      Kokkos::deep_copy(move_space,h_scalars,d_scalars);
+      Kokkos::deep_copy(move_space,h_scalars_big,d_scalars_big);
+      Kokkos::deep_copy(move_space,h_move_reduce,d_move_reduce);
       move_space.fence("UpdateKokkos::move: read move results");
 
       // a per-event surf tally compute ran out of room.  the row count is
@@ -1064,7 +1045,6 @@ template < int DIM, int SURF, int REACT, int OPT > void UpdateKokkos::move()
       if (pstop-pstart > maxmigrate) {
         maxmigrate = pstop-pstart;
         {
-          SPARTA_NVTX_RANGE("Kokkos::DualView::resize(k_mlist)");
           memoryKK->destroy_kokkos(k_mlist,mlist);
           memoryKK->create_kokkos(k_mlist,mlist,maxmigrate,"particle:mlist");
         }
@@ -1087,7 +1067,7 @@ template < int DIM, int SURF, int REACT, int OPT > void UpdateKokkos::move()
   // hand any {s} face mirrors the fast path did back to their collide models
 
   if (OPT && bcmirror_any) {
-    SPARTA_NVTX_DEEP_COPY_ASYNC(move_space,h_bcmirror,d_bcmirror);
+    Kokkos::deep_copy(move_space,h_bcmirror,d_bcmirror);
     move_space.fence("UpdateKokkos::move: read mirrored boundary counts");
     for (int f = 0; f < 6; f++) bcmirror_one[f] = h_bcmirror[f];
     optmove_surf_tally();
@@ -2626,10 +2606,8 @@ void UpdateKokkos::tally_set(bigint ntimestep)
   if (nblist_boundary > KOKKOS_MAX_BLIST || nblist_react > KOKKOS_MAX_BLIST)
     error->all(FLERR,"Kokkos currently only supports two instances of compute boundary");
 #else
-  tally_buf_resize<ComputeBoundaryKokkos>(k_blist,d_blist,nblist_boundary,
-    "Kokkos::DualView::resize(k_blist)");
-  tally_buf_resize<ComputeReactBoundaryKokkos>(k_blist_react,d_blist_react,nblist_react,
-    "Kokkos::DualView::resize(k_blist_react)");
+  tally_buf_resize<ComputeBoundaryKokkos>(k_blist,d_blist,nblist_boundary);
+  tally_buf_resize<ComputeReactBoundaryKokkos>(k_blist_react,d_blist_react,nblist_react);
 #endif
 
   nblist_boundary = nblist_react = 0;
@@ -2664,10 +2642,8 @@ void UpdateKokkos::tally_set(bigint ntimestep)
   for (i = nblist_react; i < KOKKOS_MAX_BLIST; i++)
     blist_active_react_copy[i].copy(&tmp_compute_react_boundary_kk);
 #else
-  tally_buf_sync_async(k_blist,d_blist,move_space,
-    "Kokkos::DualView::sync_device(k_blist, async)");
-  tally_buf_sync_async(k_blist_react,d_blist_react,move_space,
-    "Kokkos::DualView::sync_device(k_blist_react, async)");
+  tally_buf_sync_async(k_blist,d_blist,move_space);
+  tally_buf_sync_async(k_blist_react,d_blist_react,move_space);
 #endif
 
   // surf-tally compute scatter views (slist_active_copy et al.) are
@@ -2719,18 +2695,12 @@ void UpdateKokkos::setup_surf_tally_copies()
       nslist_coll_tally > KOKKOS_MAX_SLIST || nslist_react_tally > KOKKOS_MAX_SLIST)
     error->all(FLERR,"Kokkos currently only supports two instances of each surf tally compute");
 #else
-  tally_buf_resize<ComputeISurfGridKokkos>(k_slist_isurf,d_slist_isurf,nslist_isurf,
-    "Kokkos::DualView::resize(k_slist_isurf)");
-  tally_buf_resize<ComputeReactISurfGridKokkos>(k_slist_react_isurf,d_slist_react_isurf,nslist_react_isurf,
-    "Kokkos::DualView::resize(k_slist_react_isurf)");
-  tally_buf_resize<ComputeReactSurfKokkos>(k_slist_react_surf,d_slist_react_surf,nslist_react_surf,
-    "Kokkos::DualView::resize(k_slist_react_surf)");
-  tally_buf_resize<ComputeSurfKokkos>(k_slist_surf,d_slist_surf,nslist_surf,
-    "Kokkos::DualView::resize(k_slist_surf)");
-  tally_buf_resize<ComputeSurfCollisionTallyKokkos>(k_slist_coll_tally,d_slist_coll_tally,nslist_coll_tally,
-    "Kokkos::DualView::resize(k_slist_coll_tally)");
-  tally_buf_resize<ComputeSurfReactionTallyKokkos>(k_slist_react_tally,d_slist_react_tally,nslist_react_tally,
-    "Kokkos::DualView::resize(k_slist_react_tally)");
+  tally_buf_resize<ComputeISurfGridKokkos>(k_slist_isurf,d_slist_isurf,nslist_isurf);
+  tally_buf_resize<ComputeReactISurfGridKokkos>(k_slist_react_isurf,d_slist_react_isurf,nslist_react_isurf);
+  tally_buf_resize<ComputeReactSurfKokkos>(k_slist_react_surf,d_slist_react_surf,nslist_react_surf);
+  tally_buf_resize<ComputeSurfKokkos>(k_slist_surf,d_slist_surf,nslist_surf);
+  tally_buf_resize<ComputeSurfCollisionTallyKokkos>(k_slist_coll_tally,d_slist_coll_tally,nslist_coll_tally);
+  tally_buf_resize<ComputeSurfReactionTallyKokkos>(k_slist_react_tally,d_slist_react_tally,nslist_react_tally);
 #endif
 
   // then run each compute's pre_surf_tally() in list order, as before, and
@@ -2798,18 +2768,12 @@ void UpdateKokkos::setup_surf_tally_copies()
   for (int i = nrisurf; i < KOKKOS_MAX_SLIST; i++) slist_active_react_isurf_copy[i].copy(&tmp_compute_react_isurf_grid_kk);
   for (int i = nrsurf; i < KOKKOS_MAX_SLIST; i++) slist_active_react_surf_copy[i].copy(&tmp_compute_react_surf_kk);
 #else
-  tally_buf_sync_async(k_slist_isurf,d_slist_isurf,move_space,
-    "Kokkos::DualView::sync_device(k_slist_isurf, async)");
-  tally_buf_sync_async(k_slist_react_isurf,d_slist_react_isurf,move_space,
-    "Kokkos::DualView::sync_device(k_slist_react_isurf, async)");
-  tally_buf_sync_async(k_slist_react_surf,d_slist_react_surf,move_space,
-    "Kokkos::DualView::sync_device(k_slist_react_surf, async)");
-  tally_buf_sync_async(k_slist_surf,d_slist_surf,move_space,
-    "Kokkos::DualView::sync_device(k_slist_surf, async)");
-  tally_buf_sync_async(k_slist_coll_tally,d_slist_coll_tally,move_space,
-    "Kokkos::DualView::sync_device(k_slist_coll_tally, async)");
-  tally_buf_sync_async(k_slist_react_tally,d_slist_react_tally,move_space,
-    "Kokkos::DualView::sync_device(k_slist_react_tally, async)");
+  tally_buf_sync_async(k_slist_isurf,d_slist_isurf,move_space);
+  tally_buf_sync_async(k_slist_react_isurf,d_slist_react_isurf,move_space);
+  tally_buf_sync_async(k_slist_react_surf,d_slist_react_surf,move_space);
+  tally_buf_sync_async(k_slist_surf,d_slist_surf,move_space);
+  tally_buf_sync_async(k_slist_coll_tally,d_slist_coll_tally,move_space);
+  tally_buf_sync_async(k_slist_react_tally,d_slist_react_tally,move_space);
 #endif
 
   // gas/gas tally computes are validated and set up by CollideVSSKokkos,
@@ -2835,7 +2799,7 @@ void UpdateKokkos::backup()
   if (d_particles_backup.extent(0) != d_particles.extent(0))
     d_particles_backup = decltype(d_particles)(Kokkos::view_alloc("update:particles_backup",Kokkos::WithoutInitializing),d_particles.extent(0));
 
-  SPARTA_NVTX_DEEP_COPY_ASYNC(move_space,d_particles_backup,d_particles);
+  Kokkos::deep_copy(move_space,d_particles_backup,d_particles);
 
   for (int n = 0; n < surf->nsc; n++) sc_phase(surf->sc[n],SC_BACKUP);
   upload_surf_collide_models();
@@ -2847,7 +2811,7 @@ void UpdateKokkos::restore()
 {
   DeviceType &move_space = move_execution_space();
   ParticleKokkos* particle_kk = (ParticleKokkos*) particle;
-  SPARTA_NVTX_DEEP_COPY_ASYNC(move_space,
+  Kokkos::deep_copy(move_space,
     particle_kk->k_particles.view_device(),d_particles_backup);
   d_particles = particle_kk->k_particles.view_device();
 
@@ -2997,8 +2961,8 @@ void UpdateKokkos::setup_surf_collide_models()
       h_sc_map(n) = nsc_style[tag]++;
     }
 
-    SPARTA_NVTX_DEEP_COPY_ASYNC(move_space,d_sc_type,h_sc_type);
-    SPARTA_NVTX_DEEP_COPY_ASYNC(move_space,d_sc_map,h_sc_map);
+    Kokkos::deep_copy(move_space,d_sc_type,h_sc_type);
+    Kokkos::deep_copy(move_space,d_sc_map,h_sc_map);
 
     nsc_index_cached = surf->nsc;
   }
@@ -3047,7 +3011,6 @@ void UpdateKokkos::upload_surf_collide_models()
 
   for (int t = 0; t < SC_NSTYLE; t++) {
     if (!nsc_style[t]) continue;
-    SPARTA_NVTX_RANGE("Kokkos::DualView::sync_device(k_sc, async)");
     k_sc[t].modify_host();
     k_sc[t].sync_device(move_space);
     d_sc[t] = k_sc[t].view_device();
@@ -3067,12 +3030,10 @@ void UpdateKokkos::grow_tally_computes()
   for (int m = 0; m < nsurf_tally; m++) {
     if (ComputeSurfCollisionTallyKokkos* c =
           dynamic_cast<ComputeSurfCollisionTallyKokkos*>(slist_active[m])) {
-      SPARTA_NVTX_RANGE("Kokkos::deep_copy(collision h_ntally, async)");
       c->copy_ntally_to_host_async(move_space);
     }
     else if (ComputeSurfReactionTallyKokkos* c =
                dynamic_cast<ComputeSurfReactionTallyKokkos*>(slist_active[m])) {
-      SPARTA_NVTX_RANGE("Kokkos::deep_copy(reaction h_ntally, async)");
       c->copy_ntally_to_host_async(move_space);
     }
   }
@@ -3105,10 +3066,8 @@ void UpdateKokkos::grow_tally_computes()
   }
 
 #ifndef SPARTA_KOKKOS_FIXED_LISTS
-  tally_buf_sync_async(k_slist_coll_tally,d_slist_coll_tally,move_space,
-    "Kokkos::DualView::sync_device(k_slist_coll_tally, async)");
-  tally_buf_sync_async(k_slist_react_tally,d_slist_react_tally,move_space,
-    "Kokkos::DualView::sync_device(k_slist_react_tally, async)");
+  tally_buf_sync_async(k_slist_coll_tally,d_slist_coll_tally,move_space);
+  tally_buf_sync_async(k_slist_react_tally,d_slist_react_tally,move_space);
 #endif
 }
 
@@ -3129,19 +3088,15 @@ void UpdateKokkos::rewind_tally_computes(int mark)
     if (ComputeSurfCollisionTallyKokkos* c =
           dynamic_cast<ComputeSurfCollisionTallyKokkos*>(slist_active[m])) {
       if (mark) {
-        SPARTA_NVTX_RANGE("Kokkos::deep_copy(collision h_ntally, async)");
         c->copy_ntally_to_host_async(move_space);
       } else {
-        SPARTA_NVTX_RANGE("Kokkos::deep_copy(collision ntally rewind, async)");
         c->rewind_ntally_async(move_space);
       }
     } else if (ComputeSurfReactionTallyKokkos* c =
                  dynamic_cast<ComputeSurfReactionTallyKokkos*>(slist_active[m])) {
       if (mark) {
-        SPARTA_NVTX_RANGE("Kokkos::deep_copy(reaction h_ntally, async)");
         c->copy_ntally_to_host_async(move_space);
       } else {
-        SPARTA_NVTX_RANGE("Kokkos::deep_copy(reaction ntally rewind, async)");
         c->rewind_ntally_async(move_space);
       }
     }
