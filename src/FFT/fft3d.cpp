@@ -549,6 +549,13 @@ struct fft_plan_3d *fft_3d_create_plan(
     plan->cfg_slow_backward = kiss_fft_alloc(nslow,1,nullptr,nullptr);
   }
 
+  // kiss_fft_alloc() returns nullptr for an invalid or oversized FFT length
+  if (!plan->cfg_fast_forward ||
+      !plan->cfg_fast_backward || !plan->cfg_mid_forward ||
+      !plan->cfg_mid_backward || !plan->cfg_slow_forward ||
+      !plan->cfg_slow_backward)
+    return nullptr;
+
 #endif
 
   if (scaled == 0)
