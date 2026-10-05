@@ -112,7 +112,7 @@ jobs:
     - uses: actions/checkout@v4
 
     - name: Install Dependencies
-      run: sudo apt install openmpi-bin libopenmpi-dev
+      run: sudo apt-get update && sudo apt-get install -y openmpi-bin libopenmpi-dev
 
     - name: Configure
       # Build the KOKKOS package with the Serial backend and SPARTA_KOKKOS_EXACT
@@ -151,7 +151,7 @@ jobs:
     - uses: actions/checkout@v4
 
     - name: Install Dependencies
-      run: sudo apt install openmpi-bin libopenmpi-dev
+      run: sudo apt-get update && sudo apt-get install -y openmpi-bin libopenmpi-dev
 
     - name: Configure
       run: |
