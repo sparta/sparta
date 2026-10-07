@@ -15,11 +15,13 @@
 #include "math.h"
 #include "string.h"
 #include "stdlib.h"
+#include <string>
 #include "react_tce.h"
 #include "particle.h"
 #include "collide.h"
 #include "update.h"
 #include "random_knuth.h"
+#include "comm.h"
 #include "error.h"
 
 using namespace SPARTA_NS;
@@ -32,7 +34,8 @@ enum{DISSOCIATION,EXCHANGE,IONIZATION,RECOMBINATION};   // other files
 ReactTCE::ReactTCE(SPARTA *sparta, int narg, char **arg) :
   ReactBird(sparta, narg, arg)
 {
-  prob_warn_flag = 0;
+  prob_neg_flag = 0;
+  prob_big_index = -1;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -42,9 +45,51 @@ void ReactTCE::init()
   if (!collide || strcmp(collide->style,"vss") != 0)
     error->all(FLERR,"React tce can only be used with collide vss");
 
-  prob_warn_flag = 0;
+  prob_neg_flag = 0;
+  prob_big_index = -1;
 
   ReactBird::init();
+
+  // warn if temperature exponent of any reaction is out of bounds
+  //   for the TCE reaction probability
+
+  check_tce_bounds();
+}
+
+/* ----------------------------------------------------------------------
+   warn once, over all procs, if any invalid TCE reaction probability
+     occurred during the run
+   called by Finish on all procs at the end of each run
+------------------------------------------------------------------------- */
+
+void ReactTCE::end_of_run()
+{
+  int negflag;
+  MPI_Allreduce(&prob_neg_flag,&negflag,1,MPI_INT,MPI_MAX,world);
+
+  // report the lowest-index reaction flagged by any proc
+
+  int mine = (prob_big_index >= 0) ? prob_big_index : nlist;
+  int bigindex;
+  MPI_Allreduce(&mine,&bigindex,1,MPI_INT,MPI_MIN,world);
+
+  if (comm->me == 0) {
+    if (negflag)
+      error->warning(FLERR,"Negative TCE reaction probability occurred "
+                     "during this run, check reaction file coefficients");
+    if (bigindex < nlist) {
+      std::string mesg = "Summed TCE reaction probability exceeded 1.0 "
+        "during this run, e.g. at reaction " +
+        std::string(rlist[bigindex].id) + ": the Arrhenius rates "
+        "exceed the collision rate at some collision energies, so this "
+        "reaction and any listed after it for the same reactants are "
+        "under-sampled; this is independent of timestep and fnum";
+      error->warning(FLERR,mesg.c_str());
+    }
+  }
+
+  prob_neg_flag = 0;
+  prob_big_index = -1;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -151,6 +196,10 @@ int ReactTCE::attempt(Particle::OnePart *ip, Particle::OnePart *jp,
     }
 
     // compute probability of reaction
+    // gamma function denominator is non-positive if the temperature
+    //   exponent is below the TCE bound, then it is clamped to 1.0e-6
+    //   and the reaction rate is incorrect, warned about at init by
+    //   ReactBird::check_tce_bounds()
 
     switch (r->type) {
     case DISSOCIATION:
@@ -191,22 +240,12 @@ int ReactTCE::attempt(Particle::OnePart *ip, Particle::OnePart *jp,
 
     // sum of reaction probabilities should be < 1 for a valid TCE scheme,
     //   else reaction rates are biased by clipping
-    // warn only once per run to avoid flooding output
+    // the probability is per collision, so it does not depend on
+    //   timestep or fnum, only on the reaction coefficients and ecc
+    // only record it here, end_of_run() warns once over all procs
 
-    if (!prob_warn_flag) {
-      if (react_prob < 0.0) {
-        prob_warn_flag = 1;
-        error->warning(FLERR,"Negative TCE reaction probability, "
-                       "check reaction file coefficients "
-                       "(further warnings suppressed)");
-      } else if (react_prob > 1.0) {
-        prob_warn_flag = 1;
-        error->warning(FLERR,"TCE reaction probability exceeded 1.0, "
-                       "chemistry may be under-resolved, "
-                       "consider reducing timestep or fnum "
-                       "(further warnings suppressed)");
-      }
-    }
+    if (react_prob < 0.0) prob_neg_flag = 1;
+    else if (react_prob > 1.0 && prob_big_index < 0) prob_big_index = list[i];
 
     // test against random number to see if this reaction occurs
     // if it does, reset species of I,J and optional K to product species

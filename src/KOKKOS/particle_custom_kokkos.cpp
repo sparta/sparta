@@ -214,6 +214,7 @@ void ParticleKokkos::remove_custom(int index)
 {
   // modifies the outer host view, deletes the inner dual view
 
+  if (index < 0 || index >= ncustom) return;
   if (!ename || !ename[index]) return;
 
   delete [] ename[index];

@@ -42,6 +42,11 @@ void ReactTCEKokkos::init()
 
   ReactBirdKokkos::init();
 
+  // warn if temperature exponent of any reaction is out of bounds
+  //   for the TCE reaction probability
+
+  check_tce_bounds();
+
   vibstyle = collide->vibstyle;
   boltz = update->boltz;
 }

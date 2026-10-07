@@ -15,6 +15,7 @@
 #include "math.h"
 #include "string.h"
 #include "stdlib.h"
+#include <string>
 #include "react_bird.h"
 #include "input.h"
 #include "collide.h"
@@ -34,6 +35,7 @@ using namespace MathConst;
 
 enum{DISSOCIATION,EXCHANGE,IONIZATION,RECOMBINATION};  // other react files
 enum{ARRHENIUS,QUANTUM};                               // other react files
+enum{NONE,DISCRETE,SMOOTH};                            // several files
 
 #define MAXREACTANT 2
 #define MAXPRODUCT 3
@@ -57,6 +59,7 @@ ReactBird::ReactBird(SPARTA *sparta, int narg, char **arg) :
   tally_reactions = new bigint[nlist];
   tally_reactions_all = new bigint[nlist];
   tally_flag = 0;
+  tce_bounds_checked = 0;
 
   reactions = NULL;
   list_ij = NULL;
@@ -73,6 +76,7 @@ ReactBird::ReactBird(SPARTA *sparta) : React(sparta)
   sp2recomb_ij = NULL;
   tally_reactions = NULL;
   tally_reactions_all = NULL;
+  tce_bounds_checked = 0;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -406,6 +410,91 @@ void ReactBird::init()
 }
 
 /* ----------------------------------------------------------------------
+   check that the temperature exponent eta = coeff[3] of each active
+     reaction is within the bound for which the TCE reaction probability
+       P = C1 * Gamma(z+5/2-omega) / Gamma(z+eta+3/2) *
+           (Ec-Ea)^(eta-1+omega) * (1-Ea/Ec)^(z+3/2-omega)
+     reproduces the Arrhenius rate of the reaction
+   z = effective internal DOF contributing to the collision energy Ec,
+     its minimum value zmin depends on the energy and vibrational models:
+     partial energy (rDOF): z = coeff[0], constant
+     total energy, vibstyle = none: z = average rotational DOF, constant
+     total energy, vibstyle = smooth: z = average rotational DOF +
+       average vibrational DOF, constant
+     total energy, vibstyle = discrete: z >= average rotational DOF,
+       since the instantaneous vibrational contribution can be zero
+   the bound is eta > -(zmin + 3/2), most restrictive at z = zmin
+     below it the TCE inversion of the Arrhenius rate does not exist
+     and the argument of Gamma(z+eta+3/2) is non-positive
+     ReactTCE::attempt() clamps the gamma function to 1.0e-6,
+     so the reaction still runs but its rate is incorrect
+   other properties of the probability, e.g. whether it diverges as Ec
+     approaches Ea or infinity, do not change its average, so the rate
+     is still reproduced; where the probability exceeds 1 it is clipped,
+     which ReactTCE::attempt() warns about when it happens
+   all violating reactions are reported in one warning, on the first
+     call only, so that it is not repeated for each run
+   called from ReactTCE::init() and ReactTCEKokkos::init(),
+     after ReactBird::init() has set coeff[5] = omega
+------------------------------------------------------------------------- */
+
+void ReactBird::check_tce_bounds()
+{
+  if (tce_bounds_checked) return;
+  tce_bounds_checked = 1;
+
+  Particle::Species *species = particle->species;
+  char str[MAXLINE+64];
+
+  // for the discrete vibrational model z varies with the instantaneous
+  //   vibrational energy and only reaches zmin when it is small
+
+  int zconstant = partialEnergy || collide->vibstyle != DISCRETE;
+
+  int nbad = 0;
+  std::string mesg;
+
+  for (int m = 0; m < nlist; m++) {
+    OneReaction *r = &rlist[m];
+    if (!r->active) continue;
+
+    int isp = r->reactants[0];
+    int jsp = r->reactants[1];
+
+    double eta = r->coeff[3];
+
+    double zmin;
+    if (partialEnergy) zmin = r->coeff[0];
+    else {
+      zmin = 0.5 * (species[isp].rotdof + species[jsp].rotdof);
+      if (collide->vibstyle == SMOOTH)
+        zmin += 0.5 * (species[isp].vibdof + species[jsp].vibdof);
+    }
+
+    if (eta <= -(zmin+1.5)) {
+      snprintf(str,sizeof(str),"\n  %s: temperature exponent %g <= %g",
+               r->id,eta,-(zmin+1.5));
+      mesg += str;
+      nbad++;
+    }
+  }
+
+  if (nbad && comm->me == 0) {
+    std::string head = std::to_string(nbad) + " TCE reaction(s) have a "
+      "temperature exponent below the bound -(z+3/2) for which the TCE "
+      "model can reproduce their Arrhenius rate. ";
+    if (zconstant)
+      head += "Their gamma function is non-positive and clamped, "
+        "so their reaction rates are incorrect:";
+    else
+      head += "With discrete vibration their gamma function is "
+        "non-positive and clamped when the vibrational energy is small, "
+        "so their reaction rates may be incorrect:";
+    error->warning(FLERR,(head + mesg).c_str());
+  }
+}
+
+/* ----------------------------------------------------------------------
    return 1 if any recombination reactions are defined for species pair ISP,JSP
    else return 0
    called from Collide::init(), after React::init() has been performed
@@ -652,7 +741,7 @@ void ReactBird::readfile(char *fname)
           strcpy(r->id_reactants[r->nreactant],word);
           r->nreactant++;
         } else {
-          if (r->nreactant == MAXPRODUCT) {
+          if (r->nproduct == MAXPRODUCT) {
             print_reaction(copy1,copy2);
             error->all(FLERR,"Too many products in a reaction formula");
           }

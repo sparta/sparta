@@ -96,6 +96,27 @@ below) are used to calculate terms in equation 6.10 of
 The C2, C3, C4 values are the Arrhenius activation energy Ea,
 prefactor A, and exponent b, used in the rate formula above.
 
+The TCE model can only reproduce the Arrhenius rate of a reaction if
+its exponent b is greater than -(z+3/2), where z is the number of
+internal degrees of freedom contributing to the collision energy:
+coefficient C1 when using the default partial energy model (see the
+"react_modify"_react_modify.html partial_energy keyword), or the
+average number of rotational (and, for smooth vibration, vibrational)
+degrees of freedom of the reactants otherwise.  Below this bound the
+gamma function in the TCE reaction probability is non-positive; SPARTA
+clamps it so that the reaction still runs, but its rate is incorrect.
+SPARTA prints one warning listing any such reactions at the start of
+the first run.
+
+Above the bound, the TCE reaction probability reproduces the Arrhenius
+rate on average, but it is a per-collision probability and can exceed
+1 for some collision energies, e.g. when the Arrhenius rate approaches
+the collision rate, or near the activation energy when b < -(z+1/2).
+Probabilities above 1 are clipped, which reduces the rate of that
+reaction and of any reaction listed after it for the same reactants.
+SPARTA warns once per run when this happens.  Reducing the timestep or
+fnum does not change the probability.
+
 :line
 
 The {qk} style is Bird's Quantum-Kinetic model (QK).  When this style

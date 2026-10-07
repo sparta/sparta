@@ -74,8 +74,8 @@ FixSurfTemp::FixSurfTemp(SPARTA *sparta, int narg, char **arg) :
     // error checks
 
     icompute = modify->find_compute(id_qw);
-    cqw = modify->compute[icompute];
     if (icompute < 0) error->all(FLERR,"Could not find fix surf/temp compute ID");
+    cqw = modify->compute[icompute];
     if (cqw->per_surf_flag == 0)
       error->all(FLERR,"Fix surf/temp compute does not compute per-surf info");
     if (qwindex == 0 && cqw->size_per_surf_cols > 0)
@@ -102,8 +102,8 @@ FixSurfTemp::FixSurfTemp(SPARTA *sparta, int narg, char **arg) :
     // error checks
 
     ifix = modify->find_fix(id_qw);
-    fqw = modify->fix[ifix];
     if (ifix < 0) error->all(FLERR,"Could not find fix surf/temp fix ID");
+    fqw = modify->fix[ifix];
     if (fqw->per_surf_flag == 0)
       error->all(FLERR,"Fix surf/temp fix does not compute per-surf info");
     if (qwindex == 0 && fqw->size_per_surf_cols > 0)

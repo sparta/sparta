@@ -516,6 +516,9 @@ void SurfReactAdsorb::init()
   // wait until now b/c need nactive_ps from init_reactions_ps()
 
   if (psflag) {
+    if (mode == SURF && nactive_ps == 0)
+      error->all(FLERR,"Surf_react adsorb: no PS reactions are active - "
+                 "all species in a PS reaction must exist in the species list");
     if (mode == FACE) {
       nface = domain->dimension*2;
       memory->create(face_tau,nface,nactive_ps,"face_tau");

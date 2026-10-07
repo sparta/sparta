@@ -141,9 +141,13 @@ int ReactTCEQK::attempt_tce(Particle::OnePart *ip, Particle::OnePart *jp,
   case DISSOCIATION:
   case EXCHANGE:
     {
+      double z = r->coeff[0];
+      double eta = r->coeff[3];
+      double omega = r->coeff[5];
       react_prob += r->coeff[2] *
-        pow(ecc-r->coeff[1],r->coeff[3]) *
-        pow(1.0-r->coeff[1]/ecc,r->coeff[5]);
+        tgamma(z+2.5-omega) / MAX(1.0e-6,tgamma(z+eta+1.5)) *
+        pow(ecc-r->coeff[1],eta-1.0+omega) *
+        pow(1.0-r->coeff[1]/ecc,z+1.5-omega);
       break;
     }
 

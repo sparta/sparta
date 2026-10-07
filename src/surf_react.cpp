@@ -55,6 +55,12 @@ SurfReact::SurfReact(SPARTA *sparta, int, char **arg) :
   nsingle = ntotal = 0;
   tally_two_flag = tally_single_flag = tally_total_flag = 0;
 
+  // set to NULL in case a child constructor errors before allocating them
+  // b/c the destructor frees them
+
+  tally_single = tally_total = NULL;
+  tally_single_all = tally_total_all = NULL;
+
   kokkosable = copy = copymode = 0;
 }
 

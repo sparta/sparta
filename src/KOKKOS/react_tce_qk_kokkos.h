@@ -90,9 +90,15 @@ int attempt_kk(Particle::OnePart *ip, Particle::OnePart *jp,
         switch (r->type) {
         case DISSOCIATION:
         case EXCHANGE:
-          react_prob += r->d_coeff[2] *
-            pow(ecc2-r->d_coeff[1],r->d_coeff[3]) *
-            pow(1.0-r->d_coeff[1]/ecc2,r->d_coeff[5]);
+          {
+            const double z = r->d_coeff[0];
+            const double eta = r->d_coeff[3];
+            const double omega = r->d_coeff[5];
+            react_prob += r->d_coeff[2] *
+              tgamma(z+2.5-omega) / MAX(1.0e-6,tgamma(z+eta+1.5)) *
+              pow(ecc2-r->d_coeff[1],eta-1.0+omega) *
+              pow(1.0-r->d_coeff[1]/ecc2,z+1.5-omega);
+          }
           break;
         default:
           Kokkos::abort("ReactTCEQKKokkos: Unknown outcome in reaction\n");

@@ -715,10 +715,12 @@ void FixAblate::create_surfs(int outflag)
   else mc->invoke(cvalues,mvalues,tvalues,mcflags);
 
   // set surf->nsurf and surf->nown
+  // resize custom per-surf data to match new nown
 
   surf->nown = surf->nlocal;
   bigint nlocal = surf->nlocal;
   MPI_Allreduce(&nlocal,&surf->nsurf,1,MPI_SPARTA_BIGINT,MPI_SUM,world);
+  surf->reallocate_custom();
 
   // output extent of implicit surfs, some may be tiny
 

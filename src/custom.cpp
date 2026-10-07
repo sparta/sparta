@@ -298,7 +298,8 @@ bigint Custom::process_actions(int narg, char **arg, int external)
       // else: store info in Action list for FixCustom
 
       if (!external)
-        action_set(vstyle,vindex,cindex,ctype,csize,ccol,groupbit,mixture,region);
+        count += action_set(vstyle,vindex,cindex,ctype,csize,ccol,
+                            groupbit,mixture,region);
       else {
         actions[naction].action = action;
         actions[naction].vstyle = vstyle;
@@ -931,6 +932,11 @@ bigint Custom::set_surf(int groupbit, Region *region,
   int dim = domain->dimension;
   int distributed = surf->distributed;
 
+  // insure custom storage matches the current surf count
+  // e.g. create_isurf swaps in a new implicit surf set without resizing it
+
+  surf->reallocate_custom();
+
   Surf::Line *lines;
   Surf::Tri *tris;
   int start,stop,skip;
@@ -941,6 +947,16 @@ bigint Custom::set_surf(int groupbit, Region *region,
     start = comm->me;
     stop = surf->nlocal;
     skip = comm->nprocs;
+  } else if (surf->implicit) {
+
+    // implicit surfs are distributed but keep owned elements
+    // in lines/tris with nlocal == nown; mylines/mytris are not populated
+
+    lines = surf->lines;
+    tris = surf->tris;
+    start = 0;
+    stop = surf->nlocal;
+    skip = 1;
   } else {
     lines = surf->mylines;
     tris = surf->mytris;

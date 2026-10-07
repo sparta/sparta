@@ -37,8 +37,8 @@ enum{NEITHER,BAD,GOOD};
 enum{NONE,CHECK,KEEP};
 enum{UNKNOWN,OUTSIDE,INSIDE,OVERLAP};           // several files
 
-#define MAXLINE 256
-#define CHUNK 16384
+#define MAXLINE 1024      // max length of a file line, e.g. with many custom values
+#define CHUNK 4096        // # of file lines read and broadcast at a time
 #define EPSILON_NORM 1.0e-12
 #define BIG 1.0e20
 #define DELTA 1024
@@ -852,7 +852,10 @@ void ReadSurf::read_points()
       for (i = 0; i < nchunk; i++) {
         eof = fgets(&buffer[m],MAXLINE,fp);
         if (eof == NULL) error->one(FLERR,"Unexpected end of surf file");
-        m += strlen(&buffer[m]);
+        int nline = strlen(&buffer[m]);
+        if (nline == MAXLINE-1 && buffer[m+nline-1] != '\n')
+          error->one(FLERR,"Line in surf file exceeds maximum allowed length");
+        m += nline;
       }
       m++;
     }
@@ -921,7 +924,10 @@ void ReadSurf::read_lines()
       for (i = 0; i < nchunk; i++) {
         eof = fgets(&buffer[m],MAXLINE,fp);
         if (eof == NULL) error->one(FLERR,"Unexpected end of surf file");
-        m += strlen(&buffer[m]);
+        int nline = strlen(&buffer[m]);
+        if (nline == MAXLINE-1 && buffer[m+nline-1] != '\n')
+          error->one(FLERR,"Line in surf file exceeds maximum allowed length");
+        m += nline;
       }
       m++;
     }
@@ -1073,7 +1079,10 @@ void ReadSurf::read_tris()
       for (i = 0; i < nchunk; i++) {
         eof = fgets(&buffer[m],MAXLINE,fp);
         if (eof == NULL) error->one(FLERR,"Unexpected end of surf file");
-        m += strlen(&buffer[m]);
+        int nline = strlen(&buffer[m]);
+        if (nline == MAXLINE-1 && buffer[m+nline-1] != '\n')
+          error->one(FLERR,"Line in surf file exceeds maximum allowed length");
+        m += nline;
       }
       m++;
     }

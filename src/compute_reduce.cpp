@@ -1103,6 +1103,14 @@ bigint ComputeReduce::count_included()
       Surf::Line *mylines = surf->mylines;
       Surf::Tri *tris = surf->tris;
       Surf::Tri *mytris = surf->mytris;
+
+      // implicit surfs are distributed but owned surfs are in lines/tris
+
+      if (surf->implicit) {
+        mylines = lines;
+        mytris = tris;
+      }
+
       int distributed = surf->distributed;
       int n = surf->nown;
 
@@ -1140,6 +1148,14 @@ double ComputeReduce::area_per_surf()
   Surf::Line *mylines = surf->mylines;
   Surf::Tri *tris = surf->tris;
   Surf::Tri *mytris = surf->mytris;
+
+  // implicit surfs are distributed but owned surfs are in lines/tris
+
+  if (surf->implicit) {
+    mylines = lines;
+    mytris = tris;
+  }
+
   int distributed = surf->distributed;
   int n = surf->nown;
 

@@ -13,7 +13,7 @@ env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 # Define jobs: mpi, mpi-stubs, mpi-kokkos-exact, and bigbig
-# Each jobs runs on ubuntu-22.04 and uses the cmake build system. All jobs
+# Each jobs runs on ubuntu-24.04 and uses the cmake build system. All jobs
 # enable the FFT package (PKG_FFT). All jobs except for bigbig run ctest.
 # The mpi-kokkos-exact job runs the regression tests under KOKKOS
 # ("-k on -sf kk") using the Serial backend and SPARTA_KOKKOS_EXACT so results
@@ -21,7 +21,7 @@ env:
 # tests run with both 1 and 4 MPI ranks.
 jobs:
   mpi:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
     - uses: actions/checkout@v4
 
@@ -35,17 +35,17 @@ jobs:
       uses: actions/cache@v4
       with:
         path: /var/cache/apt/archives
-        key: apt-archives-${{ runner.os }}-vtk
+        key: apt-archives-ubuntu-24.04-vtk
 
     - name: Install Dependencies
-      env:
-        DEBIAN_FRONTEND: noninteractive
       run: |
         # Keep downloaded .deb files so actions/cache can save them for reuse.
         echo 'Binary::apt::APT::Keep-Downloaded-Packages "true";' \
           | sudo tee /etc/apt/apt.conf.d/99keep-debs
-        sudo apt-get update
-        sudo apt-get install -y openmpi-bin libopenmpi-dev libvtk9-dev
+        # sudo resets the environment, so set DEBIAN_FRONTEND on the command
+        sudo DEBIAN_FRONTEND=noninteractive apt-get update
+        sudo DEBIAN_FRONTEND=noninteractive apt-get install -y \
+          openmpi-bin libopenmpi-dev libvtk9-dev python3-dev
 
     - name: Configure
       run: |
@@ -76,9 +76,14 @@ jobs:
         name: 'mpi-Artifacts'
         path: 'build/examples/'
   mpi-stubs:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
     - uses: actions/checkout@v4
+
+    - name: Install Dependencies
+      run: |
+        sudo DEBIAN_FRONTEND=noninteractive apt-get update
+        sudo DEBIAN_FRONTEND=noninteractive apt-get install -y python3-dev
 
     - name: Configure
       run: |
@@ -107,12 +112,15 @@ jobs:
     #    name: 'mpi-stubs-Artifacts'
     #    path: 'build/examples/'
   mpi-kokkos-exact:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
     - uses: actions/checkout@v4
 
     - name: Install Dependencies
-      run: sudo apt install openmpi-bin libopenmpi-dev
+      run: |
+        sudo DEBIAN_FRONTEND=noninteractive apt-get update
+        sudo DEBIAN_FRONTEND=noninteractive apt-get install -y \
+          openmpi-bin libopenmpi-dev python3-dev
 
     - name: Configure
       # Build the KOKKOS package with the Serial backend and SPARTA_KOKKOS_EXACT
@@ -146,12 +154,15 @@ jobs:
         sudo ln -s /bin/bash /bin/sh
         ctest --output-on-failure -j4
   bigbig:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
     - uses: actions/checkout@v4
 
     - name: Install Dependencies
-      run: sudo apt install openmpi-bin libopenmpi-dev
+      run: |
+        sudo DEBIAN_FRONTEND=noninteractive apt-get update
+        sudo DEBIAN_FRONTEND=noninteractive apt-get install -y \
+          openmpi-bin libopenmpi-dev python3-dev
 
     - name: Configure
       run: |

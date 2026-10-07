@@ -1660,15 +1660,55 @@ void Grid::set_inout()
   ParentCell *pcell;
   Connect *sbuf,*rbuf;
 
-  if (!exist_ghost)
+  if (!exist_ghost) {
+    if (cutoff >= 0.0 && !clumped)
+      error->all(FLERR,"Cannot mark grid cells as inside/outside surfs "
+                 "because ghost cells do not exist: nearby ghost cells "
+                 "cannot be acquired for a grid partition which is not "
+                 "clumped, so use a clumped balance or adapt style, or "
+                 "global gridcut -1 to store all cells on every proc");
     error->all(FLERR,"Cannot mark grid cells as inside/outside surfs because "
                "ghost cells do not exist");
+  }
 
   // if all surfs are transparent, just mark all cells as OUTSIDE
 
   if (surf->all_transparent()) {
     for (icell = 0; icell < nlocal; icell++) cinfo[icell].type = OUTSIDE;
     return;
+  }
+
+  // if no cell overlaps a surf, the flood fill below has no OVERLAP cell
+  //   to seed from, so handle that case here
+  // can occur when a mobile rigid body (fix rigid) has moved entirely
+  //   outside the domain, so its surfs no longer overlap any grid cell
+  // every cell is then OUTSIDE, unless the surfs enclose the entire
+  //   domain, in which case every cell is INSIDE instead
+  // if no cell overlaps any surf, every cell is OUTSIDE:
+  // static surfs always overlap some cell (every surf point must lie
+  //   inside the box when read, and the cells cover the box), so this
+  //   arises only when the surfs are those of a mobile rigid body which
+  //   has left the box through a non-periodic boundary; a body that was
+  //   inside the box cannot enclose it, so INSIDE is not possible
+  // explicit surfs only: implicit surfs always overlap cells, so the
+  //   case does not arise for them and the reduction is skipped
+  // collective: overlap_any and surf->implicit are the same on all procs
+
+  if (!surf->implicit) {
+    int overlap_mine = 0;
+    for (icell = 0; icell < nlocal; icell++)
+      if (cinfo[icell].type == OVERLAP) overlap_mine = 1;
+    int overlap_any;
+    MPI_Allreduce(&overlap_mine,&overlap_any,1,MPI_INT,MPI_MAX,world);
+
+    if (!overlap_any) {
+      int nc = (domain->dimension == 3) ? 8 : 4;
+      for (icell = 0; icell < nlocal; icell++) {
+        cinfo[icell].type = OUTSIDE;
+        for (int j = 0; j < nc; j++) cinfo[icell].corner[j] = OUTSIDE;
+      }
+      return;
+    }
   }
 
   // set dimensional dependent quantities

@@ -87,11 +87,11 @@ void Surf::redistribute_surfs(int n, Line *newlines, Tri *newtris,
     if (dim == 2) {
       lines_contig = (Line *)
 	memory->smalloc(bbytes,"surf:lines_contig");
-      memset(lines_contig,0,bbytes);
+      if (bbytes) memset(lines_contig,0,bbytes);
     } else {
       tris_contig = (Tri *)
 	memory->smalloc(bbytes,"surf:tris_contig");
-      memset(tris_contig,0,bbytes);
+      if (bbytes) memset(tris_contig,0,bbytes);
     }
   }
 

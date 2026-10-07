@@ -134,6 +134,7 @@ class FixEmitSurf : public FixEmit {
   virtual void mflow_grid();
 
   virtual void realloc_nspecies();
+  void reset_fractions();
   int option(int, char **);
   int option_window(int, char **);
 };

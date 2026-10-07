@@ -1,0 +1,290 @@
+SPARTA (27 Aug 2026)
+Running on 1 MPI task(s)
+################################################################################
+# 2d flow around a circle, computes heatflux of surface reactions
+#
+# Note:
+#  - The "comm/sort” option to the “global” command is used to match MPI runs.
+#  - The “twopass” option is used to match Kokkos runs.
+# The "comm/sort" and "twopass" options should not be used for production runs.
+################################################################################
+
+###################################
+# Trajectory inputs
+###################################
+variable            V equal 6000.0
+variable            nden equal 4.247e20
+variable            temp equal 200
+variable            surftemp equal 1000
+
+###################################
+# Simulation initialization standards
+###################################
+variable            ppc equal 1
+variable            cpmfp equal 1
+
+###################################
+# Parameter calculations
+###################################
+variable            mfp equal 1/(sqrt(2)*3.14159*(4.287e-10)^2*${nden}*(273/${temp})^(0.216))
+variable            mfp equal 1/(sqrt(2)*3.14159*(4.287e-10)^2*4.247e+20*(273/${temp})^(0.216))
+variable            mfp equal 1/(sqrt(2)*3.14159*(4.287e-10)^2*4.247e+20*(273/200)^(0.216))
+
+variable            xmin equal -0.2
+variable            xmax equal 0.65
+variable            ymin equal 0.0
+variable            ymax equal 0.4
+variable            zmin equal -0.5
+variable            zmax equal 0.5
+
+variable            xncells equal floor((${xmax}-${xmin})/${mfp}*${cpmfp})
+variable            xncells equal floor((0.65-${xmin})/${mfp}*${cpmfp})
+variable            xncells equal floor((0.65--0.2)/${mfp}*${cpmfp})
+variable            xncells equal floor((0.65--0.2)/0.00269623421524792*${cpmfp})
+variable            xncells equal floor((0.65--0.2)/0.00269623421524792*1)
+variable            yncells equal floor((${ymax}-${ymin})/${mfp}*${cpmfp})
+variable            yncells equal floor((0.4-${ymin})/${mfp}*${cpmfp})
+variable            yncells equal floor((0.4-0)/${mfp}*${cpmfp})
+variable            yncells equal floor((0.4-0)/0.00269623421524792*${cpmfp})
+variable            yncells equal floor((0.4-0)/0.00269623421524792*1)
+#variable            zncells equal floor((${zmax}-${zmin})/${mfp}*${cpmfp})
+
+variable            Fnum equal  ${nden}*(${xmax}-${xmin})*(${ymax}-${ymin})/${ppc}/${xncells}/${yncells}
+variable            Fnum equal  4.247e+20*(${xmax}-${xmin})*(${ymax}-${ymin})/${ppc}/${xncells}/${yncells}
+variable            Fnum equal  4.247e+20*(0.65-${xmin})*(${ymax}-${ymin})/${ppc}/${xncells}/${yncells}
+variable            Fnum equal  4.247e+20*(0.65--0.2)*(${ymax}-${ymin})/${ppc}/${xncells}/${yncells}
+variable            Fnum equal  4.247e+20*(0.65--0.2)*(0.4-${ymin})/${ppc}/${xncells}/${yncells}
+variable            Fnum equal  4.247e+20*(0.65--0.2)*(0.4-0)/${ppc}/${xncells}/${yncells}
+variable            Fnum equal  4.247e+20*(0.65--0.2)*(0.4-0)/1/${xncells}/${yncells}
+variable            Fnum equal  4.247e+20*(0.65--0.2)*(0.4-0)/1/315/${yncells}
+variable            Fnum equal  4.247e+20*(0.65--0.2)*(0.4-0)/1/315/148
+
+variable            tstep equal (-${xmin}+${xmax})/${V}/${xncells}/30
+variable            tstep equal (--0.2+${xmax})/${V}/${xncells}/30
+variable            tstep equal (--0.2+0.65)/${V}/${xncells}/30
+variable            tstep equal (--0.2+0.65)/6000/${xncells}/30
+variable            tstep equal (--0.2+0.65)/6000/315/30
+
+###################################
+# Print variable values to log file
+###################################
+print               " Velocity  = ${V}"
+ Velocity  = 6000
+print               " Density  = ${nden}"
+ Density  = 4.247e+20
+print               " Temp  = ${temp}"
+ Temp  = 200
+print               " mean free path  = ${mfp}"
+ mean free path  = 0.00269623421524792
+print               " cells per free stream mean free path = ${cpmfp}"
+ cells per free stream mean free path = 1
+print               " x-min = ${xmin}"
+ x-min = -0.2
+print               " x-max = ${xmax}"
+ x-max = 0.65
+print               " y-min = ${ymin}"
+ y-min = 0
+print               " y-max = ${ymax}"
+ y-max = 0.4
+#print               " z-min = ${zmin}"
+#print               " z-max = ${zmax}"
+print               " x-cells = ${xncells}"
+ x-cells = 315
+print               " y-cells = ${yncells}"
+ y-cells = 148
+#print               " z-cells = ${zncells}"
+print               " Simulation Ratio = ${Fnum}"
+ Simulation Ratio = 3.0973401973402e+15
+print               " Timestep = ${tstep}"
+ Timestep = 1.49911816578483e-08
+
+###################################
+# Simulation parameters
+###################################
+seed	    	    847384
+dimension   	    2
+global		    nrho ${nden} fnum ${Fnum} gridcut 0.01
+global		    nrho 4.247e+20 fnum ${Fnum} gridcut 0.01
+global		    nrho 4.247e+20 fnum 3.0973401973402e+15 gridcut 0.01
+global		    comm/sort yes
+timestep            ${tstep}
+timestep            1.49911816578483e-08
+
+###################################
+# Grid generation
+###################################
+boundary	    o ro p
+create_box          ${xmin} ${xmax} ${ymin} ${ymax} ${zmin} ${zmax}
+create_box          -0.2 ${xmax} ${ymin} ${ymax} ${zmin} ${zmax}
+create_box          -0.2 0.65 ${ymin} ${ymax} ${zmin} ${zmax}
+create_box          -0.2 0.65 0 ${ymax} ${zmin} ${zmax}
+create_box          -0.2 0.65 0 0.4 ${zmin} ${zmax}
+create_box          -0.2 0.65 0 0.4 -0.5 ${zmax}
+create_box          -0.2 0.65 0 0.4 -0.5 0.5
+Created orthogonal box = (-0.2 0 -0.5) to (0.65 0.4 0.5)
+create_grid 	    ${xncells} ${yncells} 1 block * * *
+create_grid 	    315 ${yncells} 1 block * * *
+create_grid 	    315 148 1 block * * *
+Created 46620 child grid cells
+  CPU time = 0.0147558 secs
+  create/ghost percent = 43.0159 56.9841
+balance_grid        rcb cell
+Balance grid migrated 0 cells
+  CPU time = 0.0101642 secs
+  reassign/sort/migrate/ghost percent = 37.0365 3.55446 11.9617 47.4474
+
+#####################################
+# Gas/Collision Model Specification #
+#####################################
+species             air.species N2 N
+mixture             all vstream ${V} 0 0 temp ${temp}
+mixture             all vstream 6000 0 0 temp ${temp}
+mixture             all vstream 6000 0 0 temp 200
+mixture             all N2 frac 1.0
+
+collide             vss all air.vss
+collide_modify      vremax 1000 yes vibrate discrete
+
+react               tce air.tce
+react_modify        recomb no
+
+#####################################################
+# Surface generation and collision specification
+#####################################################
+read_surf	    circle.surf group 1
+  50 lines
+  0 0.3048 xlo xhi
+  0 0.1524 ylo yhi
+  0 0 zlo zhi
+  0.00957368 min line length
+  226 0 = cells overlapping surfs, overlap cells with unmarked corner pts
+  41504 4890 226 = cells outside/inside/overlapping surfs
+  226 = surf cells with 1,2,etc splits
+  0.303541 0.303541 = cell-wise and global flow volume
+  CPU time = 0.0206159 secs
+  read/check/sort/surf2grid/ghost/inout/particle percent = 1.53642 0.39764 5.15096 62.1979 30.7171 24.5578 0.00175108
+  surf2grid time = 0.0128226 secs
+  map/comm1/comm2/comm3/comm4/split percent = 37.3377 0.289168 34.4884 2.28735 3.40404 9.01694
+#write_surf          circle-clipped.out
+
+surf_collide        1 diffuse ${surftemp} 1.0
+surf_collide        1 diffuse 1000 1.0
+surf_react          1 prob air.surf
+surf_modify         1 collide 1 react 1
+
+###################################
+# Boundary conditions
+###################################
+fix                 in emit/face all xlo twopass
+
+###################################
+# Initialize simulation
+###################################
+create_particles    all n 0 twopass
+Created 41620 particles
+  CPU time = 0.0143501 secs
+balance_grid        rcb part
+Balance grid migrated 0 cells
+  CPU time = 0.0126174 secs
+  reassign/sort/migrate/ghost percent = 22.7963 4.7322 20.2557 52.2158
+
+###################################
+# Unsteady Output
+###################################
+compute             1 grid all species nrho
+compute             2 thermal/grid all all temp
+fix                 1 ave/grid all 1 1000 1000 c_1[*] c_2[*] ave one
+
+compute             1b lambda/grid f_1[1*2] f_1[3] lambda knall
+
+fix                 10 adapt 1000 all refine coarsen value c_1b[2] 0.8 1.6                     combine min thresh less more cells 2 2 1
+fix                 load balance 1000 1.1 rcb part
+
+compute             3 surf all all etot ke erot evib echem
+fix                 3 ave/surf all 1 1000 1000 c_3[*] ave one
+#dump                3 surf all 1000 std_surf.* id f_3[*]
+
+compute             echem reduce ave f_3[5]
+
+stats_style         step cpu np ncoll nreact nscoll nsreact ngrid c_echem maxlevel
+stats_modify        flush yes
+stats               1000
+
+run                 3000
+Memory usage per proc in Mbytes:
+  particles (ave,min,max) = 4.6875 4.6875 4.6875
+  grid      (ave,min,max) = 8.70129 8.70129 8.70129
+  surf      (ave,min,max) = 0.00514984 0.00514984 0.00514984
+  modify    (ave,min,max) = 12.0951 12.0951 12.0951
+  total     (ave,min,max) = 25.4891 25.4891 25.4891
+Step CPU Np Ncoll Nreact Nscoll Nsreact Ngrid c_echem Maxlevel 
+       0            0    41620        0        0        0        0    46620            0        1 
+    1000    3.1684213    41363        0        0        4        0    47454            0        2 
+    2000    6.7284593    41287        0        0        1        0    50478    2023.8086        3 
+    3000    10.333867    41250        0        0        2        0    55317     6071.406        4 
+Loop time of 10.3339 on 1 procs for 3000 steps with 41250 particles
+Performance: 290.306 timesteps/s, 11.975 Mparticle-step/s
+
+MPI task timing breakdown:
+Section |  min time  |  avg time  |  max time  |%varavg| %total
+---------------------------------------------------------------
+Move    | 2.1195     | 2.1195     | 2.1195     |   0.0 | 20.51
+Coll    | 1.2191     | 1.2191     | 1.2191     |   0.0 | 11.80
+Sort    | 1.0967     | 1.0967     | 1.0967     |   0.0 | 10.61
+Comm    | 0.0048107  | 0.0048107  | 0.0048107  |   0.0 |  0.05
+Modify  | 5.8832     | 5.8832     | 5.8832     |   0.0 | 56.93
+Output  | 0.00024139 | 0.00024139 | 0.00024139 |   0.0 |  0.00
+MPI Sync| 0.0047149  | 0.0047149  | 0.0047149  |   0.0 |  0.05
+Other   |            | 0.005598   |            |       |  0.05
+
+Particle moves    = 124023007 (124M)
+Cells touched     = 128245507 (128M)
+Particle comms    = 0 (0K)
+Boundary collides = 768 (0.768K)
+Boundary exits    = 15241 (15.2K)
+SurfColl checks   = 1703519 (1.7M)
+SurfColl occurs   = 12542 (12.5K)
+Surf reactions    = 18 (0.018K)
+Collide attempts  = 389407 (0.389M)
+Collide occurs    = 262734 (0.263M)
+Reactions         = 45 (0.045K)
+Particles stuck   = 0
+Axisymm bad moves = 0
+
+Particle-moves/CPUsec/proc: 1.20016e+07
+Particle-moves/step: 41341
+Cell-touches/particle/step: 1.03405
+Particle comm iterations/step: 1
+Particle fraction communicated: 0
+Particle fraction colliding with boundary: 6.1924e-06
+Particle fraction exiting boundary: 0.000122888
+Surface-checks/particle/step: 0.0137355
+Surface-collisions/particle/step: 0.000101126
+Surf-reactions/particle/step: 1.45134e-07
+Collision-attempts/particle/step: 0.0031398
+Collisions/particle/step: 0.00211843
+Reactions/particle/step: 3.62836e-07
+
+Gas reaction tallies:
+  style tce #-of-reactions 45
+  reaction N2 + N2 --> N + N + N2: 44
+  reaction N2 + N --> N + N + N: 1
+
+Surface reaction tallies:
+  id 1 style prob #-of-reactions 9
+    reaction all: 18
+    reaction N --> N2: 12
+    reaction N --> NULL: 6
+
+Particles: 41250 ave 41250 max 41250 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+Cells:      55317 ave 55317 max 55317 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+GhostCell: 0 ave 0 max 0 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+EmptyCell: 0 ave 0 max 0 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+Surfs:    50 ave 50 max 50 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+GhostSurf: 0 ave 0 max 0 min
+Histogram: 1 0 0 0 0 0 0 0 0 0

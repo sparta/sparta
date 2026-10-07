@@ -195,6 +195,7 @@ void Grid::reallocate_custom(int nold, int nnew)
 
 void Grid::remove_custom(int index)
 {
+  if (index < 0 || index >= ncustom) return;
   if (!ename || !ename[index]) return;
 
   delete [] ename[index];

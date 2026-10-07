@@ -1660,6 +1660,12 @@ integer in size. :dd
 
 Self-explanatory. :dd
 
+{Line in surf file exceeds maximum allowed length} :dt
+
+A line in the Points, Lines, or Triangles section of the surf file is
+longer than 1023 characters.  This can occur if many custom values
+are listed for each surface element. :dd
+
 {Log of zero/negative value in variable formula} :dt
 
 Self-explanatory. :dd

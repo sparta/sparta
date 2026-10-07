@@ -424,7 +424,7 @@ void ComputePropertySurf::pack_v3y(int n)
   else tris = surf->tris;
   for (int i = 0; i < nsown; i++) {
     m = cglobal[i];
-    if (tris[m].mask & groupbit) buf[n] = tris[m].p1[1];
+    if (tris[m].mask & groupbit) buf[n] = tris[m].p3[1];
     else buf[n] = 0.0;
     n += nvalues;
   }
@@ -441,7 +441,7 @@ void ComputePropertySurf::pack_v3z(int n)
   else tris = surf->tris;
   for (int i = 0; i < nsown; i++) {
     m = cglobal[i];
-    if (tris[m].mask & groupbit) buf[n] = tris[m].p1[2];
+    if (tris[m].mask & groupbit) buf[n] = tris[m].p3[2];
     else buf[n] = 0.0;
     n += nvalues;
   }
