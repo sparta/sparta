@@ -40,6 +40,7 @@ class GridKokkos : public Grid {
   void wrap_kokkos();
   void wrap_kokkos_graphs();
   void sync(ExecutionSpace, unsigned int);
+  void sync_device_async(const DeviceType &, unsigned int);
   void modify(ExecutionSpace, unsigned int);
 
   int add_custom(char *, int, int) override;
@@ -176,7 +177,7 @@ class GridKokkos : public Grid {
   Kokkos::Crs<int, DeviceType, void, crs_size_type> d_csubs;
 
   DAT::t_int_1d d_cellcount;
-  DAT::t_int_2d d_plist;
+  DAT::t_int_2d_lr d_plist;
 
   // hash for all cell IDs (owned,ghost,parent).  The _d postfix refers to the
   // fact that this hash lives on "device"

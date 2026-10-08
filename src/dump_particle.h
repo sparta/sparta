@@ -30,6 +30,7 @@ class DumpParticle : public Dump {
   DumpParticle(class SPARTA *, int, char **);
   virtual ~DumpParticle();
   bigint memory_usage();
+  unsigned int sync_mask() const override;
 
  protected:
   int imix;                  // index of mixture to be dumped

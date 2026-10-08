@@ -50,10 +50,12 @@ namespace SPARTA_NS {
 class KokkosSPARTA {
  public:
   int kokkos_exists;
+  unsigned int sync_mask_for_output;
   int num_threads;
   int numa;
 
-  KokkosSPARTA(class SPARTA *, int, char **) {kokkos_exists = 0;}
+  KokkosSPARTA(class SPARTA *, int, char **)
+    {kokkos_exists = 0; sync_mask_for_output = 0;}
   ~KokkosSPARTA() {}
   void accelerator(int, char **) {}
   static void finalize() {}

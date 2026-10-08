@@ -296,18 +296,19 @@ void ParticleKokkos::remove_custom(int index)
      and without this the new particle silently inherits it
 ------------------------------------------------------------------------- */
 
-void ParticleKokkos::zero_custom_kokkos(int lo, int hi)
+void ParticleKokkos::zero_custom_kokkos(const DeviceType &exec, int lo, int hi)
 {
   if (!ncustom) return;
   const int n = hi - lo;
   if (n <= 0) return;
 
-  this->sync(Device,CUSTOM_MASK);
+  this->sync_device_async(exec,CUSTOM_MASK);
 
   if (ncustom_ivec) {
     auto d_ivec = k_eivec.view_device();
     const int nvec = ncustom_ivec;
-    Kokkos::parallel_for(n, KOKKOS_LAMBDA(const int m) {
+    Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType>(exec,0,n),
+      KOKKOS_LAMBDA(const int m) {
       const int i = lo + m;
       for (int k = 0; k < nvec; k++)
         d_ivec[k].k_view.view_device()[i] = 0;
@@ -318,7 +319,8 @@ void ParticleKokkos::zero_custom_kokkos(int lo, int hi)
     auto d_iarray = k_eiarray.view_device();
     auto d_icol = k_eicol.view_device();
     const int narray = ncustom_iarray;
-    Kokkos::parallel_for(n, KOKKOS_LAMBDA(const int m) {
+    Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType>(exec,0,n),
+      KOKKOS_LAMBDA(const int m) {
       const int i = lo + m;
       for (int k = 0; k < narray; k++)
         for (int c = 0; c < d_icol[k]; c++)
@@ -329,7 +331,8 @@ void ParticleKokkos::zero_custom_kokkos(int lo, int hi)
   if (ncustom_dvec) {
     auto d_dvec = k_edvec.view_device();
     const int nvec = ncustom_dvec;
-    Kokkos::parallel_for(n, KOKKOS_LAMBDA(const int m) {
+    Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType>(exec,0,n),
+      KOKKOS_LAMBDA(const int m) {
       const int i = lo + m;
       for (int k = 0; k < nvec; k++)
         d_dvec[k].k_view.view_device()[i] = 0.0;
@@ -340,7 +343,8 @@ void ParticleKokkos::zero_custom_kokkos(int lo, int hi)
     auto d_darray = k_edarray.view_device();
     auto d_dcol = k_edcol.view_device();
     const int narray = ncustom_darray;
-    Kokkos::parallel_for(n, KOKKOS_LAMBDA(const int m) {
+    Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType>(exec,0,n),
+      KOKKOS_LAMBDA(const int m) {
       const int i = lo + m;
       for (int k = 0; k < narray; k++)
         for (int c = 0; c < d_dcol[k]; c++)
@@ -365,7 +369,21 @@ void ParticleKokkos::zero_custom_kokkos(int lo, int hi)
 
 void ParticleKokkos::zero_custom_kokkos()
 {
-  zero_custom_kokkos(nlocal,maxlocal);
+  zero_custom_kokkos(DeviceType(),nlocal,maxlocal);
+}
+
+/* ---------------------------------------------------------------------- */
+
+void ParticleKokkos::zero_custom_kokkos(int lo, int hi)
+{
+  zero_custom_kokkos(DeviceType(),lo,hi);
+}
+
+/* ---------------------------------------------------------------------- */
+
+void ParticleKokkos::zero_custom_kokkos(const DeviceType &exec)
+{
+  zero_custom_kokkos(exec,nlocal,maxlocal);
 }
 
 /* ----------------------------------------------------------------------
@@ -420,4 +438,3 @@ void ParticleKokkos::unpack_custom(char *buf, int n)
   Particle::unpack_custom(buf,n);
   modify(Host,CUSTOM_MASK);
 }
-
