@@ -112,6 +112,8 @@ action fix_surf_temp_kokkos.cpp
 action fix_surf_temp_kokkos.h
 action fix_move_surf_kokkos.cpp
 action fix_move_surf_kokkos.h
+action fix_rigid_kokkos.cpp
+action fix_rigid_kokkos.h
 action fix_temp_global_rescale_kokkos.cpp
 action fix_temp_global_rescale_kokkos.h
 action fix_temp_rescale_kokkos.cpp

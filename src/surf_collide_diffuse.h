@@ -28,6 +28,7 @@ namespace SPARTA_NS {
 
 class SurfCollideDiffuse : public SurfCollide {
  public:
+  int moving_wall() {return trflag;}
   SurfCollideDiffuse(class SPARTA *, int, char **);
   SurfCollideDiffuse(class SPARTA *sparta) : SurfCollide(sparta) {} // needed Kokkos
   virtual void init();

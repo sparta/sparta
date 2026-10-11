@@ -1,0 +1,17 @@
+# equilateral triangle, edge length 1.65, centroid at origin
+# CW vertex loop so outward normals via z x (p2-p1)
+
+3 points
+3 lines
+
+Points
+
+1 0.0 0.9526279
+2 0.8250000 -0.4763140
+3 -0.8250000 -0.4763140
+
+Lines
+
+1 1 2
+2 2 3
+3 3 1

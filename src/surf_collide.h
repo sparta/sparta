@@ -48,6 +48,7 @@ class SurfCollide : protected Pointers {
   virtual void flags_and_coeffs(int *, double *) {}
 
   virtual void dynamic();
+  virtual int moving_wall() {return 0;}   // 1 if model imposes wall motion
   void tally_reset();
   void tally_update();
   double compute_vector(int i);

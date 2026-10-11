@@ -1,0 +1,49 @@
+# TEST: coefficient of restitution of the push-off contact model
+# a body with no gas is launched at a static wall and rebounds under the
+# push-off spring, so the bounce is deterministic and analytic:
+#   pushstyle linear  = a linear spring-dashpot, whose coefficient of
+#     restitution is INDEPENDENT of impact speed
+#   pushstyle hertz   = a Hertzian spring, whose coefficient of
+#     restitution DEPENDS on impact speed
+#   pushdamp 0        = elastic, restitution exactly 1 for both laws
+# impact speeds are kept well below the spring's energy capacity,
+#   0.5*N*k*cutoff^2 over the N contacts, or the body passes through
+#   the wall instead of rebounding
+# run as: -var pstyle linear -var pk 1.0e-18 -var pdamp 0.0 -var v0 10
+
+seed	    	    12345
+
+variable            dist index 0
+variable            v0 index 10.0
+if "${dist} == 1" then "global surfs explicit/distributed"
+dimension   	    2
+boundary            r r p
+
+create_box  	    0 10 0 10 -0.5 0.5
+create_grid 	    20 20 1
+
+global		    nrho 1.0 fnum 0.001
+
+species		    air.species N
+mixture		    air N vstream 0 0 0 temp 273.0
+
+read_surf           data.square group body
+read_surf           data.wall group wall
+surf_collide	    1 specular
+surf_modify         all collide 1
+
+timestep 	    0.0001
+
+compute             c1 surf body all fx fy fz tx ty tz com 5 5 0
+
+global              rigid yes
+
+fix		    1 rigid body c1 body &
+		    mass 1.0e-22 com 5 5 0 vcom ${v0} 0 0 &
+		    moi 8.3333333e-24 8.3333333e-24 1.6666667e-23 0 0 0 &
+                    angmom 0 0 0 &
+		    push ${pk} 0.5 pushstyle ${pstyle} pushdamp ${pdamp}
+
+stats		    3000
+stats_style         step f_1[1] f_1[4]
+run 		    3000

@@ -1,0 +1,42 @@
+# TEST: dstyle = density in 2d, and the vcom/angmom keywords it accepts
+# data.square is a unit square centred at (5,5), so with density 1 the
+# computed mass is 1, the COM is (5,5,0), and for a uniform square plate
+# izz = M/6 with ixx = iyy = izz/2 and every product of inertia zero.
+# a 2d body must also come out with ixz = iyz = 0 exactly, which is what
+# setup_body() requires to find a principal axis along z.
+# vcom and angmom are supplied here: dstyle = density derives the mass
+# distribution from the geometry but cannot know the body's initial motion,
+# so those two remain user input and must survive to the outfile unchanged.
+
+seed	    	    12345
+variable            dist index 0
+if "${dist} == 1" then "global surfs explicit/distributed"
+
+dimension   	    2
+boundary            o o p
+
+create_box  	    0 10 0 10 -0.5 0.5
+create_grid 	    10 10 1
+
+global		    nrho 1.0e10 fnum 1.0e10
+
+species		    air.species N
+mixture		    air N vstream 0 0 0 temp 273.0
+
+read_surf           data.square group body
+surf_collide	    1 specular
+surf_modify         all collide 1
+
+timestep 	    1.0e-6
+
+compute             c1 surf body all fx fy fz tx ty tz com 5 5 0
+
+global              rigid yes
+
+fix		    1 rigid body c1 density 1.0 &
+                    vcom 12 -3 0 angmom 0 0 5.0e-3 &
+                    outfile tmp.density2d.state 1
+
+stats		    1
+stats_style         step np nscoll
+run 		    1

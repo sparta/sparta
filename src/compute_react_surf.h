@@ -39,6 +39,7 @@ class ComputeReactSurf : public Compute {
                           Particle::OnePart *, Particle::OnePart *);
   virtual int tallyinfo(surfint *&);
   virtual void post_process_surf();
+  void reallocate() {lines = surf->lines; tris = surf->tris;}
   bigint memory_usage();
 
  protected:

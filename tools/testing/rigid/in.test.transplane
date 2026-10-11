@@ -1,0 +1,50 @@
+# TEST: incremental re-cut of cells holding only transparent surfs
+# a body translating 1.38 cells per step sweeps over, then vacates, the
+# cells cut only by a transparent plane; the full pipeline never cuts
+# such a cell and types it INSIDE/OUTSIDE by flood fill like a surf-free
+# cell, so the incremental re-cut must re-type it the same way
+# total flow volume per step must agree between the two remap modes;
+# a missed engulfed cell shows as excess volume, a missed vacated cell
+# as a permanent volume deficit
+# no particles: the trajectory and the cell typing are deterministic
+
+seed                12345
+variable            dist index 0
+variable            mode index incremental
+if "${dist} == 1" then "global surfs explicit/distributed"
+dimension           2
+global              comm/sort yes
+boundary            p p p
+
+create_box          0 20 0 10 -0.5 0.5
+create_grid         40 20 1
+
+global              nrho 1.0 fnum 0.001
+
+species             air.species N
+mixture             air N vstream 0 0 0 temp 273.0
+
+read_surf           data.transbody group body
+read_surf           data.transplane group plane transparent
+surf_collide        1 specular
+surf_collide        2 transparent
+surf_modify         body collide 1
+surf_modify         plane collide 2
+
+timestep            0.0001
+
+compute             csurf surf body all fx fy fz tx ty tz com 1.99 5.07 0
+
+global              rigid yes
+fix                 1 rigid body csurf body mass 1.0e-9 com 1.99 5.07 0 &
+                    vcom 6900 0 0 moi 1.0e-10 1.0e-10 2.0e-10 0 0 0 &
+                    angmom 0 0 0 remap ${mode}
+
+compute             cvol property/grid all vol
+compute             tvol reduce sum c_cvol
+
+stats               1
+stats_style         step f_1[1] c_tvol
+stats_modify        format float %.17g
+
+run                 14

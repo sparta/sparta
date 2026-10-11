@@ -1,0 +1,34 @@
+# TEST: gas collisions with a fast body whose interior spans whole cells
+# the body moves 0.03 per step through cells of 0.25, so each step it
+# uncovers a sliver of a cell that was interior to it (zero flow volume)
+# at the start of the step; particles entering the sliver sit in that
+# cell when gas collisions run, before the end-of-step re-cut; the
+# collision step must skip such a cell, not abort on its zero volume
+# particle count must stay constant (reflecting box), no deletions
+# the body is offset from the cell boundaries, and the gas is dense
+# enough that the uncovered sliver holds several particles every step
+
+seed	    	    12345
+variable            dist index 0
+if "${dist} == 1" then "global surfs explicit/distributed"
+dimension   	    2
+boundary            r r p
+create_box  	    0 10 0 10 -0.5 0.5
+create_grid 	    40 40 1
+global		    nrho 1.0 fnum 0.001
+species		    air.species N
+mixture		    air N vstream 0 0 0 temp 273.0
+read_surf           data.square group body trans 0.03 0.02 0
+surf_collide	    1 specular
+surf_modify         all collide 1
+collide             vss air air.vss
+timestep 	    0.0001
+compute             c1 surf body all fx fy fz tx ty tz com 5.03 5.02 0
+global              rigid yes
+fix		    1 rigid body c1 body mass 1.0e-21 com 5.03 5.02 0 &
+		    vcom 300 120 0 moi 1.7e-22 1.7e-22 3.4e-22 0 0 0 &
+		    angmom 0 0 0 push 1.0e-18 0.3 pushbound yes
+create_particles    air n 200000
+stats		    5
+stats_style         step np f_1 f_1[1]
+run 		    50

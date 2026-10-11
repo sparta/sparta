@@ -1,0 +1,42 @@
+# TEST: dstyle = density computes mass, COM and moi from the body geometry
+# a unit cube of density 1 has M = 1, its COM at the centre of the cube, and
+# an isotropic inertia tensor with M/6 on the diagonal in any orientation.
+# sdata.cube is centred on the origin, so the COM must come out at 0 0 0 and
+# every off-diagonal component must vanish.
+# the values are written to an outfile, which stores all 16 body parameters
+# at 17 digits, and compared against those analytic values by run_tests.py.
+# a cube is exactly representable by flat triangles, so the agreement is
+# limited only by round-off, not by any discretization of the shape.
+
+seed	    	    12345
+variable            dist index 0
+if "${dist} == 1" then "global surfs explicit/distributed"
+
+dimension   	    3
+boundary            o o o
+
+create_box  	    -2 2 -2 2 -2 2
+create_grid 	    4 4 4
+
+global		    nrho 1.0e10 fnum 1.0e10
+
+species		    air.species N
+mixture		    air N vstream 0 0 0 temp 273.0
+
+read_surf           sdata.cube group body
+surf_collide	    1 specular
+surf_modify         all collide 1
+
+timestep 	    1.0e-6
+
+compute             c1 surf body all fx fy fz tx ty tz com 0 0 0
+
+global              rigid yes
+
+# no mass, com, or moi given: all three are integrated from the geometry
+
+fix		    1 rigid body c1 density 1.0 outfile tmp.density.state 1
+
+stats		    1
+stats_style         step np nscoll
+run 		    1

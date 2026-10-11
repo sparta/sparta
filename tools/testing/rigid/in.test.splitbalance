@@ -1,0 +1,52 @@
+# TEST: fix rigid with split cells and a fix balance in the same run
+# after a full re-map, fix rigid reassigns the particles of each split
+# cell to its sub cells, which leaves them unsorted; a fix balance later
+# in the same step must then re-sort before migrating cells, else it
+# migrates with stale particle lists and duplicates particles.  the
+# splitcell geometry with a balance every 3 steps; no emission, no
+# deletion, so the particle count must not change.
+# run as: -var mode cutcell   (or incremental)  -var bstyle "rcb cell"
+
+seed                12345
+
+variable            dist index 0
+variable            mode index cutcell
+variable            bstyle index random
+if "${dist} == 1" then "global surfs explicit/distributed"
+dimension           2
+global              comm/sort yes
+
+boundary            p p p
+
+create_box          0 10 0 10 -0.5 0.5
+create_grid         20 20 1
+balance_grid        rcb cell
+
+global              nrho 1.0 fnum 0.001
+
+species             air.species N
+mixture             air N vstream 0 0 0 temp 273.0
+
+read_surf           data.square group body trans -2.5 -1.0 0
+read_surf           data.diag group wall
+surf_collide        1 specular
+surf_modify         all collide 1
+
+timestep            0.0001
+
+compute             c1 surf body all fx fy fz tx ty tz com 2.5 4.0 0
+
+global              rigid yes
+
+fix                 1 rigid body c1 body mass 1.0e-15 com 2.5 4.0 0 &
+                    vcom 1000 1000 0 moi 1.7e-16 1.7e-16 3.4e-16 0 0 0 &
+                    angmom 0 0 0 remap ${mode}
+
+fix                 2 balance 3 1.0 ${bstyle}
+
+create_particles    air n 40000
+
+stats               10
+stats_style         step np nscoll f_1[1] f_1[2] f_1
+stats_modify        format float %20.14e
+run                 40

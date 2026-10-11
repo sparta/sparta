@@ -3792,3 +3792,12 @@ void SurfReactAdsorb::print_reaction(char *line1, char *line2)
   printf("Bad reaction format:\n");
   printf("%s%s",line1,line2);
 };
+
+/* ----------------------------------------------------------------------
+   1 if the model keeps per-surf state (mode surf), else per-face
+------------------------------------------------------------------------- */
+
+int SurfReactAdsorb::surf_mode()
+{
+  return (mode == SURF);
+}

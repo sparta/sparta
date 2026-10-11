@@ -1,0 +1,36 @@
+# TEST: a fix rigid re-defined between runs, followed by a grid-changing
+# command before the next run
+# the re-definition deletes the old fix; the balance_grid command then
+# notifies the new fix of the grid change, which rebuilds the per-surf
+# rigid map from the list of rigid fixes: that list must not still
+# hold the deleted instance (a silent use-after-free without ASAN)
+# distributed surfs, since only then does the grid change rebuild the map
+# no particles: the second run must continue the trajectory unperturbed
+
+seed	    	    12345
+global              surfs explicit/distributed
+dimension   	    2
+boundary            r r p
+create_box  	    0 10 0 10 -0.5 0.5
+create_grid 	    20 20 1
+global		    nrho 1.0 fnum 0.001
+species		    air.species N
+mixture		    air N vstream 0 0 0 temp 273.0
+read_surf           data.square group body
+surf_collide	    1 specular
+surf_modify         all collide 1
+timestep 	    0.0001
+compute             c1 surf body all fx fy fz tx ty tz com 5 5 0
+global              rigid yes
+fix		    1 rigid body c1 body mass 1.0e-22 com 5 5 0 &
+                    vcom 20 5 0 moi 1.7e-23 1.7e-23 3.4e-23 0 0 0 &
+                    angmom 0 0 0
+stats		    20
+stats_style         step f_1[1] f_1[2]
+stats_modify        format float %.17g
+run 		    40
+fix		    1 rigid body c1 body mass 1.0e-22 com 5.08 5.02 0 &
+                    vcom 20 5 0 moi 1.7e-23 1.7e-23 3.4e-23 0 0 0 &
+                    angmom 0 0 0
+balance_grid        rcb cell
+run 		    20

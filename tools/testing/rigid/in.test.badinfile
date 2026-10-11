@@ -1,0 +1,30 @@
+# NEGATIVE TEST: malformed number in a fix rigid infile
+# the state file has a Fortran-style exponent (1.0d-22) for the mass;
+# a permissive conversion would read it as 1.0 and run the body 22
+# orders of magnitude too heavy, so the fix must reject the file
+
+seed	    	    12345
+dimension   	    2
+boundary            o o p
+
+create_box  	    0 10 0 10 -0.5 0.5
+create_grid 	    10 10 1
+
+global		    nrho 1.0 fnum 0.001
+
+species		    air.species N
+mixture		    air N vstream 0 0 0 temp 273.0
+
+read_surf           data.square group body
+surf_collide	    1 diffuse 300.0 1.0
+surf_modify         all collide 1
+
+timestep 	    0.0001
+
+compute             c1 surf body all fx fy fz tx ty tz com 5 5 0
+
+global              rigid yes
+
+fix		    1 rigid body c1 infile data.badinfile.state
+
+run 		    10

@@ -235,6 +235,7 @@ class Surf : protected Pointers {
   void group(int, char **);
   int add_group(const char *);
   int find_group(const char *);
+  bigint count_group(int);
 
   void write_restart(FILE *);
   void read_restart(FILE *);

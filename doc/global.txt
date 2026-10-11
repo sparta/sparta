@@ -13,7 +13,10 @@ global command :h3
 global keyword values ... :pre
 
 one or more keyword/value pairs :ulb,l
-keyword = {fnum} or {nrho} or {vstream} or {temp} or {field} or {surfs} or {surfgrid} or {surfmax} or {splitmax} or {surftally} or {gridcut} or {comm/sort} or {comm/style} or {weight} or {particle/reorder} or {mem/limit} :l
+keyword = {fnum} or {nrho} or {vstream} or {temp} or {field} or
+{surfs} or {surfgrid} or {surfmax} or {splitmax} or {surftally} or
+{gridcut} or {comm/sort} or {comm/style} or {weight} or
+{particle/reorder} or {mem/limit} or {rigid} :l
   {fnum} value = ratio
     ratio = Fnum ratio of physical particles to simulation particles
   {nrho} value = density
@@ -67,7 +70,10 @@ keyword = {fnum} or {nrho} or {vstream} or {temp} or {field} or {surfs} or {surf
     grid = limit extra memory for load-balancing, particle reordering, and restart file read/write to grid cell memory
     bytes = limit extra particle memory to this amount (in MBytes)
   {optmove} value = yes or no
-    yes/no = use optimized particle move if yes, else use regular move :pre
+    yes/no = use optimized particle move if yes, else use regular move
+  {rigid} value = {yes} or {no}
+    yes = enable mobile rigid-body objects defined by fix rigid commands
+    no = disable mobile rigid-body objects :pre
 :ule
 
 [Examples:]
@@ -329,9 +335,10 @@ option, the weight is the distance the cell midpoint is from the y=0
 axis of symmetry, multiplied by the length of the cell in the x
 direction.  This mode attempts to preserve a uniform number of
 particles in each cell, regardless of the cell area, for a uniform
-targeted density.  For the {radius/only} option, the weight is just the
-distance the cell midpoint is from the y=0 axis of symmetry. This mode attempts to preserve a uniform distribution of particles
-per unit area, for a uniform targeted density.  See "Section
+targeted density.  For the {radius/only} option, the weight is just
+the distance the cell midpoint is from the y=0 axis of symmetry. This
+mode attempts to preserve a uniform distribution of particles per unit
+area, for a uniform targeted density.  See "Section
 6.2"_Section_howto.html#howto_2 for more details on axi-symmetric
 models.
 
@@ -403,6 +410,8 @@ Note that for these operations if the extra memory is too small,
 performance will suffer due to the large number of multiple passes 
 required. 
 
+:line
+
 If the {optmove} keyword is set to {yes} then an optimized move
 algorithm will be used when possible. Normally, as particles advect
 through the mesh each intermediate grid cell crossing must be found
@@ -469,6 +478,16 @@ measure of how often the optimized move was not applicable, not of how
 far particles moved. A value near zero means it was used for nearly
 every particle.
 
+The {rigid} keyword enables mobile rigid-body objects composed of
+surface elements (lines in 2d, triangles in 3d) to be simulated.
+Each object is defined by a "fix rigid"_fix_rigid.html command; all
+defined fix rigid commands become active.  If the value is {no}, the
+motion of rigid-body objects is disabled.  In that case any instances
+of the "fix rigid"_fix_rigid.html command should also be deleted via
+the "unfix"_unfix.html command.  See "Section
+6.20"_Section_howto.html#howto_20 for an overview of rigid body
+surface objects.
+
 [Restrictions:]
 
 The global surfmax command must be used before surface elements are
@@ -484,4 +503,4 @@ The keyword defaults are fnum = 1.0, nrho = 1.0, vstream = 0.0 0.0
 0.0, temp = 273.15, field = none, surfs = explicit, surfgrid = auto,
 surfmax = 100, splitmax = 10, surftally = auto,
 gridcut = -1.0, comm/sort = no, comm/style = neigh, weight = cell
-none, particle/reorder = 0, mem/limit = 0, optmove = no.
+none, particle/reorder = 0, mem/limit = 0, optmove = no, rigid = no.

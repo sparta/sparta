@@ -1,0 +1,58 @@
+# REGRESSION TEST: per-surf tallies of a static wall consumed by a fix
+# ave/surf defined after fix rigid, vs one defined before it
+# with remap cutcell the grid is rebuilt every step; the KOKKOS compute
+# surf keeps its tallies on the device indexed by local surf, which the
+# rebuild of distributed surf arrays invalidates unless fix rigid
+# fetches them first; both orders must give identical wall hit counts
+# the wall lies in the ghost layer of another proc's cells when run on
+# 2 or more procs with distributed surfs
+
+seed                12345
+variable            dist index 0
+if "${dist} == 1" then "global surfs explicit/distributed"
+variable            order index 0
+dimension           2
+global              comm/sort yes gridcut 0.5
+boundary            p p p
+
+create_box          0 20 0 10 -0.5 0.5
+create_grid         40 20 1
+balance_grid        rcb cell
+
+global              nrho 1.0 fnum 0.001 surfmax 400
+
+species             air.species N
+mixture             air N vstream 3000.0 0.0 0 temp 273.0
+
+read_surf           data.square group body trans 11.0 -1.5 0
+read_surf           data.square group wall origin 5 5 0 &
+                    scale 0.3 0.3 1 trans 5.3 0 0
+surf_collide        1 specular
+surf_modify         all collide 1
+
+timestep            0.0001
+
+compute             c1 surf body all fx fy fz tx ty tz com 16 3.5 0
+compute             cw surf wall all n
+
+global              rigid yes
+
+if "${order} == 0" then &
+  "fix aw ave/surf wall 1 1 1 c_cw[1]"
+
+fix                 1 rigid body c1 body mass 1.0e-22 com 16 3.5 0 &
+                    vcom 0 0 0 moi 1.7e-23 1.7e-23 3.4e-23 0 0 0 &
+                    angmom 0 0 0 remap cutcell push 1.0e-18 0.3
+
+if "${order} == 1" then &
+  "fix aw ave/surf wall 1 1 1 c_cw[1]"
+
+compute             red reduce sum f_aw
+
+create_particles    air n 100000
+
+stats               5
+stats_style         step np nscoll c_red f_1[1]
+stats_modify        format float %20.14e
+
+run                 20

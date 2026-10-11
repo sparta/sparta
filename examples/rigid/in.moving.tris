@@ -1,0 +1,66 @@
+################################################################################
+# three mobile rigid-body equilateral triangles in an opposing cold beam
+# cells are ~3/4 of a triangle edge: spinning triangles exercise the
+# cut/split cell machinery in remap incremental mode
+################################################################################
+
+seed	    	    12345
+dimension   	    2
+global              gridcut 0.0 comm/sort yes
+
+boundary	    o r p
+
+create_box  	    0 10 0 10 -0.5 0.5
+create_grid 	    8 8 1
+balance_grid        rcb cell
+
+global		    nrho 0.5 fnum 0.001
+
+species		    air.species N O
+mixture		    air N O vstream -100.0 0 0 temp 1.0
+
+read_surf           data.tri group body1 trans 3.0 3.0 0
+read_surf           data.tri group body2 trans 5.0 6.5 0
+read_surf           data.tri group body3 trans 7.2 3.5 0
+
+surf_collide	    1 diffuse 300.0 0.0
+surf_modify         all collide 1
+
+create_particles    air n 0
+fix		    in emit/face air xhi twopass
+
+timestep 	    0.0001
+
+compute      c1 surf body1 all fx fy fz tx ty tz com 3.0 3.0 0
+compute      c2 surf body2 all fx fy fz tx ty tz com 5.0 6.5 0
+compute      c3 surf body3 all fx fy fz tx ty tz com 7.2 3.5 0
+
+# grid cell flow volumes, for visualizing cut/split cells
+
+compute      vg property/grid all vol
+
+global              rigid yes
+
+# moi of a uniform triangular plate, edge A: izz = M A^2 / 12
+
+fix	 1 rigid body1 c1 body mass 2.0e-24 com 3.0 3.0 0 vcom 25 10 0 &
+         moi 2.27e-25 2.27e-25 4.54e-25 0 0 0 angmom 0 0 6.8e-24 &
+         push 1.0e-18 0.1 pushstyle hertz pushdamp 1.5e-22 &
+         pushbound yes remap incremental
+fix	 2 rigid body2 c2 body mass 2.0e-24 com 5.0 6.5 0 vcom 5 -20 0 &
+         moi 2.27e-25 2.27e-25 4.54e-25 0 0 0 angmom 0 0 -5.4e-24 &
+         push 1.0e-18 0.1 pushstyle hertz pushdamp 1.5e-22 &
+         pushbound yes remap incremental
+fix	 3 rigid body3 c3 body mass 2.0e-24 com 7.2 3.5 0 vcom -25 8 0 &
+         moi 2.27e-25 2.27e-25 4.54e-25 0 0 0 angmom 0 0 8.2e-24 &
+         push 1.0e-18 0.1 pushstyle hertz pushdamp 1.5e-22 &
+         pushbound yes remap incremental
+
+dump                5 image all 25 image.*.ppm type type pdiam 0.04 &
+                    surf one 0.014 size 800 800 zoom 1.75 &
+                    gline yes 0.004
+dump_modify	    5 pad 5 scolor * white glinecolor dimgray
+
+stats		    250
+stats_style	    step np f_1[1] f_1[2] f_1[15] f_2[1] f_2[2] f_2[15] f_3[1] f_3[2] f_3[15]
+run 		    5000

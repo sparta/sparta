@@ -494,7 +494,15 @@ template < int NEARCP, int GASTALLY > void Collide::collisions_one()
 
     ip = cinfo[icell].first;
     volume = cinfo[icell].volume / cinfo[icell].weight;
-    if (volume == 0.0) error->one(FLERR,"Collision cell volume is zero");
+    // a cell of zero flow volume holds particles only with a mobile
+    //   rigid body: it was interior to the body at the start of the step
+    //   and the body vacated part of it, or the particles are inside the
+    //   body and are deleted at end of step; the cell is re-cut at end
+    //   of step, so its particles skip collisions for this one step
+    if (volume == 0.0) {
+      if (update->rigidflag) continue;
+      error->one(FLERR,"Collision cell volume is zero");
+    }
 
     // setup particle list for this cell
 
@@ -654,7 +662,10 @@ template < int DIM, int GASTALLY > void Collide::collisions_one_subcell()
 
     ip = cinfo[icell].first;
     volume = cinfo[icell].volume / cinfo[icell].weight;
-    if (volume == 0.0) error->one(FLERR,"Collision cell volume is zero");
+    if (volume == 0.0) {
+      if (update->rigidflag) continue;
+      error->one(FLERR,"Collision cell volume is zero");
+    }
 
     // setup particle list and subcell vectors for this cell
 
@@ -1156,7 +1167,10 @@ template < int NEARCP, int GASTALLY > void Collide::collisions_group()
 
     ip = cinfo[icell].first;
     volume = cinfo[icell].volume / cinfo[icell].weight;
-    if (volume == 0.0) error->one(FLERR,"Collision cell volume is zero");
+    if (volume == 0.0) {
+      if (update->rigidflag) continue;
+      error->one(FLERR,"Collision cell volume is zero");
+    }
 
     // reallocate plist and p2g if necessary
 
@@ -1444,7 +1458,10 @@ template < int GASTALLY > void Collide::collisions_one_ambipolar()
 
     ip = cinfo[icell].first;
     volume = cinfo[icell].volume / cinfo[icell].weight;
-    if (volume == 0.0) error->one(FLERR,"Collision cell volume is zero");
+    if (volume == 0.0) {
+      if (update->rigidflag) continue;
+      error->one(FLERR,"Collision cell volume is zero");
+    }
 
     // setup particle list for this cell
 
@@ -1755,7 +1772,10 @@ template < int GASTALLY > void Collide::collisions_group_ambipolar()
 
     ip = cinfo[icell].first;
     volume = cinfo[icell].volume / cinfo[icell].weight;
-    if (volume == 0.0) error->one(FLERR,"Collision cell volume is zero");
+    if (volume == 0.0) {
+      if (update->rigidflag) continue;
+      error->one(FLERR,"Collision cell volume is zero");
+    }
 
     // reallocate plist and p2g if necessary
 

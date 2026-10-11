@@ -1,0 +1,32 @@
+# REGRESSION TEST: no rigid body; axisymmetric closed tube in which
+# particles bounce many times per step off the single inner wall line
+# the moving-surf re-hit rule of the particle mover must not count the
+# legitimate repeated hits on the same static line as a stuck particle,
+# so no particle may be deleted
+
+seed                12345
+dimension           2
+global              gridcut 0.0 comm/sort yes
+boundary            p ar p
+
+create_box          0 0.1 0 0.0008 -0.5 0.5
+create_grid         1 1 1
+balance_grid        rcb cell
+
+global              nrho 1.e20 fnum 1.e15
+
+species             air.species N2
+mixture             air N2 vstream 0.0 0.0 0.0 temp 300.0
+
+read_surf           data.tube clip
+surf_collide        1 specular
+surf_modify         all collide 1
+
+timestep            1e-4
+
+create_particles    air n 2000
+
+stats               10
+stats_style         step np nscoll
+
+run                 50

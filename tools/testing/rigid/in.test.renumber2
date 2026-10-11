@@ -1,0 +1,42 @@
+# NEGATIVE TEST: body surfs re-numbered after the fix is defined
+# non-distributed surfs: a remove_surf of the static wall read before
+# the body re-numbers the body surfs, and a read_surf of a replacement
+# wall restores the surf count; the body elements now index other
+# surfs, which the fix must detect by their coords
+
+seed	    	    12345
+dimension   	    2
+boundary            p p p
+
+create_box  	    0 10 0 10 -0.5 0.5
+create_grid 	    20 20 1
+balance_grid        rcb cell
+
+global		    nrho 1.0 fnum 0.001
+
+species		    air.species N
+mixture		    air N vstream 0 0 0 temp 273.0
+
+read_surf           data.square group wall trans -3.0 -3.0 0
+read_surf           data.square group body trans 2.0 2.0 0
+surf_collide	    1 specular
+surf_modify         all collide 1
+
+timestep 	    0.0001
+
+compute             c1 surf all all fx fy fz tx ty tz com 7 7 0
+
+global              rigid yes
+
+fix		    1 rigid body c1 body &
+		    mass 1.0e-22 com 7 7 0 vcom 1000 0 0 &
+		    moi 1.7e-23 1.7e-23 3.4e-23 0 0 0 angmom 0 0 0 &
+                    remap cutcell
+
+run 		    5
+
+remove_surf         wall
+read_surf           data.square group wall2 trans -3.0 -1.0 0
+surf_modify         wall2 collide 1
+
+run 		    5
