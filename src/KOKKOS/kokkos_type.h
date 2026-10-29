@@ -62,12 +62,11 @@ typedef int crs_size_type;
 #define KOKKOS_MAX_TOT_SURF_REACT 4
 #endif
 
-// architectures where the move kernel is dispatched with ATOMIC_REDUCTION = -1
+// architectures where the kernels are dispatched with ATOMIC_REDUCTION = -1
 //   (parallel_reduce) rather than atomics.  KokkosSPARTA::accelerator() clears
-//   atomic_reduction for exactly these, and UpdateKokkos::move() reads the
-//   per-step counters back from the reduction result only when it is clear.
-//   The two decisions must agree or the counters come from the wrong place, so
-//   the condition is spelled out once here instead of in both files.
+//   atomic_reduction for exactly these.  UpdateKokkos::move() does not depend
+//   on it: on every GPU it may dispatch the -1 kernel, and it sums the
+//   per-step counters from both the reduction result and the device scalars.
 
 #if defined(KOKKOS_ARCH_AMD_GFX940) || defined(KOKKOS_ARCH_AMD_GFX942) || \
     defined(KOKKOS_ARCH_AMD_GFX942_APU)

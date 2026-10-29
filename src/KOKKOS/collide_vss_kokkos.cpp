@@ -948,6 +948,12 @@ template < int NEARCP, int GASTALLY > void CollideVSSKokkos::collisions_one(COLL
         d_plist = {};
         Kokkos::resize(grid_kk->d_plist,nglocal,maxcellcount);
         d_plist = grid_kk->d_plist;
+
+        // the kernel writes d_nn_last_partner at every plist slot, so it has
+        //   to widen with it, as it does before the retry loop
+
+        if (NEARCP)
+          MemKK::realloc_kokkos(d_nn_last_partner,"collide:nn_last_partner",nglocal,maxcellcount);
       }
 
       auto nlocal_new = h_nlocal();
@@ -973,10 +979,13 @@ template < int NEARCP, int GASTALLY > void CollideVSSKokkos::collisions_one(COLL
   if (vibstyle == DISCRETE) particle_kk->modify(Device,CUSTOM_MASK);
 
   d_particles = t_particle_1d(); // destroy reference to reduce memory use
-#if DEALLOC
-  d_nn_last_partner = {};
+
+  // d_plist is only a reference to grid_kk->d_plist, retaken every call, so
+  //   drop it: holding it would keep the old buffer alive when sort_kokkos()
+  //   reallocates the plist.  d_nn_last_partner is owned here and kept
+  //   between steps to avoid reallocating it every step
+
   d_plist = {};
-#endif
 }
 
 KOKKOS_INLINE_FUNCTION
@@ -1080,7 +1089,6 @@ void CollideVSSKokkos::operator()(TagCollideCollisionsOne< NEARCP, GASTALLY, ATO
         //react->recomb_part3 = &particles[plist[k]];
         //react->recomb_species = react->recomb_part3->ispecies;
         //react->recomb_density = np * update->fnum / volume;
-        const double volume = grid_kk_copy.obj.k_cinfo.view_device()[icell].volume / grid_kk_copy.obj.k_cinfo.view_device()[icell].weight;
         recomb_part3 = &d_particles[d_plist(icell,k)];
         recomb_species = recomb_part3->ispecies;
         recomb_density = np * fnum / volume;

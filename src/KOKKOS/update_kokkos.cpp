@@ -121,16 +121,16 @@ namespace {
 
 /* ---------------------------------------------------------------------- */
 
-
-/* ---------------------------------------------------------------------- */
-
 DeviceType &UpdateKokkos::move_execution_space()
 {
-  // Construct lazily, after Kokkos has initialized.  Keeping the execution
-  // space out of UpdateKokkos itself also keeps this host-only stream handle
-  // out of every device functor copy.
-  static DeviceType exec;
-  return exec;
+  // held by pointer so that device functor copies of UpdateKokkos carry only
+  //   a raw pointer, not the instance's host-side reference count.  Owned by
+  //   this object, not a function-local static: an execution space instance
+  //   must be released before Kokkos::finalize(), and a static would outlive
+  //   it and tear down the default instance during static destruction
+
+  if (!move_space_ptr) move_space_ptr = new DeviceType();
+  return *move_space_ptr;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -161,6 +161,7 @@ UpdateKokkos::UpdateKokkos(SPARTA *sparta) : Update(sparta),
   nsc_index_cached = -1;
   use_two_pass_move = 1;
   two_pass_move_recheck = 0;
+  move_space_ptr = nullptr;
 
   // the Kokkos views of Particle/Grid/Surf are populated from the host data
   //   once, by setup() when prewrap is set, which then clears prewrap
@@ -234,6 +235,9 @@ UpdateKokkos::~UpdateKokkos()
 
   memoryKK->destroy_kokkos(k_mlist,mlist);
   mlist = NULL;
+
+  delete move_space_ptr;
+  move_space_ptr = nullptr;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -481,9 +485,7 @@ void UpdateKokkos::run(int nsteps)
     // start of step fixes
 
     if (n_start_of_step) {
-      {
-        modify->start_of_step();
-      }
+      modify->start_of_step();
       timer->stamp(TIME_MODIFY);
     }
 
@@ -495,11 +497,9 @@ void UpdateKokkos::run(int nsteps)
 
     // move particles
 
-    {
-      if (tallyflag) setup_surf_tally_copies();
-      if (cellweightflag) particle->pre_weight();
-      (this->*moveptr)();
-    }
+    if (tallyflag) setup_surf_tally_copies();
+    if (cellweightflag) particle->pre_weight();
+    (this->*moveptr)();
     timer->stamp(TIME_MOVE);
 
     // communicate particles
@@ -510,27 +510,21 @@ void UpdateKokkos::run(int nsteps)
     }
     auto mlist_small = k_mlist_small.view_host().data();
 
-    {
-      ((CommKokkos*)comm)->migrate_particles(nmigrate,mlist_small,
-                                             k_mlist_small.view_device());
-      if (cellweightflag) particle->post_weight();
-    }
+    ((CommKokkos*)comm)->migrate_particles(nmigrate,mlist_small,
+                                           k_mlist_small.view_device());
+    if (cellweightflag) particle->post_weight();
     timer->stamp(TIME_COMM);
 
     const int reorder_flag = (update->reorder_period &&
         (update->ntimestep % update->reorder_period == 0));
 
     if (collide || reorder_flag) {
-      {
-        particle_kk->sort_kokkos();
-      }
+      particle_kk->sort_kokkos();
       timer->stamp(TIME_SORT);
     }
 
     if (collide) {
-      {
-        collide->collisions();
-      }
+      collide->collisions();
       timer->stamp(TIME_COLLIDE);
     }
 
@@ -539,9 +533,7 @@ void UpdateKokkos::run(int nsteps)
     // diagnostic fixes
 
     if (n_end_of_step) {
-      {
-        modify->end_of_step();
-      }
+      modify->end_of_step();
       timer->stamp(TIME_MODIFY);
     }
 
@@ -561,10 +553,8 @@ void UpdateKokkos::run(int nsteps)
     // all output
 
     if (ntimestep == output->next) {
-      {
-        particle_kk->sync(Host,sparta->kokkos->sync_mask_for_output);
-        output->write(ntimestep);
-      }
+      particle_kk->sync(Host,sparta->kokkos->sync_mask_for_output);
+      output->write(ntimestep);
       timer->stamp(TIME_OUTPUT);
     }
   }
@@ -593,8 +583,8 @@ template < int DIM, int SURF, int REACT, int OPT > void UpdateKokkos::move()
   // even though no device work is involved.
 
   auto zero_host_scalars = [&]() {
-    for (int i = 0; i < 8; i++) h_scalars(i) = 0;
-    for (int i = 0; i < 7; i++) h_scalars_big(i) = 0;
+    for (size_t i = 0; i < h_scalars.extent(0); i++) h_scalars(i) = 0;
+    for (size_t i = 0; i < h_scalars_big.extent(0); i++) h_scalars_big(i) = 0;
   };
 
   // extend migration list if necessary
@@ -603,10 +593,8 @@ template < int DIM, int SURF, int REACT, int OPT > void UpdateKokkos::move()
 
   if (particle->nlocal > maxmigrate) {
     maxmigrate = maxlocal;
-    {
-      memoryKK->destroy_kokkos(k_mlist,mlist);
-      memoryKK->create_kokkos(k_mlist,mlist,maxmigrate,"particle:mlist");
-    }
+    memoryKK->destroy_kokkos(k_mlist,mlist);
+    memoryKK->create_kokkos(k_mlist,mlist,maxmigrate,"particle:mlist");
   }
 
   // counters
@@ -727,9 +715,7 @@ template < int DIM, int SURF, int REACT, int OPT > void UpdateKokkos::move()
 
     if (surf->exist) {
       SurfKokkos* surf_kk = ((SurfKokkos*)surf);
-      {
-        surf_kk->sync_device_async(move_space,ALL_MASK);
-      }
+      surf_kk->sync_device_async(move_space,ALL_MASK);
       d_lines = surf_kk->k_lines.view_device();
       d_tris = surf_kk->k_tris.view_device();
     }
@@ -746,20 +732,14 @@ template < int DIM, int SURF, int REACT, int OPT > void UpdateKokkos::move()
       if (nlocal_extra > MAXSMALLINT)
         error->one(FLERR,"Per-processor particle count is too big");
       if ((bigint) d_particles.extent(0) < nlocal_extra) {
-        {
-          particle->grow(nlocal_extra - particle->nlocal); // this!
-        }
+        particle->grow(nlocal_extra - particle->nlocal); // this!
         d_particles = particle_kk->k_particles.view_device();
       }
     }
 
-    {
-      particle_kk->sync_device_async(move_space,PARTICLE_MASK);
-    }
-    {
-      grid_kk->sync_device_async(move_space,
-                                 CELL_MASK|PCELL_MASK|SINFO_MASK|PLEVEL_MASK);
-    }
+    particle_kk->sync_device_async(move_space,PARTICLE_MASK);
+    grid_kk->sync_device_async(move_space,
+                               CELL_MASK|PCELL_MASK|SINFO_MASK|PLEVEL_MASK);
 
     // may be able to move this outside of the while loop
     grid_kk_copy.copy(grid_kk);
@@ -826,6 +806,7 @@ template < int DIM, int SURF, int REACT, int OPT > void UpdateKokkos::move()
       h_retry() = 0;
       h_nlocal() = particle->nlocal;
       if (continue_loop_flag) h_nmigrate() = nmigrate;
+      bigint ntouch_first_pass = 0;
 
       Kokkos::deep_copy(move_space,d_scalars,h_scalars);
       Kokkos::deep_copy(move_space,d_scalars_big,h_scalars_big);
@@ -854,9 +835,15 @@ template < int DIM, int SURF, int REACT, int OPT > void UpdateKokkos::move()
   #else
     const int concurrency = move_space.concurrency();
     const int particle_count = pstop - pstart;
+    // the first pass is a straight-line move, so it cannot be used for
+    //   axisymmetry (DIM == 1), whose radial coordinate needs axi_remap()
+    // the recheck also fires if the timestep was reset below the step that
+    //   disabled the first pass, e.g. by reset_timestep between runs
+
     const int can_recheck_two_pass =
-      fstyle == NOFIELD && niterate == 1 && !continue_loop_flag &&
-      (use_two_pass_move || update->ntimestep >= two_pass_move_recheck);
+      DIM != 1 && fstyle == NOFIELD && niterate == 1 && !continue_loop_flag &&
+      (use_two_pass_move || update->ntimestep >= two_pass_move_recheck ||
+       update->ntimestep < two_pass_move_recheck - MOVE_TWO_PASS_RECHECK);
     if (can_recheck_two_pass && particle_count >= concurrency) {
       // on the first iteration, split the move on GPU: fast path for trivial
       // particles, indirect team-based path for complex ones
@@ -873,6 +860,11 @@ template < int DIM, int SURF, int REACT, int OPT > void UpdateKokkos::move()
       } else {
         use_two_pass_move = 1;
       }
+
+      // moveOne() counts every PKEEP particle it moves in ntouch_one on the
+      //   standard path, so count the ones the first pass completed as well
+
+      if (!OPT) ntouch_first_pass = particle_count - h_not_updated_cnt();
 
       if (h_not_updated_cnt()) {
         const int team_size = 128;
@@ -922,6 +914,7 @@ template < int DIM, int SURF, int REACT, int OPT > void UpdateKokkos::move()
       Kokkos::deep_copy(move_space,h_scalars_big,d_scalars_big);
       Kokkos::deep_copy(move_space,h_move_reduce,d_move_reduce);
       move_space.fence("UpdateKokkos::move: read move results");
+      reduce.ntouch_one += ntouch_first_pass;
 
       // a per-event surf tally compute ran out of room.  the row count is
       //   only knowable by running the move, so grow every such compute to
@@ -978,27 +971,21 @@ template < int DIM, int SURF, int REACT, int OPT > void UpdateKokkos::move()
 
     int error_flag;
 
-    if (!sparta->kokkos->need_atomics || sparta->kokkos->atomic_reduction) {
-      ntouch_one += h_ntouch_one();
-      nexit_one += h_nexit_one();
-      nboundary_one += h_nboundary_one();
-      ncomm_one += h_ncomm_one();
-      nscheck_one += h_nscheck_one();
-      nscollide_one += h_nscollide_one();
-      surf->nreact_one += h_nreact_one();
-      nstuck += h_nstuck();
-      naxibad += h_naxibad();
-    } else {
-      ntouch_one       += reduce.ntouch_one   ;
-      nexit_one        += reduce.nexit_one    ;
-      nboundary_one    += reduce.nboundary_one;
-      ncomm_one        += reduce.ncomm_one    ;
-      nscheck_one      += reduce.nscheck_one  ;
-      nscollide_one    += reduce.nscollide_one;
-      surf->nreact_one += reduce.nreact_one   ;
-      nstuck           += reduce.nstuck       ;
-      naxibad          += reduce.naxibad      ;
-    }
+    // a kernel dispatched with ATOMIC_REDUCTION = -1 counts into the
+    //   reduction result, one with 0 or 1 into the device scalars.  Both are
+    //   zeroed before every attempt and whichever was not written stays zero,
+    //   so sum them rather than predict which kernel(s) the dispatch above
+    //   chose: on GPU the two-pass path and the single-pass path differ
+
+    ntouch_one       += h_ntouch_one()    + reduce.ntouch_one   ;
+    nexit_one        += h_nexit_one()     + reduce.nexit_one    ;
+    nboundary_one    += h_nboundary_one() + reduce.nboundary_one;
+    ncomm_one        += h_ncomm_one()     + reduce.ncomm_one    ;
+    nscheck_one      += h_nscheck_one()   + reduce.nscheck_one  ;
+    nscollide_one    += h_nscollide_one() + reduce.nscollide_one;
+    surf->nreact_one += h_nreact_one()    + reduce.nreact_one   ;
+    nstuck           += h_nstuck()        + reduce.nstuck       ;
+    naxibad          += h_naxibad()       + reduce.naxibad      ;
 
     entryexit += h_entryexit();
 
@@ -1050,10 +1037,8 @@ template < int DIM, int SURF, int REACT, int OPT > void UpdateKokkos::move()
       pstop = particle->nlocal;
       if (pstop-pstart > maxmigrate) {
         maxmigrate = pstop-pstart;
-        {
-          memoryKK->destroy_kokkos(k_mlist,mlist);
-          memoryKK->create_kokkos(k_mlist,mlist,maxmigrate,"particle:mlist");
-        }
+        memoryKK->destroy_kokkos(k_mlist,mlist);
+        memoryKK->create_kokkos(k_mlist,mlist,maxmigrate,"particle:mlist");
       }
     } else break;
 

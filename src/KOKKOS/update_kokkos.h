@@ -168,7 +168,8 @@ class UpdateKokkos : public Update {
   // retake hash_kk and d_halo_index from the grid, see its definition
 
   void grid_index_refresh();
-  static DeviceType &move_execution_space();
+  DeviceType &move_execution_space();
+  DeviceType *move_space_ptr;
 
   t_cell_1d d_cells;
   t_sinfo_1d d_sinfo;
