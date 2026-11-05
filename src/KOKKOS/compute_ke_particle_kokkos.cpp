@@ -63,6 +63,7 @@ void ComputeKEParticleKokkos::compute_per_particle()
     ComputeKEParticle::compute_per_particle();
   }  else {
     compute_per_particle_kokkos();
+    k_vector_particle.sync_host();
   }
 }
 
@@ -70,9 +71,14 @@ void ComputeKEParticleKokkos::compute_per_particle()
 
 void ComputeKEParticleKokkos::compute_per_particle_kokkos()
 {
+  invoked_per_particle = update->ntimestep;
+
   // grow ke array (d_vector_particle) if necessary
-  if (particle->nlocal > nmax) {
+  // also when a prewrap host invocation allocated only the host ke
+  if (particle->nlocal > nmax ||
+      (int) k_vector_particle.extent(0) < particle->nlocal) {
     memoryKK->destroy_kokkos(k_vector_particle,vector_particle);
+    ke = NULL;
     nmax = particle->maxlocal;
     memoryKK->create_kokkos(k_vector_particle,vector_particle,nmax,"ke/particle:vector_particle");
     d_vector_particle = k_vector_particle.view_device();
@@ -83,11 +89,14 @@ void ComputeKEParticleKokkos::compute_per_particle_kokkos()
   d_particles = particle_kk->k_particles.view_device();
   d_species = particle_kk->k_species.view_device();
   int nlocal = particle->nlocal;
+  mvv2e = update->mvv2e;
 
   // compute kinetic energy for each atom in group
   copymode = 1;
   Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType>(0,nlocal),*this);
   copymode = 0;
+
+  k_vector_particle.modify_device();
 
   d_particles = t_particle_1d(); // destroy reference to reduce memory use
 }
@@ -96,7 +105,6 @@ KOKKOS_INLINE_FUNCTION
 void ComputeKEParticleKokkos::operator()(const int &i) const {
   const int ispecies = d_particles[i].ispecies;
   const double mass = d_species[ispecies].mass;
-  const double mvv2e = update->mvv2e;
   double *v = d_particles[i].v;
   d_vector_particle[i] = 0.5 * mvv2e * mass * (v[0]*v[0] + v[1]*v[1] + v[2]*v[2]);
 }

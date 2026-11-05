@@ -99,10 +99,8 @@ if(PKG_KOKKOS)
     CONFIGURE_DEPENDS *.cpp *.hpp *.h)
 
   if (NOT PKG_FFT)
-    list(FILTER SPARTA_PKG_KOKKOS_SRC_FILES EXCLUDE REGEX ".*fft.*kokkos.*")
-    list(FILTER SPARTA_PKG_KOKKOS_SRC_FILES EXCLUDE REGEX ".*pack.*kokkos.*")
-    list(FILTER SPARTA_PKG_KOKKOS_SRC_FILES EXCLUDE REGEX ".*remap.*kokkos.*")
-    list(REMOVE_ITEM style_files kokkos_base_fft.h)
+    list(FILTER SPARTA_PKG_KOKKOS_SRC_FILES EXCLUDE REGEX "/[^/]*(fft|pack|remap)[^/]*kokkos[^/]*$")
+    list(FILTER SPARTA_PKG_KOKKOS_SRC_FILES EXCLUDE REGEX "/kokkos_base_fft\\.h$")
   endif()
 
   include(${SPARTA_CMAKE_COMMON_DIR}/set/style_file_glob.cmake)

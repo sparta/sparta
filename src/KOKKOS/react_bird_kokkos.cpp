@@ -55,6 +55,9 @@ ReactBirdKokkos::ReactBirdKokkos(SPARTA *sparta, int narg, char **arg) :
   memoryKK->create_kokkos(k_tally_reactions_all,tally_reactions_all,nlist,"react_bird:tally_reactions_all");
   d_tally_reactions = k_tally_reactions.view_device();
 
+  d_prob_warn = DAT::t_int_scalar("react_bird:prob_warn");
+  prob_warn_flag = 0;
+
   random_backup = NULL;
 }
 
@@ -98,6 +101,15 @@ void ReactBirdKokkos::deallocate_views_of_views()
 void ReactBirdKokkos::init()
 {
   ReactBird::init();
+
+  // ReactBird::init() only zeroes the host tallies
+
+  Kokkos::deep_copy(d_tally_reactions,0);
+
+  // warn once per run about an invalid reaction probability
+
+  Kokkos::deep_copy(d_prob_warn,0);
+  prob_warn_flag = 0;
 
   deallocate_views_of_views();
 
@@ -179,6 +191,43 @@ double ReactBirdKokkos::extract_tally(int m)
 
   return 1.0*tally_reactions_all[m];
 };
+
+/* ---------------------------------------------------------------------- */
+
+void ReactBirdKokkos::check_prob_warn(int flag)
+{
+  // only record it here, end_of_run() warns once over all procs,
+  //   same as ReactTCE::end_of_run()
+
+  prob_warn_flag |= flag;
+}
+
+/* ----------------------------------------------------------------------
+   warn once, over all procs, if any invalid TCE reaction probability
+     occurred during the run, same text as ReactTCE::end_of_run()
+   the device flag does not record which reaction, so none is named
+   called by Finish on all procs at the end of each run
+------------------------------------------------------------------------- */
+
+void ReactBirdKokkos::end_of_run()
+{
+  int flagall;
+  MPI_Allreduce(&prob_warn_flag,&flagall,1,MPI_INT,MPI_BOR,world);
+
+  if (comm->me == 0) {
+    if (flagall & 1)
+      error->warning(FLERR,"Negative TCE reaction probability occurred "
+                     "during this run, check reaction file coefficients");
+    if (flagall & 2)
+      error->warning(FLERR,"Summed TCE reaction probability exceeded 1.0 "
+                     "during this run: the Arrhenius rates exceed the "
+                     "collision rate at some collision energies, so some "
+                     "reactions are under-sampled; this is independent of "
+                     "timestep and fnum");
+  }
+
+  prob_warn_flag = 0;
+}
 
 /* ---------------------------------------------------------------------- */
 

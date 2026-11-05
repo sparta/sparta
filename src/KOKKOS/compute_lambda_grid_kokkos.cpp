@@ -134,7 +134,7 @@ void ComputeLambdaGridKokkos::compute_per_grid_kokkos()
 
     if (nrhowhich[m] == COMPUTE) {
       Compute *compute = modify->compute[n];
-      if (!compute->kokkos_flag)
+      if (!compute->kokkos_flag || !dynamic_cast<KokkosBase*>(compute))
         error->all(FLERR,"Cannot (yet) use non-Kokkos computes with compute lambda/grid/kk");
       KokkosBase* cKKBase = dynamic_cast<KokkosBase*>(compute);
 
@@ -162,7 +162,7 @@ void ComputeLambdaGridKokkos::compute_per_grid_kokkos()
         });
 
         const int k = umap[m][0];
-        const int jm1 = j - 1;
+        const int mm = m;
         if (nrho_values == 1) {
             cKKBase->post_process_grid_kokkos(j,1,d_nrho,map[0],d_vector_grid);
             auto l_vector_grid = d_vector_grid;
@@ -173,7 +173,7 @@ void ComputeLambdaGridKokkos::compute_per_grid_kokkos()
             cKKBase->post_process_grid_kokkos(j,1,d_nrho,map[m],Kokkos::subview(d_array_grid1,Kokkos::ALL(),m));
             auto l_array_grid1 = d_array_grid1;
             Kokkos::parallel_for(nglocal, SPARTA_LAMBDA(int i) {
-              l_nrho(i,k) = l_array_grid1(i,jm1);;
+              l_nrho(i,k) = l_array_grid1(i,mm);
             });
         }
       } else {
@@ -196,7 +196,7 @@ void ComputeLambdaGridKokkos::compute_per_grid_kokkos()
 
     } else if (nrhowhich[m] == FIX) {
       Fix *fix = modify->fix[n];
-      if (!fix->kokkos_flag)
+      if (!fix->kokkos_flag || !dynamic_cast<KokkosBase*>(fix))
         error->all(FLERR,"Cannot (yet) use non-Kokkos fixes with compute lambda/grid/kk");
       KokkosBase* fKKBase = dynamic_cast<KokkosBase*>(fix);
       // a fix keeps its per-grid output between invocations and grid migration
@@ -222,7 +222,7 @@ void ComputeLambdaGridKokkos::compute_per_grid_kokkos()
   auto l_temp = d_temp;
 
   if (tempwhich == COMPUTE) {
-    if (!ctemp->kokkos_flag)
+    if (!ctemp->kokkos_flag || !dynamic_cast<KokkosBase*>(ctemp))
       error->all(FLERR,"Cannot (yet) use non-Kokkos computes with compute lambda/grid/kk");
     KokkosBase* ctempKKBase = dynamic_cast<KokkosBase*>(ctemp);
 
@@ -245,7 +245,7 @@ void ComputeLambdaGridKokkos::compute_per_grid_kokkos()
     }
 
   } else if (tempwhich == FIX) {
-    if (!ftemp->kokkos_flag)
+    if (!ftemp->kokkos_flag || !dynamic_cast<KokkosBase*>(ftemp))
       error->all(FLERR,"Cannot (yet) use non-Kokkos fixes with compute lambda/grid/kk");
     KokkosBase* ftempKKBase = dynamic_cast<KokkosBase*>(ftemp);
     // a fix keeps its per-grid output between invocations and grid migration
@@ -421,8 +421,14 @@ void ComputeLambdaGridKokkos::reallocate()
   memoryKK->create_kokkos(k_vector_grid,vector_grid,nglocal,"lambda/grid:vector_grid");
   d_vector_grid = k_vector_grid.view_device();
 
-  if (nrho_values > 1)
+  // host arrays are also allocated (freed by ~ComputeLambdaGrid), since the
+  //   host ComputeLambdaGrid::compute_per_grid() runs while prewrap is set
+
+  if (nrho_values > 1) {
     d_array_grid1 = decltype(d_array_grid1)("lambda/grid:array_grid1",nglocal,nrho_values);
+    memory->destroy(array_grid1);
+    memory->create(array_grid1,nglocal,nrho_values,"lambda/grid:array_grid1");
+  }
 
   if (noutputs > 1) {
     memoryKK->destroy_kokkos(k_array_grid,array_grid);
@@ -435,9 +441,19 @@ void ComputeLambdaGridKokkos::reallocate()
   d_tauinv = decltype(d_tauinv)("lambda/grid:tauinv",nglocal,ntotal);
   d_nrho = decltype(d_nrho)("lambda/grid:nrho",nglocal,ntotal);
 
+  memory->destroy(lambda_grid);
+  memory->create(lambda_grid,nglocal,"lambda/grid:lambda_grid");
+  memory->destroy(lambdainv);
+  memory->create(lambdainv,nglocal,ntotal,"lambda/grid:lambdainv");
+  memory->destroy(tauinv);
+  memory->create(tauinv,nglocal,ntotal,"lambda/grid:tauinv");
+
   memory->destroy(nrho);
   memory->create(nrho,nglocal,ntotal,"lambda/grid:nrho");
 
-  if (tempwhich != NONE)
+  if (tempwhich != NONE) {
     d_temp = decltype(d_temp)("lambda/grid:temp",nglocal);
+    memory->destroy(temp);
+    memory->create(temp,nglocal,"lambda/grid:temp");
+  }
 }

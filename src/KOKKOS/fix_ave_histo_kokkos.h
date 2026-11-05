@@ -29,6 +29,7 @@ namespace SPARTA_NS
 {
 
 struct TagFixAveHisto_BinVector {};
+struct TagFixAveHisto_BinScalar {};
 struct TagFixAveHisto_BinParticles1 {};
 struct TagFixAveHisto_BinParticles2 {};
 struct TagFixAveHisto_BinParticles3 {};
@@ -104,6 +105,9 @@ public:
   operator()(TagFixAveHisto_BinVector, const int, minmax_type::value_type&) const;
 
   KOKKOS_INLINE_FUNCTION void
+  operator()(TagFixAveHisto_BinScalar, const int, minmax_type::value_type&) const;
+
+  KOKKOS_INLINE_FUNCTION void
   operator()(TagFixAveHisto_BinParticles1, const int, minmax_type::value_type&) const;
 
   KOKKOS_INLINE_FUNCTION void
@@ -164,7 +168,10 @@ protected:
   int index;
   int stride;
   DAT::t_float_1d_strided d_values;
-  GridKokkos* grid_kk;
+  t_cinfo_1d d_cinfo;
+
+  // single global value binned on the device by bin_scalar()
+  double scalar_value;
 
   // data used by ave/histo/weight/kk
   DAT::t_float_1d_strided d_weights;
@@ -175,6 +182,7 @@ protected:
   using FixAveHisto::bin_particles;
   using FixAveHisto::bin_grid_cells;
 
+  void bin_scalar(minmax_type&, double);
   virtual void bin_vector(minmax_type&, int, double *, int);
   virtual void bin_particles(minmax_type&, int, int);
   virtual void bin_particles(minmax_type&, double *, int);

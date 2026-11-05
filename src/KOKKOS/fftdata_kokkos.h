@@ -50,6 +50,9 @@
 # if defined(FFT_KOKKOS_MKL)
 #  undef FFT_KOKKOS_MKL
 # endif
+# if defined(FFT_KOKKOS_NVPL)
+#  undef FFT_KOKKOS_NVPL
+# endif
 # if !defined(FFT_KOKKOS_CUFFT) && !defined(FFT_KOKKOS_KISS)
 #  define FFT_KOKKOS_KISS
 # endif
@@ -78,6 +81,9 @@
 # endif
 # if defined(FFT_KOKKOS_MKL)
 #  undef FFT_KOKKOS_MKL
+# endif
+# if defined(FFT_KOKKOS_NVPL)
+#  undef FFT_KOKKOS_NVPL
 # endif
 # if !defined(FFT_KOKKOS_MKL_GPU) && !defined(FFT_KOKKOS_KISS)
 #  define FFT_KOKKOS_KISS

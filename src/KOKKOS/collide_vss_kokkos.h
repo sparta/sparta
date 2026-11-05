@@ -223,6 +223,12 @@ class CollideVSSKokkos : public CollideVSS {
   int nglist_coll_tally,nglist_react_tally;
   DAT::t_int_scalar d_tally_overflow;
   HAT::t_int_scalar h_tally_overflow;
+
+  // aliased into ReactBirdKokkos::d_prob_warn so the TCE invalid-probability
+  //   flag rides on the per-pass h_scalars read-back, no extra sync
+
+  DAT::t_int_scalar d_prob_warn;
+  HAT::t_int_scalar h_prob_warn;
   void grow_gas_tally_computes();
   void rewind_gas_tally_computes(int);
   void setup_gas_tally();
@@ -318,7 +324,7 @@ class CollideVSSKokkos : public CollideVSS {
   // bigint scalars = per-step statistics counters, can exceed 2^31
   //   in one step at large per-proc particle counts
 
-  typedef Kokkos::DualView<int[9], DeviceType::array_layout, DeviceType> tdual_int_8;
+  typedef Kokkos::DualView<int[10], DeviceType::array_layout, DeviceType> tdual_int_8;
   typedef tdual_int_8::t_dev t_int_8;
   typedef tdual_int_8::t_host t_host_int_8;
   t_int_8 d_scalars;
@@ -465,6 +471,7 @@ class CollideVSSKokkos : public CollideVSS {
   DAT::t_int_2d d_nn_last_partner_backup;
   DAT::t_int_1d d_ionambi_backup;
   DAT::t_float_2d_lr d_velambi_backup;
+  DAT::t_int_2d_lr d_vibmode_backup;
   RanKnuth* random_backup;
 };
 

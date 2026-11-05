@@ -224,7 +224,7 @@ struct remap_plan_2d_kokkos<DeviceType>* RemapKokkos2d<DeviceType>::remap_2d_cre
 
   // allocate memory for plan data struct
 
-  plan = new struct remap_plan_2d_kokkos<DeviceType>;
+  plan = new struct remap_plan_2d_kokkos<DeviceType>();
   if (plan == nullptr) return nullptr;
   plan->usecollective = usecollective;
   plan->usegpu_aware = usegpu_aware;
@@ -452,9 +452,9 @@ void RemapKokkos2d<DeviceType>::remap_2d_destroy_plan_kokkos(struct remap_plan_2
   if (plan == nullptr) return;
 
   // free MPI communicator
+  // 2d remap has no collective implementation, comm is always MPI_Comm_dup'd
 
-  if (!((plan->usecollective) && (plan->commringlen == 0)))
-    MPI_Comm_free(&plan->comm);
+  MPI_Comm_free(&plan->comm);
 
   // free internal arrays
 

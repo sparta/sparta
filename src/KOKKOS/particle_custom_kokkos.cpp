@@ -155,23 +155,36 @@ void ParticleKokkos::grow_custom(int index, int /*nold*/, int nnew)
 {
   // modifies the inner part of eivec,eiarray,edvec,edarray on host, and the outer view on device
 
-  if (sparta->kokkos->prewrap) {
-    sync(Host,CUSTOM_MASK);
-    modify(Host,CUSTOM_MASK);
-  } else
-    sync(Device,CUSTOM_MASK);
+  // resize on the host, as SurfKokkos::reallocate_custom() does: claim the
+  //   host first (after taking any copy it is owed) so DualView::resize()
+  //   keeps the host contents.  Resizing on the device instead left the host
+  //   half a freshly allocated mirror -- zeros, or garbage on a GPU -- behind
+  //   a device claim, while the host pointer handed out below was read and
+  //   written by host code (add_particle, between-run commands), and the
+  //   auto_sync refresh in sync() then copied the device over those writes.
+  //   Only the vector being grown is touched.  After the wrap, copy it back
+  //   down so both halves are valid, as they were for the device kernels
+  //   that run after a grow() inside the timestep loop
+
+  const int devsync = !sparta->kokkos->prewrap;
 
   if (etype[index] == INT) {
     if (esize[index] == 0) {
       int *ivector = eivec[ewhich[index]];
       auto k_ivector = k_eivec.view_host()[ewhich[index]].k_view;
+      k_ivector.sync_host();
+      k_ivector.modify_host();
       memoryKK->grow_kokkos(k_ivector,ivector,nnew,"particle:ivector");
+      if (devsync) k_ivector.sync_device();
       k_eivec.view_host()[ewhich[index]].k_view = k_ivector;
       eivec[ewhich[index]] = ivector;
     } else {
       int **iarray = eiarray[ewhich[index]];
       auto k_iarray = k_eiarray.view_host()[ewhich[index]].k_view;
+      k_iarray.sync_host();
+      k_iarray.modify_host();
       memoryKK->grow_kokkos(k_iarray,iarray,nnew,esize[index],"particle:iarray");
+      if (devsync) k_iarray.sync_device();
       k_eiarray.view_host()[ewhich[index]].k_view = k_iarray;
       eiarray[ewhich[index]] = iarray;
     }
@@ -180,13 +193,19 @@ void ParticleKokkos::grow_custom(int index, int /*nold*/, int nnew)
     if (esize[index] == 0) {
       double *dvector = edvec[ewhich[index]];
       auto k_dvector = k_edvec.view_host()[ewhich[index]].k_view;
+      k_dvector.sync_host();
+      k_dvector.modify_host();
       memoryKK->grow_kokkos(k_dvector,dvector,nnew,"particle:dvector");
+      if (devsync) k_dvector.sync_device();
       k_edvec.view_host()[ewhich[index]].k_view = k_dvector;
       edvec[ewhich[index]] = dvector;
     } else {
       double **darray = edarray[ewhich[index]];
       auto k_darray = k_edarray.view_host()[ewhich[index]].k_view;
+      k_darray.sync_host();
+      k_darray.modify_host();
       memoryKK->grow_kokkos(k_darray,darray,nnew,esize[index],"particle:darray");
+      if (devsync) k_darray.sync_device();
       k_edarray.view_host()[ewhich[index]].k_view = k_darray;
       edarray[ewhich[index]] = darray;
     }
@@ -286,6 +305,17 @@ void ParticleKokkos::remove_custom(int index)
   k_eiarray.sync_device();
   k_edvec.sync_device();
   k_edarray.sync_device();
+
+  // ewhich,eicol,edcol were compacted above on the host, so sync here
+
+  k_ewhich.modify_host();
+  k_ewhich.sync_device();
+
+  k_eicol.modify_host();
+  k_eicol.sync_device();
+
+  k_edcol.modify_host();
+  k_edcol.sync_device();
 }
 
 /* ----------------------------------------------------------------------

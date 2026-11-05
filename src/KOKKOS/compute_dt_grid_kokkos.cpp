@@ -86,7 +86,7 @@ void ComputeDtGridKokkos::compute_per_grid_kokkos()
   // grab per grid cell tau from compute or fix, invoke compute if needed
   // ditto for temp,us,vsq,wsq
   if (tau_which == COMPUTE) {
-    if (!ctau->kokkos_flag)
+    if (!ctau->kokkos_flag || !dynamic_cast<KokkosBase*>(ctau))
       error->all(FLERR,"Cannot (yet) use non-Kokkos computes with compute dt/grid/kk");
     KokkosBase* computeKKBase = dynamic_cast<KokkosBase*>(ctau);
     if (!(ctau->invoked_flag & INVOKED_PER_GRID)) {
@@ -105,7 +105,7 @@ void ComputeDtGridKokkos::compute_per_grid_kokkos()
       copymode = 0;
     }
   } else if (tau_which == FIX) {
-    if (!ftau->kokkos_flag)
+    if (!ftau->kokkos_flag || !dynamic_cast<KokkosBase*>(ftau))
       error->all(FLERR,"Cannot (yet) use non-Kokkos fixes with compute dt/grid/kk");
     KokkosBase* computeKKBase = dynamic_cast<KokkosBase*>(ftau);
     // a fix keeps its per-grid output between invocations and grid migration
@@ -122,7 +122,7 @@ void ComputeDtGridKokkos::compute_per_grid_kokkos()
   }
 
   if (temp_which == COMPUTE) {
-    if (!ctemp->kokkos_flag)
+    if (!ctemp->kokkos_flag || !dynamic_cast<KokkosBase*>(ctemp))
       error->all(FLERR,"Cannot (yet) use non-Kokkos computes with compute dt/grid/kk");
     KokkosBase* computeKKBase = dynamic_cast<KokkosBase*>(ctemp);
     if (!(ctemp->invoked_flag & INVOKED_PER_GRID)) {
@@ -141,7 +141,7 @@ void ComputeDtGridKokkos::compute_per_grid_kokkos()
       copymode = 0;
     }
   } else if (temp_which == FIX) {
-    if (!ftemp->kokkos_flag)
+    if (!ftemp->kokkos_flag || !dynamic_cast<KokkosBase*>(ftemp))
       error->all(FLERR,"Cannot (yet) use non-Kokkos fixes with compute dt/grid/kk");
     KokkosBase* computeKKBase = dynamic_cast<KokkosBase*>(ftemp);
     // a fix keeps its per-grid output between invocations and grid migration
@@ -158,7 +158,7 @@ void ComputeDtGridKokkos::compute_per_grid_kokkos()
   }
 
   if (usq_which == COMPUTE) {
-    if (!cusq->kokkos_flag)
+    if (!cusq->kokkos_flag || !dynamic_cast<KokkosBase*>(cusq))
       error->all(FLERR,"Cannot (yet) use non-Kokkos computes with compute dt/grid/kk");
     KokkosBase* computeKKBase = dynamic_cast<KokkosBase*>(cusq);
     if (!(cusq->invoked_flag & INVOKED_PER_GRID)) {
@@ -177,7 +177,7 @@ void ComputeDtGridKokkos::compute_per_grid_kokkos()
       copymode = 0;
     }
   } else if (usq_which == FIX) {
-    if (!fusq->kokkos_flag)
+    if (!fusq->kokkos_flag || !dynamic_cast<KokkosBase*>(fusq))
       error->all(FLERR,"Cannot (yet) use non-Kokkos fixes with compute dt/grid/kk");
     KokkosBase* computeKKBase = dynamic_cast<KokkosBase*>(fusq);
     // a fix keeps its per-grid output between invocations and grid migration
@@ -194,7 +194,7 @@ void ComputeDtGridKokkos::compute_per_grid_kokkos()
   }
 
   if (vsq_which == COMPUTE) {
-    if (!cvsq->kokkos_flag)
+    if (!cvsq->kokkos_flag || !dynamic_cast<KokkosBase*>(cvsq))
       error->all(FLERR,"Cannot (yet) use non-Kokkos computes with compute dt/grid/kk");
     KokkosBase* computeKKBase = dynamic_cast<KokkosBase*>(cvsq);
     if (!(cvsq->invoked_flag & INVOKED_PER_GRID)) {
@@ -213,7 +213,7 @@ void ComputeDtGridKokkos::compute_per_grid_kokkos()
       copymode = 0;
     }
   } else if (vsq_which == FIX) {
-    if (!fvsq->kokkos_flag)
+    if (!fvsq->kokkos_flag || !dynamic_cast<KokkosBase*>(fvsq))
       error->all(FLERR,"Cannot (yet) use non-Kokkos fixes with compute dt/grid/kk");
     KokkosBase* computeKKBase = dynamic_cast<KokkosBase*>(fvsq);
     // a fix keeps its per-grid output between invocations and grid migration
@@ -230,7 +230,7 @@ void ComputeDtGridKokkos::compute_per_grid_kokkos()
   }
 
   if (wsq_which == COMPUTE) {
-    if (!cwsq->kokkos_flag)
+    if (!cwsq->kokkos_flag || !dynamic_cast<KokkosBase*>(cwsq))
       error->all(FLERR,"Cannot (yet) use non-Kokkos computes with compute dt/grid/kk");
     KokkosBase* computeKKBase = dynamic_cast<KokkosBase*>(cwsq);
     if (!(cwsq->invoked_flag & INVOKED_PER_GRID)) {
@@ -249,7 +249,7 @@ void ComputeDtGridKokkos::compute_per_grid_kokkos()
       copymode = 0;
     }
   } else if (wsq_which == FIX) {
-    if (!fwsq->kokkos_flag)
+    if (!fwsq->kokkos_flag || !dynamic_cast<KokkosBase*>(fwsq))
       error->all(FLERR,"Cannot (yet) use non-Kokkos fixes with compute dt/grid/kk");
     KokkosBase* computeKKBase = dynamic_cast<KokkosBase*>(fwsq);
     // a fix keeps its per-grid output between invocations and grid migration
@@ -428,4 +428,18 @@ void ComputeDtGridKokkos::reallocate()
   d_usq_vector = DAT::t_float_1d ("d_usq_vector", nglocal);
   d_vsq_vector = DAT::t_float_1d ("d_vsq_vector", nglocal);
   d_wsq_vector = DAT::t_float_1d ("d_wsq_vector", nglocal);
+
+  // host arrays are also allocated (freed by ~ComputeDtGrid), since the
+  //   host ComputeDtGrid::compute_per_grid() runs while prewrap is set
+
+  memory->destroy(tau);
+  memory->destroy(temp);
+  memory->destroy(usq);
+  memory->destroy(vsq);
+  memory->destroy(wsq);
+  memory->create(tau,nglocal,"dt/grid:tau");
+  memory->create(temp,nglocal,"dt/grid:temp");
+  memory->create(usq,nglocal,"dt/grid:usq");
+  memory->create(vsq,nglocal,"dt/grid:vsq");
+  memory->create(wsq,nglocal,"dt/grid:wsq");
 }

@@ -120,9 +120,34 @@ class GridKokkos : public Grid {
       ix = static_cast<int> ((x[0]-lo[0]) * nx/(hi[0]-lo[0]));
       iy = static_cast<int> ((x[1]-lo[1]) * ny/(hi[1]-lo[1]));
       iz = static_cast<int> ((x[2]-lo[2]) * nz/(hi[2]-lo[2]));
-      if (ix == nx) ix--;
-      if (iy == ny) iy--;
-      if (iz == nz) iz--;
+      // insure indices match grid cell boundaries in case of round-off error
+      // via master equation id_child_lohi(), same as Grid::id_point_child()
+
+      double edge;
+
+      edge = lo[0] + ix*(hi[0]-lo[0])/nx;
+      if (x[0] < edge) ix--;
+      edge = lo[0] + (ix+1)*(hi[0]-lo[0])/nx;
+      if (x[0] >= edge) ix++;
+
+      edge = lo[1] + iy*(hi[1]-lo[1])/ny;
+      if (x[1] < edge) iy--;
+      edge = lo[1] + (iy+1)*(hi[1]-lo[1])/ny;
+      if (x[1] >= edge) iy++;
+
+      edge = lo[2] + iz*(hi[2]-lo[2])/nz;
+      if (x[2] < edge) iz--;
+      edge = lo[2] + (iz+1)*(hi[2]-lo[2])/nz;
+      if (x[2] >= edge) iz++;
+
+      // insure indices range from 0 to Nxyz-1 inclusive
+
+      if (ix < 0) ix = 0;
+      if (ix > nx-1) ix = nx-1;
+      if (iy < 0) iy = 0;
+      if (iy > ny-1) iy = ny-1;
+      if (iz < 0) iz = 0;
+      if (iz > nz-1) iz = nz-1;
 
       ichild = (cellint) iz*nx*ny + (cellint) iy*nx + ix + 1;
       childID = (ichild << k_plevels.view_device()[level].nbits) | id;

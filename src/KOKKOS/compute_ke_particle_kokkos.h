@@ -42,6 +42,7 @@ class ComputeKEParticleKokkos : public ComputeKEParticle, public KokkosBase {
  private:
   t_particle_1d d_particles;
   t_species_1d d_species;
+  double mvv2e;
 };
 
 }

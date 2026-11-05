@@ -123,7 +123,9 @@ void ComputeFFTGridKokkos::post_constructor()
 void ComputeFFTGridKokkos::compute_per_grid()
 {
   if (sparta->kokkos->prewrap) {
-    ComputeFFTGrid::compute_per_grid();
+    // base-class host path needs fft/irregular/map setup that the
+    // Kokkos post_constructor() does not perform
+    error->all(FLERR,"Cannot (yet) invoke compute fft/grid/kk before the first run");
   } else {
     compute_per_grid_kokkos();
     if (ncol == 1) {
@@ -157,7 +159,8 @@ void ComputeFFTGridKokkos::compute_per_grid_kokkos()
     if (ncol == 1)
       Kokkos::deep_copy(d_vector_grid,0.0);
     else
-      Kokkos::deep_copy(d_array_grid,0.0);
+      Kokkos::deep_copy(Kokkos::subview(d_array_grid,Kokkos::ALL(),
+                                        std::make_pair(startcol,ncol)),0.0);
   }
 
   // process values, one FFT per value
@@ -172,7 +175,7 @@ void ComputeFFTGridKokkos::compute_per_grid_kokkos()
     if (which[m] == COMPUTE) {
       Compute *c = modify->compute[vidx];
 
-      if (!c->kokkos_flag)
+      if (!c->kokkos_flag || !dynamic_cast<KokkosBase*>(c))
         error->all(FLERR,"Cannot (yet) use non-Kokkos computes with compute fft/grid/kk");
 
       KokkosBase* cKKBase = dynamic_cast<KokkosBase*>(c);
@@ -192,12 +195,13 @@ void ComputeFFTGridKokkos::compute_per_grid_kokkos()
         d_ingrid = cKKBase->d_vector_grid;
       } else {
         auto d_carray = cKKBase->d_array_grid;
-        auto d_ingrid = k_ingrid.view_device();
+        d_ingrid = k_ingrid.view_device();
+        auto l_ingrid = d_ingrid;
         const int n = grid->nlocal;
         const int aidxm1 = aidx - 1;
 
         Kokkos::parallel_for(n, SPARTA_LAMBDA(int i) {
-          d_ingrid[i] = d_carray(i,aidxm1);
+          l_ingrid[i] = d_carray(i,aidxm1);
         });
       }
 
@@ -222,12 +226,13 @@ void ComputeFFTGridKokkos::compute_per_grid_kokkos()
         d_ingrid = fixKKBase->d_vector_grid;
       } else {
         auto d_farray = fixKKBase->d_array_grid;
-        auto d_ingrid = k_ingrid.view_device();
+        d_ingrid = k_ingrid.view_device();
+        auto l_ingrid = d_ingrid;
         const int n = grid->nlocal;
         const int aidxm1 = aidx - 1;
 
         Kokkos::parallel_for(n, SPARTA_LAMBDA(int i) {
-          d_ingrid[i] = d_farray(i,aidxm1);
+          l_ingrid[i] = d_farray(i,aidxm1);
         });
       }
 
@@ -237,6 +242,7 @@ void ComputeFFTGridKokkos::compute_per_grid_kokkos()
       input->variable->compute_grid(vidx,ingrid,1,0);
       k_ingrid.modify_host();
       k_ingrid.sync_device();
+      d_ingrid = k_ingrid.view_device();
     }
 
     // ------------------------------

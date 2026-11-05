@@ -42,6 +42,17 @@ class ReactBirdKokkos : public ReactBird {
   double extract_tally(int);
   void backup();
   void restore();
+  void check_prob_warn(int);
+  virtual void end_of_run();
+
+  // device flag set by attempt_kk() for an invalid summed react_prob
+  //   bit 1 = negative, bit 2 = greater than 1
+  // CollideVSSKokkos::init() aliases it to a slot of its per-pass scalars
+  //   and passes the read-back value to check_prob_warn() each step
+  // prob_warn_flag accumulates the flags, end_of_run() warns once per run
+
+  DAT::t_int_scalar d_prob_warn;
+  int prob_warn_flag;
 
   // tallies for reactions
 

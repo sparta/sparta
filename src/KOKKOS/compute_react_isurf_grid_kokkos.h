@@ -55,15 +55,14 @@ class ComputeReactISurfGridKokkos : public ComputeReactISurfGrid {
     if (reaction == 0) return;
     reaction--;
 
-    // skip if isurf not in group or its reaction model is not a match
+    // skip if this surf's reaction model is not a match
+    // groupbit is a grid group, applied to cells in post_process_grid()
 
     surfint surfID;
     if (dim == 2) {
-      if (!(d_lines[isurf].mask & groupbit)) return;
       if (d_lines[isurf].isr != isr) return;
       surfID = d_lines[isurf].id;
     } else {
-      if (!(d_tris[isurf].mask & groupbit)) return;
       if (d_tris[isurf].isr != isr) return;
       surfID = d_tris[isurf].id;
     }

@@ -45,6 +45,12 @@ void ReactQKKokkos::init()
   for (int i = 0; i < nlist; i++)
     if (rlist[i].active && rlist[i].type == RECOMBINATION)
       error->all(FLERR,"React qk does not currently support recombination reactions");
+
+  // do not allow ionization reactions, attempt() has no model for them
+
+  for (int i = 0; i < nlist; i++)
+    if (rlist[i].active && rlist[i].type == IONIZATION)
+      error->all(FLERR,"React qk does not currently support ionization reactions");
   if (computeChemRates)
     error->all(FLERR,"React qk does not currently support the "
                "'react_modify compute_chem_rates' option");

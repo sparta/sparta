@@ -237,9 +237,11 @@ class SurfCollideSpecularKokkos : public SurfCollideSpecular {
 
   KOKKOS_INLINE_FUNCTION
   void wrapper_kokkos(Particle::OnePart *p, const double *norm,
-                      int *, double *) const
+                      int *flags, double *) const
   {
-    MathExtraKokkos::reflect3(p->v,norm);
+    const int noslip = flags ? flags[0] : noslip_flag;
+    if (noslip) MathExtraKokkos::negate3(p->v);
+    else MathExtraKokkos::reflect3(p->v,norm);
   }
 };
 

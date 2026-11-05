@@ -19,6 +19,7 @@
 #include "memory_kokkos.h"
 #include "sparta_masks.h"
 #include "kokkos.h"
+#include "error.h"
 
 using namespace SPARTA_NS;
 
@@ -28,6 +29,7 @@ ComputeGasReactionGridKokkos::ComputeGasReactionGridKokkos(SPARTA *sparta, int n
   ComputeGasReactionGrid(sparta, narg, arg)
 {
   kokkos_flag = 1;
+  nlist_orig = react ? react->nlist : 0;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -36,6 +38,7 @@ ComputeGasReactionGridKokkos::ComputeGasReactionGridKokkos(SPARTA *sparta) :
   ComputeGasReactionGrid(sparta)
 {
   copy = 1;
+  nlist_orig = 0;
   vector_grid = NULL;
   array_grid = NULL;
   ncol = 0;
@@ -60,10 +63,18 @@ void ComputeGasReactionGridKokkos::init()
 {
   ComputeGasReactionGrid::init();
 
+  // reaction2col and ncol were sized from react->nlist at construction,
+  //   a re-issued react command with more reactions would index them
+  //   out of bounds; fewer reactions, or none (react none), are safe
+
+  if (mode != ALL && react && react->nlist > nlist_orig)
+    error->all(FLERR,"Compute gas/reaction/grid reactions changed "
+               "since compute was defined");
+
   // device copy of reaction -> column map for SELECT mode
 
   if (mode == SELECT) {
-    int n = react->nlist + 1;
+    int n = nlist_orig + 1;
     d_reaction2col = DAT::t_int_1d("gas/reaction/grid:reaction2col",n);
     auto h_reaction2col = Kokkos::create_mirror_view(d_reaction2col);
     for (int i = 0; i < n; i++) h_reaction2col(i) = reaction2col[i];

@@ -171,8 +171,28 @@ int CommKokkos::migrate_particles(int nmigrate, int *plist, const DAT::t_int_1d 
   nsend = h_nsend();
 
   // compress my list of particles
+  // EXACT build has no ParticleKokkos::compress_migrate() override,
+  //   so compress on the host, matching Comm::migrate_particles()
 
+#ifdef SPARTA_KOKKOS_EXACT
+  particle_kk->sync(Host,PARTICLE_MASK);
+  if (ncustom) particle_kk->sync(Host,CUSTOM_MASK);
+
+  int ascending = 1;
+  for (int i = 1; i < nmigrate; i++)
+    if (plist[i] <= plist[i-1]) {
+      ascending = 0;
+      break;
+    }
+
+  if (ascending) particle->compress_migrate(nmigrate,plist);
+  else particle->compress_reactions(nmigrate,plist);
+
+  particle_kk->modify(Host,PARTICLE_MASK);
+  if (ncustom) particle_kk->modify(Host,CUSTOM_MASK);
+#else
   particle->compress_migrate(nmigrate,plist);
+#endif
   int ncompress = particle->nlocal;
 
   // create or augment irregular communication plan
@@ -195,6 +215,7 @@ int CommKokkos::migrate_particles(int nmigrate, int *plist, const DAT::t_int_1d 
   // else receive into rbuf, unpack particles one by one via unpack_custom()
 
   particle_kk->sync(Device,PARTICLE_MASK);
+  if (ncustom) particle_kk->sync(Device,CUSTOM_MASK);
   d_particles = particle_kk->k_particles.view_device();
 
   if (gpu_aware_flag && !ncustom) {

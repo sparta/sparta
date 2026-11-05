@@ -270,6 +270,8 @@ class UpdateKokkos : public Update {
   ComputeISurfGridKokkos tmp_compute_isurf_grid_kk;
   ComputeReactISurfGridKokkos tmp_compute_react_isurf_grid_kk;
   ComputeReactSurfKokkos tmp_compute_react_surf_kk;
+  ComputeSurfCollisionTallyKokkos tmp_compute_surf_coll_tally_kk;
+  ComputeSurfReactionTallyKokkos tmp_compute_surf_react_tally_kk;
 
 #define UK_SLIST_SURF(m)        slist_active_copy[m].obj
 #define UK_SLIST_ISURF(m)       slist_active_isurf_copy[m].obj

@@ -105,8 +105,6 @@ void RemapKokkos3d<DeviceType>::remap_3d_kokkos(typename FFT_AT::t_FFT_SCALAR_1d
 {
 
   typename FFT_AT::t_FFT_SCALAR_1d d_scratch;
-  int me;
-  MPI_Comm_rank(plan->comm,&me);
 
   if (plan->memory == 0)
     d_scratch = d_buf;
@@ -199,7 +197,7 @@ void RemapKokkos3d<DeviceType>::remap_3d_kokkos(typename FFT_AT::t_FFT_SCALAR_1d
                       &plan->packplan[numpacked]);
           numpacked++;
         }
-        else if (plan->commringlist[isend] == me && plan->self) {
+        else if (isend == plan->selfcommringloc && plan->self) {
           numpacked++;
         }
       }
@@ -235,7 +233,7 @@ void RemapKokkos3d<DeviceType>::remap_3d_kokkos(typename FFT_AT::t_FFT_SCALAR_1d
                        &plan->unpackplan[numpacked]);
           numpacked++;
         }
-        else if (plan->commringlist[irecv] == me && plan->self) {
+        else if (irecv == plan->selfcommringloc && plan->self) {
           numpacked++;
         }
       }
@@ -292,7 +290,7 @@ struct remap_plan_3d_kokkos<DeviceType>* RemapKokkos3d<DeviceType>::remap_3d_cre
 
   // allocate memory for plan data struct
 
-  plan = new struct remap_plan_3d_kokkos<DeviceType>;
+  plan = new struct remap_plan_3d_kokkos<DeviceType>();
   if (plan == nullptr) return nullptr;
   plan->usecollective = usecollective;
   plan->usegpu_aware = usegpu_aware;
@@ -591,13 +589,17 @@ struct remap_plan_3d_kokkos<DeviceType>* RemapKokkos3d<DeviceType>::remap_3d_cre
     // because of the Alltoallv, both send and recv have to be initialized even if
     // only one of those is performed
 
+    // a rank with no data to send or recv in this plan is not in commringlist,
+    // its plan arrays are not allocated and it does not take part in the Alltoallv
+
+    plan->selfcommringloc = -1;
+    plan->selfnsendloc = -1;
+    plan->selfnrecvloc = -1;
+    plan->self = 0;
+
     if (nsend || nrecv) {
 
       // send space
-
-      plan->selfcommringloc = -1;
-      plan->selfnsendloc = -1;
-      plan->selfnrecvloc = -1;
 
       plan->nsend = nsend;
       plan->pack = PackKokkos3d<DeviceType>::pack_3d;
@@ -654,120 +656,120 @@ struct remap_plan_3d_kokkos<DeviceType>* RemapKokkos3d<DeviceType>::remap_3d_cre
       if (plan->recv_offset == nullptr || plan->recv_size == nullptr ||
           plan->rcvcnts == nullptr || plan->rdispls == nullptr ||
           plan->unpackplan == nullptr) return nullptr;
-    }
 
-    // store send info, with self as last entry
+      // store send info, with self as last entry
 
-    nsend = 0;
-    ibuf = 0;
-    int total_send_size = 0;
-    for (i = 0; i < plan->commringlen; i++) {
-      iproc = plan->commringlist[i];
-      if (iproc == me) {
-        plan->selfcommringloc = i;
-        plan->selfnsendloc = nsend;
-      }
-      if (remap_3d_collide(&in,&outarray[iproc],&overlap)) {
-        //plan->send_proc[nsend] = i;
-        // number of entries required for this pack's 3-d coords
-        plan->send_offset[nsend] = nqty *
-          ((overlap.klo-in.klo)*in.jsize*in.isize +
-            ((overlap.jlo-in.jlo)*in.isize + overlap.ilo-in.ilo));
-        plan->packplan[nsend].nfast = nqty*overlap.isize;
-        plan->packplan[nsend].nmid = overlap.jsize;
-        plan->packplan[nsend].nslow = overlap.ksize;
-        plan->packplan[nsend].nstride_line = nqty*in.isize;
-        plan->packplan[nsend].nstride_plane = nqty*in.jsize*in.isize;
-        plan->packplan[nsend].nqty = nqty;
-        // total amount of overlap
-        plan->send_size[i] = nqty*overlap.isize*overlap.jsize*overlap.ksize;
-        plan->sendcnts[i] = plan->send_size[i];
-        plan->sdispls[i] = ibuf;
-        ibuf += plan->send_size[i];
-        nsend++;
-      } else {
-        plan->send_size[i] = 0;
-        plan->sdispls[i] = ibuf;
-        plan->sendcnts[i] = 0;
-      }
-      total_send_size += plan->send_size[i];
-    }
-
-    if (total_send_size) {
-      plan->d_sendbuf = typename FFT_AT::t_FFT_SCALAR_1d("remap3d:sendbuf",total_send_size);
-      if (!plan->d_sendbuf.data()) return nullptr;
-    }
-
-    // store recv info, with self as last entry
-
-    ibuf = 0;
-    nrecv = 0;
-
-    for (i = 0; i < plan->commringlen; i++) {
-      iproc = plan->commringlist[i];
-      if (iproc == me) {
-        plan->selfnrecvloc = nrecv;
-      }
-      if (remap_3d_collide(&out,&inarray[iproc],&overlap)) {
-
-        if (permute == 0) {
-          plan->recv_offset[nrecv] = nqty *
-            ((overlap.klo-out.klo)*out.jsize*out.isize +
-              (overlap.jlo-out.jlo)*out.isize + (overlap.ilo-out.ilo));
-          plan->unpackplan[nrecv].nfast = nqty*overlap.isize;
-          plan->unpackplan[nrecv].nmid = overlap.jsize;
-          plan->unpackplan[nrecv].nslow = overlap.ksize;
-          plan->unpackplan[nrecv].nstride_line = nqty*out.isize;
-          plan->unpackplan[nrecv].nstride_plane = nqty*out.jsize*out.isize;
-          plan->unpackplan[nrecv].nqty = nqty;
+      nsend = 0;
+      ibuf = 0;
+      int total_send_size = 0;
+      for (i = 0; i < plan->commringlen; i++) {
+        iproc = plan->commringlist[i];
+        if (iproc == me) {
+          plan->selfcommringloc = i;
+          plan->selfnsendloc = nsend;
         }
-        else if (permute == 1) {
-          plan->recv_offset[nrecv] = nqty *
-            ((overlap.ilo-out.ilo)*out.ksize*out.jsize +
-              (overlap.klo-out.klo)*out.jsize + (overlap.jlo-out.jlo));
-          plan->unpackplan[nrecv].nfast = overlap.isize;
-          plan->unpackplan[nrecv].nmid = overlap.jsize;
-          plan->unpackplan[nrecv].nslow = overlap.ksize;
-          plan->unpackplan[nrecv].nstride_line = nqty*out.jsize;
-          plan->unpackplan[nrecv].nstride_plane = nqty*out.ksize*out.jsize;
-          plan->unpackplan[nrecv].nqty = nqty;
+        if (remap_3d_collide(&in,&outarray[iproc],&overlap)) {
+          //plan->send_proc[nsend] = i;
+          // number of entries required for this pack's 3-d coords
+          plan->send_offset[nsend] = nqty *
+            ((overlap.klo-in.klo)*in.jsize*in.isize +
+              ((overlap.jlo-in.jlo)*in.isize + overlap.ilo-in.ilo));
+          plan->packplan[nsend].nfast = nqty*overlap.isize;
+          plan->packplan[nsend].nmid = overlap.jsize;
+          plan->packplan[nsend].nslow = overlap.ksize;
+          plan->packplan[nsend].nstride_line = nqty*in.isize;
+          plan->packplan[nsend].nstride_plane = nqty*in.jsize*in.isize;
+          plan->packplan[nsend].nqty = nqty;
+          // total amount of overlap
+          plan->send_size[i] = nqty*overlap.isize*overlap.jsize*overlap.ksize;
+          plan->sendcnts[i] = plan->send_size[i];
+          plan->sdispls[i] = ibuf;
+          ibuf += plan->send_size[i];
+          nsend++;
+        } else {
+          plan->send_size[i] = 0;
+          plan->sdispls[i] = ibuf;
+          plan->sendcnts[i] = 0;
         }
-        else {
-          plan->recv_offset[nrecv] = nqty *
-            ((overlap.jlo-out.jlo)*out.isize*out.ksize +
-              (overlap.ilo-out.ilo)*out.ksize + (overlap.klo-out.klo));
-          plan->unpackplan[nrecv].nfast = overlap.isize;
-          plan->unpackplan[nrecv].nmid = overlap.jsize;
-          plan->unpackplan[nrecv].nslow = overlap.ksize;
-          plan->unpackplan[nrecv].nstride_line = nqty*out.ksize;
-          plan->unpackplan[nrecv].nstride_plane = nqty*out.isize*out.ksize;
-          plan->unpackplan[nrecv].nqty = nqty;
-        }
-
-        plan->recv_size[i] = nqty*overlap.isize*overlap.jsize*overlap.ksize;
-        plan->rcvcnts[i] = plan->recv_size[i];
-        plan->rdispls[i] = ibuf;
-        ibuf += plan->recv_size[i];
-        nrecv++;
-      } else {
-        plan->recv_size[i] = 0;
-        plan->rcvcnts[i] = 0;
-        plan->rdispls[i] = ibuf;
+        total_send_size += plan->send_size[i];
       }
+
+      if (total_send_size) {
+        plan->d_sendbuf = typename FFT_AT::t_FFT_SCALAR_1d("remap3d:sendbuf",total_send_size);
+        if (!plan->d_sendbuf.data()) return nullptr;
+      }
+
+      // store recv info, with self as last entry
+
+      ibuf = 0;
+      nrecv = 0;
+
+      for (i = 0; i < plan->commringlen; i++) {
+        iproc = plan->commringlist[i];
+        if (iproc == me) {
+          plan->selfnrecvloc = nrecv;
+        }
+        if (remap_3d_collide(&out,&inarray[iproc],&overlap)) {
+
+          if (permute == 0) {
+            plan->recv_offset[nrecv] = nqty *
+              ((overlap.klo-out.klo)*out.jsize*out.isize +
+                (overlap.jlo-out.jlo)*out.isize + (overlap.ilo-out.ilo));
+            plan->unpackplan[nrecv].nfast = nqty*overlap.isize;
+            plan->unpackplan[nrecv].nmid = overlap.jsize;
+            plan->unpackplan[nrecv].nslow = overlap.ksize;
+            plan->unpackplan[nrecv].nstride_line = nqty*out.isize;
+            plan->unpackplan[nrecv].nstride_plane = nqty*out.jsize*out.isize;
+            plan->unpackplan[nrecv].nqty = nqty;
+          }
+          else if (permute == 1) {
+            plan->recv_offset[nrecv] = nqty *
+              ((overlap.ilo-out.ilo)*out.ksize*out.jsize +
+                (overlap.klo-out.klo)*out.jsize + (overlap.jlo-out.jlo));
+            plan->unpackplan[nrecv].nfast = overlap.isize;
+            plan->unpackplan[nrecv].nmid = overlap.jsize;
+            plan->unpackplan[nrecv].nslow = overlap.ksize;
+            plan->unpackplan[nrecv].nstride_line = nqty*out.jsize;
+            plan->unpackplan[nrecv].nstride_plane = nqty*out.ksize*out.jsize;
+            plan->unpackplan[nrecv].nqty = nqty;
+          }
+          else {
+            plan->recv_offset[nrecv] = nqty *
+              ((overlap.jlo-out.jlo)*out.isize*out.ksize +
+                (overlap.ilo-out.ilo)*out.ksize + (overlap.klo-out.klo));
+            plan->unpackplan[nrecv].nfast = overlap.isize;
+            plan->unpackplan[nrecv].nmid = overlap.jsize;
+            plan->unpackplan[nrecv].nslow = overlap.ksize;
+            plan->unpackplan[nrecv].nstride_line = nqty*out.ksize;
+            plan->unpackplan[nrecv].nstride_plane = nqty*out.isize*out.ksize;
+            plan->unpackplan[nrecv].nqty = nqty;
+          }
+
+          plan->recv_size[i] = nqty*overlap.isize*overlap.jsize*overlap.ksize;
+          plan->rcvcnts[i] = plan->recv_size[i];
+          plan->rdispls[i] = ibuf;
+          ibuf += plan->recv_size[i];
+          nrecv++;
+        } else {
+          plan->recv_size[i] = 0;
+          plan->rcvcnts[i] = 0;
+          plan->rdispls[i] = ibuf;
+        }
+      }
+
+      // self data is copied directly, not via the Alltoallv
+
+      if (plan->selfcommringloc >= 0 && plan->sendcnts[plan->selfcommringloc]) {
+        plan->self = 1;
+        plan->sendcnts[plan->selfcommringloc] = 0;
+        plan->rcvcnts[plan->selfcommringloc] = 0;
+      }
+
     }
 
     // init remaining fields in remap plan
 
     plan->memory = memory;
-
-    if (plan->sendcnts[plan->selfcommringloc]) {
-      plan->self = 1;
-      plan->sendcnts[plan->selfcommringloc] = 0;
-      plan->rcvcnts[plan->selfcommringloc] = 0;
-    }
-    else {
-      plan->self = 0;
-    }
 
 
     // if requested, allocate internal scratch space for recvs,
@@ -791,6 +793,8 @@ struct remap_plan_3d_kokkos<DeviceType>* RemapKokkos3d<DeviceType>::remap_3d_cre
       MPI_Group_incl(orig_group, plan->commringlen,
                       plan->commringlist, &new_group);
       MPI_Comm_create(comm, new_group, &plan->comm);
+      MPI_Group_free(&new_group);
+      MPI_Group_free(&orig_group);
     }
 
     // if using collective and the comm ring list is empty create
@@ -798,6 +802,15 @@ struct remap_plan_3d_kokkos<DeviceType>* RemapKokkos3d<DeviceType>::remap_3d_cre
 
     else
       MPI_Comm_create(comm, MPI_GROUP_EMPTY, &plan->comm);
+
+    // a rank not in commringlist got MPI_COMM_NULL: like the CPU remap,
+    // give it an empty comm ring so it skips the Alltoallv and the comm free
+
+    if (!(nsend || nrecv) && plan->commringlen > 0) {
+      free(plan->commringlist);
+      plan->commringlist = nullptr;
+      plan->commringlen = 0;
+    }
   }
 
   // free locally malloced space
@@ -833,13 +846,12 @@ void RemapKokkos3d<DeviceType>::remap_3d_destroy_plan_kokkos(struct remap_plan_3
       free(plan->rdispls);
     }
 
-    if (plan->nsend) {
+    // send and recv arrays are allocated together if (nsend || nrecv)
+
+    if (plan->nsend || plan->nrecv) {
       free(plan->send_offset);
       free(plan->send_size);
       free(plan->packplan);
-    }
-
-    if (plan->nrecv) {
       free(plan->recv_offset);
       free(plan->recv_size);
       free(plan->unpackplan);

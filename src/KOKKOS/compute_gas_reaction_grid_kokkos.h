@@ -91,6 +91,7 @@ class ComputeGasReactionGridKokkos : public ComputeGasReactionGrid, public Kokko
   //   (read by fix ave/grid/kk)
 
   DAT::t_int_1d d_reaction2col;   // reaction -> column map for SELECT mode
+  int nlist_orig;                 // react->nlist when compute was defined
 
   t_cinfo_1d d_cinfo;
   DAT::t_int_2d d_s2g;

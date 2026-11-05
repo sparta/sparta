@@ -98,21 +98,12 @@ FixEmitFaceFileKokkos::~FixEmitFaceFileKokkos()
 #endif
 
   // the per-task vectors point into Kokkos DualViews, not into new[] memory,
-  //   so hide them from ~FixEmitFaceFile(), which would delete[] them
-
-  if (tasks) {
-    for (int i = 0; i < ntaskmax; i++) {
-      tasks[i].ntargetsp = NULL;
-      tasks[i].vscale = NULL;
-      tasks[i].fraction = NULL;
-      tasks[i].cummulative = NULL;
-    }
-  }
-
-  // tasks itself is the host half of k_tasks, so it must not reach
-  //   memory->sfree() in ~FixEmitFaceFile().  zero ntaskmax as well: unlike
-  //   ~FixEmitFace(), ~FixEmitFaceFile() has no "if (tasks)" guard around its
-  //   delete[] loop, so a NULL tasks with a nonzero ntaskmax would fault
+  //   and tasks itself is the host half of k_tasks, so neither may reach the
+  //   delete[] loop and memory->sfree() in ~FixEmitFaceFile().  A NULL tasks
+  //   with a zero ntaskmax skips both (that loop has no "if (tasks)" guard,
+  //   so ntaskmax must be zeroed too).  Clearing the per-task pointers through
+  //   tasks is then not needed, and would write the host side of k_tasks,
+  //   which the run may leave stale behind a device claim
 
   tasks = NULL;
   ntaskmax = 0;
@@ -268,11 +259,29 @@ void FixEmitFaceFileKokkos::flatten_region()
 
 void FixEmitFaceFileKokkos::perform_task()
 {
-  // the non-Kokkos perform_task_*() read update->dt into a local, leaving the
-  //   class member dt (frozen at init) for subsonic_inflow().  keep that
-  //   split so a run with fix dt/reset behaves identically
+  // if global timestep was reset since tasks were created (e.g. fix dt/reset),
+  //   rescale non-subsonic insertion counts which are proportional to dt
+  // subsonic_inflow() recomputes counts using current dt
+  // same as the non-Kokkos perform_task_*()
 
-  dt_step = update->dt;
+  if (!subsonic && update->dt != dt) {
+    double dtratio = update->dt / dt;
+    k_tasks.sync_host();
+    if (perspecies) k_ntargetsp.sync_host();
+    for (int i = 0; i < ntask; i++) {
+      tasks[i].ntarget *= dtratio;
+      if (perspecies)
+        for (int isp = 0; isp < nspecies; isp++) tasks[i].ntargetsp[isp] *= dtratio;
+      if (tasks[i].ntarget >= MAXSMALLINT)
+        error->one(FLERR,
+                   "Fix emit/face/file insertion count exceeds 32-bit int");
+    }
+    k_tasks.modify_host();
+    if (perspecies) k_ntargetsp.modify_host();
+  }
+
+  dt = update->dt;
+  dt_step = dt;
 
   // face geometry is fix-wide here, not per task as in fix emit/face, so
   //   hoist it into locals the compaction lambda can capture by value
@@ -757,8 +766,16 @@ void FixEmitFaceFileKokkos::subsonic_sort()
   //   loop) comes out in INcreasing index.  d_plist is always increasing,
   //   so remember which order to walk it in.
 
+  // like the non-Kokkos subsonic_sort(), which builds private lists and
+  //   leaves Particle::sorted untouched, do not leave sorted_kk set:
+  //   particles this fix then inserts are not in d_plist, so a later
+  //   subsonic fix this step must re-sort (move resets it anyway)
+
   plist_descending = !particle_kk->sorted_kk;
-  if (!particle_kk->sorted_kk) particle_kk->sort_kokkos();
+  if (!particle_kk->sorted_kk) {
+    particle_kk->sort_kokkos();
+    particle_kk->sorted_kk = 0;
+  }
 }
 
 /* ----------------------------------------------------------------------
@@ -898,17 +915,20 @@ void FixEmitFaceFileKokkos::operator()(TagFixEmitFaceFile_subsonic_grid,
     temp_thermal_cell = d_tasks(i).temp_thermal;
 
   } else {
-    const double nrho_cell = np * fnum / d_cinfo[icell].volume;
-    const double massrho_cell = masstot * fnum / d_cinfo[icell].volume;
+    const double nrho_cell = np * fnum * d_cinfo[icell].weight / d_cinfo[icell].volume;
+    const double massrho_cell = masstot * fnum * d_cinfo[icell].weight / d_cinfo[icell].volume;
     if (np > 1) {
       const double ke = mv[3]/np -
         (mv[0]*mv[0] + mv[1]*mv[1] + mv[2]*mv[2])/np/masstot;
       temp_thermal_cell = tprefactor * ke;
+      // thermal ke negligible vs total ke (all particles at COM velocity):
+      // ke is pure roundoff of either sign, treat cell as cold
+      if (ke <= 1.0e-10 * mv[3]/np) temp_thermal_cell = 0.0;
     } else temp_thermal_cell = temp_thermal_mix;
 
     const double press_cell = nrho_cell * boltz * temp_thermal_cell;
     double soundspeed_cell;
-    if (np) {
+    if (np && temp_thermal_cell > 0.0) {
       const double mass_cell = masstot / np;
       const double gamma_cell = gamma / np;
       soundspeed_cell = sqrt(gamma_cell*boltz*temp_thermal_cell / mass_cell);

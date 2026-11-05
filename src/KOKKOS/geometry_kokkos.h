@@ -1092,11 +1092,11 @@ int point_in_tri(double *x, double *p1, double *p2, double *p3, double *norm)
 
   // if (pt - vertex) dotted into tri edge normal < 0, then outside tri
 
-  MathExtraKokkos::sub3(p1,x,diff);
+  MathExtraKokkos::sub3(x,p1,diff);
   if (MathExtraKokkos::dot3(diff,enorm1) < 0.0) return 0;
-  MathExtraKokkos::sub3(p2,x,diff);
+  MathExtraKokkos::sub3(x,p2,diff);
   if (MathExtraKokkos::dot3(diff,enorm2) < 0.0) return 0;
-  MathExtraKokkos::sub3(p3,x,diff);
+  MathExtraKokkos::sub3(x,p3,diff);
   if (MathExtraKokkos::dot3(diff,enorm3) < 0.0) return 0;
   return 1;
 };

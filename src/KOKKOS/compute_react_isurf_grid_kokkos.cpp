@@ -163,13 +163,16 @@ int ComputeReactISurfGridKokkos::tallyinfo(surfint *&ptr)
   auto h_surf2tally = Kokkos::create_mirror_view(d_surf2tally);
   Kokkos::deep_copy(h_surf2tally,d_surf2tally);
 
-  int nsurf = surf->nlocal + surf->nghost;
+  // scan full tally storage, nlocal+nghost may have changed since
+  //   the tallies were made (e.g. fix balance), rows beyond are -1
+
+  int nsurf = nsurf_tally_alloc;
   int istart = 0;
   int iend = nsurf-1;
 
   while (1) {
     while (istart < nsurf && h_surf2tally[istart] != -1) istart++;
-    while (h_surf2tally[iend] == -1 && iend > 0) iend--;
+    while (iend > 0 && h_surf2tally[iend] == -1) iend--;
     if (istart >= iend) {
       ntally = istart;
       break;
@@ -180,6 +183,15 @@ int ComputeReactISurfGridKokkos::tallyinfo(surfint *&ptr)
     h_surf2tally[iend] = -1;
     tally2surf[istart] = tally2surf[iend];
   }
+
+  // the compaction above rewrote the host copies in place.  They are a
+  //   per-step product read only on the host, while the device copies are
+  //   re-zeroed by clear() and re-claimed by post_surf_tally(), so the two
+  //   sides are left apart on purpose.  Say so (not modify_host(): the next
+  //   post_surf_tally() modify_device() would then be a concurrent claim)
+
+  k_tally2surf.clear_sync_state();
+  k_array_surf_tally.clear_sync_state();
 
   return ntally;
 }

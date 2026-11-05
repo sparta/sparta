@@ -157,65 +157,78 @@ class SurfCollidePistonKokkos : public SurfCollidePiston {
       }
     }
 
-    // norm will be in single coordinate direction
-    // dir = 0,1,2 for wall (or surface) with norm parallel to x,y,z
-    // which = 0/1 for wall (or surface) with +/- normal (lo/hi wall)
+    // ip = NULL if destroyed by chemistry: no reflection, as in the
+    //   diffuse model, but still call the surf_react() fixes below
+    // also skip reflection if reaction already reset post-collision velocity
 
-    int dim,which;
+    if (ip && !velreset) {
+      // norm will be in single coordinate direction
+      // dir = 0,1,2 for wall (or surface) with norm parallel to x,y,z
+      // which = 0/1 for wall (or surface) with +/- normal (lo/hi wall)
 
-    if (norm[0] != 0.0) {
-      dim = 0;
-      if (norm[0] < 0.0) which = 1;
-      else which = 0;
-    } else if (norm[1] != 0.0) {
-      dim = 1;
-      if (norm[1] < 0.0) which = 1;
-      else which = 0;
-    } else {
-      dim = 2;
-      if (norm[2] < 0.0) which = 1;
-      else which = 0;
-    }
+      int dim,which;
 
-    // xwall = initial position of wall (collision pt)
-    // xorig = initial coordinate component
-    // vorig = initial velocity component
-    // vwall = user-specified wall velocity (always >= 0)
-
-    double *x = ip->x;
-    double *v = ip->v;
-    double xwall = x[dim];
-    double xorig = xwall - v[dim]*(dt - dtremain);
-    double vorig = v[dim];
-
-    // piston reflection: see eqs 12.30 and 12.31 in Bird 1994, p 288
-    // uprime = post-collision velocity component
-    // xprime = post-collision coordinate component
-    // delete particle and return if xprime is not inside box
-    // formula for dtremain works for both which = 0/1
-    //   since numerator and denominator are always same sign
-
-    double uprime,xprime;
-
-    if (which == 0) {
-      uprime = -2.0*vwall - vorig;
-      xprime = 2.0*xwall - xorig + uprime*dt;
-      if (xprime <= xwall) {
-        ip = NULL;
-        return NULL;
+      if (norm[0] != 0.0) {
+        dim = 0;
+        if (norm[0] < 0.0) which = 1;
+        else which = 0;
+      } else if (norm[1] != 0.0) {
+        dim = 1;
+        if (norm[1] < 0.0) which = 1;
+        else which = 0;
+      } else {
+        dim = 2;
+        if (norm[2] < 0.0) which = 1;
+        else which = 0;
       }
-    } else {
-      uprime = 2.0*vwall - vorig;
-      xprime = 2.0*xwall - xorig + uprime*dt;
-      if (xprime >= xwall) {
-        ip = NULL;
-        return NULL;
+
+      // xwall = initial position of wall (collision pt)
+      // xorig = initial coordinate component
+      // vorig = initial velocity component
+      // vwall = user-specified wall velocity (always >= 0)
+
+      double *x = ip->x;
+      double *v = ip->v;
+      double xwall = x[dim];
+      double xorig = xwall - v[dim]*(dt - dtremain);
+      double vorig = v[dim];
+
+      // piston reflection: see eqs 12.30 and 12.31 in Bird 1994, p 288
+      // uprime = post-collision velocity component
+      // xprime = post-collision coordinate component
+      // delete particle and return if xprime is not inside box
+      // formula for dtremain works for both which = 0/1
+      //   since numerator and denominator are always same sign
+
+      double uprime,xprime;
+
+      if (which == 0) {
+        uprime = -2.0*vwall - vorig;
+        xprime = 2.0*xwall - xorig + uprime*dt;
+        if (xprime <= xwall) {
+          ip = NULL;
+          if (jp) {
+            jp->flag = PDISCARD;
+            jp = NULL;
+          }
+          return NULL;
+        }
+      } else {
+        uprime = 2.0*vwall - vorig;
+        xprime = 2.0*xwall - xorig + uprime*dt;
+        if (xprime >= xwall) {
+          ip = NULL;
+          if (jp) {
+            jp->flag = PDISCARD;
+            jp = NULL;
+          }
+          return NULL;
+        }
       }
+
+      dtremain = (xprime - xwall) / uprime;
+      v[dim] = uprime;
     }
-
-    dtremain = (xprime - xwall) / uprime;
-    v[dim] = uprime;
-
 
     // call any fixes with a surf_react() method
     // they may reset j to -1, e.g. fix ambipolar

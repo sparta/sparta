@@ -203,6 +203,8 @@ void FixGridCheckKokkos::end_of_step()
   if (outflag == ERROR && nflag) {
     auto h_particle_problems = Kokkos::create_mirror_view(d_particle_problems);
     Kokkos::deep_copy(h_particle_problems, d_particle_problems);
+    particleKK->sync(Host,PARTICLE_MASK);
+    gridKK->sync(Host,CELL_MASK);
     auto cells = grid->cells;
     auto particles = particle->particles;
     char str[128];

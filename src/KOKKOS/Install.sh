@@ -27,7 +27,7 @@ if (test $mode = 1) then
     touch ../accelerator_kokkos.h
   fi
 elif (test $mode = 0) then
-  if (test $KOKKOS_INSTALLED = 1) then
+  if (test $KOKKOS_INSTALLED != 0) then
     touch ../accelerator_kokkos.h
   fi
 fi
@@ -237,13 +237,13 @@ if (test $1 = 1 || test $1 = 2) then
 elif (test $1 = 0) then
 
   if (test -e ../Makefile.package) then
-    $SED -i -e 's/[^ \t]*kokkos[^ \t]* //g' ../Makefile.package
-    $SED -i -e 's/[^ \t]*KOKKOS[^ \t]* //g' ../Makefile.package
+    sed -i -e 's/[^ \t]*kokkos[^ \t]* //g' ../Makefile.package
+    sed -i -e 's/[^ \t]*KOKKOS[^ \t]* //g' ../Makefile.package
   fi
 
   if (test -e ../Makefile.package.settings) then
-    $SED -i -e '/CXX\ =\ \$(CC)/d' ../Makefile.package.settings
-    $SED -i -e '/^include.*kokkos.*$/d' ../Makefile.package.settings
+    sed -i -e '/CXX\ =\ \$(CC)/d' ../Makefile.package.settings
+    sed -i -e '/^include.*kokkos.*$/d' ../Makefile.package.settings
   fi
 
 fi

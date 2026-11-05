@@ -477,6 +477,10 @@ int ComputeReduceKokkos::setup_values(int m)
         d_src = Kokkos::subview(fkk->d_array_particle,Kokkos::ALL(),acol);
       }
     } else {
+      // a fix keeps its per-grid output between invocations and grid migration
+      // can leave it current on the host alone, so ask for the device copy
+      fkk->sync_pergrid_device_kokkos();
+
       if (aidx == 0) {
         if (!fkk->d_vector_grid.data()) return 0;
         if ((int) fkk->d_vector_grid.extent(0) < grid->nlocal) return 0;

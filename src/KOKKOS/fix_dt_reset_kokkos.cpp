@@ -70,7 +70,7 @@ void FixDtResetKokkos::end_of_step()
   // grab dt values from compute or fix
   // invoke  compute as needed
   if (step_which == COMPUTE) {
-    if (!cstep->kokkos_flag)
+    if (!cstep->kokkos_flag || !dynamic_cast<KokkosBase*>(cstep))
       error->all(FLERR,"Cannot (yet) use non-Kokkos computes with fix dt/reset/kk");
     KokkosBase* computeKKBase = dynamic_cast<KokkosBase*>(cstep);
     if (!(cstep->invoked_flag & INVOKED_PER_GRID)) {
@@ -90,7 +90,7 @@ void FixDtResetKokkos::end_of_step()
       copymode = 0;
     }
   } else if (step_which == FIX) {
-    if (!fstep->kokkos_flag)
+    if (!fstep->kokkos_flag || !dynamic_cast<KokkosBase*>(fstep))
       error->all(FLERR,"Cannot (yet) use non-Kokkos fixes with fix dt/reset/kk");
     KokkosBase* computeKKBase = dynamic_cast<KokkosBase*>(fstep);
     // a fix keeps its per-grid output between invocations and grid migration

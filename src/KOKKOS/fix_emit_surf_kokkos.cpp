@@ -233,7 +233,7 @@ void FixEmitSurfKokkos::grid_changed()
   // setup cummulative_custom array for nlocal surfs
 
   if (fractions_custom_flag && !perspecies) {
-    if (k_cummulative_custom.extent(0) > max_cummulative)
+    if ((int)k_cummulative_custom.extent(0) < max_cummulative)
       MemKK::realloc_kokkos(k_cummulative_custom,"fix/emit/surf:cummulative_custom",max_cummulative,nspecies);
 
     for (int isurf = 0; isurf < max_cummulative; isurf++) {
@@ -243,6 +243,7 @@ void FixEmitSurfKokkos::grid_changed()
     }
 
     k_cummulative_custom.modify_host();
+    d_cummulative_custom = k_cummulative_custom.view_device();
   }
 }
 
@@ -324,6 +325,25 @@ void FixEmitSurfKokkos::flatten_region()
 
 void FixEmitSurfKokkos::perform_task()
 {
+  // if global timestep was reset since tasks were created (e.g. fix dt/reset),
+  //   rescale non-subsonic FLOW insertion counts which are proportional to dt
+  // for n = constant or variable, ntarget is an area fraction, not dt dependent
+
+  if (!subsonic && npmode == FLOW && update->dt != dt) {
+    double dtratio = update->dt / dt;
+    k_tasks.sync_host();
+    if (perspecies) k_ntargetsp.sync_host();
+    for (int i = 0; i < ntask; i++) {
+      tasks[i].ntarget *= dtratio;
+      if (perspecies)
+        for (int isp = 0; isp < nspecies; isp++) tasks[i].ntargetsp[isp] *= dtratio;
+      if (tasks[i].ntarget >= MAXSMALLINT)
+        error->one(FLERR,"Fix emit/surf insertion count exceeds 32-bit int");
+    }
+    k_tasks.modify_host();
+    if (perspecies) k_ntargetsp.modify_host();
+  }
+
   dt = update->dt;
 
   // if subsonic, re-compute particle inflow counts for each task
@@ -431,7 +451,11 @@ void FixEmitSurfKokkos::perform_task()
   int ncands;
   d_task2cand = offset_scan(d_ninsert, ncands);
 
-  if (ncands == 0) return;
+  if (ncands == 0) {
+    for (int m = 0; m < nsurf_tally; m++)
+      ((ComputeSurfKokkos*)slist_active[m])->post_surf_tally();
+    return;
+  }
 
   if (d_x.extent(0) < ncands || d_x.extent(1) < dimension)
     d_x = DAT::t_float_2d("x", ncands, dimension);
@@ -728,8 +752,8 @@ void FixEmitSurfKokkos::operator()(TagFixEmitSurf_perform_task, const int &i, in
     // use cummulative fractions to assign species for each insertion
     // if requested, override cummulative from mixture with cummulative for isurf
 
-    double* cummulative = &d_cummulative_mix[0];
-    if (fractions_custom_flag) cummulative = &d_cummulative_custom(isurf,0);
+    double* cummulative = fractions_custom_flag ?
+      &d_cummulative_custom(isurf,0) : d_cummulative_mix.data();
 
     int nactual = 0;
     for (int m = 0; m < ninsert; m++) {
@@ -976,8 +1000,16 @@ void FixEmitSurfKokkos::subsonic_sort()
   //   is walked in decreasing particle index, while an already-sorted list
   //   is walked in increasing index.
 
+  // like the non-Kokkos subsonic_sort(), which builds private lists and
+  //   leaves Particle::sorted untouched, do not leave sorted_kk set:
+  //   particles this fix then inserts are not in d_plist, so a later
+  //   subsonic fix this step must re-sort (move resets it anyway)
+
   plist_descending = !particle_kk->sorted_kk;
-  if (!particle_kk->sorted_kk) particle_kk->sort_kokkos();
+  if (!particle_kk->sorted_kk) {
+    particle_kk->sort_kokkos();
+    particle_kk->sorted_kk = 0;
+  }
 }
 
 /* ----------------------------------------------------------------------
@@ -1142,17 +1174,20 @@ void FixEmitSurfKokkos::operator()(TagFixEmitSurf_subsonic_grid, const int &i) c
     temp_thermal_cell = tsubsonic;
 
   } else {
-    const double nrho_cell = np * fnum / d_cinfo[icell].volume;
-    const double massrho_cell = masstot * fnum / d_cinfo[icell].volume;
+    const double nrho_cell = np * fnum * d_cinfo[icell].weight / d_cinfo[icell].volume;
+    const double massrho_cell = masstot * fnum * d_cinfo[icell].weight / d_cinfo[icell].volume;
     if (np > 1) {
       const double ke = mv[3]/np -
         (mv[0]*mv[0] + mv[1]*mv[1] + mv[2]*mv[2])/np/masstot;
       temp_thermal_cell = tprefactor * ke;
+      // thermal ke negligible vs total ke (all particles at COM velocity):
+      // ke is pure roundoff of either sign, treat cell as cold
+      if (ke <= 1.0e-10 * mv[3]/np) temp_thermal_cell = 0.0;
     } else temp_thermal_cell = temp_thermal_mix;
 
     const double press_cell = nrho_cell * boltz * temp_thermal_cell;
     double soundspeed_cell;
-    if (np) {
+    if (np && temp_thermal_cell > 0.0) {
       const double mass_cell = masstot / np;
       const double gamma_cell = gamma / np;
       soundspeed_cell = sqrt(gamma_cell*boltz*temp_thermal_cell / mass_cell);
@@ -1174,7 +1209,7 @@ void FixEmitSurfKokkos::operator()(TagFixEmitSurf_subsonic_grid, const int &i) c
       normal = (dimension == 2) ? d_lines[isurf].norm : d_tris[isurf].norm;
     } else normal = norm_vstream;
 
-    if (np) {
+    if (np && massrho_cell*soundspeed_cell > 0.0) {
       const double vsmag = (psubsonic - press_cell) / (massrho_cell*soundspeed_cell);
       vstream[0] += vsmag*normal[0];
       vstream[1] += vsmag*normal[1];
