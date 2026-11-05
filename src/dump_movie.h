@@ -28,6 +28,7 @@ namespace SPARTA_NS {
 class DumpMovie : public DumpImage {
  public:
   DumpMovie(class SPARTA *, int, char**);
+  virtual ~DumpMovie();
 
   virtual void openfile();
   virtual void init_style();

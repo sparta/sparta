@@ -73,6 +73,12 @@ Dump::Dump(SPARTA *sparta, int, char **arg) : Pointers(sparta)
   format_int_user = NULL;
   format_bigint_user = NULL;
 
+  // set by child class constructors, init here since ~Dump() uses them
+  //   if a child class constructor exits with an error before setting them
+
+  size_one = 0;
+  format_column_user = NULL;
+
   clearstep = 0;
   append_flag = 0;
   buffer_allow = 0;
@@ -399,16 +405,17 @@ void Dump::openfile()
 
   if (multifile) {
     char *filestar = filecurrent;
-    filecurrent = new char[strlen(filestar) + 16];
+    filecurrent = new char[strlen(filestar) + 24 + padflag];
     char *ptr = strchr(filestar,'*');
     *ptr = '\0';
     if (padflag == 0)
       sprintf(filecurrent,"%s" BIGINT_FORMAT "%s",
               filestar,update->ntimestep,ptr+1);
     else {
-      char bif[8],pad[16];
+      // pad holds "%s%0<padflag><bigint fmt>%s", padflag can be any int
+      char bif[8],pad[40];
       strcpy(bif,BIGINT_FORMAT);
-      sprintf(pad,"%%s%%0%d%s%%s",padflag,&bif[1]);
+      snprintf(pad,sizeof(pad),"%%s%%0%d%s%%s",padflag,&bif[1]);
       sprintf(filecurrent,pad,filestar,update->ntimestep,ptr+1);
     }
     *ptr = '*';
@@ -419,13 +426,14 @@ void Dump::openfile()
   if (filewriter) {
     if (compressed) {
 #ifdef SPARTA_GZIP
-      char gzip[128];
-      snprintf(gzip,sizeof(gzip),"gzip -6 > %s",filecurrent);
+      char *gzip = new char[strlen(filecurrent) + 16];
+      sprintf(gzip,"gzip -6 > %s",filecurrent);
 #ifdef _WIN32
       fp = _popen(gzip,"wb");
 #else
       fp = popen(gzip,"w");
 #endif
+      delete [] gzip;
 #else
       error->one(FLERR,"Cannot open gzipped file");
 #endif
@@ -458,8 +466,12 @@ void Dump::openfile()
 
 int Dump::convert_string(int n, double *mybuf)
 {
-  int i,j;
+  int i,j,k,avail,rowstart,mrow,overflow;
   char str[128];
+
+  // each field is written with snprintf() bounded by space left in sbuf
+  // ONEFIELD per field is only an estimate, a user format can be wider
+  // if a row does not fit, grow sbuf and rewrite the row
 
   int offset = 0;
   int m = 0;
@@ -470,39 +482,62 @@ int Dump::convert_string(int n, double *mybuf)
       memory->grow(sbuf,maxsbuf,"dump:sbuf");
     }
 
-    for (j = 0; j < size_one; j++) {
-      if (vtype[j] == DOUBLE)
-        offset += sprintf(&sbuf[offset],vformat[j],mybuf[m]);
-      else if (vtype[j] == INT)
-        offset += sprintf(&sbuf[offset],vformat[j],
-                          static_cast<int> (ubuf(mybuf[m]).i));
-      else if (vtype[j] == BIGINT)
-        offset += sprintf(&sbuf[offset],vformat[j],
-                          static_cast<bigint> (ubuf(mybuf[m]).i));
-      else if (vtype[j] == UINT)
-        offset += sprintf(&sbuf[offset],vformat[j],
-                          static_cast<uint32_t> (ubuf(mybuf[m]).i));
-      else if (vtype[j] == BIGUINT)
-        offset += sprintf(&sbuf[offset],vformat[j],
-                          static_cast<uint64_t> (ubuf(mybuf[m]).i));
-      else if (vtype[j] == STRING) {
-        // NOTE: this is a kludge
-        // assumes any STRING field from dump particle/grid/surf
-        // is a grid cell ID
-        // if not, might have to move this method into child classes
-        // and tailor it for each dump style
-        // decode cell ID via ubuf, as write_text() does:
-        //   value is a bit-punned cellint, which is 64-bit under BIGBIG,
-        //   so a numeric read + int cast truncates IDs above 2^31
-        if (sizeof(cellint) == sizeof(smallint))
-          grid->id_num2str((uint32_t) ubuf(mybuf[m]).i,str);
-        else
-          grid->id_num2str((uint64_t) ubuf(mybuf[m]).i,str);
-        offset += sprintf(&sbuf[offset],vformat[j],str);
+    rowstart = offset;
+    mrow = m;
+
+    while (1) {
+      overflow = 0;
+      offset = rowstart;
+      m = mrow;
+
+      for (j = 0; j <= size_one; j++) {
+        avail = maxsbuf - offset;
+        if (j == size_one)
+          k = snprintf(&sbuf[offset],avail,"\n");
+        else if (vtype[j] == DOUBLE)
+          k = snprintf(&sbuf[offset],avail,vformat[j],mybuf[m]);
+        else if (vtype[j] == INT)
+          k = snprintf(&sbuf[offset],avail,vformat[j],
+                       static_cast<int> (ubuf(mybuf[m]).i));
+        else if (vtype[j] == BIGINT)
+          k = snprintf(&sbuf[offset],avail,vformat[j],
+                       static_cast<bigint> (ubuf(mybuf[m]).i));
+        else if (vtype[j] == UINT)
+          k = snprintf(&sbuf[offset],avail,vformat[j],
+                       static_cast<uint32_t> (ubuf(mybuf[m]).i));
+        else if (vtype[j] == BIGUINT)
+          k = snprintf(&sbuf[offset],avail,vformat[j],
+                       static_cast<uint64_t> (ubuf(mybuf[m]).i));
+        else if (vtype[j] == STRING) {
+          // NOTE: this is a kludge
+          // assumes any STRING field from dump particle/grid/surf
+          // is a grid cell ID
+          // if not, might have to move this method into child classes
+          // and tailor it for each dump style
+          // decode cell ID via ubuf, as write_text() does:
+          //   value is a bit-punned cellint, which is 64-bit under BIGBIG,
+          //   so a numeric read + int cast truncates IDs above 2^31
+          if (sizeof(cellint) == sizeof(smallint))
+            grid->id_num2str((uint32_t) ubuf(mybuf[m]).i,str);
+          else
+            grid->id_num2str((uint64_t) ubuf(mybuf[m]).i,str);
+          k = snprintf(&sbuf[offset],avail,vformat[j],str);
+        } else k = 0;
+
+        if (k < 0) return -1;
+        if (k >= avail) {
+          overflow = 1;
+          break;
+        }
+        offset += k;
+        if (j < size_one) m++;
       }
-      m++;
+
+      if (!overflow) break;
+      if ((bigint) maxsbuf + DELTA > MAXSMALLINT) return -1;
+      maxsbuf += DELTA;
+      memory->grow(sbuf,maxsbuf,"dump:sbuf");
     }
-    offset += sprintf(&sbuf[offset],"\n");
   }
 
   return offset;
@@ -628,7 +663,6 @@ void Dump::modify_params(int narg, char **arg)
         int n = strlen(arg[iarg+2]) + 1;
         format_line_user = new char[n];
         strcpy(format_line_user,arg[iarg+2]);
-        iarg += 3;
       } else if (strcmp(arg[iarg+1],"int") == 0) {
         delete [] format_int_user;
         int n = strlen(arg[iarg+2]) + 1;

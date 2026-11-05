@@ -71,13 +71,12 @@ class DumpSurf : public Dump {
 
   int distributed,implicit;  // Surf settings
 
-  int firstflag;
-
   // private methods
 
   void init_style();
   void write_header(bigint);
   int count();
+  void setup_surf_list();
   void pack();
   void write_data(int, double *);
 

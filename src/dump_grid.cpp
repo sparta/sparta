@@ -23,6 +23,7 @@
 #include "compute.h"
 #include "fix.h"
 #include "input.h"
+#include "output.h"
 #include "variable.h"
 #include "memory.h"
 #include "error.h"
@@ -119,7 +120,7 @@ DumpGrid::DumpGrid(SPARTA *sparta, int narg, char **arg) :
 
   vformat = new char*[nfield];
 
-  format_default = new char[4*nfield+1];
+  format_default = new char[8*nfield+1];
   format_default[0] = '\0';
 
   for (int i = 0; i < nfield; i++) {
@@ -226,6 +227,15 @@ void DumpGrid::init_style()
       error->all(FLERR,"Could not find dump grid compute ID");
     compute[i] = modify->compute[icompute];
   }
+
+  // dump_modify every may have changed the dump frequency stored by Output
+  // refresh nevery so the fix compatibility check uses the current value
+
+  for (int idump = 0; idump < output->ndump; idump++)
+    if (strcmp(id,output->dump[idump]->id) == 0) {
+      if (output->every_dump[idump] > 0) nevery = output->every_dump[idump];
+      break;
+    }
 
   int ifix;
   for (int i = 0; i < nfix; i++) {
@@ -350,14 +360,14 @@ void DumpGrid::write_binary(int n, double *mybuf)
 {
   n *= size_one;
   fwrite(&n,sizeof(int),1,fp);
-  fwrite(mybuf,sizeof(double),n,fp);
+  if (n) fwrite(mybuf,sizeof(double),n,fp);
 }
 
 /* ---------------------------------------------------------------------- */
 
 void DumpGrid::write_string(int n, double *mybuf)
 {
-  fwrite(mybuf,sizeof(char),n,fp);
+  if (n) fwrite(mybuf,sizeof(char),n,fp);
 }
 
 /* ---------------------------------------------------------------------- */
@@ -465,6 +475,8 @@ int DumpGrid::parse_fields(int narg, char **arg)
         if (suffix[strlen(suffix)-1] != ']')
           error->all(FLERR,"Invalid attribute in dump grid command");
         argindex[i] = atoi(ptr+1);
+        if (argindex[i] <= 0)
+          error->all(FLERR,"Invalid attribute in dump grid command");
         *ptr = '\0';
       } else argindex[i] = 0;
 
@@ -504,6 +516,8 @@ int DumpGrid::parse_fields(int narg, char **arg)
         if (suffix[strlen(suffix)-1] != ']')
           error->all(FLERR,"Invalid attribute in dump grid command");
         argindex[i] = atoi(ptr+1);
+        if (argindex[i] <= 0)
+          error->all(FLERR,"Invalid attribute in dump grid command");
         *ptr = '\0';
       } else argindex[i] = 0;
 
@@ -540,6 +554,8 @@ int DumpGrid::parse_fields(int narg, char **arg)
         if (suffix[strlen(suffix)-1] != ']')
           error->all(FLERR,"Invalid attribute in dump grid command");
         argindex[i] = atoi(ptr+1);
+        if (argindex[i] <= 0)
+          error->all(FLERR,"Invalid attribute in dump grid command");
         *ptr = '\0';
       } else argindex[i] = 0;
 

@@ -26,6 +26,7 @@
 #include "variable.h"
 #include "memory.h"
 #include "error.h"
+#include "output.h"
 
 using namespace SPARTA_NS;
 
@@ -119,7 +120,7 @@ DumpSurf::DumpSurf(SPARTA *sparta, int narg, char **arg) :
 
   vformat = new char*[nfield];
 
-  format_default = new char[4*nfield+1];
+  format_default = new char[8*nfield+1];
   format_default[0] = '\0';
 
   for (int i = 0; i < nfield; i++) {
@@ -154,9 +155,8 @@ DumpSurf::DumpSurf(SPARTA *sparta, int narg, char **arg) :
     memory->sfree(earg);
   }
 
-  // trigger setup of list of owned surf elements belonging to surf group
+  // list of owned surf elements belonging to surf group is setup in count()
 
-  firstflag = 1;
   cglobal = clocal = NULL;
   buflocal = NULL;
 }
@@ -235,6 +235,15 @@ void DumpSurf::init_style()
     compute[i] = modify->compute[icompute];
   }
 
+  // dump_modify every may have changed the dump frequency stored by Output
+  // refresh nevery so the fix compatibility check uses the current value
+
+  for (int idump = 0; idump < output->ndump; idump++)
+    if (strcmp(id,output->dump[idump]->id) == 0) {
+      if (output->every_dump[idump] > 0) nevery = output->every_dump[idump];
+      break;
+    }
+
   int ifix;
   for (int i = 0; i < nfix; i++) {
     ifix = modify->find_fix(id_fix[i]);
@@ -255,8 +264,16 @@ void DumpSurf::init_style()
   // open single file, one time only
 
   if (multifile == 0) openfile();
+}
 
-  // one-time setup of lists of owned elements contributing to dump
+/* ----------------------------------------------------------------------
+   setup of lists of owned elements contributing to dump
+   rebuilt on every output since surfs can change between and during runs
+     (e.g. fix ablate with implicit surfs, read_surf, remove_surf, group surf)
+------------------------------------------------------------------------- */
+
+void DumpSurf::setup_surf_list()
+{
   // nsown = # of surf elements I own
   // nchoose = # of nsown surf elements in surface group
   // cglobal[] = global indices for nchoose elements
@@ -264,8 +281,12 @@ void DumpSurf::init_style()
   // clocal[] = local indices for nchoose elements
   //            used to access nsown data from per-surf computes,fixes,variables
 
-  if (!firstflag) return;
-  firstflag = 0;
+  distributed = surf->distributed;
+  implicit = surf->implicit;
+
+  memory->destroy(cglobal);
+  memory->destroy(clocal);
+  memory->destroy(buflocal);
 
   Surf::Line *lines;
   Surf::Tri *tris;
@@ -359,6 +380,10 @@ void DumpSurf::header_item(bigint ndump)
 
 int DumpSurf::count()
 {
+  // rebuild list of owned surf elements in surface group
+
+  setup_surf_list();
+
   // grow variable vbuf arrays if needed
 
   if (surf->nown > maxsurf) {
@@ -410,14 +435,14 @@ void DumpSurf::write_binary(int n, double *mybuf)
 {
   n *= size_one;
   fwrite(&n,sizeof(int),1,fp);
-  fwrite(mybuf,sizeof(double),n,fp);
+  if (n) fwrite(mybuf,sizeof(double),n,fp);
 }
 
 /* ---------------------------------------------------------------------- */
 
 void DumpSurf::write_string(int n, double *mybuf)
 {
-  fwrite(mybuf,sizeof(char),n,fp);
+  if (n) fwrite(mybuf,sizeof(char),n,fp);
 }
 
 /* ---------------------------------------------------------------------- */

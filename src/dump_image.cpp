@@ -99,12 +99,17 @@ DumpImage::DumpImage(SPARTA *sparta, int narg, char **arg) :
 
   if (nfield != 2) error->all(FLERR,"Illegal dump image command");
 
-  pcolor = ATTRIBUTE;
-  if (strcmp(arg[5],"type") == 0) pcolor = TYPE;
-  else if (strcmp(arg[5],"proc") == 0) pcolor = PROC;
+  // ioptional = 7 if color and diameter are the 2 unexpanded args 5,6
+  // else a single wildcard arg expanded into both (e.g. p_name[*]),
+  //   both are then attributes and arg[6] may not exist
 
+  pcolor = ATTRIBUTE;
   pdiam = ATTRIBUTE;
-  if (strcmp(arg[6],"type") == 0) pdiam = TYPE;
+  if (ioptional == 7) {
+    if (strcmp(arg[5],"type") == 0) pcolor = TYPE;
+    else if (strcmp(arg[5],"proc") == 0) pcolor = PROC;
+    if (strcmp(arg[6],"type") == 0) pdiam = TYPE;
+  }
 
   // create Image class with 6 colormaps
   // colormaps for particles, grid, surf, grid xyz planes
@@ -134,6 +139,8 @@ DumpImage::DumpImage(SPARTA *sparta, int narg, char **arg) :
   particleflag = 1;
   gridflag = 0;
   gridxflag = gridyflag = gridzflag = 0;
+  gcolor = gxcolor = gycolor = gzcolor = NUMERIC;   // NUMERIC = not set
+  scolor = NUMERIC;
   grid_groupbit = 1;
   surfflag = 0;
   surf_groupbit = 1;
@@ -194,6 +201,7 @@ DumpImage::DumpImage(SPARTA *sparta, int narg, char **arg) :
           if (suffix[strlen(suffix)-1] != ']')
             error->all(FLERR,"Illegal fix ave/grid command");
           gridcol = atoi(ptr+1);
+          if (gridcol <= 0) error->all(FLERR,"Illegal dump image command");
           *ptr = '\0';
         } else gridcol = 0;
         n = strlen(suffix) + 1;
@@ -226,6 +234,7 @@ DumpImage::DumpImage(SPARTA *sparta, int narg, char **arg) :
           if (suffix[strlen(suffix)-1] != ']')
             error->all(FLERR,"Illegal fix ave/grid command");
           gridxcol = atoi(ptr+1);
+          if (gridxcol <= 0) error->all(FLERR,"Illegal dump image command");
           *ptr = '\0';
         } else gridxcol = 0;
         n = strlen(suffix) + 1;
@@ -258,6 +267,7 @@ DumpImage::DumpImage(SPARTA *sparta, int narg, char **arg) :
           if (suffix[strlen(suffix)-1] != ']')
             error->all(FLERR,"Illegal fix ave/grid command");
           gridycol = atoi(ptr+1);
+          if (gridycol <= 0) error->all(FLERR,"Illegal dump image command");
           *ptr = '\0';
         } else gridycol = 0;
         n = strlen(suffix) + 1;
@@ -290,6 +300,7 @@ DumpImage::DumpImage(SPARTA *sparta, int narg, char **arg) :
           if (suffix[strlen(suffix)-1] != ']')
             error->all(FLERR,"Illegal fix ave/grid command");
           gridzcol = atoi(ptr+1);
+          if (gridzcol <= 0) error->all(FLERR,"Illegal dump image command");
           *ptr = '\0';
         } else gridzcol = 0;
         n = strlen(suffix) + 1;
@@ -325,6 +336,7 @@ DumpImage::DumpImage(SPARTA *sparta, int narg, char **arg) :
           if (suffix[strlen(suffix)-1] != ']')
             error->all(FLERR,"Illegal fix ave/grid command");
           surfcol = atoi(ptr+1);
+          if (surfcol <= 0) error->all(FLERR,"Illegal dump image command");
           *ptr = '\0';
         } else surfcol = 0;
         n = strlen(suffix) + 1;
@@ -594,26 +606,13 @@ DumpImage::DumpImage(SPARTA *sparta, int narg, char **arg) :
 
   // additional defaults for dump_modify options
 
-  int ntypes = particle->nspecies;
-  pcolortype = new double*[ntypes+1];
-  pdiamtype = new double[ntypes+1];
-  ptranstype = new double[ntypes+1];
+  // per-species arrays, grown later by grow_types() if species are added
 
-  // index 0 is the fallback used by create_image() when the species of a
-  // particle is not available in the dump buffer, see the ptrans keyword
-
-  ptranstype[0] = 1.0;
-
-  for (int i = 1; i <= ntypes; i++) {
-    pdiamtype[i] = 1.0;
-    ptranstype[i] = 1.0;
-    if (i % 6 == 1) pcolortype[i] = image->color2rgb("red");
-    else if (i % 6 == 2) pcolortype[i] = image->color2rgb("green");
-    else if (i % 6 == 3) pcolortype[i] = image->color2rgb("blue");
-    else if (i % 6 == 4) pcolortype[i] = image->color2rgb("yellow");
-    else if (i % 6 == 5) pcolortype[i] = image->color2rgb("aqua");
-    else if (i % 6 == 0) pcolortype[i] = image->color2rgb("purple");
-  }
+  pcolortype = NULL;
+  pdiamtype = NULL;
+  ptranstype = NULL;
+  ntypes_alloc = 0;
+  grow_types();
 
   if (me % 6 == 0) pcolorproc = image->color2rgb("red");
   else if (me % 6 == 1) pcolorproc = image->color2rgb("green");
@@ -663,6 +662,57 @@ DumpImage::~DumpImage()
   delete [] ptranstype;
 }
 
+/* ----------------------------------------------------------------------
+   (re)allocate per-species color/diameter/opacity arrays
+   if more species exist than when last allocated
+   keep existing settings, assign defaults to new species
+   index 0 is the fallback used by create_image() when the species of a
+   particle is not available in the dump buffer, see the ptrans keyword
+------------------------------------------------------------------------- */
+
+void DumpImage::grow_types()
+{
+  int ntypes = particle->nspecies;
+  if (pcolortype && ntypes <= ntypes_alloc) return;
+
+  double **newcolor = new double*[ntypes+1];
+  double *newdiam = new double[ntypes+1];
+  double *newtrans = new double[ntypes+1];
+
+  int nold = 0;
+  if (pcolortype) {
+    nold = ntypes_alloc;
+    for (int i = 0; i <= nold; i++) {
+      newcolor[i] = pcolortype[i];
+      newdiam[i] = pdiamtype[i];
+      newtrans[i] = ptranstype[i];
+    }
+  } else {
+    newcolor[0] = image->color2rgb("red");
+    newdiam[0] = 1.0;
+    newtrans[0] = 1.0;
+  }
+
+  for (int i = nold+1; i <= ntypes; i++) {
+    newdiam[i] = 1.0;
+    newtrans[i] = 1.0;
+    if (i % 6 == 1) newcolor[i] = image->color2rgb("red");
+    else if (i % 6 == 2) newcolor[i] = image->color2rgb("green");
+    else if (i % 6 == 3) newcolor[i] = image->color2rgb("blue");
+    else if (i % 6 == 4) newcolor[i] = image->color2rgb("yellow");
+    else if (i % 6 == 5) newcolor[i] = image->color2rgb("aqua");
+    else if (i % 6 == 0) newcolor[i] = image->color2rgb("purple");
+  }
+
+  delete [] pcolortype;
+  delete [] pdiamtype;
+  delete [] ptranstype;
+  pcolortype = newcolor;
+  pdiamtype = newdiam;
+  ptranstype = newtrans;
+  ntypes_alloc = ntypes;
+}
+
 /* ---------------------------------------------------------------------- */
 
 void DumpImage::init_style()
@@ -671,6 +721,10 @@ void DumpImage::init_style()
     error->all(FLERR,"Dump image requires one snapshot per file");
 
   DumpParticle::init_style();
+
+  // species may have been added since this dump was created
+
+  grow_types();
 
   // check variables
 
@@ -766,7 +820,8 @@ void DumpImage::init_style()
         error->all(FLERR,"Dump image fix does not have requested column");
       if (nevery % fix->per_grid_freq)
         error->all(FLERR,"Dump image and fix not computed at compatible times");
-    }
+    } else if (gridwhich == VARIABLE)
+      error->all(FLERR,"Dump image does not yet support variables for coloring");
   }
 
   if (gridxflag && gxcolor == ATTRIBUTE) {
@@ -794,7 +849,8 @@ void DumpImage::init_style()
         error->all(FLERR,"Dump image fix does not have requested column");
       if (nevery % fix->per_grid_freq)
         error->all(FLERR,"Dump image and fix not computed at compatible times");
-    }
+    } else if (gridxwhich == VARIABLE)
+      error->all(FLERR,"Dump image does not yet support variables for coloring");
   }
 
   if (gridyflag && gycolor == ATTRIBUTE) {
@@ -822,7 +878,8 @@ void DumpImage::init_style()
         error->all(FLERR,"Dump image fix does not have requested column");
       if (nevery % fix->per_grid_freq)
         error->all(FLERR,"Dump image and fix not computed at compatible times");
-    }
+    } else if (gridywhich == VARIABLE)
+      error->all(FLERR,"Dump image does not yet support variables for coloring");
   }
 
   if (gridzflag && gzcolor == ATTRIBUTE) {
@@ -850,7 +907,8 @@ void DumpImage::init_style()
         error->all(FLERR,"Dump image fix does not have requested column");
       if (nevery % fix->per_grid_freq)
         error->all(FLERR,"Dump image and fix not computed at compatible times");
-    }
+    } else if (gridzwhich == VARIABLE)
+      error->all(FLERR,"Dump image does not yet support variables for coloring");
   }
 
   if (surfflag && scolor == ATTRIBUTE) {
@@ -878,7 +936,8 @@ void DumpImage::init_style()
         error->all(FLERR,"Dump image fix does not have requested column");
       if (nevery % fix->per_surf_freq)
         error->all(FLERR,"Dump image and fix not computed at compatible times");
-    }
+    } else if (surfwhich == VARIABLE)
+      error->all(FLERR,"Dump image does not yet support variables for coloring");
   }
 }
 
@@ -1107,9 +1166,9 @@ void DumpImage::write()
 
     if (surfwhich == COMPUTE) {
       c = modify->compute[surfindex];
-      if (!(c->invoked_flag & INVOKED_PER_GRID)) {
-        c->compute_per_grid();
-        c->invoked_flag |= INVOKED_PER_GRID;
+      if (!(c->invoked_flag & INVOKED_PER_SURF)) {
+        c->compute_per_surf();
+        c->invoked_flag |= INVOKED_PER_SURF;
       }
       c->post_process_surf();
     } else if (surfwhich == FIX) {
@@ -1657,9 +1716,9 @@ void DumpImage::create_image()
 
     if (scolor == ATTRIBUTE && surfwhich == COMPUTE) {
       c = modify->compute[surfindex];
-      if (!(c->invoked_flag & INVOKED_PER_GRID)) {
-        c->compute_per_grid();
-        c->invoked_flag |= INVOKED_PER_GRID;
+      if (!(c->invoked_flag & INVOKED_PER_SURF)) {
+        c->compute_per_surf();
+        c->invoked_flag |= INVOKED_PER_SURF;
       }
       c->post_process_surf();
     } else if (scolor == ATTRIBUTE && surfwhich == FIX) {
@@ -1871,6 +1930,10 @@ int DumpImage::modify_param(int narg, char **arg)
   int n = DumpParticle::modify_param(narg,arg);
   if (n) return n;
 
+  // species may have been added since this dump was created
+
+  grow_types();
+
   if (strcmp(arg[0],"backcolor") == 0) {
     if (narg < 2) error->all(FLERR,"Illegal dump_modify command");
     double *color = image->color2rgb(arg[1]);
@@ -2060,7 +2123,9 @@ int DumpImage::modify_param(int narg, char **arg)
   if (strcmp(arg[0],"gcolor") == 0) {
     if (narg < 3) error->all(FLERR,"Illegal dump_modify command");
     int err,nlo,nhi;
-    if (gcolor == PROC) err = MathExtra::bounds(arg[1],nprocs,nlo,nhi);
+    int procflag = (gcolor == PROC || gxcolor == PROC ||
+                    gycolor == PROC || gzcolor == PROC);
+    if (procflag) err = MathExtra::bounds(arg[1],nprocs,nlo,nhi);
     else error->all(FLERR,"Illegal dump_modify command");
     if (err) error->all(FLERR,"Illegal dump_modify command");
 
@@ -2083,7 +2148,10 @@ int DumpImage::modify_param(int narg, char **arg)
     // for PROC case, assign Ith color to I-1 value in colorproc
     // this is so can use bounds() above from 1 to Nprocs inclusive
 
-    if (gcolor == PROC) {
+    if (procflag) {
+      for (int m = 0; m < ncount; m++)
+        if (image->color2rgb(ptrs[m]) == NULL)
+          error->all(FLERR,"Invalid color in dump_modify command");
       if (me+1 >= nlo && me+1 <= nhi) {
         int m = (me+1-nlo) % ncount;
         gcolorproc = image->color2rgb(ptrs[m]);
@@ -2166,6 +2234,9 @@ int DumpImage::modify_param(int narg, char **arg)
         m++;
       }
     } else if (pcolor == PROC) {
+      for (int m = 0; m < ncount; m++)
+        if (image->color2rgb(ptrs[m]) == NULL)
+          error->all(FLERR,"Invalid color in dump_modify command");
       if (me+1 >= nlo && me+1 <= nhi) {
         int m = (me+1-nlo) % ncount;
         pcolorproc = image->color2rgb(ptrs[m]);
@@ -2239,6 +2310,9 @@ int DumpImage::modify_param(int narg, char **arg)
       if (surfcolorone == NULL)
         error->all(FLERR,"Invalid color in dump_modify command");
     } else if (scolor == PROC) {
+      for (int m = 0; m < ncount; m++)
+        if (image->color2rgb(ptrs[m]) == NULL)
+          error->all(FLERR,"Invalid color in dump_modify command");
       if (me+1 >= nlo && me+1 <= nhi) {
         int m = (me+1-nlo) % ncount;
         scolorproc = image->color2rgb(ptrs[m]);

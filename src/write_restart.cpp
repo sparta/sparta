@@ -82,7 +82,7 @@ void WriteRestart::command(int narg, char **arg)
 
   // check for multiproc output
 
-  if (strchr(arg[0],'%')) multiproc = nprocs;
+  if (strchr(file,'%')) multiproc = nprocs;
   else multiproc = 0;
 
   int mem_limit_flag = update->have_mem_limit();
@@ -185,8 +185,14 @@ void WriteRestart::multiproc_options(int multiproc_caller,
 
 void WriteRestart::write(char *file)
 {
-  if (update->have_mem_limit())
+  // write_less_memory() output can only be read back from multiproc files
+
+  if (update->have_mem_limit()) {
+    if (!multiproc)
+      error->all(FLERR,"Cannot (yet) use global mem/limit without "
+                 "% in restart file name");
     return write_less_memory(file);
+  }
 
   // open single restart file or base file for multiproc case
 
@@ -497,6 +503,7 @@ void WriteRestart::write_less_memory(char *file)
   int tmp,recv_size;
   MPI_Status status;
   MPI_Request request;
+  MPI_Request size_requests[2];
 
   if (filewriter) {
     bigint total_recv_size = 0;
@@ -539,8 +546,9 @@ void WriteRestart::write_less_memory(char *file)
 
   } else {
     bigint total_write_part = 0;
-    MPI_Isend(&send_size,1,MPI_SPARTA_BIGINT,fileproc,0,world,&request);
-    MPI_Isend(&my_npasses,1,MPI_INT,fileproc,0,world,&request);
+    MPI_Isend(&send_size,1,MPI_SPARTA_BIGINT,fileproc,0,world,
+              &size_requests[0]);
+    MPI_Isend(&my_npasses,1,MPI_INT,fileproc,0,world,&size_requests[1]);
     for (int i = 0; i < my_npasses; i++) {
       int n = 0;
       if (i == 0)
@@ -555,6 +563,8 @@ void WriteRestart::write_less_memory(char *file)
       MPI_Recv(&tmp,0,MPI_INT,fileproc,0,world,&status);
       MPI_Rsend(buf,n,MPI_CHAR,fileproc,0,world);
     }
+    MPI_Status size_statuses[2];
+    MPI_Waitall(2,size_requests,size_statuses);
   }
 
   // done if no surfs or surfs are implicit
