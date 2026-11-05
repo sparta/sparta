@@ -373,7 +373,7 @@ static char *subst_star(const char *name, bigint ntimestep, int padflag)
 {
   const char *ptr = strchr(name,'*');
   if (!ptr) { char *s = new char[strlen(name)+1]; strcpy(s,name); return s; }
-  char *s = new char[strlen(name)+16];
+  char *s = new char[strlen(name)+24+padflag];
   int pre = (int)(ptr-name);
   strncpy(s,name,pre); s[pre] = '\0';
   if (padflag == 0)
@@ -394,9 +394,14 @@ void DumpGridVTK::setFileCurrent()
   delete [] filecurrent;
   filecurrent = NULL;
 
+  // id = index of my file = cluster index Dump assigned for nfile/fileper
+  // fileproc is the 1st proc of my cluster, so fileproc*multiproc/nprocs
+  //   reproduces Dump's icluster for both nfile and fileper
+  // multiproc = 1 with nclusterprocs = 1 is the default one-file-per-proc case
+
   int id = me;
-  if (multiproc > 1)
-    id = (me + nclusterprocs == nprocs) ? multiproc-1 : me/nclusterprocs;
+  if (!(multiproc == 1 && nclusterprocs == 1))
+    id = static_cast<int> ((bigint) fileproc * multiproc / nprocs);
 
   char *tmp = subst_percent(filename,id);
   filecurrent = subst_star(tmp,update->ntimestep,padflag);
@@ -465,7 +470,7 @@ void DumpGridVTK::write_pvtk()
           "NumberOfComponents=\"3\"/>\n");
   fprintf(fp,"    </PPoints>\n");
 
-  int npieces = (multiproc > 1) ? multiproc : nprocs;
+  int npieces = (multiproc == 1 && nclusterprocs == 1) ? nprocs : multiproc;
   for (int i = 0; i < npieces; i++)
     fprintf(fp,"    <Piece Source=\"%s\"/>\n",pvtk_piece_filename(i).c_str());
 

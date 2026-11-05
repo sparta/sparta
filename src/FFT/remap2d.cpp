@@ -14,6 +14,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include "remap2d.h"
 
 #define PACK_DATA FFT_SCALAR
@@ -76,7 +77,7 @@ void remap_2d(FFT_SCALAR *in, FFT_SCALAR *out, FFT_SCALAR *buf,
 
   for (irecv = 0; irecv < plan->nrecv; irecv++)
     MPI_Irecv(&scratch[plan->recv_bufloc[irecv]],plan->recv_size[irecv],
-              MPI_DOUBLE,plan->recv_proc[irecv],0,
+              MPI_FFT_SCALAR,plan->recv_proc[irecv],0,
               plan->comm,&plan->request[irecv]);
 
   // send all messages to other procs
@@ -84,7 +85,7 @@ void remap_2d(FFT_SCALAR *in, FFT_SCALAR *out, FFT_SCALAR *buf,
   for (isend = 0; isend < plan->nsend; isend++) {
     plan->pack(&in[plan->send_offset[isend]],
                plan->sendbuf,&plan->packplan[isend]);
-    MPI_Send(plan->sendbuf,plan->send_size[isend],MPI_DOUBLE,
+    MPI_Send(plan->sendbuf,plan->send_size[isend],MPI_FFT_SCALAR,
              plan->send_proc[isend],0,plan->comm);
   }
 
@@ -134,7 +135,7 @@ struct remap_plan_2d *remap_2d_create_plan(
        MPI_Comm comm,
        int in_ilo, int in_ihi, int in_jlo, int in_jhi,
        int out_ilo, int out_ihi, int out_jlo, int out_jhi,
-       int nqty, int permute, int memory, int precision)
+       int nqty, int permute, int memory, int /*precision*/)
 
 {
   struct remap_plan_2d *plan;
@@ -146,13 +147,6 @@ struct remap_plan_2d *remap_2d_create_plan(
 
   MPI_Comm_rank(comm,&me);
   MPI_Comm_size(comm,&nprocs);
-
-  // single precision not yet supported
-
-  if (precision == 1) {
-    if (me == 0) printf("Single precision not supported\n");
-    return nullptr;
-  }
 
   // allocate memory for plan data struct
 
@@ -198,10 +192,7 @@ struct remap_plan_2d *remap_2d_create_plan(
   // malloc space for send info
 
   if (nsend) {
-    if (precision == 1)
-      plan->pack = nullptr;
-    else
-      plan->pack = pack_2d;
+    plan->pack = pack_2d;
 
     plan->send_offset = (int *) malloc(nsend*sizeof(int));
     plan->send_size = (int *) malloc(nsend*sizeof(int));
@@ -258,26 +249,14 @@ struct remap_plan_2d *remap_2d_create_plan(
   // malloc space for recv info
 
   if (nrecv) {
-    if (precision == 1) {
-      if (permute == 0)
-        plan->unpack = nullptr;
-      else if (nqty == 1)
-        plan->unpack = nullptr;
-      else if (nqty == 2)
-        plan->unpack = nullptr;
-      else
-        plan->unpack = nullptr;
-    }
-    else if (precision == 2) {
-      if (permute == 0)
-        plan->unpack = unpack_2d;
-      else if (nqty == 1)
-        plan->unpack = unpack_2d_permute_1;
-      else if (nqty == 2)
-        plan->unpack = unpack_2d_permute_2;
-      else
-        plan->unpack = unpack_2d_permute_n;
-    }
+    if (permute == 0)
+      plan->unpack = unpack_2d;
+    else if (nqty == 1)
+      plan->unpack = unpack_2d_permute_1;
+    else if (nqty == 2)
+      plan->unpack = unpack_2d_permute_2;
+    else
+      plan->unpack = unpack_2d_permute_n;
 
     plan->recv_offset = (int *) malloc(nrecv*sizeof(int));
     plan->recv_size = (int *) malloc(nrecv*sizeof(int));
@@ -357,10 +336,7 @@ struct remap_plan_2d *remap_2d_create_plan(
     size = MAX(size,plan->send_size[nsend]);
 
   if (size) {
-    if (precision == 1)
-      plan->sendbuf = nullptr;
-    else
-      plan->sendbuf = (FFT_SCALAR *) malloc(size*sizeof(FFT_SCALAR));
+    plan->sendbuf = (FFT_SCALAR *) malloc(size*sizeof(FFT_SCALAR));
     if (plan->sendbuf == nullptr) return nullptr;
   }
 
@@ -371,11 +347,8 @@ struct remap_plan_2d *remap_2d_create_plan(
 
   if (memory == 1) {
     if (nrecv > 0) {
-      if (precision == 1)
-        plan->scratch = nullptr;
-      else
-        plan->scratch =
-          (FFT_SCALAR *) malloc(nqty*out.isize*out.jsize*sizeof(FFT_SCALAR));
+      plan->scratch =
+        (FFT_SCALAR *) malloc(nqty*out.isize*out.jsize*sizeof(FFT_SCALAR));
       if (plan->scratch == nullptr) return nullptr;
     }
   }

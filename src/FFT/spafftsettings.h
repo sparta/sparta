@@ -38,6 +38,8 @@
 #define SPARTA_FFT_LIB "cuFFT"
 #elif defined(FFT_HIPFFT)
 #define SPARTA_FFT_LIB "hipFFT"
+#elif defined(FFT_NVPL)
+#define SPARTA_FFT_LIB "NVPL FFT"
 #else
 #define SPARTA_FFT_LIB "KISS FFT"
 #endif

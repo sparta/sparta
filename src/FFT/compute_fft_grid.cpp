@@ -124,6 +124,8 @@ ComputeFFTGrid::ComputeFFTGrid(SPARTA *sparta, int narg, char **arg) :
     iarg++;
   }
 
+  if (nvalues == 0) error->all(FLERR,"Illegal compute fft/grid command");
+
   // optional args
 
   zeroflag = 0;

@@ -297,6 +297,7 @@ void PythonImpl::command(int narg, char **arg)
     error->all(FLERR, msg);
   }
 
+  Py_XDECREF((PyObject *) pfuncs[ifunc].pFunc);
   pfuncs[ifunc].pFunc = (void *) pFunc;
 
   // clean-up input storage
@@ -338,7 +339,14 @@ void PythonImpl::invoke_function(int ifunc, char *result, double *dvalue)
                      pfuncs[ifunc].name, pfuncs[ifunc].svalue[i]);
           error->all(FLERR, msg);
         }
-        pValue = PY_INT_FROM_LONG(PY_LONG_FROM_STRING(str));
+        try {
+          pValue = PY_INT_FROM_LONG(PY_LONG_FROM_STRING(str));
+        } catch (std::exception &) {
+          char msg[128];
+          snprintf(msg, 128, "Python function %s input variable %s is not an integer",
+                   pfuncs[ifunc].name, pfuncs[ifunc].svalue[i]);
+          error->all(FLERR, msg);
+        }
       } else if (pfuncs[ifunc].ivarflag[i] == INTERNALVAR) {
         double value = input->variable->compute_equal(pfuncs[ifunc].internal_var[i]);
         pValue = PyLong_FromDouble(value);
@@ -354,7 +362,14 @@ void PythonImpl::invoke_function(int ifunc, char *result, double *dvalue)
                      pfuncs[ifunc].name, pfuncs[ifunc].svalue[i]);
           error->all(FLERR, msg);
         }
-        pValue = PyFloat_FromDouble(std::stod(str));
+        try {
+          pValue = PyFloat_FromDouble(std::stod(str));
+        } catch (std::exception &) {
+          char msg[128];
+          snprintf(msg, 128, "Python function %s input variable %s is not a number",
+                   pfuncs[ifunc].name, pfuncs[ifunc].svalue[i]);
+          error->all(FLERR, msg);
+        }
       } else if (pfuncs[ifunc].ivarflag[i] == INTERNALVAR) {
         double value = input->variable->compute_equal(pfuncs[ifunc].internal_var[i]);
         pValue = PyFloat_FromDouble(value);
@@ -394,7 +409,7 @@ void PythonImpl::invoke_function(int ifunc, char *result, double *dvalue)
     PyUtils::Print_Errors();
     char msg[128];
     snprintf(msg, 128, "Python evaluation of function %s failed", pfuncs[ifunc].name);
-    error->all(FLERR, msg);
+    error->one(FLERR, msg);
   }
 
   // function returned a value
@@ -412,6 +427,7 @@ void PythonImpl::invoke_function(int ifunc, char *result, double *dvalue)
         char value[128];
         snprintf(value,sizeof(value), BIGINT_FORMAT, (bigint) PY_INT_AS_LONG(pValue));
         strncpy(result, value, Variable::VALUELENGTH - 1);
+        result[Variable::VALUELENGTH - 1] = '\0';
       }
     } else if (otype == DOUBLE) {
       if (dvalue) *dvalue = PyFloat_AsDouble(pValue);
@@ -419,13 +435,22 @@ void PythonImpl::invoke_function(int ifunc, char *result, double *dvalue)
         char value[128];
         snprintf(value,sizeof(value), "%.15g", PyFloat_AsDouble(pValue));
         strncpy(result, value, Variable::VALUELENGTH - 1);
+        result[Variable::VALUELENGTH - 1] = '\0';
       }
     } else if (otype == STRING) {
       const char *pystr = PyUnicode_AsUTF8(pValue);
+      if (!pystr) {
+        PyUtils::Print_Errors();
+        char msg[128];
+        snprintf(msg, 128, "Python function %s did not return a string", pfuncs[ifunc].name);
+        error->one(FLERR, msg);
+      }
       if (pfuncs[ifunc].longstr)
         strncpy(pfuncs[ifunc].longstr, pystr, pfuncs[ifunc].length_longstr);
-      else
+      else {
         strncpy(result, pystr, Variable::VALUELENGTH - 1);
+        result[Variable::VALUELENGTH - 1] = '\0';
+      }
     }
   }
   Py_CLEAR(pValue);
@@ -533,6 +558,13 @@ int PythonImpl::create_entry(char *name, int ninput, int noutput,
     nfunc++;
     pfuncs = (PyFunc *) memory->srealloc(pfuncs, nfunc * sizeof(struct PyFunc), "python:pfuncs");
     pfuncs[ifunc].name = utils::strdup(name);
+    pfuncs[ifunc].ninput = 0;
+    pfuncs[ifunc].itype = pfuncs[ifunc].ivarflag = pfuncs[ifunc].ivalue = nullptr;
+    pfuncs[ifunc].dvalue = nullptr;
+    pfuncs[ifunc].svalue = nullptr;
+    pfuncs[ifunc].internal_var = nullptr;
+    pfuncs[ifunc].ovarname = pfuncs[ifunc].longstr = nullptr;
+    pfuncs[ifunc].pFunc = nullptr;
   } else
     deallocate(ifunc);
 
@@ -556,6 +588,7 @@ int PythonImpl::create_entry(char *name, int ninput, int noutput,
   pfuncs[ifunc].dvalue = new double[ninput];
   pfuncs[ifunc].svalue = new char *[ninput];
   pfuncs[ifunc].internal_var = new int[ninput];
+  for (int i = 0; i < ninput; i++) pfuncs[ifunc].svalue[i] = nullptr;
 
   for (int i = 0; i < ninput; i++) {
     pfuncs[ifunc].svalue[i] = nullptr;
@@ -697,11 +730,19 @@ void PythonImpl::deallocate(int i)
   delete[] pfuncs[i].ivarflag;
   delete[] pfuncs[i].ivalue;
   delete[] pfuncs[i].dvalue;
-  for (int j = 0; j < pfuncs[i].ninput; j++) delete[] pfuncs[i].svalue[j];
+  if (pfuncs[i].svalue)
+    for (int j = 0; j < pfuncs[i].ninput; j++) delete[] pfuncs[i].svalue[j];
   delete[] pfuncs[i].svalue;
   delete[] pfuncs[i].internal_var;
   delete[] pfuncs[i].ovarname;
   delete[] pfuncs[i].longstr;
+
+  pfuncs[i].ninput = 0;
+  pfuncs[i].itype = pfuncs[i].ivarflag = pfuncs[i].ivalue = nullptr;
+  pfuncs[i].dvalue = nullptr;
+  pfuncs[i].svalue = nullptr;
+  pfuncs[i].internal_var = nullptr;
+  pfuncs[i].ovarname = pfuncs[i].longstr = nullptr;
 }
 
 /* ------------------------------------------------------------------ */

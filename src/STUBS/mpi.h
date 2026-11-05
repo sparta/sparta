@@ -59,6 +59,7 @@ extern "C" {
 #define MPI_Op int
 #define MPI_Fint int
 #define MPI_Group int
+#define MPI_GROUP_NULL -1
 #define MPI_Offset long
 
 #define MPI_IN_PLACE NULL
@@ -119,6 +120,7 @@ MPI_Comm MPI_Comm_f2c(MPI_Fint comm);
 int MPI_Comm_group(MPI_Comm comm, MPI_Group *group);
 int MPI_Comm_create(MPI_Comm comm, MPI_Group group, MPI_Comm *newcomm);
 int MPI_Group_incl(MPI_Group group, int n, int *ranks, MPI_Group *newgroup);
+int MPI_Group_free(MPI_Group *group);
 
 int MPI_Cart_create(MPI_Comm comm_old, int ndims, int *dims, int *periods,
                     int reorder, MPI_Comm *comm_cart);
