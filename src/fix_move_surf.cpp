@@ -60,13 +60,13 @@ FixMoveSurf::FixMoveSurf(SPARTA *sparta, int narg, char **arg) :
   movesurf->groupbit = surf->bitmask[igroup];
 
   nevery = input->inumeric(FLERR,arg[3]);
-  if (nevery < 0) error->all(FLERR,"Illegal fix move/surf command");
+  if (nevery <= 0) error->all(FLERR,"Illegal fix move/surf command");
   if (update->ntimestep % nevery)
     error->all(FLERR,"Current timestep must be multiple of "
                "fix move/surf nevery");
 
   nlarge = input->inumeric(FLERR,arg[4]);
-  if (nlarge < 0) error->all(FLERR,"Illegal fix move/surf command");
+  if (nlarge <= 0) error->all(FLERR,"Illegal fix move/surf command");
   if (nlarge % nevery)
     error->all(FLERR,"Fix move/surf nlarge must be multiple of nevery");
 

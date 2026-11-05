@@ -33,6 +33,8 @@ class MarchingCubes : protected Pointers {
   double thresh;
 
   double *lo,*hi;
+  // corner values are truncated to ints on purpose: per-cell copies of a shared
+  //   corner can differ by roundoff, truncation keeps neighbor faces consistent
   int v000,v001,v010,v011,v100,v101,v110,v111;
   double v000iso,v001iso,v010iso,v011iso,v100iso,v101iso,v110iso,v111iso;
   double inval[8][6];

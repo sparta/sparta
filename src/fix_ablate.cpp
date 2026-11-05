@@ -747,6 +747,14 @@ void FixAblate::create_surfs(int outflag)
     surf->remove_ghosts();
     grid->unset_neighbors();
     grid->remove_ghosts();
+
+    // cleanup() can add/delete tris, so reset surf->nsurf and surf->nown
+    //   and resize custom per-surf data again (no-op if nown is unchanged)
+
+    surf->nown = surf->nlocal;
+    nlocal = surf->nlocal;
+    MPI_Allreduce(&nlocal,&surf->nsurf,1,MPI_SPARTA_BIGINT,MPI_SUM,world);
+    surf->reallocate_custom();
   }
 
   // assign optional surf group to masks of new surfs
@@ -921,15 +929,17 @@ void FixAblate::create_surfs(int outflag)
   }
 
   // compress out the deleted particles
-  // NOTE: if end up keeping this section, need logic for custom particle vectors
-  //       see Particle::compress_rebalance()
+  // also copy custom per-particle vectors/arrays, same as
+  //   Particle::compress_rebalance()
 
   int nbytes = sizeof(Particle::OnePart);
+  int ncustom = particle->ncustom;
 
   int i = 0;
   while (i < pnlocal) {
     if (particles[i].flag == PDISCARD) {
       memcpy(&particles[i],&particles[pnlocal-1],nbytes);
+      if (ncustom) particle->copy_custom(i,pnlocal-1);
       pnlocal--;
     } else i++;
   }
@@ -958,21 +968,60 @@ void FixAblate::set_delta_random()
   // enforce same decrement no matter who owns which cells
   // NOTE: could change this at some point, use differnet RNG for each proc
 
-  if (!grid->hashfilled) grid->rehash();
-  Grid::MyHash *hash = grid->hash;
-  cellint cellID;
+  // zero all owned cells first, so no cell keeps a stale or
+  //   uninitialized value if no random value is assigned to it below
+
+  for (int jcell = 0; jcell < nglocal; jcell++) celldelta[jcell] = 0.0;
+
   int rn2,icell;
   double rn1;
-  for (bigint i = 0; i < grid->ncell; i++) {
-    rn1 = random->uniform();
-    rn2 = static_cast<int> (random->uniform()*maxrandom) + 1.0;
-    cellID = i+1;
-    if (hash->find(cellID) == hash->end()) continue;
-    icell = (*hash)[cellID];
-    if (icell >= nglocal) continue;     // ghost cell
 
-    if (rn1 > scale) celldelta[icell] = 0.0;
-    else celldelta[icell] = rn2;
+  // single-level grid: cell IDs are 1 to Ncell
+
+  if (grid->maxlevel <= 1) {
+    if (!grid->hashfilled) grid->rehash();
+    Grid::MyHash *hash = grid->hash;
+    cellint cellID;
+    for (bigint i = 0; i < grid->ncell; i++) {
+      rn1 = random->uniform();
+      rn2 = static_cast<int> (random->uniform()*maxrandom) + 1.0;
+      cellID = i+1;
+      if (hash->find(cellID) == hash->end()) continue;
+      icell = (*hash)[cellID];
+      if (icell >= nglocal) continue;     // ghost cell
+
+      if (rn1 > scale) celldelta[icell] = 0.0;
+      else celldelta[icell] = rn2;
+    }
+
+  // multi-level grid: cell IDs are not 1 to Ncell
+  // instead order the uniform ablate group cells by their ixyz indices
+
+  } else {
+    Grid::MyHash ghash;
+    cellint gindex;
+    for (int jcell = 0; jcell < nglocal; jcell++) {
+      if (!(cinfo[jcell].mask & groupbit)) continue;
+      if (cells[jcell].nsplit <= 0) continue;
+      gindex = (cellint) (ixyz[jcell][0]-1) +
+        (cellint) (ixyz[jcell][1]-1) * nx;
+      if (dim == 3) gindex += (cellint) (ixyz[jcell][2]-1) * nx*ny;
+      ghash[gindex] = jcell;
+    }
+
+    bigint ngroup = (bigint) nx * ny;
+    if (dim == 3) ngroup *= nz;
+
+    for (bigint i = 0; i < ngroup; i++) {
+      rn1 = random->uniform();
+      rn2 = static_cast<int> (random->uniform()*maxrandom) + 1.0;
+      gindex = i;
+      if (ghash.find(gindex) == ghash.end()) continue;
+      icell = ghash[gindex];
+
+      if (rn1 > scale) celldelta[icell] = 0.0;
+      else celldelta[icell] = rn2;
+    }
   }
 
   // total decrement for output

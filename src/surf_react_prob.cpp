@@ -438,6 +438,9 @@ void SurfReactProb::readfile(char *fname)
       }
     }
 
+    if (r->coeff[0] < 0.0)
+      error->all(FLERR,"Invalid reaction coefficients in file");
+
     word = strtok(NULL," \t\n");
     if (word) error->all(FLERR,"Too many coefficients in a reaction formula");
 

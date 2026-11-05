@@ -76,8 +76,14 @@ void FixAblate::decrement_multid_outside()
       nvert[icell][i] = 0.0;
     }
 
+    // if no surfs, no interface points
+    // decrement cannot be paid, tally it in end_of_step(), see decrement()
+
     nsurf = cells[icell].nsurf;
-    if (!nsurf) continue; // if no surfs, no interface points
+    if (!nsurf) {
+      unpaid_mine += celldelta[icell];
+      continue;
+    }
 
     // find which corners in the cell are inside, outside, and interface
     // output how many interface points there are
@@ -90,7 +96,10 @@ void FixAblate::decrement_multid_outside()
     Ninterface = find_ninter();
     total = celldelta[icell];
     if (Ninterface > 0) perout = total / Ninterface;
-    else perout = 0.0;
+    else {
+      perout = 0.0;
+      unpaid_mine += total;
+    }
 
     // iterate to find the number of vertices around each corner
     // also assign perout to the interface points
@@ -476,17 +485,24 @@ void FixAblate::epsilon_adjust_multiv(int initflag)
 
       // if mixflag = 1, inner indices in disagreement in terms of side
       // set to all out (inside can become out but not vice versa)
+      // "out" is set to thresh - EPSILON, not exactly thresh: a value exactly
+      //   on the threshold puts a Marching Squares/Cubes vertex exactly on the
+      //   grid corner point, which gives degenerate (zero-area) triangles
+      //   lying in a cell face and aborts MarchingCubes::cleanup() with
+      //   "Some cell faces do not have zero or 2 triangles" mid-ablation
+      // same side of thresh as before (<= thresh), so the inside/outside
+      //   classification is unchanged
 
       if (mixflag) {
 
         for (int j = 0; j < nmultiv; j++)
-          mvalues[icell][i][j] = thresh;
+          mvalues[icell][i][j] = thresh - EPSILON;
 
       // all out
       } else if (!allin) {
         for (int j = 0; j < nmultiv; j++)
           if (mvalues[icell][i][j] > thresh)
-            mvalues[icell][i][j] = thresh;
+            mvalues[icell][i][j] = thresh - EPSILON;
       }
 
       // a directional value exactly equal to thresh places a Marching
@@ -691,8 +707,14 @@ void FixAblate::decrement_multiv_multid_outside()
     for (i = 0; i < ncorner; i++)
       for (j = 0; j < nmultiv; j++) mdelta[icell][i][j] = 0.0;
 
+    // if no surfs, no interface points
+    // decrement cannot be paid, tally it in end_of_step(), see decrement()
+
     nsurf = cells[icell].nsurf;
-    if (!nsurf) continue; // if no surfs, no interface points
+    if (!nsurf) {
+      unpaid_mine += celldelta[icell];
+      continue;
+    }
 
     if (dim == 2) mark_corners_2d(icell);
     else mark_corners_3d(icell);
@@ -702,7 +724,10 @@ void FixAblate::decrement_multiv_multid_outside()
     Ninterface = find_ninter();
     total = celldelta[icell];
     if (Ninterface > 0) perout = total / Ninterface;
-    else perout = 0.0;
+    else {
+      perout = 0.0;
+      unpaid_mine += total;
+    }
 
     for (i = 0; i < ncorner; i++) {
 
@@ -820,10 +845,16 @@ void FixAblate::decrement_multiv_multid_inside()
   Grid::ChildCell *cells = grid->cells;
   Grid::ChildInfo *cinfo = grid->cinfo;
 
-  int i,j,icell;
+  int i,j,k,icell;
   int i_in,o_in,i_cneigh;
   int *ineighbors,*neighbors;
-  double total_remain;
+  int ijk[3],nxyz[3];
+  int b,nshare;
+  double total_remain,scale;
+
+  nxyz[0] = nx;
+  nxyz[1] = ny;
+  nxyz[2] = nz;
 
   for (icell = 0; icell < nglocal; icell++) {
     if (!(cinfo[icell].mask & groupbit)) continue;
@@ -831,6 +862,10 @@ void FixAblate::decrement_multiv_multid_inside()
 
     for (i = 0; i < ncorner; i++)
       for (j = 0; j < nmultiv; j++) mdelta[icell][i][j] = 0.0;
+
+    ijk[0] = ixyz[icell][0];
+    ijk[1] = ixyz[icell][1];
+    ijk[2] = ixyz[icell][2];
 
     if (dim == 2) mark_corners_2d(icell);
     else mark_corners_3d(icell);
@@ -858,9 +893,27 @@ void FixAblate::decrement_multiv_multid_inside()
         else if (i_in == 5) o_in = 4;
         else error->one(FLERR,"Bad inner index");
 
+        // sync_multiv_multid_inside() divides by the 2 (4) cells that
+        //   share an edge in 2D (3D), but an edge on the boundary of the
+        //   ablate grid is shared by fewer cells
+        // nshare = # of in-grid cells sharing edge from corner i to i_cneigh,
+        //   scale this cell's contribution so the full underflow is passed
+
+        nshare = 1;
+        for (k = 0; k < dim; k++) {
+          if (((i ^ i_cneigh) >> k) & 1) continue;
+          b = (i >> k) & 1;
+          int count = 0;
+          if (ijk[k]-1+b >= 1) count++;
+          if (ijk[k]+b <= nxyz[k]) count++;
+          nshare *= count;
+        }
+        if (dim == 2) scale = 2.0/nshare;
+        else scale = 4.0/nshare;
+
         total_remain = mvalues[icell][i_cneigh][o_in];
         if (total_remain < 0)
-          mdelta[icell][i][i_in] += fabs(total_remain);
+          mdelta[icell][i][i_in] += scale*fabs(total_remain);
       } // end dim
 
     } // end corner

@@ -1262,11 +1262,11 @@ int point_in_tri(double *x, double *p1, double *p2, double *p3, double *norm)
 
   // if (pt - vertex) dotted into tri edge normal < 0, then outside tri
 
-  MathExtra::sub3(p1,x,diff);
+  MathExtra::sub3(x,p1,diff);
   if (MathExtra::dot3(diff,enorm1) < 0.0) return 0;
-  MathExtra::sub3(p2,x,diff);
+  MathExtra::sub3(x,p2,diff);
   if (MathExtra::dot3(diff,enorm2) < 0.0) return 0;
-  MathExtra::sub3(p3,x,diff);
+  MathExtra::sub3(x,p3,diff);
   if (MathExtra::dot3(diff,enorm3) < 0.0) return 0;
   return 1;
 }
@@ -1592,7 +1592,14 @@ double poly_area(int npoint, double *cpath, double* center)
     area += tri_area;
   }
 
-  MathExtra::scale3(1.0/area,center);
+  // degenerate (zero-area) polygon: use 1st point as center to avoid NaN
+
+  if (area > 0.0) MathExtra::scale3(1.0/area,center);
+  else {
+    center[0] = pt0[0];
+    center[1] = pt0[1];
+    center[2] = pt0[2];
+  }
 
   return area;
 }

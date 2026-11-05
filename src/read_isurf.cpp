@@ -53,6 +53,7 @@ ReadISurf::ReadISurf(SPARTA *sparta) : Pointers(sparta)
 
   cvalues = NULL;
   tvalues = NULL;
+  hash = NULL;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -148,18 +149,19 @@ void ReadISurf::command(int narg, char **arg)
   // NOTE: need to have a parallel read_types as well
   // serial read uses a hash
 
-  if (readflag == SERIAL) {
-    create_hash(count);
-    read_corners_serial(gridfile);
-  } else if (readflag == PARALLEL)
-    read_corners_parallel(gridfile);
+  // type file is always read serially, so it also needs the hash
+
+  if (readflag == SERIAL || typefile) create_hash(count);
+
+  if (readflag == SERIAL) read_corners_serial(gridfile);
+  else if (readflag == PARALLEL) read_corners_parallel(gridfile);
 
   if (typefile) {
     memory->create(tvalues,grid->nlocal,"readisurf:tvalues");
     read_types_serial(typefile);
   }
 
-  if (readflag == SERIAL) delete hash;
+  if (readflag == SERIAL || typefile) delete hash;
 
   // pass corner point cvalues and type values to FixAblate
   // also pass it the geometry of the 3d grid of cells and the threshold value
@@ -170,7 +172,7 @@ void ReadISurf::command(int narg, char **arg)
   double time2 = MPI_Wtime();
 
   char *sgroupID = NULL;
-  if (sgrouparg) sgroupID = arg[sgrouparg];
+  if (sgrouparg) sgroupID = arg[7+sgrouparg];
 
   ablate->store_corners(nx,ny,nz,corner,xyzsize,
                         cvalues,NULL,tvalues,thresh,sgroupID,pushflag);
@@ -471,6 +473,8 @@ void ReadISurf::read_types_serial(char *typefile)
       error->one(FLERR,str);
     }
     tmp = fread(nxyz,sizeof(int),dim,fp);
+    if (tmp != dim)
+      error->one(FLERR,"Unexpected end of read_isurf type file");
   }
 
   MPI_Bcast(nxyz,dim,MPI_INT,0,world);
@@ -492,7 +496,11 @@ void ReadISurf::read_types_serial(char *typefile)
     if (ntypes-nread > CHUNK) nchunk = CHUNK;
     else nchunk = ntypes-nread;
 
-    if (me == 0) tmp = fread(buf,sizeof(uint8_t),nchunk,fp);
+    if (me == 0) {
+      tmp = fread(buf,sizeof(uint8_t),nchunk,fp);
+      if (tmp != nchunk)
+        error->one(FLERR,"Unexpected end of read_isurf type file");
+    }
     MPI_Bcast(buf,nchunk,MPI_CHAR,0,world);
 
     assign_types(nchunk,nread,buf);
@@ -625,6 +633,31 @@ void ReadISurf::read_corners_parallel(char *gridfile)
     tmp = fread(dbuf,sizeof(double),nvalues,fp);
   }
   fclose(fp);
+
+  // check that corner point values = 0 on boundary of grid block
+  // same check and axisymmetric exception as assign_corners() for serial read
+
+  int axisflag = domain->axisymmetric && corner[1] == domain->boxlo[1];
+  int pix,piy,piz;
+  bigint pointindex;
+  int zeroflag = 0;
+
+  for (int i = 0; i < nvalues; i++) {
+    if ((precision == INT && ibuf[i] == 0) ||
+        (precision == DOUBLE && dbuf[i] == 0.0)) continue;
+    pointindex = offset + i;
+    pix = pointindex % (nx+1);
+    piy = (pointindex / (nx+1)) % (ny+1);
+    piz = pointindex / ((bigint) (nx+1)*(ny+1));
+    if (pix == 0) zeroflag = 1;
+    if (piy == 0 && !axisflag) zeroflag = 1;
+    if (pix == nx || piy == ny) zeroflag = 1;
+    if (dim == 3 && (piz == 0 || piz == nz)) zeroflag = 1;
+  }
+
+  int zeroflagall;
+  MPI_Allreduce(&zeroflag,&zeroflagall,1,MPI_INT,MPI_MAX,world);
+  if (zeroflagall) error->all(FLERR,"Grid boundary value != 0");
 
   bigint ntotal;
   bigint bnvalues = nvalues;
@@ -775,6 +808,8 @@ void ReadISurf::read_corners_parallel(char *gridfile)
 
   memory->destroy(proclist);
   memory->sfree(sdatum);
+  memory->destroy(ibuf);
+  memory->destroy(dbuf);
 
   // assign RecvDatum corner values to per grid cell cvalues
 

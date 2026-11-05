@@ -22,6 +22,8 @@ using namespace SPARTA_NS;
 
 enum{INT,DOUBLE};                      // several files
 
+#define MAXRESTARTSTR 65536     // max length of a name string in restart file
+
 /* ----------------------------------------------------------------------
    find custom per-atom vector/array with name
    return index if found
@@ -379,9 +381,9 @@ void Surf::spread_inverse_custom(int index)
 
     } else if (esize[index]) {
       int *in,*out;
-      if (nown == 0) in = NULL;
+      if (size_custom_local[index] == 0) in = NULL;
       else in = &eiarray_local[ewhich[index]][0][0];
-      if (size_custom_local[index] == 0) out = NULL;
+      if (nown == 0) out = NULL;
       else out = &eiarray[ewhich[index]][0][0];
       spread_local2own(esize[index],INT,in,out);
     }
@@ -389,13 +391,13 @@ void Surf::spread_inverse_custom(int index)
   } else if (etype[index] == DOUBLE) {
     if (esize[index] == 0) {
       spread_local2own(1,DOUBLE,edvec_local[ewhich[index]],
-                       &edvec[ewhich[index]]);
+                       edvec[ewhich[index]]);
 
     } else if (esize[index]) {
       double *in,*out;
-      if (nown == 0) in = NULL;
+      if (size_custom_local[index] == 0) in = NULL;
       else in = &edarray_local[ewhich[index]][0][0];
-      if (size_custom_local[index] == 0) out = NULL;
+      if (nown == 0) out = NULL;
       else out = &edarray[ewhich[index]][0][0];
       spread_local2own(esize[index],DOUBLE,in,out);
     }
@@ -443,14 +445,14 @@ int Surf::extract_custom(double **&cvalues)
       if (esize[ic] == 0) {
         int *ivector = eivec[ewhich[ic]];
         for (i = 0; i < nown; i++)
-          cvalues[i][m] = ubuf(ivector[i]).d;
+          cvalues[i][m] = ivector[i];
         m++;
       } else {
         int **iarray = eiarray[ewhich[ic]];
         int n = esize[ic];
         for (i = 0; i < nown; i++)
           for (j = 0; j < n; j++)
-            cvalues[i][m+j] = ubuf(iarray[i][j]).d;
+            cvalues[i][m+j] = iarray[i][j];
         m += esize[ic];
       }
 
@@ -541,8 +543,13 @@ void Surf::read_restart_custom(FILE *fp)
   // will be incremented via add_custom() for each nactive
 
   int nactive;
-  if (me == 0) tmp = fread(&nactive,sizeof(int),1,fp);
+  if (me == 0) {
+    tmp = fread(&nactive,sizeof(int),1,fp);
+    if (tmp != 1) error->one(FLERR,"Unexpected end of restart file");
+  }
   MPI_Bcast(&nactive,1,MPI_INT,0,world);
+  if (nactive < 0)
+    error->all(FLERR,"Invalid custom surf attribute count in restart file");
   if (nactive == 0) return;
 
   // order that custom vectors/arrays are in restart file
@@ -552,15 +559,32 @@ void Surf::read_restart_custom(FILE *fp)
   char *name;
 
   for (int i = 0; i < nactive; i++) {
-    if (me == 0) tmp = fread(&n,sizeof(int),1,fp);
+    if (me == 0) {
+      tmp = fread(&n,sizeof(int),1,fp);
+      if (tmp != 1) error->one(FLERR,"Unexpected end of restart file");
+    }
     MPI_Bcast(&n,1,MPI_INT,0,world);
+    if (n <= 0 || n > MAXRESTARTSTR)
+      error->all(FLERR,"Invalid string length in restart file");
     name = new char[n];
-    if (me == 0) tmp = fread(name,sizeof(char),n,fp);
+    if (me == 0) {
+      tmp = fread(name,sizeof(char),n,fp);
+      if (tmp != n) error->one(FLERR,"Unexpected end of restart file");
+    }
     MPI_Bcast(name,n,MPI_CHAR,0,world);
-    if (me == 0) tmp = fread(&type,sizeof(int),1,fp);
+    name[n-1] = '\0';
+    if (me == 0) {
+      tmp = fread(&type,sizeof(int),1,fp);
+      if (tmp != 1) error->one(FLERR,"Unexpected end of restart file");
+    }
     MPI_Bcast(&type,1,MPI_INT,0,world);
-    if (me == 0) tmp = fread(&size,sizeof(int),1,fp);
+    if (me == 0) {
+      tmp = fread(&size,sizeof(int),1,fp);
+      if (tmp != 1) error->one(FLERR,"Unexpected end of restart file");
+    }
     MPI_Bcast(&size,1,MPI_INT,0,world);
+    if ((type != INT && type != DOUBLE) || size < 0)
+      error->all(FLERR,"Invalid custom surf attribute in restart file");
 
     // create the custom attribute
 

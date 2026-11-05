@@ -36,6 +36,8 @@ SurfReactGlobal::SurfReactGlobal(SPARTA *sparta, int narg, char **arg) :
   prob_destroy = input->numeric(FLERR,arg[2]);
   prob_create = input->numeric(FLERR,arg[3]);
 
+  if (prob_destroy < 0.0 || prob_create < 0.0)
+    error->all(FLERR,"Illegal surf_react global command");
   if (prob_destroy + prob_create > 1.0 + SMALL)
     error->all(FLERR,"Illegal surf_react global command");
 

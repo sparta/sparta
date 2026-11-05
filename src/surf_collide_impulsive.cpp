@@ -357,7 +357,10 @@ void SurfCollideImpulsive::impulsive(Particle::OnePart *p, double *norm)
 
     if (!sparta->collide || sparta->collide->rotstyle == NONE ||
         species[ispecies].rotdof < 2) p->erot = 0.0;
-    else p->erot += rot_frac*extra_energy;
+    else {
+      p->erot += rot_frac*extra_energy;
+      if (p->erot < 0.0) p->erot = 0.0;
+    }
 
     // vibrational component
 
@@ -368,6 +371,7 @@ void SurfCollideImpulsive::impulsive(Particle::OnePart *p, double *norm)
     } else {
       double *vibtemp = species[ispecies].vibtemp;
       double evib_val = p->evib + vib_frac*extra_energy;
+      if (evib_val < 0.0) evib_val = 0.0;
 
       if (sparta->collide->vibstyle == SMOOTH) {
         p->evib = evib_val;
@@ -419,6 +423,7 @@ void SurfCollideImpulsive::wrapper(Particle::OnePart *p, double *norm,
     }
 
     var_alpha = coeffs[3];
+    var_alpha_sq = var_alpha*var_alpha;
     theta_peak = coeffs[4];
     cos_theta_pow = coeffs[5];
     cos_phi_pow = coeffs[6];

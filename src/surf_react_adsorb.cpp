@@ -167,6 +167,8 @@ SurfReactAdsorb::SurfReactAdsorb(SPARTA *sparta, int narg, char **arg) :
   nu_react = NULL;
   nu_tau = NULL;
   rxn_occur = NULL;
+  face_tau = NULL;
+  tau = NULL;
 
   // initialize PS added particle data structs
 
@@ -344,9 +346,11 @@ SurfReactAdsorb::~SurfReactAdsorb()
     surf->remove_custom(area_index);
     weight_index = surf->find_custom((char *) "weight");
     surf->remove_custom(weight_index);
+    // tau is only created in init(), so may not exist if no run was done
+
     if (psflag) {
       tau_index = surf->find_custom((char *) "tau");
-      surf->remove_custom(tau_index);
+      if (tau_index >= 0) surf->remove_custom(tau_index);
     }
   }
 
@@ -463,6 +467,10 @@ void SurfReactAdsorb::create_per_surf_state()
   } else if (flag < 0)
     error->all(FLERR,"Surf react/adsorb custom attribute(s) already exist");
 
+  else if (surf->esize[species_state_index] != nspecies_surf)
+    error->all(FLERR,"Surf react/adsorb custom attribute nstick_species "
+               "has wrong number of surface species");
+
   // allocate and intialize surf_species_delta
   // stores changes in each nlocal+nghost surf due to reactions
 
@@ -485,7 +493,7 @@ void SurfReactAdsorb::create_per_surf_state()
 
   // clear mark vector
 
-  memset(mark,0,nall*sizeof(int));
+  if (nall) memset(mark,0,nall*sizeof(int));
 }
 
 /* ---------------------------------------------------------------------- */
@@ -532,6 +540,9 @@ void SurfReactAdsorb::init()
       tau_index = surf->find_custom((char *) "tau");
       if (tau_index < 0)
 	tau_index = surf->add_custom((char *) "tau",DOUBLE,nactive_ps);
+      else if (surf->esize[tau_index] != nactive_ps)
+        error->all(FLERR,"Surf react/adsorb custom attribute tau "
+                   "has wrong number of PS reactions");
       tau = surf->edarray[surf->ewhich[tau_index]];
     }
   }
@@ -675,11 +686,10 @@ int SurfReactAdsorb::react(Particle::OnePart *&ip, int isurf, double *norm,
   double scatter_prob = 0.0, correction = 1.0;
   //int check_ads = 0, ads_index = -1;
 
-  int coeff_val = 1;
-
   for (int i = 0; i < n; i++) {
     r = &rlist_gs[list[i]];
 
+    int coeff_val = 1;
     if (r->style == ARRHENIUS) coeff_val = 3;
 
     switch (r->type) {
@@ -1250,7 +1260,7 @@ void SurfReactAdsorb::grid_changed()
 
   memory->destroy(mark);
   memory->create(mark,nall,"react/adsorb:mark");
-  memset(mark,0,nall*sizeof(int));
+  if (nall) memset(mark,0,nall*sizeof(int));
 
   // inverse spread of tau from local to owned custom values
   // needed because local unique surfs have been performing PS chem
@@ -2410,8 +2420,14 @@ char *SurfReactAdsorb::reactionID(int m)
 
 int SurfReactAdsorb::match_reactant(char *species, int m)
 {
-  for (int i = 0; i < rlist_gs[m].nreactant; i++)
-    if (strcmp(species,rlist_gs[m].id_reactants[i]) == 0) return 1;
+  if (m < nlist_gs) {
+    for (int i = 0; i < rlist_gs[m].nreactant; i++)
+      if (strcmp(species,rlist_gs[m].id_reactants[i]) == 0) return 1;
+  } else {
+    OneReaction_PS *r = &rlist_ps[m-nlist_gs];
+    for (int i = 0; i < r->nreactant; i++)
+      if (strcmp(species,r->id_reactants[i]) == 0) return 1;
+  }
   return 0;
 }
 
@@ -2419,8 +2435,14 @@ int SurfReactAdsorb::match_reactant(char *species, int m)
 
 int SurfReactAdsorb::match_product(char *species, int m)
 {
-  for (int i = 0; i < rlist_gs[m].nproduct; i++)
-    if (strcmp(species,rlist_gs[m].id_products[i]) == 0) return 1;
+  if (m < nlist_gs) {
+    for (int i = 0; i < rlist_gs[m].nproduct; i++)
+      if (strcmp(species,rlist_gs[m].id_products[i]) == 0) return 1;
+  } else {
+    OneReaction_PS *r = &rlist_ps[m-nlist_gs];
+    for (int i = 0; i < r->nproduct; i++)
+      if (strcmp(species,r->id_products[i]) == 0) return 1;
+  }
   return 0;
 }
 
@@ -3095,9 +3117,17 @@ void SurfReactAdsorb::PS_react(int isurf, int isc, double *norm)
         nsingle++;
         ireaction = nlist_gs + reactions_ps_list[i];
         tally_single[ireaction]++;
-        if (ncompute_tally)
-          for (m = 0; m < ncompute_tally; m++)
-            clist_active[m]->surf_tally(0.0,isurf,-1,ireaction+1,NULL,NULL,NULL);
+        // for box faces, isurf = face index and computes are boundary computes
+
+        if (ncompute_tally) {
+          if (mode == FACE)
+            for (m = 0; m < ncompute_tally; m++)
+              clist_active[m]->boundary_tally(0.0,isurf,domain->bflag[isurf],
+                                              ireaction+1,NULL,NULL,NULL);
+          else
+            for (m = 0; m < ncompute_tally; m++)
+              clist_active[m]->surf_tally(0.0,isurf,-1,ireaction+1,NULL,NULL,NULL);
+        }
 
         // update tau
 
@@ -3527,6 +3557,8 @@ void SurfReactAdsorb::random_point(int isurf, double *x)
         break;
       }
     }
+
+    if (domain->dimension == 2) x[2] = 0.0;
 
   } else if (mode == SURF) {
     if (domain->dimension == 2) {

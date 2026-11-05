@@ -50,6 +50,7 @@ MoveSurf::MoveSurf(SPARTA *sparta) : Pointers(sparta)
     memory->create(pselect,3*surf->nsurf,"move_surf:pselect");
 
   file = NULL;
+  entry = NULL;
   fp = NULL;
 }
 
@@ -59,6 +60,7 @@ MoveSurf::~MoveSurf()
 {
   memory->destroy(pselect);
   delete [] file;
+  delete [] entry;
   if (fp) fclose(fp);
 }
 
@@ -206,6 +208,7 @@ void MoveSurf::process_args(int narg, char **arg)
   int iarg = 0;
   if (strcmp(arg[0],"file") == 0) {
     if (narg < 3) error->all(FLERR,"Illegal move surf command");
+    error->all(FLERR,"Move surf file option is not yet implemented");
     action = READFILE;
     int n = strlen(arg[1]) + 1;
     file = new char[n];
@@ -251,6 +254,7 @@ void MoveSurf::process_args(int narg, char **arg)
       if (iarg+2 > narg) error->all(FLERR,"Illegal move surf command");
       if (strcmp(arg[iarg+1],"yes") == 0) connectflag = 1;
       else if (strcmp(arg[iarg+1],"no") == 0) connectflag = 0;
+      else error->all(FLERR,"Illegal move surf command");
       iarg += 2;
     } else error->all(FLERR,"Illegal move surf command");
   }
