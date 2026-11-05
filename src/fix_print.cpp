@@ -57,6 +57,7 @@ FixPrint::FixPrint(SPARTA *sparta, int narg, char **arg) :
     if (strcmp(arg[iarg],"file") == 0 || strcmp(arg[iarg],"append") == 0) {
       if (iarg+2 > narg) error->all(FLERR,"Illegal fix print command");
       if (me == 0) {
+        if (fp) fclose(fp);
         if (strcmp(arg[iarg],"file") == 0) fp = fopen(arg[iarg+1],"w");
         else fp = fopen(arg[iarg+1],"a");
         if (fp == NULL) {
@@ -117,6 +118,18 @@ int FixPrint::setmask()
   int mask = 0;
   mask |= END_OF_STEP;
   return mask;
+}
+
+/* ---------------------------------------------------------------------- */
+
+void FixPrint::init()
+{
+  // add first print step to all computes that store invocation times
+  // since don't know a priori which are invoked via variables by this fix
+  // once in end_of_step() can set timestep for ones actually invoked
+
+  bigint nfirst = (update->ntimestep/nevery)*nevery + nevery;
+  modify->addstep_compute_all(nfirst);
 }
 
 /* ---------------------------------------------------------------------- */

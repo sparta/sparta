@@ -31,6 +31,7 @@ class FixPrint : public Fix {
   FixPrint(class SPARTA *, int, char **);
   ~FixPrint();
   int setmask();
+  void init();
   void end_of_step();
 
  private:

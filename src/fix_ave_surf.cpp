@@ -362,6 +362,17 @@ void FixAveSurf::init()
 
     } else value2index[m] = -1;
   }
+
+  // per-surf storage was sized when fix was defined
+  // error if read_surf or remove_surf has since changed surf count
+
+  int flag = 0;
+  if (surf->nown != nown) flag = 1;
+  int flagall;
+  MPI_Allreduce(&flag,&flagall,1,MPI_INT,MPI_MAX,world);
+  if (flagall)
+    error->all(FLERR,"Fix ave/surf surface count has changed "
+               "since fix was defined");
 }
 
 /* ----------------------------------------------------------------------
@@ -515,8 +526,11 @@ void FixAveSurf::end_of_step()
     } else if (which[m] == VARIABLE) {
       if (nvalues == 1)
 	input->variable->compute_surf(n,accvec,1,1);
-      else
-	input->variable->compute_surf(n,&accarray[0][m],nvalues,1);
+      else {
+        double *aptr = NULL;
+        if (accarray) aptr = &accarray[0][m];
+        input->variable->compute_surf(n,aptr,nvalues,1);
+      }
 
     // access custom attribute
 

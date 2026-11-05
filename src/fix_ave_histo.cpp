@@ -365,6 +365,10 @@ FixAveHisto::FixAveHisto(SPARTA *spa, int narg, char **arg) :
       if (argindex[i])
         error->all(FLERR,"Fix ave/histo variable cannot have an index");
 
+    } else if (which[i] == VARIABLE && kind == GLOBAL && mode == VECTOR) {
+      error->all(FLERR,"Fix ave/histo equal-style variable "
+                 "cannot be used in vector mode");
+
     } else if (which[i] == VARIABLE && kind == PERPARTICLE) {
       int ivariable = input->variable->find(ids[i]);
       if (argindex[i] == 0 && input->variable->particle_style(ivariable) == 0)
@@ -454,6 +458,10 @@ FixAveHisto::FixAveHisto(SPARTA *spa, int narg, char **arg) :
   iwindow = window_limit = 0;
 
   stats_total[0] = stats_total[1] = stats_total[2] = stats_total[3] = 0.0;
+  if (ave == RUNNING) {
+    stats_total[2] = BIG;
+    stats_total[3] = -BIG;
+  }
   for (int i = 0; i < nbins; i++) bin_total[i] = 0.0;
 
   // nvalid = next step on which end_of_step does something
@@ -471,6 +479,7 @@ FixAveHisto::~FixAveHisto()
 {
   if (copymode) return;
 
+  delete [] idregion;
   delete [] which;
   delete [] argindex;
   delete [] value2index;
@@ -501,6 +510,14 @@ int FixAveHisto::setmask()
 
 void FixAveHisto::init()
 {
+  // re-resolve region, since region delete can free or move regions
+
+  if (regionflag) {
+    iregion = domain->find_region(idregion);
+    if (iregion == -1)
+      error->all(FLERR,"Fix ave/histo region ID does not exist");
+  }
+
   // set current indices for all computes,fixes,variables
 
   for (int i = 0; i < nvalues; i++) {
@@ -648,13 +665,24 @@ void FixAveHisto::end_of_step()
         else bin_one(fix->compute_vector(j-1));
 
       } else if (kind == GLOBAL && mode == VECTOR) {
-        if (j == 0) {
-          int n = fix->size_vector;
-          for (i = 0; i < n; i++) bin_one(fix->compute_vector(i));
-        } else {
-          int n = fix->size_vector;
-          for (i = 0; i < n; i++) bin_one(fix->compute_array(i,j-1));
+
+        // copy fix values into local vector and bin them via bin_vector()
+        //   so fix ave/histo/weight pairs each value with its own weight,
+        //   bin_one() would use the global scalar weight
+
+        int n;
+        if (j == 0) n = fix->size_vector;
+        else n = fix->size_array_rows;
+        if (n > maxvector) {
+          memory->destroy(vector);
+          maxvector = n;
+          memory->create(vector,maxvector,"ave/histo:vector");
         }
+        if (j == 0)
+          for (int k = 0; k < n; k++) vector[k] = fix->compute_vector(k);
+        else
+          for (int k = 0; k < n; k++) vector[k] = fix->compute_array(k,j-1);
+        bin_vector(n,vector,1);
 
       } else if (kind == PERPARTICLE) {
         if (j == 0) bin_particles(fix->vector_particle,1);
@@ -1002,6 +1030,7 @@ void FixAveHisto::options(int iarg, int narg, char **arg)
   beyond = IGNORE;
   overwrite = 0;
   regionflag = 0;
+  idregion = NULL;
   mixflag = 0;
   groupflag = 0;
   title1 = NULL;
@@ -1062,6 +1091,9 @@ void FixAveHisto::options(int iarg, int narg, char **arg)
       iregion = domain->find_region(arg[iarg+1]);
       if (iregion == -1)
         error->all(FLERR,"Fix ave/histo region ID does not exist");
+      delete [] idregion;
+      idregion = new char[strlen(arg[iarg+1])+1];
+      strcpy(idregion,arg[iarg+1]);
       iarg += 2;
     } else if (strcmp(arg[iarg],"mix") == 0) {
       if (iarg+2 > narg) error->all(FLERR,"Illegal fix ave/histo command");

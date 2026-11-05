@@ -47,6 +47,7 @@ class FixAveHisto : public Fix {
   double lo,hi,binsize,bininv;
   int regionflag,mixflag,groupflag;
   int iregion,imix,groupbit;
+  char *idregion;           // region ID, re-resolved in init()
   int kind,beyond,overwrite;
   long filepos;
 
