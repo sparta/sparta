@@ -196,6 +196,11 @@ This command can only be used after the grid has been created by the
 "create_grid"_create_grid.html, "read_grid"_read_grid.html, or
 "read_restart"_read_restart.html commands.
 
+Implicit surfaces cannot be rebalanced while any custom per-surface
+attributes are defined (see the "custom"_custom.html command): the
+custom values are not migrated with their grid cells, so an error is
+generated.
+
 This command also initializes various options in SPARTA before
 performing the balancing.  This is so that grid cells are ready to
 migrate to new processors.  Thus if an error is flagged, e.g. that a

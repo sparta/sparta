@@ -204,6 +204,11 @@ exercising the rebalancing code.
 <A HREF = "create_grid.html">create_grid</A>, <A HREF = "read_grid.html">read_grid</A>, or
 <A HREF = "read_restart.html">read_restart</A> commands.
 </P>
+<P>Implicit surfaces cannot be rebalanced while any custom per-surface
+attributes are defined (see the <A HREF = "custom.html">custom</A> command): the
+custom values are not migrated with their grid cells, so an error is
+generated.
+</P>
 <P>This command also initializes various options in SPARTA before
 performing the balancing.  This is so that grid cells are ready to
 migrate to new processors.  Thus if an error is flagged, e.g. that a
