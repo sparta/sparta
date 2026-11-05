@@ -221,7 +221,10 @@ void ReadGrid::read_cells()
       for (i = 0; i < nchunk; i++) {
         eof = fgets(&buffer[m],MAXLINE,fp);
         if (eof == NULL) error->one(FLERR,"Unexpected end of grid file");
-        m += strlen(&buffer[m]);
+        int len = strlen(&buffer[m]);
+        if (len == MAXLINE-1 && buffer[m+len-1] != '\n' && !feof(fp))
+          error->one(FLERR,"Grid file line too long");
+        m += len;
       }
       if (buffer[m-1] != '\n') strcpy(&buffer[m++],"\n");
       m++;
@@ -309,7 +312,7 @@ void ReadGrid::create_cells(int n, char *buf)
       if (level < 0) error->one(FLERR,"Cell ID in grid file exceeds maxlevel");
       grid->id_lohi(id,level,boxlo,boxhi,lo,hi);
       grid->add_child_cell(id,level,lo,hi);
-      add_custom(custom);
+      if (ncustom) add_custom(custom);
     }
 
     whichproc++;
@@ -402,9 +405,10 @@ void ReadGrid::open(char *file)
   if (!compressed) fp = fopen(file,"r");
   else {
 #ifdef SPARTA_GZIP
-    char gunzip[128];
-    snprintf(gunzip,128,"gunzip -c %s",file);
+    char *gunzip = new char[strlen(file) + 16];
+    sprintf(gunzip,"gunzip -c %s",file);
     fp = popen(gunzip,"r");
+    delete [] gunzip;
 #else
     error->one(FLERR,"Cannot open gzipped file");
 #endif

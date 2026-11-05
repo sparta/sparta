@@ -953,6 +953,7 @@ int Cut2d::loop2pg()
     int m = 0;
     for (int i = 0; i < nloop; i++) {
       if (!loops[i].active) continue;
+      if (loops[i].area <= 0.0) continue;
       pgs[m].area = loops[i].area;
       pgs[m].n = 1;
       pgs[m].first = i;
@@ -1064,7 +1065,7 @@ int Cut2d::split_point_implicit(int *surfmap, double *xsplit, int &xsub)
   // i = 1st surf with non-negative surfmap
 
   int i = 0;
-  while (surfmap[i] < 0 && i < nsurf) i++;
+  while (i < nsurf && surfmap[i] < 0) i++;
   if (i == nsurf) return 7;
 
   // xsplit = center point of line segment wholly contained in cell

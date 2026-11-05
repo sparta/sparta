@@ -46,7 +46,11 @@ enum{TEXT,BINARY};
 
 /* ---------------------------------------------------------------------- */
 
-Custom::Custom(SPARTA *sparta) : Pointers(sparta) {}
+Custom::Custom(SPARTA *sparta) : Pointers(sparta)
+{
+  naction = 0;
+  actions = NULL;
+}
 
 /* ---------------------------------------------------------------------- */
 
@@ -426,6 +430,7 @@ bigint Custom::process_actions(int narg, char **arg, int external)
       // # of coarse files and filestyle
 
       int numfile = input->inumeric(FLERR,arg[iarg+1]);
+      if (numfile < 1) error->all(FLERR,"Illegal custom command");
       if (strcmp(arg[iarg+2],"text") == 0) filestyle = TEXT;
       else if (strcmp(arg[iarg+2],"binary") == 0) filestyle = BINARY;
       else error->all(FLERR,"Illegal custom command");
@@ -612,7 +617,7 @@ bigint Custom::process_actions()
     } else if (actions[i].action == FILECOARSE) {
 
       int numfile = actions[i].numfile;
-      int filestyle = actions[i].filestyle;
+      filestyle = actions[i].filestyle;
       char *fname = actions[i].fname;
       int colcount = actions[i].colcount;
       int *cindex = actions[i].cindex_file;
@@ -733,7 +738,7 @@ bigint Custom::set_particle(Mixture *mixture, Region *region,
 
   int *choose;
   memory->create(choose,nlocal,"set:choose");
-  memset(choose,0,nlocal*sizeof(int));
+  if (nlocal) memset(choose,0,nlocal*sizeof(int));
 
   int flag;
 
@@ -833,7 +838,7 @@ bigint Custom::set_grid(int groupbit, Region *region,
 
   int *choose;
   memory->create(choose,nglocal,"set:choose");
-  memset(choose,0,nglocal*sizeof(int));
+  if (nglocal) memset(choose,0,nglocal*sizeof(int));
 
   int flag;
   double point[3];
@@ -968,7 +973,7 @@ bigint Custom::set_surf(int groupbit, Region *region,
   int nsown = surf->nown;
   int *choose;
   memory->create(choose,nsown,"set:choose");
-  memset(choose,0,nsown*sizeof(int));
+  if (nsown) memset(choose,0,nsown*sizeof(int));
 
   int flag;
   double point[3];
@@ -1244,6 +1249,11 @@ bigint Custom::read_file(int mode, int colcount,
         }
         index = (*hash)[id];
 
+        // assign values to ghost cells too, but only count owned cells
+        //   so the reported total does not depend on # of procs
+
+        if (index < grid->nlocal) count += colcount;
+
       // surf ID will only match for the owning proc
 
       } else if (mode == SURF) {
@@ -1258,6 +1268,7 @@ bigint Custom::read_file(int mode, int colcount,
           continue;
         }
         index = (id-1) / nprocs;
+        count += colcount;
       }
 
       // assign all attribute values for this grid cell or surf
@@ -1276,7 +1287,6 @@ bigint Custom::read_file(int mode, int colcount,
         }
       }
 
-      count += colcount;
       buf = next + 1;
     }
 
@@ -1376,7 +1386,8 @@ void Custom::read_coarse_files(char *fname, int numfile, int colcount)
     // line: Npoints Nvalues
 
     int npoints,nvalues;
-    sscanf(line,"%d %d",&npoints,&nvalues);
+    if (sscanf(line,"%d %d",&npoints,&nvalues) != 2 || npoints < 0)
+      error->one(FLERR,"Incorrect line format in custom coarse file");
 
     if (nvalues != colcount)
       error->one(FLERR,"Incorrect line format in custom coarse file");
@@ -1411,6 +1422,8 @@ void Custom::read_coarse_files(char *fname, int numfile, int colcount)
     ncoarse_me += npoints;
   }
 
+  delete [] line;
+
   // check that each coarse point is inside or on simulation box
 
   double *boxlo = domain->boxlo;
@@ -1431,6 +1444,8 @@ void Custom::read_coarse_files(char *fname, int numfile, int colcount)
   MPI_Allreduce(&count,&count_all,1,MPI_INT,MPI_SUM,world);
 
   if (count_all) {
+    memory->destroy(xyz_coarse_me);
+    memory->destroy(values_coarse_me);
     char str[128];
     snprintf(str,sizeof(str),"%d coarse grid points are outside simulation box",count_all);
     error->all(FLERR,str);
@@ -1440,6 +1455,8 @@ void Custom::read_coarse_files(char *fname, int numfile, int colcount)
   // done once for xyz_coarse, another for values_coarse
 
   MPI_Allreduce(&ncoarse_me,&ncoarse,1,MPI_INT,MPI_SUM,world);
+
+  if (ncoarse == 0) error->all(FLERR,"Custom file/coarse found no coarse points");
 
   if (comm->me == 0 && ncoarse > MAXCOARSE)
     error->warning(FLERR,"Custom coarse grid points > MAXCOARSE");
@@ -1480,7 +1497,6 @@ void Custom::read_coarse_files(char *fname, int numfile, int colcount)
 
   // clean up
 
-  delete [] line;
   memory->destroy(recvcounts);
   memory->destroy(displs);
   memory->destroy(xyz_coarse_me);
@@ -1807,6 +1823,11 @@ void KDTree::create_tree(int iparent, int n, int *plist)
   }
 
   double split = 0.5 * (bboxlo[splitdim] + bboxhi[splitdim]);
+
+  // midpoint can round up to bboxhi when lo/hi are adjacent doubles
+  // use lo instead so right list is not empty
+
+  if (split >= bboxhi[splitdim]) split = bboxlo[splitdim];
 
   tree[ntree].splitdim = splitdim;
   tree[ntree].split = split;

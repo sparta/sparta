@@ -66,6 +66,7 @@ class AdaptGrid : protected Pointers {
   double sdir[3];
   char *computeID,*valueID;
   class Region *region;
+  char *idregion;            // region ID, re-resolved in setup()
   class Compute *compute;
   class Fix *fix;
 

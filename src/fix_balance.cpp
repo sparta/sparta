@@ -18,6 +18,7 @@
 #include "balance_grid.h"
 #include "update.h"
 #include "grid.h"
+#include "surf.h"
 #include "particle.h"
 #include "domain.h"
 #include "comm.h"
@@ -56,6 +57,8 @@ FixBalance::FixBalance(SPARTA *sparta, int narg, char **arg) :
 
   nevery = atoi(arg[2]);
   thresh = atof(arg[3]);
+
+  rcbwt = CELL;
 
   int iarg;
   if (strcmp(arg[4],"random") == 0) {
@@ -107,7 +110,7 @@ FixBalance::FixBalance(SPARTA *sparta, int narg, char **arg) :
 
   // error check
 
-  if (nevery < 0 || thresh < 1.0)
+  if (nevery <= 0 || thresh < 1.0)
     error->all(FLERR,"Illegal fix balance command");
 
   me = comm->me;
@@ -118,8 +121,15 @@ FixBalance::FixBalance(SPARTA *sparta, int narg, char **arg) :
   random = NULL;
   rcb = NULL;
 
+  // RANDOM: per-proc RNG stream, as in balance_grid
+  // PROC: same stream on all procs, start is offset by proc ID
+
   if (bstyle == RANDOM || bstyle == PROC)
     random = new RanKnuth(update->ranmaster->uniform());
+  if (bstyle == RANDOM) {
+    double seed = update->ranmaster->uniform();
+    random->reset(seed,comm->me,100);
+  }
   if (bstyle == BISECTION) rcb = new RCB(sparta);
 
   // compute initial outputs
@@ -150,6 +160,18 @@ int FixBalance::setmask()
 
 void FixBalance::init()
 {
+  // custom per-surf data of implicit surfs is not migrated with their grid
+  //   cells, so it would no longer match the surfs after a rebalance
+
+  if (surf->exist && surf->implicit) {
+    int ncustom_active = 0;
+    for (int i = 0; i < surf->ncustom; i++)
+      if (surf->ename[i]) ncustom_active++;
+    if (ncustom_active)
+      error->all(FLERR,"Cannot use fix balance with implicit surfs "
+                 "that have custom attributes");
+  }
+
   // error b/c acquire_ghosts() is a no-op in this case
 
   if (bstyle != BISECTION && grid->cutoff >= 0.0)
@@ -220,7 +242,8 @@ void FixBalance::end_of_step()
     }
 
   } else if (bstyle == PROC) {
-    int newproc = nprocs * random->uniform();
+    int newproc = static_cast<int> (nprocs * random->uniform());
+    newproc = (newproc + comm->me) % nprocs;
     for (int icell = 0; icell < nglocal; icell++) {
       if (cells[icell].nsplit <= 0) continue;
       if (newproc != cells[icell].proc) nmigrate++;

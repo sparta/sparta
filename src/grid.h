@@ -384,6 +384,8 @@ class Grid : protected Pointers {
   }
 
  protected:
+  void collate_implicit(int, int, cellint *, double **, double **);
+
   int me;
   int maxcell;             // size of cells
   int maxsplit;            // size of sinfo

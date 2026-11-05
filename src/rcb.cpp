@@ -607,8 +607,19 @@ void RCB::compute(int n, double **x, double *wt, char *eligible, int flip)
     recvindex[i] = dots[i].index;
   }
 
-  lo = rcbbox.lo;
-  hi = rcbbox.hi;
+  // if flipped, convert bounding box back to unflipped coords
+
+  if (flip == 0) {
+    lo = rcbbox.lo;
+    hi = rcbbox.hi;
+  } else {
+    for (i = 0; i < 3; i++) {
+      fliplo[i] = -rcbbox.hi[i];
+      fliphi[i] = -rcbbox.lo[i];
+    }
+    lo = fliplo;
+    hi = fliphi;
+  }
 }
 
 /* ----------------------------------------------------------------------

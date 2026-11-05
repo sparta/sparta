@@ -55,6 +55,18 @@ void BalanceGrid::command(int narg, char **arg, int outflag)
 
   if (narg < 1) error->all(FLERR,"Illegal balance_grid command");
 
+  // custom per-surf data of implicit surfs is not migrated with their grid
+  //   cells, so it would no longer match the surfs after a rebalance
+
+  if (surf->exist && surf->implicit) {
+    int ncustom_active = 0;
+    for (int i = 0; i < surf->ncustom; i++)
+      if (surf->ename[i]) ncustom_active++;
+    if (ncustom_active)
+      error->all(FLERR,"Cannot use balance_grid with implicit surfs "
+                 "that have custom attributes");
+  }
+
   int bstyle,order;
   int px,py,pz;
   int rcbwt;
@@ -98,6 +110,8 @@ void BalanceGrid::command(int narg, char **arg, int outflag)
     else py = atoi(arg[2]);
     if (strcmp(arg[3],"*") == 0) pz = 0;
     else pz = atoi(arg[3]);
+    if (px < 0 || py < 0 || pz < 0)
+      error->all(FLERR,"Illegal balance_grid command");
     iarg = 4;
 
   } else if (strcmp(arg[0],"random") == 0) {
@@ -118,7 +132,8 @@ void BalanceGrid::command(int narg, char **arg, int outflag)
     else if (strcmp(arg[1],"time") == 0) rcbwt = TIME;
     else error->all(FLERR,"Illegal balance_grid command");
     iarg = 2;
-  }
+
+  } else error->all(FLERR,"Illegal balance_grid command");
 
   // optional args
 
@@ -275,9 +290,13 @@ void BalanceGrid::command(int narg, char **arg, int outflag)
     delete random;
 
   } else if (bstyle == PROC) {
+    // same random draw on all procs, offset by proc ID, so each proc
+    //   starts its round-robin assignment at a different proc
+
     int newproc;
     RanKnuth *random = new RanKnuth(update->ranmaster->uniform());
-    newproc = nprocs * random->uniform();
+    newproc = static_cast<int> (nprocs * random->uniform());
+    newproc = (newproc + comm->me) % nprocs;
 
     for (int icell = 0; icell < nglocal; icell++) {
       if (cells[icell].nsplit <= 0) continue;

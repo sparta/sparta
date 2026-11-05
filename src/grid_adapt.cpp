@@ -311,6 +311,7 @@ void Grid::coarsen_cell(cellint parentID, int plevel, double *plo, double *phi,
               if (dim == 2) surf->add_line_copy(1,&lines[i]);
               else surf->add_tri_copy(1,&tris[i]);
               ilocal = surf->nlocal-1;
+              (*surfhash)[surfID] = ilocal;
             }
             if (nsurf == maxsurfpercell)
               error->one(FLERR,"Too many surfs in coarsened cell");
