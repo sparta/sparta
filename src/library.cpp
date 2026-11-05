@@ -71,7 +71,7 @@ using namespace SPARTA_NS;
     SPARTA *_spa = (SPARTA *) sparta; \
     _spa->error->set_last_error(e.what(),Error::ERROR_ABORT); \
     int _nprocs; \
-    MPI_Comm_size(_spa->world,&_nprocs); \
+    MPI_Comm_size(e.get_universe(),&_nprocs); \
     if (_nprocs > 1) MPI_Abort(e.get_universe(),1); \
   } \
   catch (SpartaException &e) { \
@@ -473,7 +473,7 @@ void *sparta_extract_compute(void *ptr, const char *id, int style, int type)
 
   if (style == 1) {
     if (!compute->per_particle_flag) return NULL;
-    if (type == 1) {
+    if (type == 0 || type == 1) {
       if (compute->invoked_per_particle != sparta->update->ntimestep)
         compute->compute_per_particle();
       result = (void *) compute->vector_particle;
@@ -487,11 +487,11 @@ void *sparta_extract_compute(void *ptr, const char *id, int style, int type)
 
   if (style == 2) {
     if (!compute->per_grid_flag) return NULL;
-    if (type == 1) {
+    if (type == 0 || type == 1) {
       if (compute->invoked_per_grid != sparta->update->ntimestep)
         compute->compute_per_grid();
       if (compute->post_process_grid_flag)
-        compute->post_process_grid(0,1,NULL,NULL,NULL,1);
+        compute->post_process_grid(1,1,NULL,NULL,NULL,1);
       else if (compute->post_process_isurf_grid_flag)
         compute->post_process_isurf_grid();
       result = (void *) compute->vector_grid;
@@ -511,7 +511,7 @@ void *sparta_extract_compute(void *ptr, const char *id, int style, int type)
 
   if (style == 3) {
     if (!compute->per_surf_flag) return NULL;
-    if (type == 1) {
+    if (type == 0 || type == 1) {
       if (compute->invoked_per_surf != sparta->update->ntimestep)
         compute->compute_per_surf();
       compute->post_process_surf();
@@ -527,7 +527,7 @@ void *sparta_extract_compute(void *ptr, const char *id, int style, int type)
 
   if (style == 4) {
     if (!compute->per_tally_flag) return NULL;
-    if (type == 1) {
+    if (type == 0 || type == 1) {
       if (compute->invoked_per_tally != sparta->update->ntimestep)
         compute->compute_per_tally();
       result = (void *) compute->vector_tally;
@@ -948,12 +948,20 @@ int sparta_has_id(void *ptr, const char *category, const char *name)
   int count = sparta_id_count(ptr,category);
   if (count < 0) return -1;
 
-  char buffer[256];
+  // buffer one char longer than name, so a longer stored ID cannot match
+
+  int bufsize = strlen(name) + 2;
+  char *buffer = new char[bufsize];
+  int found = 0;
   for (int i = 0; i < count; i++) {
-    if (sparta_id_name(ptr,category,i,buffer,256) &&
-        strcmp(buffer,name) == 0) return 1;
+    if (sparta_id_name(ptr,category,i,buffer,bufsize) &&
+        strcmp(buffer,name) == 0) {
+      found = 1;
+      break;
+    }
   }
-  return 0;
+  delete [] buffer;
+  return found;
 }
 
 /* ----------------------------------------------------------------------

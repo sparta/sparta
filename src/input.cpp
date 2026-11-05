@@ -1055,7 +1055,10 @@ void Input::ifthenelse()
       iarg++;
     last = iarg-1;
 
-    if (btest == 0.0) continue;
+    if (btest == 0.0) {
+      if (iarg == narg) return;
+      continue;
+    }
 
     int ncommands = last-first + 1;
     if (ncommands <= 0) error->all(FLERR,"Illegal if command");

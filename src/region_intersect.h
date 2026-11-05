@@ -31,10 +31,12 @@ class RegIntersect : public Region {
   ~RegIntersect();
   void init();
   int inside(double *);
+  void reset_region_indices();
 
  protected:            // Kokkos subclasses flatten these to the device
   int nregion;
   int *list;
+  char **idsub;         // IDs of sub-regions, used to re-resolve list
 };
 
 }

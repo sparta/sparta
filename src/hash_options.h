@@ -68,7 +68,9 @@
 
   struct OnePoint2dHash {
     uint32_t operator ()(const OnePoint2d& one) const {
-      return hashlittle(one.pt,2*sizeof(double),0);
+      // add 0.0 so -0.0 and 0.0 (equal via ==) hash identically
+      double pt[2] = {one.pt[0] + 0.0, one.pt[1] + 0.0};
+      return hashlittle(pt,2*sizeof(double),0);
     }
   };
 
@@ -85,7 +87,9 @@
 
   struct OnePoint3dHash {
     uint32_t operator ()(const OnePoint3d& one) const {
-      return hashlittle(one.pt,3*sizeof(double),0);
+      // add 0.0 so -0.0 and 0.0 (equal via ==) hash identically
+      double pt[3] = {one.pt[0] + 0.0, one.pt[1] + 0.0, one.pt[2] + 0.0};
+      return hashlittle(pt,3*sizeof(double),0);
     }
   };
 
@@ -101,7 +105,10 @@
 
   struct TwoPoint3dHash {
     uint32_t operator ()(const TwoPoint3d& two) const {
-      return hashlittle(two.pts,6*sizeof(double),0);
+      // add 0.0 so -0.0 and 0.0 (equal via ==) hash identically
+      double pts[6];
+      for (int i = 0; i < 6; i++) pts[i] = two.pts[i] + 0.0;
+      return hashlittle(pts,6*sizeof(double),0);
     }
   };
 

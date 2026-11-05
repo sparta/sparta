@@ -33,6 +33,7 @@ RegIntersect::RegIntersect(SPARTA *sparta, int narg, char **arg) :
   // build list of regions to intersect
 
   list = new int[n];
+  idsub = new char*[n];
   nregion = 0;
 
   int iregion;
@@ -40,6 +41,8 @@ RegIntersect::RegIntersect(SPARTA *sparta, int narg, char **arg) :
     iregion = domain->find_region(arg[iarg+3]);
     if (iregion == -1)
       error->all(FLERR,"Region intersect region ID does not exist");
+    idsub[nregion] = new char[strlen(arg[iarg+3])+1];
+    strcpy(idsub[nregion],arg[iarg+3]);
     list[nregion++] = iregion;
   }
 
@@ -82,6 +85,27 @@ RegIntersect::RegIntersect(SPARTA *sparta, int narg, char **arg) :
 RegIntersect::~RegIntersect()
 {
   delete [] list;
+  for (int ilist = 0; ilist < nregion; ilist++) delete [] idsub[ilist];
+  delete [] idsub;
+}
+
+/* ----------------------------------------------------------------------
+   re-resolve sub-region indices in list via their IDs
+   region delete removes a region and moves the last region into its slot,
+     so a cached index can refer to a different or deleted region
+   called by Domain::delete_region() after any region is deleted
+------------------------------------------------------------------------- */
+
+void RegIntersect::reset_region_indices()
+{
+  Region **regions = domain->regions;
+  for (int ilist = 0; ilist < nregion; ilist++) {
+    if (list[ilist] < domain->nregion &&
+        strcmp(regions[list[ilist]]->id,idsub[ilist]) == 0) continue;
+    list[ilist] = domain->find_region(idsub[ilist]);
+    if (list[ilist] < 0)
+      error->all(FLERR,"Region intersect sub-region was deleted");
+  }
 }
 
 /* ----------------------------------------------------------------------

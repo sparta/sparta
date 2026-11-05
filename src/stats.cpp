@@ -155,15 +155,15 @@ void Stats::init()
     if (format_column_user[i]) ptr = format_column_user[i];
     else if (vtype[i] == FLOAT) {
       if (format_float_user) ptr = format_float_user;
-      else if (format_line_user) ptr = format_line_ptr;
+      else if (format_line_user && format_line_ptr) ptr = format_line_ptr;
       else ptr = format_float_def;
     } else if (vtype[i] == INT) {
       if (format_int_user) ptr = format_int_user;
-      else if (format_line_user) ptr = format_line_ptr;
+      else if (format_line_user && format_line_ptr) ptr = format_line_ptr;
       else ptr = format_int_def;
     } else if (vtype[i] == BIGINT) {
       if (format_bigint_user) ptr = format_bigint_user;
-      else if (format_line_user) ptr = format_line_ptr;
+      else if (format_line_user && format_line_ptr) ptr = format_line_ptr;
       else ptr = format_bigint_def;
     }
 
@@ -186,7 +186,7 @@ void Stats::init()
   }
   for (int i = 0; i < nsurfreact; i++) {
     m = surf->find_react(id_surf_react[i]);
-    if (m < 0) error->all(FLERR,"Could not find stats surf collide ID");
+    if (m < 0) error->all(FLERR,"Could not find stats surf react ID");
     sr[i] = surf->sr[m];
   }
 
@@ -860,6 +860,11 @@ void Stats::set_fields(int narg, char **arg)
 
 void Stats::addfield(const char *key, FnPtr func, int typeflag)
 {
+  int n = strlen(key) + 1;
+  if (n > 32) {
+    delete [] keyword[nfield];
+    keyword[nfield] = new char[n];
+  }
   strcpy(keyword[nfield],key);
   vfunc[nfield] = func;
   vtype[nfield] = typeflag;
@@ -1046,8 +1051,14 @@ int Stats::evaluate_keyword(char *word, double *answer)
     compute_ngrid();
     dvalue = bivalue;
   }
-  else if (strcmp(word,"nsplit") == 0) compute_nsplit();
-  else if (strcmp(word,"maxlevel") == 0) compute_maxlevel();
+  else if (strcmp(word,"nsplit") == 0) {
+    compute_nsplit();
+    dvalue = bivalue;
+  }
+  else if (strcmp(word,"maxlevel") == 0) {
+    compute_maxlevel();
+    dvalue = ivalue;
+  }
 
   else if (strcmp(word,"vol") == 0) compute_vol();
   else if (strcmp(word,"lx") == 0) compute_lx();

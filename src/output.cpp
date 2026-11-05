@@ -199,11 +199,13 @@ void Output::setup(int memflag)
           (ntimestep/restart_every_single)*restart_every_single +
           restart_every_single;
       else {
+        modify->clearstep_compute();
         bigint nextrestart = static_cast<bigint>
           (input->variable->compute_equal(ivar_restart_single));
         if (nextrestart <= ntimestep)
           error->all(FLERR,"Restart variable returned a bad timestep");
         next_restart_single = nextrestart;
+        modify->addstep_compute(next_restart_single);
       }
     } else next_restart_single = update->laststep + 1;
     if (restart_flag_double) {
@@ -212,11 +214,13 @@ void Output::setup(int memflag)
           (ntimestep/restart_every_double)*restart_every_double +
           restart_every_double;
       else {
+        modify->clearstep_compute();
         bigint nextrestart = static_cast<bigint>
           (input->variable->compute_equal(ivar_restart_double));
         if (nextrestart <= ntimestep)
           error->all(FLERR,"Restart variable returned a bad timestep");
         next_restart_double = nextrestart;
+        modify->addstep_compute(next_restart_double);
       }
     } else next_restart_double = update->laststep + 1;
     next_restart = MIN(next_restart_single,next_restart_double);
@@ -243,8 +247,8 @@ void Output::setup(int memflag)
       error->all(FLERR,"Stats every variable returned a bad timestep");
   } else if (stats_every) {
     next_stats = (ntimestep/stats_every)*stats_every + stats_every;
-    next_stats = MIN(next_stats,update->laststep);
   } else next_stats = update->laststep;
+  next_stats = MIN(next_stats,update->laststep);
 
   modify->addstep_compute(next_stats);
 
@@ -616,6 +620,8 @@ void Output::set_stats(int narg, char **arg)
   } else {
     stats_every = atoi(arg[0]);
     if (stats_every < 0) error->all(FLERR,"Illegal stats command");
+    delete [] var_stats;
+    var_stats = NULL;
   }
 }
 
@@ -643,6 +649,8 @@ void Output::create_restart(int narg, char **arg)
 
   if (strstr(arg[0],"v_") == arg[0]) varflag = 1;
   else every = atoi(arg[0]);
+
+  if (!varflag && every < 0) error->all(FLERR,"Illegal restart command");
 
   if (!varflag && every == 0) {
     if (narg != 1) error->all(FLERR,"Illegal restart command");
@@ -681,6 +689,7 @@ void Output::create_restart(int narg, char **arg)
     } else restart_every_single = every;
 
     int n = strlen(arg[1]) + 3;
+    delete [] restart1;
     restart1 = new char[n];
     strcpy(restart1,arg[1]);
     if (strchr(restart1,'*') == NULL) strcat(restart1,".*");
@@ -699,9 +708,11 @@ void Output::create_restart(int narg, char **arg)
 
     restart_toggle = 0;
     int n = strlen(arg[1]) + 3;
+    delete [] restart2a;
     restart2a = new char[n];
     strcpy(restart2a,arg[1]);
     n = strlen(arg[2]) + 1;
+    delete [] restart2b;
     restart2b = new char[n];
     strcpy(restart2b,arg[2]);
   }

@@ -32,7 +32,7 @@ using namespace SPARTA_NS;
 
 #define START_OF_STEP  1
 #define END_OF_STEP    2
-#define POST_RUN       3
+#define POST_RUN       4
 
 /* ---------------------------------------------------------------------- */
 
@@ -63,6 +63,11 @@ Modify::Modify(SPARTA *sparta) : Pointers(sparta)
 
   n_pergrid = n_update_custom = n_gas_react = n_surf_react = 0;
   n_custom_surf_changed = 0;
+
+  // n_timeflag is set by list_init_computes(), called from Modify::init()
+  // -1 means not yet set, addstep_compute() then calls addstep_compute_all()
+
+  n_timeflag = -1;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -402,7 +407,36 @@ void Modify::delete_fix(const char *id)
   for (int i = ifix+1; i < nfix; i++) fix[i-1] = fix[i];
   for (int i = ifix+1; i < nfix; i++) fmask[i-1] = fmask[i];
   nfix--;
+  fix[nfix] = NULL;
   ndefine++;
+
+  // remove deleted fix from lists of fix indices and shift higher indices
+  // lists may be used between runs, e.g. grid callbacks from read_surf
+
+  list_remove_fix(ifix,n_start_of_step,list_start_of_step,NULL);
+  list_remove_fix(ifix,n_end_of_step,list_end_of_step,end_of_step_every);
+  list_remove_fix(ifix,n_pergrid,list_pergrid,NULL);
+  list_remove_fix(ifix,n_update_custom,list_update_custom,NULL);
+  list_remove_fix(ifix,n_gas_react,list_gas_react,NULL);
+  list_remove_fix(ifix,n_surf_react,list_surf_react,NULL);
+  list_remove_fix(ifix,n_custom_surf_changed,list_custom_surf_changed,NULL);
+}
+
+/* ----------------------------------------------------------------------
+   remove fix index ifix from list of N fix indices, decrement indices > ifix
+   if every is not NULL, compress it in the same way as list
+------------------------------------------------------------------------- */
+
+void Modify::list_remove_fix(int ifix, int &n, int *list, int *every)
+{
+  int m = 0;
+  for (int i = 0; i < n; i++) {
+    if (list[i] == ifix) continue;
+    list[m] = list[i] > ifix ? list[i]-1 : list[i];
+    if (every) every[m] = every[i];
+    m++;
+  }
+  n = m;
 }
 
 /* ----------------------------------------------------------------------
@@ -539,6 +573,14 @@ void Modify::clearstep_compute()
 
 void Modify::addstep_compute(bigint newstep)
 {
+  // if called before Modify::init() or after post_run(),
+  //   n_timeflag is not valid, so defer to addstep_compute_all()
+
+  if (n_timeflag < 0) {
+    addstep_compute_all(newstep);
+    return;
+  }
+
   for (int icompute = 0; icompute < n_timeflag; icompute++)
     if (compute[list_timeflag[icompute]]->invoked_flag)
       compute[list_timeflag[icompute]]->addstep(newstep);

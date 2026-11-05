@@ -190,9 +190,9 @@ void MathExtra::axpy3(double alpha, const double *x, double *y)
 void MathExtra::axpy3(double alpha, const double *x, const double *y,
                       double *ynew)
 {
-  ynew[0] += alpha*x[0] + y[0];
-  ynew[1] += alpha*x[1] + y[1];
-  ynew[2] += alpha*x[2] + y[2];
+  ynew[0] = alpha*x[0] + y[0];
+  ynew[1] = alpha*x[1] + y[1];
+  ynew[2] = alpha*x[2] + y[2];
 }
 
 /* ----------------------------------------------------------------------
