@@ -85,6 +85,9 @@ ComputeDistSurfGrid::~ComputeDistSurfGrid()
 
 void ComputeDistSurfGrid::init()
 {
+  if (surf->distributed)
+    error->all(FLERR,"Cannot use compute distsurf/grid with distributed surfs");
+
   reallocate();
 }
 
@@ -175,6 +178,10 @@ void ComputeDistSurfGrid::compute_per_grid()
   Grid::ChildInfo *cinfo = grid->cinfo;
   Grid::SplitInfo *sinfo = grid->sinfo;
 
+  // cells not in group (and their sub cells) output zero
+
+  for (int icell = 0; icell < nglocal; icell++) vector_grid[icell] = 0.0;
+
   for (int icell = 0; icell < nglocal; icell++) {
     if (!(cinfo[icell].mask & groupbit)) continue;
     if (cells[icell].nsplit < 1) continue;
@@ -232,6 +239,14 @@ void ComputeDistSurfGrid::compute_per_grid()
     }
 
     vector_grid[icell] = mindist;
+    if (cells[icell].nsplit > 1) {
+      n = cells[icell].nsplit;
+      csubs = sinfo[cells[icell].isplit].csubs;
+      for (i = 0; i < n; i++) {
+        m = csubs[i];
+        vector_grid[m] = mindist;
+      }
+    }
   }
 
   // clean up

@@ -135,7 +135,9 @@ void ComputeReactISurfGrid::init()
   if (!surf->implicit)
     error->all(FLERR,"Cannot use compute react/isurf/grid with explicit surfs");
 
-  // warn if any surfs in group are assigned to different surf react model
+  // warn if any surfs are assigned to different surf react model
+  // groupbit is a grid group bit, not a surf group bit, so it cannot be
+  //   tested against surf masks; it is applied to cinfo masks in post_process
 
   lines = surf->lines;
   tris = surf->tris;
@@ -144,12 +146,10 @@ void ComputeReactISurfGrid::init()
   bigint flag = 0;
   if (dim == 2) {
     for (int i = 0; i < nslocal; i++) {
-      if (!(lines[i].mask & groupbit)) return;
       if (lines[i].isr != isr) flag++;
     }
   } else {
     for (int i = 0; i < nslocal; i++) {
-      if (!(tris[i].mask & groupbit)) return;
       if (tris[i].isr != isr) flag++;
     }
   }
@@ -222,14 +222,12 @@ void ComputeReactISurfGrid::surf_tally(double dtremain,
   if (reaction == 0) return;
   reaction--;
 
-  // skip if isurf not in surface group
-  // or if this surf's reaction model is not a match
+  // skip if this surf's reaction model is not a match
+  // grid group is applied to owning cells in post_process_isurf_grid()
 
   if (dim == 2) {
-    if (!(lines[isurf].mask & groupbit)) return;
     if (lines[isurf].isr != isr) return;
   } else {
-    if (!(tris[isurf].mask & groupbit)) return;
     if (tris[isurf].isr != isr) return;
   }
 
@@ -302,6 +300,9 @@ void ComputeReactISurfGrid::post_process_isurf_grid()
   //   to my owned grid cells
   // for implicit surfs, surfIDs are also cellIDs
 
+  // tallies whose cell migrated since they were made (e.g. fix balance on
+  //   this step) are routed to the cell's current owner
+
   grid->collate_array_implicit(ntally,ntotal,(cellint *) tally2surf,
                                array_surf_tally,array_grid);
 
@@ -336,6 +337,18 @@ void ComputeReactISurfGrid::post_process_isurf_grid()
       memcpy(array_grid[jcell],array_grid[icell],ntotal*sizeof(double));
     }
   }
+}
+
+/* ----------------------------------------------------------------------
+   grid changed (e.g. fix balance, adapt) after tallies may have been
+     collated: array_grid is in the old cell order, so force a re-collate
+     from the per-surf tallies (keyed by ID) on the next post-process
+   array_grid is resized in post_process_isurf_grid()
+------------------------------------------------------------------------- */
+
+void ComputeReactISurfGrid::reallocate()
+{
+  combined = 0;
 }
 
 /* ---------------------------------------------------------------------- */

@@ -40,6 +40,7 @@ class ComputeReactISurfGrid : public Compute {
                           Particle::OnePart *, Particle::OnePart *);
   virtual int tallyinfo(surfint *&);
   virtual void post_process_isurf_grid();
+  void reallocate();
   bigint memory_usage();
 
  protected:

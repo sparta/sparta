@@ -86,6 +86,8 @@ ComputeSurf::ComputeSurf(SPARTA *sparta, int narg, char **arg) :
     iarg++;
   }
 
+  if (nvalue == 0) error->all(FLERR,"Illegal compute surf command");
+
   // process optional keywords
 
   normarea = 1;
@@ -379,10 +381,12 @@ void ComputeSurf::surf_tally(double /*dtremain*/, int isurf, int icell, int reac
     // counts and fluxes
 
     case NUM:
-      vec[k++] += 1.0;
+      if (iorig) vec[k] += 1.0;
+      k++;
       break;
     case NUMWT:
-      vec[k++] += weight;
+      if (iorig) vec[k] += weight;
+      k++;
       break;
     case NFLUX:
       if (iorig) vec[k] += weight * fluxscale;
@@ -393,7 +397,7 @@ void ComputeSurf::surf_tally(double /*dtremain*/, int isurf, int icell, int reac
       k++;
       break;
     case NFLUXIN:
-      vec[k] += weight * fluxscale;
+      if (iorig) vec[k] += weight * fluxscale;
       k++;
       break;
     case MFLUX:
@@ -447,7 +451,8 @@ void ComputeSurf::surf_tally(double /*dtremain*/, int isurf, int icell, int reac
     case TX:
       if (!fflag) {
         fflag = 1;
-        MathExtra::scale3(-origmass,vorig,pdelta_force);
+        pdelta_force[0] = pdelta_force[1] = pdelta_force[2] = 0.0;
+        if (iorig) MathExtra::axpy3(-origmass,vorig,pdelta_force);
         if (ip) MathExtra::axpy3(imass,ip->v,pdelta_force);
         if (jp) MathExtra::axpy3(jmass,jp->v,pdelta_force);
       }
@@ -463,7 +468,8 @@ void ComputeSurf::surf_tally(double /*dtremain*/, int isurf, int icell, int reac
     case TY:
       if (!fflag) {
         fflag = 1;
-        MathExtra::scale3(-origmass,vorig,pdelta_force);
+        pdelta_force[0] = pdelta_force[1] = pdelta_force[2] = 0.0;
+        if (iorig) MathExtra::axpy3(-origmass,vorig,pdelta_force);
         if (ip) MathExtra::axpy3(imass,ip->v,pdelta_force);
         if (jp) MathExtra::axpy3(jmass,jp->v,pdelta_force);
       }
@@ -479,7 +485,8 @@ void ComputeSurf::surf_tally(double /*dtremain*/, int isurf, int icell, int reac
     case TZ:
       if (!fflag) {
         fflag = 1;
-        MathExtra::scale3(-origmass,vorig,pdelta_force);
+        pdelta_force[0] = pdelta_force[1] = pdelta_force[2] = 0.0;
+        if (iorig) MathExtra::axpy3(-origmass,vorig,pdelta_force);
         if (ip) MathExtra::axpy3(imass,ip->v,pdelta_force);
         if (jp) MathExtra::axpy3(jmass,jp->v,pdelta_force);
       }
