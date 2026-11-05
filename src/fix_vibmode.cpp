@@ -118,11 +118,12 @@ void FixVibmode::update_custom(int index, double temp_thermal,
 
   // single mode, evib already set by Particle::evib()
   // just convert evib back to mode level
+  // round to nearest, since evib = ivib*boltz*vibtemp suffers roundoff
 
   if (nmode == 1) {
     vibmode[index][0] = static_cast<int>
       (particle->particles[index].evib / update->boltz /
-       particle->species[isp].vibtemp[0]);
+       particle->species[isp].vibtemp[0] + 0.5);
     return;
   }
 

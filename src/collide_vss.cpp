@@ -383,7 +383,10 @@ int CollideVSS::perform_collision(Particle::OnePart *&ip,
     setup_collision(ip,p3);
     postcoln.etotal += partial_energy;
 
+    // if no internal DOF, all of the total energy goes to translation
+
     if (precoln.ave_dof > 0.0) EEXCHANGE_ReactingEDisposal(ip,p3,jp);
+    else postcoln.etrans = postcoln.etotal;
     SCATTER_TwoBodyScattering(ip,p3);
 
   } else {
@@ -551,6 +554,12 @@ void CollideVSS::EEXCHANGE_NonReactingEDisposal(Particle::OnePart *ip,
                                  (1.5 - params[ip->ispecies][jp->ispecies].omega));
               } while (State_prob < random->uniform());
               E_Dispose -= p->evib;
+
+              // keep fix vibmode level consistent with evib
+
+              if (index_vibmode >= 0)
+                particle->eiarray[particle->ewhich[index_vibmode]]
+                  [p - particle->particles][0] = ivib;
             }
 
           } else if (vibdof > 2) {
@@ -812,6 +821,12 @@ void CollideVSS::EEXCHANGE_ReactingEDisposal(Particle::OnePart *ip,
         } while (State_prob < random->uniform());
         E_Dispose -= p->evib;
         remaining_dof -= zeta;
+
+        // keep fix vibmode level consistent with evib
+
+        if (index_vibmode >= 0)
+          particle->eiarray[particle->ewhich[index_vibmode]]
+            [p - particle->particles][0] = ivib;
 
       } else if (vibdof == 2 && vibstyle == SMOOTH) {
         double b_vib = (1.5 - aveomega) + 0.5 * (remaining_dof - vibdof);

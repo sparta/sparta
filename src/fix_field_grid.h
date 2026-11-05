@@ -32,12 +32,15 @@ class FixFieldGrid : public Fix {
   ~FixFieldGrid();
   int setmask();
   void init();
+  void start_of_step();
   void compute_field();
+  void grid_changed();
 
  private:
   char *axstr,*aystr,*azstr;
   int axvar,ayvar,azvar;
   int maxgrid;
+  int recompute;
 };
 
 }

@@ -1250,6 +1250,10 @@ template < int DIM, int SURF, int OPT > void Update::move()
                 jpart->dtremain = dtremain;
                 jpart->weight = particles[i].weight;
                 pstop++;
+                if (pstop-pstart > maxmigrate) {
+                  maxmigrate = particle->maxlocal;
+                  memory->grow(mlist,maxmigrate,"particle:mlist");
+                }
               }
 
               if (nsurf_tally)
@@ -1505,6 +1509,10 @@ template < int DIM, int SURF, int OPT > void Update::move()
               jpart->dtremain = dtremain;
               jpart->weight = particles[i].weight;
               pstop++;
+              if (pstop-pstart > maxmigrate) {
+                maxmigrate = particle->maxlocal;
+                memory->grow(mlist,maxmigrate,"particle:mlist");
+              }
             }
             nboundary_one++;
             ntouch_one--;    // decrement here since will increment below
@@ -2120,7 +2128,8 @@ void Update::global(int narg, char **arg)
         error->all(FLERR,
                    "Cannot set global surfmax when surfaces already exist");
       grid->maxsurfpercell = atoi(arg[iarg+1]);
-      if (grid->maxsurfpercell <= 0) error->all(FLERR,"Illegal global command");
+      if (grid->maxsurfpercell <= 0 || grid->maxsurfpercell > MAXSMALLINT/100)
+        error->all(FLERR,"Illegal global command");
       // reallocate paged data structs for variable-length surf info
       grid->allocate_surf_arrays();
       iarg += 2;
@@ -2130,7 +2139,8 @@ void Update::global(int narg, char **arg)
         error->all(FLERR,
                    "Cannot set global splitmax when surfaces already exist");
       grid->maxsplitpercell = atoi(arg[iarg+1]);
-      if (grid->maxsplitpercell <= 0) error->all(FLERR,"Illegal global command");
+      if (grid->maxsplitpercell <= 0 || grid->maxsplitpercell > MAXSMALLINT/100)
+        error->all(FLERR,"Illegal global command");
       // reallocate paged data structs for variable-length cell info
       grid->allocate_surf_arrays();
       iarg += 2;
@@ -2169,6 +2179,7 @@ void Update::global(int narg, char **arg)
       else error->all(FLERR,"Illegal global command");
       iarg += 2;
     } else if (strcmp(arg[iarg],"particle/reorder") == 0) {
+      if (iarg+2 > narg) error->all(FLERR,"Illegal global command");
       reorder_period = input->inumeric(FLERR,arg[iarg+1]);
       if (reorder_period < 0) error->all(FLERR,"Illegal global command");
       iarg += 2;

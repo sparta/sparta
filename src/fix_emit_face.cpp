@@ -500,6 +500,20 @@ void FixEmitFace::perform_task_onepass()
   double *lo,*hi,*normal,*vstream,*vscale;
   Particle::OnePart *p;
 
+  // if global timestep was reset since tasks were created (e.g. fix dt/reset),
+  //   rescale non-subsonic insertion counts which are proportional to dt
+
+  if (!subsonic && update->dt != dt) {
+    double dtratio = update->dt / dt;
+    for (int i = 0; i < ntask; i++) {
+      tasks[i].ntarget *= dtratio;
+      if (perspecies)
+        for (isp = 0; isp < nspecies; isp++) tasks[i].ntargetsp[isp] *= dtratio;
+      if (tasks[i].ntarget >= MAXSMALLINT)
+        error->one(FLERR,"Fix emit/face insertion count exceeds 32-bit int");
+    }
+  }
+
   dt = update->dt;
   int *species = particle->mixture[imix]->species;
 
@@ -686,6 +700,20 @@ void FixEmitFace::perform_task_twopass()
   double x[3],v[3];
   double *lo,*hi,*normal,*vstream,*vscale;
   Particle::OnePart *p;
+
+  // if global timestep was reset since tasks were created (e.g. fix dt/reset),
+  //   rescale non-subsonic insertion counts which are proportional to dt
+
+  if (!subsonic && update->dt != dt) {
+    double dtratio = update->dt / dt;
+    for (int i = 0; i < ntask; i++) {
+      tasks[i].ntarget *= dtratio;
+      if (perspecies)
+        for (isp = 0; isp < nspecies; isp++) tasks[i].ntargetsp[isp] *= dtratio;
+      if (tasks[i].ntarget >= MAXSMALLINT)
+        error->one(FLERR,"Fix emit/face insertion count exceeds 32-bit int");
+    }
+  }
 
   dt = update->dt;
   int *species = particle->mixture[imix]->species;
@@ -1084,15 +1112,18 @@ void FixEmitFace::subsonic_grid()
       temp_thermal_cell = tsubsonic;
 
     } else {
-      nrho_cell = np * fnum / cinfo[icell].volume;
-      massrho_cell = masstot * fnum / cinfo[icell].volume;
+      nrho_cell = np * fnum * cinfo[icell].weight / cinfo[icell].volume;
+      massrho_cell = masstot * fnum * cinfo[icell].weight / cinfo[icell].volume;
       if (np > 1) {
         ke = mv[3]/np - (mv[0]*mv[0] + mv[1]*mv[1] + mv[2]*mv[2])/np/masstot;
         temp_thermal_cell = tprefactor * ke;
+        // thermal ke negligible vs total ke (all particles at COM velocity):
+        // ke is pure roundoff of either sign, treat cell as cold
+        if (ke <= 1.0e-10 * mv[3]/np) temp_thermal_cell = 0.0;
       } else temp_thermal_cell = particle->mixture[imix]->temp_thermal;
 
       press_cell = nrho_cell * boltz * temp_thermal_cell;
-      if (np) {
+      if (np && temp_thermal_cell > 0.0) {
         mass_cell = masstot / np;
         gamma_cell = gamma / np;
         soundspeed_cell = sqrt(gamma_cell*boltz*temp_thermal_cell / mass_cell);
@@ -1173,13 +1204,13 @@ void FixEmitFace::grow_task()
 void FixEmitFace::realloc_nspecies()
 {
   if (perspecies) {
-    for (int i = 0; i < ntask; i++) {
+    for (int i = 0; i < ntaskmax; i++) {
       delete [] tasks[i].ntargetsp;
       tasks[i].ntargetsp = new double[nspecies];
     }
   }
   if (subsonic_style == PONLY) {
-    for (int i = 0; i < ntask; i++) {
+    for (int i = 0; i < ntaskmax; i++) {
       delete [] tasks[i].vscale;
       tasks[i].vscale = new double[nspecies];
     }

@@ -19,6 +19,7 @@
 #include "particle.h"
 #include "grid.h"
 #include "domain.h"
+#include "update.h"
 #include "comm.h"
 #include "input.h"
 #include "memory.h"
@@ -123,7 +124,7 @@ void ReadParticles::command(int narg, char **arg)
   int flag = 0;
 
   for (int i = nlocal_previous; i < nlocal; i++)
-    if (particles[i].ispecies > nspecies) flag++;
+    if (particles[i].ispecies < 0 || particles[i].ispecies >= nspecies) flag++;
 
   bigint flagme = flag;
   bigint flagall;
@@ -209,6 +210,13 @@ void ReadParticles::process_particles(int n, int, double **fields)
 
     icell = grid->id_find_child(0,0,boxlo,boxhi,x);
     if (icell < 0 || cells[icell].proc != me) continue;
+
+    // if cell is split by surfs, assign particle to the sub cell containing x
+
+    if (cells[icell].nsplit > 1) {
+      if (domain->dimension == 3) icell = update->split3d(icell,x);
+      else icell = update->split2d(icell,x);
+    }
 
     id = static_cast<int> (fields[i][0]);
     ispecies = static_cast<int> (fields[i][1]) - 1;

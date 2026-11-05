@@ -33,6 +33,7 @@ class FixEmit : public Fix {
  protected:
   int perspecies;
   class Region *region;
+  char *idregion;           // region ID, region is re-resolved in init()
   class RanKnuth *random;
   int nsingle;              // # of insertions in current step
   bigint ntotal;            // cumulative insertions across all steps,

@@ -43,6 +43,8 @@ FixEmit::FixEmit(SPARTA *sparta, int narg, char **arg) :
   size_vector = 2;
   global_freq = 1;
   gridmigrate = 1;
+  region = NULL;
+  idregion = NULL;
 
   // RNG
 
@@ -63,6 +65,7 @@ FixEmit::~FixEmit()
   if (copymode) return;
 
   delete random;
+  delete [] idregion;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -80,6 +83,14 @@ void FixEmit::init()
 {
   particle->exist = 1;
   ntotal = 0;
+
+  // re-resolve region, since region delete can free or move regions
+
+  if (idregion) {
+    int iregion = domain->find_region(idregion);
+    if (iregion < 0) error->all(FLERR,"Fix emit region does not exist");
+    region = domain->regions[iregion];
+  }
 }
 
 /* ----------------------------------------------------------------------
@@ -131,14 +142,14 @@ void FixEmit::create_tasks()
     if (cells[icell].nsplit <= 0) continue;
     if (cinfo[icell].type == INSIDE) continue;
     if (region && region->bboxflag) {
-      rflag = 1;
-      if (cells[icell].hi[0] > region->extent_xlo &&
-          cells[icell].lo[0] < region->extent_xhi) rflag = 0;
-      if (cells[icell].hi[1] > region->extent_ylo &&
-          cells[icell].lo[1] < region->extent_yhi) rflag = 0;
+      rflag = 0;
+      if (cells[icell].hi[0] <= region->extent_xlo ||
+          cells[icell].lo[0] >= region->extent_xhi) rflag = 1;
+      if (cells[icell].hi[1] <= region->extent_ylo ||
+          cells[icell].lo[1] >= region->extent_yhi) rflag = 1;
       if (dimension == 3) {
-        if (cells[icell].hi[2] > region->extent_zlo &&
-            cells[icell].lo[2] < region->extent_zhi) rflag = 0;
+        if (cells[icell].hi[2] <= region->extent_zlo ||
+            cells[icell].lo[2] >= region->extent_zhi) rflag = 1;
       }
       if (rflag) continue;
     }
@@ -207,6 +218,7 @@ void FixEmit::options(int narg, char **arg)
   nevery = 1;
   perspecies = 1;
   region = NULL;
+  idregion = NULL;
 
   int iarg = 0;
   while (iarg < narg) {
@@ -227,6 +239,9 @@ void FixEmit::options(int narg, char **arg)
       if (iregion < 0)
         error->all(FLERR,"Fix emit region does not exist");
       region = domain->regions[iregion];
+      delete [] idregion;
+      idregion = new char[strlen(arg[iarg+1])+1];
+      strcpy(idregion,arg[iarg+1]);
       iarg += 2;
 
     } else iarg += option(narg-iarg,&arg[iarg]);
