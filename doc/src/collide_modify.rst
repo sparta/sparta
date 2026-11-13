@@ -1,0 +1,327 @@
+.. index:: collide\_modify
+
+collide\_modify command
+=======================
+
+**Syntax:**
+
+
+.. parsed-literal::
+
+   collide_modify keyword values ...
+
+* one or more keyword/value pairs may be listed
+* keywords = *vremax* or *remain* or *scheme* or *partners* or *ambipolar* or *rotate* or *vibrate*
+  
+  .. parsed-literal::
+  
+       vremax values = Nevery startflag
+         Nevery = zero vremax every this many timesteps
+         startflag = yes or no = zero vremax at start of every run
+       remain value = yes or no = hold remaining fraction of collisions over to next timestep
+       scheme value = ntc or mcf = scheme used to compute the number of attempted collisions
+       partners values = style plus optional arg = method used to select collision partners
+         style = random or nearcp or subcell
+           random = select partners randomly from all particles in the grid cell
+           nearcp arg = Nlimit
+             Nlimit = max # of attempts made to find a near collision partner
+           subcell = select partners via the transient adaptive subcell method
+       ambipolar value = no or yes
+       rotate value = no or smooth
+       vibrate value = no or smooth or discrete
+
+
+
+**Examples:**
+
+
+.. parsed-literal::
+
+   collide_modify vremax 1000 yes
+   collide_modify vremax 0 no remain no
+   collide_modify scheme mcf
+   collide_modify partners nearcp 10
+   collide_modify partners subcell
+   collide_modify ambipolar yes
+
+**Description:**
+
+Set parameters that affect how collisions are performed.
+
+The *vremax* keyword affects how often the Vremax parameter, for
+collision frequency is re-zeroed during the simulation.  This
+parameter is stored for each grid cell and each pair of collision
+groups (groups are described by the :doc:`collide <collide>` command).
+
+The value of Vremax affects how many events are attempted in each grid
+cell for a pair of groups, and thus the overall time spent performing
+collisions.  Vremax is continuously set to the largest difference in
+velocity between a pair of colliding particles.  The larger Vremax
+grows, the more collisions are attempted for the grid cell on each
+timestep, though this does not affect the number of collisions
+actually performed.  Thus if Vremax grows large, collisions become
+less efficient, though still accurate.
+
+For non-equilibrium flows, it is typically desirable to reset Vremax
+to zero fairly frequently (e.g. every 1000 steps) so that it does not
+become large, due to anomolously fast moving particles.  In contrast,
+when a system is at equilibrium, it is typically desirable to not
+reset Vremax to zero since it will also stay roughly constant.
+
+If *Nevery* is specified as 0, Vremax is not zeroed during a run.
+Otherwise Vremax is zeroed on timesteps that are a multiple of
+*Nevery*\ .  Additionally, if *startflag* is set to *yes*\ , Vremax is
+zeroed at the start of every run.  If it is set to *no*\ , it is not.
+
+The *remain* keyword affects how the number of attempted collisions
+for each grid cell is calculated each timestep.  If the value is set
+to *yes*\ , then any fractional collision count (for each grid cell and
+pair of grgroups) is carried over to the next timestep.  E.g. if the
+computed collision count is 7.3, then 7 attempts are made on this
+timestep, and 0.3 are carried over to the next timestep, to be added
+to the computed collision count for that step.  If the value is set to
+*no*\ , then no carry-over is made.  Instead, in this example, 7
+attempts are made and an 8th attempt is made conditionally with a
+probability of 0.3, using a random number.
+
+The *scheme* keyword selects the numerical scheme used to compute the
+number of collisions attempted in each grid cell (for each pair of
+collision groups) each timestep.  For *ntc*\ , which is the default,
+Bird's no-time-counter scheme is used (`(Bird94) <#Bird94>`_): the
+attempt count is the integer part of the expected number of attempts
+Nattempt = 1/2 \* N \* (N-1) \* Fnum \* Vremax \* dt / Vcell, with the
+fractional part treated as described above for the *remain* keyword.
+For *mcf*\ , the majorant collision frequency scheme of Ivanov and
+Rogasinsky is used (`(Ivanov88) <#Ivanov88>`_): collision events in a
+cell are treated as a Poisson process whose rate is the majorant
+(upper-bound) collision frequency Nattempt/dt, so the attempt count is
+drawn each timestep as a Poisson random variate whose mean is the same
+Nattempt expression.  Both schemes select candidate collision pairs
+and accept or reject them in exactly the same way; they differ only in
+the statistics of the attempt count.  The two schemes produce the same
+mean collision frequency, but MCF also reproduces the exponential
+distribution of time between collisions exactly, which can make it
+more accurate when cells contain few particles or the timestep is
+large relative to the local mean collision time.  See
+`(Pikus19) <#Pikus19>`_ for a comparison of the two schemes in SPARTA.
+When *mcf* is specified, the *remain* keyword setting has no effect,
+since no fractional attempt count is computed.
+
+The *partners* keyword selects the method used to choose which pairs
+of particles within a grid cell collide with each other.  The three
+styles are mutually exclusive; the last *partners* setting specified is
+the one used.  Note that this is independent of the *scheme* keyword
+above, which sets how many collisions are attempted in the cell, not
+which particles are paired.  Any *partners* style can be combined with
+either *scheme* setting.
+
+If *random* is specified, which is the default, then collision partner
+pairs are selected randomly from all particles in the grid cell.
+
+If *nearcp* is specified, which stands for "near collision partner",
+then up to *Nlimit* collision partners are considered for each
+collision.  The first partner I is chosen randomly from all particles
+in the grid cell.  A distance R that particle I moves in that timestep
+is calculated, based on its velocity.  *Nlimit* possible collision
+partners J are examined, starting at a random J.  If one of them is
+within a distance R of particle I, it is immediately selected as the
+collision partner.  If none of the *Nlimit* particles
+are within a distance R, the closest J particle to I is selected.  An
+exception to these rules is that a particle J is not considered for a
+collision if the I,J pair were the most recent collision partners (in
+the current timestep) for each other.  The convergence properties of
+this near-neighbor algorithm are described in `(Gallis11) <#Gallis11>`_.
+Note that choosing *Nlimit* judiciously will avoid costly searches
+when there are large numbers of particles in some or all grid cells.
+
+If *subcell* is specified, the transient adaptive subcell method of
+Bird `(Bird09) <#Bird09>`_ is used.  Each timestep the particles in a grid
+cell are binned into a transient grid of subcells within the cell, with
+Nsub subcells in each dimension.  Nsub is chosen as the largest integer
+such that the number of subcells does not exceed the number of
+particles N in the cell, i.e. Nsub = floor(N\^(1/3)) in 3d and
+floor(N\^(1/2)) in 2d, so that each subcell contains approximately one
+particle on average.  The first collision partner I is chosen randomly
+from all particles in the grid cell.  If another particle is in the
+same subcell as particle I, the partner J is chosen randomly from the
+particles in that subcell.  Otherwise
+expanding shells of subcells around particle I's subcell are searched
+until candidate partners are found, and J is chosen randomly from the
+particles in that shell.  As with the *nearcp* style, a particle J is
+not selected if the I,J pair were the most recent collision partners
+(in the current timestep) for each other; a different or more distant
+particle is selected instead, unless no other candidate exists.
+
+In the non-KOKKOS code the subcell binning is discarded after each cell
+is processed and the vectors are reused, so the memory overhead is
+negligible.  This is not the case in the KOKKOS package, where the
+binning of every cell must be live at once so that cells can be
+processed in parallel.  There the method allocates five per-cell
+scratch views, each sized by the number of grid cells owned by a
+processor times the maximum number of particles in any of its cells.
+That is five more such views than the *nearcp* style needs, and on a
+GPU it can be a significant fraction of the device memory for a large
+number of cells.  The views are allocated and freed within each
+collision step, so they add to the peak footprint rather than to the
+persistent one.
+
+Like the *nearcp* style, the *subcell* method reduces the mean
+separation distance between colliding particles, which reduces the
+spatial discretization error associated with the grid cell size.  This
+can allow accurate simulations with grid cells comparable to the local
+mean free path, instead of the usual recommendation of 1/3 or smaller,
+as described in `(Bird09) <#Bird09>`_ and `(Gallis11) <#Gallis11>`_.  The
+cost of selecting a partner does not depend on a user-chosen search
+limit as with *nearcp*\ ; for cells with many particles the subcell
+method is typically faster than *nearcp* with a large *Nlimit*\ .
+
+Note that Nsub is chosen from the number of particles in the cell and
+the cell's bounding box, without accounting for how much of the cell is
+actually open to the flow.  In a cut cell created by a surface, where
+the flow volume can be a small fraction of the bounding box, the
+particles are confined to the subcells that overlap the flow volume, so
+those subcells hold correspondingly more than one particle on average
+and the reduction in collision separation is smaller than in a
+free-stream cell.  The method is still valid in cut cells, but its
+benefit near surfaces is reduced.
+
+The *subcell* style does not yet support the ambipolar approximation or
+mixtures with multiple collision groups.  It is supported by the KOKKOS
+package.
+
+For backward compatibility the older *nearcp* keyword is still
+recognized, but it is deprecated and may be removed in a future
+release.  It takes the form "collide\_modify nearcp choice Nlimit",
+where *choice* is *yes* or *no*\ .  "nearcp yes Nlimit" is equivalent to
+"partners nearcp Nlimit", and "nearcp no Nlimit" is equivalent to
+"partners random", in which case *Nlimit* is ignored though it must
+still be specified.  New input scripts should use *partners*\ .
+
+If the *ambipolar* keyword is set to *yes*\ , then collisions within a
+grid cell with use the ambipolar approximation.  This requires use of
+the :doc:`fix ambipolar <fix_ambipolar>` command to define which species
+is an electron and which species are ions.  There can be many of the
+latter.  When collisions within a single grid cell are performed, each
+ambipolar ion is split into two particles, the ion and an associated
+electron.  Collisions between the augmented set of particles are
+calculated.  Ion/electron chemistry can also occur if the
+:doc:`react <react>` command has been used to read a file of reactions
+that include such reactions.  See the :doc:`react <react>` command doc
+page.  After all collisions in the grid cell have been computed, there
+is still a one-to-one correspondence between ambipolar ions and
+electron, and each pair is recombined into a single ambipolar
+particle.
+
+The *rotate* keyword determines how rotational energy is treated in
+particle collisions and stored by particles.  If the value is set to
+*no*\ , then rotational energy is not tracked; every particle's
+rotational energy is 0.0.  If the value is set to *smooth*\ , a
+particle's rotational energy is a single continuous value.
+
+The *vibrate* keyword determines how vibrational energy is treated in
+particle collisions and stored by particles.  If the value is set to
+*no*\ , then vibrational energy is not tracked; every particle's
+vibrational energy is 0.0.  If the value is set to *smooth*\ , a
+particle's vibrational energy is a single continuous value.  If the
+value is set to *discrete*\ , each particle's vibrational energy is set
+to discrete values, namely multiples of kT where k = the Boltzmann
+constant and T is one or more characteristic vibrational temperatures
+set for the particle species.
+
+Note that in the *discrete* case, if any species are defined that have
+4,6,8 vibrational degrees of freedom, which correspond to 2,3,4
+vibrational modes, then the :doc:`species <species>` command must be
+used with its optional *vibfile* keyword to set the vibrational info
+(temperature, relaxation number, degeneracy) for those species.
+
+Also note that if any such species are defined (with more than one
+vibrational mode, then use of the *discrete* option also requires the
+:doc:`fix vibmode <fix_vibmode>` command be used to allocate storage for
+the per-particle mode values.
+
+
+----------
+
+
+**Restrictions:** none
+
+**Related commands:**
+
+:doc:`collide <collide>`
+
+**Default:**
+
+The option defaults are vremax = (0,yes), remain = yes, scheme = ntc,
+ambipolar no, nearcp no, subcell no, rotate smooth, and vibrate = no.
+
+
+----------
+
+
+.. _Bird94:
+
+.. raw:: html
+
+   <span id="Bird94"></span>
+
+
+
+**(Bird94)** G. A. Bird, Molecular Gas Dynamics and the Direct
+Simulation of Gas Flows, Clarendon Press, Oxford (1994).
+
+.. _Bird09:
+
+.. raw:: html
+
+   <span id="Bird09"></span>
+
+
+
+**(Bird09)** G. A. Bird, M. A. Gallis, J. R. Torczynski, D. J. Rader,
+"Accuracy and efficiency of the sophisticated direct simulation Monte
+Carlo algorithm for simulating noncontinuum gas flows," Physics of
+Fluids, 21, 017103 (2009).
+
+.. _Gallis11:
+
+.. raw:: html
+
+   <span id="Gallis11"></span>
+
+
+
+**(Gallis11)** M. A. Gallis, J. R. Torczynski, "Effect of
+Collision-Partner Selection Schemes on the Accuracy and Efficiency of
+the Direct Simulation Monte Carlo Method," International Journal for
+Numerical Methods in Fluids, 67(8):1057-1072. DOI:10.1002/fld.2409
+(2011).
+
+.. _Ivanov88:
+
+.. raw:: html
+
+   <span id="Ivanov88"></span>
+
+
+
+**(Ivanov88)** M. S. Ivanov, S. V. Rogasinsky, "Analysis of numerical
+techniques of the direct simulation Monte Carlo method in the rarefied
+gas dynamics," Soviet Journal of Numerical Analysis and Mathematical
+Modelling, 3(6):453-465 (1988).
+
+.. _Pikus19:
+
+.. raw:: html
+
+   <span id="Pikus19"></span>
+
+
+
+**(Pikus19)** A. Pikus, I. B. Sebastiao, S. Jaiswal, M. A. Gallis,
+A. A. Alexeenko, "DSMC-SPARTA implementation of majorant collision
+frequency scheme," AIP Conference Proceedings, 2132, 070026 (2019).
+
+
+.. _sws: https://sparta.github.io
+.. _sd: Manual.html
+.. _sc: Section_commands.html

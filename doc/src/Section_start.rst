@@ -1,0 +1,2125 @@
+2. Getting Started
+==================
+
+This section describes how to build and run SPARTA, for both new and
+experienced users.
+
+| 2.1 `What's in the SPARTA distribution <#start_1>`_
+| 2.2 `Making SPARTA <#start_2>`_
+| 2.3 `Making SPARTA with optional packages <#start_3>`_
+| 2.4 `Building SPARTA as a library <#start_4>`_
+| 2.5 `Testing SPARTA <#start_5>`_
+| 2.6 `Running SPARTA <#start_6>`_
+| 2.7 `Command-line options <#start_7>`_
+| 2.8 `Screen output <#start_8>`_ 
+| 
+
+
+----------
+
+
+.. _start_1:
+
+.. raw:: html
+
+   <span id="start_1"></span>
+
+2.1 What's in the SPARTA distribution
+-------------------------------------------------------------------------------------------------
+
+When you download SPARTA you will need to unzip and untar the
+downloaded file with the following commands:
+
+
+.. parsed-literal::
+
+   gunzip sparta\*.tar.gz 
+   tar xvf sparta\*.tar
+
+This will create a SPARTA directory containing two files and several
+sub-directories:
+
++----------+--------------------------------------------------------+
+| README   | text file                                              |
++----------+--------------------------------------------------------+
+| LICENSE  | the GNU General Public License (GPL)                   |
++----------+--------------------------------------------------------+
+| bench    | benchmark problems                                     |
++----------+--------------------------------------------------------+
+| data     | files with species, collision, and reaction parameters |
++----------+--------------------------------------------------------+
+| doc      | documentation                                          |
++----------+--------------------------------------------------------+
+| examples | simple test problems                                   |
++----------+--------------------------------------------------------+
+| python   | Python wrapper                                         |
++----------+--------------------------------------------------------+
+| src      | source files                                           |
++----------+--------------------------------------------------------+
+| tools    | pre- and post-processing tools                         |
++----------+--------------------------------------------------------+
+
+
+----------
+
+
+.. _start_2:
+
+.. raw:: html
+
+   <span id="start_2"></span>
+
+2.2 Making SPARTA
+-----------------------------------------------------------------------------
+
+This section has the following sub-sections:
+
+* `Read this first <#start_2_1>`_
+* `Steps to build a SPARTA executable using make <#start_2_2_1>`_
+* `Steps to build a SPARTA executable using CMake <#start_2_2_2>`_
+* `Common errors that can occur when making SPARTA <#start_2_3>`_
+* `Additional build tips using make <#start_2_4_1>`_
+* `Additional build tips using CMake <#start_2_4_2>`_
+* `Building for a Mac <#start_2_5>`_
+* `Building for Windows <#start_2_6>`_
+
+
+----------
+
+
+.. _start_2_1:
+
+.. raw:: html
+
+   <span id="start_2_1"></span>
+
+**Read this first:** 
+
+Building SPARTA can be non-trivial.  You may need to edit a makefile,
+there are compiler options to consider, additional libraries can be
+used (MPI, JPEG).
+
+Please read this section carefully.  If you are not comfortable with
+cmake, makefiles, or building codes on a Linux platform, or running an MPI
+job on your machine, please find a local expert to help you.
+
+SPARTA requires that the compiler supports C++11. SPARTA will throw an error
+if this is not the case. If you are building SPARTA with Kokkos, the compiler
+must support C++20.
+
+If you have a build problem that you are convinced is a SPARTA issue
+(e.g. the compiler complains about a line of SPARTA source code), then
+please send an email to the
+`developers <https://sparta.github.io/authors.html>`_.
+
+If you succeed in building SPARTA on a new kind of machine, for which
+there isn't a similar Makefile in the src/MAKE directory or .cmake file
+in cmake/presets (for KOKKOS builds, a .cmake file in cmake/presets),
+send it to the 
+`developers <https://sparta.github.io/authors.html>`_ and we'll include it in future SPARTA releases.
+
+
+----------
+
+
+.. _start_2_2_1:
+
+.. raw:: html
+
+   <span id="start_2_2_1"></span>
+
+**Steps to build a SPARTA executable using make:** 
+
+**Step 0**
+
+The src directory contains the C++ source and header files for SPARTA.
+It also contains a top-level Makefile and a MAKE sub-directory with
+low-level Makefile.\* files for many machines.  From within the src
+directory, type "make" or "gmake".  You should see a list of available
+choices.  If one of those is the machine and options you want, you can
+type a command like:
+
+
+.. parsed-literal::
+
+   make g++
+   or
+   gmake mac
+
+Note that on a multi-core platform you can launch a parallel make, by
+using the "-j" switch with the make command, which will build SPARTA
+more quickly.
+
+If you get no errors and an executable like spa\_g++ or spa\_mac is
+produced, you're done; it's your lucky day.
+
+Note that by default none of the SPARTA optional packages are
+installed.  To build SPARTA with optional packages, see `this section <#start_3>`_ below.
+
+IMPORTANT NOTE: The optional KOKKOS accelerator package does not
+support Makefiles and must be built using CMake instead (see below).
+
+**Step 1**
+
+If Step 0 did not work, you will need to create a low-level Makefile
+for your machine, like Makefile.foo.  Copy an existing
+src/MAKE/Makefile.\* as a starting point.  The only portions of the
+file you need to edit are the first line, the "compiler/linker
+settings" section, and the "SPARTA-specific settings" section.
+
+**Step 2**
+
+Change the first line of src/MAKE/Makefile.foo to list the word "foo"
+after the "#", and whatever other options it will set.  This is the
+line you will see if you just type "make".
+
+**Step 3**
+
+The "compiler/linker settings" section lists compiler and linker
+settings for your C++ compiler, including optimization flags.  You can
+use g++, the open-source GNU compiler, which is available on all Linux
+systems.  You can also use mpicc which will typically be available if
+MPI is installed on your system, though you should check which actual
+compiler it wraps.  Vendor compilers often produce faster code.  On
+boxes with Intel CPUs, we suggest using the commercial Intel icc
+compiler, which can be downloaded from `Intel's compiler site <intel_>`_.
+
+.. _intel: https://www.intel.com/content/www/us/en/developer/tools/oneapi/toolkits.html
+
+
+
+If building a C++ code on your machine requires additional libraries,
+then you should list them as part of the LIB variable.
+
+The DEPFLAGS setting is what triggers the C++ compiler to create a
+dependency list for a source file.  This speeds re-compilation when
+source (\*.cpp) or header (\*.h) files are edited.  Some compilers do
+not support dependency file creation, or may use a different switch
+than -D.  GNU g++ works with -D.  Note that when you build SPARTA for
+the first time on a new platform, a long list of \*.d files will be
+printed out rapidly.  This is not an error; it is the Makefile doing
+its normal creation of dependencies.
+
+**Step 4**
+
+The "system-specific settings" section has several parts.  Note that
+if you change any -D setting in this section, you should do a full
+re-compile, after typing "make clean", which will describe different
+clean options.
+
+The SPA\_INC variable is used to include options that turn on ifdefs
+within the SPARTA code.  The options that are currently recognized are:
+
+* -DSPARTA\_GZIP
+* -DSPARTA\_JPEG
+* -DSPARTA\_PNG
+* -DSPARTA\_FFMPEG
+* -DSPARTA\_MAP
+* -DSPARTA\_UNORDERED\_MAP
+* -DSPARTA\_SMALL
+* -DSPARTA\_BIG
+* -DSPARTA\_BIGBIG
+* -DSPARTA\_LONGLONG\_TO\_LONG
+
+The read\_data and dump commands will read/write gzipped files if you
+compile with -DSPARTA\_GZIP.  It requires that your Linux support the
+"popen" command.
+
+If you use -DSPARTA\_JPEG and/or -DSPARTA\_PNG, the :doc:`dump image <dump>` command will be able to write out JPEG and/or PNG
+image files respectively. If not, it will only be able to write out
+PPM image files.  For JPEG files, you must also link SPARTA with a
+JPEG library, as described below.  For PNG files, you must also link
+SPARTA with a PNG library, as described below.
+
+If you use -DSPARTA\_FFMPEG, the :doc:`dump movie <dump_image>` command
+will be available to support on-the-fly generation of rendered movies
+the need to store intermediate image files.  It requires that your
+machines supports the "popen" function in the standard runtime library
+and that an FFmpeg executable can be found by SPARTA during the run.
+
+If you use -DSPARTA\_MAP, SPARTA will use the STL map class for hash
+tables.  This is less efficient than the unordered map class which is
+not yet supported by all C++ compilers.  If you use
+-DSPARTA\_UNORDERED\_MAP, SPARTA will use the unordered\_map class for
+hash tables and will assume it is part of the STL (e.g. this works for
+Clang++).  The default is to use the unordered map class from the
+"tri1" extension to the STL which is supported by most compilers.  So
+only use either of these options if the build complains that unordered
+maps are not recognized.
+
+Use at most one of the -DSPARTA\_SMALL, -DSPARTA\_BIG, -DSPARTA\_BIGBIG
+settings.  The default is -DSPARTA\_BIG.  These refer to use of 4-byte
+(small) vs 8-byte (big) integers within SPARTA, as described in
+src/spatype.h.  The only reason to use the BIGBIG setting is if you
+have a regular grid with more than ~2 billion grid cells or a
+hierarchical grid with enough levels that grid cell IDs cannot fit in
+a 32-bit integer.  In either case, SPARTA will generate an error
+message for "Cell ID has too many bits".  See `Section 6.8 <Section_howto.html#howto_8>`_ of the manual for details on how cell
+IDs are formatted.  The only reason to use the SMALL setting is if
+your machine does not support 64-bit integers.
+
+In all cases, the size of problem that can be run on a per-processor
+basis is limited by 4-byte integer storage to about 2 billion
+particles per processor (2\^31), which should not normally be a
+restriction since such a problem would have a huge per-processor
+memory and would run very slowly in terms of CPU secs/timestep.
+
+The -DSPARTA\_LONGLONG\_TO\_LONG setting may be needed if your system or
+MPI version does not recognize "long long" data types.  In this case a
+"long" data type is likely already 64-bits, in which case this setting
+will use that data type.
+
+Using one of the -DFFT\_PACK\_ARRAY, -DFFT\_PACK\_POINTER, and -DFFT\_PACK\_MEMCPY
+options can make for faster parallel FFTs on some platforms.  The
+-DFFT\_PACK\_ARRAY setting is the default.  See the :doc:`compute fft/grid <compute_fft_grid>` command for info about FFTs.  See Step
+6 below for info about building SPARTA with an FFT library.
+
+**Step 5**
+
+The 3 MPI variables are used to specify an MPI library to build SPARTA
+with.
+
+If you want SPARTA to run in parallel, you must have an MPI library
+installed on your platform.  If you use an MPI-wrapped compiler, such
+as "mpicc" to build, you should be able to leave these 3 variables
+blank; the MPI wrapper knows where to find the needed files.  If not,
+and MPI is installed on your system in the usual place (under
+/usr/local), you also may not need to specify these 3 variables.  On
+some large parallel machines which use "modules" for their
+compile/link environements, you may simply need to include the correct
+module in your build environment.  Or the parallel machine may have a
+vendor-provided MPI which the compiler has no trouble finding.
+
+Failing this, with these 3 variables you can specify where the mpi.h
+file is found (via MPI\_INC), and the MPI library file is found (via
+MPI\_PATH), and the name of the library file (via MPI\_LIB).  See
+Makefile.serial for an example of how this can be done.
+
+If you are installing MPI yourself, we recommend MPICH 1.2 or 2.0 or
+OpenMPI.  MPICH can be downloaded from the `Argonne MPI site <https://www.mpich.org>`_.  OpenMPI can be downloaded from the
+`OpenMPI site <https://www.open-mpi.org>`_.  If you are running on a big
+parallel platform, your system admins or the vendor should have
+already installed a version of MPI, which will be faster than MPICH or
+OpenMPI, so find out how to build and link with it.  If you use MPICH
+or OpenMPI, you will have to configure and build it for your platform.
+The MPI configure script should have compiler options to enable you to
+use the same compiler you use for the SPARTA build, which can avoid
+problems that can arise when linking SPARTA to the MPI library.
+
+If you just want to run SPARTA on a single processor, you can use the
+dummy MPI library provided in src/STUBS, since you don't need a true
+MPI library installed on your system.  You will also need to build the
+STUBS library for your platform before making SPARTA itself.  From the
+src directory, type "make mpi-stubs", or from within the STUBS dir,
+type "make" and it should create a libmpi.a suitable for linking to
+SPARTA.  If this build fails, you will need to edit the STUBS/Makefile
+for your platform.
+
+The file STUBS/mpi.cpp provides a CPU timer function called
+MPI\_Wtime() that calls gettimeofday() .  If your system doesn't
+support gettimeofday() , you'll need to insert code to call another
+timer.  Note that the ANSI-standard function clock() function rolls
+over after an hour or so, and is therefore insufficient for timing
+long SPARTA simulations.
+
+**Step 6**
+
+The 3 FFT variables allow you to specify an FFT library which SPARTA
+uses (for performing 1d FFTs) when built with its FFT package, which
+contains commands that invoke FFTs.
+
+SPARTA supports various open-source or vendor-supplied FFT libraries
+for this purpose.  If you leave these 3 variables blank, SPARTA will
+use the open-source `KISS FFT library <https://github.com/mborgerding/kissfft>`_, which is
+included in the SPARTA distribution.  This library is portable to all
+platforms and for typical SPARTA simulations is almost as fast as FFTW
+or vendor optimized libraries.  If you are not including the FFT
+package in your build, you can also leave the 3 variables blank.
+
+Otherwise, select which kinds of FFTs to use as part of the FFT\_INC
+setting by a switch of the form -DFFT\_XXX. 
+Available values for XXX
+are: MKL or FFTW3.
+Selecting -DFFT\_FFTW will use the FFTW3 library.
+
+Similarly a separate FFT library can be specified for KOKKOS package.
+By default, SPARTA will use a Kokkos version of the open-source `KISS FFT library <https://github.com/mborgerding/kissfft>`_, which is included in the SPARTA
+distribution. Note that using the KISS FFT library on GPUs may give
+suboptimal performance. Other options can be specified using the form
+-DFFT\_KOKKOS\_XXX. Available values for XXX when using Kokkos are:
+CUFFT, HIPFFT, MKL\_GPU, MKL or FFTW3. When using the Kokkos CUDA
+backend, either CUFFT or KISS must be used. When using the Kokkos HIP
+backend, either HIPFFT or KISS must be used. When using the Kokkos
+SYCL backend, either MKL\_GPU or KISS must be used. When using the
+Kokkos OpenMP or Serial backend, either MKL, FFTW3, or KISS must be
+used.
+
+The CUFFT option specifies the `cuFFT library <https://developer.nvidia.com/cufft>`_ from NVIDIA. The HIPFFT
+option specifies the `rocFFT library <https://rocm.docs.amd.com/projects/rocFFT/en/latest/>`_ from
+AMD. The HIPFFT option specifies the `rocFFT library <https://rocm.docs.amd.com/projects/rocFFT/en/latest/>`_ from
+AMD. The MKL\_GPU option supports GPU offload of FFTs on Intel GPUs
+with oneMKL using the Kokkos SYCL backend.
+
+You may also need to set the FFT\_INC, FFT\_PATH, and FFT\_LIB variables,
+so the compiler and linker can find the needed FFT header and library
+files.  Note that on some large parallel machines which use "modules"
+for their compile/link environements, you may simply need to include
+the correct module in your build environment.  Or the parallel machine
+may have a vendor-provided FFT library which the compiler has no
+trouble finding.
+
+FFTW is a fast, portable library that should also work on any
+platform.  You can download it from
+`www.fftw.org <https://www.fftw.org>`_. The 3.X versions are supported
+as -DFFT\_FFTW3.
+Building FFTW for your box should be as simple as ./configure; make.
+
+The FFT\_INC variable also allows for a -DFFT\_SINGLE setting that will
+use single-precision FFTs, which can speed-up the calculation,
+particularly in parallel or on GPUs.  Fourier transform operations
+are somewhat insensitive to floating point truncation
+errors and thus do not always need to be performed in double
+precision.  Using the -DFFT\_SINGLE setting trades off a little
+accuracy for reduced memory use and parallel communication costs for
+transposing 3d FFT data.
+
+**Step 7**
+
+The 3 JPG variables allow you to specify a JPEG and/or PNG library
+which SPARTA uses when writing out JPEG or PNG files via the :doc:`dump image <dump_image>` command. These can be left blank if you do not
+use the -DSPARTA\_JPEG or -DSPARTA\_PNG switches discussed above in Step
+4, since in that case JPEG/PNG output will be disabled.
+
+A standard JPEG library usually goes by the name libjpeg.a or
+libjpeg.so and has an associated header file jpeglib.h. Whichever JPEG
+library you have on your platform, you'll need to set the appropriate
+JPG\_INC, JPG\_PATH, and JPG\_LIB variables, so that the compiler and
+linker can find it.
+
+A standard PNG library usually goes by the name libpng.a or libpng.so
+and has an associated header file png.h. Whichever PNG library you
+have on your platform, you'll need to set the appropriate JPG\_INC,
+JPG\_PATH, and JPG\_LIB variables, so that the compiler and linker can
+find it.
+
+As before, if these header and library files are in the usual place on
+your machine, you may not need to set these variables.
+
+**Step 8**
+
+Note that by default none of the SPARTA optional packages are
+installed.  To build SPARTA with optional packages, see `this section <#start_3>`_ below, before proceeding to Step 9.
+
+**Step 9**
+
+That's it.  Once you have a correct Makefile.foo, and you have
+pre-built any other needed libraries (e.g. MPI), all you need to do
+from the src directory is type one of the following:
+
+
+.. parsed-literal::
+
+   make foo
+   make -j N foo
+   gmake foo
+   gmake -j N foo
+
+The -j or -j N switches perform a parallel build which can be much
+faster, depending on how many cores your compilation machine has.  N
+is the number of cores the build runs on.
+
+You should get the executable spa\_foo when the build is complete.
+
+
+----------
+
+
+.. _start_2_2_2:
+
+.. raw:: html
+
+   <span id="start_2_2_2"></span>
+
+**Steps to build a SPARTA executable using CMake:** 
+
+**Step 0**
+
+Please review https://github.com/sparta/sparta/blob/master/BUILD\_CMAKE.md and ensure that
+CMake version 3.12.0 or greater is installed:
+
+
+.. parsed-literal::
+
+   which cmake
+   which cmake3
+   cmake --version
+
+On clusters and supercomputers one can use modules to load cmake:
+
+
+.. parsed-literal::
+
+   module avail cmake
+   module load <CMAKE>
+
+On Linux one may use apt, yum, or pacman to install cmake.
+
+On Mac one may use brew or macports to install cmake.
+
+**Step 1**
+
+The cmake directory contains the CMake source files for SPARTA. Create a build
+directory and from within the build directory, run cmake:
+
+
+.. parsed-literal::
+
+   mkdir build
+   cd build
+   cmake -LH -DSPARTA_MACHINE=tutorial /path/to/sparta/cmake
+
+This will generate the default Makefiles and print the SPARTA CMake options. To
+list the generated targets, do:
+
+
+.. parsed-literal::
+
+   make help
+
+Now you can try to build the SPARTA binaries with:
+
+
+.. parsed-literal::
+
+   make
+
+If everything works, an executable named spa\_tutorial and a library named
+libsparta.a will be produced in build/src.
+
+**Step 2**
+
+If Step 1 did not work, see if you can use any system presets from
+/path/to/sparta/cmake/presets. To select a preset:
+
+cd build
+
+# Clear the CMake files
+rm -rf CMake\*
+
+
+.. parsed-literal::
+
+   cmake -C /path/to/sparta/cmake/presets/NAME.cmake -DSPARTA_MACHINE=tutorial /path/to/sparta/cmake
+   make
+
+**Step 3**
+
+If Step 2 did not work, look at cmake -LH for a list of SPARTA CMake options and their
+meaning, then modify one or more of those options by doing:
+
+
+.. parsed-literal::
+
+   cd build
+   rm -rf CMake\*
+   cmake -C /path/to/sparta/cmake/presets/NAME.cmake -D<OPTION_NAME>=<VALUE> /path/to/sparta/cmake
+   make
+
+where <OPTION\_NAME> and <VALUE> correspond to valid option value pairs listed by
+cmake -LH. For the SPARTA\_DEFAULT\_CXX\_COMPILE\_FLAGS option, see Step 4.
+
+For a full list of CMake option value pairs, see cmake -LAH. The most relevant
+CMake options (with example values) for our purposes here are:
+
+-DCMAKE\_C_COMPILER=gcc
+-DCMAKE\_CXX\_COMPILER=/usr/local/bin/g++
+-DCMAKE\_CXX\_FLAGS=-O3
+
+If your cmake command line is getting too long, consider placing it in a bash
+script and escaping newlines. For example:
+
+
+.. parsed-literal::
+
+   cmake -C /path/to/sparta/cmake/presets/NAME.cmake -D<OPTION_NAME>=<VALUE> /path/to/sparta/cmake
+
+**Step 4**
+
+The SPARTA\_DEFAULT\_CXX\_COMPILE\_FLAGS option passes flags to the compiler when
+building object files.  Note that if you change any -D setting in this section,
+you should do a full re-compile, after typing "make clean".
+
+The SPARTA\_DEFAULT\_CXX\_COMPILE\_FLAGS option is typically used to include options
+that turn on ifdefs within the SPARTA code.  The options that are currently recogized are:
+
+* -DSPARTA\_GZIP
+* -DSPARTA\_JPEG
+* -DSPARTA\_PNG
+* -DSPARTA\_FFMPEG
+* -DSPARTA\_MAP
+* -DSPARTA\_UNORDERED\_MAP
+* -DSPARTA\_SMALL
+* -DSPARTA\_BIG
+* -DSPARTA\_BIGBIG
+* -DSPARTA\_LONGLONG\_TO\_LONG
+
+The read\_data and dump commands will read/write gzipped files if you
+compile with -DSPARTA\_GZIP.  It requires that your Linux support the
+"popen" command.
+
+If you use -DSPARTA\_JPEG and/or -DSPARTA\_PNG, the :doc:`dump image <dump>` command will be able to write out JPEG and/or PNG
+image files respectively. If not, it will only be able to write out
+PPM image files.  For JPEG files, you must also link SPARTA with a
+JPEG library, as described below.  For PNG files, you must also link
+SPARTA with a PNG library, as described below.
+
+If you use -DSPARTA\_FFMPEG, the :doc:`dump movie <dump_image>` command
+will be available to support on-the-fly generation of rendered movies
+the need to store intermediate image files.  It requires that your
+machines supports the "popen" function in the standard runtime library
+and that an FFmpeg executable can be found by SPARTA during the run.
+
+If you use -DSPARTA\_MAP, SPARTA will use the STL map class for hash
+tables.  This is less efficient than the unordered map class which is
+not yet supported by all C++ compilers.  If you use
+-DSPARTA\_UNORDERED\_MAP, SPARTA will use the unordered\_map class for
+hash tables and will assume it is part of the STL (e.g. this works for
+Clang++).  The default is to use the unordered map class from the
+"tri1" extension to the STL which is supported by most compilers.  So
+only use either of these options if the build complains that unordered
+maps are not recognized.
+
+Use at most one of the -DSPARTA\_SMALL, -DSPARTA\_BIG, -DSPARTA\_BIGBIG
+settings.  The default is -DSPARTA\_BIG.  These refer to use of 4-byte
+(small) vs 8-byte (big) integers within SPARTA, as described in
+src/spatype.h.  The only reason to use the BIGBIG setting is if you
+have a regular grid with more than ~2 billion grid cells or a
+hierarchical grid with enough levels that grid cell IDs cannot fit in
+a 32-bit integer.  In either case, SPARTA will generate an error
+message for "Cell ID has too many bits".  See `Section 6.8 <Section_howto.html#howto_8>`_ of the manual for details on how cell
+IDs are formatted.  The only reason to use the SMALL setting is if
+your machine does not support 64-bit integers.
+
+In all cases, the size of problem that can be run on a per-processor
+basis is limited by 4-byte integer storage to about 2 billion
+particles per processor (2\^31), which should not normally be a
+restriction since such a problem would have a huge per-processor
+memory and would run very slowly in terms of CPU secs/timestep.
+
+The -DSPARTA\_LONGLONG\_TO\_LONG setting may be needed if your system or
+MPI version does not recognize "long long" data types.  In this case a
+"long" data type is likely already 64-bits, in which case this setting
+will use that data type.
+
+Using one of the -DPACK\_ARRAY, -DPACK\_POINTER, and -DPACK\_MEMCPY
+options can make for faster parallel FFTs on some platforms.  The
+-DPACK\_ARRAY setting is the default.  See the :doc:`compute fft/grid <compute_fft_grid>` command for info about FFTs.  See STEP
+7 below for info about building SPARTA with an FFT library.
+
+**Step 5**
+
+This step is optional. Once you get Steps 3 and 4 working by modifying the
+options to the cmake command, try setting the same options in
+/path/to/sparta/cmake/presets/NEW.cmake by copying 
+/path/to/sparta/cmake/presets/NAME.cmake and modifying the cmake
+source code. Note that the CMake cache is sticky and will only evict a 
+cached option value pair if you use -D or the FORCE argument to CMake's set
+routine.
+
+Now just do:
+
+
+.. parsed-literal::
+
+   cd build
+   rm -rf CMake\*
+   cmake -C /path/to/sparta/cmake/presets/NEW.cmake /path/to/sparta/cmake
+   make
+
+consider sharing and vetting NEW.cmake by opening a pull request at
+https://github.com/sparta/sparta.
+
+**Step 6**
+
+This step explains how to enable and select MPI in the SPARTA CMake
+configuration. There may already be a preset in 
+/path/to/sparta/cmake/presets that selects the correct MPI installation.
+
+By default, SPARTA configures with MPI enabled and cmake will print which MPI
+was selected. To build serial binaries, use SPARTA's MPI\_STUBS package:
+
+
+.. parsed-literal::
+
+   cmake -DPKG_MPI_STUBS=ON /path/to/sparta/cmake
+
+You may want a different MPI installation than CMake finds. CMake uses module
+files such as FindMPI.cmake to handle wiring in a given installation of a 
+library and its headers. If you're on a cluster or supercomputer, use module 
+before running cmake so that cmake finds the MPI installation you'd like to
+use:
+
+# Show which modules are loaded
+module list
+
+# Show which modules are available
+module avail
+
+
+.. parsed-literal::
+
+   module load <MPI>
+
+On Linux one may use apt, yum, or pacman to install MPI.
+
+On Mac one may use brew or macports to install MPI.
+
+Verify that cmake found the correct MPI installation:
+
+cd build
+rm -rf CMake\*
+
+
+.. parsed-literal::
+
+   # cmake should print "Found MPI\*" strings
+   cmake options /path/to/sparta/cmake
+
+Note that if the preset file you're using enables PKG\_MPI\_STUBS, MPI will not be
+searched for unless you explicitly disable PKG\_MPI\_STUBS in the preset file.
+
+If you'd like to use a custom MPI installation or cmake is not locating the MPI
+installation you've selected via the module command or package manager, try
+export MPI\_ROOT=/path/to/mpi/install before running cmake. Otherwise, please see
+https://cmake.org/cmake/help/v3.12/module/FindMPI.html#variables-for-locating-mpi.
+Note that this documentation link is for CMake version 3.12.
+
+**Step 7**
+
+When the SPARTA FFT package is enabled with cmake -DPKG\_FFT=ON, you may select
+between 3 thiry party libraries (TPLs) for 1d FFTs, which SPARTA uses when
+configured with cmake -DFFT=\ *FFTW3,MKL,KISS*\ .
+
+By default SPARTA will use the open-source `KISS FFT library <https://github.com/mborgerding/kissfft>`_, which is included in the SPARTA distribution.
+This library is portable to all platforms and for typical SPARTA simulations is
+almost as fast as FFTW or vendor optimized libraries.
+
+Similarly when using the KOKKOS package, you may select between 5 TPLs for FFT
+which SPARTA uses when configured with cmake
+-DFFT\_KOKKOS=\ *CUFFT,HIPFFT,FFTW3,MKL,KISS*\ . This requires enabling the SPARTA
+FFT package which can be selected with cmake -DPKG\_FFT=ON.
+
+By default, SPARTA will use a Kokkos version of the open-source `KISS FFT library <https://github.com/mborgerding/kissfft>`_, which is included in the SPARTA distribution.
+Note that using the KISS FFT library on GPUs may give suboptimal performance.
+Other options for -DFFT\_KOKKOS are CUFFT, HIPFFT, MKL or FFTW3. When using the
+Kokkos CUDA backend, either CUFFT or KISS must be used. When using the Kokkos
+HIP backend, either HIPFFT or KISS must be used. When using the Kokkos OpenMP
+or Serial backend, either MKL, FFTW3, or KISS must be used. The CUFFT option
+specifies the `cuFFT library <https://developer.nvidia.com/cufft>`_ from NVIDIA.
+The HIPFFT option specifies the `rocFFT library <https://rocm.docs.amd.com/projects/rocFFT/en/latest/>`_ from AMD.
+
+You may need to install the FFT TPL you're interested in using. If you're on a
+cluster or supercomputer, use module before running cmake so that cmake finds
+the FFT installation you'd like to use:
+
+# Show which modules are loaded
+module list
+
+# Show which modules are available
+module avail
+
+
+.. parsed-literal::
+
+   module load <FFT>
+
+On Linux one may use apt, yum, or pacman to install FFT.
+
+On Mac one may use brew or macports to install FFT.
+
+Verify that cmake found the correct MPI installation:
+
+cd build
+rm -rf CMake\*
+
+
+.. parsed-literal::
+
+   # cmake should print "Found FFT\*" strings
+   cmake options /path/to/sparta/cmake
+
+Note that if the preset file you're using enables PKG\_FFT, FFT will not be
+searched for unless you explicitly disable PKG\_FFT in the preset file.
+
+If you'd like to use a custom FFT installation or cmake is not locating the FFT
+installation you've selected via the module command or package manager, try
+export FFT\_ROOT=/path/to/fft/install before running cmake. Otherwise, please
+open an issue at https://github.com/sparta/sparta/issues.
+
+**Step 8**
+
+You may select between 2 TPLs, JPEG or PNG, for writing out JPEG or PNG files
+via the :doc:`dump image <dump_image>` command. To select a TPL, use:
+
+
+.. parsed-literal::
+
+   cmake -DBUILD_JPEG=ON /path/to/sparta/cmake
+
+or:
+
+
+.. parsed-literal::
+
+   cmake -DBUILD_PNG=ON /path/to/sparta/cmake
+
+If you'd like to use a custom jpeg or png installation, please see 
+https://cmake.org/cmake/help/v3.12/module/FindJPEG.html or
+https://cmake.org/cmake/help/v3.12/module/FindPNG.html. Note that these
+documentation links are for CMake version 3.12.
+
+**Step 9**
+
+By default, none of the SPARTA optional packages are installed. To build SPARTA
+with optional packages, use:
+
+
+.. parsed-literal::
+
+   cmake -DPKG_XXX=ON /path/to/sparta/cmake
+
+Where XXX is the package to enable. For a full list of optional packages, see:
+
+
+.. parsed-literal::
+
+   cmake -LH /path/to/sparta/cmake
+
+**Step 10**
+
+Once you have a correct cmake command line or the NAME.cmake preset file, just
+do:
+
+
+.. parsed-literal::
+
+   cd build
+   cmake OPTIONS /path/to/sparta/cmake
+
+or:
+
+cd build
+cmake -C /path/to/sparta/cmake/presets/NAME.cmake -DSPARTA\_MACHINE=tutorial /path/to/sparta/cmake
+
+
+.. parsed-literal::
+
+   make -j N
+
+The -j or -j N switches perform a parallel build which can be much faster, 
+depending on how many cores your compilation machine has. N is the number of
+cores the build runs on.
+
+You should get build/src/spa\_tutorial and build/src/libsparta.a.
+
+**Building with the KOKKOS package:**
+
+The KOKKOS package must be built with CMake (GNU Makefile builds are not
+supported for KOKKOS). The presets in cmake/presets/ set up all required
+Kokkos options for each supported backend and target platform. Choose the
+preset that matches your hardware:
+
+* kokkos\_omp.cmake      - Multi-core CPUs via OpenMP threading
+* kokkos\_mpi\_only.cmake - Multi-core CPUs, MPI only (no threading)
+* kokkos\_cuda.cmake     - NVIDIA GPUs via CUDA (default: Hopper/H100)
+* kokkos\_hip.cmake      - AMD GPUs via HIP (default: MI250X)
+* elcapitan\_kokkos.cmake - AMD MI300A APU via HIP (Cray MPICH)
+* kokkos\_sycl.cmake     - Intel Ponte Vecchio GPUs via SYCL
+
+Example: build for multi-core CPUs with OpenMP threading:
+
+
+.. parsed-literal::
+
+   mkdir build
+   cd build
+   cmake -C /path/to/sparta/cmake/presets/kokkos_omp.cmake /path/to/sparta/cmake
+   make -j 4
+
+The executable will be named spa\_kokkos\_omp (the suffix comes from the preset).
+
+Example: build for NVIDIA A100 GPUs (override the default Hopper arch):
+
+
+.. parsed-literal::
+
+   mkdir build
+   cd build
+   cmake -C /path/to/sparta/cmake/presets/kokkos_cuda.cmake       -DKokkos_ARCH_HOPPER90=OFF -DKokkos_ARCH_AMPERE80=ON       /path/to/sparta/cmake
+   make -j 4
+
+Example: build for NVIDIA V100 GPUs:
+
+
+.. parsed-literal::
+
+   mkdir build
+   cd build
+   cmake -C /path/to/sparta/cmake/presets/kokkos_cuda.cmake       -DKokkos_ARCH_HOPPER90=OFF -DKokkos_ARCH_VOLTA70=ON       /path/to/sparta/cmake
+   make -j 4
+
+Example: build for AMD MI300X GPUs:
+
+
+.. parsed-literal::
+
+   mkdir build
+   cd build
+   cmake -C /path/to/sparta/cmake/presets/kokkos_hip.cmake       -DKokkos_ARCH_VEGA90A=OFF -DKokkos_ARCH_AMD_GFX942=ON       /path/to/sparta/cmake
+   make -j 4
+
+After building, run SPARTA with the KOKKOS package using the -k, -sf,
+and -pk command-line switches. The -k on g Ng switch specifies Ng GPUs
+per node. Examples (assuming a node with 4 GPUs):
+
+For CUDA (NVIDIA) or HIP (AMD) GPUs, 4 MPI tasks using 4 GPUs:
+
+
+.. parsed-literal::
+
+   mpirun -np 4 spa_kokkos_cuda -k on g 4 -sf kk -in in.collide
+
+For OpenMP on 16-core CPUs, 2 MPI tasks each using 8 threads:
+
+
+.. parsed-literal::
+
+   mpirun -np 2 spa_kokkos_omp -k on t 8 -sf kk -in in.collide
+
+If you are migrating from the GNU Makefile build system, the Kokkos
+KOKKOS\_DEVICES and KOKKOS\_ARCH Makefile variables map to CMake options as
+follows:
+
+* KOKKOS\_DEVICES=OpenMP  ->  -DKokkos\_ENABLE\_OPENMP=ON
+* KOKKOS\_DEVICES=Cuda    ->  -DKokkos\_ENABLE\_CUDA=ON
+* KOKKOS\_ARCH=Volta70    ->  -DKokkos\_ARCH\_VOLTA70=ON
+* KOKKOS\_ARCH=Ampere80   ->  -DKokkos\_ARCH\_AMPERE80=ON
+* KOKKOS\_ARCH=Hopper90   ->  -DKokkos\_ARCH\_HOPPER90=ON
+* KOKKOS\_ARCH=Power9     ->  -DKokkos\_ARCH\_POWER9=ON
+* KOKKOS\_ARCH=ARMv8-TX2  ->  -DKokkos\_ARCH\_ARMV8\_THUNDERX2=ON
+
+See `Section 5.3 <Section_accelerate.html#acc_3>`_ for the full list of
+architecture options and detailed instructions for each KOKKOS backend.
+
+
+----------
+
+
+.. _start_2_3:
+
+.. raw:: html
+
+   <span id="start_2_3"></span>
+
+**Errors that can occur when making SPARTA:** 
+
+IMPORTANT NOTE: If an error occurs when building SPARTA, the compiler
+or linker will state very explicitly what the problem is.  The error
+message should give you a hint as to which of the steps above has
+failed, and what you need to do in order to fix it.  Building a code
+with a Makefile is a very logical process.  The compiler and linker
+need to find the appropriate files and those files need to be
+compatible with SPARTA source files.  When a make fails, there is
+usually a very simple reason, which you or a local expert will need to
+fix.
+
+Here are two non-obvious errors that can occur:
+
+\(1) If the make command breaks immediately with errors that indicate
+it can't find files with a "\*" in their names, this can be because
+your machine's native make doesn't support wildcard expansion in a
+makefile.  Try gmake instead of make.  If that doesn't work, try using
+a -f switch with your make command to use a pre-generated
+Makefile.list which explicitly lists all the needed files, e.g.
+
+
+.. parsed-literal::
+
+   make makelist
+   make -f Makefile.list g++
+   gmake -f Makefile.list mac
+
+The first "make" command will create a current Makefile.list with all
+the file names in your src dir.  The 2nd "make" command (make or
+gmake) will use it to build SPARTA.
+
+\(2) If you get an error that says something like 'identifier "atoll"
+is undefined', then your machine does not support "long long"
+integers.  Try using the -DSPARTA\_LONGLONG\_TO\_LONG setting described
+above in Step 4.
+
+
+----------
+
+
+.. _start_2_4_1:
+
+.. raw:: html
+
+   <span id="start_2_4_1"></span>
+
+**Additional build tips using make:** 
+
+\(1) Building SPARTA for multiple platforms.
+
+You can make SPARTA for multiple platforms from the same src
+directory.  Each target creates its own object sub-directory called
+Obj\_name where it stores the system-specific \*.o files.
+
+\(2) Cleaning up.
+
+Typing "make clean-all" or "make clean-foo" will delete \*.o object
+files created when SPARTA is built, for either all builds or for a
+particular machine.
+
+
+----------
+
+
+.. _start_2_4_2:
+
+.. raw:: html
+
+   <span id="start_2_4_2"></span>
+
+**Additional build tips using CMake:** 
+
+\(1) Building SPARTA for multiple platforms.
+
+It's best to build SPARTA for multiple platforms from different
+build directories. However, each target creates its own spa\_TARGET binary and
+multiple targets can be built from the same build directory. Note that the \*.o
+object files in build/src will reflective of the most recent build
+configuration. Also note that if BUILD\_SHARED\_LIBS was enabled,
+libsparta will be reflective of the most recent build configuration.
+
+\(2) Cleaning up.
+
+Typing "make clean" will delete all binary files for the most recent build
+configuration.
+
+
+----------
+
+
+.. _start_2_5:
+
+.. raw:: html
+
+   <span id="start_2_5"></span>
+
+**Building for a Mac:** 
+
+OS X is BSD Unix, so it should just work.  See the Makefile.mac or
+cmake/presets/mac.cmake file.
+
+
+----------
+
+
+.. _start_2_6:
+
+.. raw:: html
+
+   <span id="start_2_6"></span>
+
+**Building for Windows:** 
+
+At some point we may provide a pre-built Windows executable
+for SPARTA.  Until then you will need to build an executable from 
+source files.
+
+One way to do this is install and use cygwin to build SPARTA with a
+standard Linux make or CMake, just as you would on any Linux box.
+
+You can also import the \*.cpp and \*.h files into Microsoft Visual
+Studio.  If someone does this and wants to provide project files or
+other Windows build tips, please send them to the
+`developers <https://sparta.github.io/authors.html>`_ and we will include
+them in the distribution.
+
+
+----------
+
+
+.. _start_3:
+
+.. raw:: html
+
+   <span id="start_3"></span>
+
+2.3 Making SPARTA with optional packages
+----------------------------------------------------------------------------------------------------
+
+This section has the following sub-sections:
+
+`Package basics <#start_3_1>`_
+`Including/excluding packages with make <#start_3_2_1>`_
+`Including/excluding packages with CMake <#start_3_2_2>`_
+
+
+----------
+
+
+.. _start_3_1:
+
+.. raw:: html
+
+   <span id="start_3_1"></span>
+
+**Package basics:** 
+
+The source code for SPARTA is structured as a set of core files which
+are always included, plus optional packages.  Packages are groups of
+files that enable a specific set of features.  For example, the FFT
+package which includes a :doc:`compute fft/grid <compute_fft_grid>`
+command and a 2d and 3d FFT library.
+
+For make:
+You can see the list of all packages by typing "make package" from
+within the src directory of the SPARTA distribution. This also lists
+various make commands that can be used to manipulate packages.
+
+For CMake:
+You can see the list of all packages by typing "cmake -DSPARTA\_LIST\_PKGS=ON"
+from within the build directory.
+
+If you use a command in a SPARTA input script that is part of a
+package, you must have built SPARTA with that package, else you will
+get an error that the style is invalid or the command is unknown.
+Every command's doc page specfies if it is part of a package.
+
+
+----------
+
+
+.. _start_3_2_1:
+
+.. raw:: html
+
+   <span id="start_3_2_1"></span>
+
+**Including/excluding packages with make:** 
+
+To use (or not use) a package you must include it (or exclude it)
+before building SPARTA.  From the src directory, this is typically as
+simple as:
+
+
+.. parsed-literal::
+
+   make yes-fft
+   make g++
+
+or
+
+
+.. parsed-literal::
+
+   make no-fft
+   make g++
+
+NOTE: You should NOT include/exclude packages and build SPARTA in a
+single make command using multiple targets, e.g. make yes-fft g++.
+This is because the make procedure creates a list of source files that
+will be out-of-date for the build if the package configuration changes
+within the same command.
+
+Some packages have individual files that depend on other packages
+being included.  SPARTA checks for this and does the right thing.
+I.e. individual files are only included if their dependencies are
+already included.  Likewise, if a package is excluded, other files
+dependent on that package are also excluded.
+
+If you will never run simulations that use the features in a
+particular packages, there is no reason to include it in your build.
+
+When you download a SPARTA tarball, no packages are pre-installed in
+the src directory.
+
+Packages are included or excluded by typing "make yes-name" or "make
+no-name", where "name" is the name of the package in lower-case, e.g.
+name = fft for the FFT package.  You can also type "make yes-all", or
+"make no-all" to include/exclude all packages.  Type "make package" to
+see all of the package-related make options.
+
+NOTE: Inclusion/exclusion of a package works by simply moving files
+back and forth between the main src directory and sub-directories with
+the package name (e.g. src/FFT or src/KOKKOS), so that the files are
+seen or not seen when SPARTA is built.  After you have included or
+excluded a package, you must re-build SPARTA.
+
+Additional package-related make options exist to help manage SPARTA
+files that exist in both the src directory and in package
+sub-directories.  You do not normally need to use these commands
+unless you are editing SPARTA files.
+
+Typing "make package-update" or "make pu" will overwrite src files
+with files from the package sub-directories if the package has been
+included.  It should be used after a patch is installed, since patches
+only update the files in the package sub-directory, but not the src
+files.  Typing "make package-overwrite" will overwrite files in the
+package sub-directories with src files.
+
+Typing "make package-status" or "make ps" will show which packages are
+currently included. For those that are included, it will list any
+files that are different in the src directory and package
+sub-directory.  Typing "make package-diff" lists all differences
+between these files.  Again, type "make package" to see all of the
+package-related make options.
+
+Typing "make package-installed" or "make pi" will show which packages are
+currently installed in the src directory.
+
+
+----------
+
+
+.. _start_3_2_2:
+
+.. raw:: html
+
+   <span id="start_3_2_2"></span>
+
+**Including/excluding packages with CMake:** 
+
+To use (or not use) a package you must include it (or exclude it)
+before building SPARTA.  From the build directory, do:
+
+
+.. parsed-literal::
+
+   cmake -DPKG_FFT=ON /path/to/sparta/cmake
+   make -j
+
+or
+
+
+.. parsed-literal::
+
+   cmake -DPKG_FFT=OFF /path/to/sparta/cmake
+   make -j
+
+Some packages have individual files that depend on other packages
+being included.  SPARTA checks for this and does the right thing.
+I.e. individual files are only included if their dependencies are
+already included.  Likewise, if a package is excluded, other files
+dependent on that package are also excluded.
+
+If you will never run simulations that use the features in a
+particular packages, there is no reason to include it in your build.
+
+When you download a SPARTA tarball, no packages are pre-installed in
+the build/src directory.
+
+Packages are included or excluded by typing "cmake -DPKG\_NAME=ON" or 
+"cmake -DPKG\_NAME=OFF", where "NAME" is the name of the package in upper-case, 
+e.g. name = FFT for the FFT package. You can also type "cmake
+-DSPARTA\_ENABLE\_ALL\_PKGS=ON", or "cmake -DSPARTA\_DISABLE\_ALL\_PKGS=ON" to 
+include or exclude all packages. Type "cmake -DSPARTA\_LIST\_PKGS=ON" to
+see all of the package-related CMake options.
+
+NOTE: Inclusion or exclusion of a package works by setting CMake boolean
+variables to generate the correct Makefile targets and dependencies. After you
+have included or excluded a package, you must re-build SPARTA.
+
+If a SPARTA package has source code changes, simply run "make" to rebuild SPARTA
+with these changes.
+
+Typing "cmake" from the build directory will show which packages are currently
+included.
+
+
+----------
+
+
+.. _start_4:
+
+.. raw:: html
+
+   <span id="start_4"></span>
+
+2.4 Building SPARTA as a library
+--------------------------------------------------------------------------------------------
+
+SPARTA can be built as either a static or shared library, which can
+then be called from another application or a scripting language.  See
+`Section 6.7 <Section_howto.html#howto_7>`_ for more info on coupling
+SPARTA to other codes.  See :doc:`Section 11 <Section_python>` for more
+info on wrapping and running SPARTA from Python.
+
+The CMake build system will produce the library static of dynamic libsparta
+library in build/src.
+
+**Static library:**
+^^^^^^^^^^^^^^^^^^^
+
+CMake builds sparta as a static library in libsparta.a, by default.
+
+To build SPARTA as a static library (\*.a file on Linux), type
+
+
+.. parsed-literal::
+
+   make foo mode=lib
+
+where foo is the machine name.  This kind of library is typically used
+to statically link a driver application to SPARTA, so that you can
+insure all dependencies are satisfied at compile time.  This will use
+the ARCHIVE and ARFLAGS settings in src/MAKE/Makefile.foo.  The build
+will create the file libsparta\_foo.a which another application can
+link to.  It will also create a soft link libsparta.a, which will
+point to the most recently built static library.
+
+**Shared library:**
+^^^^^^^^^^^^^^^^^^^
+
+To build SPARTA as a shared library (\*.so file on Linux), which can be
+dynamically loaded, e.g. from Python, type
+
+
+.. parsed-literal::
+
+   make foo mode=shlib
+
+or:
+
+
+.. parsed-literal::
+
+   cmake -C /path/to/sparta/cmake/presets/foo.cmake -DBUILD_SHARED_LIBS=ON /path/to/sparta/cmake
+   make
+
+where foo is the machine name.  This kind of library is required when
+wrapping SPARTA with Python; see :doc:`Section\_python <Section_python>`
+for details.  This will use the SHFLAGS and SHLIBFLAGS settings in
+src/MAKE/Makefile.foo and perform the build in the directory
+Obj\_shared\_foo.  This is so that each file can be compiled with the
+-fPIC flag which is required for inclusion in a shared library.  The
+build will create the file libsparta\_foo.so which another application
+can link to dyamically.  It will also create a soft link libsparta.so,
+which will point to the most recently built shared library.  This is
+the file the Python wrapper loads by default.
+
+Note that for a shared library to be usable by a calling program, all
+the auxiliary libraries it depends on must also exist as shared
+libraries.  This will be the case for libraries included with SPARTA,
+such as the dummy MPI library in src/STUBS or any package libraries in
+lib/packages, since they are always built as shared libraries using
+the -fPIC switch.  However, if a library like MPI or FFTW does not
+exist as a shared library, the shared library build will generate an
+error.  This means you will need to install a shared library version
+of the auxiliary library.  The build instructions for the library
+should tell you how to do this.
+
+Here is an example of such errors when the system FFTW or provided
+lib/colvars library have not been built as shared libraries:
+
+
+.. parsed-literal::
+
+   /usr/bin/ld: /usr/local/lib/libfftw3.a(mapflags.o): relocation
+   R_X86_64_32 against \`.rodata' can not be used when making a shared
+   object; recompile with -fPIC
+   /usr/local/lib/libfftw3.a: could not read symbols: Bad value
+
+   /usr/bin/ld: ../../lib/colvars/libcolvars.a(colvarmodule.o):
+   relocation R_X86_64_32 against \`__pthread_key_create' can not be used
+   when making a shared object; recompile with -fPIC
+   ../../lib/colvars/libcolvars.a: error adding symbols: Bad value
+
+As an example, here is how to build and install the `MPICH library <mpich_>`_, a popular open-source version of MPI, distributed by
+Argonne National Labs, as a shared library in the default
+/usr/local/lib location:
+
+.. _mpich: https://www.mcs.anl.gov/research/projects/mpi/
+
+
+
+
+.. parsed-literal::
+
+   ./configure --enable-shared
+   make
+   make install
+
+You may need to use "sudo make install" in place of the last line if
+you do not have write privileges for /usr/local/lib.  The end result
+should be the file /usr/local/lib/libmpich.so.
+
+**Additional requirement for using a shared library:**
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The operating system finds shared libraries to load at run-time using
+the environment variable LD\_LIBRARY\_PATH.
+
+Using CMake, ensure that CMAKE\_INSTALL\_PREFIX is set properly and then run "make
+-j install" or add build/src to LD\_LIBRARY\_PATH in your shell's environment.
+
+Using make, you may wish to copy the file src/libsparta.so or 
+src/libsparta\_g++.so (for example) to a place the system can find it 
+by default, such as /usr/local/lib, or you may wish to add the SPARTA
+src directory to LD\_LIBRARY\_PATH, so that the current version of the 
+shared library is always available to programs that use it.
+
+For the csh or tcsh shells, you would add something like this to your
+~/.cshrc file:
+
+
+.. parsed-literal::
+
+   setenv LD_LIBRARY_PATH ${LD_LIBRARY_PATH}:/home/sjplimp/sparta/src
+
+**Calling the SPARTA library:**
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Either flavor of library (static or shared) allows one or more SPARTA
+objects to be instantiated from the calling program.
+
+When used from a C++ program, all of SPARTA is wrapped in a SPARTA\_NS
+namespace; you can safely use any of its classes and methods from
+within the calling code, as needed.
+
+When used from a C or Fortran program or a scripting language like
+Python, the library has a simple function-style interface, provided in
+src/library.cpp and src/library.h.
+
+See `Section\_howto 6.7 <Section_howto.html#howto_7>`_ of the manual for
+ideas on how to couple SPARTA to other codes via its library
+interface.  See :doc:`Section\_python <Section_python>` of the manual for
+a description of the Python wrapper provided with SPARTA that operates
+through the SPARTA library interface.
+
+The files src/library.cpp and library.h define the C-style API for
+using SPARTA as a library.  See `Section\_howto 6.6 <Section_howto.html#howto_6>`_ of the manual for a description of the
+interface and how to extend it for your needs.
+
+
+----------
+
+
+.. _start_5:
+
+.. raw:: html
+
+   <span id="start_5"></span>
+
+2.5 Testing SPARTA
+------------------------------------------------------------------------------
+
+SPARTA can be tested by using the CMake build system.
+
+**Basic Testing**
+
+To enable basic testing, use the SPARTA\_ENABLE\_TESTING option when configuring
+sparta:
+
+
+.. parsed-literal::
+
+   cmake -C /path/to/sparta/cmake/presets/NAME.cmake   -DSPARTA_MACHINE=basic-test-tutorial   -DSPARTA_ENABLE_TESTING=ON   /path/to/sparta/cmake
+
+Setting SPARTA\_ENABLE\_TESTING to ON, adds tests in 
+/path/to/sparta/examples/\*\*/in.\* to be run via ctest. Each in.\* file corresponds
+to an individual test. If BUILD\_MPI is ON, tests will be configured to run with 
+both 1 and 4 mpi ranks. If the binaries are built, tests can be run via ctest:
+
+
+.. parsed-literal::
+
+   make
+   ctest
+
+This will run all the tests in serial. To run the tests in parallel, use -j:
+
+
+.. parsed-literal::
+
+   ctest -j4
+
+This will run up to four single rank, single thread per rank mpi\_1 tests in parallel
+or up to one 4 rank, single thread per rank mpi\_4 tests. ctest has many options
+including regex filters for running tests that only match the specified regex.
+See ctest --help for more information.
+
+**Adding and Removing tests**
+
+Add more tests by creating one or more input decks in 
+/path/to/sparta/examples/SUITE. Each in.\* file in 
+/path/to/sparta/examples/SUITE corresponds to an individual test and
+will be picked up by the CMake build system if SPARTA\_ENABLE\_TESTING is ON.
+
+To disable tests, remove the in.\* file or remove the in. prefix from
+the in.TEST file by renaming the file to DISABLED.in.TEST, for example.
+
+**Advanced Testing**
+
+To enable advanced testing, use the SPARTA\_DSMC\_TESTING\_PATH option when
+configuring sparta:
+
+
+.. parsed-literal::
+
+   cmake -C /path/to/sparta/cmake/presets/NAME.cmake   -DSPARTA_MACHINE=advanced-test-tutorial   -DSPARTA_DSMC_TESTING_PATH=/path/to/dsmc_testing   /path/to/sparta/cmake
+
+Setting SPARTA\_DSMC\_TESTING\_PATH to a valid dsmc\_testing path adds tests in
+SPARTA\_DSMC\_TESTING\_PATH to be run by SPARTA\_DSMC\_TESTING\_PATH/regression.py
+via ctest.
+
+After configuring, build the binaries and run the tests via ctest:
+
+
+.. parsed-literal::
+
+   make
+   ctest
+
+This will run all tests found in SPARTA\_DSMC\_TESTING\_PATH/examples by
+SPARTA\_DSMC\_TESTING\_PATH/regression.py. If SPARTA\_ENABLE\_TESTING is ON,
+all tests found in /path/to/sparta/examples will configured to run by
+SPARTA\_DSMC\_TESTING\_PATH/regression.py.
+
+**SPARTA CMake Testing options**
+
+The following options allow the user more control over how the tests are run:
+
+SPARTA\_SPA\_ARGS can be specified to add additional arguments for the sparta 
+binaries being run by ctest. This option is only applied if
+SPARTA\_ENABLE\_TESTING or SPARTA\_DSMC\_TESTING\_PATH are enabled.
+
+SPARTA\_DSMC\_TESTING\_DRIVER\_ARGS can be specified to add additional arguments to
+the SPARTA\_DSMC\_TESTING\_PATH/regression.py script.
+
+The SPARTA\_CTEST\_CONFIGS option allows the user to run the same set of binaries
+with different arguments. SPARTA\_CTEST\_CONFIGS lets the user add additional ctest
+configurations, seperated by ';', that allow SPARTA\_SPA\_ARGS\_CONFIG\_NAME
+or SPARTA\_DSMC\_TESTING\_DRIVER\_ARGS\_CONFIG\_NAME to be specified. For example:
+
+
+.. parsed-literal::
+
+   cmake -C /path/to/sparta/cmake/presets/NAME.cmake   -DSPARTA_MACHINE=advanced-test-tutorial   -DSPARTA_DSMC_TESTING_PATH=/path/to/dsmc_testing   -DSPARTA_CTEST_CONFIGS="PARALLEL;SERIAL"   -DSPARTA_SPA_ARGS_SERIAL=spa_serial_args   -DSPARTA_SPA_ARGS_PARALLEL=spa_parallel_args   -DSPARTA_DSMC_TESTING_DRIVER_ARGS_PARALLEL=driver_parallel_args   -DSPARTA_DSMC_TESTING_DRIVER_ARGS_PARALLEL=driver_serial_args   /path/to/sparta/cmake
+
+To verify that the binaries are being run with the proper arguments:
+
+
+.. parsed-literal::
+
+   make
+   ctest -C SERIAL -VV
+   ctest -C PARALLEL -VV
+
+The SPARTA\_MULTIBUILD\_CONFIGS option allows the user to run different sets of
+binaries for the same input decks. SPARTA\_MULTIBUILD\_CONFIGS lets the user add
+additional build configurations, separated by ';', that will build sparta 
+with the cache file located in 
+\`SPARTA\_MULTIBUILD\_PRESET\_DIR/CONFIG\_NAME.cmake\`. For example:
+
+
+.. parsed-literal::
+
+   cmake -DSPARTA_MULTIBUILD_CONFIGS="test_mac;test_mac_mpi"       -DSPARTA_MULTIBUILD_PRESET_DIR=/path/to/sparta/cmake/presets/       /path/to/sparta/cmake
+
+This cmake command assumes that 
+/path/to/sparta/cmake/presets/*test\_mac\_mpi,test\_mac*.cmake exist.
+
+To verify that the correct binaries are being run:
+
+
+.. parsed-literal::
+
+   make
+   ctest -VV
+
+
+----------
+
+
+.. _start_6:
+
+.. raw:: html
+
+   <span id="start_6"></span>
+
+2.6 Running SPARTA
+------------------------------------------------------------------------------
+
+By default, SPARTA runs by reading commands from standard input.  Thus
+if you run the SPARTA executable by itself, e.g.
+
+
+.. parsed-literal::
+
+   spa_g++
+
+it will simply wait, expecting commands from the keyboard.  Typically
+you should put commands in an input script and use I/O redirection,
+e.g.
+
+
+.. parsed-literal::
+
+   spa_g++ < in.file
+
+For parallel environments this should also work.  If it does not, use
+the '-in' command-line switch, e.g.
+
+
+.. parsed-literal::
+
+   spa_g++ -in in.file
+
+:doc:`Section 3 <Section_commands>` describes how input scripts are
+structured and what commands they contain.
+
+You can test SPARTA on any of the sample inputs provided in the
+examples or bench directory.  Input scripts are named in.\* and sample
+outputs are named log.\*.name.P where name is a machine and P is the
+number of processors it was run on.
+
+Here is how you might run one of the benchmarks on a
+Linux box, using mpirun to launch a parallel job:
+
+cd src
+make g++
+cp spa\_g++ ../bench
+cd ../bench
+mpirun -np 4 spa\_g++ < in.free
+
+or:
+
+
+.. parsed-literal::
+
+   cd build
+   cmake -DCMAKE_CXX_COMPILER=g++ -DSPARTA_MACHINE=g++ /path/to/sparta/cmake
+   cp src/spa_g++ /path/to/bench
+   cd /path/to/bench
+   mpirun -np 4 spa_g++ < in.free
+
+See `this page <bench_>`_ for timings for this and the other benchmarks on
+various platforms.
+
+.. _bench: https://sparta.github.io/bench.html
+
+
+
+The screen output from SPARTA is described in the next section.  As it
+runs, SPARTA also writes a log.sparta file with the same information.
+
+Note that this sequence of commands copies the SPARTA executable
+(spa\_g++) to the directory with the input files.  This may not be
+necessary, but some versions of MPI reset the working directory to
+where the executable is, rather than leave it as the directory where
+you launch mpirun from (if you launch spa\_g++ on its own and not under
+mpirun).  If that happens, SPARTA will look for additional input files
+and write its output files to the executable directory, rather than
+your working directory, which is probably not what you want.
+
+If SPARTA encounters errors in the input script or while running a
+simulation it will print an ERROR message and stop or a WARNING
+message and continue.  See :doc:`Section 12 <Section_errors>` for a
+discussion of the various kinds of errors SPARTA can or can't detect,
+a list of all ERROR and WARNING messages, and what to do about them.
+
+SPARTA can run a problem on any number of processors, including a
+single processor.  The random numbers used by each processor will be
+different so you should only expect statistical consistency if the
+same problem is run on different numbers of processors.
+
+SPARTA can run as large a problem as will fit in the physical memory
+of one or more processors.  If you run out of memory, you must run on
+more processors or setup a smaller problem.
+
+
+----------
+
+
+.. _start_7:
+
+.. raw:: html
+
+   <span id="start_7"></span>
+
+2.7 Command-line options
+------------------------------------------------------------------------------------
+
+At run time, SPARTA recognizes several optional command-line switches
+which may be used in any order.  Either the full word or a one-or-two
+letter abbreviation can be used:
+
+* -e or -echo
+* -i or -in
+* -h or -help
+* -k or -kokkos
+* -l or -log
+* -p or -partition
+* -pk or -package
+* -pl or -plog
+* -ps or -pscreen
+* -sc or -screen
+* -sf or -suffix
+* -v or -var
+
+For example, spa\_g++ might be launched as follows:
+
+
+.. parsed-literal::
+
+   mpirun -np 16 spa_g++ -v f tmp.out -l my.log -sc none < in.sphere
+   mpirun -np 16 spa_g++ -var f tmp.out -log my.log -screen none < in.sphere
+
+Here are the details on the options:
+
+
+.. parsed-literal::
+
+   -echo style
+
+Set the style of command echoing.  The style can be *none* or *screen*
+or *log* or *both*\ .  Depending on the style, each command read from
+the input script will be echoed to the screen and/or logfile.  This
+can be useful to figure out which line of your script is causing an
+input error.  The default value is *log*\ .  The echo style can also be
+set by using the :doc:`echo <echo>` command in the input script itself.
+
+
+.. parsed-literal::
+
+   -in file
+
+Specify a file to use as an input script.  This is an optional switch
+when running SPARTA in one-partition mode.  If it is not specified,
+SPARTA reads its input script from stdin - e.g. spa\_g++ < in.run.
+This is a required switch when running SPARTA in multi-partition mode,
+since multiple processors cannot all read from stdin.
+
+
+.. parsed-literal::
+
+   -help
+
+Print a detailed report about this executable and immediately exit.
+The report includes a banner (the SPARTA version, the git commit and
+branch it was built from, the build date, the compiler and C++
+standard, and the target operating system and architecture), the build
+configuration (serial vs. MPI, the KOKKOS accelerator, and PNG, JPEG,
+FFmpeg and gzip support), the list of command-line switches, and the
+list of options (fix, compute, collide, etc.) compiled into this
+executable.
+
+
+.. parsed-literal::
+
+   -kokkos on/off keyword/value ...
+
+Explicitly enable or disable KOKKOS support, as provided by the KOKKOS
+package.  Even if SPARTA is built with this package, as described
+above in `Section 2.3 <#start_3>`_, this switch must be set to enable
+running with the KOKKOS-enabled styles the package provides.  If the
+switch is not set (the default), SPARTA will operate as if the KOKKOS
+package were not installed; i.e. you can run standard SPARTA 
+for testing or benchmarking purposes.
+
+Additional optional keyword/value pairs can be specified which
+determine how Kokkos will use the underlying hardware on your
+platform.  These settings apply to each MPI task you launch via the
+"mpirun" or "mpiexec" command.  You may choose to run one or more MPI
+tasks per physical node.  Note that if you are running on a desktop
+machine, you typically have one physical node.  On a cluster or
+supercomputer there may be dozens or 1000s of physical nodes.
+
+Either the full word or an abbreviation can be used for the keywords.
+Note that the keywords do not use a leading minus sign.  I.e. the
+keyword is "t", not "-t".  Also note that each of the keywords has a
+default setting.  Example of when to use these options and what
+settings to use on different platforms is given in `Section 5.3 <Section_accelerate.html#acc_3>`_.
+
+* d or device
+* g or gpus
+* t or threads
+* n or numa
+
+
+.. parsed-literal::
+
+   device Nd
+
+This option is only relevant if you built SPARTA with a GPU backend
+(e.g. Kokkos\_ENABLE\_CUDA=ON), you
+have more than one GPU per node, and if you are running with only one
+MPI task per node.  The Nd setting is the ID of the GPU on the node to
+run on.  By default Nd = 0.  If you have multiple GPUs per node, they
+have consecutive IDs numbered as 0,1,2,etc.  This setting allows you
+to launch multiple independent jobs on the node, each with a single
+MPI task per node, and assign each job to run on a different GPU.
+
+
+.. parsed-literal::
+
+   gpus Ng Ns
+
+This option is only relevant if you built SPARTA with a GPU backend
+(e.g. Kokkos\_ENABLE\_CUDA=ON), you
+have more than one GPU per node, and you are running with multiple MPI
+tasks per node.  The Ng setting is how many GPUs
+you will use per node.  The Ns setting is optional.  If set, it is the ID of a
+GPU to skip when assigning MPI tasks to GPUs.  This may be useful if
+your desktop system reserves one GPU to drive the screen and the rest
+are intended for computational work like running SPARTA.  By default
+Ng = 1 and Ns is not set.
+
+Depending on which flavor of MPI you are running, SPARTA will look for
+one of these 4 environment variables
+
+
+.. parsed-literal::
+
+   SLURM_LOCALID (various MPI variants compiled with SLURM support)
+   MPT_LRANK (HPE MPI)
+   MV2_COMM_WORLD_LOCAL_RANK (Mvapich)
+   OMPI_COMM_WORLD_LOCAL_RANK (OpenMPI)
+
+which are initialized by the "srun", "mpirun" or "mpiexec" commands.
+The environment variable setting for each MPI rank is used to assign a
+unique GPU ID to the MPI task.
+
+
+.. parsed-literal::
+
+   threads Nt
+
+This option assigns Nt number of threads to each MPI task for
+performing work when Kokkos is executing in OpenMP or pthreads mode.
+The default is Nt = 1, which essentially runs in MPI-only mode.  If
+there are Np MPI tasks per physical node, you generally want Np\*Nt =
+the number of physical cores per node, to use your available hardware
+optimally. If SPARTA is compiled with a GPU backend (e.g.
+Kokkos\_ENABLE\_CUDA=ON),
+this setting has no effect.
+
+
+.. parsed-literal::
+
+   -log file
+
+Specify a log file for SPARTA to write status information to.  In
+one-partition mode, if the switch is not used, SPARTA writes to the
+file log.sparta.  If this switch is used, SPARTA writes to the
+specified file.  In multi-partition mode, if the switch is not used, a
+log.sparta file is created with hi-level status information.  Each
+partition also writes to a log.sparta.N file where N is the partition
+ID.  If the switch is specified in multi-partition mode, the hi-level
+logfile is named "file" and each partition also logs information to a
+file.N.  For both one-partition and multi-partition mode, if the
+specified file is "none", then no log files are created.  Using a
+:doc:`log <log>` command in the input script will override this setting.
+Option -plog will override the name of the partition log files file.N.
+
+
+.. parsed-literal::
+
+   -partition 8x2 4 5 ...
+
+Invoke SPARTA in multi-partition mode.  When SPARTA is run on P
+processors and this switch is not used, SPARTA runs in one partition,
+i.e. all P processors run a single simulation.  If this switch is
+used, the P processors are split into separate partitions and each
+partition runs its own simulation.  The arguments to the switch
+specify the number of processors in each partition.  Arguments of the
+form MxN mean M partitions, each with N processors.  Arguments of the
+form N mean a single partition with N processors.  The sum of
+processors in all partitions must equal P.  Thus the command
+"-partition 8x2 4 5" has 10 partitions and runs on a total of 25
+processors.  Note that with MPI installed on a machine (e.g. your
+desktop), you can run on more (virtual) processors than you have
+physical processors.
+
+To run multiple independent simulatoins from one input script, using
+multiple partitions, see `Section 6.3 <Section_howto.html#howto_3>`_ of
+the manual.  World- and universe-style variables are useful in this
+context.
+
+
+.. parsed-literal::
+
+   -package style args ....
+
+Invoke the :doc:`package <package>` command with style and args.  The
+syntax is the same as if the command appeared at the top of the input
+script.  For example "-package kokkos on gpus 2" or "-pk kokkos g 2" is the same as
+:doc:`package kokkos g 2 <package>` in the input script.  The possible styles
+and args are documented on the :doc:`package <package>` doc page.  This
+switch can be used multiple times.
+
+Along with the "-suffix" command-line switch, this is a convenient
+mechanism for invoking the KOKKOS accelerator package and its options without
+having to edit an input script.
+
+
+.. parsed-literal::
+
+   -plog file
+
+Specify the base name for the partition log files, so partition N
+writes log information to file.N. If file is none, then no partition
+log files are created.  This overrides the filename specified in the
+-log command-line option.  This option is useful when working with
+large numbers of partitions, allowing the partition log files to be
+suppressed (-plog none) or placed in a sub-directory (-plog
+replica\_files/log.sparta) If this option is not used the log file for
+partition N is log.sparta.N or whatever is specified by the -log
+command-line option.
+
+
+.. parsed-literal::
+
+   -pscreen file
+
+Specify the base name for the partition screen file, so partition N
+writes screen information to file.N. If file is none, then no
+partition screen files are created.  This overrides the filename
+specified in the -screen command-line option.  This option is useful
+when working with large numbers of partitions, allowing the partition
+screen files to be suppressed (-pscreen none) or placed in a
+sub-directory (-pscreen replica\_files/screen) If this option is not
+used the screen file for partition N is screen.N or whatever is
+specified by the -screen command-line option.
+
+
+.. parsed-literal::
+
+   -screen file
+
+Specify a file for SPARTA to write its screen information to.  In
+one-partition mode, if the switch is not used, SPARTA writes to the
+screen.  If this switch is used, SPARTA writes to the specified file
+instead and you will see no screen output.  In multi-partition mode,
+if the switch is not used, hi-level status information is written to
+the screen.  Each partition also writes to a screen.N file where N is
+the partition ID.  If the switch is specified in multi-partition mode,
+the hi-level screen dump is named "file" and each partition also
+writes screen information to a file.N.  For both one-partition and
+multi-partition mode, if the specified file is "none", then no screen
+output is performed. Option -pscreen will override the name of the 
+partition screen files file.N.
+
+
+.. parsed-literal::
+
+   -suffix style args
+
+Use variants of various styles if they exist.  The specified style can
+be *kk*\ .  This refers to optional KOKKOS package that SPARTA can be built with, as described
+above in `Section 2.3 <#start_3>`_.
+
+Along with the "-package" command-line switch, this is a convenient
+mechanism for invoking the KOKKOS accelerator package and its options without
+having to edit an input script.
+
+As an example, the KOKKOS package provides a :doc:`compute\_style temp <compute_temp>` variant, with style name temp/kk. A variant style
+can be specified explicitly in your input script, e.g. compute
+temp/kk. If the suffix command is used with the appropriate style,
+you do not need to modify your input script.  The specified suffix
+(kk) is automatically appended whenever your
+input script command creates a new :doc:`fix <fix>`,
+:doc:`compute <compute>`, etc.
+If the variant version does not exist, the standard version is
+created.
+
+For the KOKKOS package, using this command-line switch also invokes
+the default KOKKOS settings, as if the command "package kokkos" were
+used at the top of your input script.  These settings can be changed
+by using the "-package kokkos" command-line switch or the :doc:`package kokkos <package>` command in your script.
+
+The :doc:`suffix <suffix>` command can also be used within an input
+script to set a suffix, or to turn off or back on any suffix setting
+made via the command line.
+
+
+.. parsed-literal::
+
+   -var name value1 value2 ...
+
+Specify a variable that will be defined for substitution purposes when
+the input script is read.  "Name" is the variable name which can be a
+single character (referenced as $x in the input script) or a full
+string (referenced as ${abc}).  An :doc:`index-style variable <variable>` will be created and populated with the
+subsequent values, e.g. a set of filenames.  Using this command-line
+option is equivalent to putting the line "variable name index value1
+value2 ..."  at the beginning of the input script.  Defining an index
+variable as a command-line argument overrides any setting for the same
+index variable in the input script, since index variables cannot be
+re-defined.  See the :doc:`variable <variable>` command for more info on
+defining index and other kinds of variables and `Section 3.2 <Section_commands.html#cmd_2>`_ for more info on using variables in
+input scripts.
+
+IMPORTANT NOTE: Currently, the command-line parser looks for arguments
+that start with "-" to indicate new switches. Thus you cannot specify
+multiple variable values if any of they start with a "-", e.g. a
+negative numeric value. It is OK if the first value1 starts with a
+"-", since it is automatically skipped.
+
+
+----------
+
+
+.. _start_8:
+
+.. raw:: html
+
+   <span id="start_8"></span>
+
+2.8 SPARTA screen output
+------------------------------------------------------------------------------------
+
+As SPARTA reads an input script, it prints information to both the
+screen and a log file about significant actions it takes to setup a
+simulation.  When the simulation is ready to begin, SPARTA performs
+various initializations and prints the amount of memory (in MBytes per
+processor) that the simulation requires.  It also prints details of
+the initial state of the system.  During the run itself, statistical
+information is printed periodically, every few timesteps.  When the
+run concludes, SPARTA prints the final state and a total run time for
+the simulation.  It then appends statistics about the CPU time and
+size of information stored for the simulation.  An example set of
+statistics is shown here:
+
+Loop time of 0.639973 on 4 procs for 1000 steps with 45792 particles
+
+
+.. parsed-literal::
+
+   MPI task timing breakdown:
+   Section \|  min time  \|  avg time  \|  max time  \|%varavg\| %total
+   \---------------------------------------------------------------
+   Move    \| 0.10948    \| 0.26191    \| 0.42049    \|  27.6 \| 40.92
+   Coll    \| 0.013711   \| 0.041659   \| 0.070985   \|  13.5 \|  6.51
+   Sort    \| 0.01733    \| 0.040286   \| 0.063573   \|  10.6 \|  6.29
+   Comm    \| 0.02276    \| 0.023555   \| 0.02493    \|   0.6 \|  3.68
+   Modify  \| 0.00018167 \| 0.024758   \| 0.051345   \|  15.6 \|  3.87
+   Output  \| 0.0002172  \| 0.0007354  \| 0.0012152  \|   0.0 \|  0.11
+   MPI Sync\| 0.070519   \| 0.23166    \| 0.39965    \|  24.7 \| 36.20
+   Other   \|            \| 0.01544    \|            \|       \|  2.41
+
+   Particle moves    = 38096354 (38.1M)
+   Cells touched     = 43236871 (43.2M)
+   Particle comms    = 146623 (0.147M)
+   Boundary collides = 182782 (0.183M)
+   Boundary exits    = 181792 (0.182M)
+   SurfColl checks   = 7670863 (7.67M)
+   SurfColl occurs   = 177740 (0.178M)
+   Surf reactions    = 124169 (0.124M)
+   Collide attempts  = 1232 (1K)
+   Collide occurs    = 553 (0.553K)
+   Gas reactions     = 23 (0.023K)
+   Particles stuck   = 0
+
+   Particle-moves/CPUsec/proc: 1.4882e+07
+   Particle-moves/step: 38096.4
+   Cell-touches/particle/step: 1.13493
+   Particle comm iterations/step: 1.999
+   Particle fraction communicated: 0.00384874
+   Particle fraction colliding with boundary: 0.00479789
+   Particle fraction exiting boundary: 0.0047719
+   Surface-checks/particle/step: 0.201354
+   Surface-collisions/particle/step: 0.00466554
+   Surface-reactions/particle/step: 0.00325934
+   Collision-attempts/particle/step: 1.232
+   Collisions/particle/step: 0.553
+   Gas-reactions/particle/step: 0.023
+
+Gas reaction tallies:
+  style tce #-of-reactions 45
+  reaction O2 + N --> O + O + N: 10
+  reaction O2 + O --> O + O + O: 5
+  reaction N2 + O --> N + N + O: 8
+
+Surface reaction tallies:
+  id 1 style global #-of-reactions 2
+    reaction all: 124025
+    reaction delete: 53525
+    reaction create: 70500
+
+
+.. parsed-literal::
+
+   Particles: 11448 ave 17655 max 5306 min
+   Histogram: 2 0 0 0 0 0 0 0 0 2
+   Cells:     100 ave 100 max 100 min
+   Histogram: 4 0 0 0 0 0 0 0 0 0
+   GhostCell: 21 ave 21 max 21 min
+   Histogram: 4 0 0 0 0 0 0 0 0 0
+   EmptyCell: 21 ave 21 max 21 min
+   Histogram: 4 0 0 0 0 0 0 0 0 0
+   Surfs:     50 ave 50 max 50 min
+   Histogram: 4 0 0 0 0 0 0 0 0 0
+   GhostSurf: 0 ave 0 max 0 min
+   Histogram: 4 0 0 0 0 0 0 0 0 0
+
+The first line gives the total CPU run time for the simulation, in
+seconds.
+
+The next section gives a breakdown of the CPU timing (in seconds) in
+8 categories.  The first four are timings for particles moves, which
+includes interaction with surface elements, then particle collisions,
+then sorting of particles (required to perform collisions), and
+communication of particles between processors.  The Modify section is
+time for operations invoked by fixes and computes.  The Output section
+is for dump command and statistical output.  The MPI Sync section is
+time spent waiting in the global collectives of the run loop: the
+per-timestep reduction in the move and the barrier that closes the
+loop.  On an MPI task that arrives early that wait is idle time, so
+this category is where load-imbalance shows up.  The Other category is
+the loop time minus all of the named categories above; it should be
+near zero, and a large value means some part of the loop is not being
+timed.  In each category the min,ave,max time across processors is
+shown, as well as a variation, and the percentage of total time.
+
+The next section gives some statistics about the run.  These are total
+counts of particle moves, grid cells touched by particles, the number
+of particles communicated between processors, collisions of particles
+with the global boundary and with surface elements (none in this
+problem), as well as collision and reaction statistics.
+
+The next section gives additional statistics, normalized by timestep
+or processor count.
+
+The next 2 sections are optional.  The "Gas reaction tallies" section
+is only output if the :doc:`react <react>` command is used.  For each
+reaction with a non-zero tally, the number of those reactions that
+occurred during the run is printed.  The "Surface reaction tallies"
+section is only output if the :doc:`surf\_react <surf_react>` command was
+used one or more times, to assign reaction models to individual
+surface elements or the box boundaries.  For each of the commands, and
+each of its reactions with a non-zero tally, the number of those
+reactions that occurred during the run is printed.  Note that this is
+effectively a summation over all the surface elements and/or box
+boundaries the :doc:`surf\_react <surf_react>` command was used to assign
+a reaction model to.
+
+The last section is a histogramming across processors of various
+per-processor statistics: particle count, owned grid cells, processor,
+ghost grid cells which are copies of cells owned by other processors,
+and empty cells which are ghost cells without surface information
+(only used to pass particles to neighboring processors).
+
+The ave value is the average across all processors.  The max and min
+values are for any processor.  The 10-bin histogram shows the
+distribution of the value across processors.  The total number of
+histogram counts is equal to the number of processors.
+
+
+.. _sws: https://sparta.github.io
+.. _sd: Manual.html
+.. _sc: Section_commands.html

@@ -1,0 +1,55 @@
+8. Performance & scalability
+============================
+
+The SPARTA distribution includes a bench sub-directory with several
+sample problems.  The Benchmarks page of the `SPARTA WWW Site <sws_>`_
+gives timing data for these problems run on different machines,
+for both strong and weak scaling scenarioes:
+
+* free = free molecular flow in a box
+* collide = collisional molecular flow in a box
+* sphere = flow around a sphere
+
+For each problem there is an input script and sample log file outputs
+on different machines and different numbers of processors.  E.g. a log
+file like log.free.foo.1M.P means the the free molecular problem with
+1 million grid cells ran on P processors of machine "foo".
+
+Each can be run as a serial benchmark (on one processor) or in
+parallel.  In parallel, all the benchmarks can be run as a fixed-size
+problem, meaning the same problem is run on various numbers of
+processors (strong scaling).  They can also be run as scaled-size
+problem, if the problem size is increased with the number of
+processors (weak scaling).
+
+Here is an example of how to run the benchmark problems.  See the
+bench/README file for more details.
+
+1-processor runs:
+
+
+.. parsed-literal::
+
+   spa_g++ -v x 100 -v y 100 -v z 100 < in.free
+   spa_g++ -v x 100 -v y 100 -v z 100 < in.collide
+   spa_g++ -v x 50 -v y 50 -v z 50 < in.sphere
+
+32-processor runs:
+
+
+.. parsed-literal::
+
+   mpirun -np 32 spa_g++ -v x 100 -v y 100 -v z 100 < in.free
+   mpirun -np 32 spa_g++ -v x 100 -v y 100 -v z 100 < in.collide
+   mpirun -np 32 spa_g++ -v x 50 -v y 50 -v z 50 < in.sphere
+
+Note that the benchmark scripts define variables that can be set from
+the command line that determine the size of problem that is run.
+Specifically, the x,y,z variables specify the grid size
+(e.g. 100x100x100) that is used, and variable n specifies the number
+of particles (10 per grid cell in this case).
+
+
+.. _sws: https://sparta.github.io
+.. _sd: Manual.html
+.. _sc: Section_commands.html
