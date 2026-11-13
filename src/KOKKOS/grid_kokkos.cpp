@@ -344,6 +344,46 @@ void GridKokkos::resync_after_host_change()
 
 /* ---------------------------------------------------------------------- */
 
+/* ----------------------------------------------------------------------
+   copy the views in mask to the device if they were modified on the host
+   with no execution space, as sync(Device,mask): DualView::sync_device()
+     fences the whole device before and after each copy
+   with one, as sync_device_async(): each copy is ordered on that instance
+------------------------------------------------------------------------- */
+
+template<class... Exec>
+void GridKokkos::sync_device_views(unsigned int mask, const Exec &... exec)
+{
+  if (sparta->kokkos->auto_sync)
+    modify(Host,mask);
+  if (mask & CELL_MASK) k_cells.sync_device(exec...);
+  if (mask & CINFO_MASK) k_cinfo.sync_device(exec...);
+  if (mask & PCELL_MASK) k_pcells.sync_device(exec...);
+  if (mask & SINFO_MASK) k_sinfo.sync_device(exec...);
+  if (mask & PLEVEL_MASK) k_plevels.sync_device(exec...);
+  if (mask & CUSTOM_MASK) {
+    if (ncustom) {
+      if (ncustom_ivec)
+        for (int i = 0; i < ncustom_ivec; i++)
+          k_eivec.view_host()[i].k_view.sync_device(exec...);
+
+      if (ncustom_iarray)
+        for (int i = 0; i < ncustom_iarray; i++)
+          k_eiarray.view_host()[i].k_view.sync_device(exec...);
+
+      if (ncustom_dvec)
+        for (int i = 0; i < ncustom_dvec; i++)
+          k_edvec.view_host()[i].k_view.sync_device(exec...);
+
+      if (ncustom_darray)
+        for (int i = 0; i < ncustom_darray; i++)
+          k_edarray.view_host()[i].k_view.sync_device(exec...);
+    }
+  }
+}
+
+/* ---------------------------------------------------------------------- */
+
 void GridKokkos::sync(ExecutionSpace space, unsigned int mask)
 {
   if (sparta->kokkos->prewrap) {
@@ -354,32 +394,7 @@ void GridKokkos::sync(ExecutionSpace space, unsigned int mask)
   }
 
   if (space == Device) {
-    if (sparta->kokkos->auto_sync)
-      modify(Host,mask);
-    if (mask & CELL_MASK) k_cells.sync_device();
-    if (mask & CINFO_MASK) k_cinfo.sync_device();
-    if (mask & PCELL_MASK) k_pcells.sync_device();
-    if (mask & SINFO_MASK) k_sinfo.sync_device();
-    if (mask & PLEVEL_MASK) k_plevels.sync_device();
-    if (mask & CUSTOM_MASK) {
-      if (ncustom) {
-        if (ncustom_ivec)
-          for (int i = 0; i < ncustom_ivec; i++)
-            k_eivec.view_host()[i].k_view.sync_device();
-
-        if (ncustom_iarray)
-          for (int i = 0; i < ncustom_iarray; i++)
-            k_eiarray.view_host()[i].k_view.sync_device();
-
-        if (ncustom_dvec)
-          for (int i = 0; i < ncustom_dvec; i++)
-            k_edvec.view_host()[i].k_view.sync_device();
-
-        if (ncustom_darray)
-          for (int i = 0; i < ncustom_darray; i++)
-            k_edarray.view_host()[i].k_view.sync_device();
-      }
-    }
+    sync_device_views(mask);
   } else {
     if (mask & CELL_MASK) k_cells.sync_host();
     if (mask & CINFO_MASK) k_cinfo.sync_host();
@@ -413,29 +428,7 @@ void GridKokkos::sync_device_async(const DeviceType &exec, unsigned int mask)
   if (sparta->kokkos->prewrap)
     error->one(FLERR,"Sync Device before wrap");
 
-  if (sparta->kokkos->auto_sync) modify(Host,mask);
-  if (mask & CELL_MASK) k_cells.sync_device(exec);
-  if (mask & CINFO_MASK) k_cinfo.sync_device(exec);
-  if (mask & PCELL_MASK) k_pcells.sync_device(exec);
-  if (mask & SINFO_MASK) k_sinfo.sync_device(exec);
-  if (mask & PLEVEL_MASK) k_plevels.sync_device(exec);
-  if (mask & CUSTOM_MASK && ncustom) {
-    if (ncustom_ivec)
-      for (int i = 0; i < ncustom_ivec; i++)
-        k_eivec.view_host()[i].k_view.sync_device(exec);
-
-    if (ncustom_iarray)
-      for (int i = 0; i < ncustom_iarray; i++)
-        k_eiarray.view_host()[i].k_view.sync_device(exec);
-
-    if (ncustom_dvec)
-      for (int i = 0; i < ncustom_dvec; i++)
-        k_edvec.view_host()[i].k_view.sync_device(exec);
-
-    if (ncustom_darray)
-      for (int i = 0; i < ncustom_darray; i++)
-        k_edarray.view_host()[i].k_view.sync_device(exec);
-  }
+  sync_device_views(mask,exec);
 }
 
 /* ---------------------------------------------------------------------- */

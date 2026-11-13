@@ -613,17 +613,8 @@ template < int DIM, int SURF, int REACT, int OPT > void UpdateKokkos::move()
   nscheck_one = nscollide_one = 0;
   surf->nreact_one = 0;
 
-  if (!sparta->kokkos->need_atomics || sparta->kokkos->atomic_reduction) {
-    h_ntouch_one() = 0;
-    h_nexit_one() = 0;
-    h_nboundary_one() = 0;
-    h_ncomm_one() = 0;
-    h_nscheck_one() = 0;
-    h_nscollide_one() = 0;
-    h_nreact_one() = 0;
-  }
-
-  h_error_flag() = 0;
+  // the device counters and flags are cleared by zero_host_scalars() before
+  //   every kernel attempt below, whichever kernel variant then runs
 
   // move/migrate iterations
 
@@ -765,15 +756,6 @@ template < int DIM, int SURF, int REACT, int OPT > void UpdateKokkos::move()
     if (niterate == 1 && !continue_loop_flag) {
       pstart = 0;
       pstop = particle->nlocal;
-#if defined SPARTA_KOKKOS_GPU
-      if ( fstyle == NOFIELD && not_updated.extent(0) < (size_t)pstop ) {
-        not_updated = Kokkos::View<int*>("not_updated",(size_t)(pstop*1.05));
-      }
-      if ( fstyle == NOFIELD && !not_updated_cnt.data() ) {
-        not_updated_cnt = Kokkos::View<int>("not_updated_cnt");
-        h_not_updated_cnt = Kokkos::View<int,SPAHostType>("h_not_updated_cnt");
-      }
-#endif
     }
 
     UPDATE_REDUCE &reduce = h_move_reduce();
@@ -857,6 +839,19 @@ template < int DIM, int SURF, int REACT, int OPT > void UpdateKokkos::move()
       //   number of threads, so the host does not wait for the first pass to
       //   size it.  The count comes back with the other move results, after
       //   the fence below, and the heuristic and ntouch are applied there
+
+      // allocated here, not up front, since only this path uses them
+      // grow with headroom; realloc frees the old list first and skips the
+      //   zero fill, as the first pass writes every entry it later reads
+
+      if ((int) not_updated.extent(0) < particle_count)
+        MemKK::realloc_kokkos(not_updated,"update:not_updated",
+                              (size_t) (particle_count*1.05));
+      if (!not_updated_cnt.data()) {
+        not_updated_cnt = decltype(not_updated_cnt)("update:not_updated_cnt");
+        h_not_updated_cnt =
+          decltype(h_not_updated_cnt)("update:not_updated_cnt_mirror");
+      }
 
       Kokkos::deep_copy(move_space,not_updated_cnt,0);
       Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType,

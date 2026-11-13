@@ -32,6 +32,8 @@ class SurfKokkos : public Surf {
   void grow_own(int) override;
   void sync(ExecutionSpace, unsigned int);
   void sync_device_async(const DeviceType &, unsigned int);
+  template<class... Exec>
+  void sync_device_views(unsigned int, const Exec &...);
   void modify(ExecutionSpace, unsigned int);
   bigint memory_usage() override;
 
