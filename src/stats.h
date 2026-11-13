@@ -30,6 +30,7 @@ class Stats : protected Pointers {
   void init();
   void modify_params(int, char **);
   void set_fields(int, char **);
+  unsigned int sync_mask() const;
   void header();
   void compute(int);
   int evaluate_keyword(char *, double *);

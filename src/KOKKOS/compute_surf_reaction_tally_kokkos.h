@@ -48,6 +48,30 @@ class ComputeSurfReactionTallyKokkos : public ComputeSurfReactionTally, public K
   void post_surf_tally();
   void grow_tally_kokkos(int);
 
+  // Execution-space-aware counter operations used by UpdateKokkos to batch
+  // transfers from all tally computes behind a single fence.  Keep the
+  // counter views private so their update protocol remains encapsulated.
+
+  void copy_ntally_to_host_async(const DeviceType &exec)
+  {
+    Kokkos::deep_copy(exec,h_ntally,d_ntally);
+  }
+
+  void grow_after_overflow_from_host()
+  {
+    grow_tally_kokkos(h_ntally());
+  }
+
+  void mark_ntally_from_host()
+  {
+    ntally_mark = h_ntally();
+  }
+
+  void rewind_ntally_async(const DeviceType &exec)
+  {
+    Kokkos::deep_copy(exec,d_ntally,ntally_mark);
+  }
+
   // grow to what the overflowed attempt actually needed; the device counter
   //   kept counting past the end of the buffer, so it is that number
 

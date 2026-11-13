@@ -116,18 +116,12 @@ static int cellcount_target(int need, int nlocal_in, int ngrid_in,
 
 ParticleKokkos::ParticleKokkos(SPARTA *sparta) : Particle(sparta)
 {
-  // NOTE: the weight_rand_pool seed cannot be set here.  Every other Kokkos
-  //   class seeds its pool in the constructor initializer list with
-  //   12345 + comm->me, but those are all styles the input script creates,
-  //   long after SPARTA::create() has finished.  ParticleKokkos is built by
-  //   create() itself, at sparta.cpp:484, three lines BEFORE comm exists
-  //   (:487), and comm is not NULL-initialized -- so reading comm->me there
-  //   dereferences an uninitialized pointer.  Seed on first use instead.
 
+  // ParticleKokkos is built before comm exists, so this pool is seeded on
+  // first use rather than from comm->me in the constructor.
 #ifndef SPARTA_KOKKOS_EXACT
   weight_rand_pool_seeded = 0;
 #endif
-
 
   d_resize = DAT::t_int_scalar("particle:resize");
   h_resize = HAT::t_int_scalar("particle:resize_mirror");
@@ -361,15 +355,13 @@ void ParticleKokkos::sort_kokkos()
 
     if (resize) {
       Kokkos::deep_copy(d_cellcount,0);
-
       // grow with headroom, not to exactly what this step needed
 
       maxcellcount =
         MAX(cellcount_target(resize,nlocal,ngrid,cell_contiguous),
             static_cast<int> (maxcellcount*CELLCOUNT_GROWTH));
-
       d_plist = {};
-      MemKK::realloc_kokkos(grid_kk->d_plist,"particle:plist",ngrid,maxcellcount);
+      grid_kk->d_plist=decltype(grid_kk->d_plist)("particle:plist",ngrid,maxcellcount);
       d_plist = grid_kk->d_plist;
 
       Kokkos::deep_copy(d_resize,0);
@@ -1026,6 +1018,33 @@ void ParticleKokkos::sync(ExecutionSpace space, unsigned int mask)
         for (int i = 0; i < ncustom_darray; i++)
           k_edarray.view_host()[i].k_view.sync_host();
     }
+  }
+}
+
+/* ---------------------------------------------------------------------- */
+
+void ParticleKokkos::sync_device_async(const DeviceType &exec,
+                                       unsigned int mask)
+{
+  if (sparta->kokkos->auto_sync) modify(Host,mask);
+  if (mask & PARTICLE_MASK) k_particles.sync_device(exec);
+  if (mask & SPECIES_MASK) k_species.sync_device(exec);
+  if (mask & CUSTOM_MASK && ncustom) {
+    if (ncustom_ivec)
+      for (int i = 0; i < ncustom_ivec; i++)
+        k_eivec.view_host()[i].k_view.sync_device(exec);
+
+    if (ncustom_iarray)
+      for (int i = 0; i < ncustom_iarray; i++)
+        k_eiarray.view_host()[i].k_view.sync_device(exec);
+
+    if (ncustom_dvec)
+      for (int i = 0; i < ncustom_dvec; i++)
+        k_edvec.view_host()[i].k_view.sync_device(exec);
+
+    if (ncustom_darray)
+      for (int i = 0; i < ncustom_darray; i++)
+        k_edarray.view_host()[i].k_view.sync_device(exec);
   }
 }
 

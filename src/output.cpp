@@ -16,6 +16,7 @@
 #include "stdlib.h"
 #include "string.h"
 #include "output.h"
+#include "accelerator_kokkos.h"
 #include "style_dump.h"
 #include "comm.h"
 #include "input.h"
@@ -31,6 +32,7 @@
 #include "write_restart.h"
 #include "memory.h"
 #include "error.h"
+#include "sparta_masks.h"
 
 using namespace SPARTA_NS;
 
@@ -551,6 +553,7 @@ void Output::add_dump(int narg, char **arg)
   last_dump[ndump] = -1;
   var_dump[ndump] = NULL;
   ndump++;
+  reset_sync_mask_for_output();
 }
 
 /* ----------------------------------------------------------------------
@@ -569,6 +572,7 @@ void Output::modify_dump(int narg, char **arg)
   if (idump == ndump) error->all(FLERR,"Cound not find dump_modify ID");
 
   dump[idump]->modify_params(narg-1,&arg[1]);
+  reset_sync_mask_for_output();
 }
 
 /* ----------------------------------------------------------------------
@@ -598,6 +602,22 @@ void Output::delete_dump(char *id)
     ivar_dump[i-1] = ivar_dump[i];
   }
   ndump--;
+  reset_sync_mask_for_output();
+}
+
+/* ----------------------------------------------------------------------
+   Kokkos particle data required by output is determined as input commands
+   create, modify, and remove outputs.  This lets stats-only output avoid a
+   host copy while keeping particle dumps correct.
+------------------------------------------------------------------------- */
+
+void Output::reset_sync_mask_for_output()
+{
+  if (sparta->kokkos == NULL || !sparta->kokkos->kokkos_exists) return;
+
+  unsigned int mask = restart_flag ? ALL_MASK : stats->sync_mask();
+  for (int i = 0; i < ndump; i++) mask |= dump[i]->sync_mask();
+  sparta->kokkos->sync_mask_for_output = mask;
 }
 
 /* ----------------------------------------------------------------------
@@ -627,6 +647,7 @@ void Output::create_stats(int narg, char **arg)
 {
   if (narg < 1) error->all(FLERR,"Illegal stats_style command");
   stats->set_fields(narg,arg);
+  reset_sync_mask_for_output();
 }
 
 /* ----------------------------------------------------------------------
@@ -659,6 +680,8 @@ void Output::create_restart(int narg, char **arg)
     delete [] var_restart_single;
     delete [] var_restart_double;
     var_restart_single = var_restart_double = NULL;
+
+    reset_sync_mask_for_output();
 
     return;
   }
@@ -725,6 +748,7 @@ void Output::create_restart(int narg, char **arg)
   restart = new WriteRestart(sparta);
   int iarg = nfile+1;
   restart->multiproc_options(multiproc,narg-iarg,&arg[iarg]);
+  reset_sync_mask_for_output();
 }
 
 /* ----------------------------------------------------------------------
