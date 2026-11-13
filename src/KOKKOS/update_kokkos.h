@@ -121,7 +121,7 @@ class UpdateKokkos : public Update {
   template<int DIM, int SURF, int REACT, int OPT, int ATOMIC_REDUCTION>
   KOKKOS_INLINE_FUNCTION
   void operator()(TagUpdateMoveIndirect<DIM,SURF,REACT,OPT,ATOMIC_REDUCTION>,
-        const typename Kokkos::TeamPolicy<DeviceType, TagUpdateMove<DIM,SURF,REACT,OPT,ATOMIC_REDUCTION>>::member_type &team, UPDATE_REDUCE&) const;
+                  const int&, UPDATE_REDUCE&) const;
 
   template<int DIM, int SURF, int REACT, int OPT, int ATOMIC_REDUCTION>
   KOKKOS_INLINE_FUNCTION
@@ -137,6 +137,7 @@ class UpdateKokkos : public Update {
   Kokkos::View<int*> not_updated;
   int use_two_pass_move;
   bigint two_pass_move_recheck;
+  int indirect_stride;              // threads in the second-pass kernel
 
   double dt;
   int field_active[3];
@@ -168,8 +169,7 @@ class UpdateKokkos : public Update {
   // retake hash_kk and d_halo_index from the grid, see its definition
 
   void grid_index_refresh();
-  DeviceType &move_execution_space();
-  DeviceType *move_space_ptr;
+  static DeviceType move_execution_space();
 
   t_cell_1d d_cells;
   t_sinfo_1d d_sinfo;

@@ -76,7 +76,8 @@ enum{BCSTD,BCWRAP,BCMIRROR,BCEXIT};             // Update::bcopt values
 #define VAL_1(X) X
 #define VAL_2(X) VAL_1(X), VAL_1(X)
 
-#define MOVE_TWO_PASS_RECHECK 100
+#define MOVE_TWO_PASS_RECHECK 100   // steps before a disabled first pass is retried
+#define MOVE_TWO_PASS_KEEP 0.90     // fraction it must complete to stay enabled
 
 /* ----------------------------------------------------------------------
    blit one active tally compute into its per-type device buffer
@@ -121,16 +122,19 @@ namespace {
 
 /* ---------------------------------------------------------------------- */
 
-DeviceType &UpdateKokkos::move_execution_space()
+DeviceType UpdateKokkos::move_execution_space()
 {
-  // held by pointer so that device functor copies of UpdateKokkos carry only
-  //   a raw pointer, not the instance's host-side reference count.  Owned by
-  //   this object, not a function-local static: an execution space instance
-  //   must be released before Kokkos::finalize(), and a static would outlive
-  //   it and tear down the default instance during static destruction
+  // a default-constructed instance is a handle to the default execution space
+  //   instance (the default CUDA/HIP stream), not a separate stream.  That is
+  //   required: sort, collide and comm launch on the default instance too, and
+  //   nothing fences between them and the move.  What passing it explicitly
+  //   buys is that deep_copy() and DualView::sync_device() then order the
+  //   copy on that instance instead of fencing the whole device before and
+  //   after it.  Returned by value and held in locals only: an instance must
+  //   not outlive Kokkos::finalize(), and keeping it out of UpdateKokkos keeps
+  //   it out of the device functor copies
 
-  if (!move_space_ptr) move_space_ptr = new DeviceType();
-  return *move_space_ptr;
+  return DeviceType();
 }
 
 /* ---------------------------------------------------------------------- */
@@ -161,7 +165,7 @@ UpdateKokkos::UpdateKokkos(SPARTA *sparta) : Update(sparta),
   nsc_index_cached = -1;
   use_two_pass_move = 1;
   two_pass_move_recheck = 0;
-  move_space_ptr = nullptr;
+  indirect_stride = 0;
 
   // the Kokkos views of Particle/Grid/Surf are populated from the host data
   //   once, by setup() when prewrap is set, which then clears prewrap
@@ -235,9 +239,6 @@ UpdateKokkos::~UpdateKokkos()
 
   memoryKK->destroy_kokkos(k_mlist,mlist);
   mlist = NULL;
-
-  delete move_space_ptr;
-  move_space_ptr = nullptr;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -369,6 +370,13 @@ void UpdateKokkos::init()
 
 void UpdateKokkos::setup()
 {
+  // a new run can change what the two-pass heuristic measured (timestep,
+  //   particles, grid), and reset_timestep can move ntimestep below the
+  //   recheck step, so start every run with the first pass enabled
+
+  use_two_pass_move = 1;
+  two_pass_move_recheck = 0;
+
   ParticleKokkos* particle_kk = (ParticleKokkos*) particle;
   GridKokkos* grid_kk = (GridKokkos*) grid;
   SurfKokkos* surf_kk = (SurfKokkos*) surf;
@@ -574,7 +582,7 @@ void UpdateKokkos::run(int nsteps)
 
 template < int DIM, int SURF, int REACT, int OPT > void UpdateKokkos::move()
 {
-  DeviceType &move_space = move_execution_space();
+  DeviceType move_space = move_execution_space();
   int pstart,pstop,entryexit,any_entryexit;
   int continue_loop_flag = 0;
 
@@ -806,7 +814,7 @@ template < int DIM, int SURF, int REACT, int OPT > void UpdateKokkos::move()
       h_retry() = 0;
       h_nlocal() = particle->nlocal;
       if (continue_loop_flag) h_nmigrate() = nmigrate;
-      bigint ntouch_first_pass = 0;
+      int two_pass_count = 0;   // particles given to the first pass
 
       Kokkos::deep_copy(move_space,d_scalars,h_scalars);
       Kokkos::deep_copy(move_space,d_scalars_big,h_scalars_big);
@@ -837,44 +845,28 @@ template < int DIM, int SURF, int REACT, int OPT > void UpdateKokkos::move()
     const int particle_count = pstop - pstart;
     // the first pass is a straight-line move, so it cannot be used for
     //   axisymmetry (DIM == 1), whose radial coordinate needs axi_remap()
-    // the recheck also fires if the timestep was reset below the step that
-    //   disabled the first pass, e.g. by reset_timestep between runs
 
     const int can_recheck_two_pass =
       DIM != 1 && fstyle == NOFIELD && niterate == 1 && !continue_loop_flag &&
-      (use_two_pass_move || update->ntimestep >= two_pass_move_recheck ||
-       update->ntimestep < two_pass_move_recheck - MOVE_TWO_PASS_RECHECK);
+      (use_two_pass_move || update->ntimestep >= two_pass_move_recheck);
     if (can_recheck_two_pass && particle_count >= concurrency) {
-      // on the first iteration, split the move on GPU: fast path for trivial
-      // particles, indirect team-based path for complex ones
+      // on the first iteration, split the move on GPU: a straight-line pass
+      //   completes particles that stay in a cell with no surfs, and lists the
+      //   rest in not_updated for the full move
+      // the second kernel loops over the device-side count with a fixed
+      //   number of threads, so the host does not wait for the first pass to
+      //   size it.  The count comes back with the other move results, after
+      //   the fence below, and the heuristic and ntouch are applied there
+
       Kokkos::deep_copy(move_space,not_updated_cnt,0);
       Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType,
         TagUpdateMoveFirstPass<DIM> >(move_space,pstart,pstop),*this);
+      indirect_stride = concurrency;
+      Kokkos::parallel_reduce(Kokkos::RangePolicy<DeviceType,
+        TagUpdateMoveIndirect<DIM,SURF,REACT,OPT,-1> >(move_space,0,concurrency),
+        *this,d_move_reduce);
       Kokkos::deep_copy(move_space,h_not_updated_cnt,not_updated_cnt);
-      move_space.fence("UpdateKokkos::move: read two-pass count");
-      const double eliminated_fraction =
-        static_cast<double>(particle_count - h_not_updated_cnt()) / particle_count;
-      if (eliminated_fraction < 0.90) {
-        use_two_pass_move = 0;
-        two_pass_move_recheck = update->ntimestep + MOVE_TWO_PASS_RECHECK;
-      } else {
-        use_two_pass_move = 1;
-      }
-
-      // moveOne() counts every PKEEP particle it moves in ntouch_one on the
-      //   standard path, so count the ones the first pass completed as well
-
-      if (!OPT) ntouch_first_pass = particle_count - h_not_updated_cnt();
-
-      if (h_not_updated_cnt()) {
-        const int team_size = 128;
-        const int num_teams =
-          (std::min<int>(concurrency,h_not_updated_cnt())-1)/team_size+1;
-        auto policy = Kokkos::TeamPolicy<DeviceType,
-          TagUpdateMoveIndirect<DIM,SURF,REACT,OPT,-1>>
-          (move_space,num_teams,team_size);
-        Kokkos::parallel_reduce(policy,*this,d_move_reduce);
-      }
+      two_pass_count = particle_count;
     } else {
       if (can_recheck_two_pass) {
         use_two_pass_move = 0;
@@ -914,7 +906,21 @@ template < int DIM, int SURF, int REACT, int OPT > void UpdateKokkos::move()
       Kokkos::deep_copy(move_space,h_scalars_big,d_scalars_big);
       Kokkos::deep_copy(move_space,h_move_reduce,d_move_reduce);
       move_space.fence("UpdateKokkos::move: read move results");
-      reduce.ntouch_one += ntouch_first_pass;
+
+      // two-pass bookkeeping, now that the first-pass count is on the host
+      // moveOne() counts every PKEEP particle it moves in ntouch_one on the
+      //   standard path, so count the ones the first pass completed as well
+      // keep the first pass while it completes at least MOVE_TWO_PASS_KEEP of
+      //   the particles, else retry it after MOVE_TWO_PASS_RECHECK steps
+
+      if (two_pass_count > 0) {
+        const int ncompleted = two_pass_count - h_not_updated_cnt();
+        if (!OPT) reduce.ntouch_one += ncompleted;
+        if (ncompleted < MOVE_TWO_PASS_KEEP*two_pass_count) {
+          use_two_pass_move = 0;
+          two_pass_move_recheck = update->ntimestep + MOVE_TWO_PASS_RECHECK;
+        } else use_two_pass_move = 1;
+      }
 
       // a per-event surf tally compute ran out of room.  the row count is
       //   only knowable by running the move, so grow every such compute to
@@ -1314,11 +1320,10 @@ void UpdateKokkos::operator()(TagUpdateMove<DIM,SURF,REACT,OPT,ATOMIC_REDUCTION>
 template<int DIM, int SURF, int REACT, int OPT, int ATOMIC_REDUCTION>
 KOKKOS_INLINE_FUNCTION
 void UpdateKokkos::operator()(TagUpdateMoveIndirect<DIM,SURF,REACT,OPT,ATOMIC_REDUCTION>,
-     const typename Kokkos::TeamPolicy<DeviceType, TagUpdateMove<DIM,SURF,REACT,OPT,ATOMIC_REDUCTION>>::member_type &team,
-     UPDATE_REDUCE &reduce) const {
-  int i = team.team_rank() + team.team_size()*team.league_rank();
-  for (; i<not_updated_cnt(); i+= team.league_size()*team.team_size())
-    moveOne<DIM,SURF,REACT,OPT,ATOMIC_REDUCTION>(not_updated(i),reduce);
+     const int &i, UPDATE_REDUCE &reduce) const {
+  const int n = not_updated_cnt();
+  for (int j = i; j < n; j += indirect_stride)
+    moveOne<DIM,SURF,REACT,OPT,ATOMIC_REDUCTION>(not_updated(j),reduce);
 }
 
 /*-----------------------------------------------------------------------------*/
@@ -2571,7 +2576,7 @@ int UpdateKokkos::split2d(int icell, double *x) const
 
 void UpdateKokkos::tally_set(bigint ntimestep)
 {
-  DeviceType &move_space = move_execution_space();
+  DeviceType move_space = move_execution_space();
   Update::tally_set(ntimestep);
 
   int i;
@@ -2653,7 +2658,7 @@ void UpdateKokkos::tally_set(bigint ntimestep)
 
 void UpdateKokkos::setup_surf_tally_copies()
 {
-  DeviceType &move_space = move_execution_space();
+  DeviceType move_space = move_execution_space();
   // partition the active surf tally computes by type, one runtime-sized
   //   device buffer each; all of them tally on-device via surf_tally_kk(),
   //   invoked from the move kernel's surface collision loop
@@ -2775,7 +2780,7 @@ void UpdateKokkos::setup_surf_tally_copies()
 
 void UpdateKokkos::backup()
 {
-  DeviceType &move_space = move_execution_space();
+  DeviceType move_space = move_execution_space();
   ParticleKokkos* particle_kk = (ParticleKokkos*) particle;
   d_particles = particle_kk->k_particles.view_device();
 
@@ -2800,7 +2805,7 @@ void UpdateKokkos::backup()
 
 void UpdateKokkos::restore()
 {
-  DeviceType &move_space = move_execution_space();
+  DeviceType move_space = move_execution_space();
   ParticleKokkos* particle_kk = (ParticleKokkos*) particle;
   Kokkos::deep_copy(move_space,
     particle_kk->k_particles.view_device(),d_particles_backup);
@@ -2919,7 +2924,7 @@ size_t UpdateKokkos::sc_sizeof(int tag)
 
 void UpdateKokkos::setup_surf_collide_models()
 {
-  DeviceType &move_space = move_execution_space();
+  DeviceType move_space = move_execution_space();
   if (surf->nsc == 0) {
     for (int t = 0; t < SC_NSTYLE; t++) nsc_style[t] = 0;
     nsc_index_cached = -1;
@@ -2983,7 +2988,7 @@ void UpdateKokkos::setup_surf_collide_models()
 
 void UpdateKokkos::upload_surf_collide_models()
 {
-  DeviceType &move_space = move_execution_space();
+  DeviceType move_space = move_execution_space();
   if (surf->nsc == 0) return;
 
   int slot[SC_NSTYLE];
@@ -3012,7 +3017,7 @@ void UpdateKokkos::upload_surf_collide_models()
 
 void UpdateKokkos::grow_tally_computes()
 {
-  DeviceType &move_space = move_execution_space();
+  DeviceType move_space = move_execution_space();
   int ncoll = 0, nreact = 0;
 
   // Queue every counter read first, then wait once before using the values to
@@ -3073,7 +3078,7 @@ void UpdateKokkos::grow_tally_computes()
 
 void UpdateKokkos::rewind_tally_computes(int mark)
 {
-  DeviceType &move_space = move_execution_space();
+  DeviceType move_space = move_execution_space();
 
   for (int m = 0; m < nsurf_tally; m++) {
     if (ComputeSurfCollisionTallyKokkos* c =
