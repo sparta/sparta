@@ -82,19 +82,44 @@ class Run:
     def log(self):
         return os.path.join(self.workdir, "log.sparta")
 
+    def inputs(self):
+        """the files the deck reads: every word of a command line (after
+        substituting the run's variables) that names a file, as a path or
+        relative to the step directory (whose files are copied into the
+        run directory); e.g. the data files ${DATA}/air.*"""
+        text = open(os.path.join(self.stepdir, self.deck)).read()
+        for k, v in self.variables.items():
+            text = text.replace("${%s}" % k, str(v))
+        found = set()
+        for line in text.split("\n"):
+            for w in line.split("#")[0].split():
+                for p in (w, os.path.join(self.stepdir, w)):
+                    if os.path.isfile(p):
+                        found.add(os.path.realpath(p))
+                        break
+        found.update(os.path.realpath(os.path.join(self.stepdir, f))
+                     for f in self.files)
+        return sorted(found)
+
     def record(self):
-        """what defines the run: deck (name and content), variables,
-        executable kind"""
+        """what defines the run: deck (name and content), the content of
+        the files it reads, variables, executable kind"""
         import hashlib
-        with open(os.path.join(self.stepdir, self.deck), "rb") as fh:
-            sha = hashlib.sha1(fh.read()).hexdigest()
-        return {"deck": self.deck, "deck_sha1": sha, "kind": self.kind,
+
+        def sha1(path):
+            with open(path, "rb") as fh:
+                return hashlib.sha1(fh.read()).hexdigest()
+        return {"deck": self.deck,
+                "deck_sha1": sha1(os.path.join(self.stepdir, self.deck)),
+                "inputs_sha1": {os.path.basename(p): sha1(p)
+                                for p in self.inputs()},
+                "kind": self.kind,
                 "variables": {k: str(v) for k, v in self.variables.items()}}
 
     def done(self):
         """the log finished, and run.json shows the run was made with the
-        current deck (name and content), variables and executable kind: a
-        run whose definition changed is run again"""
+        current deck (name and content), input files, variables and
+        executable kind: a run whose definition changed is run again"""
         rec = os.path.join(self.workdir, "run.json")
         if not (os.path.exists(self.log) and os.path.exists(rec)):
             return False

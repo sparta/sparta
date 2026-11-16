@@ -17,21 +17,38 @@
 #           is approximate
 #   dof   = unused (0)
 #
-# Level data: atoms (N, O, N+, O+) from the NIST Atomic Spectra Database /
-# NIST Handbook of Basic Atomic Spectroscopic Data (Moore); molecules from
-# Huber & Herzberg, "Constants of Diatomic Molecules" (1979), the source
-# reproduced by the NIST Chemistry WebBook, cross-checked against Park (1990)
-# and Gnoffo et al., NASA TP-2867 (1989).  E[K] = E[cm^-1] * 1.4387769.
+# Level data: atoms (N, O, N+, O+) from the NIST Atomic Spectra Database;
+# molecules from Huber & Herzberg, "Constants of Diatomic Molecules" (1979),
+# as reproduced by the NIST Chemistry WebBook (term energies T_e).
+# E[K] = E[cm^-1] * 1.4387769.  Checked against both sources 2026-11.
 #
-# All bound states below the dissociation limit (molecules) or ionization
-# limit (atoms) are included, with dense high-lying manifolds GROUPED:
-#   degeneracy = sum over the group's states
+# Dense manifolds are GROUPED:
+#   degeneracy = sum of 2J+1 (atoms) or of the state degeneracies
+#                (molecules) over the group's states
 #   energy     = the LOWEST state energy of the group (excitation is most
-#                sensitive to the threshold, so grouping is conservative;
-#                the grouped partition functions match the full NIST level
-#                sets to ~1% up to 30000 K)
-# Bound states slightly above a molecular dissociation limit that correlate
-# to excited-atom products (e.g. N2 C3Pi_u, O2 B3Sigma_u-) are retained.
+#                sensitive to the threshold, so grouping is conservative)
+# The ground-term fine structure of O, N+, NO and O2+ is lumped at 0 K.
+# This overstates the electronic partition function at low temperature:
+# by 9-14% at 1000 K, 1.7-2.8% at 5000 K and 0.9-1.4% at 10000 K (O 11%,
+# 2.2%, 1.1%).
+#
+# Molecules: every state with a definite T_e below the dissociation limit,
+# and the bound states slightly above it that correlate to excited-atom
+# products (N2 C3Pi_u, O2 B3Sigma_u-, NO D2Sigma+).  States whose T_e
+# Huber & Herzberg give only as uncertain (in parentheses) are left out -
+# N2 A'5Sigma_g+, G3Delta_g, C''5Pi_u, E3Sigma_g+; N2+ a4Sigma_u+; O2+
+# b'4Pi_g, C2Phi_u - except the NO quartets a4Pi and b4Sigma- and O2
+# A'3Delta_u (in the Herzberg group).  Including them would raise the
+# electronic partition function at 20000 K by 14% (N2+), 7% (O2+) and
+# 3% (N2).
+#
+# Atoms: the levels of the ground and low configurations, and the excited
+# configurations up to 4s and 3d on the lowest parent term (N, O) or up to
+# 2p3s and the 2s2p^n terms (N+, O+); the higher Rydberg levels are left
+# out.  The N and O partition functions then agree with those of the CEA
+# database (Gurvich level sets) within 0.5% up to 20000 K, apart from the
+# O fine structure; all levels the ASD lists below the ionization limit
+# would raise them by about 5% at 20000 K and 40% at 30000 K.
 #
 # The electron (e) carries no internal electronic ladder and is deliberately
 # absent: its spin degeneracy (g = 2) enters the Saha equation for
@@ -41,24 +58,25 @@
 # N2:  X1Sg+ | A3Su+ | B3Pg+W3Du | B'3Su-+a'1Su-+a1Pg+w1Du | C3Pu
 # O2:  X3Sg- | a1Dg | b1Sg+ | Herzberg c1Su-+A'3Du+A3Su+ | B3Su-
 # NO:  X2Pi (both spin-orbit components, g=4) | a4Pi | A2S++B2Pi | b4S- | C2Pi+D2S+
-# N2+: X2Sg+ | A2Pu | B2Su+ | D2Pg | C2Su+   (no grouping needed)
-# O2+: X2Pg | a4Pu | A2Pu | b4Sg-            (no grouping needed)
-# NO+: X1S+ | a3S+ | b3Pi+W3D | b'3S-+A'1S- | A1Pi
+# N2+: X2Sg+ | A2Pu | B2Su+ | D2Pg | C2Su+
+# O2+: X2Pg (both spin-orbit components, g=4) | a4Pu | A2Pu | b4Sg-
+# NO+: X1S+ | a3S+ | b3Pi+w3D | b'3S-+A'1S+ | W1D | A1Pi
 
 N2  5   0.0 0.01 1 1 0   72232.0 0.01 3 3 0   85778.0 0.01 12 3 0   95350.0 0.01 8 3 0   128248.0 0.01 6 3 0
 O2  5   0.0 0.01 3 3 0   11392.0 0.01 2 1 0   18985.0 0.01 1 1 0   47562.0 0.01 10 1 0   71642.0 0.01 3 3 0
-NO  5   0.0 0.01 4 2 0   55307.0 0.01 8 4 0   63257.0 0.01 6 2 0   68989.0 0.01 4 4 0   74998.0 0.01 6 2 0
-N2+ 5   0.0 0.01 2 2 0   13190.0 0.01 4 2 0   36633.0 0.01 2 2 0   75993.0 0.01 4 2 0   92958.0 0.01 2 2 0
-O2+ 4   0.0 0.01 4 2 0   47428.0 0.01 8 4 0   58514.0 0.01 4 2 0   70140.0 0.01 4 4 0
-NO+ 5   0.0 0.01 1 1 0   75090.0 0.01 3 3 0   85233.0 0.01 12 3 0   92729.0 0.01 4 3 0   105709.0 0.01 2 1 0
+NO  5   0.0 0.01 4 2 0   55307.0 0.01 8 4 0   63257.0 0.01 6 2 0   70040.0 0.01 4 4 0   74998.0 0.01 6 2 0
+N2+ 5   0.0 0.01 2 2 0   13190.0 0.01 4 2 0   36633.0 0.01 2 2 0   75274.0 0.01 4 2 0   92958.0 0.01 2 2 0
+O2+ 4   0.0 0.01 4 2 0   47428.0 0.01 8 4 0   58514.0 0.01 4 2 0   71294.0 0.01 4 4 0
+NO+ 6   0.0 0.01 1 1 0   75090.0 0.01 3 3 0   85233.0 0.01 12 3 0   97434.0 0.01 4 3 0   102801.0 0.01 2 1 0   105709.0 0.01 2 1 0
 
 # Atoms -------------------------------------------------------------------
-# N:  4So | 2Do | 2Po | 3s4P+3s2P+2s2p4-4P | 3p manifold+(1D)3s2D | 4s+3d+Rydberg
-# O:  3P (fine structure grouped, g=9) | 1D | 1S | 3s5So | 3s3So | 3p5P+3p3P | 4s+3d+Rydberg
-# N+: 3P (grouped, g=9) | 1D | 1S | 5So | 3Do | 3Po+3So | 1Do+1Po+2p3s+Rydberg
-# O+: 4So | 2Do | 2Po | 2s2p4-4P | 2s2p4-2D | 3s+2s2p4-2S/2P+Rydberg
+# N:  4So | 2Do | 2Po | 3s4P+3s2P+2s2p4-4P | 3p manifold+(1D)3s2D | (3P)4s+(3P)3d
+# O:  3P (fine structure grouped, g=9) | 1D | 1S | 3s5So | 3s3So | 3p5P+3p3P | (4So)4s+(4So)3d
+# N+: 3P (fine structure grouped, g=9) | 1D | 1S | 2s2p3-5So | 2s2p3-3Do | 2s2p3-3Po |
+#     2s2p3-1Do+3So+1Po + 2p3s-3Po+1Po
+# O+: 4So | 2Do | 2Po | 2s2p4-4P | 2s2p4-2D | (3P)3s-4P+2P + 2s2p4-2S+2P
 
-N   6   0.0 0.01 4 4 0   27660.0 0.01 10 2 0   41493.0 0.01 6 2 0   119827.0 0.01 30 4 0   134643.0 0.01 64 2 0   149090.0 0.01 52 4 0
+N   6   0.0 0.01 4 4 0   27660.0 0.01 10 2 0   41493.0 0.01 6 2 0   119827.0 0.01 30 4 0   134643.0 0.01 64 2 0   149090.0 0.01 108 4 0
 O   7   0.0 0.01 9 3 0   22830.0 0.01 5 1 0   48620.0 0.01 1 1 0   106136.0 0.01 5 5 0   110491.0 0.01 3 3 0   124635.0 0.01 24 5 0   137370.0 0.01 48 5 0
-N+  7   0.0 0.01 9 3 0   22037.0 0.01 5 1 0   47032.0 0.01 1 1 0   67313.0 0.01 5 5 0   132708.0 0.01 15 3 0   157138.0 0.01 12 3 0   207454.0 0.01 20 1 0
+N+  7   0.0 0.01 9 3 0   22037.0 0.01 5 1 0   47032.0 0.01 1 1 0   67313.0 0.01 5 5 0   132708.0 0.01 15 3 0   157138.0 0.01 9 3 0   207454.0 0.01 23 1 0
 O+  6   0.0 0.01 4 4 0   38574.0 0.01 10 2 0   58224.0 0.01 6 2 0   172419.0 0.01 12 4 0   238820.0 0.01 10 2 0   266512.0 0.01 26 4 0
