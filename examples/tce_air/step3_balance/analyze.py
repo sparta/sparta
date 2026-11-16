@@ -28,8 +28,6 @@ sys.modules.pop("runs", None)  # this step's runs.py, not another step's
 from runs import runs, STEP, ZELD_T, REC, NLOW, NHIGH  # noqa: E402
 
 V, DT = 1.0e-12, 1.0e-9
-MECH_X = {"N2": .15, "O2": .15, "NO": .15, "N": .15, "O": .15, "N2+": .045,
-          "O2+": .045, "NO+": .045, "N+": .045, "O+": .045, "e": .025}
 
 
 def sums(rl, prefix):
@@ -54,6 +52,28 @@ def mean_T(sel):
         i = head.index("c_temp")
         vals.append(np.mean([row[i] for row in rows[1:]]))
     return float(np.mean(vals))
+
+
+RES_SPC = ("N2", "O", "NO", "N")
+MECH_SPC = ("N2", "O2", "NO", "N", "O", "N2+", "O2+", "NO+", "N+", "O+", "e")
+
+
+def composition(run, names):
+    """mole fractions of the sample: the species counts of the first stats
+    row (create_particles draws each particle's species at random, so they
+    differ from the nominal fractions by about 1/sqrt(N); the reservoirs
+    are frozen, so the composition does not change during the run)"""
+    head, rows = pkg.stats(run.log)
+    i = head.index("c_spc[1]")
+    c = rows[0][i:i + len(names)]
+    return dict(zip(names, [v / sum(c) for v in c]))
+
+
+def run_T(run):
+    """time-averaged translational temperature of one run"""
+    head, rows = pkg.stats(run.log)
+    i = head.index("c_temp")
+    return float(np.mean([row[i] for row in rows[1:]]))
 
 
 def ratio_err(F, B, per_seed):
@@ -100,15 +120,24 @@ def analyze(size="quick"):
             continue
         Tn, T = T, mean_T(sel)
         F, B = tot.get(fwd["label"], 0), tot.get("NO + N --> N2 + O", 0)
-        per = [pkg.tallies(r.log).get(fwd["label"], 0) /
-               max(pkg.tallies(r.log).get("NO + N --> N2 + O", 0), 1)
-               for r in sel]
         keq = D.keq(fwd, T)
-        r, e = ratio_err(F, B, per)
         NP, NST = sel[0].variables["NP"], sel[0].variables["NSTEP"]
         fnum = NLOW * V / NP
-        n = 0.25 * NLOW
-        kb = B * fnum / (n * n * V * NST * DT * len(sel))
+        # each seed's sample: f/b = K_eq x_N2 x_O/(x_NO x_N), and the
+        # reverse rate is its tally over n_NO n_N V t
+        Bc, kden, per = 0.0, 0.0, []
+        for run in sel:
+            tl = pkg.tallies(run.log)
+            f_s = tl.get(fwd["label"], 0)
+            b_s = tl.get("NO + N --> N2 + O", 0)
+            x = composition(run, RES_SPC)
+            c = x["N2"] * x["O"] / (x["NO"] * x["N"])
+            Bc += b_s * c
+            per.append(f_s / max(b_s * c, 1))
+            kden += (x["NO"] * NLOW) * (x["N"] * NLOW) * V * NST * DT / fnum
+        r, e = ratio_err(F, B, per)
+        r, e = F / Bc, e * (F / Bc) / r
+        kb = B / kden
         kb_e = kb / math.sqrt(B)
         capf = XR.mean_p(T) / XR.mean_p(T, cap=False)
         zel[Tn] = (r / keq, e / keq, kb, kb_e, capf)
@@ -117,9 +146,9 @@ def analyze(size="quick"):
         num["zeld_kb_%d" % Tn] = [kb, 2 * kb_e, kd, kd * capf, T]
         rep.check(abs(r / keq * capf - 1) <= 3 * e / keq + 0.005,
                   "Zeldovich T=%5.0f K: (f/b)/K_eq = %.3f +/- %.3f (%d/%d "
-                  "tallies), expected %.4f (reverse capped to %.4f of "
-                  "k_f/K_eq)" % (T, r / keq, 2 * e / keq, F, B, 1 / capf,
-                                 capf))
+                  "tallies, realized composition), expected %.4f (reverse "
+                  "capped to %.4f of k_f/K_eq)" % (T, r / keq, 2 * e / keq,
+                                                   F, B, 1 / capf, capf))
         rep.check(abs(kb / (kd * capf) - 1) <= 3 * kb_e / kd + 0.005,
                   "Zeldovich T=%5.0f K: reverse rate %.4e +/- %.1e, derived "
                   "k_f/K_eq x capped fraction %.4e" % (T, kb, 2 * kb_e,
@@ -156,6 +185,10 @@ def analyze(size="quick"):
             continue
         per = [pkg.tallies(r.log).get(fl, 0) /
                max(pkg.tallies(r.log).get(bl, 0), 1) for r in sel]
+        # nominal composition: these long runs (in.res) do not write the
+        # species counts.  The sampled x_N^2/x_N2 differs from the nominal
+        # value by about 2% per seed, below the counting error of the
+        # ratio (3-5%); the seed spread in ratio_err includes it.
         r, e = ratio_err(F, B, per)
         nN, nN2 = 0.25 * NHIGH, 0.25 * NHIGH
         meas = r * nN * nN / nN2
@@ -177,7 +210,7 @@ def analyze(size="quick"):
         tot, sel = sums(rl, "mech_T%d" % T)
         if not tot:
             continue
-        mech[T] = _mechanism(D, tot, T, sel[0].variables["NRHO"])
+        mech[T] = _mechanism(D, sel, sel[0].variables["NRHO"])
         lines = ["%-28s %7s %8s %8s %7s %6s" % ("pair (forward)", "type",
                                                  "f", "b", "ratio", "2sd")]
         nin = nall = 0
@@ -194,9 +227,10 @@ def analyze(size="quick"):
         open(os.path.join(out, "mechanism_%dK.txt" % T), "w").write(
             "\n".join(lines) + "\n")
         num["mech_%d_within" % T] = [nin, nall]
-        rep.info("mechanism at %5d K: %d of %d dissociation/exchange pairs "
-                 "within 3 sd of detailed balance (see mechanism_%dK.txt)"
-                 % (T, nin, nall, T))
+        rep.info("mechanism at %5d K (measured %.0f K): %d of %d "
+                 "dissociation/exchange pairs within 3 sd of detailed "
+                 "balance (see mechanism_%dK.txt)"
+                 % (T, np.mean([run_T(q) for q in sel]), nin, nall, T))
 
     _fig7(out, zel, D, fwd, lf, lb)
     _table7(out, rec)
@@ -207,14 +241,18 @@ def analyze(size="quick"):
     return rep.write()
 
 
-def _mechanism(D, tot, T, ntot):
+def _mechanism(D, sel, ntot):
     """(label, type, f, b, measured/predicted, error) per forward/reverse
-    pair, with mole fractions x and total number density ntot: exchange
-    f/b = K_eq x_A x_B/(x_C x_D); dissociation (per third body)
-    f/b = K_eq x_AB/(x_a x_b ntot), K_eq in number-density units"""
-    n = MECH_X
+    pair, pooled over the runs sel.  Each run's prediction of f/b uses its
+    own composition x (species counts) and time-averaged temperature T:
+    exchange f/b = K_eq(T) x_A x_B/(x_C x_D); dissociation (per third
+    body) f/b = K_eq(T) x_AB/(x_a x_b ntot), K_eq in number-density
+    units, ntot the total number density.  The measured/predicted ratio is
+    sum(f)/sum(b * prediction); its error is the counting error."""
     fwd = [r for r in D.rx_all if r["style"] == "A"]
     rev = [r for r in D.rx_all if r["style"] == "B"]
+    per = [(pkg.tallies(q.log), composition(q, MECH_SPC), run_T(q))
+           for q in sel]
     rows = []
     for f in fwd:
         if f["type"] == "D":
@@ -222,22 +260,24 @@ def _mechanism(D, tot, T, ntot):
             a, b = f["prod"][0], f["prod"][1]
             r = [x for x in rev if x["reac"][:2] in ([a, b], [b, a])
                  and x["prod"] == [AB, M]]
-            pred = D.keq(f, T) * n[AB] / (n[a] * n[b] * ntot)
+            pred = lambda n, T: D.keq(f, T) * n[AB] / (n[a] * n[b] * ntot)
         elif f["type"] in ("E", "I"):
             r = [x for x in rev if sorted(x["reac"]) == sorted(f["prod"])
                  and sorted(x["prod"]) == sorted(f["reac"])]
             A, B = f["reac"]
             C, Dd = f["prod"][0], f["prod"][1]
-            pred = D.keq(f, T) * n[A] * n[B] / (n[C] * n[Dd])
+            pred = lambda n, T: D.keq(f, T) * n[A] * n[B] / (n[C] * n[Dd])
         else:
             continue
         if not r:
             continue
-        F, B_ = tot.get(f["label"], 0), tot.get(r[0]["label"], 0)
+        F = sum(t.get(f["label"], 0) for t, _, _ in per)
+        B_ = sum(t.get(r[0]["label"], 0) for t, _, _ in per)
         if F < 5 or B_ < 5:
             rows.append((f["label"], f["type"], F, B_, None, None))
             continue
-        ratio = (F / B_) / pred
+        W = sum(t.get(r[0]["label"], 0) * pred(n, T) for t, n, T in per)
+        ratio = F / W
         rows.append((f["label"], f["type"], F, B_, ratio,
                      ratio * math.sqrt(1.0 / F + 1.0 / B_)))
     return rows

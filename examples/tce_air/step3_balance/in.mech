@@ -46,7 +46,11 @@ react_modify        partial_energy no compute_chem_rates yes rboost 1.0
 
 create_particles    air n ${NP} twopass
 compute             temp temp
-stats               1000
-stats_style         step cpu np nattempt ncoll c_temp
+# species counts: the analysis takes the composition the sample actually
+# has (create_particles draws each particle's species at random), not the
+# nominal fractions; the temperature every 20 steps for its time average
+compute             spc count N2 O2 NO N O N2+ O2+ NO+ N+ O+ e
+stats               20
+stats_style         step cpu np nattempt ncoll c_temp c_spc[*]
 timestep            1.0e-9
 run                 ${NSTEP}

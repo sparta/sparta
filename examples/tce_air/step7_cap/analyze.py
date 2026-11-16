@@ -99,48 +99,74 @@ def analyze(size="quick"):
     refs = {lab: R.ExchangeReverse(D, D.reaction(lab), forward=True)
             for lab in FWD}
     for T in FRZ_T:
-        r = [q for q in rl if q.tag == "frz_T%d" % T][0]
-        if not r.done():
+        sel = [q for q in rl if q.tag.startswith("frz_T%d_s" % T)
+               and q.done()]
+        if not sel:
             continue
-        st = stats_array(r)
-        Tm = float(np.mean(st["c_temp"][1:]))     # time average
-        t = r.variables["NSTEP"] * r.variables["DT"]
-        fnum = r.variables["NRHO"] * V / r.variables["NP"]
-        n = r.variables["NRHO"]
-        tal = pkg.tallies(r.log)
-        # composition actually created (mole fractions of the sample)
-        x = {"O": st["c_spc[1]"][0], "N": st["c_spc[2]"][0],
-             "NO": st["c_spc[3]"][0]}
-        tot = sum(x.values())
-        x = {k: v / tot for k, v in x.items()}
+        # per seed and reaction: realized rate over the reference, its
+        # counting error, the measured fraction and the capped fraction
+        fwd = dict((lab, []) for lab in FWD)
+        rec = dict((lab, []) for lab in FWD)
+        Tms = []
+        for r in sel:
+            st = stats_array(r)
+            Ts = st["c_temp"][1:]               # every 20 steps
+            Tm = float(np.mean(Ts))
+            Tms.append(Tm)
+            t = r.variables["NSTEP"] * r.variables["DT"]
+            fnum = r.variables["NRHO"] * V / r.variables["NP"]
+            n = r.variables["NRHO"]
+            tal = pkg.tallies(r.log)
+            # composition actually created (mole fractions of the sample)
+            x = {"O": st["c_spc[1]"][0], "N": st["c_spc[2]"][0],
+                 "NO": st["c_spc[3]"][0]}
+            tot = sum(x.values())
+            x = {k: v / tot for k, v in x.items()}
+            for lab in FWD:
+                rx = D.reaction(lab)
+                M = rx["reac"][1]
+                capf = refs[lab].mean_p(Tm) / refs[lab].mean_p(Tm, cap=False)
+                # the tallies integrate the rate over the run, and the
+                # rates vary as T^5-T^10: average the fit over the
+                # temperature series (capf varies slowly, at Tm)
+                F = tal.get(lab, 0)
+                if T >= 8000.0 and F > 0:
+                    k = F * fnum / (x["NO"] * n * x[M] * n * V * t)
+                    kfit = float(np.mean([R.arrhenius(rx, q) for q in Ts]))
+                    fwd[lab].append((k / kfit / capf, 1 / math.sqrt(F),
+                                     k / kfit, capf))
+                B = tal.get(REV[lab], 0)
+                if T < 8000.0 and B > 0:
+                    k = B * fnum / (x["N"] * n * x["O"] * n * x[M] * n * V * t)
+                    kdb = float(np.mean([R.arrhenius(rx, q) / D.keq(rx, q)
+                                         for q in Ts]))
+                    rec[lab].append((k / kdb / capf, 1 / math.sqrt(B),
+                                     k / kdb, capf))
+        Tm = float(np.mean(Tms))
         for lab in FWD:
-            M = D.reaction(lab)["reac"][1]
-            capf = refs[lab].mean_p(Tm) / refs[lab].mean_p(Tm, cap=False)
-            F = tal.get(lab, 0)
-            if T >= 8000.0 and F > 0:
-                k = F * fnum / (x["NO"] * n * x[M] * n * V * t)
-                frac = k / R.arrhenius(D.reaction(lab), Tm)
-                e = frac / math.sqrt(F)
-                num["frz_fwd_%s_%d" % (lab.split()[2], T)] = [frac, 2 * e,
-                                                              capf, Tm]
-                rep.check(abs(frac / capf - 1) <= 3 * e / capf + 0.02,
-                          "%s at %5.0f K: %.3f of the fit +/- %.3f, capped "
-                          "fraction %.3f (%+.1f%%)"
-                          % (lab, Tm, frac, 2 * e, capf,
-                             100 * (frac / capf - 1)))
-            B = tal.get(REV[lab], 0)
-            if T < 8000.0 and B > 0:
-                k = B * fnum / (x["N"] * n * x["O"] * n * x[M] * n * V * t)
-                kdb = R.arrhenius(D.reaction(lab), Tm) / D.keq(
-                    D.reaction(lab), Tm)
-                frac = k / kdb
-                e = frac / math.sqrt(B)
-                num["frz_rec_%s_%d" % (lab.split()[2], T)] = [frac, 2 * e,
-                                                              capf, Tm]
-                rep.check(abs(frac / capf - 1) <= 3 * e / capf + 0.02,
-                          "%s at %5.0f K: %.3f of k_fit/K_eq +/- %.3f, "
-                          "capped forward fraction %.3f"
-                          % (REV[lab], Tm, frac, 2 * e, capf))
+            for kind, vals in (("fwd", fwd[lab]), ("rec", rec[lab])):
+                if not vals:
+                    continue
+                y = [v[0] for v in vals]
+                m = float(np.mean(y))
+                # error of the mean: counting statistics, or the spread
+                # over seeds if larger (it is, by several times)
+                e = math.sqrt(sum((v[0] * v[1]) ** 2 for v in vals)) / len(y)
+                if len(y) > 1:
+                    e = max(e, float(np.std(y, ddof=1)) / math.sqrt(len(y)))
+                frac = float(np.mean([v[2] for v in vals]))
+                capf = float(np.mean([v[3] for v in vals]))
+                num["frz_%s_%s_%d" % (kind, lab.split()[2], T)] = dict(
+                    ratio=[m, 2 * e], fraction=frac, capped_fraction=capf,
+                    T=Tm, seeds=y)
+                what = ("%s at %5.0f K: %.3f of the fit" % (lab, Tm, frac)
+                        if kind == "fwd" else
+                        "%s at %5.0f K: %.3f of k_fit/K_eq" % (REV[lab], Tm,
+                                                              frac))
+                rep.check(abs(m - 1) <= 3 * e + 0.02,
+                          "%s, capped %sfraction %.3f: ratio %.3f +/- %.3f "
+                          "(%d seeds)" % (what, "forward " if kind == "rec"
+                                          else "", capf, m, 2 * e, len(y)))
 
     # ---- reactors
     tab = []

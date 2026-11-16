@@ -3,10 +3,10 @@ and Sec. VII G, Table X), in NO/N/O gas with only NO + O and NO + N
 dissociation and their derived recombinations.
 
   frz   frozen reservoirs (compute_chem_rates yes) at 5600, 8000, 10 000
-        and 15 000 K: the realized forward rates relative to their fits,
-        and the recombination rates relative to the uncapped
-        detailed-balance values, against the capped fractions computed
-        from the microcanonical forward probability
+        and 15 000 K, several seeds each: the realized forward rates
+        relative to their fits, and the recombination rates relative to
+        the uncapped detailed-balance values, against the capped fractions
+        computed from the microcanonical forward probability
   rx    adiabatic reactors at 1e25 m^-3 relaxing to the NO = N + O
         equilibrium (about 5630 K): the realized equilibrium constant
         relative to the partition-function value, for three seeds (cap),
@@ -23,16 +23,22 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from pkg import Run, DATA, size_params  # noqa: E402
 
 STEP = "step7_cap"
-# NPF/NSTF: frozen reservoirs; NPR/NSTR: reactors (steps of 5e-11 s; the
-# low-density reactor uses steps of 5e-10 s and NSTL steps)
+# NPF/NSTF/seedsF: frozen reservoirs.  Their rates vary from seed to seed
+# by several times the counting error of the tallies (+/-3% at 8000 K and
+# +/-1.4% at 10-15 kK for 20 000 particles, against 0.7% and 0.1-0.3%
+# counting errors), so the analysis takes the error from the spread over
+# seeds.  The temperature is written every 20 steps: the rates scale as
+# T^5-T^10, and the reference is averaged over that temperature series.
+# NPR/NSTR: reactors (steps of 5e-11 s; the low-density reactor uses steps
+# of 5e-10 s and NSTL steps)
 # NPS/NSTS: the reactor without cap (rates divided by 30).  It relaxes 15
 # times more slowly than the capped reactors, so its composition
 # fluctuations (about 9% in the ratio for 10 000 particles) average out
 # only over a long run of many particles: 0 leaves it out (the package;
 # the closed box of step 4 tests the uncapped balance), the paper size
 # runs it with 200 000 particles.
-SIZES = {"quick": dict(seeds=3, NPF=20000, NSTF=4000, NPR=10000,
-                       NSTR=150000, NSTL=150000, NPS=0, NSTS=0)}
+SIZES = {"quick": dict(seeds=3, seedsF=6, NPF=20000, NSTF=4000,
+                       NPR=10000, NSTR=150000, NSTL=150000, NPS=0, NSTS=0)}
 FILES = ("cap.tce", "cap_slow.tce", "nofast.species")
 NRHO = 1.0e25
 X_EQ = dict(XNO=0.3326, XO=0.3348, XN=0.3326)     # frozen reservoirs
@@ -49,10 +55,13 @@ def runs(size="quick"):
     sz = size_params(STEP, SIZES, size)
     out = []
     for T in FRZ_T:
-        v = dict(DATA=DATA, SEED=72345, SPFILE=SP, TCE="cap.tce", T=T,
-                 NRHO=NRHO, NP=sz["NPF"], NSTEP=sz["NSTF"], DT=5.0e-11,
-                 NOUT=1000, CHEM="compute_chem_rates yes", **X_EQ)
-        out.append(Run(STEP, "frz_T%d" % T, "in.cap", v, files=FILES))
+        for s in range(sz.get("seedsF", 1)):
+            v = dict(DATA=DATA, SEED=72345 + 101 * s, SPFILE=SP,
+                     TCE="cap.tce", T=T, NRHO=NRHO, NP=sz["NPF"],
+                     NSTEP=sz["NSTF"], DT=5.0e-11, NOUT=20,
+                     CHEM="compute_chem_rates yes", **X_EQ)
+            out.append(Run(STEP, "frz_T%d_s%d" % (T, s), "in.cap", v,
+                           files=FILES))
     base = dict(DATA=DATA, SPFILE=SP, TCE="cap.tce", T=9000.0, NRHO=NRHO,
                 NP=sz["NPR"], NSTEP=sz["NSTR"], DT=5.0e-11, NOUT=1000,
                 CHEM="compute_chem_rates no", **X_RX)

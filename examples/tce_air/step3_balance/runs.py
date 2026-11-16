@@ -51,7 +51,7 @@ def runs(size="quick"):
             v = dict(DATA=DATA, SEED=seed, T=T, NRHO=NLOW, NP=sz["NP"],
                      NSTEP=sz["NSTEP"], TCE="zeldovich.tce", VIB="discrete",
                      RMOD="recomb yes")
-            out.append(Run(STEP, "zeld_T%d_s%d" % (T, s), "in.res", v,
+            out.append(Run(STEP, "zeld_T%d_s%d" % (T, s), "in.zeld", v,
                            files=FILES))
         for name, (tce, vib, rmod, T) in REC.items():
             T = T or sz["REC_T"]
