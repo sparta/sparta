@@ -99,6 +99,23 @@ FixEmitFaceKokkos::~FixEmitFaceKokkos()
 
 void FixEmitFaceKokkos::init()
 {
+  // the Kokkos kernel pair draws every task's insertion count before it
+  //   generates any particle: the offset scan has to know all the counts
+  //   before the candidate arrays can be sized.  That is the order of the
+  //   host's two-pass loop, not its default one-pass loop, so under
+  //   SPARTA_KOKKOS_EXACT, where the point is a bit-for-bit match against the
+  //   non-Kokkos run, refuse to run without twopass, as fix
+  //   emit/face/file/kk does.  Outside SPARTA_KOKKOS_EXACT the random
+  //   streams differ anyway
+
+#ifdef SPARTA_KOKKOS_EXACT
+  if (!twopass)
+    error->all(FLERR,"Fix emit/face/kk requires the twopass keyword "
+               "under SPARTA_KOKKOS_EXACT: without it the Kokkos and "
+               "non-Kokkos runs consume random numbers in a different order "
+               "and will not produce the same particles");
+#endif
+
   k_tasks.sync_host();
   if (perspecies) k_ntargetsp.sync_host();
   if (subsonic_style == PONLY) k_vscale.sync_host();
