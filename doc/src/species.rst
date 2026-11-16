@@ -14,11 +14,23 @@ species command
 * ID1, ID2, ... = one or more species names listed in file
 * multi-species abbreviations can also be used (see below)
 * zero or more keyword/value pairs may be appended
+* keyword = *rotfile*
+  
+  .. parsed-literal::
+  
+       rotfile value = rfile = filename for extra rotational info
+
 * keyword = *vibfile*
   
   .. parsed-literal::
   
        vibfile value = vfile = filename for extra vibrational info
+
+* keyword = *elecfile*
+  
+  .. parsed-literal::
+  
+       elecfile value = efile = filename for extra electronic info
 
 
 
@@ -125,6 +137,38 @@ accordingly.
 ----------
 
 
+The optional *rotfile* keyword can be used to specify the
+characteristic rotational temperature(s) of species in the specified
+*rfile*\ .  It is required for each linear (rotdof = 2) species when the
+:doc:`collide\_modify rotate <collide_modify>` setting is *discrete*\ : the
+rotational temperature Theta\_r defines the rigid-rotor level energies
+E\_J = J(J+1) k Theta\_r used by the discrete rotational model.
+
+The format of a species rotational file is as follows.  Comments or
+blank lines are allowed in the file.  Comment lines start with a "#"
+character.  All other lines must have the following format with values
+separated by whitespace:
+
+
+.. parsed-literal::
+
+   species-ID N temp1 ... tempN sigma
+
+The species-ID is a string that will be matched against the requested
+species-ID, as described above.  N is the number of rotational
+temperatures that follow: 1 for a linear molecule (rotdof = 2), or 3
+for a nonlinear molecule (rotdof = 3).  The optional trailing value
+*sigma* is the rotational symmetry number (e.g. 2 for homonuclear
+diatomics, default 1), used in the rotational partition functions of
+detailed-balance reverse reactions (see the :doc:`react <react>`
+command).  Note that only the single temperature of linear molecules
+is used by the discrete rotational model; nonlinear molecules keep the
+continuous rotational model.
+
+
+----------
+
+
 The optional *vibfile* keyword can be used to specify additional
 vibrational information in the specified *vfile*\ .  If this option is
 used, then an entry must appear in *vfile* for every species in this
@@ -185,6 +229,65 @@ the same species in the *vibfile*\ .
 
 ----------
 
+
+The optional *elecfile* keyword can be used in conjuction with
+"collide\_modify electronic discrete" and "fix elecmode" to model
+electronic excitation. If this option is used, then an entry must
+appear in *elecfile* for every species in this command.
+
+The format of a species electronic file is as follows. Comments or
+blank lines are allowed in the file. Comment lines start with a "#"
+character. All other lines must have one of the following formats:
+
+
+.. parsed-literal::
+
+   species-ID N temp1 relax1 degen1 spin1 dof1 temp2 relax2 degen2 spin2 dof2 ... tempN relaxN degenN spinN dofN
+
+The species-ID is a string that will be matched against the requested species-ID.
+N is the number of electronic states. For each of the N states, 5 values are
+listed:
+
+* tempI = electronic temperature of state I (temperature units)
+* relaxI = inverse electronic relaxation number of state I (unitless)
+* degenI = total degeneracy of state I (integer, unitless)
+* spinI = spin degeneracy of state I (e.g. singlet = 1, triplet = 3, etc.)
+* dofI = effective DOF of state I for the TCE chemistry model (unitless)
+
+The *dofI* value is read for file compatibility but not used: the TCE
+reaction model couples electronic energy to the reaction probability
+through the microcanonical ladder average (see
+:doc:`react\_modify <react_modify>`), which requires no per-state DOF.
+
+Note that the *relaxI* values enter a state-to-state transition twice:
+a relaxation event is attempted with probability relax(current state),
+and the destination state is then selected with a weight proportional
+to degen \* relax(destination) times an available-energy factor.  The
+effective i->f transition rate therefore scales as relaxI\*relaxF; this
+product form is what preserves detailed balance for state-dependent
+relaxation numbers, and should be accounted for when calibrating the
+inputs against measured relaxation times or state-to-state rates.
+
+The other accepted format is:
+
+
+.. parsed-literal::
+
+   species-ID1 species-ID2 conserve_spin relax1 ... relaxN
+
+species-ID1 is a string of a species ID with electronic modes defined.
+species-ID2 is another species ID with which species-ID1 will collide.
+conserve\_spin is either a "T" or a "F". When "F", then any electronic state
+for the relaxing particle is considered for the post-collision state. If "T"
+then only states with the same spin degeneracy number will be considered for relaxation.
+relaxI is the same as relaxI for the other format, i.e. inverse electronic
+relaxation number for state I of species-ID1 when colliding with species-ID2.
+These values override the default values set in the line with the first format.
+
+The states of a species must be listed in ascending energy order, and the
+first (ground) state must have a temperature of zero. A line in the second
+format must come after the line in the first format that defines the states
+of species-ID1.
 
 **Restrictions:** none
 

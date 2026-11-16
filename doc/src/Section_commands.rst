@@ -251,7 +251,7 @@ typically in this order:
 
 * :doc:`create\_box <create_box>` for the simulation box
 * :doc:`create\_grid <create_grid>` or :doc:`read\_grid <read_grid>` for grid cells
-* :doc:`read\_surf <read_surf>` or :doc:`read\_isurf <read_isurf>` for surfaces
+* :doc:`read\_surf <read_surf>` or :doc:`create\_isurf <create_isurf>` or :doc:`read\_isurf <read_isurf>` for surfaces
 * :doc:`species <species>` for particle species properties
 * :doc:`create\_particles <create_particles>` for particles
 
@@ -314,7 +314,8 @@ Problem definition:
 :doc:`boundary <boundary>`, :doc:`bound\_modify <bound_modify>`,
 :doc:`create\_box <create_box>`, :doc:`create\_grid <create_grid>`,
 :doc:`create\_particles <create_particles>`, :doc:`mixture <mixture>`,
-:doc:`read\_grid <read_grid>`, :doc:`read\_isurf <read_isurf>`,
+:doc:`create\_grid <create_grid>` or :doc:`read\_grid <read_grid>`,
+:doc:`create\_isurf <create_isurf>` or :doc:`read\_isurf <read_isurf>`,
 :doc:`read\_particles <read_particles>`, :doc:`read\_surf <read_surf>`,
 :doc:`read\_restart <read_restart>`, :doc:`species <species>`,
 
@@ -411,17 +412,17 @@ styles have accelerated versions, which can be used if SPARTA is built
 with the :doc:`appropriate accelerated package <Section_accelerate>`.
 This is indicated by additional letters in parenthesis: k = KOKKOS.
 
-+--------------------------------------+------------------------------------------------+--------------------------------------+----------------------------------------+----------------------------------------------------------+---------------------------------------------+
-| :doc:`ablate <fix_ablate>`           | :doc:`adapt (k) <fix_adapt>`                   | :doc:`ambipolar (k) <fix_ambipolar>` | :doc:`ave/grid (k) <fix_ave_grid>`     | :doc:`ave/histo (k) <fix_ave_histo>`                     | :doc:`ave/histo/weight (k) <fix_ave_histo>` |
-+--------------------------------------+------------------------------------------------+--------------------------------------+----------------------------------------+----------------------------------------------------------+---------------------------------------------+
-| :doc:`ave/surf <fix_ave_surf>`       | :doc:`ave/time <fix_ave_time>`                 | :doc:`balance (k) <fix_balance>`     | :doc:`controller <fix_controller>`     | :doc:`custom <fix_custom>`                               | :doc:`dt/reset (k) <fix_dt_reset>`          |
-+--------------------------------------+------------------------------------------------+--------------------------------------+----------------------------------------+----------------------------------------------------------+---------------------------------------------+
-| :doc:`emit/face (k) <fix_emit_face>` | :doc:`emit/face/file (k) <fix_emit_face_file>` | :doc:`emit/surf (k) <fix_emit_surf>` | :doc:`field/grid (k) <fix_field_grid>` | :doc:`field/particle (k) <fix_field_particle>`           | :doc:`grid/check (k) <fix_grid_check>`      |
-+--------------------------------------+------------------------------------------------+--------------------------------------+----------------------------------------+----------------------------------------------------------+---------------------------------------------+
-| :doc:`halt <fix_halt>`               | :doc:`move/surf (k) <fix_move_surf>`           | :doc:`print <fix_print>`             | :doc:`surf/temp (k) <fix_surf_temp>`   | :doc:`temp/global/rescale (k) <fix_temp_global_rescale>` | :doc:`temp/rescale (k) <fix_temp_rescale>`  |
-+--------------------------------------+------------------------------------------------+--------------------------------------+----------------------------------------+----------------------------------------------------------+---------------------------------------------+
-| :doc:`vibmode (k) <fix_vibmode>`     |                                                |                                      |                                        |                                                          |                                             |
-+--------------------------------------+------------------------------------------------+--------------------------------------+----------------------------------------+----------------------------------------------------------+---------------------------------------------+
++--------------------------------------------+--------------------------------------+------------------------------------------------+--------------------------------------+----------------------------------------+----------------------------------------------------------+
+| :doc:`ablate <fix_ablate>`                 | :doc:`adapt (k) <fix_adapt>`         | :doc:`ambipolar (k) <fix_ambipolar>`           | :doc:`ave/grid (k) <fix_ave_grid>`   | :doc:`ave/histo (k) <fix_ave_histo>`   | :doc:`ave/histo/weight (k) <fix_ave_histo>`              |
++--------------------------------------------+--------------------------------------+------------------------------------------------+--------------------------------------+----------------------------------------+----------------------------------------------------------+
+| :doc:`ave/surf <fix_ave_surf>`             | :doc:`ave/time <fix_ave_time>`       | :doc:`balance (k) <fix_balance>`               | :doc:`controller <fix_controller>`   | :doc:`custom <fix_custom>`             | :doc:`dt/reset (k) <fix_dt_reset>`                       |
++--------------------------------------------+--------------------------------------+------------------------------------------------+--------------------------------------+----------------------------------------+----------------------------------------------------------+
+| :doc:`elecmode (k) <fix_elecmode>`         | :doc:`emit/face (k) <fix_emit_face>` | :doc:`emit/face/file (k) <fix_emit_face_file>` | :doc:`emit/surf (k) <fix_emit_surf>` | :doc:`field/grid (k) <fix_field_grid>` | :doc:`field/particle (k) <fix_field_particle>`           |
++--------------------------------------------+--------------------------------------+------------------------------------------------+--------------------------------------+----------------------------------------+----------------------------------------------------------+
+| :doc:`grid/check (k) <fix_grid_check>`     | :doc:`halt <fix_halt>`               | :doc:`move/surf (k) <fix_move_surf>`           | :doc:`print <fix_print>`             | :doc:`surf/temp (k) <fix_surf_temp>`   | :doc:`temp/global/rescale (k) <fix_temp_global_rescale>` |
++--------------------------------------------+--------------------------------------+------------------------------------------------+--------------------------------------+----------------------------------------+----------------------------------------------------------+
+| :doc:`temp/rescale (k) <fix_temp_rescale>` | :doc:`vibmode (k) <fix_vibmode>`     |                                                |                                      |                                        |                                                          |
++--------------------------------------------+--------------------------------------+------------------------------------------------+--------------------------------------+----------------------------------------+----------------------------------------------------------+
 
 
 ----------
@@ -445,7 +446,7 @@ letters in parenthesis: k = KOKKOS.
 +--------------------------------------------------------------+--------------------------------------------------------------+----------------------------------------------------------+------------------------------------------------------------+--------------------------------------------------+----------------------------------------------------------------+
 | :doc:`react/surf (k) <compute_react_surf>`                   | :doc:`react/isurf/grid (k) <compute_react_isurf_grid>`       | :doc:`reduce (k) <compute_reduce>`                       | :doc:`sonine/grid (k) <compute_sonine_grid>`               | :doc:`surf (k) <compute_surf>`                   | :doc:`surf/collision/tally (k) <compute_surf_collision_tally>` |
 +--------------------------------------------------------------+--------------------------------------------------------------+----------------------------------------------------------+------------------------------------------------------------+--------------------------------------------------+----------------------------------------------------------------+
-| :doc:`surf/reaction/tally (k) <compute_surf_reaction_tally>` | :doc:`temp (k) <compute_temp>`                               | :doc:`thermal/grid (k) <compute_thermal_grid>`           | :doc:`tvib/grid (k) <compute_tvib_grid>`                   |                                                  |                                                                |
+| :doc:`surf/reaction/tally (k) <compute_surf_reaction_tally>` | :doc:`tambi/grid <compute_tambi_grid>`                       | :doc:`telec/grid (k) <compute_telec_grid>`               | :doc:`temp (k) <compute_temp>`                             | :doc:`thermal/grid (k) <compute_thermal_grid>`   | :doc:`tvib/grid (k) <compute_tvib_grid>`                       |
 +--------------------------------------------------------------+--------------------------------------------------------------+----------------------------------------------------------+------------------------------------------------------------+--------------------------------------------------+----------------------------------------------------------------+
 
 

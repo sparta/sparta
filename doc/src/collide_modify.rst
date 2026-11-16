@@ -27,8 +27,9 @@ collide\_modify command
              Nlimit = max # of attempts made to find a near collision partner
            subcell = select partners via the transient adaptive subcell method
        ambipolar value = no or yes
-       rotate value = no or smooth
+       rotate value = no or smooth or discrete
        vibrate value = no or smooth or discrete
+       electronic value = no or discrete
 
 
 
@@ -216,7 +217,19 @@ The *rotate* keyword determines how rotational energy is treated in
 particle collisions and stored by particles.  If the value is set to
 *no*\ , then rotational energy is not tracked; every particle's
 rotational energy is 0.0.  If the value is set to *smooth*\ , a
-particle's rotational energy is a single continuous value.
+particle's rotational energy is a single continuous value.  If the
+value is set to *discrete*\ , the rotational energy of a linear molecule
+(2 rotational degrees of freedom) is set to the discrete rigid-rotor
+level energies E\_J = J(J+1) k Theta\_r, where Theta\_r is the species'
+characteristic rotational temperature and each level J carries
+degeneracy 2J+1.  Thermal initialization samples the
+degeneracy-weighted Boltzmann distribution over levels and collisional
+relaxation selects levels with the corresponding degeneracy-weighted
+Borgnakke-Larsen kernel.  Each linear species with rotational degrees
+of freedom must then define its rotational temperature via the
+*rotfile* keyword of the :doc:`species <species>` command.  Species with
+3 rotational degrees of freedom (nonlinear molecules) have no
+closed-form level structure and keep the continuous rotational model.
 
 The *vibrate* keyword determines how vibrational energy is treated in
 particle collisions and stored by particles.  If the value is set to
@@ -238,6 +251,15 @@ Also note that if any such species are defined (with more than one
 vibrational mode, then use of the *discrete* option also requires the
 :doc:`fix vibmode <fix_vibmode>` command be used to allocate storage for
 the per-particle mode values.
+
+The *electronic* keyword determines whether the electronic energy of
+particles is tracked. If the value is set to *no*\ , then electronic
+energy is not tracked. If the value is set to *discrete*\ , then each
+particle is in one of several defined electronic states. The use of
+electronic modes also requires the :doc:`fix elecmode <fix_elecmode>`
+command be used to allocate storage for the per-particle electronic
+state values. Likewise, the "species elecfile" must also be used to
+provide electronic state information.
 
 
 ----------

@@ -448,6 +448,8 @@ it gives quick access to documentation for all SPARTA commands.
    compute_surf
    compute_surf_collision_tally
    compute_surf_reaction_tally
+   compute_tambi_grid
+   compute_telec_grid
    compute_temp
    compute_thermal_grid
    compute_tvib_grid
@@ -474,6 +476,7 @@ it gives quick access to documentation for all SPARTA commands.
    fix_controller
    fix_custom
    fix_dt_reset
+   fix_elecmode
    fix_emit_face
    fix_emit_face_file
    fix_emit_surf

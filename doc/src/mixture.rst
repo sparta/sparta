@@ -13,7 +13,7 @@ mixture command
 * ID = user-defined name of the mixture
 * species1, species2, ... = zero or more species IDs to include in the mixture
 * zero or more keyword/arg pairs may be appended
-* keyword = *nrho* or *vstream* or *temp* or *frac* or *group* or *copy* or *delete*
+* keyword = *nrho* or *vstream* or *temp* or *trot* or *tvib* or *telec* or *frac* or *group* or *copy* or *delete*
   
   .. parsed-literal::
   
@@ -27,6 +27,8 @@ mixture command
          Trot = rotational temperature of entire mixture (temperature units)
        tvib arg = Tvib
          Tvib = vibrational temperature of entire mixture (temperature units)
+       telec arg = Telec
+         Telec = electronic temperature of entire mixture (temperature units)
        frac arg = fraction
          fraction = number fraction for each listed species (0 to 1)
        group arg = SELF or group-ID
@@ -143,6 +145,15 @@ energy distribution to define each particle's vibrational energy.  If
 this keyword is not specified, the thermal temperature is used as the
 default.
 
+The *telec* keyword sets a global attribute of the mixture, namely the
+electronic temperature of its particles.  It must be a value >= zero.
+When particles are created with :doc:`fix elecmode <fix_elecmode>`
+active, this value is used to sample each particle's discrete
+electronic state from the Boltzmann distribution over the states
+defined via the *elecfile* option of the :doc:`species <species>`
+command.  If this keyword is not specified, the thermal temperature is
+used as the default.
+
 
 ----------
 
@@ -253,8 +264,9 @@ The restrictions on use of the *delete* keyword are described above.
 
 The *nrho*\ , *vstream*\ , and *temp* defaults are those defined for the
 background gas density, as set by the :doc:`global <global>` command.
-The *trot* and *tvib* defaults are to use the thermal temperature
-*temp*\ , either its default or the value specified by this command.
+The *trot*\ , *tvib*\ , and *telec* defaults are to use the thermal
+temperature *temp*\ , either its default or the value specified by this
+command.
 The *frac* default is described above.  The *group* keyword has no
 default; if it is not used, new species not already in the mixture are
 assigned to a group with a group ID = "default".

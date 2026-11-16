@@ -64,10 +64,22 @@ The reaction models for the various styles are described below.  When
 a pair of particles collide, the list of all reactions with those two
 species as reactants is looped over.  A probability for each reaction
 is calculated, using the formulas discussed below, and a random number
-is used to decide which reaction (if any) takes place.  No check is
-made that the sum of probabilities for all possible reactions is <=
-1.0, but that should normally be the case if reasonable reaction
-coefficients are defined.
+is used to decide which reaction (if any) takes place.
+
+For the *tce* style, each reaction's probability is individually
+capped at 1: the TCE derivation assumes the reaction cross-section is
+a fraction of the VHS cross-section, so a computed probability above 1
+is outside the model and is limited to the collision rate (following
+Strand and Goldstein's total-cross-section correction as simplified by
+Higdon).  When the summed probability of all of a pair's reactions
+exceeds 1, the collision reacts with probability 1 and the reaction is
+chosen proportionally to the individual probabilities, so the outcome
+does not depend on the order in which reactions are listed in the
+reaction file.  A warning is printed at the end of each run in which
+either condition occurred, naming a reaction at which it did, since
+the simulated rate then saturates at the collision rate and no longer
+follows the input Arrhenius rate.  The probability is per collision,
+so the timestep, fnum and grid do not change it.
 
 The format of the reaction file is the same for all three of the
 currently defined styles, and is also described below.  The various
@@ -121,10 +133,12 @@ Above the bound, the TCE reaction probability reproduces the Arrhenius
 rate on average, but it is a per-collision probability and can exceed
 1 for some collision energies, e.g. when the Arrhenius rate approaches
 the collision rate, or near the activation energy when b < -(z+1/2).
-Probabilities above 1 are clipped, which reduces the rate of that
-reaction and of any reaction listed after it for the same reactants.
-SPARTA warns once per run when this happens.  Reducing the timestep or
-fnum does not change the probability.
+Probabilities above 1 are clipped: where the summed probability of the
+reactions of a species pair exceeds 1, that pair reacts at the
+collision rate and each of its reactions is selected in proportion to
+its probability, so their rates are under-predicted.  SPARTA warns
+once per run when this happens.  Reducing the timestep or fnum does
+not change the probability.
 
 ----------
 
@@ -299,6 +313,7 @@ case) with the following meaning:
 
 * A = Arrhenius
 * Q = Quantum
+* B = Arrhenius Backward (see below)
 
 The style determines how many reaction coefficients are listed as C1,
 C2, etc, and how they are interpreted by SPARTA.
@@ -314,6 +329,216 @@ coefficients:
 
 The different reaction styles use these values in different ways, as
 explained above.
+
+
+----------
+
+
+**Backward (detailed-balance) reactions**
+
+The B = Arrhenius Backward style derives a reverse reaction rate from
+its forward reaction using the principle of detailed balance, rather
+than supplying an independent Arrhenius fit for the reverse rate.  See
+`(Bird94) <#Bird94>`_ section 6.6 and Boyd & Schwartzentruber sections
+7.5.2-7.5.3 for background.  A single Arrhenius form cannot exactly
+reproduce k\_b(T) = k\_f(T)/K\_eq(T), because the equilibrium constant
+K\_eq carries the non-Arrhenius temperature dependence of the
+partition-function ratios, so independently-fitted forward and
+backward rates do not satisfy detailed balance and the gas does not
+relax to the correct chemical-equilibrium composition at elevated
+temperatures.
+
+Two kinds of pairs are supported.  A B-style exchange reaction pairs
+with the forward A-style exchange reaction whose reactants/products
+are its products/reactants:
+
+
+.. parsed-literal::
+
+   N2 + O --> NO + N
+   E A 0.0 5.175e-19 1.069e-12 -1.0 -5.175e-19
+
+
+.. parsed-literal::
+
+   NO + N --> N2 + O
+   E B 0.0 0.0 0.0 0.0 0.0
+
+A B-style recombination reaction pairs with the forward dissociation
+reaction with the same explicit third-body species (the atom/mol
+wildcards cannot be used on a B recombination, since per-partner
+forward dissociation rates differ):
+
+
+.. parsed-literal::
+
+   N2 + N --> N + N + N
+   D A 1.0 1.561e-18 4.980e-8 -1.5 -1.561e-18
+
+
+.. parsed-literal::
+
+   N + N --> N2 + N
+   R B 0.0 0.0 0.0 0.0 0.0
+
+The 5 coefficients for a B reaction are placeholders; they are ignored
+and overwritten internally.  The backward rate is constructed to
+satisfy
+
+
+.. parsed-literal::
+
+   k_b(T) = k_f(T) / K_eq(T)
+
+where K\_eq(T) is the equilibrium constant computed from the species
+partition functions: translational, rotational (rigid rotor, with the
+symmetry number from the :doc:`species <species>` *rotfile*\ ), vibrational
+(harmonic oscillator, including degenerate modes), and electronic
+(summed over the ladder from the *elecfile*\ , when defined).  These
+include only the internal states the collision model carries: with
+:doc:`collide\_modify <collide_modify>` *vibrate no* the vibrational
+factor is 1, and with *electronic no* the electronic factor is the
+ground-state degeneracy, since the detailed-balance tables can only
+reproduce the equilibrium of the states the particles actually
+occupy.  For the full equilibrium constants use *vibrate discrete*
+(or *smooth*\ ) and *electronic discrete* with :doc:`fix elecmode <fix_elecmode>`.
+
+Rotation is the exception: the tables always count the rotational
+degrees of freedom, so reverse reactions need rotation modelled.  With
+*rotate no* particles carry no rotational energy, the reverse rates of
+rotating species are biased, and a recombination with a nonlinear
+third body never occurs; SPARTA warns about this.  It also warns when
+the *rotfile* gives no symmetry number for a rotating species used by
+a reverse reaction, since the default sigma = 1 is wrong by a factor
+of 2 in K\_eq for each homonuclear molecule.
+
+Two properties of the data files are required for energy conservation
+once reverse reactions are active, and SPARTA warns at initialization
+when either fails.  First, every reaction must conserve mass: if the
+product masses do not sum to the reactant masses (e.g. a species file
+with m(O2) different from 2 m(O)), each reaction event changes the
+centre-of-mass kinetic energy, and a gas that cycles through forward
+and reverse reactions gains or loses energy steadily.  Second, the
+reaction energies must be consistent around reaction cycles, such as
+N2 + O -> NO + N, NO + M -> N + O + M, N + N + M -> N2 + M: if they do
+not sum to zero around a cycle, every loop creates or destroys energy
+and the reactions share no common equilibrium.  Both hold when all
+reaction energies are computed from one set of species formation
+energies, as in the *data/air.tce* file, whose header lists them.
+
+This is enforced without evaluating any temperature.  At
+initialization an exchange pair is given a detailed-balance table
+relating the microcanonical densities of states of the two channels
+at matched total collision energy (the same density-of-states
+machinery that builds the microcanonical TCE energy factors), so each
+collision's backward probability follows from the forward reaction by
+energy-resolved microscopic reversibility.  The thermal average of
+this probability reproduces k\_f(T)/K\_eq(T) at every temperature
+simultaneously, and the per-collision probability remains meaningful
+arbitrarily far from equilibrium, where no temperature is defined.
+
+A dissociation/recombination pair is handled the same way, extended
+to three bodies: the backward activation energy is seeded as Ea\_f +
+dHrxn and the backward reaction energy as -dHrxn, and the
+recombination probability is resolved in the total available energy
+of all three particles - the collision energy of the recombining
+pair, plus the third particle's internal energies, plus its
+translational energy relative to the pair's center of mass (which is
+exactly the relative translational energy of the forward
+dissociation collision).  The probability is the ratio of the
+forward channel's microcanonical reaction numerator at that total
+energy to the density of states of the (pair energy, third-body
+energy) decomposition, so the third particle's energy genuinely
+counts toward the energy balance: an energetic third body enhances
+recombination exactly as microscopic reversibility of the forward
+dissociation demands, and the thermal average again reproduces
+k\_f(T)/K\_eq(T) at every temperature with no cell temperature
+evaluated.  Reverse reactions require
+:doc:`react\_modify <react_modify>` *partial\_energy* *no*\ ; the default
+is *yes*\ .  With *partial\_energy* *yes*\ , B lines in the reaction file
+are switched off with a warning and the forward reactions run alone,
+so a reaction file that carries reverses (such as data/air.tce) can
+still be used with the default partial-energy model.
+
+The cap on the forward probability described above is carried into the
+reverse tables.  Where a forward reaction's probability is capped at
+1, its rate falls below the Arrhenius fit, and a reverse reaction
+built from the uncapped fit would outrun it and shift the equilibrium.
+Each reverse table is therefore built from the forward probability
+that is actually realized: the value capped at 1, divided by the
+summed probability of the forward pair's reactions where that sum
+exceeds 1.  A capped pair then reacts more slowly than its Arrhenius
+fit in both directions, but relaxes to the correct equilibrium.  With
+the *data/air.tce* set this matters for NO + O and NO + N
+dissociation, whose rate fits exceed the VHS collision rate over much
+of the thermal energy range.  In a test with those two reactions
+alone, the equilibrium constant realized by the simulation was 0.57
+of the partition-function value without the limit and 1.01 with it
+(three seeds, 1.006-1.025), and 1.01 at a tenth of the density; an
+adiabatic air reactor that should equilibrate at 6240 K settled 3.5%
+too hot with 25% too much NO without the limit.  A test like this
+depends on the post-reaction energy disposal as well: when a reaction
+proceeds at the collision rate, its products react again before they
+relax, so they must leave the reaction with the distribution that the
+reverse samples (see below).  The limit works in one direction only: a
+cap on the reverse reaction itself (three-body recombination in dense
+gas, or a barrierless reverse at low collision energy) is not carried
+back into its forward reaction.
+
+After a reaction the products' discrete levels (vibration, electronic
+states, discrete rotation) are drawn jointly from the conditional, at
+the collision's total energy, of the products' equilibrium collision
+ensemble, and the remaining energy is split between translation and
+the continuous modes; this is the distribution the reverse reaction
+samples, so a reacting gas keeps equilibrium populations in every mode
+even where relaxation is slow (vibration) or forbidden (spin-changing
+electronic transitions).
+
+For quantitatively correct equilibrium constants, define a *rotfile*
+with the rotational symmetry numbers of homonuclear molecules and an
+*elecfile* with at least the ground-state degeneracies of each species
+(see the :doc:`species <species>` command): for N2 + O <-> NO + N the
+ground-state electronic degeneracies alone change K\_eq by a factor of
+~1.8 and the N2 symmetry number by a further factor of 2.  A
+*rotfile* entry is required for every rotating species that takes part
+in an active reverse reaction; it is an error if one is missing.  See
+examples/reverse for a complete worked example and
+examples/reverse/validate\_reverse.py for a quantitative validation
+against independently computed equilibrium constants.  Instead of
+writing B lines by hand, :doc:`react\_modify <react_modify>` *reverse*
+*auto* generates the reverse of every eligible forward reaction
+automatically, and :doc:`react\_modify <react_modify>` *keq\_file* can
+supply equilibrium-constant curve fits that override the internal
+partition functions when a published chemistry set's backward rates
+must be reproduced exactly.
+
+The B style requires the :doc:`react tce <react>` style (with or without
+:doc:`react\_modify <react_modify>` *compute\_chem\_rates*\ ); with the qk
+and tce/qk styles, B lines are switched off with a warning.  A reverse
+reaction is also switched off if the exponent b of its forward
+reaction is below the -(z+3/2) bound described above, since the
+forward probability then does not reproduce its Arrhenius rate; the
+warning about the forward reaction says so.  Reactions between charged and neutral
+heavy species are fully supported: a charge-exchange reaction such as
+A+ + B --> A + B+ is an exchange (E) reaction and pairs with a B-style
+reverse like any other exchange, since no free electron participates
+and all partition functions are those of heavy particles.  The reverse
+of a 2-product ionization (I) reaction - associative ionization A + B
+--> AB+ + e, whose reverse is dissociative recombination AB+ + e --> A
++ B - is also supported: write the reverse as an E-style B line (it is
+a 2 -> 2 reaction).  Its Saha-type equilibrium constant is built from
+the same partition functions, with the free electron contributing its
+translational partition function and spin degeneracy 2; the reverse
+probability is resolved in the electron-ion collision energy, so with
+:doc:`fix ambipolar <fix_ambipolar>` the recombination rate follows the
+ambipolar electron velocities (the electron energies maintained by the
+elastic-collision exchange) rather than the heavy-particle cell
+temperature.  What remains unsupported is a B-style reverse of a
+3-product electron-impact ionization (A + e --> A+ + e + e): its
+reverse is a 3-body process in the electron gas and must be supplied
+explicitly.  The KOKKOS-accelerated
+tce/kk style implements the identical path and reproduces the CPU code
+bit-for-bit when built with -DSPARTA\_KOKKOS\_EXACT.
 
 
 ----------

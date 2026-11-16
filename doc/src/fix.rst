@@ -79,6 +79,7 @@ styles available in SPARTA:
 * :doc:`balance <fix_balance>` - perform dynamic load-balancing
 * :doc:`custom <fix_custom>` - periodically reset the values of one or more custom attributes
 * :doc:`dt/reset <fix_dt_reset>` - adjust global timestep dynamically
+* :doc:`elecmode <fix_elecmode>` - discrete electronic energy states
 * :doc:`emit/face <fix_emit_face>` - emit particles at global boundaries
 * :doc:`emit/face/file <fix_emit_face_file>` - emit particles at global boundaries using a distribution defined in a file
 * :doc:`emit/surf <fix_emit_surf>` - emit particles at surfaces

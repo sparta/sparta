@@ -120,7 +120,7 @@ effectively.
 
 **Related commands:**
 
-:doc:`collide\_modify ambipolar yes <collide_modify>`
+:doc:`collide\_modify ambipolar yes <collide_modify>`, :doc:`compute tambi/grid <compute_tambi_grid>`
 
 **Default:** none
 
