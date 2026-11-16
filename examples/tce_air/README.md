@@ -18,7 +18,9 @@ the analysis says in words what it compares.
 - A Linux or macOS machine with 4 cores (more is faster), an MPI C++
   compiler (`mpicxx`), `make`, and Python 3 with `numpy`, `scipy` and
   `matplotlib`.
-- About 1 hour for all steps with 4 cores.
+- About 2 hours for all steps with 4 cores (about 7 core-hours; the ten
+  recombination runs of `step3_balance`, half an hour each, are three
+  quarters of it).
 
 ## Quick start
 
@@ -83,17 +85,32 @@ run on GPUs (the `paper-runs` branch of the paper's repository).
 
 ## What to expect
 
-With this branch at the quick size all checks pass except one, in
-`step7_cap`.  The forward rates of NO + O and NO + N dissociation, whose
-Arrhenius fits exceed the collision rate so that most reacting
-collisions are capped at probability one, run 0.4-3% below the capped
-fraction computed by `tce_ref.py`, for both reactions and at every
-temperature; the NO + N check at 10 000 K (-3.1%) falls outside the 2%
-allowance.  A build from before the latest code changes gives identical
-tallies, so this is not a regression; the cause (the sampling of the
-fastest collisions, or the reference's treatment of NO rotation as a
-continuum) is open.  The reactors of the same step reach the
-partition-function equilibrium to 1-2%.
+With this branch at the quick size all checks pass.  Three things are
+worth knowing:
+
+- `step7_cap`: the forward rates of NO + O and NO + N dissociation, whose
+  Arrhenius fits exceed the collision rate so that most reacting
+  collisions are capped at probability one, run 0.7-2.7% below the
+  capped fraction computed by `tce_ref.py` at 8000-15 000 K; the check
+  allows 2%.  Single frozen reservoirs of this step scatter by several
+  times their counting error (about 5% at 8000 K): NO relaxes its
+  vibration only once in about 1400 collisions, so a reservoir keeps
+  much of its initial sample of the highly excited molecules that carry
+  the rate.  The step therefore runs six seeds per temperature and takes
+  the error from their spread.  The reactors of the same step reach the
+  partition-function equilibrium to 1-4%.
+- `step3_balance`, the 11-species reservoir: every dissociation and
+  exchange pair with enough tallies agrees with detailed balance within
+  3 standard deviations (plus 1%), with the composition and temperature
+  that each sample actually has.  The three associative-ionization pairs
+  (O + N -> NO+ + e and the like) do not: their tally ratios are 13-27%
+  above the Saha prediction at 15 000 K and about 80% at 8000 K.  Their
+  reverse, dissociative recombination, is capped at low electron energy,
+  a loss the forward reaction does not see; the paper discusses this,
+  and the analysis reports these pairs without checking them.
+- The recombination checks of `step3_balance` have the largest
+  statistical errors of the package at the quick size: 5-9% at two
+  standard deviations (42% at 6765 K, where few dissociations occur).
 
 Two limitations are known and documented in the paper:
 

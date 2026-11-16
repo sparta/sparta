@@ -3,7 +3,7 @@
 Every step defines its runs (Run objects) in runs.py.  The run list is
 used both to run and to analyze, so the analysis never depends on how or
 where a run happened.  Each step has one size, "quick", chosen so that the
-whole package runs on a 4-core machine in about an hour; set_size()
+whole package runs on a 4-core machine in about two hours; set_size()
 registers other sizes (more particles, steps or seeds for the same decks)
 from outside the package.
 
