@@ -6,11 +6,20 @@ Produces, in results/step7_cap/:
                             value, per reactor configuration
   numbers.json, results.txt
 
-The frozen-reservoir checks allow 2% beyond statistics: these reactions
-are mostly capped, so their measured rate is close to the VHS collision
-rate of the pair, and a small difference between the simulated collision
-rate and its analytic value enters directly (the measurements run 1-2%
-below the references at 8-10 kK for both reactions).
+The frozen-reservoir rates vary from seed to seed by several times the
+counting error of their tallies (one 20 000-particle reservoir at 8000 K
+scatters by about 5% against a 0.7% counting error, at 10-15 kK by 1-2%):
+NO relaxes its vibration once in about 1400 collisions, so each
+reservoir keeps much of its initial random sample of the few highly
+excited molecules that carry the dissociation rate.  The check takes the
+error of the mean from the spread over seeds, and allows 2% beyond it:
+the measurements run 0.7-2.7% below the references at 8-15 kK for both
+reactions.  (With NO relaxing at every collision, nofast.species, four
+seeds at 8000 K run 3-4% above, and the reactor rx_fast sits 3.5% above
+its equilibrium; a likely cause, not yet tested, is that serial
+relaxation at high probability does not hold every mode exactly at
+equilibrium.  The frozen reservoirs therefore use the relaxation of the
+data.)
 
 References (tce_ref.py, from the data files only):
   frozen reservoirs: the capped fraction <min(P,1)>/<P> of the forward
