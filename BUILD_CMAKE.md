@@ -37,6 +37,15 @@ configuration knobs before building sparta.
 ```bash
 cmake -C /path/to/<NAME>.cmake /path/to/sparta/cmake
 ```
+## Build types
+As in LAMMPS, the optimization and debug flags come with `CMAKE_BUILD_TYPE`,
+so `-g` is only used for `RelWithDebInfo` and `Debug` builds:
+* With no preset, and neither `CMAKE_BUILD_TYPE` nor `CMAKE_CXX_FLAGS` given,
+  the build type defaults to `RelWithDebInfo` (`-O2 -g -DNDEBUG`).
+* The KOKKOS presets and `openmpi.cmake` default to `RelWithDebInfo` with
+  `-g -O3 -DNDEBUG`; `-DCMAKE_BUILD_TYPE=Release` gives `-O3 -DNDEBUG`.
+* The other presets set `CMAKE_CXX_FLAGS` themselves and set no build type;
+  of those, only the `*_debug` presets add `-g`.
 
 # SPARTA Keyword Listing
 ## Package options
@@ -161,6 +170,25 @@ relies on another target B will pull in the dependencies that target B resolved.
 Targets 2-4 are all optional packages that are built as static libraries.
 
 Target 1 links against targets 2-4 (if enabled).
+
+## Git version information
+The git commit and branch reported by `spa_* -help` and by
+`sparta_extract_global()` are written to `spartagitversion.h` at every build by
+`cmake/Modules/generate_spartagitversion.cmake`. The header is only replaced
+when its contents change, and only `src/sparta.cpp` includes it, so a new
+commit recompiles just that one file.
+
+## Host-only compilation with KOKKOS for GPUs
+With the KOKKOS package for CUDA or HIP, all sources are compiled by the GPU
+compiler unless told otherwise, which is slow. `sparta_kokkos_host_only_sources()`
+in `cmake/common/process/kokkos_host_only.cmake` compiles the sources of the
+other targets for the host only (`--host-only` for nvcc_wrapper, `-xc++` for
+hipcc/clang) and defines `SPARTA_KOKKOS_HOST_ONLY` for them, unless they include
+a header with `kokkos` in its name or a generated `style_*.h` header. The
+choice is made when cmake runs. A source that gets Kokkos through any other
+header fails to compile, and then that header has to be added to the regex
+there. In `src/KOKKOS/CMakeLists.txt`, the slowest sources are listed first, so
+they do not compile alone at the end of the build.
 
 ## The structure of the `sparta/cmake` directory
 This directory contains two directories: `common` and `presets`.

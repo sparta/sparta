@@ -252,6 +252,18 @@ specific hardware. For example:
 See the **Advanced Kokkos Options** section below for a complete listing
 of all Kokkos architecture options.
 
+The KOKKOS presets build with -g -O3 -DNDEBUG by default (the
+RelWithDebInfo build type).  Add -DCMAKE\_BUILD\_TYPE=Release to build
+without -g, which gives much smaller object files and executables and,
+with HIP, compiles noticeably faster, since -g also adds debug
+information for the GPU code.
+
+With the CUDA and HIP backends, sources that do not use Kokkos are
+compiled for the host only, which saves most of the time the GPU
+compiler would spend on them.  These are all sources outside the KOKKOS
+package that include no header with "kokkos" in its name and no
+generated style\_\*.h header.
+
 NOTE: If you are migrating from GNU Makefile builds, see the table of
 preset files above and pick the one that matches your hardware. The
 Kokkos KOKKOS\_DEVICES and KOKKOS\_ARCH Makefile variables map to CMake
