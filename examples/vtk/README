@@ -8,7 +8,7 @@ which write native VTK files (readable directly by ParaView or VisIt):
   in.vtk.3d   3d flow around a sphere (grid voxels, surf triangles)
 
 They require SPARTA to be built with the VTK package and an external
-VTK library (see doc/Section_packages.html #VTK and doc/dump_vtk.html).
+VTK library (see doc/html/Section_packages.html #VTK and doc/html/dump_vtk.html).
 If SPARTA was built without the VTK package, the "particle/vtk",
 "grid/vtk", and "surf/vtk" dump styles are unavailable and these
 scripts will stop with an "Unrecognized dump style" error.

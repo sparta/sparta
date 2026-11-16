@@ -1,7 +1,7 @@
 ! NASA Glenn (CEA) thermodynamic data, NASA-9 polynomial records of the
 ! five neutral air species, copied verbatim from the thermo.inp database
 ! distributed with CEA (McBride, Zehe and Gordon, NASA/TP-2002-211556).
-! Used by step9_thermo only, as an independent reference for the
+! Used by step8_thermo only, as an independent reference for the
 ! equilibrium constants of the SPARTA data files.
 N2                Ref-Elm. Gurvich,1978 pt1 p280 pt2 p207.                      
  3 tpis78 N   2.00    0.00    0.00    0.00    0.00 0   28.0134000          0.000

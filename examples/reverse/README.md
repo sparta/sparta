@@ -20,7 +20,7 @@ composition.
 ## The B reaction style
 
 A reaction with style **`B`** in the reaction file gets its rate derived
-at run time from its forward partner (see `doc/react.txt` for the full
+at run time from its forward partner (see `doc/src/react.rst` for the full
 description).  Two kinds of pairs are supported:
 
 - **exchange <-> exchange**: the forward partner is the exchange reaction
@@ -261,7 +261,7 @@ yes"` to also run the CPU/KOKKOS parity check (check 12).
 
 A probability capped at 1 limits the rate of that reaction.  Where a
 *forward* reaction is capped, its reverse table is limited to match, so
-the pair still relaxes to the right equilibrium (see `doc/react.txt`;
+the pair still relaxes to the right equilibrium (see `doc/src/react.rst`;
 with `data/air.tce` this concerns NO + O and NO + N dissociation).  A
 capped *reverse*, as in check 24, is not carried back into its forward
 reaction.

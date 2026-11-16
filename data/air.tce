@@ -38,14 +38,14 @@
 # refit within it, matched to the published rate at 15000 K (noted per
 # reaction below).  SPARTA itself checks only the hard limit
 # eta > -(z + 3/2), below which TCE cannot reproduce the rate at all (see
-# doc/react.txt): the two electron-impact ionization reactions violate it
+# doc/src/react.rst): the two electron-impact ionization reactions violate it
 # and are commented out at the end of the file.
 #
 # BACKWARD RATES: every dissociation and exchange (including charge
 # exchange) carries a detailed-balance reverse partner with reaction style
 # "B" - its rate is derived at run time from the forward rate and the
 # species partition functions by energy-resolved microscopic reversibility
-# (see doc/react.txt).  The five numeric coefficients on a B line are
+# (see doc/src/react.rst).  The five numeric coefficients on a B line are
 # placeholders.  Reverse rates need react tce with
 #
 #     react_modify partial_energy no
