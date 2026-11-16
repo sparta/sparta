@@ -594,17 +594,19 @@ void SPARTA::destroy()
 }
 
 /* ----------------------------------------------------------------------
-   optional build-time provenance defines (guarded; absence is harmless)
-   the build system may -D these; if it does not, fall back to "(unknown)"
-   so a plain (non-git, e.g. tarball) build still compiles and prints
-   sensibly.  Keeping the fallbacks here makes -help self-contained.
+   git commit and branch of the sources
+   the CMake build generates spartagitversion.h with them at every build
+   (see cmake/Modules/generate_spartagitversion.cmake), as LAMMPS does;
+   only this file includes it, so a new commit does not recompile anything
+   else.  CMake defines SPARTA_GIT_VERSION_HEADER for this file only.
+   Without it (the make build), and in a non-git tarball, they are empty.
 ------------------------------------------------------------------------- */
 
-#ifndef SPARTA_GIT_COMMIT
-#define SPARTA_GIT_COMMIT "(unknown)"
-#endif
-#ifndef SPARTA_GIT_BRANCH
-#define SPARTA_GIT_BRANCH "(unknown)"
+#ifdef SPARTA_GIT_VERSION_HEADER
+#include "spartagitversion.h"
+#else
+const char *SPARTA::git_commit() { return ""; }
+const char *SPARTA::git_branch() { return ""; }
 #endif
 
 /* return a short descriptor of the compiler used to build SPARTA */
@@ -690,7 +692,9 @@ void SPARTA::print_help()
   // build/version provenance banner
 
   printf("\nSPARTA (%s)\n",universe->version);
-  printf("Git info:     %s / %s\n",SPARTA_GIT_BRANCH,SPARTA_GIT_COMMIT);
+  printf("Git info:     %s / %s\n",
+         git_branch()[0] ? git_branch() : "(unknown)",
+         git_commit()[0] ? git_commit() : "(unknown)");
   printf("Compiled:     %s %s\n",__DATE__,__TIME__);
   printf("Compiler:     %s (%s)\n",compiler_info(),cxx_standard());
   printf("OS / arch:    %s / %s (%d-bit integers)\n",

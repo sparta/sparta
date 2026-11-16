@@ -9,6 +9,7 @@ if(PKG_VTK)
   include(${SPARTA_CMAKE_COMMON_DIR}/set/style_file_glob.cmake)
 
   add_library(${TARGET_SPARTA_PKG_VTK} STATIC ${SPARTA_PKG_VTK_SRC_FILES})
+  sparta_kokkos_host_only_sources(${TARGET_SPARTA_PKG_VTK})
   set_target_properties(${TARGET_SPARTA_PKG_VTK} PROPERTIES LINKER_LANGUAGE CXX)
 
   # Get MPI header files

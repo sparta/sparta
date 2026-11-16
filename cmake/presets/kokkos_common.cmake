@@ -45,8 +45,16 @@ else()
       "mpicxx"
       CACHE STRING "")
 endif()
-set(CMAKE_CXX_FLAGS
-    "-g -O3"
+# optimization and debug flags come with the build type, as in LAMMPS: -g only
+# for RelWithDebInfo (the default here) and Debug builds, not for Release
+set(CMAKE_BUILD_TYPE
+    RelWithDebInfo
+    CACHE STRING "")
+set(CMAKE_CXX_FLAGS_RELWITHDEBINFO
+    "-g -O3 -DNDEBUG"
+    CACHE STRING "")
+set(CMAKE_CXX_FLAGS_RELEASE
+    "-O3 -DNDEBUG"
     CACHE STRING "")
 set(CMAKE_AR
     "ar"

@@ -534,6 +534,16 @@ CMake options (with example values) for our purposes here are:
 -DCMAKE\_C_COMPILER=gcc
 -DCMAKE\_CXX\_COMPILER=/usr/local/bin/g++
 -DCMAKE\_CXX\_FLAGS=-O3
+-DCMAKE\_BUILD\_TYPE=Release
+
+The build type selects the optimization and debug flags: Release builds
+use -O3 -DNDEBUG, RelWithDebInfo builds add -g for debug information,
+and Debug builds use -g without optimization.  When neither a preset nor
+the command line sets CMAKE\_BUILD\_TYPE or CMAKE\_CXX\_FLAGS, the build
+type defaults to RelWithDebInfo (-O2 -g -DNDEBUG).  The KOKKOS and
+openmpi presets default to RelWithDebInfo with -g -O3 -DNDEBUG; use
+-DCMAKE\_BUILD\_TYPE=Release to build them without -g.  The other
+presets set CMAKE\_CXX\_FLAGS themselves and do not set a build type.
 
 If your cmake command line is getting too long, consider placing it in a bash
 script and escaping newlines. For example:
@@ -1711,7 +1721,8 @@ since multiple processors cannot all read from stdin.
 
 Print a detailed report about this executable and immediately exit.
 The report includes a banner (the SPARTA version, the git commit and
-branch it was built from, the build date, the compiler and C++
+branch it was built from, which are only known for a CMake build of a
+git checkout, the build date, the compiler and C++
 standard, and the target operating system and architecture), the build
 configuration (serial vs. MPI, the KOKKOS accelerator, and PNG, JPEG,
 FFmpeg and gzip support), the list of command-line switches, and the
