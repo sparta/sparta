@@ -24,10 +24,12 @@ from pkg import Run, DATA, size_params  # noqa: E402
 
 STEP = "step7_cap"
 # NPF/NSTF/seedsF: frozen reservoirs.  Their rates vary from seed to seed
-# by several times the counting error of the tallies (+/-3% at 8000 K and
-# +/-1.4% at 10-15 kK for 20 000 particles, against 0.7% and 0.1-0.3%
-# counting errors), so the analysis takes the error from the spread over
-# seeds.  The temperature is written every 20 steps: the rates scale as
+# by several times the counting error of the tallies (about 5% at 8000 K
+# and 1-2% at 10-15 kK for 20 000 particles, against 0.7% and 0.1-0.3%
+# counting errors): a reservoir keeps its initial sample of spin classes
+# (spin is conserved and no reaction is performed) and much of its NO
+# vibration, and rare excited states carry much of these rates (see
+# analyze.py).  The analysis takes the error from the spread over seeds.  The temperature is written every 20 steps: the rates scale as
 # T^5-T^10, and the reference is averaged over that temperature series.
 # NPR/NSTR: reactors (steps of 5e-11 s; the low-density reactor uses steps
 # of 5e-10 s and NSTL steps)

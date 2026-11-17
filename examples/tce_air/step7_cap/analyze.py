@@ -8,18 +8,26 @@ Produces, in results/step7_cap/:
 
 The frozen-reservoir rates vary from seed to seed by several times the
 counting error of their tallies (one 20 000-particle reservoir at 8000 K
-scatters by about 5% against a 0.7% counting error, at 10-15 kK by 1-2%):
-NO relaxes its vibration once in about 1400 collisions, so each
-reservoir keeps much of its initial random sample of the few highly
-excited molecules that carry the dissociation rate.  The check takes the
-error of the mean from the spread over seeds, and allows 2% beyond it:
-the measurements run 0.7-2.7% below the references at 8-15 kK for both
-reactions.  (With NO relaxing at every collision, nofast.species, four
-seeds at 8000 K run 3-4% above, and the reactor rx_fast sits 3.5% above
-its equilibrium; a likely cause, not yet tested, is that serial
-relaxation at high probability does not hold every mode exactly at
-equilibrium.  The frozen reservoirs therefore use the relaxation of the
-data.)
+scatters by about 5% against a 0.7% counting error, at 10-15 kK by
+1-2%), because each reservoir keeps features of its initial random
+sample that carry a large share of these rates:
+  - spin classes.  Non-reacting collisions conserve spin (air.elec sets
+    no exception), and a frozen reservoir performs no reaction, so the
+    number of NO quartets (a4Pi, b4Sigma-), O singlets and N doublets
+    stays at its initial sample for the whole run.  At 8000 K the 0.2%
+    of NO in quartet states carries 13% of NO + O and 10% of NO + N
+    dissociation, the 3% of O in singlets 18% of NO + O, the 8% of N in
+    doublets 50% of NO + N (tce_ref, capped average by reactant state);
+    a reservoir holds about 14 quartet NO molecules.
+  - vibration.  NO relaxes its vibration once in about 1400 collisions,
+    a few times per run, so the hot tail of its initial sample persists.
+The check takes the error of the mean from the spread over seeds, and
+allows 2% beyond it: the measurements run 0.7-2.7% below the references
+at 8-15 kK for both reactions.  The relaxation model does not bias the
+rates: in 100 000-particle reservoirs at 8000 K every mode stays at the
+Boltzmann distribution of the measured temperature, and the rates agree
+with the capped fraction to 1-2% whether NO relaxes at the rates of the
+data or at every collision (rotation, vibration or both).
 
 References (tce_ref.py, from the data files only):
   frozen reservoirs: the capped fraction <min(P,1)>/<P> of the forward

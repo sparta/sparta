@@ -93,11 +93,13 @@ worth knowing:
   collisions are capped at probability one, run 0.7-2.7% below the
   capped fraction computed by `tce_ref.py` at 8000-15 000 K; the check
   allows 2%.  Single frozen reservoirs of this step scatter by several
-  times their counting error (about 5% at 8000 K): NO relaxes its
-  vibration only once in about 1400 collisions, so a reservoir keeps
-  much of its initial sample of the highly excited molecules that carry
-  the rate.  The step therefore runs six seeds per temperature and takes
-  the error from their spread.  The reactors of the same step reach the
+  times their counting error (about 5% at 8000 K).  A frozen reservoir
+  performs no reaction and its collisions conserve spin, so it keeps its
+  initial random numbers of excited spin states (about 14 NO molecules
+  in quartet states, which carry 10-13% of the rate at 8000 K), and NO
+  relaxes its vibration only a few times per run.  The step therefore
+  runs six seeds per temperature and takes the error from their
+  spread.  The reactors of the same step reach the
   partition-function equilibrium to 1-4%.
 - `step3_balance`, the 11-species reservoir: every dissociation and
   exchange pair with enough tallies agrees with detailed balance within
