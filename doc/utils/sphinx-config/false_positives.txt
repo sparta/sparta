@@ -358,6 +358,7 @@ logicals
 logplot
 LoopVar
 lossy
+macOS
 macports
 macroscopically
 magalli
@@ -649,6 +650,7 @@ ssao
 ssaosamples
 Startstep
 startstep
+stderr
 stdin
 steelblue
 stereolithography

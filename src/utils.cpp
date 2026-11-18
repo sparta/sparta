@@ -38,6 +38,14 @@
 #include <ctime>
 #include <stdexcept>
 
+#if defined(_WIN32)
+#define WIN32_LEAN_AND_MEAN
+#define NOMINMAX
+#include <windows.h>
+#else
+#include <unistd.h>
+#endif
+
 /*
  * Mini regex-module adapted from https://github.com/kokke/tiny-regex-c
  * which is in the public domain.
@@ -981,4 +989,28 @@ static int matchpattern(regex_t *pattern, const char *text, int *matchlen)
   *matchlen = pre;
   return 0;
 }
+}
+
+/* ----------------------------------------------------------------------
+   check if process has superuser (root) or administrator privileges
+   adapted from platform::is_superuser() in LAMMPS
+------------------------------------------------------------------------- */
+
+bool utils::is_superuser()
+{
+#if defined(_WIN32)
+  // a process started with "Run as administrator" has an elevated access token
+  bool elevated = false;
+  HANDLE token = nullptr;
+  if (OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &token)) {
+    TOKEN_ELEVATION elevation;
+    DWORD size = sizeof(elevation);
+    if (GetTokenInformation(token, TokenElevation, &elevation, sizeof(elevation), &size))
+      elevated = (elevation.TokenIsElevated != 0);
+    CloseHandle(token);
+  }
+  return elevated;
+#else
+  return (geteuid() == 0);
+#endif
 }
