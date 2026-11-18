@@ -8,3 +8,10 @@ lib/kokkos/*          @stanmoore1
 # packages
 src/KOKKOS            @stanmoore1
 
+
+# project policies, automated tests, and release tooling
+/SECURITY.md                       @stanmoore1
+/.github/workflows/                @stanmoore1
+/.github/security-insights.yml     @stanmoore1
+/.github/dependabot.yml            @stanmoore1
+/.github/release_checksums.sh      @stanmoore1
