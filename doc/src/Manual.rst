@@ -150,7 +150,34 @@ it gives quick access to documentation for all SPARTA commands.
 * :doc:`Future and history <Section_history>`
   13.1 `Coming attractions <hist_1_>`_
   13.2 `Past versions <hist_2_>`_
+
+* :doc:`Security considerations <Section_security>`
+  14.1 `What a SPARTA input script can do <sec_1_>`_
+  14.2 `What is included in the SPARTA distribution <sec_2_>`_
+  14.3 `What is downloaded when building SPARTA <sec_3_>`_
+  14.4 `SPARTA provided by other projects <sec_4_>`_
+  14.5 `Checking a download <sec_5_>`_
 * :doc:`Bibliography <Bibliography>`
+
+
+
+.. _sec_1: Section_security.html#sec_1
+
+
+
+.. _sec_2: Section_security.html#sec_2
+
+
+
+.. _sec_3: Section_security.html#sec_3
+
+
+
+.. _sec_4: Section_security.html#sec_4
+
+
+
+.. _sec_5: Section_security.html#sec_5
 
 
 
@@ -416,6 +443,7 @@ it gives quick access to documentation for all SPARTA commands.
    Section_python
    Section_errors
    Section_history
+   Section_security
    Bibliography
    adapt_grid
    balance_grid

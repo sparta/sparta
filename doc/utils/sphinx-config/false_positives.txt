@@ -77,6 +77,7 @@ Ceyer
 cfg
 cfile
 cfraction
+checksums
 chemisorbed
 CMake
 cmake
@@ -153,6 +154,7 @@ deltaerr
 delx
 dely
 delz
+Dependabot
 depthcue
 desorb
 desorbed
@@ -275,6 +277,7 @@ histogrammed
 histogramming
 hotpink
 html
+hwloc
 Hypersonic
 hyperthermal
 hyperthreading
@@ -369,6 +372,7 @@ Makefiles
 makefiles
 malloc
 Masstotal
+MathJax
 Matsumoto
 maxlevel
 maxrandom
@@ -413,6 +417,7 @@ mpiexec
 mpirun
 mplayer
 Mth
+multibuild
 multicore
 multipoint
 multivalue
@@ -462,6 +467,7 @@ normals
 np
 Nparticles
 npernode
+npm
 Nprevious
 Nprocs
 nratio
@@ -633,6 +639,7 @@ Smallint
 smallint
 Sonine
 sonine
+Spack
 sparta
 spatype
 Specular
