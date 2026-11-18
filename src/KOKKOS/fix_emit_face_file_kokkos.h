@@ -148,7 +148,7 @@ class FixEmitFaceFileKokkos : public FixEmitFaceFile {
   t_particle_1d d_particles;
   t_species_1d d_species_all;            // all particle species (mass, rotdof)
   t_cinfo_1d d_cinfo;
-  DAT::t_int_2d d_plist;
+  DAT::t_int_2d_lr d_plist;
   DAT::t_int_1d d_cellcount;
   DAT::t_float_scalar d_tempmax;
   int plist_descending;   // 1 if the host walks d_plist high index -> low

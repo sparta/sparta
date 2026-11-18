@@ -408,6 +408,38 @@ void GridKokkos::sync(ExecutionSpace space, unsigned int mask)
 
 /* ---------------------------------------------------------------------- */
 
+void GridKokkos::sync_device_async(const DeviceType &exec, unsigned int mask)
+{
+  if (sparta->kokkos->prewrap)
+    error->one(FLERR,"Sync Device before wrap");
+
+  if (sparta->kokkos->auto_sync) modify(Host,mask);
+  if (mask & CELL_MASK) k_cells.sync_device(exec);
+  if (mask & CINFO_MASK) k_cinfo.sync_device(exec);
+  if (mask & PCELL_MASK) k_pcells.sync_device(exec);
+  if (mask & SINFO_MASK) k_sinfo.sync_device(exec);
+  if (mask & PLEVEL_MASK) k_plevels.sync_device(exec);
+  if (mask & CUSTOM_MASK && ncustom) {
+    if (ncustom_ivec)
+      for (int i = 0; i < ncustom_ivec; i++)
+        k_eivec.view_host()[i].k_view.sync_device(exec);
+
+    if (ncustom_iarray)
+      for (int i = 0; i < ncustom_iarray; i++)
+        k_eiarray.view_host()[i].k_view.sync_device(exec);
+
+    if (ncustom_dvec)
+      for (int i = 0; i < ncustom_dvec; i++)
+        k_edvec.view_host()[i].k_view.sync_device(exec);
+
+    if (ncustom_darray)
+      for (int i = 0; i < ncustom_darray; i++)
+        k_edarray.view_host()[i].k_view.sync_device(exec);
+  }
+}
+
+/* ---------------------------------------------------------------------- */
+
 void GridKokkos::modify(ExecutionSpace space, unsigned int mask)
 {
   if (sparta->kokkos->prewrap) {

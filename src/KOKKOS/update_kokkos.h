@@ -66,8 +66,10 @@ struct s_UPDATE_REDUCE {
     nscheck_one   = 0;
     nscollide_one = 0;
     nreact_one    = 0;
+    entryexit     = 0;
     nstuck        = 0;
     naxibad       = 0;
+    error_flag    = 0;
   }
 
   KOKKOS_INLINE_FUNCTION
@@ -87,6 +89,10 @@ typedef struct s_UPDATE_REDUCE UPDATE_REDUCE;
 
 template<int DIM, int SURF, int REACT, int OPT, int ATOMIC_REDUCTION>
 struct TagUpdateMove{};
+template<int DIM, int SURF, int REACT, int OPT, int ATOMIC_REDUCTION>
+struct TagUpdateMoveIndirect{};
+template<int DIM>
+struct TagUpdateMoveFirstPass{};
 
 class UpdateKokkos : public Update {
  public:
@@ -112,7 +118,25 @@ class UpdateKokkos : public Update {
   KOKKOS_INLINE_FUNCTION
   void operator()(TagUpdateMove<DIM,SURF,REACT,OPT,ATOMIC_REDUCTION>, const int&, UPDATE_REDUCE&) const;
 
+  template<int DIM, int SURF, int REACT, int OPT, int ATOMIC_REDUCTION>
+  KOKKOS_INLINE_FUNCTION
+  void operator()(TagUpdateMoveIndirect<DIM,SURF,REACT,OPT,ATOMIC_REDUCTION>,
+        const typename Kokkos::TeamPolicy<DeviceType, TagUpdateMove<DIM,SURF,REACT,OPT,ATOMIC_REDUCTION>>::member_type &team, UPDATE_REDUCE&) const;
+
+  template<int DIM, int SURF, int REACT, int OPT, int ATOMIC_REDUCTION>
+  KOKKOS_INLINE_FUNCTION
+  void moveOne(const int&, UPDATE_REDUCE&) const;
+
+  template<int DIM>
+  KOKKOS_INLINE_FUNCTION
+  void operator()(TagUpdateMoveFirstPass<DIM>, const int) const;
+
  private:
+  Kokkos::View<int> not_updated_cnt;
+  Kokkos::View<int, SPAHostType> h_not_updated_cnt;
+  Kokkos::View<int*> not_updated;
+  int use_two_pass_move;
+  bigint two_pass_move_recheck;
 
   double dt;
   int field_active[3];
@@ -144,6 +168,7 @@ class UpdateKokkos : public Update {
   // retake hash_kk and d_halo_index from the grid, see its definition
 
   void grid_index_refresh();
+  static DeviceType &move_execution_space();
 
   t_cell_1d d_cells;
   t_sinfo_1d d_sinfo;
@@ -329,6 +354,9 @@ class UpdateKokkos : public Update {
   typedef tdual_bigint_7::t_host t_host_bigint_7;
   t_bigint_7 d_scalars_big;
   t_host_bigint_7 h_scalars_big;
+
+  Kokkos::View<UPDATE_REDUCE,DeviceType> d_move_reduce;
+  Kokkos::View<UPDATE_REDUCE,SPAHostType> h_move_reduce;
 
   DAT::t_bigint_scalar d_ntouch_one;
   HAT::t_bigint_scalar h_ntouch_one;

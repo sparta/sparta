@@ -85,6 +85,8 @@ class ParticleKokkos : public Particle {
 
   void zero_custom_kokkos(int, int);
   void zero_custom_kokkos();
+  void zero_custom_kokkos(const DeviceType &, int, int);
+  void zero_custom_kokkos(const DeviceType &);
 
 #ifndef SPARTA_KOKKOS_EXACT
   // pool for post_weight_device().  only the EXACT path needs to match the
@@ -116,6 +118,7 @@ class ParticleKokkos : public Particle {
 
   void wrap_kokkos();
   void sync(ExecutionSpace, unsigned int);
+  void sync_device_async(const DeviceType &, unsigned int);
   void modify(ExecutionSpace, unsigned int);
 
   KOKKOS_INLINE_FUNCTION
@@ -184,7 +187,7 @@ class ParticleKokkos : public Particle {
   int collide_rot,vibstyle;
   double boltz;
 
-  DAT::t_int_2d d_plist;
+  DAT::t_int_2d_lr d_plist;
   DAT::t_int_1d d_cellcount;
 
   DAT::t_int_2d_lr d_lists;

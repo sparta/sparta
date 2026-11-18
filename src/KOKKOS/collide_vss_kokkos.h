@@ -231,7 +231,7 @@ class CollideVSSKokkos : public CollideVSS {
 
   t_particle_1d d_particles;
   t_species_1d_const d_species;
-  DAT::t_int_2d d_plist;
+  DAT::t_int_2d_lr d_plist;
 
   // group collision scratch (ngroups > 1)
   DAT::t_int_1d d_species2group;
@@ -368,7 +368,7 @@ class CollideVSSKokkos : public CollideVSS {
 
   DAT::t_float_2d d_recomb_ijflag;
 
-  DAT::t_int_2d d_nn_last_partner;
+  DAT::t_int_2d_lr d_nn_last_partner;
 
   template < int NEARCP, int GASTALLY > void collisions_one(COLLIDE_REDUCE&);
   template < int DIM, int GASTALLY > void collisions_one_subcell(COLLIDE_REDUCE&);
@@ -459,10 +459,10 @@ class CollideVSSKokkos : public CollideVSS {
   void restore();
 
   t_particle_1d d_particles_backup;
-  DAT::t_int_2d d_plist_backup;
+  DAT::t_int_2d_lr d_plist_backup;
   DAT::t_float_3d d_vremax_backup;
   DAT::t_float_3d d_remain_backup;
-  DAT::t_int_2d d_nn_last_partner_backup;
+  DAT::t_int_2d_lr d_nn_last_partner_backup;
   DAT::t_int_1d d_ionambi_backup;
   DAT::t_float_2d_lr d_velambi_backup;
   RanKnuth* random_backup;

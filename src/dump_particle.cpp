@@ -29,6 +29,7 @@
 #include "variable.h"
 #include "memory.h"
 #include "error.h"
+#include "sparta_masks.h"
 
 using namespace SPARTA_NS;
 
@@ -210,6 +211,21 @@ DumpParticle::~DumpParticle()
   delete [] vformat;
 
   delete [] columns;
+}
+
+/* ----------------------------------------------------------------------
+   return only the particle views this dump reads on the host
+------------------------------------------------------------------------- */
+
+unsigned int DumpParticle::sync_mask() const
+{
+  // A referenced compute, fix, or variable can have arbitrary host-side
+  // dependencies, so only direct particle fields can use a narrow mask.
+  if (ncompute || nfix || nvariable) return ALL_MASK;
+
+  unsigned int mask = PARTICLE_MASK;
+  if (ncustom) mask |= CUSTOM_MASK;
+  return mask;
 }
 
 /* ---------------------------------------------------------------------- */
