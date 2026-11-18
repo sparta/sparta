@@ -6,6 +6,11 @@ on:
   pull_request:
     branches: [ master ]
 
+# The jobs only need to read the repository.  Jobs that need more must ask
+# for it themselves.
+permissions:
+  contents: read
+
 # Run JavaScript actions on Node 24 to silence the Node 20 deprecation
 # warning. upload-artifact has no Node 24 release yet, so this runtime
 # override is used instead of only bumping action versions.
@@ -24,6 +29,8 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
     - uses: actions/checkout@v4
+      with:
+        persist-credentials: false
 
     # Make the apt download cache writable so actions/cache can restore .deb
     # files into it before "apt install" runs. libvtk9-dev pulls in a large
@@ -79,6 +86,8 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
     - uses: actions/checkout@v4
+      with:
+        persist-credentials: false
 
     - name: Install Dependencies
       run: |
@@ -115,6 +124,8 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
     - uses: actions/checkout@v4
+      with:
+        persist-credentials: false
 
     - name: Install Dependencies
       run: |
@@ -157,6 +168,8 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
     - uses: actions/checkout@v4
+      with:
+        persist-credentials: false
 
     - name: Install Dependencies
       run: |
@@ -196,6 +209,8 @@ jobs:
         python-version: ['3.9', '3.11']
     steps:
     - uses: actions/checkout@v4
+      with:
+        persist-credentials: false
 
     - uses: actions/setup-python@v5
       with:

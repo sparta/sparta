@@ -61,6 +61,23 @@ repository:
           their own input.  The resulting limitations are described in
           the security policy.
     tools:
+      # The type of the following entry must be "secret-scanning" because
+      # that is the value the LFX Insights scanner looks for.  The entry may
+      # only be listed while "Secret Protection" is switched on in the
+      # settings of the repository on GitHub.  Mention push protection in
+      # the name and comment only while that is switched on as well.
+      - name: GitHub secret scanning
+        type: secret-scanning
+        rulesets:
+          - default
+        integration:
+          adhoc: false
+          ci: true
+          release: false
+        results: {}
+        comment: |
+          Searches the repository for known kinds of passwords and access
+          keys.
       - name: Dependabot
         type: SCA
         rulesets:
@@ -73,3 +90,15 @@ repository:
         comment: |
           Proposes updates for the GitHub Actions used by the workflows
           (see .github/dependabot.yml).
+      - name: CodeQL
+        type: SAST
+        rulesets:
+          - default
+        integration:
+          adhoc: false
+          ci: true
+          release: false
+        results: {}
+        comment: |
+          Runs for C++ with the GitHub code scanning "default setup" on
+          pushes to the master branch, on pull requests, and weekly.
