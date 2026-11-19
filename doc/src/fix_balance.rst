@@ -239,7 +239,12 @@ effectively.
 ----------
 
 
-**Restrictions:** none
+**Restrictions:**
+
+Implicit surfaces cannot be rebalanced while any custom per-surface
+attributes are defined (see the :doc:`custom <custom>` command): the
+custom values are not migrated with their grid cells, so an error is
+generated.
 
 **Related commands:**
 

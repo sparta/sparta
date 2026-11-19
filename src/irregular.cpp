@@ -398,11 +398,11 @@ int Irregular::create_data_uniform_grouped(int n, int *procs, int sort)
   int i,j,k,m;
 
   // setup for collective comm
-  // work1 = # of datums I send to each proc, set self to 0
+  // work1 = 1 for procs I send to, set self to 0
   // work2 = 1 for all procs, used for ReduceScatter
 
   for (i = 0; i < nprocs; i++) {
-    work1[i] = procs[i];
+    work1[i] = procs[i] ? 1 : 0;
     work2[i] = 1;
   }
   work1[me] = 0;

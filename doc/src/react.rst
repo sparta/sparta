@@ -417,7 +417,10 @@ effectively.
 ----------
 
 
-**Restrictions:** none
+**Restrictions:**
+
+The *qk* and *tce/qk* styles do not support ionization reactions; an
+error is generated if the reaction file contains an active one.
 
 **Related commands:**
 

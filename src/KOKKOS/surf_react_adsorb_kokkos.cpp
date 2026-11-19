@@ -65,7 +65,19 @@ SurfReactAdsorbKokkos::SurfReactAdsorbKokkos(SPARTA *sparta, int narg, char **ar
   d_tally_single = k_tally_single.view_device();
   h_tally_single = k_tally_single.view_host();
 
+  // allocate the backup() snapshots on the real class instance: backup() is
+  //  only invoked on a blitted/KKCopy image of this class, so anything
+  //  allocated there would be orphaned by the next copy of the original over it
+  //  (the per-slot backups are sized in alloc_state_kokkos())
+
+  d_nsingle_backup = DAT::t_int_scalar("surf_react_adsorb:nsingle_backup");
+  d_tally_single_backup =
+    DAT::t_bigint_1d("surf_react_adsorb:tally_single_backup",nlist_gs);
+
   random_backup = NULL;
+#ifdef SPARTA_KOKKOS_EXACT
+  random_backup = new RanKnuth(12345 + comm->me);
+#endif
 
   for (int i = 0; i < SRA_KK_MAXMODELS; i++) {
     cmodel_pool[i] = NULL;
@@ -147,6 +159,12 @@ void SurfReactAdsorbKokkos::grid_changed()
 {
   SurfReactAdsorb::grid_changed();
   ((SurfKokkos *) surf)->modify(Host,CUSTOM_MASK);
+
+  // SURF mode + distributed surfs: the base re-created species_delta/mark at
+  //   the new nlocal+nghost (zeroed); resize + zero the device per-slot views
+  //   to match (also forces a host->device state push in pre_react())
+
+  if (mode == SRA_KK::SURF && distributed) alloc_state_kokkos(1);
 }
 
 /* ---------------------------------------------------------------------- */
@@ -188,6 +206,8 @@ void SurfReactAdsorbKokkos::init_cmodels_kokkos()
     if (!cmrand) continue;     // e.g. specular has no RNG
     cmodel_pool[idx] = new RandPoolWrap(12345,sparta);
     cmodel_pool[idx]->init(cmrand);
+    if (!cmodel_random_backup[idx])
+      cmodel_random_backup[idx] = new RanKnuth(12345 + comm->me);
   }
 #endif
 }
@@ -346,8 +366,21 @@ void SurfReactAdsorbKokkos::init_reactions_gs_kokkos()
   Kokkos::deep_copy(d_pad,h_pad);
   Kokkos::deep_copy(d_products,h_products);
 
-  // per-state-slot device storage: FACE => 6 box faces, SURF => nlocal+nghost
+  // keep pending GS deltas/marks across runs, as the CPU does (it allocates
+  //   and zeroes species_delta/mark once); only (re)zero them on a size change
 
+  alloc_state_kokkos(0);
+}
+
+/* ----------------------------------------------------------------------
+   (re)allocate per-state-slot device storage:
+     FACE => 6 box faces, SURF => nlocal+nghost
+   force = 1: always re-create + zero the deltas/mark (grid changed)
+   force = 0: keep existing deltas/mark if their size is unchanged
+------------------------------------------------------------------------- */
+
+void SurfReactAdsorbKokkos::alloc_state_kokkos(int force)
+{
   nstate_ = (mode == SRA_KK::FACE) ? nface : (surf->nlocal + surf->nghost);
   int ns = MAX(nstate_,1);
 
@@ -361,13 +394,21 @@ void SurfReactAdsorbKokkos::init_reactions_gs_kokkos()
   d_weight = DAT::t_float_1d("sra:weight",ns);
   d_species_state = DAT::t_int_2d("sra:species_state",ns,nspecies_surf);
 
-  k_species_delta = DAT::tdual_int_2d("sra:species_delta",ns,nspecies_surf);
-  d_species_delta = k_species_delta.view_device();
-  Kokkos::deep_copy(d_species_delta,0);
+  if (force || k_species_delta.extent(0) != (size_t) ns ||
+      k_species_delta.extent(1) != (size_t) nspecies_surf) {
+    k_species_delta = DAT::tdual_int_2d("sra:species_delta",ns,nspecies_surf);
+    d_species_delta = k_species_delta.view_device();
+    Kokkos::deep_copy(d_species_delta,0);
+    d_species_delta_backup =
+      DAT::t_int_2d("surf_react_adsorb:species_delta_backup",ns,nspecies_surf);
+  }
 
-  k_mark = DAT::tdual_int_1d("sra:mark",ns);
-  d_mark = k_mark.view_device();
-  Kokkos::deep_copy(d_mark,0);
+  if (force || k_mark.extent(0) != (size_t) ns) {
+    k_mark = DAT::tdual_int_1d("sra:mark",ns);
+    d_mark = k_mark.view_device();
+    Kokkos::deep_copy(d_mark,0);
+    d_mark_backup = DAT::t_int_1d("surf_react_adsorb:mark_backup",ns);
+  }
 }
 
 /* ----------------------------------------------------------------------
@@ -428,7 +469,11 @@ void SurfReactAdsorbKokkos::pre_react()
     Kokkos::deep_copy(d_weight,h_weight);
     Kokkos::deep_copy(d_species_state,h_sstate);
 
+    // pre_react() runs on the blitted image of this class; record the flag
+    //   on the live object too, else the next blit resets it to 0
+
     state_synced_to_device = 1;
+    ((SurfReactAdsorbKokkos *) surf->sr[this_index])->state_synced_to_device = 1;
   }
 }
 
@@ -570,35 +615,17 @@ void SurfReactAdsorbKokkos::backup()
   //   d_mark persist across steps until a sync step, so they cannot simply
   //   be zeroed on restore (unlike surf_react global/prob)
 
-  if (!d_nsingle_backup.data())
-    d_nsingle_backup = DAT::t_int_scalar(
-      Kokkos::view_alloc("surf_react_adsorb:nsingle_backup",Kokkos::WithoutInitializing));
+  // all backup storage is allocated on the live object (ctor,
+  //   alloc_state_kokkos(), init_cmodels_kokkos()): backup() runs on a
+  //   blitted image, where an allocation would be orphaned by the next blit
+
   Kokkos::deep_copy(d_nsingle_backup,d_nsingle);
-
-  if (d_tally_single_backup.extent(0) != d_tally_single.extent(0))
-    d_tally_single_backup = DAT::t_bigint_1d(
-      Kokkos::view_alloc("surf_react_adsorb:tally_single_backup",Kokkos::WithoutInitializing),
-      d_tally_single.extent(0));
   Kokkos::deep_copy(d_tally_single_backup,d_tally_single);
-
-  if (d_species_delta_backup.extent(0) != d_species_delta.extent(0) ||
-      d_species_delta_backup.extent(1) != d_species_delta.extent(1))
-    d_species_delta_backup = DAT::t_int_2d(
-      Kokkos::view_alloc("surf_react_adsorb:species_delta_backup",Kokkos::WithoutInitializing),
-      d_species_delta.extent(0),d_species_delta.extent(1));
   Kokkos::deep_copy(d_species_delta_backup,d_species_delta);
-
-  if (mode == SRA_KK::SURF) {
-    if (d_mark_backup.extent(0) != d_mark.extent(0))
-      d_mark_backup = DAT::t_int_1d(
-        Kokkos::view_alloc("surf_react_adsorb:mark_backup",Kokkos::WithoutInitializing),
-        d_mark.extent(0));
+  if (mode == SRA_KK::SURF)
     Kokkos::deep_copy(d_mark_backup,d_mark);
-  }
 
 #ifdef SPARTA_KOKKOS_EXACT
-  if (!random_backup)
-    random_backup = new RanKnuth(12345 + comm->me);
   memcpy(random_backup,random,sizeof(RanKnuth));
 
   // the device scatter kernels draw from each cmodel's own RanKnuth (thread 0
@@ -609,8 +636,7 @@ void SurfReactAdsorbKokkos::backup()
     if (!cmodel_pool[idx]) continue;
     RanKnuth *cmrand = cmodels[idx]->random;
     if (!cmrand) continue;
-    if (!cmodel_random_backup[idx])
-      cmodel_random_backup[idx] = new RanKnuth(12345 + comm->me);
+    if (!cmodel_random_backup[idx]) continue;
     memcpy(cmodel_random_backup[idx],cmrand,sizeof(RanKnuth));
   }
 #endif

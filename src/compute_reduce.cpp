@@ -152,6 +152,8 @@ ComputeReduce::ComputeReduce(SPARTA *spa, int narg, char **arg) :
     iarg++;
   }
 
+  if (nvalues == 0) error->all(FLERR,"Illegal compute reduce command");
+
   // optional args
 
   replace = new int[nvalues];
@@ -756,7 +758,7 @@ double ComputeReduce::compute_one(int m, int flag)
         if (flag < 0) {
           for (i = 0; i < n; i++) {
             if (subsetID && !(smasks[i] & surfgroupbit)) continue;
-            combine(one,cvec[i],i);
+            combine(one,areasurf[i]*cvec[i],i);
           }
         } else one = cvec[flag];
       } else {
@@ -766,7 +768,7 @@ double ComputeReduce::compute_one(int m, int flag)
         if (flag < 0) {
           for (i = 0; i < n; i++) {
             if (subsetID && !(smasks[i] & surfgroupbit)) continue;
-            combine(one,carray[i][aidxm1],i);
+            combine(one,areasurf[i]*carray[i][aidxm1],i);
           }
         } else one = carray[flag][aidxm1];
       }
@@ -906,7 +908,7 @@ double ComputeReduce::compute_one(int m, int flag)
       if (flag < 0) {
         for (i = 0; i < n; i++) {
           if (subsetID && !(smasks[i] & surfgroupbit)) continue;
-          combine(one,varsurf[i],i);
+          combine(one,areasurf[i]*varsurf[i],i);
         }
       } else one = varsurf[flag];
     }

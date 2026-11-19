@@ -30,13 +30,15 @@ Fix::Fix(SPARTA *sparta, int, char **arg) : Pointers(sparta)
   // fix ID and style
   // ID must be all alphanumeric chars or underscores
 
+  // check ID before allocating, so an error leaves nothing to free
+
   int n = strlen(arg[0]) + 1;
+  for (int i = 0; i < n-1; i++)
+    if (!isalnum(arg[0][i]) && arg[0][i] != '_')
+      error->all(FLERR,"Fix ID must be alphanumeric or underscore characters");
+
   id = new char[n];
   strcpy(id,arg[0]);
-
-  for (int i = 0; i < n-1; i++)
-    if (!isalnum(id[i]) && id[i] != '_')
-      error->all(FLERR,"Fix ID must be alphanumeric or underscore characters");
 
   n = strlen(arg[1]) + 1;
   style = new char[n];
@@ -57,7 +59,7 @@ Fix::Fix(SPARTA *sparta, int, char **arg) : Pointers(sparta)
 
   START_OF_STEP = 1;
   END_OF_STEP = 2;
-  POST_RUN = 3;
+  POST_RUN = 4;
 
   kokkos_flag = 0;
   copy = copymode = 0;

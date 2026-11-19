@@ -314,7 +314,7 @@ class SurfCollideCLLKokkos : public SurfCollideCLL {
           dot /= vrm;
           do {
             do {
-              beta_un = (6.0*rand_gen.normal() - 3.0);
+              beta_un = (6.0*rand_gen.drand() - 3.0);
             } while (beta_un + dot < 0.0);
             normalized_distbn_fn = 2.0 * (beta_un + dot) /
               (dot + sqrt(dot*dot + 2.0)) *

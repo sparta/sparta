@@ -595,7 +595,7 @@ bigint Grid::unpack_particles(char *buf, int icell, int sortflag)
       n++;
     }
   } else {
-    memcpy(&particles[nplocal],ptr,(bigint) np*nbytes_particle);
+    if (np) memcpy(&particles[nplocal],ptr,(bigint) np*nbytes_particle);
     ptr += (bigint) np * nbytes_particle_total;
   }
 
@@ -641,7 +641,7 @@ void Grid::unpack_particles_adapt(int np, char *buf)
       nplocal++;
     }
   } else {
-    memcpy(&particles[nplocal],buf,(bigint) np*nbytes_particle);
+    if (np) memcpy(&particles[nplocal],buf,(bigint) np*nbytes_particle);
     nplocal += np;
   }
 

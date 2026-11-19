@@ -101,6 +101,14 @@ void ComputeBoundaryKokkos::compute_array()
       for (int i = 0; i < size_array_rows; i++)
         array[i][j] /= normflux[i];
   }
+
+  // the host copy of k_array (written by the host MPI_Allreduce or synced
+  //   from the device, then normalized above) is the result and is read only
+  //   on the host; the device copy is only an MPI_Allreduce target on the
+  //   gpu-aware path.  The two sides are left apart on purpose: say so (not
+  //   modify_host(), which the next gpu-aware modify_device() would trip)
+
+  k_array.clear_sync_state();
 }
 
 /* ---------------------------------------------------------------------- */

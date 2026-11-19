@@ -1485,11 +1485,11 @@ Errors:
 *Partition numeric index is out of bounds*
    It must be an integer from 1 to the number of partitions.
 
-*Per-particle compute in equal-style variable formula*
-   Equal-style variables cannot use per-particle quantities.
+*Per-particle compute in non particle-style variable formula*
+   Only particle-style variables can use per-particle quantities.
 
-*Per-particle fix in equal-style variable formula*
-   Equal-style variables cannot use per-particle quantities.
+*Per-particle fix in non particle-style variable formula*
+   Only particle-style variables can use per-particle quantities.
 
 *Per-processor particle count is too big*
    No processor can have more particle than fit in a 32-bit integer,

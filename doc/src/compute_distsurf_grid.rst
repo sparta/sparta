@@ -157,7 +157,11 @@ effectively.
 ----------
 
 
-**Restrictions:** None
+**Restrictions:**
+
+This compute cannot be used with distributed surfaces, i.e. when
+the :doc:`global surfs <global>` setting is *explicit/distributed*
+or implicit surfaces are used.
 
 **Related commands:**
 

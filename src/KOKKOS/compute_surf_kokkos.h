@@ -171,10 +171,12 @@ void surf_tally_kk(double /*dtremain*/, int isurf, int icell, int reaction,
     // counts and fluxes
 
     case NUM:
-      a_array_surf_tally(itally,k++) += 1.0;
+      if (iorig) a_array_surf_tally(itally,k) += 1.0;
+      k++;
       break;
     case NUMWT:
-      a_array_surf_tally(itally,k++) += weight;
+      if (iorig) a_array_surf_tally(itally,k) += weight;
+      k++;
       break;
     case NFLUX:
       if (iorig) a_array_surf_tally(itally,k) += weight * fluxscale;
@@ -185,7 +187,7 @@ void surf_tally_kk(double /*dtremain*/, int isurf, int icell, int reaction,
       k++;
       break;
     case NFLUXIN:
-      a_array_surf_tally(itally,k) += weight * fluxscale;
+      if (iorig) a_array_surf_tally(itally,k) += weight * fluxscale;
       k++;
       break;
     case MFLUX:
@@ -449,7 +451,7 @@ void surf_tally_kk(double /*dtremain*/, int isurf, int icell, int reaction,
 }
 
  private:
-  int mvv2e;
+  double mvv2e;
   int compressed;     // 1 once the device tallies have been copied and compressed
 
   DAT::t_int_1d d_which;

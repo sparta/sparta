@@ -32,14 +32,16 @@ Compute::Compute(SPARTA *sparta, int narg, char **arg) : Pointers(sparta)
   // compute ID and style
   // ID must be all alphanumeric chars or underscores
 
-  int n = strlen(arg[0]) + 1;
-  id = new char[n];
-  strcpy(id,arg[0]);
+  // check ID before allocating, so an error leaves nothing to free
 
+  int n = strlen(arg[0]) + 1;
   for (int i = 0; i < n-1; i++)
-    if (!isalnum(id[i]) && id[i] != '_')
+    if (!isalnum(arg[0][i]) && arg[0][i] != '_')
       error->all(FLERR,
                  "Compute ID must be alphanumeric or underscore characters");
+
+  id = new char[n];
+  strcpy(id,arg[0]);
 
   n = strlen(arg[1]) + 1;
   style = new char[n];

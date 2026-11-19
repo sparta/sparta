@@ -230,9 +230,9 @@ void Grid::id_find_child_uniform_level(int level, int lohi,
   // still require 0 <= index <= N-1
 
   if (lohi == 0) {
-    if (x[0] == lo[0] && ix != 0) xgrid--;
-    if (x[1] == lo[1] && iy != 0) ygrid--;
-    if (x[2] == lo[2] && iz != 0) zgrid--;
+    if (x[0] == lo[0] && xgrid != 0) xgrid--;
+    if (x[1] == lo[1] && ygrid != 0) ygrid--;
+    if (x[2] == lo[2] && zgrid != 0) zgrid--;
   }
 }
 
@@ -432,6 +432,7 @@ int Grid::id_level(cellint id)
     level++;
   }
 
+  if (level == maxlevel) return -1;
   return level+1;
 }
 

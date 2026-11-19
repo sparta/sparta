@@ -458,6 +458,9 @@ void ComputeISurfGrid::post_process_isurf_grid()
   //   to my owned grid cells
   // for implicit surfs, surfIDs are also cellIDs
 
+  // tallies whose cell migrated since they were made (e.g. fix balance on
+  //   this step) are routed to the cell's current owner by the collate
+
   grid->collate_array_implicit(ntally,ntotal,(cellint *) tally2surf,
                                array_surf_tally,array_grid);
 
@@ -509,6 +512,12 @@ void ComputeISurfGrid::grow_tally()
 
 void ComputeISurfGrid::reallocate()
 {
+  // the grid changed (e.g. fix balance, adapt) after tallies may have been
+  //   collated: array_grid is in the old cell order, force a re-collate
+  //   from the per-surf tallies (keyed by ID) on the next post-process
+
+  combined = 0;
+
   // normflux is indexed by surf ID and is sized by the surf count,
   // not the grid cell count, so it must be reset unconditionally
   // implicit surfs are re-created by ablation with the grid unchanged

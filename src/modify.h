@@ -94,6 +94,7 @@ class Modify : protected Pointers {
 
   void list_init(int, int &, int *&);
   void list_init_end_of_step(int, int &, int *&);
+  void list_remove_fix(int, int &, int *, int *);
 };
 
 }

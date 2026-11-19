@@ -515,8 +515,7 @@ void Image::merge()
   // extra SSAO enhancement
   // bcast full image to all procs
   // each works on subset of pixels
-  // MPI_Gather() result back to proc 0
-  // use Gatherv() if subset of pixels is not the same size on every proc
+  // MPI_Gatherv() result back to proc 0
 
   if (ssao) {
     MPI_Bcast(imageBuffer,npixels*3,MPI_BYTE,0,world);
@@ -528,23 +527,21 @@ void Image::merge()
     int pixelstop = 3 * static_cast<int> (1.0*(me+1)/nprocs * npixels);
     int mypixels = pixelstop - pixelstart;
 
-    if (npixels % nprocs == 0) {
-      MPI_Gather(imageBuffer+pixelstart,mypixels,MPI_BYTE,
-                 rgbcopy,mypixels,MPI_BYTE,0,world);
+    // always use Gatherv(), since floating-point slice bounds can
+    //   produce unequal mypixels even when npixels % nprocs == 0
+    // recompute counts each time in case image size changed
 
-    } else {
-      if (recvcounts == NULL) {
-        memory->create(recvcounts,nprocs,"image:recvcounts");
-        memory->create(displs,nprocs,"image:displs");
-        MPI_Allgather(&mypixels,1,MPI_INT,recvcounts,1,MPI_INT,world);
-        displs[0] = 0;
-        for (int i = 1; i < nprocs; i++)
-          displs[i] = displs[i-1] + recvcounts[i-1];
-      }
-
-      MPI_Gatherv(imageBuffer+pixelstart,mypixels,MPI_BYTE,
-                  rgbcopy,recvcounts,displs,MPI_BYTE,0,world);
+    if (recvcounts == NULL) {
+      memory->create(recvcounts,nprocs,"image:recvcounts");
+      memory->create(displs,nprocs,"image:displs");
     }
+    MPI_Allgather(&mypixels,1,MPI_INT,recvcounts,1,MPI_INT,world);
+    displs[0] = 0;
+    for (int i = 1; i < nprocs; i++)
+      displs[i] = displs[i-1] + recvcounts[i-1];
+
+    MPI_Gatherv(imageBuffer+pixelstart,mypixels,MPI_BYTE,
+                rgbcopy,recvcounts,displs,MPI_BYTE,0,world);
 
     writeBuffer = rgbcopy;
   } else {
@@ -870,6 +867,7 @@ void Image::draw_cylinder(double *x, double *y,
   mid[2] = (y[2] + x[2]) * 0.5 - zctr;
 
   double len = MathExtra::len3(zaxis);
+  if (len == 0.0) return;
   MathExtra::scale3(1.0/len,zaxis);
   len *= 0.5;
   zmax = len;
@@ -1018,8 +1016,10 @@ void Image::draw_triangle(double *x, double *y, double *z,
   // ----------------
   // new code
 
+  // also skip degenerate triangle with NaN normal
+
   double ndotd = MathExtra::dot3(normal,camDir);
-  if (ndotd >= 0.0) return;
+  if (!(ndotd < 0.0)) return;
   invndotd = 1.0 / ndotd;
 
   // ----------------
@@ -1871,7 +1871,7 @@ void Image::write_PNG(FILE *fp)
   text_ptr[0].compression = PNG_TEXT_COMPRESSION_NONE;
   text_ptr[1].compression = PNG_TEXT_COMPRESSION_NONE;
 
-  png_set_text(png_ptr,info_ptr,text_ptr,1);
+  png_set_text(png_ptr,info_ptr,text_ptr,2);
   png_write_info(png_ptr,info_ptr);
 
   png_bytep row_pointers[outheight];
@@ -1960,11 +1960,10 @@ int Image::addcolor(char *name, double r, double g, double b)
       memory->srealloc(username,(ncolors+1)*sizeof(char *),"image:username");
     memory->grow(userrgb,ncolors+1,3,"image:userrgb");
     ncolors++;
+    int n = strlen(name) + 1;
+    username[icolor] = new char[n];
+    strcpy(username[icolor],name);
   }
-
-  int n = strlen(name) + 1;
-  username[icolor] = new char[n];
-  strcpy(username[icolor],name);
 
   if (r < 0.0 || r > 1.0 || g < 0.0 || g > 1.0 || b < 0.0 || b > 1.0)
     return 1;
@@ -2138,7 +2137,7 @@ double *Image::color2rgb(const char *color, int index)
     {245/255.0, 245/255.0, 220/255.0},
     {255/255.0, 228/255.0, 196/255.0},
     {0/255.0, 0/255.0, 0/255.0},
-    {255/255.0, 255/255.0, 205/255.0},
+    {255/255.0, 235/255.0, 205/255.0},
     {0/255.0, 0/255.0, 255/255.0},
     {138/255.0, 43/255.0, 226/255.0},
     {165/255.0, 42/255.0, 42/255.0},
@@ -2187,7 +2186,7 @@ double *Image::color2rgb(const char *color, int index)
     {255/255.0, 105/255.0, 180/255.0},
     {205/255.0, 92/255.0, 92/255.0},
     {75/255.0, 0/255.0, 130/255.0},
-    {255/255.0, 240/255.0, 240/255.0},
+    {255/255.0, 255/255.0, 240/255.0},
     {240/255.0, 230/255.0, 140/255.0},
     {230/255.0, 230/255.0, 250/255.0},
     {255/255.0, 240/255.0, 245/255.0},
@@ -2237,7 +2236,7 @@ double *Image::color2rgb(const char *color, int index)
     {175/255.0, 238/255.0, 238/255.0},
     {219/255.0, 112/255.0, 147/255.0},
     {255/255.0, 239/255.0, 213/255.0},
-    {255/255.0, 239/255.0, 213/255.0},
+    {255/255.0, 218/255.0, 185/255.0},
     {205/255.0, 133/255.0, 63/255.0},
     {255/255.0, 192/255.0, 203/255.0},
     {221/255.0, 160/255.0, 221/255.0},
@@ -2262,7 +2261,7 @@ double *Image::color2rgb(const char *color, int index)
     {210/255.0, 180/255.0, 140/255.0},
     {0/255.0, 128/255.0, 128/255.0},
     {216/255.0, 191/255.0, 216/255.0},
-    {253/255.0, 99/255.0, 71/255.0},
+    {255/255.0, 99/255.0, 71/255.0},
     {64/255.0, 224/255.0, 208/255.0},
     {238/255.0, 130/255.0, 238/255.0},
     {245/255.0, 222/255.0, 179/255.0},
@@ -2416,6 +2415,8 @@ int ColorMap::reset(int narg, char **arg)
     if (nentry < 2) return 1;
     if (mentry[0].single != MINVALUE || mentry[nentry-1].single != MAXVALUE)
       return 1;
+    for (int i = 1; i < nentry-1; i++)
+      if (mentry[i].single != NUMERIC) return 1;
     for (int i = 2; i < nentry-1; i++) {
       if (mentry[i].svalue <= mentry[i-1].svalue) return 1;
     }

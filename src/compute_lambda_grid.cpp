@@ -184,8 +184,8 @@ ComputeLambdaGrid::ComputeLambdaGrid(SPARTA *sparta, int narg, char **arg) :
   ids_nrho = new char*[nrho_values];
 
   for (int i = 0; i < nrho_values; i++) {
-    if (arg[i][0] == 'c') nrhowhich[i] = COMPUTE;
-    else if (arg[i][0] == 'f') nrhowhich[i] = FIX;
+    if (strncmp(arg[i],"c_",2) == 0) nrhowhich[i] = COMPUTE;
+    else if (strncmp(arg[i],"f_",2) == 0) nrhowhich[i] = FIX;
     else error->all(FLERR,"Invalid nrho in compute lambda/grid command");
 
     int n = strlen(arg[i]);
@@ -363,6 +363,11 @@ ComputeLambdaGrid::ComputeLambdaGrid(SPARTA *sparta, int narg, char **arg) :
           ntotal++;
         }
       }
+
+      // each nrho value must contribute at least one unique tally
+
+      if (numap[m] == 0)
+        error->all(FLERR,"Compute lambda/grid nrho values are not unique");
     }
   }
 
@@ -513,13 +518,12 @@ void ComputeLambdaGrid::compute_per_grid()
         }
 
         k = umap[m][0];
-        int jm1 = j - 1;
         if (nrho_values == 1) {
           compute->post_process_grid(j,1,nrho,map[0],vector_grid,1);
           for (i = 0; i < nglocal; i++) nrho[i][k] = vector_grid[i];
         } else {
           compute->post_process_grid(j,1,nrho,map[m],&array_grid1[0][m],nrho_values);
-          for (i = 0; i < nglocal; i++) nrho[i][k] = array_grid1[i][jm1];
+          for (i = 0; i < nglocal; i++) nrho[i][k] = array_grid1[i][m];
         }
       } else {
         k = umap[m][0];

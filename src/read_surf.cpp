@@ -31,6 +31,37 @@
 #include "error.h"
 
 using namespace SPARTA_NS;
+
+/* ----------------------------------------------------------------------
+   parse a numeric field of a surf file data line
+   uses error->one, not Input::numeric()/inumeric() which call error->all:
+     in multi-file reads each proc cluster parses a different file,
+     so a collective error on one cluster would hang the others
+------------------------------------------------------------------------- */
+
+double ReadSurf::numeric_one(char *str)
+{
+  int n = (str ? strlen(str) : 0);
+  if (n == 0) error->one(FLERR,"Expected floating point value in surf file");
+  for (int i = 0; i < n; i++) {
+    if (isdigit(str[i])) continue;
+    if (str[i] == '-' || str[i] == '+' || str[i] == '.') continue;
+    if (str[i] == 'e' || str[i] == 'E') continue;
+    error->one(FLERR,"Expected floating point value in surf file");
+  }
+  return atof(str);
+}
+
+int ReadSurf::inumeric_one(char *str)
+{
+  int n = (str ? strlen(str) : 0);
+  if (n == 0) error->one(FLERR,"Expected integer value in surf file");
+  for (int i = 0; i < n; i++) {
+    if (isdigit(str[i]) || str[i] == '-' || str[i] == '+') continue;
+    error->one(FLERR,"Expected integer value in surf file");
+  }
+  return atoi(str);
+}
 using namespace MathConst;
 
 enum{NEITHER,BAD,GOOD};
@@ -407,7 +438,7 @@ void ReadSurf::command(int narg, char **arg)
         } else {
           Surf::Tri *tris = surf->tris;
           for (m = 0; m < nsurf; m++) {
-            if (tris[csurfs[m]].id >= nsurf_old) break;
+            if (tris[csurfs[m]].id > nsurf_old) break;
           }
         }
         if (m < nsurf && partflag == CHECK) {
@@ -581,8 +612,9 @@ void ReadSurf::read_multiple(char *file)
 
   if (nsurf_allfiles != nsurf_all) {
     char str[128];
-    fprintf(screen,"Read surf mismatch in surf count across mutiple files: base "
-	    BIGINT_FORMAT ", actual " BIGINT_FORMAT "\n",nsurf_all,nsurf_allfiles);
+    snprintf(str,128,"Read surf mismatch in surf count across mutiple files: "
+             "base " BIGINT_FORMAT ", actual " BIGINT_FORMAT,
+             nsurf_all,nsurf_allfiles);
     error->all(FLERR,str);
   }
 
@@ -615,21 +647,21 @@ void ReadSurf::read_file(char *file)
 
   if (strcmp(keyword,"Points") == 0) {
     if (npoint_file == 0)
-      error->all(FLERR,"Read_surf file has no points keyword");
+      error->one(FLERR,"Read_surf file has no points keyword");
     read_points();
     parse_keyword(0);
   } else if (npoint_file)
-    error->all(FLERR,"Read_surf file has no Points section");
+    error->one(FLERR,"Read_surf file has no Points section");
 
   // read and store data from Lines or Triangles section
 
   if (dim == 2) {
     if (strcmp(keyword,"Lines") != 0)
-      error->all(FLERR,"Read_surf did not find Lines section of surf file");
+      error->one(FLERR,"Read_surf did not find Lines section of surf file");
     read_lines();
   } else {
     if (strcmp(keyword,"Triangles") != 0)
-      error->all(FLERR,"Read_surf did not find Triangles section of surf file");
+      error->one(FLERR,"Read_surf did not find Triangles section of surf file");
     read_tris();
   }
 
@@ -806,7 +838,7 @@ void ReadSurf::header()
         error->one(FLERR,"Surf file cannot contain lines for 3d simulation");
       bigint bnline;
       sscanf(line,BIGINT_FORMAT,&bnline);
-      if (bnline > MAXSMALLINT) error->all(FLERR,"Read surf nline is too large");
+      if (bnline > MAXSMALLINT) error->one(FLERR,"Read surf nline is too large");
       nsurf_file = nline_file = bnline;
     } else if (strstr(line,"triangles")) {
       if (dim == 2)
@@ -864,9 +896,9 @@ void ReadSurf::read_points()
 
     buf = buffer;
     next = strchr(buf,'\n');
-    *next = '\0';
+    if (next) *next = '\0';
     int nwords = input->count_words(buf);
-    *next = '\n';
+    if (next) *next = '\n';
 
     if (dim == 2 && nwords != 3)
       error->one(FLERR,"Incorrect point format in surf file");
@@ -878,10 +910,10 @@ void ReadSurf::read_points()
     for (int i = 0; i < nchunk; i++) {
       next = strchr(buf,'\n');
       strtok(buf," \t\n\r\f");
-      pts[n].x[0] = input->numeric(FLERR,strtok(NULL," \t\n\r\f"));
-      pts[n].x[1] = input->numeric(FLERR,strtok(NULL," \t\n\r\f"));
+      pts[n].x[0] = numeric_one(strtok(NULL," \t\n\r\f"));
+      pts[n].x[1] = numeric_one(strtok(NULL," \t\n\r\f"));
       if (dim == 3)
-        pts[n].x[2] = input->numeric(FLERR,strtok(NULL," \t\n\r\f"));
+        pts[n].x[2] = numeric_one(strtok(NULL," \t\n\r\f"));
       else pts[n].x[2] = 0.0;
       n++;
       buf = next + 1;
@@ -936,12 +968,12 @@ void ReadSurf::read_lines()
 
     buf = buffer;
     next = strchr(buf,'\n');
-    *next = '\0';
+    if (next) *next = '\0';
     int nwords = input->count_words(buf);
-    *next = '\n';
+    if (next) *next = '\n';
 
     if (nwords != nwords_required)
-      error->all(FLERR,"Incorrect line format in surf file");
+      error->one(FLERR,"Incorrect line format in surf file");
 
     // if Points section in file, each read line has indices into it
 
@@ -951,13 +983,13 @@ void ReadSurf::read_lines()
       for (i = 0; i < nchunk; i++) {
         next = strchr(buf,'\n');
         id = ATOSURFINT(strtok(buf," \t\n\r\f"));
-        if (typeflag) type = input->inumeric(FLERR,strtok(NULL," \t\n\r\f"));
+        if (typeflag) type = inumeric_one(strtok(NULL," \t\n\r\f"));
         else type = 1;
 
-        p1 = input->inumeric(FLERR,strtok(NULL," \t\n\r\f"));
-        p2 = input->inumeric(FLERR,strtok(NULL," \t\n\r\f"));
+        p1 = inumeric_one(strtok(NULL," \t\n\r\f"));
+        p2 = inumeric_one(strtok(NULL," \t\n\r\f"));
         if (p1 < 1 || p1 > npoint_file || p2 < 1 || p2 > npoint_file || p1 == p2)
-          error->all(FLERR,"Invalid point index in Lines section");
+          error->one(FLERR,"Invalid point index in Lines section");
 
 	if (ncustom) {
 	  icvalue = 0;
@@ -965,19 +997,19 @@ void ReadSurf::read_lines()
 	    if (type_custom[ic] == 0) {
 	      if (size_custom[ic] == 0) {
                 custom[icvalue++] =
-                  input->inumeric(FLERR,strtok(NULL," \t\n\r\f"));
+                  inumeric_one(strtok(NULL," \t\n\r\f"));
 	      } else
 		for (iv = 0; iv < size_custom[ic]; iv++)
 		  custom[icvalue++] =
-                    input->inumeric(FLERR,strtok(NULL," \t\n\r\f"));
+                    inumeric_one(strtok(NULL," \t\n\r\f"));
 	    } else {
               if (size_custom[ic] == 0)
 		custom[icvalue++] =
-                  input->numeric(FLERR,strtok(NULL," \t\n\r\f"));
+                  numeric_one(strtok(NULL," \t\n\r\f"));
               else
 		for (iv = 0; iv < size_custom[ic]; iv++)
 		  custom[icvalue++] =
-                    input->numeric(FLERR,strtok(NULL," \t\n\r\f"));
+                    numeric_one(strtok(NULL," \t\n\r\f"));
             }
           }
 	}
@@ -997,13 +1029,13 @@ void ReadSurf::read_lines()
       for (int i = 0; i < nchunk; i++) {
         next = strchr(buf,'\n');
         id = ATOSURFINT(strtok(buf," \t\n\r\f"));
-        if (typeflag) type = input->inumeric(FLERR,strtok(NULL," \t\n\r\f"));
+        if (typeflag) type = inumeric_one(strtok(NULL," \t\n\r\f"));
         else type = 1;
 
-        x1[0] = input->numeric(FLERR,strtok(NULL," \t\n\r\f"));
-        x1[1] = input->numeric(FLERR,strtok(NULL," \t\n\r\f"));
-        x2[0] = input->numeric(FLERR,strtok(NULL," \t\n\r\f"));
-        x2[1] = input->numeric(FLERR,strtok(NULL," \t\n\r\f"));
+        x1[0] = numeric_one(strtok(NULL," \t\n\r\f"));
+        x1[1] = numeric_one(strtok(NULL," \t\n\r\f"));
+        x2[0] = numeric_one(strtok(NULL," \t\n\r\f"));
+        x2[1] = numeric_one(strtok(NULL," \t\n\r\f"));
 	
 	if (ncustom) {
 	  icvalue = 0;
@@ -1011,19 +1043,19 @@ void ReadSurf::read_lines()
 	    if (type_custom[ic] == 0) {
 	      if (size_custom[ic] == 0)
 		custom[icvalue++] =
-                  input->inumeric(FLERR,strtok(NULL," \t\n\r\f"));
+                  inumeric_one(strtok(NULL," \t\n\r\f"));
 	      else
 		for (iv = 0; iv < size_custom[ic]; iv++)
 		  custom[icvalue++] =
-                    input->inumeric(FLERR,strtok(NULL," \t\n\r\f"));
+                    inumeric_one(strtok(NULL," \t\n\r\f"));
 	    } else {
 	      if (size_custom[ic] == 0)
 		custom[icvalue++] =
-                  input->numeric(FLERR,strtok(NULL," \t\n\r\f"));
+                  numeric_one(strtok(NULL," \t\n\r\f"));
 	      else
 		for (iv = 0; iv < size_custom[ic]; iv++)
 		  custom[icvalue++] =
-                    input->numeric(FLERR,strtok(NULL," \t\n\r\f"));
+                    numeric_one(strtok(NULL," \t\n\r\f"));
             }
           }
 	}
@@ -1091,12 +1123,12 @@ void ReadSurf::read_tris()
 
     buf = buffer;
     next = strchr(buf,'\n');
-    *next = '\0';
+    if (next) *next = '\0';
     int nwords = input->count_words(buf);
-    *next = '\n';
+    if (next) *next = '\n';
 
     if (nwords != nwords_required)
-      error->all(FLERR,"Incorrect line format in surf file");
+      error->one(FLERR,"Incorrect line format in surf file");
 
     // if Points section in file, each read line has indices into it
 
@@ -1106,15 +1138,15 @@ void ReadSurf::read_tris()
       for (int i = 0; i < nchunk; i++) {
         next = strchr(buf,'\n');
         id = ATOSURFINT(strtok(buf," \t\n\r\f"));
-        if (typeflag) type = input->inumeric(FLERR,strtok(NULL," \t\n\r\f"));
+        if (typeflag) type = inumeric_one(strtok(NULL," \t\n\r\f"));
         else type = 1;
 
-        p1 = input->inumeric(FLERR,strtok(NULL," \t\n\r\f"));
-        p2 = input->inumeric(FLERR,strtok(NULL," \t\n\r\f"));
-        p3 = input->inumeric(FLERR,strtok(NULL," \t\n\r\f"));
+        p1 = inumeric_one(strtok(NULL," \t\n\r\f"));
+        p2 = inumeric_one(strtok(NULL," \t\n\r\f"));
+        p3 = inumeric_one(strtok(NULL," \t\n\r\f"));
         if (p1 < 1 || p1 > npoint_file || p2 < 1 || p2 > npoint_file ||
-            p3 < 1 || p3 > npoint_file || p1 == p2 || p2 == p3)
-          error->all(FLERR,"Invalid point index in Triangles section");
+            p3 < 1 || p3 > npoint_file || p1 == p2 || p2 == p3 || p1 == p3)
+          error->one(FLERR,"Invalid point index in Triangles section");
 
 	if (ncustom) {
 	  icvalue = 0;
@@ -1122,19 +1154,19 @@ void ReadSurf::read_tris()
 	    if (type_custom[ic] == 0) {
 	      if (size_custom[ic] == 0)
 		custom[icvalue++] =
-                  input->inumeric(FLERR,strtok(NULL," \t\n\r\f"));
+                  inumeric_one(strtok(NULL," \t\n\r\f"));
 	      else
 		for (iv = 0; iv < size_custom[ic]; iv++)
                   custom[icvalue++] =
-                    input->inumeric(FLERR,strtok(NULL," \t\n\r\f"));
+                    inumeric_one(strtok(NULL," \t\n\r\f"));
 	    } else {
               if (size_custom[ic] == 0)
 		custom[icvalue++] =
-                  input->numeric(FLERR,strtok(NULL," \t\n\r\f"));
+                  numeric_one(strtok(NULL," \t\n\r\f"));
 	      else
 		for (iv = 0; iv < size_custom[ic]; iv++)
 		  custom[icvalue++] =
-                    input->numeric(FLERR,strtok(NULL," \t\n\r\f"));
+                    numeric_one(strtok(NULL," \t\n\r\f"));
             }
 	  }
 	}
@@ -1154,34 +1186,34 @@ void ReadSurf::read_tris()
       for (int i = 0; i < nchunk; i++) {
         next = strchr(buf,'\n');
         id = ATOSURFINT(strtok(buf," \t\n\r\f"));
-        if (typeflag) type = input->inumeric(FLERR,strtok(NULL," \t\n\r\f"));
+        if (typeflag) type = inumeric_one(strtok(NULL," \t\n\r\f"));
         else type = 1;
 
-        x1[0] = input->numeric(FLERR,strtok(NULL," \t\n\r\f"));
-        x1[1] = input->numeric(FLERR,strtok(NULL," \t\n\r\f"));
-        x1[2] = input->numeric(FLERR,strtok(NULL," \t\n\r\f"));
-        x2[0] = input->numeric(FLERR,strtok(NULL," \t\n\r\f"));
-        x2[1] = input->numeric(FLERR,strtok(NULL," \t\n\r\f"));
-        x2[2] = input->numeric(FLERR,strtok(NULL," \t\n\r\f"));
-        x3[0] = input->numeric(FLERR,strtok(NULL," \t\n\r\f"));
-        x3[1] = input->numeric(FLERR,strtok(NULL," \t\n\r\f"));
-        x3[2] = input->numeric(FLERR,strtok(NULL," \t\n\r\f"));
+        x1[0] = numeric_one(strtok(NULL," \t\n\r\f"));
+        x1[1] = numeric_one(strtok(NULL," \t\n\r\f"));
+        x1[2] = numeric_one(strtok(NULL," \t\n\r\f"));
+        x2[0] = numeric_one(strtok(NULL," \t\n\r\f"));
+        x2[1] = numeric_one(strtok(NULL," \t\n\r\f"));
+        x2[2] = numeric_one(strtok(NULL," \t\n\r\f"));
+        x3[0] = numeric_one(strtok(NULL," \t\n\r\f"));
+        x3[1] = numeric_one(strtok(NULL," \t\n\r\f"));
+        x3[2] = numeric_one(strtok(NULL," \t\n\r\f"));
 
 	if (ncustom) {
 	  icvalue = 0;
 	  for (ic = 0; ic < ncustom; ic++) {
 	    if (type_custom[ic] == 0) {
 	      if (size_custom[ic] == 0)
-		custom[icvalue++] = input->inumeric(FLERR,strtok(NULL," \t\n\r\f"));
+		custom[icvalue++] = inumeric_one(strtok(NULL," \t\n\r\f"));
 	      else
 		for (iv = 0; iv < size_custom[ic]; iv++)
-		  custom[icvalue++] = input->inumeric(FLERR,strtok(NULL," \t\n\r\f"));
+		  custom[icvalue++] = inumeric_one(strtok(NULL," \t\n\r\f"));
 	    } else {
 	      if (size_custom[ic] == 0)
-		custom[icvalue++] = input->numeric(FLERR,strtok(NULL," \t\n\r\f"));
+		custom[icvalue++] = numeric_one(strtok(NULL," \t\n\r\f"));
 	      else
 		for (iv = 0; iv < size_custom[ic]; iv++)
-		  custom[icvalue++] = input->numeric(FLERR,strtok(NULL," \t\n\r\f"));
+		  custom[icvalue++] = numeric_one(strtok(NULL," \t\n\r\f"));
             }
           }
 	}
@@ -2259,9 +2291,10 @@ void ReadSurf::open(char *file)
   if (!compressed) fp = fopen(file,"r");
   else {
 #ifdef SPARTA_GZIP
-    char gunzip[128];
-    snprintf(gunzip,128,"gunzip -c %s",file);
+    char *gunzip = new char[strlen(file) + 16];
+    sprintf(gunzip,"gunzip -c %s",file);
     fp = popen(gunzip,"r");
+    delete [] gunzip;
 #else
     error->one(FLERR,"Cannot open gzipped file");
 #endif

@@ -47,6 +47,7 @@ class CreateGrid : protected Pointers {
     int style;                           // NOSTYLE or SUBSET or REGION
     int cx,cy,cz;                        // grid of child cells at this level
     int ixlo,ixhi,iylo,iyhi,izlo,izhi;   // parent bounds for SUBSET style
+    char *pxstr,*pystr,*pzstr;           // parent bounds args for SUBSET style
     class Region *region;                // region for REGION style
   };
 

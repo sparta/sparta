@@ -69,6 +69,7 @@ KokkosSPARTA::KokkosSPARTA(SPARTA *sparta, int narg, char **arg) : Pointers(spar
 #endif
       if (iarg+2 > narg) error->all(FLERR,"Invalid Kokkos command-line args");
       ngpus = atoi(arg[iarg+1]);
+      if (ngpus <= 0) error->all(FLERR,"Invalid Kokkos command-line args");
 
       int skip_gpu = 9999;
       if (iarg+2 < narg && isdigit(arg[iarg+2][0])) {
@@ -122,6 +123,7 @@ KokkosSPARTA::KokkosSPARTA(SPARTA *sparta, int narg, char **arg) : Pointers(spar
 
     } else if (strcmp(arg[iarg],"t") == 0 ||
                strcmp(arg[iarg],"threads") == 0) {
+      if (iarg+2 > narg) error->all(FLERR,"Invalid Kokkos command-line args");
       nthreads = atoi(arg[iarg+1]);
       iarg += 2;
 

@@ -211,6 +211,11 @@ This command can only be used after the grid has been created by the
 :doc:`create\_grid <create_grid>`, :doc:`read\_grid <read_grid>`, or
 :doc:`read\_restart <read_restart>` commands.
 
+Implicit surfaces cannot be rebalanced while any custom per-surface
+attributes are defined (see the :doc:`custom <custom>` command): the
+custom values are not migrated with their grid cells, so an error is
+generated.
+
 This command also initializes various options in SPARTA before
 performing the balancing.  This is so that grid cells are ready to
 migrate to new processors.  Thus if an error is flagged, e.g. that a

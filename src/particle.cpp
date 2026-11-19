@@ -39,6 +39,7 @@ enum{INT,DOUBLE};                      // several files
 #define DELTASPECIES 16
 #define DELTAMIXTURE 8
 #define MAXLINE 1024
+#define MAXRESTARTSTR 65536     // max length of a name string in restart file
 
 // customize by adding an abbreviation string
 // also add a check for the keyword in 2 places in add_species()
@@ -733,6 +734,7 @@ int Particle::add_particle(int id, int ispecies, int icell,
   if (ncustom) zero_custom(nlocal);
 
   nlocal++;
+  sorted = 0;
   return reallocflag;
 }
 
@@ -750,6 +752,7 @@ int Particle::add_particle()
   }
 
   nlocal++;
+  sorted = 0;
   return reallocflag;
 }
 
@@ -770,6 +773,7 @@ int Particle::clone_particle(int index)
   if (ncustom) copy_custom(nlocal,index);
 
   nlocal++;
+  sorted = 0;
   return reallocflag;
 }
 
@@ -851,7 +855,7 @@ void Particle::add_species(int narg, char **arg)
 
   for (i = 0; i < newspecies; i++) {
     n = strlen(names[i]);
-    for (j = 0; j < n-1; j++)
+    for (j = 0; j < n; j++)
       if (!isalnum(names[i][j]) && names[i][j] != '_' &&
           names[i][j] != '+' && names[i][j] != '-')
         error->all(FLERR,"Invalid character in species ID");
@@ -1248,10 +1252,10 @@ void Particle::read_species_file()
     // error checks
 
     if (fsp->rotdof != 0 && fsp->rotdof != 2 && fsp->rotdof != 3)
-      error->all(FLERR,"Invalid rotational DOF in species file");
+      error->one(FLERR,"Invalid rotational DOF in species file");
 
     if (fsp->vibdof < 0 || fsp->vibdof > 2*MAXVIBMODE || fsp->vibdof % 2)
-      error->all(FLERR,"Invalid vibrational DOF in species file");
+      error->one(FLERR,"Invalid vibrational DOF in species file");
 
     // initialize additional rotation/vibration fields
     // may be overwritten by rotfile or vibfile
@@ -1453,15 +1457,23 @@ void Particle::read_restart_species(FILE *fp)
 {
   int tmp;
 
-  if (me == 0) tmp = fread(&nspecies,sizeof(int),1,fp);
+  if (me == 0) {
+    tmp = fread(&nspecies,sizeof(int),1,fp);
+    if (tmp != 1) error->one(FLERR,"Unexpected end of restart file");
+  }
   MPI_Bcast(&nspecies,1,MPI_INT,0,world);
+  if (nspecies < 0)
+    error->all(FLERR,"Invalid species count in restart file");
 
   if (nspecies > maxspecies) {
     while (nspecies > maxspecies) maxspecies += DELTASPECIES;
     grow_species();
   }
 
-  if (me == 0) tmp = fread(species,sizeof(Species),nspecies,fp);
+  if (me == 0) {
+    tmp = fread(species,sizeof(Species),nspecies,fp);
+    if (tmp != nspecies) error->one(FLERR,"Unexpected end of restart file");
+  }
   MPI_Bcast(species,nspecies*sizeof(Species),MPI_CHAR,0,world);
 
   maxvibmode = 0;
@@ -1500,8 +1512,13 @@ void Particle::read_restart_mixture(FILE *fp)
 
   // now process restart file data
 
-  if (me == 0) tmp = fread(&nmixture,sizeof(int),1,fp);
+  if (me == 0) {
+    tmp = fread(&nmixture,sizeof(int),1,fp);
+    if (tmp != 1) error->one(FLERR,"Unexpected end of restart file");
+  }
   MPI_Bcast(&nmixture,1,MPI_INT,0,world);
+  if (nmixture < 0)
+    error->all(FLERR,"Invalid mixture count in restart file");
 
   if (nmixture > maxmixture) {
     while (nmixture > maxmixture) maxmixture += DELTAMIXTURE;
@@ -1513,11 +1530,20 @@ void Particle::read_restart_mixture(FILE *fp)
   char *id;
 
   for (int i = 0; i < nmixture; i++) {
-    if (me == 0) tmp = fread(&n,sizeof(int),1,fp);
+    if (me == 0) {
+      tmp = fread(&n,sizeof(int),1,fp);
+      if (tmp != 1) error->one(FLERR,"Unexpected end of restart file");
+    }
     MPI_Bcast(&n,1,MPI_INT,0,world);
+    if (n <= 0 || n > MAXRESTARTSTR)
+      error->all(FLERR,"Invalid string length in restart file");
     id = new char[n];
-    if (me == 0) tmp = fread(id,sizeof(char),n,fp);
+    if (me == 0) {
+      tmp = fread(id,sizeof(char),n,fp);
+      if (tmp != n) error->one(FLERR,"Unexpected end of restart file");
+    }
     MPI_Bcast(id,n,MPI_CHAR,0,world);
+    id[n-1] = '\0';
     mixture[i] = new Mixture(sparta,id);
     mixture[i]->read_restart(fp);
     delete [] id;
@@ -1649,6 +1675,8 @@ int Particle::unpack_restart(char *buf)
   char *ptr = buf;
   int *ibuf = (int *) buf;
   nlocal_restart = *ibuf;
+  if (nlocal_restart < 0)
+    error->one(FLERR,"Invalid particle count in restart file");
   ptr += sizeof(int);
   ptr = ROUNDUP(ptr);
 
@@ -1656,8 +1684,9 @@ int Particle::unpack_restart(char *buf)
     memory->smalloc((bigint) nlocal_restart*nbytes,
                     "particle:particle_restart");
 
-  memcpy(particle_restart,ptr,(bigint) nlocal_restart*nbytes);
-  ptr += (bigint) nlocal_restart * sizeof(OnePartRestart);
+  if (nlocal_restart)
+    memcpy(particle_restart,ptr,(bigint) nlocal_restart*nbytes);
+  ptr += (bigint) nlocal_restart * nbytes;
   ptr = ROUNDUP(ptr);
 
   return ptr - buf;
@@ -1681,6 +1710,8 @@ void Particle::unpack_restart(char *buf, int &nlocal_restart, int step, int pass
   if (pass == 0) {
     int *ibuf = (int *) buf;
     nlocal_restart = *ibuf;
+    if (nlocal_restart < 0)
+      error->one(FLERR,"Invalid particle count in restart file");
     ptr += sizeof(int);
     ptr = ROUNDUP(ptr);
   }
@@ -1692,7 +1723,7 @@ void Particle::unpack_restart(char *buf, int &nlocal_restart, int step, int pass
   particle_restart = (char *)
     memory->smalloc((bigint) step*nbytes,"particle:particle_restart");
 
-  memcpy(particle_restart,ptr,(bigint) step*nbytes);
+  if (step) memcpy(particle_restart,ptr,(bigint) step*nbytes);
 
   this->nlocal_restart = step;
 }

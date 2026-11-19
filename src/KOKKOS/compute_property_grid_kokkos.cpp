@@ -105,10 +105,12 @@ void ComputePropertyGridKokkos::compute_per_grid()
 /* ---------------------------------------------------------------------- */
 void ComputePropertyGridKokkos::compute_per_grid_kokkos()
 {
+  invoked_per_grid = update->ntimestep;
+
   GridKokkos* grid_kk = ((GridKokkos*)grid);
+  grid_kk->sync(Device,CELL_MASK|CINFO_MASK);
   d_cells = grid_kk->k_cells.view_device();
   d_cinfo = grid_kk->k_cinfo.view_device();
-  grid_kk->sync(Device,CELL_MASK|CINFO_MASK);
 
   copymode = 1;
   if (nvalues == 1)

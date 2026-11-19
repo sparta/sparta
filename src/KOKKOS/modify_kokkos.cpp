@@ -25,6 +25,8 @@
 #include "error.h"
 #include "particle_kokkos.h"
 #include "grid_kokkos.h"
+#include "surf_kokkos.h"
+#include "sparta_masks.h"
 #include "kokkos.h"
 
 using namespace SPARTA_NS;
@@ -231,6 +233,17 @@ void ModifyKokkos::grid_changed()
 
 void ModifyKokkos::custom_surf_changed()
 {
+  // the callers (fix custom surf, fix surf/temp) have just written the owned
+  //   per-surf custom values on the host through the plain pointers, inside
+  //   a run, and nothing claims that write: without this the next
+  //   sync(Device,CUSTOM_MASK) copies nothing and the device copy stays stale.
+  // modify(Host) after the write is safe: no device code claims surf custom
+  //   data (modify(Device) is never called on it), so the device side cannot
+  //   be newer here and there is nothing a sync(Host) before the write
+  //   could have owed the host
+
+  if (surf->exist) ((SurfKokkos*) surf)->modify(Host,CUSTOM_MASK);
+
   for (int i = 0; i < n_custom_surf_changed; i++) {
     int j = list_custom_surf_changed[i];
     particle_kk->sync(fix[j]->execution_space,fix[j]->datamask_read);

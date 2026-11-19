@@ -85,6 +85,7 @@ Collide::Collide(SPARTA *sparta, int, char **arg) : Pointers(sparta)
   vre_start = 1;
   vre_every = 0;
   remainflag = 1;
+  remainflag_last = 1;
   vremax = NULL;
   vremax_initial = NULL;
   remain = NULL;
@@ -105,8 +106,9 @@ Collide::Collide(SPARTA *sparta, int, char **arg) : Pointers(sparta)
 
   max_nn = 1;
   memory->create(nn_last_partner,max_nn,"collide:nn_last_partner");
-  memory->create(nn_last_partner_igroup,max_nn,"collide:nn_last_partner");
-  memory->create(nn_last_partner_jgroup,max_nn,"collide:nn_last_partner");
+  max_nn_group = 1;
+  memory->create(nn_last_partner_igroup,max_nn_group,"collide:nn_last_partner");
+  memory->create(nn_last_partner_jgroup,max_nn_group,"collide:nn_last_partner");
 
   // initialize counters in case stats outputs them
 
@@ -256,6 +258,9 @@ void Collide::init()
     }
 
     if (ngroups == 1) {
+      memory->destroy(plist);
+      memory->destroy(p2g);
+      p2g = NULL;
       npmax = DELTAPART;
       memory->create(plist,npmax,"collide:plist");
     }
@@ -295,10 +300,30 @@ void Collide::init()
     if (remainflag)
       memory->create(remain,nglocalmax,ngroups,ngroups,"collide:remain");
 
+    // vremax is uninitialized, so force it to be set on this run
+
+    vre_first = 1;
+
     for (int igroup = 0; igroup < ngroups; igroup++)
       for (int jgroup = 0; jgroup < ngroups; jgroup++)
         vremax_initial[igroup][jgroup] = vremax_init(igroup,jgroup);
   }
+
+  // allocate remain if remainflag was enabled after a previous run without it
+  // remain is kept sized to nglocalmax whenever allocated, see grow_percell()
+  // (if nglocalmax = 0, remain stays NULL and is grown later via remainflag)
+  // also zero it if remainflag was off for the previous run, since
+  //   pack/unpack/copy_grid_one() only migrate remain when remainflag is set
+
+  if (remainflag && (!remain || !remainflag_last)) {
+    if (!remain)
+      memory->create(remain,nglocalmax,ngroups,ngroups,"collide:remain");
+    for (int icell = 0; icell < nglocalmax; icell++)
+      for (int igroup = 0; igroup < ngroups; igroup++)
+        for (int jgroup = 0; jgroup < ngroups; jgroup++)
+          remain[icell][igroup][jgroup] = 0.0;
+  }
+  remainflag_last = remainflag;
 
   // if recombination reactions exist, set flags per species pair
 
@@ -326,11 +351,17 @@ void Collide::init()
     index_velambi = particle->find_custom((char *) "velambi");
     if (index_ionambi < 0 || index_velambi < 0)
       error->all(FLERR,"Collision ambipolar without fix ambipolar");
-    if (react) react->ambi_check();
+
+    // custom attributes can exist without the fix, e.g. from a restart file
 
     int ifix;
     for (ifix = 0; ifix < modify->nfix; ifix++)
-      if (strcmp(modify->fix[ifix]->style,"ambipolar") == 0) break;
+      if (strcmp(modify->fix[ifix]->style,"ambipolar") == 0 ||
+          strcmp(modify->fix[ifix]->style,"ambipolar/kk") == 0) break;
+    if (ifix == modify->nfix)
+      error->all(FLERR,"Collision ambipolar without fix ambipolar");
+    if (react) react->ambi_check();
+
     FixAmbipolar *afix = (FixAmbipolar *) modify->fix[ifix];
     ambispecies = afix->especies;
     ions = afix->ions;
@@ -1197,10 +1228,7 @@ template < int NEARCP, int GASTALLY > void Collide::collisions_group()
     if (NEARCP) {
       ngmax = 0;
       for (i = 0; i < ngroups; i++) ngmax = MAX(ngmax,ngroup[i]);
-      if (ngmax > max_nn) {
-        realloc_nn(ngmax,nn_last_partner_igroup);
-        realloc_nn(ngmax,nn_last_partner_jgroup);
-      }
+      set_nn_group(ngmax);
     }
 
     // attempt = exact collision attempt count for a pair of groups
@@ -1250,7 +1278,10 @@ template < int NEARCP, int GASTALLY > void Collide::collisions_group()
       if (*ni == 0 || *nj == 0) continue;
       if (igroup == jgroup && *ni == 1) continue;
 
+      // group counts may have grown via reactions in previous group pairs
+
       if (NEARCP) {
+        set_nn_group(MAX(*ni,*nj));
         nn_igroup = nn_last_partner_igroup;
         if (igroup == jgroup) nn_jgroup = nn_last_partner_igroup;
         else nn_jgroup = nn_last_partner_jgroup;
@@ -1326,6 +1357,12 @@ template < int NEARCP, int GASTALLY > void Collide::collisions_group()
         newgroup = species2group[ipart->ispecies];
         if (newgroup != igroup) {
           addgroup(newgroup,ilist[i]);
+          if (NEARCP && newgroup == jgroup) {
+            set_nn_group(*nj-1);
+            nn_igroup = nn_last_partner_igroup;
+            nn_jgroup = nn_last_partner_jgroup;
+            nn_jgroup[*nj-1] = 0;
+          }
           delgroup(igroup,i);
           ilist = glist[igroup];
           jlist = glist[jgroup];
@@ -1341,6 +1378,12 @@ template < int NEARCP, int GASTALLY > void Collide::collisions_group()
           newgroup = species2group[jpart->ispecies];
           if (newgroup != jgroup) {
             addgroup(newgroup,jlist[j]);
+            if (NEARCP && newgroup == igroup) {
+              set_nn_group(*ni-1);
+              nn_igroup = nn_last_partner_igroup;
+              nn_jgroup = nn_last_partner_jgroup;
+              nn_igroup[*ni-1] = 0;
+            }
             delgroup(jgroup,j);
             ilist = glist[igroup];
             jlist = glist[jgroup];
@@ -1617,6 +1660,8 @@ template < int GASTALLY > void Collide::collisions_one_ambipolar()
             maxelectron += DELTAELECTRON;
             elist = (Particle::OnePart *)
               memory->srealloc(elist,(bigint) maxelectron*nbytes,"collide:elist");
+            // repoint jpart if it is an electron in the realloced elist
+            if (jpart && j >= np) jpart = &elist[j-np];
           }
           ep = &elist[nelectron];
           memcpy(ep,kpart,nbytes);
@@ -2004,6 +2049,8 @@ template < int GASTALLY > void Collide::collisions_group_ambipolar()
               maxelectron += DELTAELECTRON;
               elist = (Particle::OnePart *)
                 memory->srealloc(elist,(bigint) maxelectron*nbytes,"collide:elist");
+              // repoint jpart if it is an electron in the realloced elist
+              if (jpart && jgroup == egroup) jpart = &elist[j];
             }
             ep = &elist[nelectron];
             memcpy(ep,kpart,nbytes);
@@ -2486,7 +2533,7 @@ void Collide::add_grid_one()
   for (int igroup = 0; igroup < ngroups; igroup++)
     for (int jgroup = 0; jgroup < ngroups; jgroup++) {
       vremax[nglocal][igroup][jgroup] = vremax_initial[igroup][jgroup];
-      if (remainflag) remain[nglocal][igroup][jgroup] = 0.0;
+      if (remainflag || remain) remain[nglocal][igroup][jgroup] = 0.0;
     }
 
   nglocal++;
@@ -2509,14 +2556,14 @@ void Collide::adapt_grid()
 
   nglocalmax = nglocal;
   memory->grow(vremax,nglocalmax,ngroups,ngroups,"collide:vremax");
-  if (remainflag)
+  if (remainflag || remain)
     memory->grow(remain,nglocalmax,ngroups,ngroups,"collide:remain");
 
   for (int icell = nglocal_old; icell < nglocal; icell++)
     for (int igroup = 0; igroup < ngroups; igroup++)
       for (int jgroup = 0; jgroup < ngroups; jgroup++) {
         vremax[icell][igroup][jgroup] = vremax_initial[igroup][jgroup];
-        if (remainflag) remain[icell][igroup][jgroup] = 0.0;
+        if (remainflag || remain) remain[icell][igroup][jgroup] = 0.0;
       }
 }
 
@@ -2529,7 +2576,7 @@ void Collide::grow_percell(int n)
   if (nglocal+n < nglocalmax || !ngroups) return;
   while (nglocal+n >= nglocalmax) nglocalmax += DELTAGRID;
   memory->grow(vremax,nglocalmax,ngroups,ngroups,"collide:vremax");
-  if (remainflag)
+  if (remainflag || remain)
     memory->grow(remain,nglocalmax,ngroups,ngroups,"collide:remain");
 }
 
@@ -2739,14 +2786,14 @@ void Collide::set_nn(int n)
 }
 
 /* ----------------------------------------------------------------------
-   grow the group last partner vectors if necessary
+   grow the group last partner vectors if necessary so index N is valid
+   capacity is tracked separately from nn_last_partner via max_nn_group
 ------------------------------------------------------------------------- */
 
 void Collide::set_nn_group(int n)
 {
-  if (n == max_nn) {
-    max_nn *= 2;
-    memory->grow(nn_last_partner_igroup,max_nn,"collide:nn_last_partner");
-    memory->grow(nn_last_partner_jgroup,max_nn,"collide:nn_last_partner");
-  }
+  if (n < max_nn_group) return;
+  while (n >= max_nn_group) max_nn_group *= 2;
+  memory->grow(nn_last_partner_igroup,max_nn_group,"collide:nn_last_partner");
+  memory->grow(nn_last_partner_jgroup,max_nn_group,"collide:nn_last_partner");
 }

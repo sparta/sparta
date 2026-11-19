@@ -229,7 +229,7 @@ void ComputeGridKokkos::operator()(TagComputeGrid_compute_per_grid, const int &i
 
     const int ispecies = d_particles[i].ispecies;
     const int igroup = d_s2g(imix,ispecies);
-    if (igroup < 0) return;
+    if (igroup < 0) continue;
 
     const double mass = d_species[ispecies].mass;
     double* v = d_particles[i].v;

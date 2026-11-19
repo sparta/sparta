@@ -415,6 +415,10 @@ void FixEmitSurf::reset_fractions()
   int isp,nunset;
   double sum,newfrac;
 
+  // flag errors locally so that error->all() is invoked by all procs,
+  //   a bad value may be owned by only some of them
+
+  int flag = 0;
   int nsown = surf->nown;
   for (int i = 0; i < nsown; i++) {
     nunset = 0;
@@ -425,17 +429,22 @@ void FixEmitSurf::reset_fractions()
     }
 
     if (nunset == 0) {
-      if (fabs(sum-1.0) > SMALL)
-        error->all(FLERR,"Fix emit/surf custom fractions do not sum to 1.0");
+      if (fabs(sum-1.0) > SMALL) flag = MAX(flag,1);
     } else {
-      if (sum > 1.0 + SMALL)
-        error->all(FLERR,"Fix emit/surf custom fractions sum to more than 1.0");
+      if (sum > 1.0 + SMALL) flag = 2;
       newfrac = MAX(0.0,(1.0 - sum) / nunset);
       for (isp = 0; isp < nspecies; isp++) {
         if (fractions[i][isp] < 0.0) fractions[i][isp] = newfrac;
       }
     }
   }
+
+  int flagall;
+  MPI_Allreduce(&flag,&flagall,1,MPI_INT,MPI_MAX,world);
+  if (flagall == 2)
+    error->all(FLERR,"Fix emit/surf custom fractions sum to more than 1.0");
+  if (flagall == 1)
+    error->all(FLERR,"Fix emit/surf custom fractions do not sum to 1.0");
 }
 
 /* ----------------------------------------------------------------------
@@ -700,6 +709,24 @@ void FixEmitSurf::create_task(int icell)
 
 void FixEmitSurf::perform_task()
 {
+  // if global timestep was reset since tasks were created (e.g. fix dt/reset),
+  //   rescale non-subsonic FLOW insertion counts which are proportional to dt
+  // for n = constant or variable, ntarget is an area fraction, not dt dependent
+
+  if (!subsonic && npmode == FLOW && update->dt != dt) {
+    double dtratio = update->dt / dt;
+    for (int i = 0; i < ntask; i++) {
+      tasks[i].ntarget *= dtratio;
+      if (perspecies)
+        for (int isp = 0; isp < nspecies; isp++)
+          tasks[i].ntargetsp[isp] *= dtratio;
+      if (tasks[i].ntarget >= MAXSMALLINT)
+        error->one(FLERR,"Fix emit/surf insertion count exceeds 32-bit int");
+    }
+  }
+
+  dt = update->dt;
+
   if (!twopass) perform_task_onepass();
   else perform_task_twopass();
 }
@@ -1528,14 +1555,17 @@ void FixEmitSurf::subsonic_grid()
       temp_thermal_cell = tsubsonic;
 
     } else {
-      nrho_cell = np * fnum / cinfo[icell].volume;
-      massrho_cell = masstot * fnum / cinfo[icell].volume;
+      nrho_cell = np * fnum * cinfo[icell].weight / cinfo[icell].volume;
+      massrho_cell = masstot * fnum * cinfo[icell].weight / cinfo[icell].volume;
       if (np > 1) {
         ke = mv[3]/np - (mv[0]*mv[0] + mv[1]*mv[1] + mv[2]*mv[2])/np/masstot;
         temp_thermal_cell = tprefactor * ke;
+        // thermal ke negligible vs total ke (all particles at COM velocity):
+        // ke is pure roundoff of either sign, treat cell as cold
+        if (ke <= 1.0e-10 * mv[3]/np) temp_thermal_cell = 0.0;
       } else temp_thermal_cell = particle->mixture[imix]->temp_thermal;
       press_cell = nrho_cell * boltz * temp_thermal_cell;
-      if (np) {
+      if (np && temp_thermal_cell > 0.0) {
         mass_cell = masstot / np;
         gamma_cell = gamma / np;
         soundspeed_cell = sqrt(gamma_cell*boltz*temp_thermal_cell / mass_cell);
@@ -1766,13 +1796,13 @@ void FixEmitSurf::grow_task()
 void FixEmitSurf::realloc_nspecies()
 {
   if (perspecies) {
-    for (int i = 0; i < ntask; i++) {
+    for (int i = 0; i < ntaskmax; i++) {
       delete [] tasks[i].ntargetsp;
       tasks[i].ntargetsp = new double[nspecies];
     }
   }
   if (subsonic_style == PONLY || subsonic_style == MFLOW || temp_custom_flag) {
-    for (int i = 0; i < ntask; i++) {
+    for (int i = 0; i < ntaskmax; i++) {
       delete [] tasks[i].vscale;
       tasks[i].vscale = new double[nspecies];
     }
@@ -1805,6 +1835,7 @@ int FixEmitSurf::option(int narg, char **arg)
     if (strstr(arg[1],"v_") == arg[1]) {
       npmode = VARIABLE;
       int n = strlen(&arg[1][2]) + 1;
+      delete [] npstr;
       npstr = new char[n];
       strcpy(npstr,&arg[1][2]);
     } else {

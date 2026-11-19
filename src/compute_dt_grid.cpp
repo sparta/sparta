@@ -19,6 +19,7 @@
 #include "compute_dt_grid.h"
 #include "update.h"
 #include "grid.h"
+#include "particle.h"
 #include "domain.h"
 #include "modify.h"
 #include "fix.h"
@@ -314,13 +315,6 @@ ComputeDtGrid::ComputeDtGrid(SPARTA *sparta, int narg, char **arg) :
                  "accessed out-of-range");
   }
 
-  // find minimum species mass
-
-  Particle::Species *species = particle->species;
-  min_species_mass = BIG;
-  for (int s = 0; s < particle->nspecies; ++s)
-    min_species_mass = MIN(species[s].mass,min_species_mass);
-
   // initialize data structures
 
   per_grid_flag = 1;
@@ -356,6 +350,14 @@ ComputeDtGrid::~ComputeDtGrid()
 void ComputeDtGrid::init()
 {
   reallocate();
+
+  // find minimum species mass
+  // done here since species may be added after compute is defined
+
+  Particle::Species *species = particle->species;
+  min_species_mass = BIG;
+  for (int s = 0; s < particle->nspecies; ++s)
+    min_species_mass = MIN(species[s].mass,min_species_mass);
 
   // ctau/ftau = compute or fix that calculates per grid cell tau
   // ditto for temp,usq,vsq,wsq
@@ -451,7 +453,7 @@ void ComputeDtGrid::compute_per_grid()
     if (ctau->post_process_grid_flag)
       ctau->post_process_grid(tau_index,1,NULL,NULL,NULL,1);
 
-    if (tau_index == 0)
+    if (tau_index == 0 || ctau->post_process_grid_flag)
       memcpy(tau,ctau->vector_grid,nglocal*sizeof(double));
     else {
       int index = tau_index-1;
@@ -478,7 +480,7 @@ void ComputeDtGrid::compute_per_grid()
     if (ctemp->post_process_grid_flag)
       ctemp->post_process_grid(temp_index,1,NULL,NULL,NULL,1);
 
-    if (temp_index == 0)
+    if (temp_index == 0 || ctemp->post_process_grid_flag)
       memcpy(temp,ctemp->vector_grid,nglocal*sizeof(double));
     else {
       int index = temp_index-1;
@@ -505,7 +507,7 @@ void ComputeDtGrid::compute_per_grid()
     if (cusq->post_process_grid_flag)
       cusq->post_process_grid(usq_index,1,NULL,NULL,NULL,1);
 
-    if (usq_index == 0)
+    if (usq_index == 0 || cusq->post_process_grid_flag)
       memcpy(usq,cusq->vector_grid,nglocal*sizeof(double));
     else {
       int index = usq_index-1;
@@ -532,7 +534,7 @@ void ComputeDtGrid::compute_per_grid()
     if (cvsq->post_process_grid_flag)
       cvsq->post_process_grid(vsq_index,1,NULL,NULL,NULL,1);
 
-    if (vsq_index == 0)
+    if (vsq_index == 0 || cvsq->post_process_grid_flag)
       memcpy(vsq,cvsq->vector_grid,nglocal*sizeof(double));
     else {
       int index = vsq_index-1;
@@ -559,7 +561,7 @@ void ComputeDtGrid::compute_per_grid()
     if (cwsq->post_process_grid_flag)
       cwsq->post_process_grid(wsq_index,1,NULL,NULL,NULL,1);
 
-    if (wsq_index == 0)
+    if (wsq_index == 0 || cwsq->post_process_grid_flag)
       memcpy(wsq,cwsq->vector_grid,nglocal*sizeof(double));
     else {
       int index = wsq_index-1;
@@ -577,6 +579,12 @@ void ComputeDtGrid::compute_per_grid()
         wsq[i] = array[i][index];
     }
   }
+
+  // the per-cell particle counts used below are set by the last particle sort
+  // particles are only sorted during a run when collisions are enabled,
+  //   and not yet at the setup of a run, so re-sort if unsorted
+
+  if (!particle->sorted) particle->sort();
 
   // calculate per grid cell timestep for cells in group
   // set timestep = 0. for cells not in group and for cells with problematic input data

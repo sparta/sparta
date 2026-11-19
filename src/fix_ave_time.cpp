@@ -341,6 +341,8 @@ FixAveTime::~FixAveTime()
   memory->destroy(array);
   memory->destroy(array_total);
   memory->destroy(array_list);
+  memory->destroy(vector_list);
+  memory->destroy(offlist);
 }
 
 /* ---------------------------------------------------------------------- */
@@ -683,7 +685,7 @@ double FixAveTime::compute_vector(int i)
 {
   if (norm) {
     if (mode == SCALAR) return vector_total[i]/norm;
-    if (mode == VECTOR) return array_total[i][0];
+    if (mode == VECTOR) return array_total[i][0]/norm;
   }
   return 0.0;
 }

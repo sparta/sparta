@@ -85,13 +85,21 @@ void ComputeISurfGridKokkos::init_normflux()
   Kokkos::deep_copy(d_normflux,h_normflux);
 
   // Cannot realloc inside a Kokkos parallel region, so size tally2surf as nsurf
+  // also called mid-cycle via reallocate() (e.g. fix balance) after tallies
+  //   were made but before they are consumed, so preserve surf2tally and
+  //   never shrink the tally storage, else the tallies would be lost
 
-  memoryKK->grow_kokkos(k_tally2surf,tally2surf,nsurf,"isurf/grid:tally2surf");
+  int nold = d_surf2tally.extent(0);
+  int nalloc = MAX(nsurf,nold);
+  if (nalloc > nold) {
+    Kokkos::resize(d_surf2tally,nalloc);
+    Kokkos::deep_copy(Kokkos::subview(d_surf2tally,Kokkos::make_pair(nold,nalloc)),-1);
+  }
+
+  memoryKK->grow_kokkos(k_tally2surf,tally2surf,nalloc,"isurf/grid:tally2surf");
   d_tally2surf = k_tally2surf.view_device();
-  d_surf2tally = DAT::t_int_1d("isurf/grid:surf2tally",nsurf);
-  Kokkos::deep_copy(d_surf2tally,-1);
 
-  memoryKK->grow_kokkos(k_array_surf_tally,array_surf_tally,nsurf,ntotal,"isurf/grid:array_surf_tally");
+  memoryKK->grow_kokkos(k_array_surf_tally,array_surf_tally,nalloc,ntotal,"isurf/grid:array_surf_tally");
   d_array_surf_tally = k_array_surf_tally.view_device();
 }
 
@@ -185,13 +193,16 @@ int ComputeISurfGridKokkos::tallyinfo(surfint *&ptr)
 
   // compress array_surf_tally
 
-  int nsurf = surf->nlocal + surf->nghost;
+  // scan full surf2tally, it may be larger than current nlocal+nghost
+  //   if surfs were rebalanced since the tallies were made
+
+  int nsurf = d_surf2tally.extent(0);
   int istart = 0;
   int iend = nsurf-1;
 
   while (1) {
     while (istart < nsurf && h_surf2tally[istart] != -1) istart++;
-    while (h_surf2tally[iend] == -1 && iend > 0) iend--;
+    while (iend > 0 && h_surf2tally[iend] == -1) iend--;
     if (istart >= iend) {
       ntally = istart;
       break;
@@ -234,9 +245,9 @@ void ComputeISurfGridKokkos::post_process_isurf_grid()
 
 void ComputeISurfGridKokkos::grow_tally()
 {
-  // Cannot realloc inside a Kokkos parallel region, so size as nsurf
+  // Cannot realloc inside a Kokkos parallel region, so size as surf2tally
 
-  int nsurf = surf->nlocal + surf->nghost;
+  int nsurf = d_surf2tally.extent(0);
 
   memoryKK->grow_kokkos(k_tally2surf,tally2surf,nsurf,"isurf/grid:tally2surf");
   d_tally2surf = k_tally2surf.view_device();

@@ -244,7 +244,7 @@ struct fft_plan_2d *fft_2d_create_plan(
     plan->pre_plan =
       remap_2d_create_plan(comm,in_ilo,in_ihi,in_jlo,in_jhi,
                            first_ilo,first_ihi,first_jlo,first_jhi,
-                           FFT_PRECISION,0,0,2);
+                           2,0,0,FFT_PRECISION);
     if (plan->pre_plan == nullptr) return nullptr;
   }
 
@@ -279,7 +279,7 @@ struct fft_plan_2d *fft_2d_create_plan(
   plan->mid_plan =
     remap_2d_create_plan(comm,first_ilo,first_ihi,first_jlo,first_jhi,
                          second_ilo,second_ihi,second_jlo,second_jhi,
-                         FFT_PRECISION,1,0,2);
+                         2,1,0,FFT_PRECISION);
   if (plan->mid_plan == nullptr) return nullptr;
 
   // 1d FFTs along slow axis
@@ -303,7 +303,7 @@ struct fft_plan_2d *fft_2d_create_plan(
     plan->post_plan =
       remap_2d_create_plan(comm,second_jlo,second_jhi,second_ilo,second_ihi,
                            out_jlo,out_jhi,out_ilo,out_ihi,
-                           FFT_PRECISION,(permute+1)%2,0,2);
+                           2,(permute+1)%2,0,FFT_PRECISION);
     if (plan->post_plan == nullptr) return nullptr;
   }
 

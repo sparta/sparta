@@ -53,7 +53,7 @@ FixAdapt::FixAdapt(SPARTA *sparta, int narg, char **arg) :
   // parse and check arguments using AdaptGrid class
 
   nevery = input->inumeric(FLERR,arg[2]);
-  if (nevery < 0) error->all(FLERR,"Illegal fix adapt command");
+  if (nevery <= 0) error->all(FLERR,"Illegal fix adapt command");
 
   adapt->process_args(narg-3,&arg[3]);
   adapt->check_args(nevery);
@@ -95,6 +95,11 @@ int FixAdapt::setmask()
 
 void FixAdapt::init()
 {
+  // see doc/read_isurf.txt: implicit surf simulations cannot adapt the grid
+
+  if (surf->exist && surf->implicit)
+    error->all(FLERR,"Cannot use fix adapt with implicit surfaces");
+
   // re-check args in case computes or fixes changed
 
   adapt->check_args(nevery);
@@ -109,6 +114,12 @@ void FixAdapt::init()
         error->all(FLERR,"Fix adapt must come after fix ave/grid");
     }
   }
+
+  // add next adaptation step to all computes that store invocation times
+  // since AdaptGrid invokes its compute without setting invoked_flag
+
+  bigint nvalid = (update->ntimestep/nevery)*nevery + nevery;
+  modify->addstep_compute_all(nvalid);
 }
 
 /* ----------------------------------------------------------------------
@@ -149,6 +160,7 @@ void FixAdapt::end_of_step()
     adapt->cleanup();
     grid->acquire_ghosts();
     grid->find_neighbors();
+    modify->addstep_compute_all(update->ntimestep + nevery);
     return;
   }
 
@@ -189,7 +201,7 @@ void FixAdapt::end_of_step()
 
   // wrap adaptivity with clearstep/addstep since it may invoke computes
 
-  modify->addstep_compute(update->ntimestep + nevery);
+  modify->addstep_compute_all(update->ntimestep + nevery);
 
   // outputs
 

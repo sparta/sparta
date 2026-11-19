@@ -112,7 +112,7 @@ public:
     const int fast = index % nfast;
     const int out = slow*nfast + fast;
     const int in = slow*nstride + fast;
-    d_buf[buf_offset + in] = d_data[data_offset + out];
+    d_data[data_offset + in] = d_buf[buf_offset + out];
   }
 };
 

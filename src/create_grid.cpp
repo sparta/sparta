@@ -138,15 +138,17 @@ void CreateGrid::command(int narg, char **arg)
       } else {
         nlo = nhi = atoi(arg[iarg+1]);
         if (nlo < 2) error->all(FLERR,"Create grid subset level < 2");
+        if (nhi > nlevels)
+          error->all(FLERR,"Create grid subset level > nlevels");
       }
       for (int i = nlo-1; i <= nhi-1; i++) {
         if (levels[i].setflag)
           error->all(FLERR,"Create_grid subset is resetting a level");
         levels[i].setflag = 1;
         levels[i].style = SUBSET;
-        bounds(arg[iarg+2],levels[i-1].cx,levels[i].ixlo,levels[i].ixhi);
-        bounds(arg[iarg+3],levels[i-1].cy,levels[i].iylo,levels[i].iyhi);
-        bounds(arg[iarg+4],levels[i-1].cz,levels[i].izlo,levels[i].izhi);
+        levels[i].pxstr = arg[iarg+2];
+        levels[i].pystr = arg[iarg+3];
+        levels[i].pzstr = arg[iarg+4];
         levels[i].cx = atoi(arg[iarg+5]);
         levels[i].cy = atoi(arg[iarg+6]);
         levels[i].cz = atoi(arg[iarg+7]);
@@ -163,6 +165,8 @@ void CreateGrid::command(int narg, char **arg)
       } else {
         nlo = nhi = atoi(arg[iarg+1]);
         if (nlo < 2) error->all(FLERR,"Create grid region level < 2");
+        if (nhi > nlevels)
+          error->all(FLERR,"Create grid region level > nlevels");
       }
       for (int i = nlo-1; i <= nhi-1; i++) {
         if (levels[i].setflag)
@@ -212,6 +216,16 @@ void CreateGrid::command(int narg, char **arg)
       error->all(FLERR,"Create_grid cx,cy,cz cannot be < 1");
     if (levels[i].cx == 1 && levels[i].cy == 1 && levels[i].cz == 1)
       error->all(FLERR,"Create_grid cx,cy,cz cannot all be one");
+  }
+
+  // subset bounds for each level depend on its parent level's cx,cy,cz
+  // evaluate after all levels are set, so levels can be specified in any order
+
+  for (int i = 1; i < nlevels; i++) {
+    if (levels[i].style != SUBSET) continue;
+    bounds(levels[i].pxstr,levels[i-1].cx,levels[i].ixlo,levels[i].ixhi);
+    bounds(levels[i].pystr,levels[i-1].cy,levels[i].iylo,levels[i].iyhi);
+    bounds(levels[i].pzstr,levels[i-1].cz,levels[i].izlo,levels[i].izhi);
   }
 
   // transfer level info into Grid data structs

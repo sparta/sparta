@@ -28,6 +28,7 @@ using namespace SPARTA_NS;
 RanMars::RanMars(SPARTA *sparta) : Pointers(sparta)
 {
   initflag = 0;
+  save = 0;
   u = NULL;
 }
 
@@ -46,12 +47,14 @@ void RanMars::init(int seed)
   double s,t;
 
   initflag = 1;
+  save = 0;
 
   // assume input seed is positive value > 0
   // insure seed is from 1 to 900,000,000 inclusive
 
   while (seed > 900000000) seed -= 900000000;
 
+  delete [] u;
   u = new double[97+1];
 
   ij = (seed-1)/30082;

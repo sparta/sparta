@@ -91,6 +91,8 @@ class ReadSurf : protected Pointers {
   void read_points();
   void read_lines();
   void read_tris();
+  double numeric_one(char *);
+  int inumeric_one(char *);
 
   void add_line(surfint, int, double *, double *);
   void add_tri(surfint, int, double *, double *, double *);

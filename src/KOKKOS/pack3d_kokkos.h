@@ -292,7 +292,7 @@ public:
     const int out_orig = slow*nmid*nfast*nqty;
     const int plane = slow*nstride_line;
     const int instart = plane + nqty*mid;
-    int in = instart + nqty*fast*nstride_plane;
+    int in = instart + fast*nstride_plane;
     int out = out_orig + nqty*mid*nfast + nqty*fast;
     for (int iqty = 0; iqty < nqty; iqty++) d_data[data_offset + in++] = d_buf[buf_offset + out++];
   }
@@ -453,7 +453,7 @@ public:
     const int slow = index_new % nslow;
     const int out_orig = slow*nmid*nfast*nqty;
     const int instart = nqty*slow + mid*nstride_plane;
-    int in = instart + nqty*fast*nstride_line;
+    int in = instart + fast*nstride_line;
     int out = out_orig + nqty*mid*nfast + nqty*fast;
     for (int iqty = 0; iqty < nqty; iqty++) d_data[data_offset + in++] = d_buf[buf_offset + out++];
   }

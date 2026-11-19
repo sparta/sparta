@@ -64,6 +64,14 @@ class MyPage {
     pagesize = user_pagesize;
     pagedelta = user_pagedelta;
 
+    // initialize so destructor is safe even if inputs are invalid
+
+    ndatum = nchunk = 0;
+    pages = NULL;
+    page = NULL;
+    npage = 0;
+    ipage = index = 0;
+
     errorflag = 0;
     if (maxchunk <= 0 || pagesize <= 0 || pagedelta <= 0) errorflag = 1;
     if (maxchunk > pagesize) errorflag = 1;
@@ -71,9 +79,6 @@ class MyPage {
 
     // initial page allocation
 
-    ndatum = nchunk = 0;
-    pages = NULL;
-    npage = 0;
     allocate();
     if (errorflag) return;
     ipage = index = 0;

@@ -334,13 +334,11 @@ void ReactBird::init()
     for (int j = 0; j < nspecies; j++) {
       int n = reactions[i][j].n;
       int *list = reactions[i][j].list;
-      if (offset < nij*nspecies)
-        reactions[i][j].sp2recomb = &sp2recomb_ij[offset];
-      else
-        reactions[i][j].sp2recomb = NULL; // Needed for Kokkos
+      reactions[i][j].sp2recomb = NULL; // Needed for Kokkos
       for (int m = 0; m < n; m++) {
         r = &rlist[list[m]];
         if (r->type == RECOMBINATION) {
+          reactions[i][j].sp2recomb = &sp2recomb_ij[offset];
           offset += nspecies;
           break;
         }
@@ -521,7 +519,8 @@ void ReactBird::ambi_check()
 
   int ifix;
   for (ifix = 0; ifix < modify->nfix; ifix++)
-    if (strcmp(modify->fix[ifix]->style,"ambipolar") == 0) break;
+    if (strcmp(modify->fix[ifix]->style,"ambipolar") == 0 ||
+        strcmp(modify->fix[ifix]->style,"ambipolar/kk") == 0) break;
   FixAmbipolar *afix = (FixAmbipolar *) modify->fix[ifix];
   int especies = afix->especies;
   int *ions = afix->ions;
@@ -639,7 +638,8 @@ void ReactBird::ambi_check()
 
       else if (r->nreactant == 2 && r->nproduct == 2) {
         if (r->reactants[0] != especies && r->reactants[1] != especies &&
-            r->products[0] != especies && ions[r->products[1]] == 1) flag = 0;
+            r->products[0] != especies && r->products[1] >= 0 &&
+            ions[r->products[1]] == 1) flag = 0;
       }
     }
 

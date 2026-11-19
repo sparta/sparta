@@ -55,7 +55,7 @@ FixGridCheck::FixGridCheck(SPARTA *sparta, int narg, char **arg) :
       else if (strcmp(arg[iarg+1],"yes") == 0) outside_check = 1;
       else error->all(FLERR,"Illegal fix grid/check command");
       iarg += 2;
-    }
+    } else error->all(FLERR,"Illegal fix grid/check command");
   }
 
   // setup

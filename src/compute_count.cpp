@@ -132,6 +132,11 @@ void ComputeCount::init()
     count = new int[maxspecies];
   }
 
+  // force re-tally on first invocation of a new run,
+  //   particles may have changed since last run on same timestep
+
+  lasttally = -1;
+
   // check if the group count in any accessed mixtures has changed
 
   int warn = 0;
@@ -184,7 +189,7 @@ void ComputeCount::compute_vector()
 {
   int i,m;
 
-  invoked_scalar = update->ntimestep;
+  invoked_vector = update->ntimestep;
 
   per_species_tally();
 

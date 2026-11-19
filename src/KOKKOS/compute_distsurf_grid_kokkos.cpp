@@ -126,10 +126,15 @@ void ComputeDistSurfGridKokkos::compute_per_grid_kokkos()
   //   dist = minimum distance to any eligible surf
   // if assign dist to split cell, also assign dist to all its sub cells
   GridKokkos* grid_kk = ((GridKokkos*)grid);
+  grid_kk->sync(Device,CELL_MASK|CINFO_MASK);
   d_cells = grid_kk->k_cells.view_device();
   d_cinfo = grid_kk->k_cinfo.view_device();
   d_csurfs = grid_kk->d_csurfs;
   d_csubs = grid_kk->d_csubs;
+
+  // cells not in group (and their sub cells) output zero
+
+  Kokkos::deep_copy(d_vector_grid,0.0);
 
   copymode = 1;
   Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagComputeDistSurfGrid_surf_distance>(0,nglocal),*this);
@@ -231,6 +236,15 @@ void ComputeDistSurfGridKokkos::operator()(TagComputeDistSurfGrid_surf_distance,
   }
 
   d_vector_grid[icell] = mindist;
+  if (d_cells[icell].nsplit > 1) {
+    n = d_cells[icell].nsplit;
+    int isplit = d_cells[icell].isplit;
+    auto csubs_begin = d_csubs.row_map(isplit);
+    for (i = 0; i < n; i++) {
+      m = d_csubs.entries(csubs_begin + i);
+      d_vector_grid[m] = mindist;
+    }
+  }
 }
 
 /* ----------------------------------------------------------------------

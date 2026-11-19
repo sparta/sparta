@@ -101,11 +101,13 @@ void ComputeBoundary::init()
 
   double nfactor = update->dt/update->fnum;
   if (domain->dimension == 2) {
-    normflux[XLO] = normflux[XHI] = domain->yprd * nfactor;
-
-    if (!domain->axisymmetric)
+    if (!domain->axisymmetric) {
+      normflux[XLO] = normflux[XHI] = domain->yprd * nfactor;
       normflux[YLO] = normflux[YHI] = domain->xprd * nfactor;
-    else {
+    } else {
+      // x faces are disks/annuli swept around y=0 axis
+      normflux[XLO] = normflux[XHI] = MY_PI *
+        (domain->boxlo[1] + domain->boxhi[1]) * domain->yprd * nfactor;
       // normflux[YLO] is actually 0 in axisymmetric case
       //  but is used in tally normalization even though numerator will be 0
       normflux[YLO] = normflux[YHI] = 2 * MY_PI * domain->xprd * domain->yprd * nfactor;
@@ -178,6 +180,10 @@ void ComputeBoundary::boundary_tally(double dtremain,
                                      Particle::OnePart *ip,
                                      Particle::OnePart *jp)
 {
+  // skip if no original particle, e.g. on-surf reaction by SurfReactAdsorb
+
+  if (!iorig) return;
+
   // skip if species not in mixture group
 
   int origspecies = iorig->ispecies;

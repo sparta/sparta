@@ -555,7 +555,9 @@ void FixAveGrid::end_of_step()
 
       } else if (which[m] == VARIABLE) {
         k = umap[m][0];
-        input->variable->compute_grid(n,&tally[0][k],ntotal,1);
+        double *tptr = NULL;
+        if (tally) tptr = &tally[0][k];
+        input->variable->compute_grid(n,tptr,ntotal,1);
 
       // access custom attribute
 

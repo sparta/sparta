@@ -61,6 +61,12 @@ FixFieldGrid::FixFieldGrid(SPARTA *sparta, int narg, char **arg) :
   per_grid_freq = 1;
   per_grid_field = 1;
 
+  // gridmigrate so that grid_changed() is invoked when grid cells change
+  // array_grid is not migrated, instead it is recomputed at start of next step
+
+  gridmigrate = 1;
+  recompute = 0;
+
   field_active[0] = field_active[1] = field_active[2] = 0;
   if (axstr) field_active[0] = 1;
   if (aystr) field_active[1] = 1;
@@ -88,6 +94,7 @@ FixFieldGrid::~FixFieldGrid()
 int FixFieldGrid::setmask()
 {
   int mask = 0;
+  mask |= START_OF_STEP;
   return mask;
 }
 
@@ -133,8 +140,30 @@ void FixFieldGrid::init()
 
 /* ---------------------------------------------------------------------- */
 
+void FixFieldGrid::start_of_step()
+{
+  if (recompute) {
+    recompute = 0;
+    compute_field();
+  }
+}
+
+/* ----------------------------------------------------------------------
+   per-processor list of grid cells changed (load balance or adaptation)
+   array_grid is now indexed incorrectly and may be too small
+   flag it to be recomputed before the next move
+------------------------------------------------------------------------- */
+
+void FixFieldGrid::grid_changed()
+{
+  recompute = 1;
+}
+
+/* ---------------------------------------------------------------------- */
+
 void FixFieldGrid::compute_field()
 {
+  recompute = 0;
   if (!grid->nlocal) return;
 
   // reallocate array_grid if necessary
