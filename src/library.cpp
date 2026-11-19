@@ -384,18 +384,11 @@ void *sparta_extract_global(void *ptr, const char *name)
   // these entries do not require an instance,
   // e.g. so a version check can be done before calling sparta_open()
 
-  // optional build-time git provenance (guarded; absence is harmless so a
-  // plain non-git build still returns an empty/"(unknown)" string)
-#ifndef SPARTA_GIT_COMMIT
-#define SPARTA_GIT_COMMIT ""
-#endif
-#ifndef SPARTA_GIT_BRANCH
-#define SPARTA_GIT_BRANCH ""
-#endif
+  // git provenance is an empty string when unknown, e.g. a non-git build
 
   if (strcmp(name,"sparta_version") == 0) return (void *) SPARTA_VERSION;
-  if (strcmp(name,"git_branch") == 0) return (void *) SPARTA_GIT_BRANCH;
-  if (strcmp(name,"git_commit") == 0) return (void *) SPARTA_GIT_COMMIT;
+  if (strcmp(name,"git_branch") == 0) return (void *) SPARTA::git_branch();
+  if (strcmp(name,"git_commit") == 0) return (void *) SPARTA::git_commit();
 
   if (!sparta) return NULL;
 

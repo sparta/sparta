@@ -38,6 +38,23 @@ target_include_directories(${TARGET_SPARTA_LIB} PRIVATE ${SPA_INCLUDE_DIRS})
 target_link_libraries(${TARGET_SPARTA_LIB} LINK_PUBLIC
                       ${TARGET_SPARTA_BUILD_TPLS})
 target_link_libraries(${TARGET_SPARTA_LIB} LINK_PUBLIC ${TARGET_SPARTA_PKGS})
+sparta_kokkos_host_only_sources(${TARGET_SPARTA_LIB})
+
+# Generate spartagitversion.h with the git commit and branch at every build,
+# as LAMMPS does.  Only sparta.cpp includes it, and it is only replaced when
+# its contents change.
+find_package(Git QUIET)
+add_custom_target(
+  ${TARGET_SPARTA_LIB}_GITVERSION
+  COMMAND
+    ${CMAKE_COMMAND} -DSPARTA_DIR="${SPARTA_SRC_DIR}/.."
+    -DSPARTA_GIT_HEADER="${SPARTA_BINARY_DIR}/include/spartagitversion.h"
+    -DGIT_FOUND="${GIT_FOUND}" -DGIT_EXECUTABLE="${GIT_EXECUTABLE}" -P
+    ${SPARTA_CMAKE_DIR}/Modules/generate_spartagitversion.cmake
+  BYPRODUCTS ${SPARTA_BINARY_DIR}/include/spartagitversion.h)
+add_dependencies(${TARGET_SPARTA_LIB} ${TARGET_SPARTA_LIB}_GITVERSION)
+set_property(SOURCE ${CMAKE_CURRENT_SOURCE_DIR}/sparta.cpp APPEND
+             PROPERTY COMPILE_DEFINITIONS SPARTA_GIT_VERSION_HEADER)
 
 include(${SPARTA_CMAKE_COMMON_DIR}/set/style_file_glob.cmake)
 
@@ -58,6 +75,7 @@ install(FILES ${CMAKE_CURRENT_BINARY_DIR}/${TARGET_SPARTA_LIB_LINK}
 
 add_executable(${TARGET_SPARTA} main.cpp)
 target_link_libraries(${TARGET_SPARTA} LINK_PRIVATE ${TARGET_SPARTA_LIB})
+sparta_kokkos_host_only_sources(${TARGET_SPARTA})
 # print the binary size after linking (informational). Skip when cross-
 # compiling: the command uses the bare target name, but on Windows the file is
 # spa_.exe, so `size spa_` fails the build during a MinGW64 cross-compile.

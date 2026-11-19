@@ -2,6 +2,14 @@ cmake_minimum_required(VERSION 3.16.0)
 
 project(SPARTA)
 
+# like LAMMPS, default to a RelWithDebInfo build when neither a build type nor
+# compiler flags are given, so -g only comes with RelWithDebInfo and Debug
+# builds.  Presets that set CMAKE_CXX_FLAGS themselves get no default build
+# type; of those, only the *_debug presets add -g.
+if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CXX_FLAGS)
+  set(CMAKE_BUILD_TYPE RelWithDebInfo CACHE STRING "Choose the type of build, options are: None Debug Release RelWithDebInfo MinSizeRel." FORCE)
+endif()
+
 set(SPARTA_BUILD_VER "1.0.0")
 set(SPARTA_API_VER "1")
 
@@ -32,26 +40,6 @@ set(CMAKE_CXX_EXTENSIONS OFF CACHE BOOL "Use compiler extensions")
 # some standard libraries (e.g. libc++ on macOS)
 add_compile_definitions(SPARTA_UNORDERED_MAP)
 
-# Optional git provenance: stamp the build with the commit hash and branch so
-# `sparta -help` and the library's extract_global("git_commit"/"git_branch")
-# can report it.  Entirely optional -- a plain (non-git, e.g. tarball) build
-# simply skips this and the source falls back to "(unknown)"/"".
-find_package(Git QUIET)
-if(Git_FOUND)
-  execute_process(COMMAND ${GIT_EXECUTABLE} describe --always --dirty --abbrev=10
-    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/..
-    OUTPUT_VARIABLE SPARTA_GIT_COMMIT OUTPUT_STRIP_TRAILING_WHITESPACE
-    ERROR_QUIET RESULT_VARIABLE _sparta_git_rc)
-  execute_process(COMMAND ${GIT_EXECUTABLE} rev-parse --abbrev-ref HEAD
-    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/..
-    OUTPUT_VARIABLE SPARTA_GIT_BRANCH OUTPUT_STRIP_TRAILING_WHITESPACE
-    ERROR_QUIET)
-  if(_sparta_git_rc EQUAL 0 AND SPARTA_GIT_COMMIT)
-    add_compile_definitions(
-      SPARTA_GIT_COMMIT="${SPARTA_GIT_COMMIT}"
-      SPARTA_GIT_BRANCH="${SPARTA_GIT_BRANCH}")
-  endif()
-endif()
 # ugly hacks for MSVC which by default always reports an old C++ standard in the __cplusplus macro
 # and prints lots of pointless warnings about "unsafe" functions
 if(MSVC)
@@ -204,6 +192,7 @@ endif()
 
 # ######### BEGIN PROCESS SPARTA OPTIONS ##########
 include(${SPARTA_CMAKE_COMMON_DIR}/process/sparta_build_options.cmake)
+include(${SPARTA_CMAKE_COMMON_DIR}/process/kokkos_host_only.cmake)
 # ######### END   PROCESS SPARTA OPTIONS ##########
 
 # ######### BEGIN PRINT SPARTA OPTIONS ##########
