@@ -12,6 +12,7 @@
    See the README file in the top-level SPARTA directory.
 ------------------------------------------------------------------------- */
 
+#include <cmath>
 #include "stdlib.h"
 #include "string.h"
 #include "fix_emit_face.h"
@@ -84,11 +85,20 @@ FixEmitFace::FixEmitFace(SPARTA *sparta, int narg, char **arg) :
   subsonic = 0;
   subsonic_style = NOSUBSONIC;
   subsonic_warning = 0;
+  normalflag = 0;
   twopass = 0;
 
   options(narg-iarg,&arg[iarg]);
 
   // error checks
+
+  if (normalflag && !subsonic)
+    error->all(FLERR,"Fix emit/face normal yes requires a subsonic boundary");
+  if (normalflag && subsonic_style == PONLY) {
+    if (comm->me == 0)
+      error->warning(FLERR,"Fix emit/face ignores normal yes for subsonic pressure-only boundaries");
+    normalflag = 0;
+  }
 
   if (domain->dimension == 2 && (faces[ZLO] || faces[ZHI]))
     error->all(FLERR,"Cannot use fix emit/face in z dimension "
@@ -173,6 +183,7 @@ void FixEmitFace::init()
                                (3.0 + particle->species[ispecies].rotdof));
   }
 
+  avemass_mixture = avemass;
   soundspeed_mixture = sqrt(avegamma * update->boltz *
                             particle->mixture[imix]->temp_thermal / avemass);
 
@@ -572,7 +583,10 @@ void FixEmitFace::perform_task_onepass()
         ispecies = species[isp];
         ntarget = prefactor*tasks[i].ntargetsp[isp] + random->uniform();
         ninsert = static_cast<int> (ntarget);
-        scosine = indot / vscale[isp];
+        const double vscale_species = (subsonic_style == PTBOTH) ?
+          sqrt(2.0*update->boltz*temp_thermal / particle->species[ispecies].mass) :
+          vscale[isp];
+        scosine = indot / vscale_species;
 
         nactual = 0;
         for (int m = 0; m < ninsert; m++) {
@@ -595,10 +609,10 @@ void FixEmitFace::perform_task_onepass()
                   beta_un*beta_un);
           } while (normalized_distbn_fn < random->uniform());
 
-          v[ndim] = beta_un*vscale[isp]*normal[ndim] + vstream[ndim];
+          v[ndim] = beta_un*vscale_species*normal[ndim] + vstream[ndim];
 
           theta = MY_2PI * random->uniform();
-          vr = vscale[isp] * sqrt(-log(random->uniform()));
+          vr = vscale_species * sqrt(-log(random->uniform()));
           v[pdim] = vr * sin(theta) + vstream[pdim];
           v[qdim] = vr * cos(theta) + vstream[qdim];
           erot = particle->erot(ispecies,temp_rot,random);
@@ -637,7 +651,10 @@ void FixEmitFace::perform_task_onepass()
         isp = 0;
         while (cummulative[isp] < rn) isp++;
         ispecies = species[isp];
-        scosine = indot / vscale[isp];
+        const double vscale_species = (subsonic_style == PTBOTH) ?
+          sqrt(2.0*update->boltz*temp_thermal / particle->species[ispecies].mass) :
+          vscale[isp];
+        scosine = indot / vscale_species;
 
         x[0] = lo[0] + random->uniform() * (hi[0]-lo[0]);
         if (axisymmetric)
@@ -659,10 +676,10 @@ void FixEmitFace::perform_task_onepass()
                 beta_un*beta_un);
         } while (normalized_distbn_fn < random->uniform());
 
-        v[ndim] = beta_un*vscale[isp]*normal[ndim] + vstream[ndim];
+        v[ndim] = beta_un*vscale_species*normal[ndim] + vstream[ndim];
 
         theta = MY_2PI * random->uniform();
-        vr = vscale[isp] * sqrt(-log(random->uniform()));
+        vr = vscale_species * sqrt(-log(random->uniform()));
         v[pdim] = vr * sin(theta) + vstream[pdim];
         v[qdim] = vr * cos(theta) + vstream[qdim];
         erot = particle->erot(ispecies,temp_rot,random);
@@ -797,7 +814,10 @@ void FixEmitFace::perform_task_twopass()
       for (isp = 0; isp < nspecies; isp++) {
         ispecies = species[isp];
         ninsert = ninsert_values[i][isp];
-        scosine = indot / vscale[isp];
+        const double vscale_species = (subsonic_style == PTBOTH) ?
+          sqrt(2.0*update->boltz*temp_thermal / particle->species[ispecies].mass) :
+          vscale[isp];
+        scosine = indot / vscale_species;
 
         nactual = 0;
         for (int m = 0; m < ninsert; m++) {
@@ -820,10 +840,10 @@ void FixEmitFace::perform_task_twopass()
                   beta_un*beta_un);
           } while (normalized_distbn_fn < random->uniform());
 
-          v[ndim] = beta_un*vscale[isp]*normal[ndim] + vstream[ndim];
+          v[ndim] = beta_un*vscale_species*normal[ndim] + vstream[ndim];
 
           theta = MY_2PI * random->uniform();
-          vr = vscale[isp] * sqrt(-log(random->uniform()));
+          vr = vscale_species * sqrt(-log(random->uniform()));
           v[pdim] = vr * sin(theta) + vstream[pdim];
           v[qdim] = vr * cos(theta) + vstream[qdim];
           erot = particle->erot(ispecies,temp_rot,random);
@@ -854,7 +874,10 @@ void FixEmitFace::perform_task_twopass()
         isp = 0;
         while (cummulative[isp] < rn) isp++;
         ispecies = species[isp];
-        scosine = indot / vscale[isp];
+        const double vscale_species = (subsonic_style == PTBOTH) ?
+          sqrt(2.0*update->boltz*temp_thermal / particle->species[ispecies].mass) :
+          vscale[isp];
+        scosine = indot / vscale_species;
 
         x[0] = lo[0] + random->uniform() * (hi[0]-lo[0]);
         if (axisymmetric)
@@ -876,10 +899,10 @@ void FixEmitFace::perform_task_twopass()
                 beta_un*beta_un);
         } while (normalized_distbn_fn < random->uniform());
 
-        v[ndim] = beta_un*vscale[isp]*normal[ndim] + vstream[ndim];
+        v[ndim] = beta_un*vscale_species*normal[ndim] + vstream[ndim];
 
         theta = MY_2PI * random->uniform();
-        vr = vscale[isp] * sqrt(-log(random->uniform()));
+        vr = vscale_species * sqrt(-log(random->uniform()));
         v[pdim] = vr * sin(theta) + vstream[pdim];
         v[qdim] = vr * cos(theta) + vstream[qdim];
         erot = particle->erot(ispecies,temp_rot,random);
@@ -1110,6 +1133,10 @@ void FixEmitFace::subsonic_grid()
     if (subsonic_style == PTBOTH) {
       tasks[i].nrho = nsubsonic;
       temp_thermal_cell = tsubsonic;
+      if (normalflag) {
+        vstream[tasks[i].pdim] = 0.0;
+        vstream[tasks[i].qdim] = 0.0;
+      }
 
     } else {
       nrho_cell = np * fnum * cinfo[icell].weight / cinfo[icell].volume;
@@ -1121,8 +1148,12 @@ void FixEmitFace::subsonic_grid()
         // ke is pure roundoff of either sign, treat cell as cold
         if (ke <= 1.0e-10 * mv[3]/np) temp_thermal_cell = 0.0;
       } else temp_thermal_cell = particle->mixture[imix]->temp_thermal;
+      // Use mixture temperature when cell moments cannot supply a valid value.
+      if (!(temp_thermal_cell > 0.0) || !std::isfinite(temp_thermal_cell))
+        temp_thermal_cell = particle->mixture[imix]->temp_thermal;
 
       press_cell = nrho_cell * boltz * temp_thermal_cell;
+      mass_cell = avemass_mixture;
       if (np && temp_thermal_cell > 0.0) {
         mass_cell = masstot / np;
         gamma_cell = gamma / np;
@@ -1130,7 +1161,7 @@ void FixEmitFace::subsonic_grid()
       } else soundspeed_cell = soundspeed_mixture;
 
       tasks[i].nrho = nrho_cell +
-        (psubsonic - press_cell) / (soundspeed_cell*soundspeed_cell);
+        (psubsonic - press_cell) / (mass_cell*soundspeed_cell*soundspeed_cell);
       temp_thermal_cell = psubsonic / (boltz * tasks[i].nrho);
       if (temp_thermal_cell > TEMPLIMIT) {
         temp_exceed_flag = 1;
@@ -1242,6 +1273,14 @@ int FixEmitFace::option(int narg, char **arg)
       if (input->variable->equal_style(n) == 0)
         error->all(FLERR,"Fix emit/face modulate variable is not equal-style");
     } else error->all(FLERR,"Invalid fix emit/face modulate variable syntax");
+    return 2;
+  }
+
+  if (strcmp(arg[0],"normal") == 0) {
+    if (2 > narg) error->all(FLERR,"Illegal fix emit/face command");
+    if (strcmp(arg[1],"yes") == 0) normalflag = 1;
+    else if (strcmp(arg[1],"no") == 0) normalflag = 0;
+    else error->all(FLERR,"Illegal fix emit/face command");
     return 2;
   }
 

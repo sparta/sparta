@@ -44,7 +44,7 @@ class FixEmitSurf : public FixEmit {
     double temp_thermal;        // from mixture or adjacent subsonic cell
     double temp_rot;            // from mixture or subsonic temp_thermal
     double temp_vib;            // from mixture or subsonic temp_thermal
-    double magvstream;          // from mixture
+    double magvstream;          // mixture speed or signed pressure-BC normal drift
     double vstream[3];          // from mixture or adjacent subsonic cell
     double vcom[3];             // time-averaged cell COM velocity,
                                 //   EMA accumulator for subsonic/mflow window
