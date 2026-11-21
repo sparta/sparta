@@ -18,7 +18,7 @@ fix emit/face/kk command
 * mix-ID = ID of mixture to use when creating particles
 * face1,face2,... = one or more of *all* or *xlo* or *xhi* or *ylo* or *yhi* or *zlo* or *zhi*
 * zero or more keyword/value(s) pairs may be appended
-* keyword = *n* or *nevery* or *perspecies* or *region* or *modulate* or *subsonic* or *twopass*
+* keyword = *n* or *nevery* or *perspecies* or *region* or *modulate* or *subsonic* or *normal* or *twopass*
   
   .. parsed-literal::
   
@@ -31,6 +31,7 @@ fix emit/face/kk command
        subsonic values = Psub Tsub
          Psub = pressure setting at inflow boundary (pressure units)
          Tsub = temperature setting at inflow boundary, can be NULL (temperature units)
+       normal value = yes or no = retain only normal bulk drift at a prescribed-pressure-and-temperature inlet
        twopass values = none
 
 
@@ -42,7 +43,7 @@ fix emit/face/kk command
 
    fix in emit/face air all
    fix in emit/face mymix xlo yhi n 1000 nevery 10 region circle
-   fix in emit/face air xlo subsonic 0.1 300
+   fix in emit/face air xlo subsonic 0.1 300 normal yes
    fix in emit/face air xhi subsonic 0.05 NULL twopass
 
    variable mod equal "1.0 + sin(step/10000\*2\*PI)"
@@ -206,6 +207,23 @@ of particles in the cells adjacent to the boundary face(s) are
 computed and used to determine the properties of inserted particles on
 each timestep.
 
+For a *subsonic* inlet with prescribed pressure and temperature, the
+number density is ``Psub/(kB*Tsub)``, and Tsub is used for both the
+insertion count and the translational thermal velocities. The mixture
+temperature can differ from Tsub. Option *normal* = *yes* keeps the
+signed normal component of the extrapolated cell velocity and sets both
+tangential bulk components to zero. The normal is determined by the
+selected box face. This supplies the planar inlet velocity prescription
+of `(Fang02) <#Fang02>`_. With *normal* = *no*, the default, all three
+extrapolated bulk components are retained.
+
+When Tsub is NULL, the adjacent cell's measured translational temperature
+is used to compute cell pressure and sound speed. For fewer than two
+particles, or a nonpositive or non-finite temperature estimate, the
+mixture temperature is used as a fallback. A *normal* = *yes* setting
+is accepted with a warning and has the same effect as *normal* = *no* in
+this mode. The *normal* = *yes* setting requires the *subsonic* keyword.
+
 IMPORTANT NOTE: Caution must be exercised when using the subsonic
 boundary condition without specifying an inlet temperature. In this
 case the code tries to estimate the temperature of the flow from the
@@ -301,7 +319,7 @@ velocity into the simulation box.
 
 **Default:**
 
-The keyword defaults are n = 0, nevery = 1, perspecies = yes, region =
+The keyword defaults are n = 0, normal = no, nevery = 1, perspecies = yes, region =
 none, no modulate setting, no subsonic settings, no twopass setting.
 
 

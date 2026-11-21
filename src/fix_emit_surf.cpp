@@ -12,6 +12,7 @@
    See the README file in the top-level SPARTA directory.
 ------------------------------------------------------------------------- */
 
+#include <cmath>
 #include "stdlib.h"
 #include "string.h"
 #include "fix_emit_surf.h"
@@ -125,6 +126,14 @@ FixEmitSurf::FixEmitSurf(SPARTA *sparta, int narg, char **arg) :
 
     if (region)
       error->all(FLERR,"Cannot use fix emit/surf mflow with a region");
+  }
+
+  // A pressure-only boundary extrapolates tangential velocity from the cell.
+
+  if (subsonic_style == PONLY && normalflag) {
+    if (comm->me == 0)
+      error->warning(FLERR,"Fix emit/surf ignores normal yes for subsonic pressure-only boundaries");
+    normalflag = 0;
   }
 
   if (custom_any) flag_custom_surf_changed = 1;
@@ -742,7 +751,7 @@ void FixEmitSurf::perform_task_onepass()
   int i,m,n,pcell,isurf,ninsert,nactual,isp,ispecies,ntri,id;
   double indot,scosine,rn,ntarget,vr,alpha,beta;
   double beta_un,normalized_distbn_fn,theta,erot,evib;
-  double vnmag,vamag,vbmag;
+  double vnmag,vamag,vbmag,normal_speed;
   double *normal,*p1,*p2,*p3,*atan,*btan,*vstream,*vscale;
   double x[3],v[3],e1[3],e2[3];
   Particle::OnePart *p;
@@ -800,13 +809,13 @@ void FixEmitSurf::perform_task_onepass()
     temp_thermal = tasks[i].temp_thermal;
     temp_rot = tasks[i].temp_rot;
     temp_vib = tasks[i].temp_vib;
-    magvstream = tasks[i].magvstream;
+    normal_speed = tasks[i].magvstream;
     vstream = tasks[i].vstream;
 
     if (subsonic_style == PONLY || subsonic_style == MFLOW || temp_custom_flag)
       vscale = tasks[i].vscale;
     else vscale = particle->mixture[imix]->vscale;
-    if (normalflag) indot = magvstream;
+    if (normalflag) indot = normal_speed;
     else indot = vstream[0]*normal[0] + vstream[1]*normal[1] + vstream[2]*normal[2];
 
     // perspecies yes
@@ -816,7 +825,10 @@ void FixEmitSurf::perform_task_onepass()
         ispecies = species[isp];
         ntarget = tasks[i].ntargetsp[isp]+random->uniform();
         ninsert = static_cast<int> (ntarget);
-        scosine = indot / vscale[isp];
+        const double vscale_species = (subsonic_style == PTBOTH) ?
+          sqrt(2.0*update->boltz*temp_thermal / particle->species[ispecies].mass) :
+          vscale[isp];
+        scosine = indot / vscale_species;
 
         // loop over ninsert for each species
 
@@ -864,11 +876,11 @@ void FixEmitSurf::perform_task_onepass()
                   beta_un*beta_un);
           } while (normalized_distbn_fn < random->uniform());
 
-          if (normalflag) vnmag = beta_un*vscale[isp] + magvstream;
-          else vnmag = beta_un*vscale[isp] + indot;
+          if (normalflag) vnmag = beta_un*vscale_species + normal_speed;
+          else vnmag = beta_un*vscale_species + indot;
 
           theta = MY_2PI * random->uniform();
-          vr = vscale[isp] * sqrt(-log(random->uniform()));
+          vr = vscale_species * sqrt(-log(random->uniform()));
           if (normalflag) {
             vamag = vr * sin(theta);
             vbmag = vr * cos(theta);
@@ -937,7 +949,10 @@ void FixEmitSurf::perform_task_onepass()
         isp = 0;
         while (cummulative[isp] < rn) isp++;
         ispecies = species[isp];
-        scosine = indot / vscale[isp];
+        const double vscale_species = (subsonic_style == PTBOTH) ?
+          sqrt(2.0*update->boltz*temp_thermal / particle->species[ispecies].mass) :
+          vscale[isp];
+        scosine = indot / vscale_species;
 
         if (dimension == 2) {
           rn = random->uniform();
@@ -982,11 +997,11 @@ void FixEmitSurf::perform_task_onepass()
                 beta_un*beta_un);
         } while (normalized_distbn_fn < random->uniform());
 
-        if (normalflag) vnmag = beta_un*vscale[isp] + magvstream;
-        else vnmag = beta_un*vscale[isp] + indot;
+        if (normalflag) vnmag = beta_un*vscale_species + normal_speed;
+        else vnmag = beta_un*vscale_species + indot;
 
         theta = MY_2PI * random->uniform();
-        vr = vscale[isp] * sqrt(-log(random->uniform()));
+        vr = vscale_species * sqrt(-log(random->uniform()));
         if (normalflag) {
           vamag = vr * sin(theta);
           vbmag = vr * cos(theta);
@@ -1037,7 +1052,7 @@ void FixEmitSurf::perform_task_twopass()
   int i,m,n,pcell,isurf,ninsert,nactual,isp,ispecies,ntri,id;
   double indot,scosine,rn,ntarget,vr,alpha,beta;
   double beta_un,normalized_distbn_fn,theta,erot,evib;
-  double vnmag,vamag,vbmag;
+  double vnmag,vamag,vbmag,normal_speed;
   double *normal,*p1,*p2,*p3,*atan,*btan,*vstream,*vscale;
   double x[3],v[3],e1[3],e2[3];
   Particle::OnePart *p;
@@ -1124,13 +1139,13 @@ void FixEmitSurf::perform_task_twopass()
     temp_thermal = tasks[i].temp_thermal;
     temp_rot = tasks[i].temp_rot;
     temp_vib = tasks[i].temp_vib;
-    magvstream = tasks[i].magvstream;
+    normal_speed = tasks[i].magvstream;
     vstream = tasks[i].vstream;
 
     if (subsonic_style == PONLY || subsonic_style == MFLOW || temp_custom_flag)
       vscale = tasks[i].vscale;
     else vscale = particle->mixture[imix]->vscale;
-    if (normalflag) indot = magvstream;
+    if (normalflag) indot = normal_speed;
     else indot = vstream[0]*normal[0] + vstream[1]*normal[1] + vstream[2]*normal[2];
 
     // perspecies yes
@@ -1139,7 +1154,10 @@ void FixEmitSurf::perform_task_twopass()
       for (isp = 0; isp < nspecies; isp++) {
         ispecies = species[isp];
         ninsert = ninsert_values[i][isp];
-        scosine = indot / vscale[isp];
+        const double vscale_species = (subsonic_style == PTBOTH) ?
+          sqrt(2.0*update->boltz*temp_thermal / particle->species[ispecies].mass) :
+          vscale[isp];
+        scosine = indot / vscale_species;
 
         // loop over ninsert for each species
 
@@ -1187,11 +1205,11 @@ void FixEmitSurf::perform_task_twopass()
                   beta_un*beta_un);
           } while (normalized_distbn_fn < random->uniform());
 
-          if (normalflag) vnmag = beta_un*vscale[isp] + magvstream;
-          else vnmag = beta_un*vscale[isp] + indot;
+          if (normalflag) vnmag = beta_un*vscale_species + normal_speed;
+          else vnmag = beta_un*vscale_species + indot;
 
           theta = MY_2PI * random->uniform();
-          vr = vscale[isp] * sqrt(-log(random->uniform()));
+          vr = vscale_species * sqrt(-log(random->uniform()));
           if (normalflag) {
             vamag = vr * sin(theta);
             vbmag = vr * cos(theta);
@@ -1247,7 +1265,10 @@ void FixEmitSurf::perform_task_twopass()
         isp = 0;
         while (cummulative[isp] < rn) isp++;
         ispecies = species[isp];
-        scosine = indot / vscale[isp];
+        const double vscale_species = (subsonic_style == PTBOTH) ?
+          sqrt(2.0*update->boltz*temp_thermal / particle->species[ispecies].mass) :
+          vscale[isp];
+        scosine = indot / vscale_species;
 
         if (dimension == 2) {
           rn = random->uniform();
@@ -1292,11 +1313,11 @@ void FixEmitSurf::perform_task_twopass()
                 beta_un*beta_un);
         } while (normalized_distbn_fn < random->uniform());
 
-        if (normalflag) vnmag = beta_un*vscale[isp] + magvstream;
-        else vnmag = beta_un*vscale[isp] + indot;
+        if (normalflag) vnmag = beta_un*vscale_species + normal_speed;
+        else vnmag = beta_un*vscale_species + indot;
 
         theta = MY_2PI * random->uniform();
-        vr = vscale[isp] * sqrt(-log(random->uniform()));
+        vr = vscale_species * sqrt(-log(random->uniform()));
         if (normalflag) {
           vamag = vr * sin(theta);
           vbmag = vr * cos(theta);
@@ -1376,13 +1397,13 @@ void FixEmitSurf::subsonic_inflow()
     // indot depends on normalflag
 
     if (dimension == 2) {
-      if (normalflag) indot = magvstream;
+      if (normalflag) indot = tasks[i].magvstream;
       else {
         normal = lines[tasks[i].isurf].norm;
         indot = vstream[0]*normal[0] + vstream[1]*normal[1];
       }
     } else {
-      if (normalflag) indot = magvstream;
+      if (normalflag) indot = tasks[i].magvstream;
       else {
         normal = tris[tasks[i].isurf].norm;
         indot = vstream[0]*normal[0] + vstream[1]*normal[1] +
@@ -1553,6 +1574,16 @@ void FixEmitSurf::subsonic_grid()
     if (subsonic_style == PTBOTH) {
       tasks[i].nrho = nsubsonic;
       temp_thermal_cell = tsubsonic;
+      // Project the inlet drift after updating the cell-velocity average.
+      if (normalflag) {
+        if (dimension == 2) normal = lines[tasks[i].isurf].norm;
+        else normal = tris[tasks[i].isurf].norm;
+        const double un = MathExtra::dot3(vstream,normal);
+        tasks[i].magvstream = un;
+        vstream[0] = un*normal[0];
+        vstream[1] = un*normal[1];
+        vstream[2] = un*normal[2];
+      }
 
     } else {
       nrho_cell = np * fnum * cinfo[icell].weight / cinfo[icell].volume;
@@ -1564,7 +1595,11 @@ void FixEmitSurf::subsonic_grid()
         // ke is pure roundoff of either sign, treat cell as cold
         if (ke <= 1.0e-10 * mv[3]/np) temp_thermal_cell = 0.0;
       } else temp_thermal_cell = particle->mixture[imix]->temp_thermal;
+      // Use mixture temperature when cell moments cannot supply a valid value.
+      if (!(temp_thermal_cell > 0.0) || !std::isfinite(temp_thermal_cell))
+        temp_thermal_cell = particle->mixture[imix]->temp_thermal;
       press_cell = nrho_cell * boltz * temp_thermal_cell;
+      mass_cell = avemass_mixture;
       if (np && temp_thermal_cell > 0.0) {
         mass_cell = masstot / np;
         gamma_cell = gamma / np;
@@ -1572,7 +1607,7 @@ void FixEmitSurf::subsonic_grid()
       } else soundspeed_cell = soundspeed_mixture;
 
       tasks[i].nrho = nrho_cell +
-        (psubsonic - press_cell) / (soundspeed_cell*soundspeed_cell);
+        (psubsonic - press_cell) / (mass_cell*soundspeed_cell*soundspeed_cell);
       temp_thermal_cell = psubsonic / (boltz * tasks[i].nrho);
       if (temp_thermal_cell > TEMPLIMIT) {
         temp_exceed_flag = 1;
@@ -1581,15 +1616,10 @@ void FixEmitSurf::subsonic_grid()
 
       // adjust COM vstream by difference bewteen
       //   cell pressure and subsonic target pressure
-      // normal = direction of difference which depends on normalflag
+      // use the surface normal pointing into the flow region
 
-      if (dimension == 2) {
-        if (normalflag) normal = lines[tasks[i].isurf].norm;
-        else normal = norm_vstream;
-      } else {
-        if (normalflag) normal = tris[tasks[i].isurf].norm;
-        else normal = norm_vstream;
-      }
+      if (dimension == 2) normal = lines[tasks[i].isurf].norm;
+      else normal = tris[tasks[i].isurf].norm;
 
       if (np && massrho_cell*soundspeed_cell > 0.0) {
         vsmag = (psubsonic - press_cell) / (massrho_cell*soundspeed_cell);
