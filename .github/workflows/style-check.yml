@@ -1,0 +1,39 @@
+# GitHub action to run the checks from tools/coding_standard
+# (TABs and trailing whitespace, file permissions, homepage URLs, and
+# non-ASCII characters), see "make check" in src/Makefile
+name: "Check for Programming Style Conformance"
+
+on:
+  pull_request:
+    branches:
+      - master
+
+  workflow_dispatch:
+
+# The job only needs to read the repository.
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.event_name }}-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  build:
+    name: Programming Style Conformance
+    runs-on: ubuntu-24.04
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 1
+        persist-credentials: false
+
+    - name: Install Python dependencies
+      run: python3 -m pip install pyyaml
+
+    - name: Run Tests
+      working-directory: src
+      shell: bash
+      run: make check

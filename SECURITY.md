@@ -34,6 +34,14 @@ either a user mistake or a bug in the code.  Bugs can be reported in the
 SPARTA project [issue tracker on
 GitHub](https://github.com/sparta/sparta/issues).
 
+To mitigate issues with using homoglyphs or bidirectional reordering in
+unicode, which have been demonstrated as a vector to obfuscate and hide
+malicious changes to the source code, all SPARTA pull requests are
+checked for unicode characters and only all-ASCII text files are
+accepted.  The check can also be run locally with `make check-unicode`
+in the `src` folder.  The bundled Kokkos library in `lib/kokkos` is
+maintained by the Kokkos project and is excluded from this check.
+
 # Reporting a Vulnerability
 
 If you have found a problem that could be used to harm other SPARTA

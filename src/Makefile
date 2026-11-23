@@ -1,6 +1,7 @@
 # SPARTA multiple-machine Makefile
 
 SHELL = /bin/bash
+PYTHON = $(word 3,$(shell type python3))
 
 # Definitions
 
@@ -59,6 +60,15 @@ help:
 	@echo 'make install-python      install SPARTA wrapper in Python'
 	@echo 'make tar                 create spa_src.tar.gz of src dir and packages'
 	@echo 'make purge               purge obsolete copies of source files'
+	@echo ''
+	@echo 'make check               run all coding style checks below'
+	@echo 'make check-whitespace    check for TABs and trailing whitespace'
+	@echo 'make check-permissions   check for executable bits on non-scripts'
+	@echo 'make check-homepage      check for outdated homepage URLs and emails'
+	@echo 'make check-unicode       check for non-ASCII characters'
+	@echo 'make check-docs          check the manual: style listings and roles'
+	@echo 'make fix-whitespace (or fix-permissions, fix-homepage, fix-unicode)'
+	@echo '                         automatically fix the issues found'
 	@echo ''
 	@echo 'make package             list available packages'
 	@echo 'make yes-package         install a single pgk in src dir'
@@ -169,6 +179,37 @@ tar:
           --exclude=*/.svn
 	@cd STUBS; $(MAKE)
 	@echo "Created $(ROOT)_src.tar.gz"
+
+# Coding style checks
+
+check: check-whitespace check-permissions check-homepage check-unicode check-docs
+
+check-whitespace:
+	$(PYTHON) ../tools/coding_standard/whitespace.py ..
+
+fix-whitespace:
+	$(PYTHON) ../tools/coding_standard/whitespace.py .. -f
+
+check-permissions:
+	$(PYTHON) ../tools/coding_standard/permissions.py ..
+
+fix-permissions:
+	$(PYTHON) ../tools/coding_standard/permissions.py .. -f
+
+check-homepage:
+	$(PYTHON) ../tools/coding_standard/homepage.py ..
+
+fix-homepage:
+	$(PYTHON) ../tools/coding_standard/homepage.py .. -f
+
+check-unicode:
+	$(PYTHON) ../tools/coding_standard/unicode.py ..
+
+fix-unicode:
+	$(PYTHON) ../tools/coding_standard/unicode.py .. -f
+
+check-docs:
+	$(MAKE) $(MFLAGS) -C ../doc style_check role_check
 
 # Package management
 

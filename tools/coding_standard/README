@@ -1,0 +1,20 @@
+These Python scripts help to detect whether files in the repository
+conform to SPARTA coding conventions or not, and can fix those issues, too.
+They are adapted from the LAMMPS tools/coding_standard scripts.
+
+permissions.py   detects if sources and data files have executable permissions
+whitespace.py    detects TAB characters and trailing whitespace
+homepage.py      detects outdated SPARTA homepage URLs (pointing to the old Sandia site
+                 instead of sparta.github.io) and developer emails
+unicode.py       detects non-ASCII characters; -f replaces typographic characters
+                 (curly quotes, dashes, ...) with ASCII, invisible and bidirectional
+                 control characters must be removed by hand
+
+Example usage: python3 whitespace.py <DIRECTORY> [-f]
+
+where <DIRECTORY> is the path of a SPARTA directory containing subdirs src/, python/, doc/, etc.
+They can also be run from the src/ folder with "make check" or "make check-<name>",
+and "make fix-<name>" to apply the automatic fixes.
+"make check" also runs "make check-docs", which checks the command and style
+listings and the :doc:/:ref: roles of the manual (doc/Makefile style_check and
+role_check, no Sphinx build needed).
