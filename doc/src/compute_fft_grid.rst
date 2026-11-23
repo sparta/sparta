@@ -79,7 +79,7 @@ different ways.  The values for a single timestep can be output by the
 timesteps can be averaged by the :doc:`fix ave/grid <fix_ave_grid>`
 command.
 
-A forward FFT is perfomed on each input value independently.
+A forward FFT is performed on each input value independently.
 
 Each listed input can be the result of a :doc:`compute <compute>` or
 :doc:`fix <fix>` or the evaluation of a :doc:`variable <variable>`, all of
@@ -146,7 +146,7 @@ Ky\^2) for 2d models.  For all keywords, the Kx,Ky,Kz represent
 distance from the origin in a periodic sense.  Thus for a grid that is
 NxMxP, the Kx values associated with the x-dimension and used in those
 formulas are not Kx = 0,1,2 ... N-2,N-1.  Rather they are Kx = 0,1,2,
-... N/2-1, N/2, N/2-1, ... 2,1.  Similary for Ky in the y-dimension
+... N/2-1, N/2, N/2-1, ... 2,1.  Similarly for Ky in the y-dimension
 with a max index of M/2, and Kz in the z-dimension with a max index of
 P/2.
 
@@ -156,7 +156,7 @@ P/2.
 
 **Output info:**
 
-The number of per-grid values ouptut by this compute depends on the
+The number of per-grid values output by this compute depends on the
 optional keyword settings.  The number of FFTs is equal to the number
 of specified input values.
 

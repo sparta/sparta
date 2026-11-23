@@ -169,6 +169,52 @@ def copy_full_size_images(app, exception):
     shutil.copytree(src, os.path.join(app.outdir, 'JPG'), dirs_exist_ok=True)
 
 
+# -- Spell checking ----------------------------------------------------------
+#
+# "make -C doc spelling" runs the spelling builder from
+# sphinxcontrib-spelling, as the LAMMPS manual does.  It needs the enchant
+# library and an English dictionary installed on the system, which an HTML
+# build does not, so the extension is loaded only when that builder is the
+# one asked for.  Every misspelling is a warning, so with -W the target
+# fails until each is either fixed or, if it is a real word the dictionary
+# does not know, added to false_positives.txt beside this file.
+def _requested_builder(argv):
+    import sys
+
+    argv = argv or sys.argv
+    for i, arg in enumerate(argv):
+        if arg in ('-b', '--builder') and i + 1 < len(argv):
+            return argv[i + 1]
+        if arg.startswith('-b') and len(arg) > 2:
+            return arg[2:]
+        if arg.startswith('--builder='):
+            return arg.split('=', 1)[1]
+    return None
+
+
+if _requested_builder(None) == 'spelling':
+    try:
+        import enchant  # noqa: F401
+        enchant.Dict('en_US')
+    except Exception as err:
+        raise RuntimeError(
+            '"make spelling" needs the enchant library and an en_US '
+            'dictionary installed on the system, e.g. the enchant-2 and '
+            'hunspell-en-us packages: %s' % err) from err
+    extensions.append('sphinxcontrib.spelling')
+    spelling_lang = 'en_US'
+    spelling_word_list_filename = os.path.join(
+        os.path.dirname(os.path.abspath(__file__)), 'false_positives.txt')
+    spelling_warning = True
+    spelling_show_suggestions = True
+    spelling_ignore_pypi_package_names = False
+    spelling_ignore_acronyms = True
+    # Section_errors quotes SPARTA's error and warning messages, and their
+    # explanations, from the ERROR/WARNING blocks in the src/ headers.  A
+    # misspelling there has to be fixed in src/ as well, so the page keeps
+    # matching the text a user is shown.
+
+
 # -- SPARTA input-script highlighting --------------------------------------
 #
 # ".. code-block:: SPARTA" uses the lexer in SPARTALexer.py, modelled on the

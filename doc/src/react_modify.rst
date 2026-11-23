@@ -45,7 +45,7 @@ see if they affect simulation results.
 
 The *rboost* keyword is a setting for recombination reactions.  It is
 ignored if no recombination reactions exist, or the *recomb* keyword
-is set to *no*\ .  The *rboost* setting does not affect the overalll
+is set to *no*\ .  The *rboost* setting does not affect the overall
 statistical results of recombination reactions, but tries to improve
 their computational efficiency.  Recombination reactions typically
 occur with very low probability, which means the code spends time
@@ -76,14 +76,14 @@ used in the TCE model.
 
 If the *partial\_energy* keyword is set to *yes*\ , the rDOF model of
 Bird is used, and only the sum of the relative translational energy
-between the partcles and a fraction of the rotational energy is
+between the particles and a fraction of the rotational energy is
 used. The participating internal degrees of freedom are either set to
 1 (dissociation reactions), or 0 (recombination, exchange, ionization
 reactions).
 
 Conversely, if the *partial\_energy* keyword is set to *no*\ , then the
 total energy model is used, i.e. the sum of the relative translational
-energy between the partcles and the rotational and vibrational
+energy between the particles and the rotational and vibrational
 energies. The participating internal degrees of freedom are computed
 directly by the code and do not need to be inputted by the user. The
 vibrational energy model used has an impact on the internal degrees of

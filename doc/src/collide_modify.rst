@@ -64,7 +64,7 @@ less efficient, though still accurate.
 
 For non-equilibrium flows, it is typically desirable to reset Vremax
 to zero fairly frequently (e.g. every 1000 steps) so that it does not
-become large, due to anomolously fast moving particles.  In contrast,
+become large, due to anomalously fast moving particles.  In contrast,
 when a system is at equilibrium, it is typically desirable to not
 reset Vremax to zero since it will also stay roughly constant.
 
@@ -76,7 +76,7 @@ zeroed at the start of every run.  If it is set to *no*\ , it is not.
 The *remain* keyword affects how the number of attempted collisions
 for each grid cell is calculated each timestep.  If the value is set
 to *yes*\ , then any fractional collision count (for each grid cell and
-pair of grgroups) is carried over to the next timestep.  E.g. if the
+pair of groups) is carried over to the next timestep.  E.g. if the
 computed collision count is 7.3, then 7 attempts are made on this
 timestep, and 0.3 are carried over to the next timestep, to be added
 to the computed collision count for that step.  If the value is set to

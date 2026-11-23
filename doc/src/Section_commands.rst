@@ -262,7 +262,7 @@ runs.
 The system can also be load-balanced after the grid and/or particles
 are defined in the setup stage using the
 :doc:`balance\_grid <balance_grid>` command.  The grid can also be
-adapted before or betwee simulations using the
+adapted before or between simulations using the
 :doc:`adapt\_grid <adapt_grid>` command.
 
 \(3) Settings
@@ -276,7 +276,7 @@ Commands that do this include
 :doc:`global <global>`
 :doc:`timestep <timestep>`
 :doc:`collide <collide>` for a collision model
-:doc:`react <react>` for a chemisty model
+:doc:`react <react>` for a chemistry model
 :doc:`fix <fix>` for boundary conditions, time-averaging, load-balancing, etc
 :doc:`compute <compute>` for diagnostic computations
 :doc:`stats\_style <stats_style>` for screen output

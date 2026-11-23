@@ -80,12 +80,12 @@ species-ID, as described above.  The properties are as follows:
 * prop1 = molecular weight (atomic mass units, e.g. 16 for oxygen)
 * prop2 = molecular mass (mass units)
 * prop3 = rotational degrees of freedom (integer, unitless)
-* prop4 = inverse rotational relaxtion number (unitless)
+* prop4 = inverse rotational relaxation number (unitless)
 * prop5 = vibrational degrees of freedom (integer, unitless)
 * prop6 = inverse vibrational relaxation number (unitless)
 * prop7 = vibrational temperature (temperature units)
 * prop8 = species weight (unitless)
-* prop9 = multiple of electon charge (1 for a proton)
+* prop9 = multiple of electron charge (1 for a proton)
 
 The allowed values for rotational degrees of freedom (rotdof = prop3)
 are 0,2,3.  Typically, 0 = monatomic species, 2 = diatomic, 3 =

@@ -282,7 +282,7 @@ condition is meant more for an outlet than an inlet boundary
 condition, and performs well in cases where the cells are adequately
 populated.
 
-IMPORTANT NOTE: When using a subsonic prsesure boundary condition, you
+IMPORTANT NOTE: When using a subsonic pressure boundary condition, you
 should also use an appropriate boundary collision or chemistry model
 via the :doc:`boundary <boundary>` or :doc:`bound\_modify <bound_modify>`
 or :doc:`surf\_collide <surf_collide>` or :doc:`surf\_react <surf_react>`
@@ -399,14 +399,14 @@ No information about this fix is written to :doc:`binary restart files <restart>
 This fix computes a global vector of length 2 which can be accessed by
 various output commands.  The first element of the vector is the total
 number of particles added on the most recent insertion step.  The
-second element is the cummulative total number added since the
+second element is the cumulative total number added since the
 beginning of the run.  The 2nd value is initialized to zero each time
 a run is performed.
 
 **Restrictions:**
 
 Particles cannot be added on periodic faces of the simulation box.
-Particles cannot be added on *z* faces of the simluation box for a 2d
+Particles cannot be added on *z* faces of the simulation box for a 2d
 simulation.
 
 Unlike the :doc:`fix emit/face <fix_emit_face>` command, no warning is

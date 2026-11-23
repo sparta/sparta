@@ -37,7 +37,7 @@ create\_isurf command
 This command converts all currently defined explicit surface elements
 to implicit surface elements.  One motivation for this operation is
 that implicit surfaces can be ablated over time via the :doc:`fix ablate <fix_ablate>` command.  See the `How to 6.13 <Section_howto.html#howto_13>`_ section of the manual for an
-explantion of explicit versus implicit surfaces.
+explanation of explicit versus implicit surfaces.
 
 Explicit surface elements are triangles in 3d or line segments in 2d.
 They are enumerated in a file, read by the :doc:`read\_surf <read_surf>`
@@ -59,7 +59,7 @@ command where implicit line segments or triangles within each grid
 cell are calculated from the 4 or 8 corner points of the cell.  When
 the process is complete, all explicit surfaces are removed from the
 simulation.  This is because SPARTA does not currently allow both
-implicit and explicit surfaces to simulataneously exist.  The
+implicit and explicit surfaces to simultaneously exist.  The
 :doc:`read\_isurf <read_isurf>` doc page has additional information about
 using implicit surfaces in a simulation, which also apply to this
 command.
@@ -237,7 +237,7 @@ approximation to the original explicit surfaces.  In particular:
   resulting implicit surfaces in a non-continuous manner.
 
 Examples of the effects of last two bullet points are illustrated in
-the following diagrams for 2d geomtries (similar effects occur in 3d).
+the following diagrams for 2d geometries (similar effects occur in 3d).
 
 .. image:: JPG/implicit_bend_uneven_small.png
 

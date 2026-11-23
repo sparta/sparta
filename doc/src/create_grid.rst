@@ -163,8 +163,8 @@ assigned to the processor that owns the level 1 cell.
 
 The settings for every level, from 2 to Nlevels, must be specified
 exactly once via the *Ilevel* argument to either a *subset* or
-*region* keyword.  *Ilevel* can be specfied as a single number or use
-a wildcard asterisk in place of or in conjuction with one or two
+*region* keyword.  *Ilevel* can be specified as a single number or use
+a wildcard asterisk in place of or in conjunction with one or two
 integers to specify multiple levels at the same time.  This takes the
 form “\*” or “\*n” or “n\*” or “m\*n”.  An asterisk with no numeric values
 means all levels from 2 to Nlevels.  A leading asterisk means all
@@ -182,7 +182,7 @@ for level 3 could select any contiguous range of cells from 1 to 4 in
 x, y and 1 to 2 in z.  Each of the Px, Py, Pz arguments can be a
 single number or be specified with a wildcard asterisk, the same as
 described above for *Ilevel*\ , where the bounds of Px (for example) are
-1 to Cx in the preceeding parent level.
+1 to Cx in the preceding parent level.
 
 The Cx, Cy, Cz arguments are the number of new cells (in each
 dimension) to partition each selected parent cell into.  *Cz* must be

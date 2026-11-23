@@ -34,7 +34,7 @@ read\_grid command
 **Description:**
 
 Read a grid file in text format which lists the grid cell IDs to be
-used to construct a hierarchical grid that overalys the simulation
+used to construct a hierarchical grid that overlays the simulation
 domain defined by the :doc:`create\_box <create_box>` command.  The grid
 can also be defined by the :doc:`create\_grid <create_grid>` command.
 

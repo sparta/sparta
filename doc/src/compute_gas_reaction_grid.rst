@@ -39,7 +39,7 @@ compute gas/reaction/grid command
 
 **Description:**
 
-Count the number of gas-phase reactions bewteen pairs of particles
+Count the number of gas-phase reactions between pairs of particles
 which occur in each grid cell during the current timestep.  Only gas
 collisions which result in chemical reactions are counted by this
 command, as defined by the :doc:`react <react>` command and the list of
@@ -70,13 +70,13 @@ a per-grid vector.
 If *mode* is specified as *every* then an individual count for each
 reaction is produced for each grid cell.  The number of possible
 reactions M are those listed in the file read by the
-:doc:`react <react>` commmand.  The compute calculates these counts as a
+:doc:`react <react>` command.  The compute calculates these counts as a
 per-grid array, even if M = 1.
 
 If *mode* is specified as *select* then a count for each reaction in
 the specified list of numeric indices is produced for each grid cell.
 Each index must be a number from 1 to M, where M is the number of
-reactions listed in the file read by the :doc:`react <react>` commmand.
+reactions listed in the file read by the :doc:`react <react>` command.
 The compute calculates these counts as a per-grid array, even if only
 a single index is specified.
 
@@ -90,7 +90,7 @@ If no numeric keywords are used, then this compute calculates a
 per-grid vector with the count of all reactions for each grid cell.
 
 If one or more numeric keywords are used, then this compute calculates
-a per-grid array.  The first column wlll be the count of all reactions.
+a per-grid array.  The first column will be the count of all reactions.
 The remaining columns (one per numeric keyword) will be the counts of only
 the specific reactions listed.
 

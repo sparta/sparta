@@ -62,7 +62,7 @@ CollideStyle(foo,CollideFoo)
 ...
 #endif
 
-where "foo" is the style keyword in the collid command, and CollideFoo
+where "foo" is the style keyword in the collide command, and CollideFoo
 is the class name defined in your collide\_foo.cpp and collide\_foo.h
 files.
 
@@ -148,7 +148,7 @@ class.  See compute.h for details.  All of these methods are optional.
 Note that computes with "/particle" in their style name calculate per
 particle quantities, with "/grid" in their name calculate per grid
 cell quantities, and with "/surf" in their name calculate per surface
-element properties.  All others calcuulate global quantities.
+element properties.  All others calculate global quantities.
 
 Flags may also need to be set by a compute to enable specific
 properties.  See the compute.h header file for one-line descriptions.
@@ -173,7 +173,7 @@ insert particles, perform load-balancing, or perform time-averaging of
 various quantities.  They can also define and maintain new
 per-particle vectors and arrays that define quantities that move with
 particles when they migrate from processor to processor or when the
-grid is rebalanced or adapated.  They can also produce output of
+grid is rebalanced or adapted.  They can also produce output of
 various kinds, similar to :doc:`compute <compute>` commands.
 
 Here is a brief description of methods to define in a new derived
@@ -213,7 +213,7 @@ values.  These are the relevant Particle class methods:
 
 See the :doc:`fix ambipolar <fix_ambipolar>` for an example of how these
 are used.  It define an integer vector called "ionambi" to flag
-particles as ambipolar ions, and a floatin-point array called
+particles as ambipolar ions, and a floating-point array called
 "velambi" to store the velocity vector for the associated electron.
 
 
@@ -269,7 +269,7 @@ except init() and modify\_params().
 +--------------------+---------------------------------------------------------------------------------------+
 | attempt\_collision | compute # of collisions to attempt between 2 species groups                           |
 +--------------------+---------------------------------------------------------------------------------------+
-| test\_collision    | determine if a collision bewteen 2 particles occurs                                   |
+| test\_collision    | determine if a collision between 2 particles occurs                                   |
 +--------------------+---------------------------------------------------------------------------------------+
 | setup\_collision   | pre-computation before a 2-particle collision                                         |
 +--------------------+---------------------------------------------------------------------------------------+

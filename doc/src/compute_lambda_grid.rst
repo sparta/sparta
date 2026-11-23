@@ -56,7 +56,7 @@ collision time for each grid cell to a dump file every 1000 steps:
 
 This command calculates properties related to the gas collision mean
 free path for each grid cell based on the number density *nrho* and
-thermal tempearture *temp* of particles in the cell.
+thermal temperature *temp* of particles in the cell.
 
 If the *lambda* value is specified, the mean free path (MFP) of
 particles between collisions will be computed. If the *tau* value is
@@ -177,7 +177,7 @@ calculated using a command like this:
 
 which uses the velocity of each particle to calculate a temperature.
 
-For systems with a streaming flow, an appropriate therml temperature
+For systems with a streaming flow, an appropriate thermal temperature
 can be calculated by the :doc:`compute thermal/grid <compute_thermal_grid>` thermal/grid command.  Its doc
 page explain that the the center-of-mass velocity for the particles in
 each grid cell is subtracted from each particle's individual velocity

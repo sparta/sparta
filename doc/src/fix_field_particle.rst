@@ -94,7 +94,7 @@ uses are only invoked once as a pre-calculation (for static fields) or
 once every N timesteps (for time-varying fields).  And the field
 calculation is done for each grid cell, not for each particle.  The
 trade-off is that the fields it calculates are based on the grid cell
-center pint, and thus are not as accurate as the calucations performed
+center pint, and thus are not as accurate as the calculations performed
 by this fix.
 
 **Restart, output info:**

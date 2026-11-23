@@ -136,7 +136,7 @@ timestep 200, etc.
 If a value begins with "c\_", a compute ID must follow which has been
 previously defined in the input script.  If no bracketed term is
 appended, the compute must calculate a per-grid vector.  If
-*c\_ID[N]* is used, the compute must calculate a per-grud array with
+*c\_ID[N]* is used, the compute must calculate a per-grid array with
 M columns and N must be in the range from 1-M, which will use the Nth
 column of the M-column per-grid array.  See the discussion above for
 how N can be specified with a wildcard asterisk to effectively specify

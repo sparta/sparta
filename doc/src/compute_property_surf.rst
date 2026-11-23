@@ -65,7 +65,7 @@ manual for details.
 
 
 *Id* is the surface element ID, as defined in the surface data file
-read by the :doc:`read\_surf <read_surf>` comand.
+read by the :doc:`read\_surf <read_surf>` command.
 
 The *v1x*\ , *v1y*\ , *v1z* attributes are the coordinates of the first
 end point of a line segment (2d) or first corner point of a triangle
@@ -75,13 +75,13 @@ corner point of a triangle (3d).  The *v3x*\ , *v3y*\ , *v23z* attributes
 are the coordinates of the third corner point of a triangle (3d).
 
 The *xc*\ , *yc*\ , *zc* attributes are the coordinates of the center
-point of a line segment or tringle.
+point of a line segment or triangle.
 
 The *area* attribute is the length of a line segment (distance units
 in 2d), or area of a triangle (area units in 3d).
 
 The *normx*\ , *normy*\ , *normz* attributes are components of a unit
-normal perpendicular to the line segment or face of the trangle. It
+normal perpendicular to the line segment or face of the triangle. It
 points into the flow volume of the simulation.
 
 

@@ -89,7 +89,7 @@ See `Section 6.19 <Section_howto.html#howto_19>`_ for more details on particle
 types.
 
 The *time* value is the point in time within the timestep when the
-collision occured.  Thus if the timestep size is DT, as set by the
+collision occurred.  Thus if the timestep size is DT, as set by the
 :doc:`timestep <timestep>` command, the *time* values will all be within
 the range of 0.0 to DT, for all collisions tallied by this compute on
 each timestep it is invoked.

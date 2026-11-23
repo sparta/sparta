@@ -18,7 +18,7 @@ adapt\_grid command
 .. parsed-literal::
 
      particle args = rthresh cthresh
-       rcount = threshold in particle count for refinment
+       rcount = threshold in particle count for refinement
        ccount = threshold in particle count for coarsening
      surf arg = surfID ssize
        surfID = group ID for which surface elements to consider
@@ -110,8 +110,8 @@ refined by *action1* are not eligible for subsequent coarsening by
 that are coarsened by *action1* are not eligible for subsequent
 refinement by *action2*\ .  This is also true if the *iterate* keyword
 is used to loop over the two actions multiple times.  Cells can be
-successivly refined on each iteration, but will never be coarsened.
-Likewise cells can be successivly coarsensed, but will never be
+successively refined on each iteration, but will never be coarsened.
+Likewise cells can be successively coarsened, but will never be
 refined.  Of course any cell may be refined or coarsened later if the
 adapt\_grid command is used again, including on later timesteps via the
 :doc:`fix adapt <fix_adapt>` command.
@@ -187,7 +187,7 @@ For refinement, if the compute or fix value for the grid cell is
 "more" than *rvalue*\ , the cell is refined.  For coarsening, if the
 "sum" of the compute or fix values in all child cells of the parent
 cell is "less" than *cvalue*\ , the parent cell is coarsened.  The
-*thresh* keyword can be used to change the refinment or coarsening
+*thresh* keyword can be used to change the refinement or coarsening
 criteria to "less" versus "more".  Likewise the *combine* keyword can
 be used to change the "sum" of child cell values to be a "min" or
 "max" operation.
@@ -233,7 +233,7 @@ when MFP is less than the specified threshold (0.05).
               combine min thresh less more
 
 The *random* style is provided for test and debugging purposes.  For
-each cell eligible for adaptation, a uniform random number RN bewteen
+each cell eligible for adaptation, a uniform random number RN between
 0.0 and 1.0 is generated.  For refinement, the cell is refined if RN <
 *rfrac*\ , so that approximately an *rfrac* fraction of the child cells
 are refined.  Similarly, for coarsening, the parent cell is coarsened
@@ -289,9 +289,9 @@ are created.  *Nz* must be one for 2d.  Any of Nx, Ny, Nz may have a
 value of 1, but they cannot all be 1.
 
 The *region* keyword can be used to limit which grid cells are
-eligible for adapation.  It applies to both child cells for refinment
+eligible for adaptation.  It applies to both child cells for refinement
 and parent cells for coarsening.  The ID of the geometric region is
-speficied as *regID*\ .  See the :doc:`region <region>` command for
+specified as *regID*\ .  See the :doc:`region <region>` command for
 details on what kind of geometric regions can be defined.  Note that
 the *side* option for the :doc:`region <region>` command can be used to
 define whether the inside or outside of the geometric region is
@@ -308,7 +308,7 @@ The *dir* keyword is only used by the style *surf*\ .  The Sx,Sy,Sz
 settings are components of a vector.  It's length does not matter,
 just its direction.  Only surface elements whose normal is opposed to
 the vector direction (in a dot product sense) are eligible surfaces
-for the adapation procedure described above for the *surf* style.
+for the adaptation procedure described above for the *surf* style.
 This can be useful to exclude refinement around surface elements that
 are not facing "upwind" with respect to the flow direction of the
 particles.  This is accomplished by setting Sx,Sy,Sz to the flow
@@ -319,13 +319,13 @@ The *file* keyword triggers output of the adapted grid to the
 specified *filename*\ .  The format of the file is the same as that
 created by the :doc:`write\_grid <write_grid>` command, which is a list
 of parent cells.  The file can be read in by a subsequent simulation
-to define a grid, or used by visualization or other post-procesing
+to define a grid, or used by visualization or other post-processing
 tools.  Note that no file is written if no grid cells are refined or
 coarsened.
 
 If the filename contains a "\*" wildcard character, then the "\*" is
 replaced by the current timestep.  This is useful for the :doc:`fix adapt <fix_adapt>` command, if you wish to write out multiple grid
-files, each time the grid iadapts.
+files, each time the grid adapts.
 
 
 ----------
@@ -350,7 +350,7 @@ This command can only be used after the grid has been created by the
 Currently a fix cannot be used with style *value* for *iterate* > 1.
 This is because the per-grid cell values accumulated by the fix are
 not interpolated to new grid cells so that the fix can be re-evaluated
-multiple times.  In the future we may revove this restriction.
+multiple times.  In the future we may remove this restriction.
 
 Currently, if there are custom attributes defined for grid cells, grid
 adaptation does not set new values for new grid cells created when

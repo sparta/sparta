@@ -119,7 +119,7 @@ was created by the reaction, otherwise it is the species index of the
 newly created particle.
 
 The *time* value is the point in time within the timestep when the
-collision occured.  Thus if the timestep size is DT, as set by the
+collision occurred.  Thus if the timestep size is DT, as set by the
 :doc:`timestep <timestep>` command, the *time* values will all be within
 the range of 0.0 to DT, for all collisions tallied by this compute on
 each timestep it is invoked.
@@ -132,7 +132,7 @@ the incident particle before it collides with the surface element.
 
 The *vx1/post*\ , *vy1/post*\ , *vz1/post* values are the velocity
 components of the incident particle after it collides with the surface
-element and has reacted.  These values will be zero if the paticle
+element and has reacted.  These values will be zero if the particle
 vanished in the reaction.
 
 If a 2nd particle was created by the reaction, the *vx2/post*\ ,

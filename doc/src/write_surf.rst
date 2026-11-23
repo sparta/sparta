@@ -109,11 +109,11 @@ Points section is included in the written file.  The Lines or
 Triangles section will reference indices from the Points section.  If
 the *points* keyword is specified with a value of *no*\ , then a Points
 section is not included. The Lines or Triangles section will list the
-coordinates of line segment or trianges corners directly.
+coordinates of line segment or triangles corners directly.
 
 If the *type* keyword is specified, then a surface element type is
 included for each line or triangle in the Lines or Triangles section.
-If it is not specified, element types are not incuded.
+If it is not specified, element types are not included.
 
 If the *custom* keyword is specified along with the *name* of a custom
 per-surf vector or array, then the per-surf values for that vector or

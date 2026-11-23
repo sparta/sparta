@@ -62,10 +62,10 @@ In practice, multiple transit-based timestep candidates are
 constructed based on the cell dimensions in each coordinate direction
 and the associated average particle velocity components in addition to
 the maximum most probable speed.  The selected cell timestep is the
-minumum of all candidate timesteps. The collision and transit
+minimum of all candidate timesteps. The collision and transit
 fractions simply provide a user-defined safety margin for the
 collision time and transit time estimates. In `(Bird2013) <#Bird2013>`_,
-Bird recomnmends setting the collision fraction to 0.2, which is
+Bird recommends setting the collision fraction to 0.2, which is
 likely a good starting point for the selection of both of these
 fractions.
 

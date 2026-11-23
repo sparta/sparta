@@ -101,8 +101,8 @@ and assigned default per-species attributes, unless the appropriate
 keywords are also specified.
 
 Species can be specified which are already part of the mixture, to
-change their group assignment or their per-species proerties, as
-disussed below.
+change their group assignment or their per-species properties, as
+discussed below.
 
 Zero species can be specified, if other keywords are used which alter
 group assignments or change global attributes of the mixture, as
@@ -175,7 +175,7 @@ to calculate per-grid quantities on a per-grid-cell, per-group basis,
 i.e. on subsets of particles within each grid cell.
 
 If the *group* keyword is not used in a mixture command, no changes to
-group assignements are made for species that are already in the
+group assignments are made for species that are already in the
 mixture.  If one or more new species are specified, then all of them
 are assigned to a group with "default" as the group ID.  Note that
 this means that mixtures defined with mixture commands that never use
@@ -228,7 +228,7 @@ specified as *sp1*\ , *sp2*\ , etc.  No other keywords can be used with
 *delete*\ .  All arguments that follow it are assumed to be species IDs
 that are currently in the mixture.  When using *delete*\ , no species
 can be defined before the keyword, i.e. *species1*\ , *species2*\ , etc
-cannot be defined in the comand syntax described above.
+cannot be defined in the command syntax described above.
 
 After the listed species are removed, any group IDs for the mixture
 that have no species assigned to them are also deleted.

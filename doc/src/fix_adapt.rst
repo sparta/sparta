@@ -31,7 +31,7 @@ fix adapt/kk command
 
 **Description:**
 
-This command performs on-the-fly adapatation of grid cells as a
+This command performs on-the-fly adaptation of grid cells as a
 simulation runs, either by refinement or coarsening or both.  Grid
 adaptation can also be performed before or between simulations by
 using the :doc:`adapt\_grid <adapt_grid>` command.
@@ -41,7 +41,7 @@ cells; the original child cell becomes a parent cell.  Coarsening
 means combining all the child cells of a parent cell, so that the
 child cells are deleted and the parent cell becomes a single new child
 cell.  See `Section howto 6.8 <Section_howto.html#howto_8>`_ for a
-description of the hierarchical grid used by SPARTA and a defintion of
+description of the hierarchical grid used by SPARTA and a definition of
 child and parent cells.
 
 Grid adaptation can be useful for adjusting the grid cell sizes to the
@@ -53,7 +53,7 @@ and/or reduce a simulation's computational cost.
 Adaptation is performed by this command once every *Nfreq* timesteps.
 
 All of the command arguments which appear after *Nfreq*\ , which
-determine how adapation is done for both refinement and coarsening,
+determine how adaptation is done for both refinement and coarsening,
 are exactly the same as for the :doc:`adapt\_grid <adapt_grid>` command.
 
 This includes a group-ID parameter which can be used to limit

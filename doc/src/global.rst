@@ -120,7 +120,7 @@ specified.  It is the default.
 
 The *constant* setting is for a field that has no spatial or time
 dependence; the same field vector acts on all particles.  Gravity is
-an example of a constant external field.  The *mag* arguement sets the
+an example of a constant external field.  The *mag* argument sets the
 magnitude of the field.  The (ex,ey,ez) components specify the
 direction the field acts in.  The components do not need to be a unit
 vector; the code converts them into a unit vector internally.  Note
@@ -177,7 +177,7 @@ The *surfs* keyword determines what kind of surface elements SPARTA
 uses and how they are distributed across processors.  Possible values
 are *explicit*\ , *explicit/distributed*\ , and *implicit*\ .  See the
 `Howto 6.13 <Section_howto.html#howto_13>`_ section of the manual for an
-explantion of explicit versus implicit surfaces.  The distributed
+explanation of explicit versus implicit surfaces.  The distributed
 option can be important for models with huge numbers of surface
 elements.  Each processor stores copies of only the surfaces that
 overlap grid cells it owns or has ghost copies of.  Implicit surfaces
@@ -223,7 +223,7 @@ choose between a *reduce* or *rvous* algorithm based on the number of
 surface elements and processor count.  If there are more processors
 than surface elements, the *reduce* algorithm is used.  Otherwise the
 *rvous* algorithm is used.  The *reduce* algorithm is suitable for
-relatively small surface elememt counts.  It creates a copy of a
+relatively small surface element counts.  It creates a copy of a
 vector or array of length the global number of surface elements.  Each
 processor sums its tally contributions into the vector or array.  An
 MPI\_Allreduce() is performed to sum it across all processors.  Each
@@ -278,7 +278,7 @@ IMPORTANT NOTE: If grid cells have already been defined via the
 :doc:`create\_grid <create_grid>`, :doc:`read\_grid <read_grid>`, or
 :doc:`read\_restart <read_restart>` commands, when the *gridcut* cutoff
 is specified, then any ghost cell information that is currently stored
-will be erased.  As discussed in the preceeding paragraph, a
+will be erased.  As discussed in the preceding paragraph, a
 :doc:`balance\_grid <balance_grid>` command must then be invoked to
 regenerate ghost cell information.  If this is not done before
 surfaces are read in or a simulation is performed, an error will

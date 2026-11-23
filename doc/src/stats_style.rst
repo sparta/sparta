@@ -138,7 +138,7 @@ counts for the current timestep.
 
 The *npave*\ , *ntouchave*\ , *ncommave*\ , *nboundave*\ , *nexitave*\ ,
 *nscollave*\ , *nscheckave*\ , *ncollave*\ , *nattemptave*\ , *nreactave*\ , and
-*nsreactave* keywords all generate values that are the cummulative
+*nsreactave* keywords all generate values that are the cumulative
 total of the corresponding count divided by *elapsed* = the number of
 timesteps since the start of the current run.
 

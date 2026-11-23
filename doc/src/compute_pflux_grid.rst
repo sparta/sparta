@@ -47,7 +47,7 @@ each species and each grid cell to a dump file every 1000 steps:
 
 **Description:**
 
-Define a computation that calculates components of the momemtum flux
+Define a computation that calculates components of the momentum flux
 density tensor for each grid cell in a grid cell group.  This is
 equivalent to the kinetic energy density tensor, and is based on the
 thermal velocity of the particles in each grid cell.  The values are
@@ -93,7 +93,7 @@ sampling steps.
 ----------
 
 
-Calculation of the momentum flux density is done by first calcuating
+Calculation of the momentum flux density is done by first calculating
 the center-of-mass (COM) velocity of particles for each group within a
 grid cell.  This is done as follows:
 

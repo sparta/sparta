@@ -277,7 +277,7 @@ output by the text-based dump styles: *particle*\ , *grid*\ , *surf*\ ,
 All the specified format strings are C-style formats, e.g. as used by
 the C/C++ printf() command.  The *line* keyword takes a single
 argument which is the format string for an entire line of output with
-N fields for each particle, grid cell, or suraface elememt, which you
+N fields for each particle, grid cell, or surface element, which you
 must enclose in quotes if it is more than one field.  The *int* and
 *float* keywords take a single format argument and are applied to all
 integer or floating-point quantities output.  The setting for *M

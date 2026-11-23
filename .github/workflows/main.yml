@@ -213,3 +213,13 @@ jobs:
     # does not define.
     - name: Check the command and style listings against src/
       run: python3 doc/utils/check-styles.py src doc/src
+
+    # Once is enough: the spelling builder does not depend on the Sphinx
+    # version the way the warnings above do.  A real word the dictionary
+    # does not know goes in doc/utils/sphinx-config/false_positives.txt.
+    - name: Spell-check the manual
+      if: matrix.python-version == '3.11'
+      run: |
+        sudo apt-get update -q
+        sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -q enchant-2 hunspell-en-us
+        make -C doc spelling

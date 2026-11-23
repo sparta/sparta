@@ -87,7 +87,7 @@ sampling steps.
 
 
 Calculation of both the A and B sonine moments is done by first
-calcuating the center-of-mass (COM) velocity of particles for each
+calculating the center-of-mass (COM) velocity of particles for each
 group within a grid cell.  This is done as follows:
 
 

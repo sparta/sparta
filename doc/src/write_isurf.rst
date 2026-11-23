@@ -36,7 +36,7 @@ Write a grid corner point file in binary format describing the current
 corner point values which define the current set of implicit surface
 elements.  See the :doc:`read\_isurf <read_surf>` command for a
 definition of implicit surface elements and how they are defined from
-grid conner point values.  The surface file can be used for later
+grid corner point values.  The surface file can be used for later
 input to a new simulation or for post-processing and visualization.
 
 The specified *group-ID* is the name of a grid cell group, as defined

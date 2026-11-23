@@ -78,7 +78,7 @@ Surfaces can be explicit or implicit.  This command reads explicit
 surfaces from a file containing a list of explicit surfaces.  See the
 :doc:`read\_isurf <read_isurf>` command to read implicit surfaces from a
 different kind of file.  See the `Howto 6.13 <Section_howto.html#howto_13>`_ section of the manual for an
-explantion of explicit versus implicit surfaces as well as distributed
+explanation of explicit versus implicit surfaces as well as distributed
 versus non-distributed storage.  You cannot mix explicit and implicit
 surfaces in the same simulation.
 
@@ -103,9 +103,9 @@ assigned to a reaction model, specified by the
 chemistry occurs during a collision.  Statistics for each surface
 element due to their interactions with particles can be tallied via
 the :doc:`compute surf <compute_surf>` command, time-averaged via the
-:doc:`fix ave/surf <fix_ave_surf>` command, and ouput via the :doc:`dump surface <dump>` command.
+:doc:`fix ave/surf <fix_ave_surf>` command, and output via the :doc:`dump surface <dump>` command.
 
-Surface elememts can be assigned to surface groups via the :doc:`group surf <group>` command.  Surface group IDs are used by other
+Surface elements can be assigned to surface groups via the :doc:`group surf <group>` command.  Surface group IDs are used by other
 commands to operate on selected sets of elements.  This command has
 *group* and *typeadd* keywords which can be used to help assign
 different elements or different objects to different groups.
@@ -265,7 +265,7 @@ A.  If it was not, use format B.
    line-ID (type) p1x p1y p2x p2y (custom1) (custom2) ...     # format B
 
 The *line-ID* is stored internally with the line and can be output by
-the :doc:`dump surf <dump>` command.  If the read\_surf commmand is
+the :doc:`dump surf <dump>` command.  If the read\_surf command is
 reading a single file, the line-IDs should be unique values from 1 to
 N where N is the number of lines specified in the header of the file.
 For a set of multiple files, each line in the collection of all files
@@ -340,7 +340,7 @@ use format A.  If it was not, use format B.
    tri-ID (type) p1x p1y p1z p2x p2y p2z p3x p3y p3z (custom1) custom2) ...  # format B
 
 The tri-ID is stored internally with the triangle and can be output
-with the :doc:`dump surf <dump>` comand.  If the read\_surf command
+with the :doc:`dump surf <dump>` command.  If the read\_surf command
 is reading a single file, the tri-IDs should be unique values from 1
 to N where N is the number of triangles specified in the header of the
 file.  For a set of multiple files, each triangle in the collection of
@@ -557,7 +557,7 @@ input to a new simulation or for post-processing and visualization.
 
 IMPORTANT NOTE: When the *clip* operation deletes or adds surface
 elements, the line-IDs or tri-IDs will be renumbered to produce IDs
-that are consective values from 1 to the # of surface elements.  The
+that are consecutive values from 1 to the # of surface elements.  The
 ID of a surface element that is unclipped may change due to this
 reordering.
 
@@ -572,7 +572,7 @@ surface elements are added.
 Surface groups are collections of surface elements.  Each surface
 element belongs to one or more surface groups; all elements belong to
 the "all" group, which is created by default.  Surface group IDs are
-used by other commands to identify a group of suface elements to
+used by other commands to identify a group of surface elements to
 operate on.  See the :doc:`group surf <group>` command for more details.
 
 Every surface element also stores a *type* which is a positive
@@ -596,7 +596,7 @@ can still be altered by the *typeadd* keyword.
 
 Note that use of the *group* and *typeadd* keywords allow the same
 surface file to be read multiple times (e.g. with different origins,
-tranlations, rotations, etc) to define multiple objects, and assign
+translations, rotations, etc) to define multiple objects, and assign
 their surface elements to different groups or different type values.
 
 The *particle* keyword determines how particles in the simulation are
@@ -636,7 +636,7 @@ The format for the output file is the same as for the file read by
 this command.
 
 Note that it can be useful to write out a new surface file after it is
-read if clipping was performed.  This is beacuse the new file will
+read if clipping was performed.  This is because the new file will
 contain surface elements altered by clipping and will not contain any
 surface elements removed by clipping.  This may include a renumbering
 of the surface element IDs.

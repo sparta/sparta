@@ -70,7 +70,7 @@ details of how SPARTA defines child, unsplit, split, and sub cells.
 From the per-cell timesteps, 3 values are extracted by this fix.  They
 are the minimum positive timestep (DTmin) for all cells, the maximum positive timestep
 (DTmax) for all cells, and the average positive timestep (DTave) over all
-cells.  Cells with a timestep value of zero are not included in the mininum,
+cells.  Cells with a timestep value of zero are not included in the minimum,
 maximum, and average timestep calculations.
 
 A new global timestep is than calculated by this formula, using

@@ -66,7 +66,7 @@ to a particular surface element.
 **Restrictions:**
 
 All surface elements must be assigned to a surface collision model via
-the *collide* keyword before a simlulation can be performed.  Using a
+the *collide* keyword before a simulation can be performed.  Using a
 surface reaction model is optional.
 
 This command cannot be used before surfaces exist.

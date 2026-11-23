@@ -42,7 +42,7 @@ given below.  Basically this operation will re-create the simulation
 box with all its particles, the hierarchical grid used to track
 particles, and surface elements embedded in the grid, all with their
 attributes at the point in time the information was written to the
-restart file by a previous simluation.
+restart file by a previous simulation.
 
 Although restart files are saved in binary format to allow exact
 regeneration of information, the random numbers used in the continued
@@ -67,7 +67,7 @@ assignments and their relative performance trade-offs.
 
 Note that the restart file contains the setting for the :doc:`global gridcut <global>` command.  If it is >= 0.0 and the assignment of
 grid cells to processors is "dispersed" (as described in the
-preceeding paragraph), and there are surface elements defined in the
+preceding paragraph), and there are surface elements defined in the
 restart file, an error will be triggered.  This is because the
 read\_restart command needs to mark all the grid cells as inside vs
 outside the defined surface and cannot do this without ghost cell
@@ -172,7 +172,7 @@ Also note that many commands can be used after a restart file is read,
 to override a setting that was stored in the restart file.  For
 example, the :doc:`global <global>` command can be used to reset the
 values of its specified keywords. If a global command is used in the
-input file before the restart file is read, then it will be overriden
+input file before the restart file is read, then it will be overridden
 by values in the restart file. The only exception is the \*mem/limit\*
 command, since it affects how the restart file is processed.
 
@@ -206,7 +206,7 @@ custom data for that attribute already exists, it will be re-used.  If
 a corresponding input script command is not used, then the custom data
 will be stored in the simulation (with particle in this case), but not
 be used, which can be inefficient.  The :doc:`custom remove <custom>`
-command can be used after the restart file is read, to delete unneded
+command can be used after the restart file is read, to delete unneeded
 custom attributes and their data.
 
 

@@ -65,7 +65,7 @@ the cells owned by this processor.
 
 E: Particle %d,%d on proc %d is in split cell  on timestep %ld
 
-This should not happend.  The particle should be in one
+This should not happen.  The particle should be in one
 of the sub-cells of the split cell.
 
 E: Particle %d,%d on proc %d is outside cell  on timestep %ld

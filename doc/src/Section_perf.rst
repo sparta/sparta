@@ -4,7 +4,7 @@
 The SPARTA distribution includes a bench sub-directory with several
 sample problems.  The Benchmarks page of the `SPARTA WWW Site <sws_>`_
 gives timing data for these problems run on different machines,
-for both strong and weak scaling scenarioes:
+for both strong and weak scaling scenarios:
 
 * free = free molecular flow in a box
 * collide = collisional molecular flow in a box

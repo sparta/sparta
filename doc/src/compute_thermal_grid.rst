@@ -92,7 +92,7 @@ what the :doc:`compute sonine/grid <compute_sonine_grid>` command does.
 ----------
 
 
-Calculation of the thermal temperature is done by first calcuating the
+Calculation of the thermal temperature is done by first calculating the
 center-of-mass (COM) velocity of particles for each group within a
 grid cell.  This is done as follows:
 
@@ -175,7 +175,7 @@ for an overview of SPARTA output options.
 
 The per-grid array values will be in the :doc:`units <units>`
 appropriate to the individual values as described above.  *Temp* is in
-temperature units.  *Press* is in prsesure units.
+temperature units.  *Press* is in pressure units.
 
 
 ----------

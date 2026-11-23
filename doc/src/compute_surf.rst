@@ -108,7 +108,7 @@ surface (vanish), or a 2nd particle can also be emitted.
 Additionally, surface elements can emit particles directly -- see the
 :doc:`fix\_emit\_surf <fix_emit_surf>` command doc page.  The formulas
 below account for all these possible outcomes.  For example, the
-kinetic energy flux *ke* onto a suface element for a single collision
+kinetic energy flux *ke* onto a surface element for a single collision
 includes a positive contribution from the incoming particle and
 negative contributions from 0, 1, or 2 outgoing particles.  The
 exception is the *n* and *nwt* values which simply tally counts of
@@ -117,7 +117,7 @@ particles colliding with the surface element.
 If the explicit surface element is transparent, the particle will pass
 through the surface unaltered.  See the transparent keyword for the
 :doc:`read\_surf <read_surf>` command.  The count of particles going
-through the surfacce as well as their mass or energy fluxes can still
+through the surface as well as their mass or energy fluxes can still
 be tallied by this compute.  See details on transparent surface
 elements below.
 
@@ -260,7 +260,7 @@ contributing p\_delta dotted into the outward normal N of the surface
 element, also normalized by A = the area of the surface element.
 
 The *px*\ , *py*\ , *pz* values calculate the normal pressure Px, Py, Pz
-extered on the surface element in the direction of its normal by
+exerted on the surface element in the direction of its normal by
 particles in the group, with respect to the x, y, z coordinate axes.
 These are computed as
 
@@ -279,7 +279,7 @@ p\_delta of a particle.  P\_delta\_n_x (and y,z) are its x, y, z
 components.
 
 The *shx*\ , *shy*\ , *shz* values calculate the shear pressure Sx, Sy, Sz
-extered on the surface element in the tangential direction to its
+exerted on the surface element in the tangential direction to its
 normal by particles in the group, with respect to the x, y, z
 coordinate axes.  These are computed as
 
@@ -368,7 +368,7 @@ Eflux = - Sum\_i (e\_recomb) / (A \* dt / fnum)
 where e\_recomb is the catalytic chemical energy of a particle pair
 (positive for an exothermic recombination reaction). The flux equation
 is the same as for the *ke* value. This option applies only to the
-*prob* style of surface reations. A value of 0.0 will be returned
+*prob* style of surface reactions. A value of 0.0 will be returned
 for other styles of surface reactions, e.g. *global* and *adsorb*\ .
 
 The *etot* value calculates the total energy flux imparted to the
@@ -418,7 +418,7 @@ triangles which interact with flow particles.  A plane of transparent
 surface elements normal to the flow direction could be defined which
 cut through the sphere.  In this case some or all of the transparent
 triangles will be partially or wholly inside the sphere.  SPARTA does
-not attempt to calculate the portion of a tranparent triangle (or line
+not attempt to calculate the portion of a transparent triangle (or line
 segment in 2d) which is inside the flow volume.  The "area" specified
 in all the formulas above will be the area of the entire transparent
 triangle (or line segment in 2d), which may or may not be what you

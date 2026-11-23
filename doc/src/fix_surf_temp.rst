@@ -57,7 +57,7 @@ The specified *group-ID* must be the name of a surface element group,
 as defined by the :doc:`group surf <group>` command, which contains a
 set of surface elements.
 
-The specfied *Nevery* determines how often the surface temperatures
+The specified *Nevery* determines how often the surface temperatures
 are re-computed.
 
 The *source* can be specified as a per-surf quantity calculated by a

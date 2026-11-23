@@ -17,7 +17,7 @@ MATHJAXSHA     = 1b9c0a1c44df864e915690558e72adb9cc5203360daefd385084ced3b6c64c0
 PYTHON         = python3
 SPHINXEXTRA    =
 
-.PHONY: help clean clean-all html pdf fasthtml fasthtml-init check
+.PHONY: help clean clean-all html pdf fasthtml fasthtml-init check spelling
 
 HAS_PDFLATEX   = $(shell command -v latexmk > /dev/null 2>&1 && \
                          command -v pdflatex > /dev/null 2>&1 && echo YES || echo NO)
@@ -36,6 +36,7 @@ help:
 	@echo "  fasthtml      quick per-page preview in doc/fasthtml (needs pandoc)"
 	@echo "  check         verify the command and style listings against src/,"
 	@echo "                and every internal link and anchor in doc/html"
+	@echo "  spelling      spell-check the manual (needs enchant and an English dictionary)"
 	@echo "  clean         remove the build tree, keep the virtualenv"
 	@echo "  clean-all     also remove the virtualenv and the MathJax copy"
 	@echo ""
@@ -45,6 +46,17 @@ help:
 # The one check that outlives the migration: parity-check.py and
 # equation-check.py both need a txt2html manual to compare against, and
 # there will not be one once doc/*.txt is gone from the release.
+# The spelling builder needs enchant and an English dictionary installed
+# on the system (e.g. the enchant-2 and hunspell-en-us packages).  -W makes
+# every misspelling an error; fix it, or if it is a real word add it to
+# utils/sphinx-config/false_positives.txt.
+spelling: $(VENV)
+	@. $(VENV)/bin/activate && \
+	 sphinx-build $(SPHINXEXTRA) -W --keep-going -b spelling \
+	   -c $(SPHINXCONFIG) -d $(BUILDDIR)/doctrees-spelling \
+	   $(RSTDIR) $(BUILDDIR)/spelling && \
+	 echo "Spell check passed."
+
 # && so that a failure in either check fails the target.
 check: html
 	@$(PYTHON) $(BUILDDIR)/utils/check-styles.py $(BUILDDIR)/../src $(BUILDDIR)/src && \
@@ -52,6 +64,7 @@ check: html
 
 clean:
 	rm -rf $(BUILDDIR)/html $(BUILDDIR)/doctrees \
+	       $(BUILDDIR)/spelling $(BUILDDIR)/doctrees-spelling \
 	       $(BUILDDIR)/latex $(BUILDDIR)/latexdoctrees \
 	       $(BUILDDIR)/fasthtml
 

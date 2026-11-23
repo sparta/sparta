@@ -148,7 +148,7 @@ The size of the MPI datatype does not match the size of a bigint.
 
 E: Small,big integers are not sized correctly
 
-This error occurs whenthe sizes of smallint and bigint as defined in
+This error occurs when the sizes of smallint and bigint as defined in
 src/spatype.h are not what is expected.  Please report the issue
 to the SPARTA developers.
 

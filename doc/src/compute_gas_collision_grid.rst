@@ -25,7 +25,7 @@ compute gas/collision/grid command
 
 **Description:**
 
-Count the number of gas-phase collisions bewteen pairs of particles
+Count the number of gas-phase collisions between pairs of particles
 which occur in each grid cell during the current timestep.  Only gas
 collisions which do not result in chemical reactions are counted by
 this command.  See the related :doc:`compute gas/reaction/grid <compute_gas_reaction_grid>` command to count

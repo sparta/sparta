@@ -106,8 +106,8 @@ temperature for the species, as defined in the file read by the
 
 If the :doc:`collide\_modify vibrate <collide_modify>` setting is
 *discrete*\ , but no species has a vibrational DOF setting that implies
-multiple vibrational modes (vibdof = 4,6,8), then the calulation of
-vibrational temeperatures is the same as for :doc:`collide\_modify vibrate smooth <collide_modify>`.  See the :doc:`species <species>` command
+multiple vibrational modes (vibdof = 4,6,8), then the calculation of
+vibrational temperatures is the same as for :doc:`collide\_modify vibrate smooth <collide_modify>`.  See the :doc:`species <species>` command
 and its description of the per-species "vibdof" setting in the species
 file.
 
@@ -117,7 +117,7 @@ imply multiple vibrational modes (vibdof = 4,6,8), as defined by the
 :doc:`species <species>` command, then the sums in the numerator and
 denominator are over the different species in the group and the modes
 for each species.  For example if species CO2 has vibdof=6, then it
-has 3 modes.  Three terms in the numerator and demoninator are
+has 3 modes.  Three terms in the numerator and denominator are
 included when CO2 is a species in the group.
 
 The vibrational temperature Tsp\_m for particles of a single species

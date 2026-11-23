@@ -7,3 +7,5 @@
 *.pyc
 __pycache__
 /utils/sphinx-config/_static/mathjax
+/spelling
+/doctrees-spelling

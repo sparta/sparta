@@ -2,7 +2,7 @@
 =====================
 
 The following sections describe how to perform common tasks using
-SPARTA, as well as provide some techinical details about how
+SPARTA, as well as provide some technical details about how
 SPARTA works.
 
 | 6.1 `2d simulations <#howto_1>`_
@@ -63,7 +63,7 @@ model.
   setting to calculate numbers of particles to create or insert.  It is
   also used to compute collision frequencies.
 * If surfaces are defined via the :doc:`read\_surf <read_surf>` command,
-  use 2d objects defined by line segements.
+  use 2d objects defined by line segments.
 
 Many of the example input scripts included in the SPARTA distribution
 are for 2d models.
@@ -278,7 +278,7 @@ Global/per-particle/per-grid/per-surf/pre-tally data
 Various output-related commands work with four different styles of
 data: global, per particle, per grid, or per surf.  A global datum is
 one or more system-wide values, e.g. the temperature of the system.  A
-per particle datum is one or more values per partice, e.g. the kinetic
+per particle datum is one or more values per particle, e.g. the kinetic
 energy of each particle.  A per grid datum is one or more values per
 grid cell, e.g. the temperature of the particles in the grid cell.  A
 per surf datum is one or more values per surface element, e.g. the
@@ -456,7 +456,7 @@ commands.
 
 The :doc:`fix ave/grid <fix_ave_grid>` command enables time-averaging of
 per grid vectors.  The user specifies one or more quantities as input.
-These can be per grid vectors or ararys from :doc:`compute <compute>` or
+These can be per grid vectors or arrays from :doc:`compute <compute>` or
 :doc:`fix <fix>` commands.  If the input is a single vector, then the
 fix generates a per grid vector.  If the input is multiple vectors or
 array, the fix generates a per grid array.  The time-averaged output
@@ -464,7 +464,7 @@ of this fix can also be used as input to other output commands.
 
 The :doc:`fix ave/surf <fix_ave_surf>` command enables time-averaging of
 per surf vectors.  The user specifies one or more quantities as input.
-These can be per surf vectors or ararys from :doc:`compute <compute>` or
+These can be per surf vectors or arrays from :doc:`compute <compute>` or
 :doc:`fix <fix>` commands.  If the input is a single vector, then the
 fix generates a per surf vector.  If the input is multiple vectors or
 array, the fix generates a per surf array.  The time-averaged output
@@ -878,7 +878,7 @@ particle/surface collisions can be efficiently computed.
 SPARTA uses a Cartesian hierarchical grid.  Cartesian means that the
 faces of a grid cell, at any level of the hierarchy, are aligned with
 the Cartesian xyz axes.  I.e. each grid cell is an axis-aligned
-pallelpiped or rectangular box.
+parallelepiped or rectangular box.
 
 The hierarchy of grid cells is defined for N levels, from 1 to N.  The
 entire simulation box is a single parent grid cell, conceptually at
@@ -940,7 +940,7 @@ various attributes and are distributed across processors, so that each
 child cell is owned by exactly one processor, as discussed below.
 
 When surface objects are defined via the :doc:`read\_surf <read_surf>`
-command, they intersect child cells.  In this contex "intersection" by
+command, they intersect child cells.  In this context "intersection" by
 a surface element means a geometric overlap between the area of the
 surface element and the volume of the grid cell (or length of element
 and area of grid cell in 2d).  Thus an intersection includes a surface
@@ -989,7 +989,7 @@ and 1st cell in z.  I.e. 4 = (z-1)\*4 + (y-1)\*2 + (x-1) + 1.
 
 This level 2 cell could itself be a parent cell if it were further
 sub-divided, or a child cell if not.  In either case its ID is the
-same and is calcluated as follows.  The rightmost 11 bits of the
+same and is calculated as follows.  The rightmost 11 bits of the
 integer ID are encoded with 376.  This is because it requires 11 bits
 to represent 2000 cells (1 to 2000) at level 1.  The next 4 bits are
 encoded with 4, because it requires 4 bits to represent 8 cells (1 to
@@ -1048,7 +1048,7 @@ If the spatial distribution of particles is highly irregular and/or
 dynamically changing, or if the computational work per grid cell is
 otherwise highly imbalanced, a clumped assignment of grid cells to
 processors may not lead to optimal balancing.  In these scenarios a
-dispersed assignment of grid cells to processsors may run faster even
+dispersed assignment of grid cells to processors may run faster even
 with the overhead of increased particle communication.  This is
 because randomly assigning grid cells to processors can balance the
 computational load in a statistical sense.
@@ -1215,7 +1215,7 @@ The ambipolar approximation is a computationally efficient way to
 model low-density plasmas which contain positively-charged ions and
 negatively-charged electrons.  In this model, electrons are not free
 particles which move independently.  This would require a simulation
-with a very small timestep due to electon's small mass and high speed
+with a very small timestep due to electron's small mass and high speed
 (1000x that of an ion or neutral particle).
 
 Instead each ambipolar electron is assumed to stay "close" to its
@@ -1236,7 +1236,7 @@ actually not performed, but are tallied in the overall collision count
 multiple groups).  If gas-phase chemistry is turned on, reactions
 involving ions and electrons can be specified, which include
 dissociation, ionization, exchange, and recombination reactions.  At
-the end of the collision/chemsitry operations for the grid cell, there
+the end of the collision/chemistry operations for the grid cell, there
 is still a one-to-one pairing between ambipolar ions and electrons.
 Each pair is recombined into a single particle.
 
@@ -1281,7 +1281,7 @@ large disparity in electron versus ion/neutral velocities.
 If you want to perform gas-phase chemistry for reactions involving
 ambipolar ions and electrons, use the :doc:`react <react>` command with
 an input file of reactions that include the ambipolar electron and ion
-species defined by the fix ambipolar commmand.  See the
+species defined by the fix ambipolar command.  See the
 :doc:`react <react>` command doc page for info the syntax required for
 ambipolar reactions.  Their reactants and products must be listed in
 specific order.
@@ -1319,7 +1319,7 @@ assign the surface reaction model to surface or the simulation box
 boundaries via the :doc:`surf\_modify <surf_modify>` and
 :doc:`bound\_modify <bound_modify>` commands.
 
-For diagnositics and output, you can use the :doc:`compute count <compute_count>` and :doc:`dump particle <dump>` commands.  The
+For diagnostics and output, you can use the :doc:`compute count <compute_count>` and :doc:`dump particle <dump>` commands.  The
 :doc:`compute count <compute_count>` command generate counts of
 individual species, entire mixtures, and groups within mixtures.  For
 example these commands will include counts of ambipolar ions in
@@ -1331,7 +1331,7 @@ statistical output:
    compute myCount O+ N+ NO+ e
    stats_style step nsreact nsreactave cpu np c_myCount
 
-Note that the count for species "e" = ambipolar electrons should alwas
+Note that the count for species "e" = ambipolar electrons should always
 be zero, since those particles only exist during gas and surface
 collisions.  The :doc:`stats\_style <stats_style>` *nsreact* and
 *nsreactave* keywords print tallies of surface reactions taking place.
@@ -1348,7 +1348,7 @@ E.g. this command
 will output the ionambi flag = 1 for ambipolar ions, along with the vy
 of their associated ambipolar electrons.
 
-The :doc:`fix ambipolar <fix>` ambiploar.html doc page explains how to
+The :doc:`fix ambipolar <fix>` ambipolar.html doc page explains how to
 restart ambipolar simulations where the fix is used.
 
 
@@ -1469,7 +1469,7 @@ explicit versus implicit, and distributed versus non-distributed
 surface elements.
 
 Unless noted, the following surface-related commands work with either
-explict or implicit surfaces, whether they are distributed or not.
+explicit or implicit surfaces, whether they are distributed or not.
 For large data sets, the read and write surf and isurf commands have
 options to use multiple files and/or operate in parallel which can
 reduce I/O times.
@@ -2038,7 +2038,7 @@ referred to as a custom per-particle, per-grid, or per-surf array (an
 array can have a single column and thus a single value per entity).
 Each custom attribute has a name, which allows them to be specified in
 input scripts as arguments to various commands.  The values each
-attricute stores can be either integer or floating point numbers.
+attribute stores can be either integer or floating point numbers.
 
 The :doc:`custom <custom>` command can create and set/reset custom
 attribute values for all 3 flavors of attributes.  Either by invoking
@@ -2046,7 +2046,7 @@ per-particle, per-grid, or per-surf variables, or by reading a file
 with one line of attribute values per particle/grid/surf.  In the case
 of per-grid attributes, it can also read a coarse file with values for
 coarse grid points.  The attributed values for each grid cell are set
-to values of the nearset coarse grid point.  The :doc:`fix custom <fix_custom>` command can do the same thing periodically as
+to values of the nearest coarse grid point.  The :doc:`fix custom <fix_custom>` command can do the same thing periodically as
 a simulation runs.  :doc:`Dump <dump>` commands can output all 3 flavors
 of attributes.
 
@@ -2091,7 +2091,7 @@ various ways:
 * :doc:`write\_surf <write_surf>` - write per-surf attributes to a surf data file
 
 Per-surf custom attributes can be defined for explicit or
-explicit/distributed surface elements, as set by the :doc:`global surfs <global>` comand.  But they cannot be used for implicit
+explicit/distributed surface elements, as set by the :doc:`global surfs <global>` command.  But they cannot be used for implicit
 surface elements.  Conceptually, implicit surfaces are defined on a
 per-grid cell basis, so per-grid custom attributes can be used instead
 to define attributes of implicit surfaces.
@@ -2116,7 +2116,7 @@ In both cases, the custom per-surf temperature can be used by the
 surface temperature for performing particle/surface element
 collisions.  Likewise the :doc:`fix emit/surf <fix_emit_surf>` command
 can use the current custom per-surf temperature to alter the emission
-properties of each surface elemnt.
+properties of each surface element.
 
 Another use of dynamic custom attributes is by the :doc:`fix ambipolar <fix_ambipolar>` and :doc:`surf\_react adsorb <surf_react>`
 commands.  The former stores the ambipolar state of each particle in
@@ -2156,7 +2156,7 @@ mean collision and particle transit times.  These cell-based timesteps
 are only used to compute the global timestep and are not used to
 advance the solution locally. The benefit of the global timestep
 calculation is that it will automatically reduce the timestep if the
-intial value is too large, leading to higher accuracy, and it will
+initial value is too large, leading to higher accuracy, and it will
 automatically increase the timestep if the initial value is too small,
 speeding up the simulation. The overhead of using the variable
 timestep option is the computational time involved in computing the

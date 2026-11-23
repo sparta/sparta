@@ -142,7 +142,7 @@ Second, *Tsurf* can be a variable specified as v\_name where *name* is
 the name of the variable defined by the :doc:`variable <variable>`
 command.  Two different styles of variable can be used.
 
-The first is an equal-style variable which evaulates to a single
+The first is an equal-style variable which evaluates to a single
 scalar value, which will be the temperature assigned to every surface
 element.  Equal-style variables can specify formulas with various
 mathematical functions, and include :doc:`stats\_style <stats_style>`
@@ -161,7 +161,7 @@ element.
 
 Note that the frequency at which the equal-style or surf-style
 variable is evaluated can be set using the optional *temp/freq*
-keyword, disussed below.  The default value is 1, meaning the variable
+keyword, discussed below.  The default value is 1, meaning the variable
 is evaluated every timestep.  Surf-style variables can be expensive to
 evaluate, because they require inter-processor communication in
 parallel, so you may wish to set the *temp/freq* keyword to a larger
@@ -295,7 +295,7 @@ be a numeric value, surf-style variable, or custom per-surf attribute.
 See the explanation for all 3 options above.
 
 The particles are scattered thermally based on the Maxwell Boltzmann
-distribution conisstent with the surface temperture.  The new velocity
+distribution consistent with the surface temperature.  The new velocity
 will have thermal components in the direction of the outward surface
 normal and the plane tangent to the surface given by:
 
@@ -372,7 +372,7 @@ the polar angle distribution is usually higher than the incident angle
 cosine power (n) of the polar angle distribution and the cosine power
 \(m) of the azimuthal angular distribution are taken as input
 parameters. A factor of 2 is present in the azimuthal distribution to
-ensure the function remians positive within the range of the azimuthal
+ensure the function remains positive within the range of the azimuthal
 angle: (-180, 180)
 
 .. math::
@@ -596,7 +596,7 @@ normal and the peak is described using the parameter *pol\_pow*.
 
 The keyword *intenergy* can be used to modify the internal energy of
 an incident molecule during collision. In the case of hyperthermal
-collision the energy from the translational mode is transfered to the
+collision the energy from the translational mode is transferred to the
 internal modes. This keyword requires two input parameters *frac\_rot*
 and *frac\_vib*. These specify the fraction of the change in
 translational energy (difference between the final and initial)
@@ -617,7 +617,7 @@ options.
 
 The first element of the vector is the count of particles that hit
 surface elements assigned to this collision model during the current
-timestep.  The second element is the cummulative count of particles
+timestep.  The second element is the cumulative count of particles
 that have hit surface elements since the current run began.
 
 

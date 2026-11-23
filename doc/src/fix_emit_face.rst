@@ -88,7 +88,7 @@ species is chosen randomly in accord with the *frac* settings of the
 collection of species in the mixture, as set by the
 :doc:`mixture <mixture>` command.
 
-IMPORTANT NOTE: The preceeding calculation is actually done using face
+IMPORTANT NOTE: The preceding calculation is actually done using face
 areas associated with *weighted* cell volumes.  Grid cells can be
 weighted using the :doc:`global weight <global>` command.
 
@@ -180,9 +180,9 @@ for N, even if some or all of the particle insertions are rejected due
 to not being inside the region.
 
 The *modulate* keyword can be used to multiple the count of particles
-inserted at each timestep by a prefactor.  The prefactor is calcalated
+inserted at each timestep by a prefactor.  The prefactor is calculated
 at each insertion timestep by invoking the equal-style variable whose
-name is speficied as *v\_name*.  A value of 1.0 will not modulate the
+name is specified as *v\_name*.  A value of 1.0 will not modulate the
 count of inserted particles (on that timestep).  A value of 0.5 (or
 2.0) will insert half (or twice) the unmodulated count of particles.
 Note that the formula used for an equal-style variable can include the
@@ -245,7 +245,7 @@ No information about this fix is written to :doc:`binary restart files <restart>
 This fix computes a global vector of length 2 which can be accessed by
 various output commands.  The first element of the vector is the total
 number of particles added on the most recent insertion step.  The
-second element is the cummulative total number added since the
+second element is the cumulative total number added since the
 beginning of the run.  The 2nd value is initialized to zero each time
 a run is performed.
 
@@ -278,7 +278,7 @@ effectively.
 **Restrictions:**
 
 Particles cannot be emitted from periodic faces of the simulation box.
-Particles cannot be emitted from *z* faces of the simluation box for a
+Particles cannot be emitted from *z* faces of the simulation box for a
 2d simulation.
 
 A *perspecies* setting of *yes* can only be used with an *n* setting

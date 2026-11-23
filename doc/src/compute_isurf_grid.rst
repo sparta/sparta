@@ -91,7 +91,7 @@ Note that when a particle collides with a surface element, it can
 bounce off (possibly as a different species), be captured by the
 surface (vanish), or a 2nd particle can also be emitted.  The formulas
 below account for all the possible outcomes.  For example, the kinetic
-energy flux *ke* onto a suface element for a single collision includes
+energy flux *ke* onto a surface element for a single collision includes
 a positive contribution from the incoming particle and negative
 contributions from 0, 1, or 2 outgoing particles.  The exception is
 the *n* and *nwt* values which simply tally counts of particles

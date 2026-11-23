@@ -50,7 +50,7 @@ This command reads implicit surfaces from a file containing grid
 corner point values which implicitly define the surface elements.  See
 the :doc:`read\_surf <read_surf>` command to read explicit surfaces from
 a different kind of file.  See the `Howto 6.13 <Section_howto.html#howto_13>`_ section of the manual for an
-explantion of explicit versus implicit surfaces as well as distributed
+explanation of explicit versus implicit surfaces as well as distributed
 versus non-distributed storage.  You cannot mix explicit and implicit
 surfaces in the same simulation.
 
@@ -86,9 +86,9 @@ chemistry occurs during a collision.  Statistics for each surface
 element due to their interactions with particles can be tallied via
 the :doc:`compute isurf/grid <compute_isurf_grid>` command,
 time-averaged via the :doc:`fix ave/grid <fix_ave_grid>` command, and
-ouput via the :doc:`dump surface <dump>` command.
+output via the :doc:`dump surface <dump>` command.
 
-Surface elememts can be assigned to surface groups via the :doc:`group surf <group>` command.  Surface group IDs are used by other
+Surface elements can be assigned to surface groups via the :doc:`group surf <group>` command.  Surface group IDs are used by other
 commands to operate on selected sets of elements.  This command has a
 *type* keyword which can be used to help assign different elements to
 different groups.
@@ -222,7 +222,7 @@ The specified *ablateID* is the fix ID of a :doc:`fix ablate <fix_ablate>` comma
 the input script.  It will store the grid corner point values for each
 grid cell.  It also has the code logic for converting grid corner
 point values to surface elements (line segments or triangles) and also
-optinally allows for the surface to be ablated during a simulation due
+optionally allows for the surface to be ablated during a simulation due
 to particles colliding with the surface elements.
 
 
@@ -235,12 +235,12 @@ surface elements and how they are read.
 Surface groups are collections of surface elements.  Each surface
 element belongs to one or more surface groups; all elements belong to
 the "all" group, which is created by default.  Surface group IDs are
-used by other commands to identify a group of suface elements to
+used by other commands to identify a group of surface elements to
 operate on.  See the :doc:`group surf <group>` command for more details.
 
 Every surface element also stores a *type* which is a positive
 integer.  *Type* values are useful for flagging subsets of elements.
-For example, implicit surface elemnts in different regions of the
+For example, implicit surface elements in different regions of the
 simulation box.  Surface element types can be used to define surface
 groups.  See the :doc:`group surf <group>` command for details.
 
@@ -298,9 +298,9 @@ i.e. 0 or 255 respectively.  Each corner point value which is below
 (above) the specified *thresh* value is and is also entirely
 surrounded by neighbor corner point values which are also below
 (above) the *thresh* value is reset to 0 (255).  In 2d, there are 8
-corner points surrouding each interior corner point, i.e. all corner
+corner points surrounding each interior corner point, i.e. all corner
 points on the face of the 2x2 set of grid cells which surround the
-interior point.  In 3d, there are 26 corner points surrouding each
+interior point.  In 3d, there are 26 corner points surrounding each
 interior corner point, i.e. all corner points on the face of the 2x2x2
 set of grid cells which surround the interior point.  The purpose of
 this operation is to reset corner point values to 0 if they are fully

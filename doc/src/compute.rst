@@ -40,7 +40,7 @@ options, many of which involve computes.
 The ID for a compute is used to identify the compute in other
 commands.  Each compute ID must be unique.  The ID can only contain
 alphanumeric characters and underscores.  You can specify multiple
-computees of the same style so long as they have different IDs.  A
+computes of the same style so long as they have different IDs.  A
 compute can be deleted with the :doc:`uncompute <uncompute>` command,
 after which its ID can be re-used.
 
@@ -101,7 +101,7 @@ event, e.g. a particle colliding or reacting with a surface element.
 
 Global, per-particle, per-grid, per-surf, and per-tally quantities
 each come in two forms: a single scalar value or a vector of values.
-Additionaly, global quantities can also be a 2d array of values.  The
+Additionally, global quantities can also be a 2d array of values.  The
 doc page for each compute describes the style and kind of values it
 produces, e.g. a per-particle vector.  Some computes can produce more
 than one form of a single style, e.g. a global scalar and a global

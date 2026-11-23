@@ -86,7 +86,7 @@ the python command again with its *invoke* keyword.  The other is to
 trigger the evaluation of a python-style, equal-style, particle-style,
 grid-style, or surf-style variable.  A python-style variable invokes
 its associated Python function; its return value becomes the value of
-the python-style variable.  Equal-, particle-, grid-, and surt-style
+the python-style variable.  Equal-, particle-, grid-, and surf-style
 variables can use a Python function wrapper in their formulas which
 encodes the Python function name, and specifies arguments (which
 themselves can be numeric formulas) to pass to the Python function
@@ -110,7 +110,7 @@ the first time.
 
 Note that python-style, equal-style, particle-style, grid-style, and
 surf-style variables can be used in many different ways within SPARTA.
-They can be evaulated directly in an input script, effectively
+They can be evaluated directly in an input script, effectively
 replacing the variable with its value.  Or they can be passed to
 various commands as arguments, so that the variable is evaluated
 multiple times during a simulation run.  See the
@@ -613,7 +613,7 @@ function.  In this example, these arguments are themselves small
 formulas containing the x,y,z coordinates of each grid cell as well as
 a per-grid compute (c\_2) and stats keyword (zlo).
 
-The other three arguements (7.5,v\_myValue,v\_flag) are defined by the
+The other three arguments (7.5,v\_myValue,v\_flag) are defined by the
 *python* command.  The first and last are constant values (7.5 and the
 optionABC string).  The second argument (myValue) is the result of an
 equal-style variable formula which accesses the total particle count

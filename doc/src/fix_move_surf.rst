@@ -32,7 +32,7 @@ fix move/surf/kk command
 **Description:**
 
 This command performs on-the-fly movement of all the surface elements
-in the specfied group via one of several styles.  See the :doc:`group surf <group>` command for info on how surface elements can be
+in the specified group via one of several styles.  See the :doc:`group surf <group>` command for info on how surface elements can be
 assigned to surface groups.  Surface element moves can also be
 performed before or between simulations by using the
 :doc:`move\_surf <move_surf>` command.

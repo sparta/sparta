@@ -93,8 +93,8 @@ or *max* operations find the minimum or maximum value across all
 vector values.  The *ave* operation adds the vector values into a
 global total, then divides by the number of values in the vector.  The
 *sumsq* operation sums the square of the values in the vector into a
-global total.  The *avesq* oepration does the same as *sumsq*\ , then
-divdes the sum of squares by the number of values.  These two
+global total.  The *avesq* operation does the same as *sumsq*\ , then
+divides the sum of squares by the number of values.  These two
 operations can be useful for calculating the variance of some
 quantity, e.g. variance = sumsq - ave\^2.
 
@@ -197,7 +197,7 @@ attributes.
 If no bracketed integer is appended, the custom attribute must be a
 per-particle, per-grid, or per-surf vector (single value).  If a
 bracketed integer is appended, the custom attribute must be a
-per-particle, per-grid, or per-surf arayy (multiple values) and the
+per-particle, per-grid, or per-surf array (multiple values) and the
 Nth column of the custom array is used.  See the discussion above for
 how N can be specified with a wildcard asterisk to effectively specify
 multiple values.

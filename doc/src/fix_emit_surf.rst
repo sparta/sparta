@@ -102,7 +102,7 @@ chosen randomly in accord with the *frac* settings of the collection
 of species in the mixture, as set by the :doc:`mixture <mixture>`
 command.
 
-IMPORTANT NOTE: The preceeding calculation is actually done using
+IMPORTANT NOTE: The preceding calculation is actually done using
 surface element areas associated with *weighted* cell volumes.  Grid
 cells can be weighted using the :doc:`global weight <global>` command.
 
@@ -156,7 +156,7 @@ specified as v\_name, where name is the variable name.  In this case,
 the variable will be evaluated on each emission timestep, and its
 value used as *Np* on that step to determine the target number of
 emitted particles for each grid cell/surface element pair, the same as
-described in the preceeding paragraph.
+described in the preceding paragraph.
 
 Equal-style variables can specify formulas with various mathematical
 functions, and include :doc:`stats\_style <stats_style>` command
@@ -224,7 +224,7 @@ region.
 
 IMPORTANT NOTE: If the *region* and *n* keywords are used together,
 less than N particles may be added on an insertion timestep.  This is
-because grid cell/suface element pairs will be candidates for particle
+because grid cell/surface element pairs will be candidates for particle
 insertion, unless the grid cell is entirely outside the bounding box
 that encloses the region.  Particles those grid cell/surface element
 pairs will attempt to add are included in the count for N, even if
@@ -399,7 +399,7 @@ The *custom* attribute *vstream* can only be used if the *normal*
 keyword is set to *no*\ , which is the default.  In this case it must
 refer to a 3-column per-surf custom array which stores the 3 streaming
 velocity components for each surface element.  If the *normal* keyword
-is set to *yes*\ , then the *custom* atrribute *speed* should be used
+is set to *yes*\ , then the *custom* attribute *speed* should be used
 instead.  It must refer to a custom per-surf vector which stores the
 "speed" of the emission in the direction normal to each surface
 element.  I.e. it is the scalar length of the streaming velocity
@@ -407,7 +407,7 @@ vector, as described above for the *normal* keyword.
 
 The *custom* attribute *temp* sets a temperature for each surface
 element.  This temperature is used as the thermal, rotational,
-vibrational temeperature for each inserted particle which means it
+vibrational temperature for each inserted particle which means it
 affects their thermal velocity components as well as their rotational
 and vibrational energies.
 
@@ -450,7 +450,7 @@ No information about this fix is written to :doc:`binary restart files <restart>
 This fix computes a global vector of length 2 which can be accessed by
 various output commands.  The first element of the vector is the total
 number of particles added on the most recent insertion step.  The
-second element is the cummulative total number added since the
+second element is the cumulative total number added since the
 beginning of the run.  The 2nd value is initialized to zero each time
 a run is performed.
 

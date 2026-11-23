@@ -54,7 +54,7 @@ to processors, to attempt to balance the computational cost (load)
 evenly across processors.  The load balancing is "static" in the sense
 that this command performs the balancing once, before or between
 simulations. The assignments will remain static during the
-subsequent run.  To perform "dynamic" balancing, see the :doc:`fix balance <fix_balance>` command, which can adjust the assignemt of
+subsequent run.  To perform "dynamic" balancing, see the :doc:`fix balance <fix_balance>` command, which can adjust the assignment of
 grid cells to processors on-the-fly during a run.
 
 After grid cells have been assigned, they are migrated to new owning
@@ -107,7 +107,7 @@ cell information.
 The *stride*\ , *clump*\ , and *block* styles can only be used if the grid
 is "uniform".  The grid in SPARTA is hierarchical with one or more
 levels, as defined by the :doc:`create\_grid <create_grid>` or
-:doc:`read\_grid <read_grid>` commlands.  If the parent cell of every
+:doc:`read\_grid <read_grid>` commands.  If the parent cell of every
 grid cell is at the same level of the hierarchy, then for purposes of
 this command the grid is uniform, meaning the collection of grid cells
 effectively form a uniform fine grid overlaying the entire simulation
@@ -155,7 +155,7 @@ used for balancing tally time from the move, sort, collide, and modify
 portions of each timestep.
 
 IMPORTANT NOTE: The :doc:`adapt\_grid <adapt_grid>` command zeros out
-timing data, so the weight *time* option is not available immediatly
+timing data, so the weight *time* option is not available immediately
 after this command.
 
 IMPORTANT NOTE: The coarsening option in :doc:`fix\_adapt <fix_adapt>` may

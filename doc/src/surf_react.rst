@@ -97,7 +97,7 @@ particle deletion, the second for particle creation.
 The *global* style takes two parameters, *pdelete* and *pcreate*\ . The
 first is the probability that a "deletion" reaction takes place when a
 collision occurs.  If it does, the particle is deleted.  The second is
-the probablity that a "creation" reaction occurs, which clones the
+the probability that a "creation" reaction occurs, which clones the
 particle, so that one particle becomes two.  The two particles leave
 the surface according to whatever surface collision model is defined
 by the :doc:`surf\_collide <surf_collide>` command, and is assigned to
@@ -197,7 +197,7 @@ Adsorbed particles can then undergo reactions with other adsorbed
 particles as well as with new gas-phase particles that strike the
 surface.  Each surface element stores its "state" for the counts of
 different particle species currently adsorbed on the element, which
-alters the probablity for future reactions to take place.
+alters the probability for future reactions to take place.
 
 A detailed description of the *adsorb* style and the list of reactions
 it supports is given on a separate
@@ -208,9 +208,9 @@ it supports is given on a separate
 
 
 If the ambipolar approximation is being used, via the :doc:`fix ambipolar <fix_ambipolar>` command, then reactions which involve
-either ambipolar ions or the ambipolar electron have more restricitve
+either ambipolar ions or the ambipolar electron have more restrictive
 rules about the ordering of reactants and products, than those
-described in the preceeding section for the *prob* style.
+described in the preceding section for the *prob* style.
 
 The first is an "exchange" reaction which converts an ambipolar ion
 into a neutral species.  Internally this removes the ambipolar
@@ -248,10 +248,10 @@ reactions listed in the file(s) read as input.
 The first element of the vector is the count of particles that
 performed surface reactions for surface elements assigned to this
 reaction model during the current timestep.  The second element is the
-cummulative count of particles that have performed reactions since the
+cumulative count of particles that have performed reactions since the
 beginning of the current run.  The next nlist elements are the count
 of each individual reaction that occurred during the current timestep.
-The final nlist elements are the cummulative count of each individual
+The final nlist elements are the cumulative count of each individual
 reaction since the beginning of the current run.
 
 

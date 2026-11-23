@@ -61,7 +61,7 @@ group command
 Assign grid cells to grid groups or surface elements to surface
 groups.  In SPARTA, a "grid group" is a collection of one or more grid
 cells.  A "surface group" is a collection of one or more surface
-elements (line segements in 2d, triangles in 3d).  Other commands take
+elements (line segments in 2d, triangles in 3d).  Other commands take
 group IDs as arguments so that they act on a set of grid cells or
 surface elements.  For example, see the :doc:`compute grid <compute_grid>`, :doc:`compute surf <compute_surf>`, :doc:`fix ave/grid <fix_ave_grid>`, :doc:`fix ave/surf <fix_ave_surf>`, :doc:`dump grid <dump>`, or :doc:`dump surf <dump>` commands.
 
@@ -125,7 +125,7 @@ elements are read from a surface file, via the
 :doc:`read\_surf <read_surf>` command.  In the file, a positive integer
 type value can be optionally defined for each element (default = 1).
 The specified type values can also be incremented using the *typeadd*
-keyword of the :doc:`read\_surf <read_surf>` commmand.
+keyword of the :doc:`read\_surf <read_surf>` command.
 
 For surface elements, the "ID" of each element is simply its index
 from 1 to N, for all N surface elements that have been read in via the
@@ -137,7 +137,7 @@ increase monotonically each time new surface elements are added.
 The first format is a list of values (types or IDs).  For example, the
 first command in the examples above puts all surface elements of type
 1 and 3 into the group named sphere.  Each entry in the list can
-optionally be a colon-separated range A:B, as in the second axample
+optionally be a colon-separated range A:B, as in the second example
 above.  A "range" is a series of values (types or IDs).  The second
 example with 100:150 adds all surface elements with IDs from 100 to
 150 (inclusive) to the group named sphere, along with element 50 since

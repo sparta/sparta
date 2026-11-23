@@ -66,7 +66,7 @@ For 2d simulations, the *zlo* and *zhi* boundaries cannot be modified
 by this command, since they are always periodic.
 
 All boundaries of type "s" must be assigned to a surface collision
-model via the *collide* keyword before a simlulation can be performed.
+model via the *collide* keyword before a simulation can be performed.
 Using a surface reaction model is optional.
 
 **Related commands:**

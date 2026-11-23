@@ -32,7 +32,7 @@ ambipolar approximation is a computationally efficient way to model
 low-density plasmas which contain positively-charged ions and
 negatively-charged electrons.  In this model, electrons are not free
 particles which move independently.  This would require a simulation
-with a very small timestep due to electon's small mass and high speed
+with a very small timestep due to electron's small mass and high speed
 (1000x that of an ion or neutral particle).
 
 Instead each ambipolar electron is assumed to stay "close" to its

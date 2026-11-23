@@ -70,7 +70,7 @@ create\_particles/kk command
 
 Create particles and add them to the simulation domain.  The
 attributes of individual particles, such as species and velocity, are
-determined by the mixture attributes, as specied by the *mix-ID*\ .  In
+determined by the mixture attributes, as specified by the *mix-ID*\ .  In
 particular the *temp*\ , *trot*\ , *tvib*\ , and *vstream* attributes of the
 mixture affect create particle velocities and internal energy modes.
 See the :doc:`mixture <mixture>` command for more details.  Note that
@@ -119,7 +119,7 @@ fractional value, e.g. 12.5, then 12 particles will be inserted, and a
 cells are looped over, the remainder fraction is accumulated, so that
 exactly *Np* particles are created across all the processors.
 
-IMPORTANT NOTE: The preceeding calculation is actually done using
+IMPORTANT NOTE: The preceding calculation is actually done using
 *weighted* cell volumes.  Grid cells can be weighted using the :doc:`global weight <global>` command.
 
 Each particle is inserted at a random location within the grid cell.
@@ -170,7 +170,7 @@ If the value is *no*\ , then each of the *P* processors generates a
 only adds particles to grid cells that it owns, as described above.
 This is a faster way to generate a large number of particles, but
 means that the individual attributes of particles will depend on the
-number of processors and the mapping of grid cells to procesors.  The
+number of processors and the mapping of grid cells to processors.  The
 overall set of created particles should have the same statistical
 properties as with the *yes* setting.
 
@@ -242,7 +242,7 @@ species in the mixture, then no particle is created.
 
 As an example, these commands can be used in a 2d simulation, to
 create a particle distribution with species 1 on top of species 2 with
-a sinudoidal interface between the two species, as illustrated in the
+a sinusoidal interface between the two species, as illustrated in the
 snapshot of the initial particle distribution.  Click on the image for
 a larger version.  Note that when using this option less than the
 requested N particles can be created if the species variable returns

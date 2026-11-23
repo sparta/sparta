@@ -38,7 +38,7 @@ if command
 **Description:**
 
 This command provides an in-then-else capability within an input
-script.  A Boolean expression is evaluted and the result is TRUE or
+script.  A Boolean expression is evaluated and the result is TRUE or
 FALSE.  Note that as in the examples above, the expression can contain
 variables, as defined by the :doc:`variable <variable>` command, which
 will be evaluated as part of the expression.  Thus a user-defined
@@ -50,7 +50,7 @@ commands (t1, t2, ..., tN) are executed.  If it is FALSE, then Boolean
 expressions associated with successive elif keywords are evaluated
 until one is found to be true, in which case its commands (f1, f2,
 ..., fN) are executed.  If no Boolean expression is TRUE, then the
-commands associated witht the else keyword, namely (e1, e2, ..., eN),
+commands associated with the else keyword, namely (e1, e2, ..., eN),
 are executed.  The elif and else keywords and their associated
 commands are optional.  If they aren't specified and the initial
 Boolean expression is FALSE, then no commands are executed.

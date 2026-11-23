@@ -143,7 +143,7 @@ configuration every N timesteps, as discussed on the :doc:`dump image <dump_imag
 
 The ID for a dump is used to identify the dump in other commands.
 Each dump ID must be unique.  The ID can only contain alphanumeric
-characters and underscores.  You can specify multiple dumpes of the
+characters and underscores.  You can specify multiple dumps of the
 same style so long as they have different IDs.  A dump can be deleted
 with the :doc:`undump <undump>` command, after which its ID can be
 re-used.
@@ -161,7 +161,7 @@ command.  Only particles whose species are part of the mixture are
 output.  For *style* = *grid*\ , the *select-ID* is for a grid group, as
 defined by the :doc:`group grid <group>` command.  Only grid cells in
 the group are output.  For *style* = *surf*\ , the *select-ID* is for a
-surface eleemnt group, as defined by the :doc:`group surf <group>`
+surface element group, as defined by the :doc:`group surf <group>`
 command.  Only surface elements in the group are output.  For *style*
 = *tally*\ , the *select-ID* setting is ignored, so a placeholder word
 like "all" can be used.  All tallies stored by the specified
@@ -213,7 +213,7 @@ gives the number of particles, grid cells, surfaces to follow.
 The "ITEM: ATOMS" or "ITEM: CELLS" or "ITEM: SURFS" or "ITEM: TALLIES"
 entry in each snapshot lists column descriptors for the per-particle
 or per-grid or per-surf or per-tally lines that follow.  The
-descriptors are the attributes specied in the dump command for the
+descriptors are the attributes specified in the dump command for the
 style.  Possible attributes are listed above and will appear in the
 order specified.  An explanation of the possible attributes is given
 below.
@@ -426,7 +426,7 @@ SPARTA defines unsplit and sub cells.  Flow volume is the portion of
 the grid cell that is accessible to particles, i.e. outside any closed
 surface that may intersect the cell.  Note that unsplit cells which
 are inside a surface object will have a flow volume of 0.0.  Likewise
-a cut cell which is inside a suface object but which is intersected by
+a cut cell which is inside a surface object but which is intersected by
 surface element(s) which only touch a face, edge, or corner point of
 the grid cell, will have a flow volume of 0.0.
 
@@ -451,7 +451,7 @@ previously in the input script.
 If *f\_ID* is used as a attribute, and the fix calculates a per-grid
 vector, then the per-grid vector is output.  If *f\_ID[N]* is used,
 then N must be in the range from 1-M, which will output the Nth column
-of the M-columne per-grid array calculated by the fix.  See the
+of the M-column per-grid array calculated by the fix.  See the
 discussion above for how N can be specified with a wildcard asterisk
 to effectively specify multiple values.
 

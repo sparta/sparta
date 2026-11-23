@@ -81,7 +81,7 @@ For *ave* with a value *yes*\ , the thermal temperatures of all the
 cells are averaged.  The average thermal temperature is simply the sum
 of cell thermal temperatures divided by the number of cells.  Cells
 with less than 2 particles or whose thermal temperature = 0.0
-contribute a thermal temperaure = Ttarget to the average.  The average
+contribute a thermal temperature = Ttarget to the average.  The average
 thermal temperature (Tthermal\_ave) for all cells is used to compute a
 velocity scale factor for all cells, which is
 

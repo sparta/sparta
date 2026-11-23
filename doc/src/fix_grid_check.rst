@@ -71,7 +71,7 @@ No information about this fix is written to :doc:`binary restart files <restart>
 
 This fix computes a global scalar which can be accessed by various
 output commands.  The scalar is the count of how many particles were
-not in the correct grid cell.  The count is cummulative over all the
+not in the correct grid cell.  The count is cumulative over all the
 timesteps the check was performed since the start of the run.  It is
 initialized to zero each time a run is performed.
 

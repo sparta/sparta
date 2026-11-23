@@ -90,7 +90,7 @@ depend on particle attributes, such as its mass and magnetic moment
 
 Note that use of the :doc:`global field grid <global>` command with this
 fix will evaluate the specified grid-style variables as often as
-requested.  For a field that has no time-ependence, you can specificy
+requested.  For a field that has no time-dependence, you can specify
 it only be evaluated once at the beginning of a run.  For a field that
 is time-dependent you can choose how often to recompute the field,
 depending on how fast it varies.

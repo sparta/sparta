@@ -113,7 +113,7 @@ per-grid quantity is one or more values per grid cell.  A per-surf
 quantity is one or more values per surface element.
 
 Global, per-particle, per-grid, and per-surf quantities each come in
-two forms: a single scalar value or a vector of values.  Additionaly,
+two forms: a single scalar value or a vector of values.  Additionally,
 global quantities can also be a 2d array of values.  The doc page for
 each fix describes the style and kind of values it produces, e.g. a
 per-particle vector.  Some fixes can produce more than one form of a

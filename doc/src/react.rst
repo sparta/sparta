@@ -232,7 +232,7 @@ SPARTA does not check for this, so there is no restriction on the
 species involved in the reaction.
 
 An ionization reaction with 3 products is typically a collision
-between a neutral R1 and an electon R2 which ejects an electron from
+between a neutral R1 and an electron R2 which ejects an electron from
 the neutral species, resulting in an ion P1 and a new electron P2.
 See the discussion on ambipolar reactions below.  Again, SPARTA does
 not check for this, so there is no restriction on the species involved
@@ -290,7 +290,7 @@ P2.
 
 IMPORTANT NOTE: If the ambipolar approximation is being used, via the
 :doc:`fix ambipolar <fix_ambipolar>` and :doc:`collide\_modify ambipolar yes <collide_modify>` commands, then reactions which involve either
-ambipolar ions or the ambipolar electron have more restricitve rules
+ambipolar ions or the ambipolar electron have more restrictive rules
 about the ordering of reactants and products.  See the next section
 for a discussion of these requirements.
 
@@ -320,11 +320,11 @@ explained above.
 
 
 If the ambipolar approximation is being used, via the :doc:`fix ambipolar <fix_ambipolar>` command, then reactions which involve
-either ambipolar ions or the ambipolar electron have more restricitve
+either ambipolar ions or the ambipolar electron have more restrictive
 rules about the ordering of reactants and products, than those
-described in the preceeding section.
+described in the preceding section.
 
-Note that ambipolar collisions are turned on via the :doc:`collide\_modify ambipolar yes <collide_modify>` commands, which in turn requries
+Note that ambipolar collisions are turned on via the :doc:`collide\_modify ambipolar yes <collide_modify>` commands, which in turn requires
 that the :doc:`fix ambipolar <fix_ambipolar>` is defined in your input
 script.  This fix defines a particular species as an ambipolar
 electron, written as "e" in the reactions that follow.  It also

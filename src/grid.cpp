@@ -1473,7 +1473,7 @@ void Grid::find_neighbors()
       if (found) continue;
 
       // found nothing, so UNKNOWN neighbor
-      // should never happend for an owned cell (error check below)
+      // should never happen for an owned cell (error check below)
       // can happen for a ghost cell
 
       neigh[iface] = 0;

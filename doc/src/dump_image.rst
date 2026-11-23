@@ -144,7 +144,7 @@ A series of images can easily be converted into an animated movie of
 your simulation (see further details below), or the process can be
 automated without writing the intermediate files using the dump movie
 command.  Other dump styles store snapshots of numerical data
-asociated with particles, grid cells, and surfaces in various formats,
+associated with particles, grid cells, and surfaces in various formats,
 as discussed on the :doc:`dump <dump>` doc page.
 
 Here are two sample images, rendered as JPG files.  
@@ -166,7 +166,7 @@ Click to see the full-size images.
 
 The left image is flow around a sphere with visualization of
 triangular surface elements on the sphere surface (colored by surface
-presssure), a vertical plane of grid cells (colored by particle
+pressure), a vertical plane of grid cells (colored by particle
 density), and a horizontal plane of particles (colored by chemical
 species).  The right image is the initial condition for a 2d
 simulation of Rayleigh-Taylor mixing as a relatively dense heavy gas
@@ -232,7 +232,7 @@ will be written by the movie encoder.
 
 Several of the keywords determine what objects are rendered in the
 image, namely particles, grid cells, or surface elements.  There are
-additional optional kewords which control how the image is rendered.
+additional optional keywords which control how the image is rendered.
 As listed below, all of the keywords have defaults, most of which you
 will likely not need to change.  The :doc:`dump modify <dump_modify>`
 also has options specific to the dump image style, particularly for
@@ -289,7 +289,7 @@ all types have diameter 1.0.  This mapping can be changed by the
 
 If *proc* is specified for the *diameter* setting then the diameter of
 each particle will be the proc ID (0 up to Nprocs-1) in whatever
-:doc:`units <units>` you are using, which is undoubtably not what you
+:doc:`units <units>` you are using, which is undoubtedly not what you
 want.
 
 Any of the particle attributes listed in the :doc:`dump custom <dump>`
@@ -420,7 +420,7 @@ case, it is specified as *c\_ID* or *c\_ID[N]* for a compute and as
 *f\_ID* and *f\_ID[N]* for a fix.
 
 This allows per-surf values in a vector or array to be used to color
-the surface elemtns.  The ID in the attribute should be replaced by
+the surface elements.  The ID in the attribute should be replaced by
 the actual ID of the compute or fix that has been defined previously
 in the input script.  See the :doc:`compute <compute>` or :doc:`fix <fix>`
 command for details.
@@ -473,7 +473,7 @@ degrees.
 
 The *center* keyword determines the point in simulation space that
 will be at the center of the image.  *Cx*\ , *Cy*\ , and *Cz* are
-speficied as fractions of the box dimensions, so that (0.5,0.5,0.5) is
+specified as fractions of the box dimensions, so that (0.5,0.5,0.5) is
 the center of the simulation box.  These values do not have to be
 between 0.0 and 1.0, if you want the simulation box to be offset from
 the center of the image.  Note, however, that if you choose strange
@@ -537,7 +537,7 @@ whether the *grid* keyword is specified or not.  In this case, the
 :doc:`dump\_modify region <dump_modify>` command can be used to restrict
 which grid cells the outlines are drawn for.
 
-For the *gline* keywork, if *no* is set, then grid outlines are not
+For the *gline* keyword, if *no* is set, then grid outlines are not
 drawn and the *diam* setting is ignored.  If *yes* is set, the 12
 edges of each grid cell are drawn, with a diameter that is a fraction
 of the shortest box length in x,y,z (for 3d) or x,y (for 2d).  The
@@ -803,7 +803,7 @@ communicated to FFmpeg, it will often print the message + pipe::
 Input/output error :pre + which can be safely ignored. Other warnings
 and errors have to be addressed according to the FFmpeg documentation.
 One known issue is that certain movie file formats (e.g. MPEG level 1
-and 2 format streams) have video bandwith limits that can be crossed
+and 2 format streams) have video bandwidth limits that can be crossed
 when rendering too large of image sizes. Typical warnings look like
 this:
 
