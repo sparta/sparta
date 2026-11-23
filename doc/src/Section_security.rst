@@ -117,9 +117,9 @@ projects:
   ``src``:
 
   * the 3d Marching Cubes code (``marching_cubes.cpp``), which is
-    adapted from the Marching Cubes 33 implementation by Thomas Lewiner,
-    and its lookup tables (``lookup_table.h`` and
-    ``decrement_lookup_table.h``)
+    adapted from the Marching Cubes 33 implementation by Thomas Lewiner
+    and the modified version by Lis Custodio et al., and its lookup
+    tables (``lookup_table.h`` and ``decrement_lookup_table.h``)
   * the public domain lookup3 hash function by Bob Jenkins
     (``hashlittle.cpp``)
   * a regular expression matcher adapted from the public domain

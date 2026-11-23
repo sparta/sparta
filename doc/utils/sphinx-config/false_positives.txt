@@ -97,6 +97,7 @@ cornsilk
 cp
 cpp
 cpu
+cryptographic
 csh
 cshrc
 Csq
@@ -107,6 +108,7 @@ Ctypes
 CUDA
 cuda
 cueing
+Custodio
 cv
 cwiggle
 Cx
@@ -355,6 +357,7 @@ lightsteelblue
 lightyellow
 limegreen
 Liou
+Lis
 lmp
 ln
 lobular
@@ -375,6 +378,7 @@ Makefiles
 makefiles
 malloc
 Masstotal
+matcher
 MathJax
 Matsumoto
 maxlevel
