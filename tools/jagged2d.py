@@ -39,7 +39,7 @@ args = sys.argv[1:]
 if len(args) != 4:
   print("Syntax: jagged2d.py Nspike Nper delta sfile")
   sys.exit()
-  
+
 nspike = int(args[0])
 nper = int(args[1])
 delta = float(args[2])
@@ -56,7 +56,7 @@ for i in range(nspike):
   p1 = (1.0,(i+0.0)/nspike)
   p2 = (0.0,(i+0.5)/nspike)
   genlines(p1,p2)
-  
+
   p1 = (0.0,(i+0.5)/nspike)
   if i == nspike-1: p2 = (1.0,1.0)
   else: p2 = (1.0,(i+1.0)/nspike)
@@ -94,5 +94,5 @@ print(file=fp)
 print("Lines\n", file=fp)
 for i,line in enumerate(lines):
   print(i+1,1,line[0]+1,line[1]+1, file=fp)
-    
+
 fp.close()

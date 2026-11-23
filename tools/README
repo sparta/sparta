@@ -29,14 +29,14 @@ Tools that use the ParaView visualization package:
 paraview/grid2paraview.py     convert grid data to ParaView format
 paraview/surf2paraview.py     convert surface data to ParaView format
 
-Tools that use Pizza.py modules: 
+Tools that use Pizza.py modules:
 
-dump2cfg.py	convert a particle dump file to CFG format
-dump2xyz.py	convert a particle dump file to XYZ format
-dumpsort.py	sort snapshots in a particle dump file by particle ID
+dump2cfg.py     convert a particle dump file to CFG format
+dump2xyz.py     convert a particle dump file to XYZ format
+dumpsort.py     sort snapshots in a particle dump file by particle ID
 grid_refine.py  refine a grid around a surface
-log2txt.py	convert stats info in a log file to columns of numbers
-logplot.py	plot 2 columns of stats info from a log file
+log2txt.py      convert stats info in a log file to columns of numbers
+logplot.py      plot 2 columns of stats info from a log file
 surf_create.py  create a surface file with one or more objects in it
                 3d objects are triangulated, 2d objects are line-segmented
 surf_transform.py  transform objects in a surface file via same operations
@@ -55,7 +55,7 @@ directory where your data files are.
 The latter requires 2 things:
 
 1) that the script be made "executable", e.g. type "chmod +x log2txt.py"
-2) that the 1st line of the script is the path of the Python installed 
+2) that the 1st line of the script is the path of the Python installed
    on your machine, e.g. /usr/local/bin/python
 
 IMPORTANT NOTE: If you run the logplot.py script using the 1st method

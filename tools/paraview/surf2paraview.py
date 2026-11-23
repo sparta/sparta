@@ -7,7 +7,7 @@ from __future__ import print_function
 
 #   Copyright (2014) Sandia Corporation.  Under the terms of Contract
 #   DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-#   certain rights in this software.  This software is distributed under 
+#   certain rights in this software.  This software is distributed under
 #   the GNU General Public License.
 
 #   See the README file in the top-level SPARTA directory.
@@ -58,7 +58,7 @@ def read_points(sif, num_points, num_elements, ug, three_d_file):
     print("Error reading SPARTA surf input file")
     print("Points section of file occurs more than once")
     sys.exit(1)
-  
+
   points = vtk.vtkPoints()
   for line in sif:
     s = clean_line(line)
@@ -148,11 +148,11 @@ def read_surf_file(sif, ug):
     s = clean_line(line)
     if s and len(s.split()) == 2:
       if s.split()[1].lower() == 'points':
-        num_points = int(s.split()[0]) 
+        num_points = int(s.split()[0])
       elif s.split()[1].lower() == 'triangles':
-        num_elements = int(s.split()[0]) 
+        num_elements = int(s.split()[0])
       elif s.split()[1].lower() == 'lines':
-        num_elements = int(s.split()[0]) 
+        num_elements = int(s.split()[0])
         three_d_file = False
     elif s:
       if num_points <= 0:
@@ -164,7 +164,7 @@ def read_surf_file(sif, ug):
         print("Error reading SPARTA surf input file")
         print("Number of elements are: ", num_points)
         sys.exit(1)
- 
+
       if len(s.split()) != 1:
         print("Error reading SPARTA surf input file")
         print("Missing section header: Triangles, Lines, or Points")
@@ -174,7 +174,7 @@ def read_surf_file(sif, ug):
       elif s.split()[0].lower() == 'triangles' or \
            s.split()[0].lower() == 'lines':
         read_elements(sif, num_points, num_elements, ug, three_d_file)
-  
+
   if not three_d_file:
     polygon = vtk.vtkPolygon()
 
@@ -212,7 +212,7 @@ def read_time_step_data(time_step_file_list, ug):
     for line in fh:
       s = clean_line(line)
       if s.lower().replace(" ", "")[:10] == "item:surfs":
-        for name in s.split()[2:]: 
+        for name in s.split()[2:]:
           array_names.append(name)
         break
 
@@ -240,7 +240,7 @@ def read_time_step_data(time_step_file_list, ug):
           print("Surface index out of range: ", index)
           print("Number of expected surfaces: ", ug.GetNumberOfCells())
           sys.exit(1)
-        
+
         for idx, val in enumerate(array_names):
           array = ug.GetCellData().GetArray(idx)
           array.SetValue(index, float(s.split()[idx]))
@@ -259,9 +259,9 @@ def write_pvd_file(time_steps, file_name):
   fh.write('               byte_order="LittleEndian"\n')
   fh.write('               compressor="vtkZLibDataCompressor">\n')
   fh.write('   <Collection>    \n')
-  
+
   for time in time_steps:
-    filepath = os.path.join(file_name, file_name + '_' + str(time) + '.vtu') 
+    filepath = os.path.join(file_name, file_name + '_' + str(time) + '.vtu')
     fh.write('    <DataSet timestep="' + str(time) + '" group="" part="0"   \n')
     fh.write('             file="' + filepath + '"/>\n')
 

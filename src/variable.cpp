@@ -802,7 +802,7 @@ char *Variable::retrieve(char *name)
     if (strlong) str = strlong;
 
   } else if (style[ivar] == PARTICLE || style[ivar] == GRID ||
-	     style[ivar] == SURF) return NULL;
+             style[ivar] == SURF) return NULL;
 
   return str;
 }
@@ -1573,7 +1573,7 @@ double Variable::evaluate(char *str, Tree **tree)
           }
           treestack[ntreestack++] = newtree;
 
-	// c_ID = vector from per-surf vector
+        // c_ID = vector from per-surf vector
 
         } else if (nbracket == 0 && compute->per_surf_flag &&
                    compute->size_per_surf_cols == 0) {
@@ -1589,15 +1589,15 @@ double Variable::evaluate(char *str, Tree **tree)
             compute->invoked_flag |= INVOKED_PER_SURF;
           }
 
-	  compute->post_process_surf();
+          compute->post_process_surf();
 
           Tree *newtree = new Tree();
           newtree->type = ARRAY;
           newtree->array = compute->vector_surf;
           newtree->nstride = 1;
           treestack[ntreestack++] = newtree;
-	
-	// c_ID[i] = vector from per-surf array
+
+        // c_ID[i] = vector from per-surf array
 
         } else if (nbracket == 1 && compute->per_surf_flag &&
                    compute->size_per_surf_cols > 0) {
@@ -1616,17 +1616,17 @@ double Variable::evaluate(char *str, Tree **tree)
             compute->invoked_flag |= INVOKED_PER_SURF;
           }
 
-	  compute->post_process_surf();
+          compute->post_process_surf();
 
           Tree *newtree = new Tree();
           newtree->type = ARRAY;
-	  newtree->array = compute->array_surf ?
+          newtree->array = compute->array_surf ?
             &compute->array_surf[0][index1-1] : NULL;
-	  newtree->nstride = compute->size_per_surf_cols;
+          newtree->nstride = compute->size_per_surf_cols;
           treestack[ntreestack++] = newtree;
 
-	// unrecognized compute
-	
+        // unrecognized compute
+
         } else error->all(FLERR,"Mismatched compute in variable formula");
 
       // ----------------
@@ -1842,9 +1842,9 @@ double Variable::evaluate(char *str, Tree **tree)
           newtree->nstride = fix->size_per_surf_cols;
           treestack[ntreestack++] = newtree;
 
-	// unrecognized fix
-	
-	} else error->all(FLERR,"Mismatched fix in variable formula");
+        // unrecognized fix
+
+        } else error->all(FLERR,"Mismatched fix in variable formula");
 
       // ----------------
       // custom per-particle, per-grid, per-surf data
@@ -1858,10 +1858,10 @@ double Variable::evaluate(char *str, Tree **tree)
           error->all(FLERR,
                      "Custom attribute evaluation before simulation box is defined");
 
-	int cwhich;
-	if (strncmp(word,"p_",2) == 0) cwhich = PARTICLE_CUSTOM;
-	else if (strncmp(word,"g_",2) == 0) cwhich = GRID_CUSTOM;
-	else if (strncmp(word,"s_",2) == 0) cwhich = SURF_CUSTOM;
+        int cwhich;
+        if (strncmp(word,"p_",2) == 0) cwhich = PARTICLE_CUSTOM;
+        else if (strncmp(word,"g_",2) == 0) cwhich = GRID_CUSTOM;
+        else if (strncmp(word,"s_",2) == 0) cwhich = SURF_CUSTOM;
 
         custom_sync(cwhich);
 
@@ -1870,48 +1870,48 @@ double Variable::evaluate(char *str, Tree **tree)
         char *id = new char[n];
         strcpy(id,&word[2]);
 
-	int icustom,size,type;
-	if (cwhich == PARTICLE_CUSTOM) {
-	  if (tree == NULL || treestyle != PARTICLE) {
-	    delete [] id;
-	    error->all(FLERR,"Per-particle custom attribute in "
-		       "non particle-style variable formula");
-	  }
-	  icustom = particle->find_custom(id);
-	  if (icustom < 0) {
-	    delete [] id;
-	    error->all(FLERR,"Invalid custom attribute ID in variable formula");
-	  }
-	  size = particle->esize[icustom];
-	  type = particle->etype[icustom];
-	} else if (cwhich == GRID_CUSTOM) {
-	  if (tree == NULL || treestyle != GRID) {
-	    delete [] id;
-	    error->all(FLERR,"Per-grid custom attribute in "
-		       "non grid-style variable formula");
-	  }
-	  icustom = grid->find_custom(id);
-	  if (icustom < 0) {
-	    delete [] id;
-	    error->all(FLERR,"Invalid custom attribute ID in variable formula");
-	  }
-	  size = grid->esize[icustom];
-	  type = grid->etype[icustom];
-	} else if (cwhich == SURF_CUSTOM) {
-	  if (tree == NULL || treestyle != SURF) {
-	    delete [] id;
-	    error->all(FLERR,"Per-surf custom attribute in "
-		       "non surf-style variable formula");
-	  }
-	  icustom = surf->find_custom(id);
-	  if (icustom < 0) {
-	    delete [] id;
-	    error->all(FLERR,"Invalid custom attribute ID in variable formula");
-	  }
-	  size = surf->esize[icustom];
-	  type = surf->etype[icustom];
-	}
-	
+        int icustom,size,type;
+        if (cwhich == PARTICLE_CUSTOM) {
+          if (tree == NULL || treestyle != PARTICLE) {
+            delete [] id;
+            error->all(FLERR,"Per-particle custom attribute in "
+                       "non particle-style variable formula");
+          }
+          icustom = particle->find_custom(id);
+          if (icustom < 0) {
+            delete [] id;
+            error->all(FLERR,"Invalid custom attribute ID in variable formula");
+          }
+          size = particle->esize[icustom];
+          type = particle->etype[icustom];
+        } else if (cwhich == GRID_CUSTOM) {
+          if (tree == NULL || treestyle != GRID) {
+            delete [] id;
+            error->all(FLERR,"Per-grid custom attribute in "
+                       "non grid-style variable formula");
+          }
+          icustom = grid->find_custom(id);
+          if (icustom < 0) {
+            delete [] id;
+            error->all(FLERR,"Invalid custom attribute ID in variable formula");
+          }
+          size = grid->esize[icustom];
+          type = grid->etype[icustom];
+        } else if (cwhich == SURF_CUSTOM) {
+          if (tree == NULL || treestyle != SURF) {
+            delete [] id;
+            error->all(FLERR,"Per-surf custom attribute in "
+                       "non surf-style variable formula");
+          }
+          icustom = surf->find_custom(id);
+          if (icustom < 0) {
+            delete [] id;
+            error->all(FLERR,"Invalid custom attribute ID in variable formula");
+          }
+          size = surf->esize[icustom];
+          type = surf->etype[icustom];
+        }
+
         delete [] id;
 
         // parse zero or one or two trailing brackets
@@ -1932,71 +1932,71 @@ double Variable::evaluate(char *str, Tree **tree)
             i = ptr-str+1;
           }
         }
-	
-	if (nbracket == 0 && size == 0) {
 
-	  Tree *newtree = new Tree();
-	  if (type == INT) {
-	    newtree->type = ARRAYINT;
-	    if (cwhich == PARTICLE_CUSTOM)
-	      newtree->iarray = particle->eivec[particle->ewhich[icustom]];
-	    else if (cwhich == GRID_CUSTOM)
-	      newtree->iarray = grid->eivec[grid->ewhich[icustom]];
-	    else if (cwhich == SURF_CUSTOM)
-	      newtree->iarray = surf->eivec[surf->ewhich[icustom]];
-	  } else if (type == DOUBLE) {
-	    newtree->type = ARRAY;
-	    if (cwhich == PARTICLE_CUSTOM)
-	      newtree->array = particle->edvec[particle->ewhich[icustom]];
-	    else if (cwhich == GRID_CUSTOM)
-	      newtree->array = grid->edvec[grid->ewhich[icustom]];
-	    else if (cwhich == SURF_CUSTOM)
-	      newtree->array = surf->edvec[surf->ewhich[icustom]];
-	  }
-	  newtree->nstride = 1;
-	  treestack[ntreestack++] = newtree;
-	
-	} else if (nbracket == 1 && size > 0) {
+        if (nbracket == 0 && size == 0) {
 
-	  if (index1 < 1 || index1 > size)
-	    error->all(FLERR,"Custom attribute in variable formula is "
-		       "accessed out-of-range");
+          Tree *newtree = new Tree();
+          if (type == INT) {
+            newtree->type = ARRAYINT;
+            if (cwhich == PARTICLE_CUSTOM)
+              newtree->iarray = particle->eivec[particle->ewhich[icustom]];
+            else if (cwhich == GRID_CUSTOM)
+              newtree->iarray = grid->eivec[grid->ewhich[icustom]];
+            else if (cwhich == SURF_CUSTOM)
+              newtree->iarray = surf->eivec[surf->ewhich[icustom]];
+          } else if (type == DOUBLE) {
+            newtree->type = ARRAY;
+            if (cwhich == PARTICLE_CUSTOM)
+              newtree->array = particle->edvec[particle->ewhich[icustom]];
+            else if (cwhich == GRID_CUSTOM)
+              newtree->array = grid->edvec[grid->ewhich[icustom]];
+            else if (cwhich == SURF_CUSTOM)
+              newtree->array = surf->edvec[surf->ewhich[icustom]];
+          }
+          newtree->nstride = 1;
+          treestack[ntreestack++] = newtree;
 
-	  // ptr to column index1-1 of the Nentity x size array
-	  // with nstride = size, evaluation walks down that column
+        } else if (nbracket == 1 && size > 0) {
 
-	  Tree *newtree = new Tree();
-	  if (type == INT) {
-	    newtree->type = ARRAYINT;
-	    if (cwhich == PARTICLE_CUSTOM)
-	      newtree->iarray =
-		particle->eiarray[particle->ewhich[icustom]] ?
+          if (index1 < 1 || index1 > size)
+            error->all(FLERR,"Custom attribute in variable formula is "
+                       "accessed out-of-range");
+
+          // ptr to column index1-1 of the Nentity x size array
+          // with nstride = size, evaluation walks down that column
+
+          Tree *newtree = new Tree();
+          if (type == INT) {
+            newtree->type = ARRAYINT;
+            if (cwhich == PARTICLE_CUSTOM)
+              newtree->iarray =
+                particle->eiarray[particle->ewhich[icustom]] ?
             &particle->eiarray[particle->ewhich[icustom]][0][index1-1] : NULL;
-	    else if (cwhich == GRID_CUSTOM)
-	      newtree->iarray = grid->eiarray[grid->ewhich[icustom]] ?
+            else if (cwhich == GRID_CUSTOM)
+              newtree->iarray = grid->eiarray[grid->ewhich[icustom]] ?
             &grid->eiarray[grid->ewhich[icustom]][0][index1-1] : NULL;
-	    else if (cwhich == SURF_CUSTOM)
-	      newtree->iarray = surf->eiarray[surf->ewhich[icustom]] ?
+            else if (cwhich == SURF_CUSTOM)
+              newtree->iarray = surf->eiarray[surf->ewhich[icustom]] ?
             &surf->eiarray[surf->ewhich[icustom]][0][index1-1] : NULL;
-	  } else if (type == DOUBLE) {
-	    newtree->type = ARRAY;
-	    if (cwhich == PARTICLE_CUSTOM)
-	      newtree->array =
-		particle->edarray[particle->ewhich[icustom]] ?
+          } else if (type == DOUBLE) {
+            newtree->type = ARRAY;
+            if (cwhich == PARTICLE_CUSTOM)
+              newtree->array =
+                particle->edarray[particle->ewhich[icustom]] ?
             &particle->edarray[particle->ewhich[icustom]][0][index1-1] : NULL;
-	    else if (cwhich == GRID_CUSTOM)
-	      newtree->array = grid->edarray[grid->ewhich[icustom]] ?
+            else if (cwhich == GRID_CUSTOM)
+              newtree->array = grid->edarray[grid->ewhich[icustom]] ?
             &grid->edarray[grid->ewhich[icustom]][0][index1-1] : NULL;
-	    else if (cwhich == SURF_CUSTOM)
-	      newtree->array = surf->edarray[surf->ewhich[icustom]] ?
+            else if (cwhich == SURF_CUSTOM)
+              newtree->array = surf->edarray[surf->ewhich[icustom]] ?
             &surf->edarray[surf->ewhich[icustom]][0][index1-1] : NULL;
-	  }
-	  newtree->nstride = size;
-	  treestack[ntreestack++] = newtree;
+          }
+          newtree->nstride = size;
+          treestack[ntreestack++] = newtree;
 
-	// unrecognized custom attribute
-	
-	} else error->all(FLERR,"Mismatched custom attribute in variable formula");
+        // unrecognized custom attribute
+
+        } else error->all(FLERR,"Mismatched custom attribute in variable formula");
 
       // ----------------
       // surface collide model
@@ -2218,8 +2218,8 @@ double Variable::evaluate(char *str, Tree **tree)
           evaluate(data[ivar][0],&newtree);
           treestack[ntreestack++] = newtree;
 
-	// unrecognized variable
-	
+        // unrecognized variable
+
         } else {
           delete [] id;
           error->all(FLERR,"Mismatched variable in variable formula");

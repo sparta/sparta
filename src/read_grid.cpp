@@ -79,8 +79,8 @@ void ReadGrid::command(int narg, char **arg)
       if (iarg+4 > narg) error->all(FLERR,"Invalid read_grid command");
 
       name_custom = (char **)
-	memory->srealloc(name_custom,(ncustom+1)*sizeof(char *),
-			 "readgrid:name_custom");
+        memory->srealloc(name_custom,(ncustom+1)*sizeof(char *),
+                         "readgrid:name_custom");
       memory->grow(type_custom,ncustom+1,"readgrid:type_custom");
       memory->grow(size_custom,ncustom+1,"readgrid:size_custom");
 
@@ -92,7 +92,7 @@ void ReadGrid::command(int narg, char **arg)
       else error->all(FLERR,"Invalid read_grid command");
       size_custom[ncustom] = input->inumeric(FLERR,arg[iarg+3]);
       if (size_custom[ncustom] < 0)
-	error->all(FLERR,"Invalid read_surf command");
+        error->all(FLERR,"Invalid read_surf command");
 
       if (size_custom[ncustom] == 0) nvalues_custom++;
       else nvalues_custom += size_custom[ncustom];
@@ -283,27 +283,27 @@ void ReadGrid::create_cells(int n, char *buf)
       *next = '\n';
 
       if (nwords != nwords_required)
-	error->one(FLERR,"Incorrect line format in grid file");
+        error->one(FLERR,"Incorrect line format in grid file");
 
       idptr = strtok(buf," \t\n\r\f");
       id = ATOCELLINT(idptr);
       if (id < 0) error->one(FLERR,"Invalid cell ID in grid file");
 
       if (ncustom) {
-	icvalue = 0;
-	for (ic = 0; ic < ncustom; ic++) {
-	  if (type_custom[ic] == INT) {
-	    if (size_custom[ic] == 0)
-	      custom[icvalue++] = input->inumeric(FLERR,strtok(NULL," \t\n\r\f"));
-	    else
-	      for (iv = 0; iv < size_custom[ic]; iv++)
-		custom[icvalue++] = input->inumeric(FLERR,strtok(NULL," \t\n\r\f"));
-	  } else if (type_custom[ic] == DOUBLE) {
+        icvalue = 0;
+        for (ic = 0; ic < ncustom; ic++) {
+          if (type_custom[ic] == INT) {
+            if (size_custom[ic] == 0)
+              custom[icvalue++] = input->inumeric(FLERR,strtok(NULL," \t\n\r\f"));
+            else
+              for (iv = 0; iv < size_custom[ic]; iv++)
+                custom[icvalue++] = input->inumeric(FLERR,strtok(NULL," \t\n\r\f"));
+          } else if (type_custom[ic] == DOUBLE) {
             if (size_custom[ic] == 0)
               custom[icvalue++] = input->numeric(FLERR,strtok(NULL," \t\n\r\f"));
             else
               for (iv = 0; iv < size_custom[ic]; iv++)
-	      custom[icvalue++] = input->numeric(FLERR,strtok(NULL," \t\n\r\f"));
+              custom[icvalue++] = input->numeric(FLERR,strtok(NULL," \t\n\r\f"));
           }
         }
       }
@@ -363,30 +363,30 @@ void ReadGrid::create_custom()
 
     if (type_custom[ic] == INT) {
       if (size_custom[ic] == 0) {
-	int *ivector = grid->eivec[grid->ewhich[index]];
-	for (i = 0; i < nlocal; i++)
-	  ivector[i] = static_cast<int> (cvalues[i][icvalue]);
-	icvalue++;
+        int *ivector = grid->eivec[grid->ewhich[index]];
+        for (i = 0; i < nlocal; i++)
+          ivector[i] = static_cast<int> (cvalues[i][icvalue]);
+        icvalue++;
       } else {
-	int **iarray = grid->eiarray[grid->ewhich[index]];
-	for (i = 0; i < nlocal; i++)
-	  for (j = 0; j < size_custom[ic]; j++)
-	    iarray[i][j] = static_cast<int> (cvalues[i][icvalue+j]);
-	icvalue += size_custom[ic];
+        int **iarray = grid->eiarray[grid->ewhich[index]];
+        for (i = 0; i < nlocal; i++)
+          for (j = 0; j < size_custom[ic]; j++)
+            iarray[i][j] = static_cast<int> (cvalues[i][icvalue+j]);
+        icvalue += size_custom[ic];
       }
 
     } else if (type_custom[ic] == DOUBLE) {
       if (size_custom[ic] == 0) {
-	double *dvector = grid->edvec[grid->ewhich[index]];
-	for (i = 0; i < nlocal; i++)
-	  dvector[i] = cvalues[i][icvalue];
-	icvalue++;
+        double *dvector = grid->edvec[grid->ewhich[index]];
+        for (i = 0; i < nlocal; i++)
+          dvector[i] = cvalues[i][icvalue];
+        icvalue++;
       } else {
-	double **darray = grid->edarray[grid->ewhich[index]];
-	for (i = 0; i < nlocal; i++)
-	  for (j = 0; j < size_custom[ic]; j++)
-	    darray[i][j] = cvalues[i][icvalue+j];
-	icvalue += size_custom[ic];
+        double **darray = grid->edarray[grid->ewhich[index]];
+        for (i = 0; i < nlocal; i++)
+          for (j = 0; j < size_custom[ic]; j++)
+            darray[i][j] = cvalues[i][icvalue+j];
+        icvalue += size_custom[ic];
       }
     }
   }

@@ -204,7 +204,7 @@ FixAveGrid::FixAveGrid(SPARTA *sparta, int narg, char **arg) :
         error->all(FLERR,"Fix ave/grid custom attribute is not an array");
       if (argindex[i] && argindex[i] > grid->esize[icustom])
         error->all(FLERR,"Fix ave/grid custom attribute array is "
-		   "accessed out-of-range");
+                   "accessed out-of-range");
     }
   }
 
@@ -563,7 +563,7 @@ void FixAveGrid::end_of_step()
 
       } else if (which[m] == CUSTOM) {
         k = umap[m][0];
-	if (j == 0) {
+        if (j == 0) {
           if (grid->etype[n] == INT) {
             int *custom_vector = grid->eivec[grid->ewhich[n]];
             for (i = 0; i < nglocal; i++) tally[i][k] += custom_vector[i];
@@ -571,8 +571,8 @@ void FixAveGrid::end_of_step()
             double *custom_vector = grid->edvec[grid->ewhich[n]];
             for (i = 0; i < nglocal; i++) tally[i][k] += custom_vector[i];
           }
-	} else {
-	  int jm1 = j - 1;
+        } else {
+          int jm1 = j - 1;
           if (grid->etype[n] == INT) {
             int **custom_array = grid->eiarray[grid->ewhich[n]];
             for (i = 0; i < nglocal; i++) tally[i][k] += custom_array[i][jm1];
@@ -580,7 +580,7 @@ void FixAveGrid::end_of_step()
             double **custom_array = grid->edarray[grid->ewhich[n]];
             for (i = 0; i < nglocal; i++) tally[i][k] += custom_array[i][jm1];
           }
-	}
+        }
       }
     }
 

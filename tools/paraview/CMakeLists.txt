@@ -20,7 +20,7 @@ set(PARAVIEW_TOOLS_TEST_FILES
     "test_data/data.circle_w_type"
     "test_data/data.sphere_w_type")
 
-function(ADD_SERIAL_PARAVIEW_TESTS TEST_NAMES) 
+function(ADD_SERIAL_PARAVIEW_TESTS TEST_NAMES)
     foreach(TEST_FILE IN LISTS TEST_NAMES)
         REMOVE_FILE_EXTENSION(TEST_NAME ${TEST_FILE})
         add_test(NAME "paraview_${TEST_NAME}" COMMAND
@@ -56,12 +56,12 @@ if(SPARTA_ENABLE_TESTING AND SPARTA_ENABLE_PARAVIEW_TESTING)
 
    add_custom_target(paraview_python_files ALL DEPENDS
        ${PARAVIEW_TOOLS_ALL_FILES})
-   add_custom_command(OUTPUT 
+   add_custom_command(OUTPUT
        ${PARAVIEW_TOOLS_ALL_FILES}
        COMMAND ${CMAKE_COMMAND} -E copy
            ${PARAVIEW_TOOLS_ALL_FILES_SRC_DIR}
            ${CMAKE_CURRENT_BINARY_DIR}
-       DEPENDS 
+       DEPENDS
            ${PARAVIEW_TOOLS_ALL_FILES_SRC_DIR})
 
    ADD_SERIAL_PARAVIEW_TESTS("${PARAVIEW_TOOLS_SERIAL_PYTHON_TESTS}")

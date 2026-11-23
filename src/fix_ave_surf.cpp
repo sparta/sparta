@@ -194,7 +194,7 @@ FixAveSurf::FixAveSurf(SPARTA *sparta, int narg, char **arg) :
         error->all(FLERR,"Fix ave/surf custom attribute is not an array");
       if (argindex[i] && argindex[i] > surf->esize[icustom])
         error->all(FLERR,"Fix ave/surf custom attribute array is "
-		   "accessed out-of-range");
+                   "accessed out-of-range");
     }
   }
 
@@ -202,7 +202,7 @@ FixAveSurf::FixAveSurf(SPARTA *sparta, int narg, char **arg) :
 
   if (count_tally && count_tally != nvalues)
     error->all(FLERR,"Fix ave/surf inputs must be all be computes "
-	       "which tally particle/surf collisions or all not be");
+               "which tally particle/surf collisions or all not be");
 
   // this fix produces either a per-surf vector or array
 
@@ -525,7 +525,7 @@ void FixAveSurf::end_of_step()
 
     } else if (which[m] == VARIABLE) {
       if (nvalues == 1)
-	input->variable->compute_surf(n,accvec,1,1);
+        input->variable->compute_surf(n,accvec,1,1);
       else {
         double *aptr = NULL;
         if (accarray) aptr = &accarray[0][m];
@@ -537,41 +537,41 @@ void FixAveSurf::end_of_step()
     } else if (which[m] == CUSTOM) {
       if (j == 0) {
         if (nvalues == 1) {
-	  if (surf->etype[n] == INT) {
-	    int *custom_vector = surf->eivec[surf->ewhich[n]];
-	    for (i = 0; i < nown; i++) accvec[i] += custom_vector[i];
-	  } else if (surf->etype[n] == DOUBLE) {
-	    double *custom_vector = surf->edvec[surf->ewhich[n]];
-	    for (i = 0; i < nown; i++) accvec[i] += custom_vector[i];
-	  }
-	} else {
-	  if (surf->etype[n] == INT) {
-	    int *custom_vector = surf->eivec[surf->ewhich[n]];
-	    for (i = 0; i < nown; i++) accarray[i][m] += custom_vector[i];
-	  } else if (surf->etype[n] == DOUBLE) {
-	    double *custom_vector = surf->edvec[surf->ewhich[n]];
-	    for (i = 0; i < nown; i++) accarray[i][m] += custom_vector[i];
-	  }
-	}
+          if (surf->etype[n] == INT) {
+            int *custom_vector = surf->eivec[surf->ewhich[n]];
+            for (i = 0; i < nown; i++) accvec[i] += custom_vector[i];
+          } else if (surf->etype[n] == DOUBLE) {
+            double *custom_vector = surf->edvec[surf->ewhich[n]];
+            for (i = 0; i < nown; i++) accvec[i] += custom_vector[i];
+          }
+        } else {
+          if (surf->etype[n] == INT) {
+            int *custom_vector = surf->eivec[surf->ewhich[n]];
+            for (i = 0; i < nown; i++) accarray[i][m] += custom_vector[i];
+          } else if (surf->etype[n] == DOUBLE) {
+            double *custom_vector = surf->edvec[surf->ewhich[n]];
+            for (i = 0; i < nown; i++) accarray[i][m] += custom_vector[i];
+          }
+        }
       } else {
         int jm1 = j - 1;
         if (nvalues == 1) {
-	  if (surf->etype[n] == INT) {
-	    int **custom_array = surf->eiarray[surf->ewhich[n]];
-	    for (i = 0; i < nown; i++) accvec[i] += custom_array[i][jm1];
-	  } else if (surf->etype[n] == DOUBLE) {
-	    double **custom_array = surf->edarray[surf->ewhich[n]];
-	    for (i = 0; i < nown; i++) accvec[i] += custom_array[i][jm1];
-	  }
-	} else {
-	  if (surf->etype[n] == INT) {
-	    int **custom_array = surf->eiarray[surf->ewhich[n]];
-	    for (i = 0; i < nown; i++) accarray[i][m] += custom_array[i][jm1];
-	  } else if (surf->etype[n] == DOUBLE) {
-	    double **custom_array = surf->edarray[surf->ewhich[n]];
-	    for (i = 0; i < nown; i++) accarray[i][m] += custom_array[i][jm1];
-	  }
-	}
+          if (surf->etype[n] == INT) {
+            int **custom_array = surf->eiarray[surf->ewhich[n]];
+            for (i = 0; i < nown; i++) accvec[i] += custom_array[i][jm1];
+          } else if (surf->etype[n] == DOUBLE) {
+            double **custom_array = surf->edarray[surf->ewhich[n]];
+            for (i = 0; i < nown; i++) accvec[i] += custom_array[i][jm1];
+          }
+        } else {
+          if (surf->etype[n] == INT) {
+            int **custom_array = surf->eiarray[surf->ewhich[n]];
+            for (i = 0; i < nown; i++) accarray[i][m] += custom_array[i][jm1];
+          } else if (surf->etype[n] == DOUBLE) {
+            double **custom_array = surf->edarray[surf->ewhich[n]];
+            for (i = 0; i < nown; i++) accarray[i][m] += custom_array[i][jm1];
+          }
+        }
       }
     }
   }

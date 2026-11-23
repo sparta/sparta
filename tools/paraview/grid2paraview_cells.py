@@ -98,7 +98,7 @@ def create_grid_description(args):
             print("Error: grid description file does not have a dimension statement: ",
                 args.sparta_grid_description_file)
             error_flag = True
-            
+
         if "create_box" not in grid_desc:
             print("Error: grid description file does not have a create_box statement: ",
                 args.sparta_grid_description_file)
@@ -261,7 +261,7 @@ def write_pvd_file(unstructured_grid, program_data):
     fh.write('   <Collection>    \n')
 
     array_names = get_array_names_on_unstructured_grid(unstructured_grid)
-    
+
     if time_steps:
         for time in sorted(time_steps.keys()):
             write_pvd_time_step(fh, time, array_names, program_data)

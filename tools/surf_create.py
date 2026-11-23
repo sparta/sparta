@@ -109,5 +109,5 @@ while iarg < narg:
     iarg += 6
   else: error()
   id += "a"
-  
+
 s.write(sfile)

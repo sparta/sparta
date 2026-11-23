@@ -9,7 +9,7 @@ def parallel_sort(data, compare=None, use_file_buckets=False):
     pivots = _parallel_sort_init(data, compare)
     if not pivots:
         return _gather_to_proc_zero_and_sort(data, compare)
-    
+
     if use_file_buckets:
         return _sort_with_file_buckets(pivots, data, compare)
     else:
@@ -184,7 +184,7 @@ def get_rank():
     return get_comm_world().Get_rank()
 
 def get_size():
-    return get_comm_world().Get_size() 
+    return get_comm_world().Get_size()
 
 def barrier():
     get_comm_world().Barrier()

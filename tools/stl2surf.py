@@ -107,7 +107,7 @@ for i,tri in enumerate(tris):
   print(i+1,tri[0]+1,tri[1]+1,tri[2]+1,file=fp)
 
 fp.close()
-  
+
 # stats to screen
 
 print("# of vertices in SPARTA file:",len(verts))
@@ -143,7 +143,7 @@ for edge in ehash:
   if invedge not in ehash:
     unmatch += 1
     unmatchedge = edge
-    
+
 if dup or unmatch:
   print("WARNING: surface is not watertight")
 

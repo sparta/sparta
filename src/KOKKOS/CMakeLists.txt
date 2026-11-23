@@ -132,8 +132,8 @@ if(PKG_KOKKOS)
   target_include_directories(${TARGET_SPARTA_PKG_KOKKOS} SYSTEM
                              PUBLIC ${Kokkos_INCLUDE_DIRS_RET})
 
-  message(VERBOSE "Kokkos_INCLUDE_DIRS_RET: ${Kokkos_INCLUDE_DIRS_RET}")  
-  message(VERBOSE "TARGET_SPARTA_PKG_KOKKOS: ${TARGET_SPARTA_PKG_KOKKOS}")  
+  message(VERBOSE "Kokkos_INCLUDE_DIRS_RET: ${Kokkos_INCLUDE_DIRS_RET}")
+  message(VERBOSE "TARGET_SPARTA_PKG_KOKKOS: ${TARGET_SPARTA_PKG_KOKKOS}")
 
   # Add include dependencies for building TARGET_SPARTA_PKG_KOKKOS
   target_include_directories(${TARGET_SPARTA_PKG_KOKKOS}

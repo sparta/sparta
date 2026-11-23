@@ -252,7 +252,7 @@ void FixSurfTemp::end_of_step()
       else mask = tris[m].mask;
       if (mask & groupbit) {
         qw = qwvector[i];
-	if (qw > threshold) tcustom[i] = pow(prefactor*qw,0.25);
+        if (qw > threshold) tcustom[i] = pow(prefactor*qw,0.25);
         else tcustom[i] = twall;
       }
     }

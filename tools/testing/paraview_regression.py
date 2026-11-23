@@ -153,7 +153,7 @@ def assert_read(test):
     if "assert_read" in test:
         pv = open_data_file(test["assert_fetch"]["file"])
         check_attributes(pv, test["assert_read"]["attributes"])
-        
+
 def assert_fetch(test):
     if "assert_fetch" in test:
         pv = open_data_file(test["assert_fetch"]["file"])
@@ -186,7 +186,7 @@ def open_data_file(data_file_name):
 def get_run_command_line(args, run_command_list):
     command_line = ""
     for token in run_command_list:
-        if token == "PARAVIEW_PVPYTHON": 
+        if token == "PARAVIEW_PVPYTHON":
             command_line += " " + args.pvpython_exe
         elif token == "SURF2PARAVIEW":
             command_line += " " + args.surf2paraview_module
@@ -202,6 +202,6 @@ def get_run_command_line(args, run_command_list):
         else:
             command_line += " " + token
     return command_line
-    
+
 if __name__ == '__main__':
     main()

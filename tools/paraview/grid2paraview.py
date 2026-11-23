@@ -8,7 +8,7 @@ from __future__ import division
 
 #   Copyright (2014) Sandia Corporation.  Under the terms of Contract
 #   DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-#   certain rights in this software.  This software is distributed under 
+#   certain rights in this software.  This software is distributed under
 #   the GNU General Public License.
 
 #   See the README file in the top-level SPARTA directory.
@@ -173,7 +173,7 @@ class SpartaGridFile:
             index = s.index(level_string)
             self.__level_dimensions[level] = {'x' : int(s[index-3]),
               'y' : int(s[index-2]), 'z' : int(s[index-1])}
-    self._create_level_bit_masks()  
+    self._create_level_bit_masks()
 
   def _go_to_grid_file_cells_section(self):
     grid_file_handle = self.__grid_file_handle
@@ -195,7 +195,7 @@ class SpartaGridFile:
       ldims['bit_mask'] = bit_mask
       ldims['bits_to_shift_right'] = bits_shifted_left
       bits_shifted_left += bits
-  
+
   def create_dashed_id(self, local_cell_id):
     if not local_cell_id:
       return local_cell_id
@@ -311,11 +311,11 @@ def find_chunking(chunks, grid_desc, args):
     for k in zc:
       for j in yc:
         for i in xc:
-          chunks.append({"x": i, "y": j, "z": k}) 
+          chunks.append({"x": i, "y": j, "z": k})
   else:
     for j in yc:
       for i in xc:
-        chunks.append({"x": i, "y": j, "z": [1,1]}) 
+        chunks.append({"x": i, "y": j, "z": [1,1]})
 
 def create_and_write_grid_chunk(chunk_id, chunk_info, num_chunks, \
                                 grid_desc, time_steps_dict, output_file):
@@ -515,11 +515,11 @@ def get_cell_first_level_location(dashed_id, grid_desc):
 
 def level_contains_refined_cells(level, grid_desc, dashed_id):
   if "parent_grid" in grid_desc:
-    if level == 1: 
+    if level == 1:
       return bool(grid_desc["parent_grid"])
     else:
       s = dashed_id.split('-')
-      d = None 
+      d = None
       for id in s:
         if not d:
           if int(id) in  grid_desc["parent_grid"]:
@@ -585,7 +585,7 @@ def is_2d_cell_refined(level, i, j, cell_index, grid_desc, dashed_id, xi, yi, r_
     Py = grid_desc["create_grid"][level+1]["Py"]
     return (i in Px and j in Py)
   else:
-    if level == 1: 
+    if level == 1:
       if cell_index in grid_desc["parent_grid"]:
         Cx = grid_desc["parent_grid"][cell_index]['px']
         Cy = grid_desc["parent_grid"][cell_index]['py']
@@ -598,7 +598,7 @@ def is_2d_cell_refined(level, i, j, cell_index, grid_desc, dashed_id, xi, yi, r_
         return False
     else:
       s = dashed_id.split('-')
-      d = None 
+      d = None
       lc = 2
       for id in s:
         if not d:
@@ -615,7 +615,7 @@ def is_2d_cell_refined(level, i, j, cell_index, grid_desc, dashed_id, xi, yi, r_
           return True
         lc += 1
       return False
-     
+
 def get_cell_size(level, grid_desc, cell_info):
   if "parent_grid" not in grid_desc:
     cell_info['Cx'] = grid_desc["create_grid"][level+1]["Cx"]
@@ -641,7 +641,7 @@ def find_2d_intersected_cells(intersecting_planes, parent_bit_mask, parent_id, o
         p01 = plane["px"]
         p02 = plane["py"]
         p03 = plane["pz"]
- 
+
         d = math.fabs(n1*(p1-p01) + n2*(p2-p02))
         rhs = a1*n1 + a2*n2
         if d <= math.fabs(rhs):
@@ -663,7 +663,7 @@ def find_2d_intersected_cells(intersecting_planes, parent_bit_mask, parent_id, o
           quad.GetPointIds().SetId(1, 1)
           quad.GetPointIds().SetId(2, 3)
           quad.GetPointIds().SetId(3, 2)
-       
+
           ug.InsertNextCell(quad.GetCellType(), quad.GetPointIds())
 
           gids = vtk.vtkIdTypeArray()
@@ -936,7 +936,7 @@ def create_2d_amr_grids(grid_desc, level, parent_bit_mask, parent_id, \
                                       dashed_id, xi, yi, r_spacing, r_ndims)
 
         refined_cell_index = cell_index*(2**parent_bit_mask) + parent_id
-        
+
         if refine:
           if not dashed_id:
             next_dashed_id = str(cell_index)
@@ -959,7 +959,7 @@ def create_2d_amr_grids(grid_desc, level, parent_bit_mask, parent_id, \
       return None
   else:
     return build_2d_grid(parent_bit_mask, parent_id, origin, spacing, ndims, chunk_info, grid_desc)
-  
+
 def clean_line(line):
   line = line.partition('#')[0]
   return line.strip()
@@ -967,10 +967,10 @@ def clean_line(line):
 def create_parent_ranges(item, level, index, parent, grid_desc):
   if item == "*":
     grid_desc["create_grid"][level][index] = range(1, parent + 1)
-  elif item[0] == "*": 
+  elif item[0] == "*":
     rb = int(item.split('*')[1])
     grid_desc["create_grid"][level][index] = range(1, rb + 1)
-  elif item[-1:] == "*": 
+  elif item[-1:] == "*":
     lb = int(item.split('*')[0])
     grid_desc["create_grid"][level][index] = range(lb, parent + 1)
   elif len(item.split('*')) == 1:
@@ -982,7 +982,7 @@ def create_parent_ranges(item, level, index, parent, grid_desc):
 def read_grid_levels(gl_array, grid_desc, level):
   if len(gl_array) % 8 or \
      gl_array[0].lower() != "level" or \
-     int(gl_array[1]) != level: 
+     int(gl_array[1]) != level:
     print("Error reading SPARTA grid description file")
     print("create_grid specification is invalid: ", ' '.join(gl_array))
     sys.exit(1)
@@ -1134,7 +1134,7 @@ def read_time_step_data(time_step_file_list, ug, id_hash):
       print("Expected data columns:  ", ug.GetCellData().GetNumberOfArrays())
       print("Found data columns:  ", len(array_names))
       return
-   
+
     arrays = []
     for val in array_names:
       arrays.append(ug.GetCellData().GetArray(val))
@@ -1443,7 +1443,7 @@ if __name__ == "__main__":
     if os.path.isdir(args.paraview_output_file) and not args.catalystscript:
       print("ParaView output directory exists: ", args.paraview_output_file)
       sys.exit(1)
- 
+
     if args.xchunk < 1:
       print("Invalid xchunk size given: ", args.xchunk)
       sys.exit(1)
@@ -1542,12 +1542,12 @@ if __name__ == "__main__":
   if platform.system() == 'Linux' or platform.system() == 'Darwin':
     if num_procs == 1:
       import multiprocessing as mp
-      
+
       # ARM64 Mac fix - disable multiprocessing entirely
       if platform.machine() == 'arm64' and platform.system() == 'Darwin':
         # Process chunks sequentially on ARM64 Macs
         for idx, chunk in enumerate(chunking):
-          create_and_write_grid_chunk(idx, chunk, len(chunking), grid_desc, 
+          create_and_write_grid_chunk(idx, chunk, len(chunking), grid_desc,
                                      time_steps_dict, args.paraview_output_file)
       else:
         # Use multiprocessing on other platforms
@@ -1557,7 +1557,7 @@ if __name__ == "__main__":
             mp.set_start_method('spawn', force=True)
           except RuntimeError:
             pass
-        
+
         pool = mp.Pool()
         async_results = []
         for idx, chunk in enumerate(chunking):
@@ -1601,5 +1601,5 @@ if __name__ == "__main__":
           write_pvd_file(time_steps_dict, args.paraview_output_file, num_procs)
       else:
         write_slice_pvd_file(time_steps_dict, args.paraview_output_file)
-          
+
     pt.report_rank_zero_time("Done in %s (wall clock time)")

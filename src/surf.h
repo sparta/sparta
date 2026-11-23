@@ -265,7 +265,7 @@ class Surf : protected Pointers {
   // including callback functions
 
   void redistribute_surfs(int, Line *, Tri *,
-			  int, int *, double **, bigint, bigint);
+                          int, int *, double **, bigint, bigint);
 
   void compress_explicit();
   void compress_implicit();
@@ -278,9 +278,9 @@ class Surf : protected Pointers {
   void spread_local2own(int, int, void *, void *);
 
   static int rendezvous_redistribute_surfs(int, char *, int &, int *&,
-					   char *&, void *);
+                                           char *&, void *);
   static int rendezvous_redistribute_custom(int, char *, int &, int *&,
-					    char *&, void *);
+                                            char *&, void *);
 
   // surf_custom.cpp
 
@@ -388,13 +388,13 @@ class Surf : protected Pointers {
   //static int rendezvous_tris(int, char *,
   //                           int &, int *&, char *&, void *);
   static int rendezvous_own2local(int, char *,
-				  int &, int *&, char *&, void *);
+                                  int &, int *&, char *&, void *);
   static int rendezvous_own2local_implicit(int, char *,
                                            int &, int *&, char *&, void *);
   static int rendezvous_unique(int, char *,
-			       int &, int *&, char *&, void *);
+                               int &, int *&, char *&, void *);
   static int rendezvous_local2own(int, char *,
-				  int &, int *&, char *&, void *);
+                                  int &, int *&, char *&, void *);
 
   // union data struct for packing 32-bit and 64-bit ints into double bufs
   // this avoids aliasing issues by having 3 pointers (double,int,uint)

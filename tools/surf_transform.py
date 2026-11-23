@@ -29,11 +29,11 @@ def error(str):
   sys.exit()
 
 # write SPARTA surf file
-  
+
 def write_surfs(dim,file):
   fp = open(file,"w")
   print("%s file converted via surf_transform.py\n" % infile, file=fp)
-  
+
   print(len(pts),"points", file=fp)
   if lines: print(len(lines),"lines", file=fp)
   if tris: print(len(tris),"triangles", file=fp)
@@ -50,7 +50,7 @@ def write_surfs(dim,file):
     print("\nLines\n", file=fp)
     for i,line in enumerate(lines):
       print(i+1,line[0]+1,line[1]+1, file=fp)
-    
+
   if tris:
     print("\nTriangles\n", file=fp)
     for i,tri in enumerate(tris):
@@ -59,7 +59,7 @@ def write_surfs(dim,file):
   fp.close()
 
 # translate origin and pts by dx,dy,dz
-  
+
 def translate(dx,dy,dz):
   origin[0] += dx
   origin[1] += dy
@@ -70,7 +70,7 @@ def translate(dx,dy,dz):
     if dim == 3: pt[2] += dz
 
 # move origin to ax,ay,ax and translate pts by dx,dy,dz
-  
+
 def atranslate(ax,ay,az):
   dx = ax - origin[0]
   dy = ay - origin[1]
@@ -94,7 +94,7 @@ def scale(dim,sx,sy,sz):
 
 # rotate pts by theta around rx,ry,rz vector from origin
 # for 2d, do not reset x[2] to avoid epsilon change
-    
+
 def rotate(dim,theta,rx,ry,rz):
   PI = 3.14159265358979323846
   theta *= PI/180.0
@@ -112,10 +112,10 @@ def rotate(dim,theta,rx,ry,rz):
     pt[0] = dnew[0] + origin[0];
     pt[1] = dnew[1] + origin[1];
     if dim == 3: pt[2] = dnew[2] + origin[2];
-  
+
 # invert vertex ordering within each line or tri
 # this flips direction of surface normal
-    
+
 def invert(dim):
   if dim == 2:
     for line in lines:
@@ -188,7 +188,7 @@ infile = arg[1]
 outfile = arg[2]
 
 # read surf file via sdata
-  
+
 s = sdata(0,infile)
 dim = s.dim
 pts = s.surfs[0].points

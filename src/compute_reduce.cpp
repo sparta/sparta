@@ -255,7 +255,7 @@ ComputeReduce::ComputeReduce(SPARTA *spa, int narg, char **arg) :
             argindex[i] > modify->compute[icompute]->size_per_surf_cols)
           error->all(FLERR,
                      "Compute reduce compute array is accessed out-of-range");
-	
+
       } else error->all(FLERR,"Compute reduce compute calculates global values");
 
     } else if (which[i] == FIX) {
@@ -275,7 +275,7 @@ ComputeReduce::ComputeReduce(SPARTA *spa, int narg, char **arg) :
         if (argindex[i] &&
             argindex[i] > modify->fix[ifix]->size_per_particle_cols)
           error->all(FLERR,"Compute reduce fix array is accessed out-of-range");
-	
+
       } else if (modify->fix[ifix]->per_grid_flag) {
         flavor[i] = GRID;
         if (argindex[i] == 0 &&
@@ -288,7 +288,7 @@ ComputeReduce::ComputeReduce(SPARTA *spa, int narg, char **arg) :
         if (argindex[i] &&
             argindex[i] > modify->fix[ifix]->size_per_grid_cols)
           error->all(FLERR,"Compute reduce fix array is accessed out-of-range");
-	
+
       } else if (modify->fix[ifix]->per_surf_flag) {
         flavor[i] = SURF;
         if (argindex[i] == 0 &&
@@ -301,7 +301,7 @@ ComputeReduce::ComputeReduce(SPARTA *spa, int narg, char **arg) :
         if (argindex[i] &&
             argindex[i] > modify->fix[ifix]->size_per_surf_cols)
           error->all(FLERR,"Compute reduce fix array is accessed out-of-range");
-	
+
       } else error->all(FLERR,"Compute reduce fix calculates global values");
 
     } else if (which[i] == VARIABLE) {
@@ -312,7 +312,7 @@ ComputeReduce::ComputeReduce(SPARTA *spa, int narg, char **arg) :
       else if (input->variable->grid_style(ivariable)) flavor[i] = GRID;
       else if (input->variable->surf_style(ivariable)) flavor[i] = SURF;
       else error->all(FLERR,"Compute reduce variable is not "
-		      "particle-, grid-, surf-style variable");
+                      "particle-, grid-, surf-style variable");
 
     } else if (which[i] == PCUSTOM) {
       flavor[i] = PARTICLE;
@@ -325,7 +325,7 @@ ComputeReduce::ComputeReduce(SPARTA *spa, int narg, char **arg) :
         error->all(FLERR,"Compute reduce custom attribute is not an array");
       if (argindex[i] && argindex[i] > particle->esize[icustom])
         error->all(FLERR,"Compute reduce custom attribute array is "
-		   "accessed out-of-range");
+                   "accessed out-of-range");
 
     } else if (which[i] == GCUSTOM) {
       flavor[i] = GRID;
@@ -338,7 +338,7 @@ ComputeReduce::ComputeReduce(SPARTA *spa, int narg, char **arg) :
         error->all(FLERR,"Compute reduce custom attribute is not an array");
       if (argindex[i] && argindex[i] > grid->esize[icustom])
         error->all(FLERR,"Compute reduce custom attribute array is "
-		   "accessed out-of-range");
+                   "accessed out-of-range");
 
     } else if (which[i] == SCUSTOM) {
       flavor[i] = SURF;
@@ -351,7 +351,7 @@ ComputeReduce::ComputeReduce(SPARTA *spa, int narg, char **arg) :
         error->all(FLERR,"Compute reduce custom attribute is not an array");
       if (argindex[i] && argindex[i] > surf->esize[icustom])
         error->all(FLERR,"Compute reduce custom attribute array is "
-		   "accessed out-of-range");
+                   "accessed out-of-range");
     }
 
     // require all values have same flavor
@@ -839,12 +839,12 @@ double ComputeReduce::compute_one(int m, int flag)
                    "computed at compatible time");
       if (aidx == 0) {
         double *fvec = fix->vector_surf;
-	int n = surf->nown;
+        int n = surf->nown;
         if (flag < 0) {
           for (i = 0; i < n; i++) {
             if (subsetID && !(smasks[i] & surfgroupbit)) continue;
             combine(one,areasurf[i]*fvec[i],i);
-	  }
+          }
         } else one = fvec[flag];
       } else {
         double **farray = fix->array_surf;
@@ -852,9 +852,9 @@ double ComputeReduce::compute_one(int m, int flag)
         int aidxm1 = aidx - 1;
         if (flag < 0) {
           for (i = 0; i < n; i++) {
-	    if (subsetID && !(smasks[i] & surfgroupbit)) continue;
-	    combine(one,areasurf[i]*farray[i][aidxm1],i);
-	  }
+            if (subsetID && !(smasks[i] & surfgroupbit)) continue;
+            combine(one,areasurf[i]*farray[i][aidxm1],i);
+          }
         } else one = farray[flag][aidxm1];
       }
     }
@@ -920,48 +920,48 @@ double ComputeReduce::compute_one(int m, int flag)
       Particle::OnePart *particles = particle->particles;
       int n = particle->nlocal;
       if (flag < 0) {
-	if (particle->etype[vidx] == INT) {
-	  int *cvec = particle->eivec[particle->ewhich[vidx]];
-	  for (i = 0; i < n; i++) {
+        if (particle->etype[vidx] == INT) {
+          int *cvec = particle->eivec[particle->ewhich[vidx]];
+          for (i = 0; i < n; i++) {
             if (subsetID && s2g[particles[i].ispecies] < 0) continue;
-	    combine(one,cvec[i],i);
-	  }
-	} else if (particle->etype[vidx] == DOUBLE) {
-	  double *cvec = particle->edvec[particle->ewhich[vidx]];
-	  for (i = 0; i < n; i++) {
+            combine(one,cvec[i],i);
+          }
+        } else if (particle->etype[vidx] == DOUBLE) {
+          double *cvec = particle->edvec[particle->ewhich[vidx]];
+          for (i = 0; i < n; i++) {
             if (subsetID && s2g[particles[i].ispecies] < 0) continue;
-	    combine(one,cvec[i],i);
-	  }
-	}
+            combine(one,cvec[i],i);
+          }
+        }
       } else {
-	if (particle->etype[vidx] == INT)
-	  one = particle->eivec[particle->ewhich[vidx]][flag];
-	else
-	  one = particle->edvec[particle->ewhich[vidx]][flag];
+        if (particle->etype[vidx] == INT)
+          one = particle->eivec[particle->ewhich[vidx]][flag];
+        else
+          one = particle->edvec[particle->ewhich[vidx]][flag];
       }
     } else {
       Particle::OnePart *particles = particle->particles;
       int n = particle->nlocal;
       int aidxm1 = aidx - 1;
       if (flag < 0) {
-	if (particle->etype[vidx] == INT) {
-	  int **carray = particle->eiarray[particle->ewhich[vidx]];
-	  for (i = 0; i < n; i++) {
+        if (particle->etype[vidx] == INT) {
+          int **carray = particle->eiarray[particle->ewhich[vidx]];
+          for (i = 0; i < n; i++) {
             if (subsetID && s2g[particles[i].ispecies] < 0) continue;
-	    combine(one,carray[i][aidxm1],i);
-	  }
-	} else if (particle->etype[vidx] == DOUBLE) {
-	  double **carray = particle->edarray[particle->ewhich[vidx]];
-	  for (i = 0; i < n; i++) {
+            combine(one,carray[i][aidxm1],i);
+          }
+        } else if (particle->etype[vidx] == DOUBLE) {
+          double **carray = particle->edarray[particle->ewhich[vidx]];
+          for (i = 0; i < n; i++) {
             if (subsetID && s2g[particles[i].ispecies] < 0) continue;
-	    combine(one,carray[i][aidxm1],i);
-	  }
-	}
+            combine(one,carray[i][aidxm1],i);
+          }
+        }
       } else {
-	if (particle->etype[vidx] == INT)
-	  one = particle->eiarray[particle->ewhich[vidx]][flag][aidxm1];
-	else
-	  one = particle->edarray[particle->ewhich[vidx]][flag][aidxm1];
+        if (particle->etype[vidx] == INT)
+          one = particle->eiarray[particle->ewhich[vidx]][flag][aidxm1];
+        else
+          one = particle->edarray[particle->ewhich[vidx]][flag][aidxm1];
       }
     }
 
@@ -972,48 +972,48 @@ double ComputeReduce::compute_one(int m, int flag)
       Grid::ChildInfo *cinfo = grid->cinfo;
       int n = grid->nlocal;
       if (flag < 0) {
-	if (grid->etype[vidx] == INT) {
-	  int *cvec = grid->eivec[grid->ewhich[vidx]];
-	  for (i = 0; i < n; i++) {
+        if (grid->etype[vidx] == INT) {
+          int *cvec = grid->eivec[grid->ewhich[vidx]];
+          for (i = 0; i < n; i++) {
             if (subsetID && !(cinfo[i].mask & gridgroupbit)) continue;
-	    combine(one,cvec[i],i);
-	  }
-	} else if (grid->etype[vidx] == DOUBLE) {
-	  double *cvec = grid->edvec[grid->ewhich[vidx]];
-	  for (i = 0; i < n; i++) {
+            combine(one,cvec[i],i);
+          }
+        } else if (grid->etype[vidx] == DOUBLE) {
+          double *cvec = grid->edvec[grid->ewhich[vidx]];
+          for (i = 0; i < n; i++) {
             if (subsetID && !(cinfo[i].mask & gridgroupbit)) continue;
-	    combine(one,cvec[i],i);
-	  }
-	}
+            combine(one,cvec[i],i);
+          }
+        }
       } else {
-	if (grid->etype[vidx] == INT)
-	  one = grid->eivec[grid->ewhich[vidx]][flag];
-	else
-	  one = grid->edvec[grid->ewhich[vidx]][flag];
+        if (grid->etype[vidx] == INT)
+          one = grid->eivec[grid->ewhich[vidx]][flag];
+        else
+          one = grid->edvec[grid->ewhich[vidx]][flag];
       }
     } else {
       Grid::ChildInfo *cinfo = grid->cinfo;
       int n = grid->nlocal;
       int aidxm1 = aidx - 1;
       if (flag < 0) {
-	if (grid->etype[vidx] == INT) {
-	  int **carray = grid->eiarray[grid->ewhich[vidx]];
-	  for (i = 0; i < n; i++) {
+        if (grid->etype[vidx] == INT) {
+          int **carray = grid->eiarray[grid->ewhich[vidx]];
+          for (i = 0; i < n; i++) {
             if (subsetID && !(cinfo[i].mask & gridgroupbit)) continue;
-	    combine(one,carray[i][aidxm1],i);
-	  }
-	} else if (grid->etype[vidx] == DOUBLE) {
-	  double **carray = grid->edarray[grid->ewhich[vidx]];
-	  for (i = 0; i < n; i++) {
+            combine(one,carray[i][aidxm1],i);
+          }
+        } else if (grid->etype[vidx] == DOUBLE) {
+          double **carray = grid->edarray[grid->ewhich[vidx]];
+          for (i = 0; i < n; i++) {
             if (subsetID && !(cinfo[i].mask & gridgroupbit)) continue;
-	    combine(one,carray[i][aidxm1],i);
-	  }
-	}
+            combine(one,carray[i][aidxm1],i);
+          }
+        }
       } else {
-	if (grid->etype[vidx] == INT)
-	  one = grid->eiarray[grid->ewhich[vidx]][flag][aidxm1];
-	else
-	  one = grid->edarray[grid->ewhich[vidx]][flag][aidxm1];
+        if (grid->etype[vidx] == INT)
+          one = grid->eiarray[grid->ewhich[vidx]][flag][aidxm1];
+        else
+          one = grid->edarray[grid->ewhich[vidx]][flag][aidxm1];
       }
     }
 
@@ -1023,47 +1023,47 @@ double ComputeReduce::compute_one(int m, int flag)
     if (aidx == 0) {
       int n = surf->nown;
       if (flag < 0) {
-	if (surf->etype[vidx] == INT) {
-	  int *cvec = surf->eivec[surf->ewhich[vidx]];
-	  for (i = 0; i < n; i++) {
-	    if (subsetID && !(smasks[i] & surfgroupbit)) continue;
-	    combine(one,areasurf[i]*cvec[i],i);
-	  }
-	} else if (surf->etype[vidx] == DOUBLE) {
-	  double *cvec = surf->edvec[surf->ewhich[vidx]];
-	  for (i = 0; i < n; i++) {
-	    if (subsetID && !(smasks[i] & surfgroupbit)) continue;
-	    combine(one,areasurf[i]*cvec[i],i);
-	  }
-	}
+        if (surf->etype[vidx] == INT) {
+          int *cvec = surf->eivec[surf->ewhich[vidx]];
+          for (i = 0; i < n; i++) {
+            if (subsetID && !(smasks[i] & surfgroupbit)) continue;
+            combine(one,areasurf[i]*cvec[i],i);
+          }
+        } else if (surf->etype[vidx] == DOUBLE) {
+          double *cvec = surf->edvec[surf->ewhich[vidx]];
+          for (i = 0; i < n; i++) {
+            if (subsetID && !(smasks[i] & surfgroupbit)) continue;
+            combine(one,areasurf[i]*cvec[i],i);
+          }
+        }
       } else {
-	if (surf->etype[vidx] == INT)
-	  one = surf->eivec[surf->ewhich[vidx]][flag];
-	else
-	  one = surf->edvec[surf->ewhich[vidx]][flag];
+        if (surf->etype[vidx] == INT)
+          one = surf->eivec[surf->ewhich[vidx]][flag];
+        else
+          one = surf->edvec[surf->ewhich[vidx]][flag];
       }
     } else {
       int n = surf->nown;
       int aidxm1 = aidx - 1;
       if (flag < 0) {
-	if (surf->etype[vidx] == INT) {
-	  int **carray = surf->eiarray[surf->ewhich[vidx]];
-	  for (i = 0; i < n; i++) {
-	    if (subsetID && !(smasks[i] & surfgroupbit)) continue;
-	    combine(one,areasurf[i]*carray[i][aidxm1],i);
-	  }
-	} else if (surf->etype[vidx] == DOUBLE) {
-	  double **carray = surf->edarray[surf->ewhich[vidx]];
-	  for (i = 0; i < n; i++) {
-	    if (subsetID && !(smasks[i] & surfgroupbit)) continue;
-	    combine(one,areasurf[i]*carray[i][aidxm1],i);
-	  }
-	}
+        if (surf->etype[vidx] == INT) {
+          int **carray = surf->eiarray[surf->ewhich[vidx]];
+          for (i = 0; i < n; i++) {
+            if (subsetID && !(smasks[i] & surfgroupbit)) continue;
+            combine(one,areasurf[i]*carray[i][aidxm1],i);
+          }
+        } else if (surf->etype[vidx] == DOUBLE) {
+          double **carray = surf->edarray[surf->ewhich[vidx]];
+          for (i = 0; i < n; i++) {
+            if (subsetID && !(smasks[i] & surfgroupbit)) continue;
+            combine(one,areasurf[i]*carray[i][aidxm1],i);
+          }
+        }
       } else {
-	if (surf->etype[vidx] == INT)
-	  one = surf->eiarray[surf->ewhich[vidx]][flag][aidxm1];
-	else
-	  one = surf->edarray[surf->ewhich[vidx]][flag][aidxm1];
+        if (surf->etype[vidx] == INT)
+          one = surf->eiarray[surf->ewhich[vidx]][flag][aidxm1];
+        else
+          one = surf->edarray[surf->ewhich[vidx]][flag][aidxm1];
       }
     }
   }
