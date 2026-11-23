@@ -1,0 +1,12 @@
+{#- The theme's breadcrumbs, with a small SPARTA logo linking to the web
+    site and a link to the command list at the right, as the LAMMPS manual
+    has.  Replaces the theme's "view page source" link, which the manual
+    turns off anyway (html_show_sourcelink = False). -#}
+{%- extends "!breadcrumbs.html" %}
+{%- block breadcrumbs_aside %}
+      <li class="wy-breadcrumbs-aside">
+        <a href="https://sparta.github.io"><img src="{{ pathto('_static/sparta-logo-small.png', 1) }}" class="sparta-breadcrumbs-logo" width="18" height="18" alt="SPARTA home page"></a>
+        {#- pathto() gives "#" on the page itself #}
+        | <a href="{% if pagename != 'Section_commands' %}{{ pathto('Section_commands') }}{% endif %}#cmd_5">Commands</a>
+      </li>
+{%- endblock %}

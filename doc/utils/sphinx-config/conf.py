@@ -95,9 +95,22 @@ html_theme = 'sphinx_rtd_theme'
 html_theme_options = {
     'collapse_navigation': False,
     'navigation_depth': 3,
+    # the logo stands in for the project name at the top of the sidebar
+    'logo_only': True,
 }
 # what the sidebar shows under the title
 html_context = {'display_version': True}
+
+# The SPARTA logo, as the LAMMPS manual has its own: at the top of the
+# sidebar on every page, small at the right of the breadcrumbs beside a
+# link to the command list (_templates/breadcrumbs.html), and as the
+# favicon.
+html_logo = '_static/sparta-logo.png'
+html_favicon = '_static/sparta.ico'
+templates_path = [os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                               '_templates')]
+html_css_files = ['sparta.css']
+
 html_title = f'SPARTA Documentation ({release})'
 html_short_title = 'SPARTA'
 html_static_path = ['_static']
@@ -147,6 +160,9 @@ latex_elements = {
 \sloppy
 ''',
 }
+# The SPARTA logo on the title page, as the LAMMPS PDF has its own.
+latex_logo = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                          '_static', 'sparta-logo.png')
 # Sphinx repeats the whole toctree as a "domain index" the manual has no use
 # for, and its module index is empty because there are no Python modules.
 latex_domain_indices = False

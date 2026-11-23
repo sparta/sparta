@@ -1,0 +1,11 @@
+/* The SPARTA logo at the top of the sidebar: a round badge, so keep it
+   modest rather than the full sidebar width the theme allows. */
+.wy-side-nav-search .wy-dropdown > a img.logo,
+.wy-side-nav-search > a img.logo {
+  max-width: 140px;
+}
+
+/* The small logo beside the "Commands" link in the breadcrumbs. */
+.sparta-breadcrumbs-logo {
+  vertical-align: text-bottom;
+}

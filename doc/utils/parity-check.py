@@ -162,7 +162,9 @@ EQ_IMG = re.compile(r'<img\b[^>]*?src\s*=\s*"(?:\./)?Eqs/[^"]+"[^>]*>', re.I)
 CHROME = re.compile(
     r'<(nav|header|footer)\b.*?</\1>'
     r'|<div[^>]+role="navigation".*?</div>'
-    r'|<div[^>]+class="[^"]*\b(sphinxsidebar|related|footer|headerlink)\b[^"]*".*?</div>',
+    r'|<div[^>]+class="[^"]*\b(sphinxsidebar|related|footer|headerlink)\b[^"]*".*?</div>'
+    # the version menu at the bottom of the sidebar, which holds one div
+    r'|<div class="rst-versions"[^>]*>.*?</div>\s*</div>',
     re.S | re.I)
 
 # Every txt2html page opens with a navigation line -- command pages carry
