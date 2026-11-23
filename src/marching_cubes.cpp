@@ -1410,11 +1410,12 @@ bool MarchingCubes::test_interior(int s, int icase)
 
 /* ----------------------------------------------------------------------
    modified interior test for cases 4, 6, 7, 10 and 12
-   this function, interior_ambiguity() and interior_ambiguity_verification()
-     are adapted from the modified Marching Cubes 33 code by L. Custodio,
-     T. Etiene, S. Pesco and C. Silva, "Practical considerations on
-     Marching Cubes 33 topological correctness", Computers & Graphics,
-     37, 840-850 (2013), https://github.com/liscustodio/modified_mc33
+   this function, interior_ambiguity(), interior_ambiguity_verification()
+     and interior_test_case13() are adapted from the C-MC33 code by
+     L. Custodio, T. Etiene, S. Pesco and C. Silva, "Practical
+     considerations on Marching Cubes 33 topological correctness",
+     Computers & Graphics, 37, 840-850 (2013),
+     https://github.com/liscustodio/C_MC33
 ------------------------------------------------------------------------- */
 
 bool MarchingCubes::modified_test_interior(int s, int icase)
@@ -1878,7 +1879,10 @@ int MarchingCubes::interior_ambiguity_verification(int edge)
 }
 
 /* ----------------------------------------------------------------------
+   interior test for case 13
    return true if the interior is empty (two faces)
+   adapted from the C-MC33 code by Custodio et al.,
+     see modified_test_interior() above
 ------------------------------------------------------------------------- */
 
 bool MarchingCubes::interior_test_case13()
