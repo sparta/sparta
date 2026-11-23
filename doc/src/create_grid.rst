@@ -6,7 +6,7 @@ create\_grid command
 **Syntax:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    create_grid Nx Ny Nz keyword args ...
 
@@ -37,16 +37,16 @@ create\_grid command
 **Examples:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    create_grid 10 10 10
-   create_grid 10 10 10 block \* \* \*
+   create_grid 10 10 10 block * * *
    create_grid 10 10 10 block 4 2 5
-   create_grid 10 10 10 levels 4 subset 2\*4 \* \* \* 2 2 3
-   create_grid 20 10 1 levels 2 subset 2 10\*15 3\*7 1 2 2 1
+   create_grid 10 10 10 levels 4 subset 2*4 * * * 2 2 3
+   create_grid 20 10 1 levels 2 subset 2 10*15 3*7 1 2 2 1
    create_grid 20 10 1 levels 3 region 2 b2 2 2 1 region 3 b3 2 3 1 inside any
-   create_grid 20 10 1 levels 2 subset 2 10\*15 3\*7 1 2 2 1 region 3 b3 2 3 1
-   create_grid 8 8 10 levels 3 subset 2 5\* \* \* 4 4 4 subset 3 1 2\*3 3\* 2 2 1
+   create_grid 20 10 1 levels 2 subset 2 10*15 3*7 1 2 2 1 region 3 b3 2 3 1
+   create_grid 8 8 10 levels 3 subset 2 5* * * 4 4 4 subset 3 1 2*3 3* 2 2 1
 
 **Description:**
 
@@ -163,8 +163,8 @@ assigned to the processor that owns the level 1 cell.
 
 The settings for every level, from 2 to Nlevels, must be specified
 exactly once via the *Ilevel* argument to either a *subset* or
-*region* keyword.  *Ilevel* can be specfied as a single number or use
-a wildcard asterisk in place of or in conjuction with one or two
+*region* keyword.  *Ilevel* can be specified as a single number or use
+a wildcard asterisk in place of or in conjunction with one or two
 integers to specify multiple levels at the same time.  This takes the
 form “\*” or “\*n” or “n\*” or “m\*n”.  An asterisk with no numeric values
 means all levels from 2 to Nlevels.  A leading asterisk means all
@@ -182,7 +182,7 @@ for level 3 could select any contiguous range of cells from 1 to 4 in
 x, y and 1 to 2 in z.  Each of the Px, Py, Pz arguments can be a
 single number or be specified with a wildcard asterisk, the same as
 described above for *Ilevel*\ , where the bounds of Px (for example) are
-1 to Cx in the preceeding parent level.
+1 to Cx in the preceding parent level.
 
 The Cx, Cy, Cz arguments are the number of new cells (in each
 dimension) to partition each selected parent cell into.  *Cz* must be
@@ -195,9 +195,9 @@ not have been partitioned into level 2 cells.
 For example this command creates a two-level grid:
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
-   create_grid 10 10 10 levels 2 subset 2 \* \* \* 2 2 3
+   create_grid 10 10 10 levels 2 subset 2 * * * 2 2 3
 
 The 1st level is 10x10x10.  Each of the 1000 level 1 cells is further
 partitioned into 2x2x3 cells.  This means the total number of
@@ -206,9 +206,9 @@ resulting grid cells is 1000 \* 12 = 12000.
 This command creates a 3-level grid:
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
-   create_grid 8 8 10 levels 3 subset 2 5\* \* \* 4 4 4 subset 3 1 2\*3 3\* 2 2 1
+   create_grid 8 8 10 levels 3 subset 2 5* * * 4 4 4 subset 3 1 2*3 3* 2 2 1
 
 The first level is 8x8x10.  The second level is 4x4x4 within each
 level 1 cell, but only half or 320 of the 640 level 1 cells are

@@ -6,7 +6,7 @@ read\_grid command
 **Syntax:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    read_grid filename keyword args ...
 
@@ -26,7 +26,7 @@ read\_grid command
 **Examples:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    read_grid data.grid
    read_grid data.grid custom temperature double 0
@@ -34,7 +34,7 @@ read\_grid command
 **Description:**
 
 Read a grid file in text format which lists the grid cell IDs to be
-used to construct a hierarchical grid that overalys the simulation
+used to construct a hierarchical grid that overlays the simulation
 domain defined by the :doc:`create\_box <create_box>` command.  The grid
 can also be defined by the :doc:`create\_grid <create_grid>` command.
 
@@ -90,7 +90,7 @@ For example, for this read\_grid command, 4 custom values should be
 added to the end of each line in the Cells section of the input file:
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    read_grid grid.data custom temperature float 0 custom flags int 3
 

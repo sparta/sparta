@@ -6,7 +6,7 @@ units command
 **Syntax:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    units style
 
@@ -15,7 +15,7 @@ units command
 **Examples:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    units cgs
 
@@ -79,7 +79,7 @@ This command must be used before the simulation box is defined by a
 **Default:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    units si
 

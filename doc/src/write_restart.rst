@@ -6,7 +6,7 @@ write\_restart command
 **Syntax:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    write_restart file keyword value ...
 
@@ -26,11 +26,11 @@ write\_restart command
 **Examples:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    write_restart restart.equil
    write_restart restart.equil.mpiio
-   write_restart flow.%.\* nfile 10
+   write_restart flow.%.* nfile 10
 
 **Description:**
 

@@ -53,7 +53,7 @@ E: Run command before grid ghost cells are defined
 Normally, ghost cells will be defined when the grid is created via the
 create_grid or read_grid commands.  However, if the global gridcut
 cutoff is set to a value >= 0.0, then ghost cells can only be defined
-if the partiioning of cells to processors is clumped, not dispersed.
+if the partitioning of cells to processors is clumped, not dispersed.
 See the fix balance command for an explanation.  Invoking the fix
 balance command with a clumped option will trigger ghost cells to be
 defined.
@@ -81,7 +81,7 @@ Self-explanatory.
 
 E: Too many timesteps
 
-The cummulative timesteps must fit in a SPARTA big integer, as as
+The cumulative timesteps must fit in a SPARTA big integer, as as
 specified by the -DSPARTA_SMALL, -DSPARTA_BIG, or -DSPARTA_BIGBIG
 options in the low-level Makefile used to build SPARTA.  See Section
 2.2 of the manual for details.

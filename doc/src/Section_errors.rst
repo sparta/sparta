@@ -27,7 +27,7 @@ machines or different numbers of processors, this is typically not a
 bug.  On different machines, there can be numerical round-off in the
 computations which causes slight differences in particle trajectories
 or the number of particles, which will lead to numerical divergence of
-the particle trajectores and averaged statistical quantities within a
+the particle trajectories and averaged statistical quantities within a
 few 100s or few 1000s of timesteps.  When running on different numbers
 of processors, random numbers are used in different ways, so two
 simulations can be immediately different.  However, the statistical
@@ -157,7 +157,7 @@ Errors:
 
 *%d read\_surf point pairs are too close*
    A pair of points is very close together, relative to grid size,
-   inidicating the grid is too large, or an ill-formed surface.
+   indicating the grid is too large, or an ill-formed surface.
 
 *%d read\_surf points are not inside simulation box*
    If clipping was not performed, all points in surf file
@@ -165,7 +165,7 @@ Errors:
 
 *%d surface elements not assigned to a collision model*
    All surface elements must be assigned to a surface collision model via
-   the surf\_modify command before a simulation is perforemd.
+   the surf\_modify command before a simulation is performed.
 
 *All universe/uloop variables must have same # of values*
    Self-explanatory.
@@ -261,13 +261,13 @@ Errors:
 
 *Cannot create/grow a vector/array of pointers for %s*
    SPARTA code is making an illegal call to the templated memory
-   allocaters, to create a vector or array of pointers.
+   allocators, to create a vector or array of pointers.
 
 *Cannot create\_box after simulation box is defined*
    A simulation box can only be defined once.
 
 *Cannot open VSS parameter file %s*
-   Self-explantory.
+   Self-explanatory.
 
 *Cannot open dir to search for restart file*
    Using a "\*" in the name of the restart file will open the current
@@ -358,7 +358,7 @@ Errors:
    This needs to be documented if keep this restriction.
 
 *Cannot read\_surf before grid is defined*
-   Self-explantory.
+   Self-explanatory.
 
 *Cannot redefine variable as a different style*
    An equal-style variable can be re-defined but only if it was
@@ -373,7 +373,7 @@ Errors:
    run a 2d simulation.
 
 *Cannot set global surfmax when surfaces already exist*
-   This setting must be made before any surfac elements are
+   This setting must be made before any surface elements are
    read via the read\_surf command.
 
 *Cannot use collide\_modify with no collisions defined*
@@ -471,7 +471,7 @@ Errors:
    that they can be assigned to collision groups.
 
 *Collision mixture does not exist*
-   Self-explantory.
+   Self-explanatory.
 
 *Compute ID for compute reduce does not exist*
    Self-explanatory.
@@ -642,7 +642,7 @@ Errors:
    Self-explanatory.
 
 *Create\_particles global option not yet implemented*
-   Self-explantory.
+   Self-explanatory.
 
 *Create\_particles mixture ID does not exist*
    Self-explanatory.
@@ -952,10 +952,10 @@ Errors:
    An index for the array is out of bounds.
 
 *Fix ave/time compute does not calculate a scalar*
-   Self-explantory.
+   Self-explanatory.
 
 *Fix ave/time compute does not calculate a vector*
-   Self-explantory.
+   Self-explanatory.
 
 *Fix ave/time compute does not calculate an array*
    Self-explanatory.
@@ -1059,7 +1059,7 @@ Errors:
 
 *Inconsistent surface to grid mapping in read\_restart*
    When surface elements were mapped to grid cells after reading a
-   restart file, an inconsitent count of elements in a grid cell was
+   restart file, an inconsistent count of elements in a grid cell was
    found, as compared to the original simulation, which should not
    happen.  Please report the issue to the SPARTA developers.
 
@@ -1101,7 +1101,7 @@ Errors:
    Self-explanatory.
 
 *Invalid attribute in dump modify command*
-   Self-explantory.
+   Self-explanatory.
 
 *Invalid attribute in dump particle command*
    Self-explanatory.
@@ -1190,7 +1190,7 @@ Errors:
    The fix is not recognized.
 
 *Invalid fix ave/time off column*
-   Self-explantory.
+   Self-explanatory.
 
 *Invalid fix style*
    The choice of fix style is unknown.
@@ -1220,7 +1220,7 @@ Errors:
    Syntax of immediate value is incorrect.
 
 *Invalid keyword in compute property/grid command*
-   Self-explantory.
+   Self-explanatory.
 
 *Invalid keyword in stats\_style command*
    One or more specified keywords are not recognized.
@@ -1260,7 +1260,7 @@ Errors:
    Self-explanatory.
 
 *Invalid read\_surf geometry transformation for 2d simulation*
-   Cannot perform a transformation that changes z cooridinates of points
+   Cannot perform a transformation that changes z coordinates of points
    for a 2d simulation.
 
 *Invalid region style*
@@ -1414,7 +1414,7 @@ Errors:
    issue to the SPARTA developers.
 
 *Non digit character between brackets in variable*
-   Self-explantory.
+   Self-explanatory.
 
 *Number of groups in compute boundary mixture has changed*
    This mixture property cannot be changed after this compute command is
@@ -1469,7 +1469,7 @@ Errors:
    the cells owned by this processor.
 
 *Particle %d,%d on proc %d is in split cell  on timestep %ld*
-   This should not happend.  The particle should be in one
+   This should not happen.  The particle should be in one
    of the sub-cells of the split cell.
 
 *Particle %d,%d on proc %d is outside cell  on timestep %ld*
@@ -1581,7 +1581,7 @@ Errors:
    Normally, ghost cells will be defined when the grid is created via the
    create\_grid or read\_grid commands.  However, if the global gridcut
    cutoff is set to a value >= 0.0, then ghost cells can only be defined
-   if the partiioning of cells to processors is clumped, not dispersed.
+   if the partitioning of cells to processors is clumped, not dispersed.
    See the fix balance command for an explanation.  Invoking the fix
    balance command with a clumped option will trigger ghost cells to be
    defined.
@@ -1626,7 +1626,7 @@ Errors:
    issue to the SPARTA developers.
 
 *Small,big integers are not sized correctly*
-   This error occurs whenthe sizes of smallint and bigint as defined in
+   This error occurs when the sizes of smallint and bigint as defined in
    src/spatype.h are not what is expected.  Please report the issue
    to the SPARTA developers.
 
@@ -1787,7 +1787,7 @@ Errors:
    surfs per grid cell.
 
 *Too many timesteps*
-   The cummulative timesteps must fit in a SPARTA big integer, as as
+   The cumulative timesteps must fit in a SPARTA big integer, as as
    specified by the -DSPARTA\_SMALL, -DSPARTA\_BIG, or -DSPARTA\_BIGBIG
    options in the low-level Makefile used to build SPARTA.  See Section
    2.2 of the manual for details.
@@ -1809,7 +1809,7 @@ Errors:
    section.  Something is wrong with the format of the data file.
 
 *Unexpected end of grid file*
-   Self-explantory.
+   Self-explanatory.
 
 *Unexpected end of surf file*
    Self-explanatory.
@@ -1830,7 +1830,7 @@ Errors:
    style.
 
 *VSS parameters do not match current species*
-   Species cannot be added after VSS colision file is read.
+   Species cannot be added after VSS collision file is read.
 
 *Variable ID in variable formula does not exist*
    Self-explanatory.
@@ -1874,7 +1874,7 @@ Errors:
 
 *Variable has circular dependency*
    A circular dependency is when variable "a" in used by variable "b" and
-   variable "b" is also used by varaible "a".  Circular dependencies with
+   variable "b" is also used by variable "a".  Circular dependencies with
    longer chains of dependence are also not allowed.
 
 *Variable name between brackets must be alphanumeric or underscore characters*

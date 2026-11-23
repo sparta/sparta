@@ -6,7 +6,7 @@ restart command
 **Syntax:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    restart 0
    restart N root keyword value ...
@@ -31,11 +31,11 @@ restart command
 **Examples:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    restart 0
    restart 1000 flow.restart
-   restart 1000 restart.\*.equil
+   restart 1000 restart.*.equil
    restart 10000 flow.%.1 flow.%.2 nfile 10
    restart v_mystep flow.restart
 
@@ -52,7 +52,7 @@ between the 2 names as it writes successive restart files.
 Note that you can specify the restart command twice, once with a
 single filename and once with two filenames.  This would allow you,
 for example, to write out archival restart files every 100000 steps
-using a single filenname, and more frequent temporary restart files
+using a single filename, and more frequent temporary restart files
 every 1000 steps, using two filenames.  Using restart 0 will turn off
 both modes of output.
 
@@ -87,7 +87,7 @@ timestep of a run unless it is a multiple of N.  A restart file is
 written on the last timestep of a minimization if N > 0 and the
 minimization converges.
 
-Instead of a numeric value, N can be specifed as an :doc:`equal-style variable <variable>`, which should be specified as v\_name, where
+Instead of a numeric value, N can be specified as an :doc:`equal-style variable <variable>`, which should be specified as v\_name, where
 name is the variable name.  In this case, the variable is evaluated at
 the beginning of a run to determine the next timestep at which a
 restart file will be written out.  On that timestep, the variable will
@@ -102,7 +102,7 @@ every step from 1100 to 1200, and could be useful for debugging
 a simulation where something goes wrong at step 1163:
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    variable	s equal stride(1100,1200,1)
    restart		v_s tmp.restart
@@ -154,7 +154,7 @@ next 3 processors and write it to a restart file.
 **Default:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    restart 0
 

@@ -145,7 +145,7 @@ Self-explanatory.
 
 E: Invalid read_surf geometry transformation for 2d simulation
 
-Cannot perform a transformation that changes z cooridinates of points
+Cannot perform a transformation that changes z coordinates of points
 for a 2d simulation.
 
 E: Unexpected end of data file
@@ -274,6 +274,6 @@ executable can be found and run.
 E: %d read_surf point pairs are too close
 
 A pair of points is very close together, relative to grid size,
-inidicating the grid is too large, or an ill-formed surface.
+indicating the grid is too large, or an ill-formed surface.
 
 */

@@ -9,7 +9,7 @@ fix move/surf/kk command
 **Syntax:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    fix ID move/surf groupID Nevery Nlarge args ...
 
@@ -23,7 +23,7 @@ fix move/surf/kk command
 **Examples:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    fix 1 move/surf all 100 1000 trans 1 0 0
    fix 1 move/surf partial 100 10000 rotate 360 0 0 1 5 5 0 connect yes
@@ -32,7 +32,7 @@ fix move/surf/kk command
 **Description:**
 
 This command performs on-the-fly movement of all the surface elements
-in the specfied group via one of several styles.  See the :doc:`group surf <group>` command for info on how surface elements can be
+in the specified group via one of several styles.  See the :doc:`group surf <group>` command for info on how surface elements can be
 assigned to surface groups.  Surface element moves can also be
 performed before or between simulations by using the
 :doc:`move\_surf <move_surf>` command.
@@ -93,8 +93,7 @@ These accelerated styles are part of the KOKKOS package. They are only
 enabled if SPARTA was built with that package.  See the `Making SPARTA <Section_start.html#start_3>`_ section for more info.
 
 You can specify the accelerated styles explicitly in your input script
-by including their suffix, or you can use the `-suffix command-line switch <Section_start.html#start_7>`_ when you invoke SPARTA, or you can
-use the :doc:`suffix <suffix>` command in your input script.
+by including their suffix, or you can use the `-suffix command-line switch <Section_start.html#start_7>`_ when you invoke SPARTA.
 
 See the :doc:`Accelerating SPARTA <Section_accelerate>` section of the
 manual for more instructions on how to use the accelerated styles

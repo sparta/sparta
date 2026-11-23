@@ -6,7 +6,7 @@ compute gas/collision/tally command
 **Syntax:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    compute ID gas/collision/tally group-ID mix-ID value1 value2 ...
 
@@ -32,7 +32,7 @@ compute gas/collision/tally command
 **Examples:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    compute 1 gas/collision/tally all all id id/cell time xc yc zc
 
@@ -40,9 +40,9 @@ This command will dump the tallies in the previous command to a dump
 file every 10 steps:
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
-   dump 1 tally all 10 tmp.tally c_1[\*]
+   dump 1 tally all 10 tmp.tally c_1[*]
 
 **Description:**
 
@@ -120,8 +120,7 @@ These accelerated styles are part of the KOKKOS package. They are only
 enabled if SPARTA was built with that package.  See the `Making SPARTA <Section_start.html#start_3>`_ section for more info.
 
 You can specify the accelerated styles explicitly in your input script
-by including their suffix, or you can use the `-suffix command-line switch <Section_start.html#start_7>`_ when you invoke SPARTA, or you can
-use the :doc:`suffix <suffix>` command in your input script.
+by including their suffix, or you can use the `-suffix command-line switch <Section_start.html#start_7>`_ when you invoke SPARTA.
 
 See the :doc:`Accelerating SPARTA <Section_accelerate>` section of the
 manual for more instructions on how to use the accelerated styles

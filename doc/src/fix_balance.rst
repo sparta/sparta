@@ -9,14 +9,14 @@ fix balance/kk command
 **Syntax:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    fix ID balance Nfreq thresh bstyle args
 
 * ID is documented in :doc:`fix <fix>` command
 * balance = style name of this fix command
 * Nfreq = perform dynamic load balancing every this many steps
-* thresh = rebalance if imbalance factor is above this threshhold
+* thresh = rebalance if imbalance factor is above this threshold
 * bstyle = *random* or *proc* or *rcb*
   
   .. parsed-literal::
@@ -40,7 +40,7 @@ fix balance/kk command
 **Examples:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    fix 1 balance 1000 1.1 rcb cell
    fix 2 balance 10000 1.0 random
@@ -115,7 +115,7 @@ around the collection of processors if necessary.  In this case every
 processor will typically not be assigned exactly the same number of
 grid cells.
 
-The *rcb* keyword uses a recurvise coordinate bisectioning (RCB)
+The *rcb* keyword uses a recursive coordinate bisectioning (RCB)
 algorithm to assign spatially-compact clumps of grid cells to
 processors.  Each grid cell has a "weight" in this algorithm so that
 each processor is assigned an equal total weight of grid cells, as
@@ -142,7 +142,7 @@ enough to give reliable timings. The timers used for balancing tally
 time from the move, sort, collide, and modify portions of each timestep.
 
 IMPORTANT NOTE: The :doc:`adapt\_grid <adapt_grid>` command zeros out
-timing data, so the weight *time* option is not available immediatly
+timing data, so the weight *time* option is not available immediately
 after this command.
 
 IMPORTANT NOTE: The coarsening option in :doc:`fix\_adapt <fix_adapt>` may
@@ -199,12 +199,12 @@ No information about this fix is written to :doc:`binary restart files <restart>
 This fix computes a global scalar which is the imbalance factor after
 the most recent rebalance.  It also computes a global vector of length
 3 with additional information about the most recent rebalancing and
-the cummulative count of rebalancings.  The 3 values in the vector are
+the cumulative count of rebalancings.  The 3 values in the vector are
 as follows:
 
 * 1 = max particle count on any processor after last rebalance
 * 2 = imbalance factor before the last rebalance was performed
-* 3 = cummulative count of rebalances since the fix was specified
+* 3 = cumulative count of rebalances since the fix was specified
 
 As explained above, the imbalance factor is the ratio of the maximum
 number of particles on any processor to the average number of
@@ -228,8 +228,7 @@ These accelerated styles are part of the KOKKOS package. They are only
 enabled if SPARTA was built with that package.  See the `Making SPARTA <Section_start.html#start_3>`_ section for more info.
 
 You can specify the accelerated styles explicitly in your input script
-by including their suffix, or you can use the `-suffix command-line switch <Section_start.html#start_7>`_ when you invoke SPARTA, or you can
-use the :doc:`suffix <suffix>` command in your input script.
+by including their suffix, or you can use the `-suffix command-line switch <Section_start.html#start_7>`_ when you invoke SPARTA.
 
 See the :doc:`Accelerating SPARTA <Section_accelerate>` section of the
 manual for more instructions on how to use the accelerated styles

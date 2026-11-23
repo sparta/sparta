@@ -6,7 +6,7 @@ species\_modify command
 **Syntax:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    species_modify ID property value ...
 
@@ -29,7 +29,7 @@ species\_modify command
 **Examples:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    species_modify Fe mu 2.0 Cr mu 3.0
 

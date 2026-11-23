@@ -6,7 +6,7 @@ stats\_modify command
 **Syntax:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    stats_modify keyword value ...
 
@@ -89,7 +89,7 @@ For example, the following commands will output statistical info at
 timesteps 0,10,20,30,100,200,300,1000,2000,etc:
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    variable	s equal logfreq(10,3,10)
    stats_modify	1 every v_s

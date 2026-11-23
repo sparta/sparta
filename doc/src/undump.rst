@@ -6,7 +6,7 @@ undump command
 **Syntax:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    undump dump-ID
 
@@ -15,7 +15,7 @@ undump command
 **Examples:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    undump mine
    undump 2

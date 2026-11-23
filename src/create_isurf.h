@@ -181,7 +181,7 @@ Self-explanatory.
 E: %d surface elements not assigned to a collision model
 
 All surface elements must be assigned to a surface collision model via
-the surf_modify command before a simulation is perforemd.
+the surf_modify command before a simulation is performed.
 
 E: Reuse of surf_collide ID
 

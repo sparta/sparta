@@ -9,7 +9,7 @@ compute fft/grid/kk command
 **Syntax:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    compute ID fft/grid value1 value2 ... keyword args ...
 
@@ -44,7 +44,7 @@ compute fft/grid/kk command
 **Examples:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    compute 1 fft/grid c_1
 
@@ -52,7 +52,7 @@ These commands will dump FFTs of instantaneous and time-averaged
 velocity components in each grid cell to a dump file every 1000 steps:
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    compute 1 grid all u v w
    fix 1 ave/grid 10 100 1000 c_1
@@ -79,7 +79,7 @@ different ways.  The values for a single timestep can be output by the
 timesteps can be averaged by the :doc:`fix ave/grid <fix_ave_grid>`
 command.
 
-A forward FFT is perfomed on each input value independently.
+A forward FFT is performed on each input value independently.
 
 Each listed input can be the result of a :doc:`compute <compute>` or
 :doc:`fix <fix>` or the evaluation of a :doc:`variable <variable>`, all of
@@ -146,7 +146,7 @@ Ky\^2) for 2d models.  For all keywords, the Kx,Ky,Kz represent
 distance from the origin in a periodic sense.  Thus for a grid that is
 NxMxP, the Kx values associated with the x-dimension and used in those
 formulas are not Kx = 0,1,2 ... N-2,N-1.  Rather they are Kx = 0,1,2,
-... N/2-1, N/2, N/2-1, ... 2,1.  Similary for Ky in the y-dimension
+... N/2-1, N/2, N/2-1, ... 2,1.  Similarly for Ky in the y-dimension
 with a max index of M/2, and Kz in the z-dimension with a max index of
 P/2.
 
@@ -156,7 +156,7 @@ P/2.
 
 **Output info:**
 
-The number of per-grid values ouptut by this compute depends on the
+The number of per-grid values output by this compute depends on the
 optional keyword settings.  The number of FFTs is equal to the number
 of specified input values.
 
@@ -213,8 +213,7 @@ These accelerated styles are part of the KOKKOS package. They are only
 enabled if SPARTA was built with that package.  See the `Making SPARTA <Section_start.html#start_3>`_ section for more info.
 
 You can specify the accelerated styles explicitly in your input script
-by including their suffix, or you can use the `-suffix command-line switch <Section_start.html#start_7>`_ when you invoke SPARTA, or you can
-use the :doc:`suffix <suffix>` command in your input script.
+by including their suffix, or you can use the `-suffix command-line switch <Section_start.html#start_7>`_ when you invoke SPARTA.
 
 See the :doc:`Accelerating SPARTA <Section_accelerate>` section of the
 manual for more instructions on how to use the accelerated styles

@@ -1,65 +1,25 @@
 .. index:: suffix
 
-suffix command
-==============
+.. _suffix-command:
 
-**Syntax:**
+suffix
+======
 
+SPARTA has no "suffix" input-script command.  Earlier versions of this
+manual documented one, but SPARTA never accepted it: a "suffix" line in
+an input script stops with an "Unknown command" error.
 
-.. parsed-literal::
+To use the accelerated variants of styles, such as those of the KOKKOS
+package, do one of these:
 
-   suffix style args
+* Launch SPARTA with the "-suffix" (or "-sf") `command-line switch <Section_start.html#start_7>`_, e.g. "-sf kk".  The suffix is then
+  appended to every style that has a variant, without editing the input
+  script.
+* Name the variant explicitly in your input script, e.g.
 
-* style = *off* or *on* or *kk*
+.. code-block:: SPARTA
 
-**Examples:**
+   collide vss/kk air ar.vss
 
-
-.. parsed-literal::
-
-   suffix off
-   suffix on
-   suffix kk
-
-**Description:**
-
-This command allows you to use variants of various styles if they
-exist.  In that respect it operates the same as the `-suffix command-line switch <Section_start.html#start_7>`_.  It also has options
-to turn off or back on any suffix setting made via the command line.
-
-The specified style *kk* refers to the optional KOKKOS package that
-SPARTA can be built with, as described in `this section of the manual <Section_start.html#start_3>`_. The KOKKOS package is a collection
-of styles optimized to run using the Kokkos library on various kinds
-of hardware, including GPUs via CUDA and many-core chips via OpenMP
-multi-threading.
-
-As an example, the KOKKOS package provides a :doc:`compute\_style temp <compute_temp>` variant, with style name temp/kk. A variant
-style can be specified explicitly in your input script, e.g. compute
-temp/kk. If the suffix command is used with the appropriate style, you
-do not need to modify your input script.  The specified suffix (kk) is
-automatically appended whenever your input script command creates a
-new :doc:`fix <fix>`, :doc:`compute <compute>`, etc.  If the variant
-version does not exist, the standard version is created.
-
-If the specified style is *off*\ , then any previously specified suffix
-is temporarily disabled, whether it was specified by a command-line
-switch or a previous suffix command.  If the specified style is *on*\ ,
-a disabled suffix is turned back on.  The use of these 2 commands lets
-your input script use a standard SPARTA style (i.e. a non-accelerated
-variant), which can be useful for testing or benchmarking purposes.
-Of course this is also possible by not using any suffix commands, and
-explicitly appending or not appending the suffix to the relevant
-commands in your input script.
-
-**Restrictions:** none
-
-**Related commands:**
-
-`Command-line switch -suffix <Section_start.html#start_7>`_
-
-**Default:** none
-
-
-.. _sws: https://sparta.github.io
-.. _sd: Manual.html
-.. _sc: Section_commands.html
+See the :doc:`Accelerating SPARTA <Section_accelerate>` section of the
+manual for more about the KOKKOS package.

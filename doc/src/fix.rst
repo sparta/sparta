@@ -6,7 +6,7 @@ fix command
 **Syntax:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    fix ID style args
 
@@ -17,7 +17,7 @@ fix command
 **Examples:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    fix 1 grid/check 100 warn
    fix 1 ave/time all 100 5 1000 c_myTemp c_thermo_temp file temp.profile
@@ -113,7 +113,7 @@ per-grid quantity is one or more values per grid cell.  A per-surf
 quantity is one or more values per surface element.
 
 Global, per-particle, per-grid, and per-surf quantities each come in
-two forms: a single scalar value or a vector of values.  Additionaly,
+two forms: a single scalar value or a vector of values.  Additionally,
 global quantities can also be a 2d array of values.  The doc page for
 each fix describes the style and kind of values it produces, e.g. a
 per-particle vector.  Some fixes can produce more than one form of a

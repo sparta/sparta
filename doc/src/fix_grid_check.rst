@@ -9,7 +9,7 @@ fix grid/check/kk command
 **Syntax:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    fix ID grid/check N outflag keyword arg ...
 
@@ -29,7 +29,7 @@ fix grid/check/kk command
 **Examples:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    fix 1 grid/check 100 error
 
@@ -71,7 +71,7 @@ No information about this fix is written to :doc:`binary restart files <restart>
 
 This fix computes a global scalar which can be accessed by various
 output commands.  The scalar is the count of how many particles were
-not in the correct grid cell.  The count is cummulative over all the
+not in the correct grid cell.  The count is cumulative over all the
 timesteps the check was performed since the start of the run.  It is
 initialized to zero each time a run is performed.
 
@@ -91,8 +91,7 @@ These accelerated styles are part of the KOKKOS package. They are only
 enabled if SPARTA was built with that package.  See the `Making SPARTA <Section_start.html#start_3>`_ section for more info.
 
 You can specify the accelerated styles explicitly in your input script
-by including their suffix, or you can use the `-suffix command-line switch <Section_start.html#start_7>`_ when you invoke SPARTA, or you can
-use the :doc:`suffix <suffix>` command in your input script.
+by including their suffix, or you can use the `-suffix command-line switch <Section_start.html#start_7>`_ when you invoke SPARTA.
 
 See the :doc:`Accelerating SPARTA <Section_accelerate>` section of the
 manual for more instructions on how to use the accelerated styles

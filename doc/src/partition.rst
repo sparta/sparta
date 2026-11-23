@@ -6,7 +6,7 @@ partition command
 **Syntax:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    partition style N command ...
 
@@ -17,12 +17,12 @@ partition command
 **Examples:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    partition yes 1 processors 4 10 6
    partition no 5 print "Active partition"
-   partition yes \*5 fix all nve
-   partition yes 6\* fix all nvt temp 1.0 1.0 0.1
+   partition yes *5 fix all nve
+   partition yes 6* fix all nvt temp 1.0 1.0 0.1
 
 **Description:**
 
@@ -40,7 +40,7 @@ such a variable is used in a :doc:`jump <jump>` command.
 
 The "partition" command is another mechanism for having an input
 script operate differently on different partitions.  It is basically a
-prefix on any SPARTA command.  The commmand will only be invoked on
+prefix on any SPARTA command.  The command will only be invoked on
 the partition(s) specified by the *style* and *N* arguments.
 
 If the *style* is *yes*\ , the command will be invoked on any partition

@@ -6,7 +6,7 @@ surf\_modify command
 **Syntax:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    surf_modify group-ID keyword args ...
 
@@ -26,7 +26,7 @@ surf\_modify command
 **Examples:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    surf_modify sphere collide 1
    surf_modify all collide sphere react sphere
@@ -66,7 +66,7 @@ to a particular surface element.
 **Restrictions:**
 
 All surface elements must be assigned to a surface collision model via
-the *collide* keyword before a simlulation can be performed.  Using a
+the *collide* keyword before a simulation can be performed.  Using a
 surface reaction model is optional.
 
 This command cannot be used before surfaces exist.

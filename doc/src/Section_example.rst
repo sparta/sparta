@@ -31,7 +31,7 @@ Here is how you might run and visualize one of the sample problems:
    cp ../../src/spa_g++ .           # copy SPARTA executable to this dir
    spa_g++ < in.free                # run the problem
 
-Running the simulation produces the file log.sparta and optionall
+Running the simulation produces the file log.sparta and optionally
 image.\*.jpg.  If you have the freely available ImageMagick toolkit on
 your machine, you can run its "convert" command to create an animated
 GIF, and visualize it from the FireFox browser as follows:

@@ -6,7 +6,7 @@ write\_grid command
 **Syntax:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    write_grid filename keyword arg ...
 
@@ -24,7 +24,7 @@ write\_grid command
 **Examples:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    write_grid data.grid
    write_grid data.grid custom flags

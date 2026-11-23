@@ -6,7 +6,7 @@ variable command
 **Syntax:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    variable name style args ...
 
@@ -69,14 +69,14 @@ variable command
 **Examples:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    variable x index run1 run2 run3 run4 run5 run6 run7 run8
    variable LoopVar loop $n
    variable beta equal vol/ngrid
    variable beta equal "vol / ngrid"
    variable b equal c_myTemp
-   variable b particle x\*y/vol
+   variable b particle x*y/vol
    variable foo string myfile
    variable myPy python increase
    variable foo internal 3.5
@@ -137,7 +137,7 @@ as needed, e.g. at different timesteps during a :doc:`run <run>`.  In
 this context, variables of style *internal* or *python* can be used in
 place of an equal-style variable, with the following two caveats.
 
-First, internal-style variables of reuqire their values be set by code
+First, internal-style variables of require their values be set by code
 elsewhere in SPARTA.  When a SPARTA input script or command evaluates
 an internal-style variable, it must have a current value set
 (internally) via that mechanism.  Second, python-style variables can
@@ -198,7 +198,7 @@ when breaking out of a loop via the :doc:`if <if>` and :doc:`jump <jump>`
 commands before the variable would become exhausted.  For example,
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    label	    loop
    variable    a loop 5
@@ -334,7 +334,7 @@ which returns a value to this variable as defined by its *return*
 keyword.  For example these two commands would be self-consistent:
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    variable foo python myMultiply
    python myMultiply return v_foo format f file funcs.py
@@ -380,7 +380,7 @@ is evaluated.
 For *particle* style variables the formula computes one quantity for
 each particle whenever it is evaluated.  For *grid* style variables
 the formula computes one quantity for each grid cell whenever it is
-evaluated.  A *grid* style variable computes quantites for all flavors
+evaluated.  A *grid* style variable computes quantities for all flavors
 of child grid cells in the simulation, which includes unsplit, cut,
 split, and sub cells.  See `Section 6.8 <Section_howto.html#howto_8>`_ of
 the manual gives details of how SPARTA defines child, unsplit, split,
@@ -409,9 +409,9 @@ various ways to build up formulas of arbitrary complexity.  For
 example, this is a valid (though strange) variable formula:
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
-   variable x equal "np + c_MyTemp / vol\^(1/3)"
+   variable x equal "np + c_MyTemp / vol^(1/3)"
 
 Specifically, a formula can contain numbers, stats keywords, math
 operators, math functions, Python function wrappers, particle vectors,
@@ -524,7 +524,7 @@ if its argument is 0.0, else it returns 0.0.
 
 These relational and logical operators can be used as a masking or
 selection operation in a formula.  For example, the number of
-particles whose properties satifsy one or more criteria could be
+particles whose properties satisfy one or more criteria could be
 calculated by taking the returned per-particle vector of ones and
 zeroes and passing it to the :doc:`compute reduce <compute_reduce>`
 command.
@@ -571,7 +571,7 @@ Floor() if the largest integer not greater than its argument.  Round()
 is the nearest integer to its argument.
 
 The ramp(x,y) function uses the current timestep to generate a value
-linearly intepolated between the specified x,y values over the course
+linearly interpolated between the specified x,y values over the course
 of a run, according to this formula:
 
 
@@ -617,7 +617,7 @@ output timesteps:
 The stride(x,y,z) function uses the current timestep to generate a new
 timestep.  X,y >= 0 and z > 0 and x <= y are required.  The generated
 timesteps increase in increments of z, from x to y, I.e. it generates
-the sequece x,x+z,x+2z,...,y.  If y-x is not a multiple of z, then
+the sequence x,x+z,x+2z,...,y.  If y-x is not a multiple of z, then
 similar to the way a for loop operates, the last value will be one
 that does not exceed y.  For any current timestep, the next timestep
 in the sequence is returned.  Thus if stagger(1000,2000,100) is used
@@ -688,7 +688,7 @@ used, when N is an integer, to specify which column of the global
 array is being referenced.
 
 These functions operate on the global vector of inputs and reduce it
-to a single scalar value.  This is analagous to the operation of the
+to a single scalar value.  This is analogous to the operation of the
 :doc:`compute reduce <compute_reduce>` command, which invokes the same
 functions on per-particle or per-grid vectors.
 
@@ -699,7 +699,7 @@ divides the result by the length of the vector.
 
 The trap() function is the same as sum() except the first and last
 elements are multiplied by a weighting factor of 1/2 when performing
-the sum.  This effectively implements an integratiion via the
+the sum.  This effectively implements an integration via the
 trapezoidal rule on the global vector of data.  I.e. consider a set of
 points, equally spaced by 1 in their x coordinate: (1,V1), (2,V2),
 ..., (N,VN), where the Vi are the values in the global vector of
@@ -741,11 +741,11 @@ the grid cell index for each particle.
 An example of its usage is as follows:
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
-   variable     csq particle "vx\*vx + vy\*vy + vz\*vz"
+   variable     csq particle "vx*vx + vy*vy + vz*vz"
    compute      therm thermal/grid all all temp press
-   variable     csq_norm particle v_csq/grid2part(c_therm\ 1\ )
+   variable     csq_norm particle v_csq/grid2part(c_therm[1])
 
 The per-particle variable csq\_norm will calculate the kinetic energy
 for each particle, normalized by the thermal temperature of the full
@@ -784,10 +784,10 @@ grid for the wrong size; the mismatch then surfaces much later as a
 example, this computes a processor grid from the rank count itself:
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    variable nprocs equal extract_setting(world_size)
-   variable px equal 2\^floor(log(v_nprocs)/log(2)/3)
+   variable px equal 2^floor(log(v_nprocs)/log(2)/3)
 
 Two cautions.  A setting is read locally on each rank rather than
 through a collective, so nothing is added to the collective path and
@@ -905,7 +905,7 @@ is the mass for the particle's species, "q" is the particle's charge,
 The meaning of the other particle vectors should be self-explanatory.
 
 Particle vectors can only be used in *particle* style variables, not
-in *equal* or *grid* or *surf* style varaibles.
+in *equal* or *grid* or *surf* style variables.
 
 
 ----------
@@ -921,7 +921,7 @@ corner will be used when evaluating the variable.
 The meaning of the other grid vectors should be self-explanatory.
 
 Grid vectors can only be used in *grid* style variables, not in
-*equal* or *particle* or *surf* style varaibles.
+*equal* or *particle* or *surf* style variables.
 
 
 ----------
@@ -1085,7 +1085,7 @@ command.  The ID in the reference should be replaced by the ID of a
 surface collision or surface reaction model defined elsewhere in the
 input script.  As discussed in the doc pages for the
 :doc:`surf\_collide <surf_collide>` and :doc:`surf\_react <surf_react>`
-commands, these commmands produce global vectors, the elements of
+commands, these commands produce global vectors, the elements of
 which can be accessed by equal-style, particle-style, grid-style, or
 surf-style variables, e.g.
 
@@ -1162,7 +1162,7 @@ As an example, suppose you use this command in your input script to
 define the variable "n" as
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    variable n equal np
 
@@ -1177,7 +1177,7 @@ If you want to store the initial particle count of the system, it
 can be done in this manner:
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    variable n equal np
    variable n0 equal $n
@@ -1187,7 +1187,7 @@ initial count) and assign that value to the variable "n0".  Thus the
 command
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    stats_style custom step v_n v_n0
 
@@ -1195,10 +1195,10 @@ would print out both the current and initial particle count
 periodically during the run.
 
 Also note that it is a mistake to enclose a variable formula in quotes
-if it contains variables preceeded by $ signs.  For example,
+if it contains variables preceded by $ signs.  For example,
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    variable nratio equal "${nfinal}/${n0}"
 

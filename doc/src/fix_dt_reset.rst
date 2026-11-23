@@ -6,7 +6,7 @@ fix dt/reset command
 **Syntax:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    fix ID dt/reset Nfreq step weight resetflag
 
@@ -21,10 +21,10 @@ fix dt/reset command
 **Examples:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    compute 1 grid all mymixture nrho temp usq vsq wsq
-   fix 1 ave/grid all 10 50 500 c_1[\*]
+   fix 1 ave/grid all 10 50 500 c_1[*]
    compute mct lambda/grid f_1[1] f_1[2] tau
    compute tstep dt/grid all 0.25 0.1 c_mct f_1[2] f_1[3] f_1[4] f_1[5]
 
@@ -70,7 +70,7 @@ details of how SPARTA defines child, unsplit, split, and sub cells.
 From the per-cell timesteps, 3 values are extracted by this fix.  They
 are the minimum positive timestep (DTmin) for all cells, the maximum positive timestep
 (DTmax) for all cells, and the average positive timestep (DTave) over all
-cells.  Cells with a timestep value of zero are not included in the mininum,
+cells.  Cells with a timestep value of zero are not included in the minimum,
 maximum, and average timestep calculations.
 
 A new global timestep is than calculated by this formula, using
@@ -120,8 +120,7 @@ These accelerated styles are part of the KOKKOS package. They are only
 enabled if SPARTA was built with that package.  See the `Making SPARTA <Section_start.html#start_3>`_ section for more info.
 
 You can specify the accelerated styles explicitly in your input script
-by including their suffix, or you can use the `-suffix command-line switch <Section_start.html#start_7>`_ when you invoke SPARTA, or you can
-use the :doc:`suffix <suffix>` command in your input script.
+by including their suffix, or you can use the `-suffix command-line switch <Section_start.html#start_7>`_ when you invoke SPARTA.
 
 See the :doc:`Accelerating SPARTA <Section_accelerate>` section of the
 manual for more instructions on how to use the accelerated styles

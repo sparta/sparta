@@ -9,7 +9,7 @@ compute lambda/grid/kk command
 **Syntax:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    compute ID lambda/grid nrho temp value1 value2 ...
 
@@ -34,29 +34,29 @@ compute lambda/grid/kk command
 **Examples:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
-   compute 1 lambda/grid c_GR[\*] NULL lambda tau
-   compute 1 lambda/grid f_ave[\*] f_ave[3] lambda knall
+   compute 1 lambda/grid c_GR[*] NULL lambda tau
+   compute 1 lambda/grid f_ave[*] f_ave[3] lambda knall
 
 These commands will dump time averages for the mean free path and mean
 collision time for each grid cell to a dump file every 1000 steps:
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    compute 1 grid all species nrho
    compute 2 grid all all temp
-   fix 1 ave/grid all 10 100 1000 c_1[\*]
+   fix 1 ave/grid all 10 100 1000 c_1[*]
    fix 2 ave/grid all 10 100 1000 c_2
-   compute 3 lambda/grid f_1[\*] f_2 lambda tau
-   dump 1 grid all 1000 tmp.grid id c_3[\*]
+   compute 3 lambda/grid f_1[*] f_2 lambda tau
+   dump 1 grid all 1000 tmp.grid id c_3[*]
 
 **Description:**
 
 This command calculates properties related to the gas collision mean
 free path for each grid cell based on the number density *nrho* and
-thermal tempearture *temp* of particles in the cell.
+thermal temperature *temp* of particles in the cell.
 
 If the *lambda* value is specified, the mean free path (MFP) of
 particles between collisions will be computed. If the *tau* value is
@@ -154,7 +154,7 @@ Note that because the MFP and MFT formulas require a number density
 nrho for all species in the system, you should use a :doc:`compute grid <compute_grid>` command like this:
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    compute 1 grid all species nrho
 
@@ -171,13 +171,13 @@ For systems with a zero of small streaming velocity, this can be
 calculated using a command like this:
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    compute 2 grid all all temp
 
 which uses the velocity of each particle to calculate a temperature.
 
-For systems with a streaming flow, an appropriate therml temperature
+For systems with a streaming flow, an appropriate thermal temperature
 can be calculated by the :doc:`compute thermal/grid <compute_thermal_grid>` thermal/grid command.  Its doc
 page explain that the the center-of-mass velocity for the particles in
 each grid cell is subtracted from each particle's individual velocity
@@ -186,7 +186,7 @@ calculated.  The corresponding command to use with this compute would
 be:
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    compute 2 thermal/grid all all temp
 
@@ -251,8 +251,7 @@ These accelerated styles are part of the KOKKOS package. They are only
 enabled if SPARTA was built with that package.  See the `Making SPARTA <Section_start.html#start_3>`_ section for more info.
 
 You can specify the accelerated styles explicitly in your input script
-by including their suffix, or you can use the `-suffix command-line switch <Section_start.html#start_7>`_ when you invoke SPARTA, or you can
-use the :doc:`suffix <suffix>` command in your input script.
+by including their suffix, or you can use the `-suffix command-line switch <Section_start.html#start_7>`_ when you invoke SPARTA.
 
 See the :doc:`Accelerating SPARTA <Section_accelerate>` section of the
 manual for more instructions on how to use the accelerated styles

@@ -9,7 +9,7 @@ compute isurf/grid/kk command
 **Syntax:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    compute ID isurf/grid group-ID mix-ID value1 value2 ...
 
@@ -39,7 +39,7 @@ compute isurf/grid/kk command
 **Examples:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    compute 1 isurf/grid all all n press eng
    compute mine isurf/grid sphere species press shx shy shz
@@ -48,21 +48,21 @@ These commands will dump time averages for each species and each
 grid cell to a dump file every 1000 steps:
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    compute 1 isurfgrid all species n press shx shy shz
-   fix 1 ave/grid all 10 100 1000 c_1[\*]
-   dump 1 grid all 1000 tmp.grid id f_1[\*]
+   fix 1 ave/grid all 10 100 1000 c_1[*]
+   dump 1 grid all 1000 tmp.grid id f_1[*]
 
 These commands will time-average the force surface elements in each
 grid cell, then sum them across grid cells to compute drag (fx) and
 lift (fy) on the set of implicit surfs:
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    compute 1 isurf/grid all all fx fy
-   fix 1 ave/grid all 10 100 1000 c_1[\*]
+   fix 1 ave/grid all 10 100 1000 c_1[*]
    compute 2 reduce sum f_1[1] f_1[2]
    stats 1000
    stats_style step cpu np c_2[1] c_2[2]
@@ -91,7 +91,7 @@ Note that when a particle collides with a surface element, it can
 bounce off (possibly as a different species), be captured by the
 surface (vanish), or a 2nd particle can also be emitted.  The formulas
 below account for all the possible outcomes.  For example, the kinetic
-energy flux *ke* onto a suface element for a single collision includes
+energy flux *ke* onto a surface element for a single collision includes
 a positive contribution from the incoming particle and negative
 contributions from 0, 1, or 2 outgoing particles.  The exception is
 the *n* and *nwt* values which simply tally counts of particles
@@ -177,8 +177,7 @@ These accelerated styles are part of the KOKKOS package. They are only
 enabled if SPARTA was built with that package.  See the `Making SPARTA <Section_start.html#start_3>`_ section for more info.
 
 You can specify the accelerated styles explicitly in your input script
-by including their suffix, or you can use the `-suffix command-line switch <Section_start.html#start_7>`_ when you invoke SPARTA, or you can
-use the :doc:`suffix <suffix>` command in your input script.
+by including their suffix, or you can use the `-suffix command-line switch <Section_start.html#start_7>`_ when you invoke SPARTA.
 
 See the :doc:`Accelerating SPARTA <Section_accelerate>` section of the
 manual for more instructions on how to use the accelerated styles

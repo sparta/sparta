@@ -9,7 +9,7 @@ compute reduce/kk command
 **Syntax:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    compute ID reduce mode input1 input2 ... keyword args ...
 
@@ -51,9 +51,9 @@ compute reduce/kk command
 **Examples:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
-   compute 1 reduce sum c_grid[\*]
+   compute 1 reduce sum c_grid[*]
    compute 2 reduce min f_ave v_myKE subset trace_species
    compute 3 reduce max c_mine[1] c_mine[2] c_temp replace 1 3 replace 2 3
 
@@ -61,7 +61,7 @@ These commands will include the average grid cell temperature, across
 all grid cells, in the stats output:
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    compute 1 temp
    compute	2 grid all all temp
@@ -93,8 +93,8 @@ or *max* operations find the minimum or maximum value across all
 vector values.  The *ave* operation adds the vector values into a
 global total, then divides by the number of values in the vector.  The
 *sumsq* operation sums the square of the values in the vector into a
-global total.  The *avesq* oepration does the same as *sumsq*\ , then
-divdes the sum of squares by the number of values.  These two
+global total.  The *avesq* operation does the same as *sumsq*\ , then
+divides the sum of squares by the number of values.  These two
 operations can be useful for calculating the variance of some
 quantity, e.g. variance = sumsq - ave\^2.
 
@@ -135,10 +135,10 @@ equivalent, since the :doc:`compute grid <compute_grid>` command creates
 a per-grid array with 3 columns:
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    compute myGrid grid all all u v w
-   compute 2 all reduce min c_myGrid[\*]
+   compute 2 all reduce min c_myGrid[*]
    compute 2 all reduce min c_myGrid[1] c_myGrid[2] c_myGrid[3]
 
 
@@ -197,7 +197,7 @@ attributes.
 If no bracketed integer is appended, the custom attribute must be a
 per-particle, per-grid, or per-surf vector (single value).  If a
 bracketed integer is appended, the custom attribute must be a
-per-particle, per-grid, or per-surf arayy (multiple values) and the
+per-particle, per-grid, or per-surf array (multiple values) and the
 Nth column of the custom array is used.  See the discussion above for
 how N can be specified with a wildcard asterisk to effectively specify
 multiple values.
@@ -218,7 +218,7 @@ Here is an example which prints out both the grid cell ID and number
 of particles for the grid cell with the maximum number of particles:
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    compute 1 property/grid id
    compute	2 grid all n
@@ -316,8 +316,7 @@ on the host, after the data it reads is copied back.  This is a
 performance distinction only; the result is the same either way.
 
 You can specify the accelerated styles explicitly in your input script
-by including their suffix, or you can use the `-suffix command-line switch <Section_start.html#start_7>`_ when you invoke SPARTA, or you can
-use the :doc:`suffix <suffix>` command in your input script.
+by including their suffix, or you can use the `-suffix command-line switch <Section_start.html#start_7>`_ when you invoke SPARTA.
 
 See the :doc:`Accelerating SPARTA <Section_accelerate>` section of the
 manual for more instructions on how to use the accelerated styles

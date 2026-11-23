@@ -6,7 +6,7 @@ write\_isurf command
 **Syntax:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    write_isurf group-ID Nx Ny Nz filename ablateID keyword args ...
 
@@ -26,9 +26,9 @@ write\_isurf command
 **Examples:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
-   write_isurf block 100 100 200 isurf.material.\* ablation
+   write_isurf block 100 100 200 isurf.material.* ablation
 
 **Description:**
 
@@ -36,7 +36,7 @@ Write a grid corner point file in binary format describing the current
 corner point values which define the current set of implicit surface
 elements.  See the :doc:`read\_isurf <read_surf>` command for a
 definition of implicit surface elements and how they are defined from
-grid conner point values.  The surface file can be used for later
+grid corner point values.  The surface file can be used for later
 input to a new simulation or for post-processing and visualization.
 
 The specified *group-ID* is the name of a grid cell group, as defined

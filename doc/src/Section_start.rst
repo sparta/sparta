@@ -286,7 +286,7 @@ blank; the MPI wrapper knows where to find the needed files.  If not,
 and MPI is installed on your system in the usual place (under
 /usr/local), you also may not need to specify these 3 variables.  On
 some large parallel machines which use "modules" for their
-compile/link environements, you may simply need to include the correct
+compile/link environments, you may simply need to include the correct
 module in your build environment.  Or the parallel machine may have a
 vendor-provided MPI which the compiler has no trouble finding.
 
@@ -363,7 +363,7 @@ with oneMKL using the Kokkos SYCL backend.
 You may also need to set the FFT\_INC, FFT\_PATH, and FFT\_LIB variables,
 so the compiler and linker can find the needed FFT header and library
 files.  Note that on some large parallel machines which use "modules"
-for their compile/link environements, you may simply need to include
+for their compile/link environments, you may simply need to include
 the correct module in your build environment.  Or the parallel machine
 may have a vendor-provided FFT library which the compiler has no
 trouble finding.
@@ -560,7 +560,7 @@ building object files.  Note that if you change any -D setting in this section,
 you should do a full re-compile, after typing "make clean".
 
 The SPARTA\_DEFAULT\_CXX\_COMPILE\_FLAGS option is typically used to include options
-that turn on ifdefs within the SPARTA code.  The options that are currently recogized are:
+that turn on ifdefs within the SPARTA code.  The options that are currently recognized are:
 
 * -DSPARTA\_GZIP
 * -DSPARTA\_JPEG
@@ -707,7 +707,7 @@ Note that this documentation link is for CMake version 3.12.
 **Step 7**
 
 When the SPARTA FFT package is enabled with cmake -DPKG\_FFT=ON, you may select
-between 3 thiry party libraries (TPLs) for 1d FFTs, which SPARTA uses when
+between 3 third party libraries (TPLs) for 1d FFTs, which SPARTA uses when
 configured with cmake -DFFT=\ *FFTW3,MKL,KISS*\ .
 
 By default SPARTA will use the open-source `KISS FFT library <https://github.com/mborgerding/kissfft>`_, which is included in the SPARTA distribution.
@@ -1107,7 +1107,7 @@ from within the build directory.
 If you use a command in a SPARTA input script that is part of a
 package, you must have built SPARTA with that package, else you will
 get an error that the style is invalid or the command is unknown.
-Every command's doc page specfies if it is part of a package.
+Every command's doc page specifies if it is part of a package.
 
 
 ----------
@@ -1317,7 +1317,7 @@ src/MAKE/Makefile.foo and perform the build in the directory
 Obj\_shared\_foo.  This is so that each file can be compiled with the
 -fPIC flag which is required for inclusion in a shared library.  The
 build will create the file libsparta\_foo.so which another application
-can link to dyamically.  It will also create a soft link libsparta.so,
+can link to dynamically.  It will also create a soft link libsparta.so,
 which will point to the most recently built shared library.  This is
 the file the Python wrapper loads by default.
 
@@ -1512,7 +1512,7 @@ the SPARTA\_DSMC\_TESTING\_PATH/regression.py script.
 
 The SPARTA\_CTEST\_CONFIGS option allows the user to run the same set of binaries
 with different arguments. SPARTA\_CTEST\_CONFIGS lets the user add additional ctest
-configurations, seperated by ';', that allow SPARTA\_SPA\_ARGS\_CONFIG\_NAME
+configurations, separated by ';', that allow SPARTA\_SPA\_ARGS\_CONFIG\_NAME
 or SPARTA\_DSMC\_TESTING\_DRIVER\_ARGS\_CONFIG\_NAME to be specified. For example:
 
 
@@ -1856,7 +1856,7 @@ processors.  Note that with MPI installed on a machine (e.g. your
 desktop), you can run on more (virtual) processors than you have
 physical processors.
 
-To run multiple independent simulatoins from one input script, using
+To run multiple independent simulations from one input script, using
 multiple partitions, see `Section 6.3 <Section_howto.html#howto_3>`_ of
 the manual.  World- and universe-style variables are useful in this
 context.
@@ -1928,7 +1928,7 @@ partition screen files file.N.
 
 .. parsed-literal::
 
-   -suffix style args
+   -suffix style
 
 Use variants of various styles if they exist.  The specified style can
 be *kk*\ .  This refers to optional KOKKOS package that SPARTA can be built with, as described
@@ -1940,7 +1940,7 @@ having to edit an input script.
 
 As an example, the KOKKOS package provides a :doc:`compute\_style temp <compute_temp>` variant, with style name temp/kk. A variant style
 can be specified explicitly in your input script, e.g. compute
-temp/kk. If the suffix command is used with the appropriate style,
+temp/kk. If this switch is used with the appropriate style,
 you do not need to modify your input script.  The specified suffix
 (kk) is automatically appended whenever your
 input script command creates a new :doc:`fix <fix>`,
@@ -1953,9 +1953,9 @@ the default KOKKOS settings, as if the command "package kokkos" were
 used at the top of your input script.  These settings can be changed
 by using the "-package kokkos" command-line switch or the :doc:`package kokkos <package>` command in your script.
 
-The :doc:`suffix <suffix>` command can also be used within an input
-script to set a suffix, or to turn off or back on any suffix setting
-made via the command line.
+There is no input-script command that does the same.  To use the
+variant for only some commands, leave out this switch and name the
+variant explicitly in your input script instead, e.g. "compute temp/kk".
 
 
 .. parsed-literal::

@@ -6,7 +6,7 @@ fix field/grid command
 **Syntax:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    fix ID field/grid axvar ayvar azvar
 
@@ -17,7 +17,7 @@ fix field/grid command
 **Examples:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    fix 1 field/grid gradBx gradBy NULL
 
@@ -71,7 +71,7 @@ Note that the :doc:`global field <global>` command provides three
 alternatives for specifying an external field:
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    global field constant ...     # field is constant in space and time
    global field particle ...     # field is applied on a per particle basis
@@ -90,7 +90,7 @@ depend on particle attributes, such as its mass and magnetic moment
 
 Note that use of the :doc:`global field grid <global>` command with this
 fix will evaluate the specified grid-style variables as often as
-requested.  For a field that has no time-ependence, you can specificy
+requested.  For a field that has no time-dependence, you can specify
 it only be evaluated once at the beginning of a run.  For a field that
 is time-dependent you can choose how often to recompute the field,
 depending on how fast it varies.
@@ -130,8 +130,7 @@ These accelerated styles are part of the KOKKOS package. They are only
 enabled if SPARTA was built with that package.  See the `Making SPARTA <Section_start.html#start_3>`_ section for more info.
 
 You can specify the accelerated styles explicitly in your input script
-by including their suffix, or you can use the `-suffix command-line switch <Section_start.html#start_7>`_ when you invoke SPARTA, or you can
-use the :doc:`suffix <suffix>` command in your input script.
+by including their suffix, or you can use the `-suffix command-line switch <Section_start.html#start_7>`_ when you invoke SPARTA.
 
 See the :doc:`Accelerating SPARTA <Section_accelerate>` section of the
 manual for more instructions on how to use the accelerated styles

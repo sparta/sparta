@@ -9,7 +9,7 @@ surf\_react adsorb/kk command
 **Syntax:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    surf_react ID adsorb model infile(s) Nsync type temp n_sites adsp1 adsp2 ...
 
@@ -58,7 +58,7 @@ file format below for details.
 **Examples:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    surf_react adsorb gs gs_react.surf nsync 10 surf 1000 6.022e18 O CO
    surf_react adsorb gs/ps gs_react.surf ps_react.surf nsync 1 face 300 3e9 O
@@ -101,7 +101,7 @@ Adsorbed particles can then undergo reactions with other adsorbed
 particles as well as with new gas-phase particles that strike the
 surface.  Each surface element stores its "state" for the counts of
 different particle species currently adsorbed on the element, which
-alters the probablity for future reactions to take place.
+alters the probability for future reactions to take place.
 
 When a particle adsorbs on the surface, a gas particle is deleted and
 the number of adsorbed particles of that particular species is
@@ -137,7 +137,7 @@ computed based on the specified reaction rate constants as well as the
 surface coverage of the reactants. The product of the rate *R* and
 time counter *tau* is normalized to obtain the probability for each of
 reaction; and a random number is used to decide which reaction occurs.
-The chosen reaction is perforemd and its time counter is modified as
+The chosen reaction is performed and its time counter is modified as
 follows:
 
 .. math::
@@ -145,7 +145,7 @@ follows:
    \tau_{i} = \tau_{i} + \frac{log(Rn)}{R_{i}}
 
 Next the probabilities of each reaction are recomputed and a new
-reaction is chosen based on these probabilties and performed.  This
+reaction is chosen based on these probabilities and performed.  This
 process is repeated till the probability of all the reactions reaches
 zero. A detailed description can be found in Swaminathan Gopalan *et
 al.* `(SG18) <#SG18>`_.
@@ -477,10 +477,10 @@ just the ones flagged as active for a particular simulation.
 The first element of the vector is the count of particles that
 performed surface reactions for surface elements assigned to this
 reaction model during the current timestep. The second element is the
-cummulative count of particles that have performed reactions since the
+cumulative count of particles that have performed reactions since the
 beginning of the current run.  The next nlist elements are the count
 of each individual reaction that occurred during the current timestep.
-The final nlist elements are the cummulative count of each individual
+The final nlist elements are the cumulative count of each individual
 reaction since the beginning of the current run.
 
 
@@ -499,8 +499,7 @@ These accelerated styles are part of the KOKKOS package. They are only
 enabled if SPARTA was built with that package.  See the `Making SPARTA <Section_start.html#start_3>`_ section for more info.
 
 You can specify the accelerated styles explicitly in your input script
-by including their suffix, or you can use the `-suffix command-line switch <Section_start.html#start_7>`_ when you invoke SPARTA, or you can
-use the :doc:`suffix <suffix>` command in your input script.
+by including their suffix, or you can use the `-suffix command-line switch <Section_start.html#start_7>`_ when you invoke SPARTA.
 
 See the :doc:`Accelerating SPARTA <Section_accelerate>` section of the
 manual for more instructions on how to use the accelerated styles
@@ -522,7 +521,7 @@ If the following conditions are met:
 then the timesteps on which balancing or grid adaptation are performed
 must be multiples of *Nsync*\ .  This is because surfaces are
 re-assigned to processors due to the change in the grid assignment to
-processors and the per-surface *tau* values must be upated
+processors and the per-surface *tau* values must be updated
 appropriately when that occurs.
 
 **Related commands:**

@@ -6,7 +6,7 @@ stats\_style command
 **Syntax:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    stats_style arg1 arg2 ...
 
@@ -72,11 +72,11 @@ stats\_style command
 **Examples:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    stats_style step cpu np
    stats_style step cpu spcpu np xlo xhi c_myCount[2]
-   stats_style step cpu spcpu np xlo xhi c_myCount[\*]
+   stats_style step cpu spcpu np xlo xhi c_myCount[*]
 
 **Description:**
 
@@ -138,7 +138,7 @@ counts for the current timestep.
 
 The *npave*\ , *ntouchave*\ , *ncommave*\ , *nboundave*\ , *nexitave*\ ,
 *nscollave*\ , *nscheckave*\ , *ncollave*\ , *nattemptave*\ , *nreactave*\ , and
-*nsreactave* keywords all generate values that are the cummulative
+*nsreactave* keywords all generate values that are the cumulative
 total of the corresponding count divided by *elapsed* = the number of
 timesteps since the start of the current run.
 
@@ -217,10 +217,10 @@ are equivalent, since the :doc:`compute reduce <compute_reduce>` command
 creates a global vector with 6 values.
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    compute myCount reduce max x y z vx vy vz
-   stats_style step np c_myCount[\*]
+   stats_style step np c_myCount[*]
    stats_style step np c_myCount[1] c_myCount[2] c_myCount[3] &
                        c_myCount[4] c_myCount[5] c_myCount[6]
 
@@ -290,7 +290,7 @@ then be referenced with these keywords to generate statistical output.
 **Default:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    stats_style step cpu np
 

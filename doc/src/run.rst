@@ -6,7 +6,7 @@ run command
 **Syntax:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    run N keyword values ...
 
@@ -33,7 +33,7 @@ run command
 **Examples:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    run 10000
    run 1000000 upto
@@ -141,25 +141,25 @@ invoked.  If only a single command is specified as NULL, then no
 command is invoked.  Thus these lines:
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    compute t temp
    variable myT equal c_t
-   run 6000 every 2000 "print 'Temp = $\ myT\ '"
+   run 6000 every 2000 "print 'Temp = ${myT}'"
 
 are the equivalent of:
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    compute t temp
    variable myT equal c_t
    run 2000
-   print "Temp = $\ myT\ "
+   print "Temp = ${myT}"
    run 2000
-   print "Temp = $\ myT\ "
+   print "Temp = ${myT}"
    run 2000
-   print "Temp = $\ myT\ "
+   print "Temp = ${myT}"
 
 which does 3 runs of 2000 steps and prints the x-coordinate of a
 particular atom between runs.  Note that the variable "$q" will
@@ -170,7 +170,7 @@ command can be spread across many lines, though it is still a single
 command:
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    run 100000 every 1000 &
      "print 'Minimum value = $a'" &

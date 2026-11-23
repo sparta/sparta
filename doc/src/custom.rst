@@ -6,7 +6,7 @@ custom command
 **Syntax:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    custom style action args ... action args ...
 
@@ -47,10 +47,10 @@ custom command
 **Examples:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    variable ivec particle id/100000
-   variable sdvec surf c_1\*10+3.5
+   variable sdvec surf c_1*10+3.5
    variable sdarray1 surf s_dvec+1
    variable sdarray2 surf v_sdarray1+1
 
@@ -58,7 +58,7 @@ custom command
    custom surf create sdvec float 0 set sdvec v_sdvec all NULL
    custom surf create darray float 2 set darray[1] v_sdarray1 all NULL
    custom surf set darray[2] v_sdarray2 all NULL
-   custom grid create gvec int 0 create garray float 2 file grid.attributes gvec garray\ 1 garray\ 2
+   custom grid create gvec int 0 create garray float 2 file grid.attributes gvec garray[1] garray[2]
    custom particle remove ivec
    custom surf remove darray
 
@@ -78,7 +78,7 @@ per-surf attributes.  Particle-style attributes cannot be reset with
 the *file* action.
 
 Custom attributes can be vectors (single value per entity) or arrays
-(mutiple values per entity).  They can also be integer or floating
+(multiple values per entity).  They can also be integer or floating
 point values.  See `Section 6.17 <Section_howto.html#howto_17>`_ for an
 explanation of custom attributes.
 
@@ -194,7 +194,7 @@ The format of each attribute value line is as follows:
 ID value1 value2 ... valueM
 
 ID is the integer ID of the grid cell or surface element.  Note that
-for hierarchial grids, it must be the integer form of the ID, not the
+for hierarchical grids, it must be the integer form of the ID, not the
 string form (possibly with dashes).  M values follow, corresponding to
 the *M* argument in the input script, following the *fname* argument.
 
@@ -216,7 +216,7 @@ for 3 surface elements are set.
 This file could be read with an input script command like this:
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    custom surf create darray float 2 file file.surf 2 darray[1] darray[2]
 
@@ -274,7 +274,7 @@ cell cell.  Here are a few additional details.
   surface of an object.  The mapping operation described above is not
   performed for SPARTA grid cells wholly inside surface objects; their
   custom attribute values are set to zero.  If a SPARTA grid cell is cut
-  by surface elements, its center point may be inside a suface object.
+  by surface elements, its center point may be inside a surface object.
   In this case it should be fine to assign the grid cell values from the
   nearest coarse grid point in the flow.
 
@@ -372,7 +372,7 @@ values for a per-grid custom array with 2 columns.
 This file could be read with an input script command like either of these:
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    custom grid create nrho float 0 create temp float 0 file/coarse 1 text cfile.grid 2 nrho temp
    custom grid create nrho float 0 create temp float 0 file/coarse 3 text cfile.grid.% 2 nrho temp
@@ -422,7 +422,7 @@ above would store these numbers (without the newlines):
 This file could be read with an input script command like either of these:
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    custom grid create nrho float 0 create temp float 0 file/coarse 1 binary cfile.grid 2 nrho temp
    custom grid create nrho float 0 create temp float 0 file/coarse 3 binary cfile.grid.% 2 nrho temp

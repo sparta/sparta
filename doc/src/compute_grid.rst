@@ -9,7 +9,7 @@ compute grid/kk command
 **Syntax:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    compute ID grid group-ID mix-ID value1 value2 ...
 
@@ -50,7 +50,7 @@ compute grid/kk command
 **Examples:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    compute 1 grid all species n u v w usq vsq wsq
    compute 1 grid subset air n u v w
@@ -59,18 +59,18 @@ These commands will dump time averages for each species and each grid
 cell to a dump file every 1000 steps:
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    compute 1 grid all species n u v w usq vsq wsq
-   fix 1 ave/grid 10 100 1000 c_1[\*]
-   dump 1 grid all 1000 tmp.grid id f_1[\*]
+   fix 1 ave/grid 10 100 1000 c_1[*]
+   dump 1 grid all 1000 tmp.grid id f_1[*]
 
 **Description:**
 
 Define a computation that calculates one or more values for each grid
 cell in a grid cell group, based on the particles in the cell.  The
 values are tallied separately for each group of species in the
-specified mixture, as described in the Ouput section below.  See the
+specified mixture, as described in the Output section below.  See the
 :doc:`mixture <mixture>` command for how a set of species can be
 partitioned into groups.
 
@@ -273,7 +273,7 @@ average vibrational energy of entire grid cells.  That can be
 calculated by multiplying the *evib* quantity by the *n* quantity.
 
 The *tvib* value computes a classical definition of vibrational
-temperature, valid for continous distributions of vibrational energy,
+temperature, valid for continuous distributions of vibrational energy,
 by the following formula where *kB* is the Boltzmann factor:
 
 
@@ -386,8 +386,7 @@ These accelerated styles are part of the KOKKOS package. They are only
 enabled if SPARTA was built with that package.  See the `Making SPARTA <Section_start.html#start_3>`_ section for more info.
 
 You can specify the accelerated styles explicitly in your input script
-by including their suffix, or you can use the `-suffix command-line switch <Section_start.html#start_7>`_ when you invoke SPARTA, or you can
-use the :doc:`suffix <suffix>` command in your input script.
+by including their suffix, or you can use the `-suffix command-line switch <Section_start.html#start_7>`_ when you invoke SPARTA.
 
 See the :doc:`Accelerating SPARTA <Section_accelerate>` section of the
 manual for more instructions on how to use the accelerated styles

@@ -6,7 +6,7 @@ fix surf/temp command
 **Syntax:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    fix ID surf/temp surf-ID Nevery source Tinit emisurf custom-name
 
@@ -28,7 +28,7 @@ fix surf/temp command
 **Examples:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    compute 1 surf all all etot
    fix 1 surf/temp all 1000 c_1 250 0.9 temperature
@@ -57,7 +57,7 @@ The specified *group-ID* must be the name of a surface element group,
 as defined by the :doc:`group surf <group>` command, which contains a
 set of surface elements.
 
-The specfied *Nevery* determines how often the surface temperatures
+The specified *Nevery* determines how often the surface temperatures
 are re-computed.
 
 The *source* can be specified as a per-surf quantity calculated by a
@@ -146,8 +146,7 @@ These accelerated styles are part of the KOKKOS package. They are only
 enabled if SPARTA was built with that package.  See the `Making SPARTA <Section_start.html#start_3>`_ section for more info.
 
 You can specify the accelerated styles explicitly in your input script
-by including their suffix, or you can use the `-suffix command-line switch <Section_start.html#start_7>`_ when you invoke SPARTA, or you can
-use the :doc:`suffix <suffix>` command in your input script.
+by including their suffix, or you can use the `-suffix command-line switch <Section_start.html#start_7>`_ when you invoke SPARTA.
 
 See the :doc:`Accelerating SPARTA <Section_accelerate>` section of the
 manual for more instructions on how to use the accelerated styles

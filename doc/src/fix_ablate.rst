@@ -6,7 +6,7 @@ fix ablate command
 **Syntax:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    fix ID ablate group-ID Nevery scale source maxrandom keyword value ...
 
@@ -41,7 +41,7 @@ fix ablate command
 **Examples:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    fix 1 ablate surfcells 1000 10.0 c_tally
    fix 1 ablate surfcells 0 0.0 random 10
@@ -93,7 +93,7 @@ by *Nz* extent.  See the :doc:`read\_isurf <read_isurf>` command for more
 details.  This command reads the initial values for grid cell corner
 points, which are stored by this fix.
 
-The specfied *Nevery* determines how often an ablation operation is
+The specified *Nevery* determines how often an ablation operation is
 performed.  If *Nevery* = 0, ablation is never performed.  The grid
 cell corner point values and the surface elements they induce will
 remain static for the duration of subsequent simulations.
@@ -151,13 +151,13 @@ surfaces.  These lines are taken from the
 examples/ablation/in.ablation.3d.reactions input script:
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    surf_collide	    1 diffuse 300.0 1.0
    surf_react	      2 prob air.surf
 
    compute             10 react/isurf/grid all 2
-   fix                 10 ave/grid all 1 100 100 c_10[\*]
+   fix                 10 ave/grid all 1 100 100 c_10[*]
    dump                10 grid all 100 tmp.grid id c_10[1]
 
    global              surfs implicit
@@ -212,7 +212,7 @@ Within each grid cell, the decrement value is subtracted from the
 smallest corner point value.  Except that a corner point value cannot
 become smaller than 0.0.  If this would occur, only a portion of the
 decrement is used to set the corner point to 0.0; the remainder is
-applid to the next smallest corner point value.  And so forth on
+applied to the next smallest corner point value.  And so forth on
 successive corner points until all of the decrement is used.  If the
 corner point values of the cell sum to less than its decrement value,
 they are all set to 0.0 and the rest of the decrement is dropped, since
@@ -282,7 +282,7 @@ such that the relative distance from the vertex to the inside corner
 point is at least *mindist*
 
 \(2) Conversely, if the vertex is too close to the outside grid corner
-point, the vetex location is shifted towards the inside corner point
+point, the vertex location is shifted towards the inside corner point
 such that the relative distance from the vertex to the outside corner
 point is at least *mindist*
 

@@ -9,7 +9,7 @@ compute thermal/grid/kk command
 **Syntax:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    compute ID thermal/grid group-ID mix-ID value1 value2 ...
 
@@ -30,7 +30,7 @@ compute thermal/grid/kk command
 **Examples:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    compute 1 thermal/grid all species temp
    compute 1 thermal/grid subset air temp press
@@ -39,11 +39,11 @@ These commands will dump time averaged thermal temperatures for
 each species and each grid cell to a dump file every 1000 steps:
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    compute 1 thermal/grid species temp
-   fix 1 ave/grid 10 100 1000 c_1[\*]
-   dump 1 grid all 1000 tmp.grid id f_1[\*]
+   fix 1 ave/grid 10 100 1000 c_1[*]
+   dump 1 grid all 1000 tmp.grid id f_1[*]
 
 **Description:**
 
@@ -92,7 +92,7 @@ what the :doc:`compute sonine/grid <compute_sonine_grid>` command does.
 ----------
 
 
-Calculation of the thermal temperature is done by first calcuating the
+Calculation of the thermal temperature is done by first calculating the
 center-of-mass (COM) velocity of particles for each group within a
 grid cell.  This is done as follows:
 
@@ -175,7 +175,7 @@ for an overview of SPARTA output options.
 
 The per-grid array values will be in the :doc:`units <units>`
 appropriate to the individual values as described above.  *Temp* is in
-temperature units.  *Press* is in prsesure units.
+temperature units.  *Press* is in pressure units.
 
 
 ----------
@@ -193,8 +193,7 @@ These accelerated styles are part of the KOKKOS package. They are only
 enabled if SPARTA was built with that package.  See the `Making SPARTA <Section_start.html#start_3>`_ section for more info.
 
 You can specify the accelerated styles explicitly in your input script
-by including their suffix, or you can use the `-suffix command-line switch <Section_start.html#start_7>`_ when you invoke SPARTA, or you can
-use the :doc:`suffix <suffix>` command in your input script.
+by including their suffix, or you can use the `-suffix command-line switch <Section_start.html#start_7>`_ when you invoke SPARTA.
 
 See the :doc:`Accelerating SPARTA <Section_accelerate>` section of the
 manual for more instructions on how to use the accelerated styles

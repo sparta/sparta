@@ -40,7 +40,7 @@ one line at a time and each command takes effect when it is read.
 Thus this sequence of commands:
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    timestep 0.5 
    run      100 
@@ -49,7 +49,7 @@ Thus this sequence of commands:
 does something different than this sequence:
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    run      100 
    timestep 0.5 
@@ -127,7 +127,7 @@ to use numeric formulas in an input script without having to assign
 them to variable names.  For example, these 3 input script lines:
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    variable X equal (xlo+xhi)/2+sqrt(v_area)
    region 1 block $X 2 INF INF EDGE EDGE
@@ -136,7 +136,7 @@ them to variable names.  For example, these 3 input script lines:
 can be replaced by
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    region 1 block $((xlo+xhi)/2+sqrt(v_area)) 2 INF INF EDGE EDGE
 
@@ -147,7 +147,7 @@ contain nested $ characters for other variables to substitute for.
 Thus you cannot do this:
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    variable        a equal 2
    variable        b2 equal 4
@@ -262,7 +262,7 @@ runs.
 The system can also be load-balanced after the grid and/or particles
 are defined in the setup stage using the
 :doc:`balance\_grid <balance_grid>` command.  The grid can also be
-adapted before or betwee simulations using the
+adapted before or between simulations using the
 :doc:`adapt\_grid <adapt_grid>` command.
 
 \(3) Settings
@@ -276,7 +276,7 @@ Commands that do this include
 :doc:`global <global>`
 :doc:`timestep <timestep>`
 :doc:`collide <collide>` for a collision model
-:doc:`react <react>` for a chemisty model
+:doc:`react <react>` for a chemistry model
 :doc:`fix <fix>` for boundary conditions, time-averaging, load-balancing, etc
 :doc:`compute <compute>` for diagnostic computations
 :doc:`stats\_style <stats_style>` for screen output
@@ -307,7 +307,7 @@ This section lists many SPARTA commands, grouped by category.  The
 Initialization:
 
 :doc:`dimension <dimension>`, :doc:`package <package>`, :doc:`seed <seed>`,
-:doc:`suffix <suffix>`, :doc:`units <units>`
+:doc:`units <units>`
 
 Problem definition:
 
@@ -372,31 +372,31 @@ Miscellaneous:
 This section lists all SPARTA commands alphabetically, with a separate
 listing below of styles within certain commands.  The `previous section <#cmd_4>`_ lists many of the same commands, grouped by category.
 
-+-------------------------------------------+-------------------------------------+---------------------------------------+-----------------------------------------+-----------------------------------------+-------------------------------------------------+
-| :doc:`adapt\_grid <adapt_grid>`           | :doc:`balance\_grid <balance_grid>` | :doc:`boundary <boundary>`            | :doc:`bound\_modify <bound_modify>`     | :doc:`clear <clear>`                    | :doc:`collide <collide>`                        |
-+-------------------------------------------+-------------------------------------+---------------------------------------+-----------------------------------------+-----------------------------------------+-------------------------------------------------+
-| :doc:`collide\_modify <collide_modify>`   | :doc:`compute <compute>`            | :doc:`create\_box <create_box>`       | :doc:`create\_grid <create_grid>`       | :doc:`create\_isurf <create_isurf>`     | :doc:`create\_particles (k) <create_particles>` |
-+-------------------------------------------+-------------------------------------+---------------------------------------+-----------------------------------------+-----------------------------------------+-------------------------------------------------+
-| :doc:`custom <custom>`                    | :doc:`dimension <dimension>`        | :doc:`dump <dump>`                    | :doc:`dump image <dump_image>`          | :doc:`dump\_modify <dump_modify>`       | :doc:`dump movie <dump_image>`                  |
-+-------------------------------------------+-------------------------------------+---------------------------------------+-----------------------------------------+-----------------------------------------+-------------------------------------------------+
-| :doc:`dump vtk <dump_vtk>`                | :doc:`echo <echo>`                  | :doc:`fix <fix>`                      | :doc:`global <global>`                  | :doc:`group <group>`                    | :doc:`if <if>`                                  |
-+-------------------------------------------+-------------------------------------+---------------------------------------+-----------------------------------------+-----------------------------------------+-------------------------------------------------+
-| :doc:`include <include>`                  | :doc:`jump <jump>`                  | :doc:`label <label>`                  | :doc:`log <log>`                        | :doc:`mixture <mixture>`                | :doc:`move\_surf <move_surf>`                   |
-+-------------------------------------------+-------------------------------------+---------------------------------------+-----------------------------------------+-----------------------------------------+-------------------------------------------------+
-| :doc:`next <next>`                        | :doc:`package <package>`            | :doc:`partition <partition>`          | :doc:`print <print>`                    | :doc:`python <python>`                  | :doc:`quit <quit>`                              |
-+-------------------------------------------+-------------------------------------+---------------------------------------+-----------------------------------------+-----------------------------------------+-------------------------------------------------+
-| :doc:`react <react>`                      | :doc:`react\_modify <react_modify>` | :doc:`read\_grid <read_grid>`         | :doc:`read\_isurf <read_isurf>`         | :doc:`read\_particles <read_particles>` | :doc:`read\_restart <read_restart>`             |
-+-------------------------------------------+-------------------------------------+---------------------------------------+-----------------------------------------+-----------------------------------------+-------------------------------------------------+
-| :doc:`read\_surf (k) <read_surf>`         | :doc:`region <region>`              | :doc:`remove\_surf (k) <remove_surf>` | :doc:`reset\_timestep <reset_timestep>` | :doc:`restart <restart>`                | :doc:`run <run>`                                |
-+-------------------------------------------+-------------------------------------+---------------------------------------+-----------------------------------------+-----------------------------------------+-------------------------------------------------+
-| :doc:`scale\_particles <scale_particles>` | :doc:`seed <seed>`                  | :doc:`shell <shell>`                  | :doc:`species <species>`                | :doc:`species\_modify <species_modify>` | :doc:`stats <stats>`                            |
-+-------------------------------------------+-------------------------------------+---------------------------------------+-----------------------------------------+-----------------------------------------+-------------------------------------------------+
-| :doc:`stats\_modify <stats_modify>`       | :doc:`stats\_style <stats_style>`   | :doc:`suffix <suffix>`                | :doc:`surf\_collide <surf_collide>`     | :doc:`surf\_react <surf_react>`         | :doc:`surf\_modify <surf_modify>`               |
-+-------------------------------------------+-------------------------------------+---------------------------------------+-----------------------------------------+-----------------------------------------+-------------------------------------------------+
-| :doc:`timestep <timestep>`                | :doc:`uncompute <uncompute>`        | :doc:`undump <undump>`                | :doc:`unfix <unfix>`                    | :doc:`units <units>`                    | :doc:`variable <variable>`                      |
-+-------------------------------------------+-------------------------------------+---------------------------------------+-----------------------------------------+-----------------------------------------+-------------------------------------------------+
-| :doc:`write\_grid <write_grid>`           | :doc:`write\_isurf <write_isurf>`   | :doc:`write\_restart <write_restart>` | :doc:`write\_surf <write_surf>`         |                                         |                                                 |
-+-------------------------------------------+-------------------------------------+---------------------------------------+-----------------------------------------+-----------------------------------------+-------------------------------------------------+
++-------------------------------------------+---------------------------------------+---------------------------------------+-----------------------------------------+-----------------------------------------+-------------------------------------------------+
+| :doc:`adapt\_grid <adapt_grid>`           | :doc:`balance\_grid <balance_grid>`   | :doc:`boundary <boundary>`            | :doc:`bound\_modify <bound_modify>`     | :doc:`clear <clear>`                    | :doc:`collide <collide>`                        |
++-------------------------------------------+---------------------------------------+---------------------------------------+-----------------------------------------+-----------------------------------------+-------------------------------------------------+
+| :doc:`collide\_modify <collide_modify>`   | :doc:`compute <compute>`              | :doc:`create\_box <create_box>`       | :doc:`create\_grid <create_grid>`       | :doc:`create\_isurf <create_isurf>`     | :doc:`create\_particles (k) <create_particles>` |
++-------------------------------------------+---------------------------------------+---------------------------------------+-----------------------------------------+-----------------------------------------+-------------------------------------------------+
+| :doc:`custom <custom>`                    | :doc:`dimension <dimension>`          | :doc:`dump <dump>`                    | :doc:`dump image <dump_image>`          | :doc:`dump\_modify <dump_modify>`       | :doc:`dump movie <dump_image>`                  |
++-------------------------------------------+---------------------------------------+---------------------------------------+-----------------------------------------+-----------------------------------------+-------------------------------------------------+
+| :doc:`dump vtk <dump_vtk>`                | :doc:`echo <echo>`                    | :doc:`fix <fix>`                      | :doc:`global <global>`                  | :doc:`group <group>`                    | :doc:`if <if>`                                  |
++-------------------------------------------+---------------------------------------+---------------------------------------+-----------------------------------------+-----------------------------------------+-------------------------------------------------+
+| :doc:`include <include>`                  | :doc:`jump <jump>`                    | :doc:`label <label>`                  | :doc:`log <log>`                        | :doc:`mixture <mixture>`                | :doc:`move\_surf <move_surf>`                   |
++-------------------------------------------+---------------------------------------+---------------------------------------+-----------------------------------------+-----------------------------------------+-------------------------------------------------+
+| :doc:`next <next>`                        | :doc:`package <package>`              | :doc:`partition <partition>`          | :doc:`print <print>`                    | :doc:`python <python>`                  | :doc:`quit <quit>`                              |
++-------------------------------------------+---------------------------------------+---------------------------------------+-----------------------------------------+-----------------------------------------+-------------------------------------------------+
+| :doc:`react <react>`                      | :doc:`react\_modify <react_modify>`   | :doc:`read\_grid <read_grid>`         | :doc:`read\_isurf <read_isurf>`         | :doc:`read\_particles <read_particles>` | :doc:`read\_restart <read_restart>`             |
++-------------------------------------------+---------------------------------------+---------------------------------------+-----------------------------------------+-----------------------------------------+-------------------------------------------------+
+| :doc:`read\_surf (k) <read_surf>`         | :doc:`region <region>`                | :doc:`remove\_surf (k) <remove_surf>` | :doc:`reset\_timestep <reset_timestep>` | :doc:`restart <restart>`                | :doc:`run <run>`                                |
++-------------------------------------------+---------------------------------------+---------------------------------------+-----------------------------------------+-----------------------------------------+-------------------------------------------------+
+| :doc:`scale\_particles <scale_particles>` | :doc:`seed <seed>`                    | :doc:`shell <shell>`                  | :doc:`species <species>`                | :doc:`species\_modify <species_modify>` | :doc:`stats <stats>`                            |
++-------------------------------------------+---------------------------------------+---------------------------------------+-----------------------------------------+-----------------------------------------+-------------------------------------------------+
+| :doc:`stats\_modify <stats_modify>`       | :doc:`stats\_style <stats_style>`     | :doc:`surf\_collide <surf_collide>`   | :doc:`surf\_react <surf_react>`         | :doc:`surf\_modify <surf_modify>`       | :doc:`timestep <timestep>`                      |
++-------------------------------------------+---------------------------------------+---------------------------------------+-----------------------------------------+-----------------------------------------+-------------------------------------------------+
+| :doc:`uncompute <uncompute>`              | :doc:`undump <undump>`                | :doc:`unfix <unfix>`                  | :doc:`units <units>`                    | :doc:`variable <variable>`              | :doc:`write\_grid <write_grid>`                 |
++-------------------------------------------+---------------------------------------+---------------------------------------+-----------------------------------------+-----------------------------------------+-------------------------------------------------+
+| :doc:`write\_isurf <write_isurf>`         | :doc:`write\_restart <write_restart>` | :doc:`write\_surf <write_surf>`       |                                         |                                         |                                                 |
++-------------------------------------------+---------------------------------------+---------------------------------------+-----------------------------------------+-----------------------------------------+-------------------------------------------------+
 
 
 ----------
@@ -501,6 +501,58 @@ letters in parenthesis: k = KOKKOS.
 +---------------------------------------+--------------------------------+
 | :doc:`prob (k) <surf_react>`          |                                |
 +---------------------------------------+--------------------------------+
+
+
+----------
+
+
+Dump styles
+-----------
+
+See the :doc:`dump <dump>` command for details of each style.  The
+*image* and *movie* styles are documented on the :doc:`dump image <dump_image>` page, and the VTK styles on the :doc:`dump vtk <dump_vtk>` page.
+
++---------------------------+----------------------------+--------------------------------+
+| :doc:`grid <dump>`        | :doc:`grid/vtk <dump_vtk>` | :doc:`image <dump_image>`      |
++---------------------------+----------------------------+--------------------------------+
+| :doc:`movie <dump_image>` | :doc:`particle <dump>`     | :doc:`particle/vtk <dump_vtk>` |
++---------------------------+----------------------------+--------------------------------+
+| :doc:`surf <dump>`        | :doc:`surf/vtk <dump_vtk>` | :doc:`tally <dump>`            |
++---------------------------+----------------------------+--------------------------------+
+
+
+----------
+
+
+Reaction styles
+---------------
+
+See the :doc:`react <react>` command for details of each style.
+Some of the styles have accelerated versions, which can be used if
+SPARTA is built with the :doc:`appropriate accelerated package <Section_accelerate>`.  This is indicated by additional
+letters in parenthesis: k = KOKKOS.
+
++-----------------------+------------------------+---------------------------+
+| :doc:`qk (k) <react>` | :doc:`tce (k) <react>` | :doc:`tce/qk (k) <react>` |
++-----------------------+------------------------+---------------------------+
+
+
+----------
+
+
+Region styles
+-------------
+
+See the :doc:`region <region>` command for details of each style.
+Some of the styles have accelerated versions, which can be used if
+SPARTA is built with the :doc:`appropriate accelerated package <Section_accelerate>`.  This is indicated by additional
+letters in parenthesis: k = KOKKOS.
+
++---------------------------+------------------------------+-------------------------------+
+| :doc:`block (k) <region>` | :doc:`cylinder (k) <region>` | :doc:`intersect (k) <region>` |
++---------------------------+------------------------------+-------------------------------+
+| :doc:`plane (k) <region>` | :doc:`sphere (k) <region>`   | :doc:`union (k) <region>`     |
++---------------------------+------------------------------+-------------------------------+
 
 
 .. _sws: https://sparta.github.io

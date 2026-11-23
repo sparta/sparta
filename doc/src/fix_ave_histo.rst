@@ -15,7 +15,7 @@ fix ave/histo/weight/kk command
 **Syntax:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    fix ID style Nevery Nrepeat Nfreq lo hi Nbin value1 value2 ... keyword args ...
 
@@ -74,9 +74,9 @@ fix ave/histo/weight/kk command
 **Examples:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
-   fix 1 ave/histo 100 5 1000 0.5 1.5 50 c_myGrid[\*] file temp.histo ave running
+   fix 1 ave/histo 100 5 1000 0.5 1.5 50 c_myGrid[*] file temp.histo ave running
    fix 1 ave/histo 100 5 1000 0 5 100 c_kePart "My output values"
    fix 1 ave/histo/weight 1 100 1000 -2.0 2.0 18 vx vy ave running beyond extra
 
@@ -136,7 +136,7 @@ vector or columns of the array had been listed one by one.  E.g. these
 columns:
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    compute myGrid grid all all u v w
    fix 1 ave/histo 100 1 100 c_myGrid file tmp1.grid mode vector
@@ -377,8 +377,7 @@ These accelerated styles are part of the KOKKOS package. They are only
 enabled if SPARTA was built with that package.  See the `Making SPARTA <Section_start.html#start_3>`_ section for more info.
 
 You can specify the accelerated styles explicitly in your input script
-by including their suffix, or you can use the `-suffix command-line switch <Section_start.html#start_7>`_ when you invoke SPARTA, or you can
-use the :doc:`suffix <suffix>` command in your input script.
+by including their suffix, or you can use the `-suffix command-line switch <Section_start.html#start_7>`_ when you invoke SPARTA.
 
 See the :doc:`Accelerating SPARTA <Section_accelerate>` section of the
 manual for more instructions on how to use the accelerated styles

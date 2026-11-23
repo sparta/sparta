@@ -9,7 +9,7 @@ fix ave/grid/kk command
 **Syntax:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    fix ID ave/grid group-ID Nevery Nrepeat Nfreq value1 value2 ... keyword args ...
 
@@ -46,22 +46,22 @@ fix ave/grid/kk command
 **Examples:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    fix 1 ave/grid all 10 20 1000 c_mine
    fix 1 ave/grid all 1 100 100 c_2[1] ave running
-   fix 1 ave/grid all 1 100 100 c_2[\*] ave running
+   fix 1 ave/grid all 1 100 100 c_2[*] ave running
    fix 1 ave/grid section1 5 20 100 v_myEng
 
 These commands will dump averages for each species and each grid cell
 to a file every 1000 steps:
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    compute 1 grid species n u v w usq vsq wsq
-   fix 1 ave/grid 10 100 1000 c_1[\*]
-   dump 1 grid all 1000 tmp.grid id f_1[\*]
+   fix 1 ave/grid 10 100 1000 c_1[*]
+   dump 1 grid all 1000 tmp.grid id f_1[*]
 
 **Description:**
 
@@ -104,10 +104,10 @@ equivalent, since the :doc:`compute grid <compute_grid>` command creates
 a per-grid array with 3 columns:
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    compute myGrid all all u v w
-   fix 1 ave/grid all 10 20 1000 c_myGrid[\*]
+   fix 1 ave/grid all 10 20 1000 c_myGrid[*]
    fix 1 ave/grid all 10 20 1000 c_myGrid[1] c_myGrid[2] c_myGrid[3]
 
 
@@ -136,7 +136,7 @@ timestep 200, etc.
 If a value begins with "c\_", a compute ID must follow which has been
 previously defined in the input script.  If no bracketed term is
 appended, the compute must calculate a per-grid vector.  If
-*c\_ID[N]* is used, the compute must calculate a per-grud array with
+*c\_ID[N]* is used, the compute must calculate a per-grid array with
 M columns and N must be in the range from 1-M, which will use the Nth
 column of the M-column per-grid array.  See the discussion above for
 how N can be specified with a wildcard asterisk to effectively specify
@@ -264,8 +264,7 @@ These accelerated styles are part of the KOKKOS package. They are only
 enabled if SPARTA was built with that package.  See the `Making SPARTA <Section_start.html#start_3>`_ section for more info.
 
 You can specify the accelerated styles explicitly in your input script
-by including their suffix, or you can use the `-suffix command-line switch <Section_start.html#start_7>`_ when you invoke SPARTA, or you can
-use the :doc:`suffix <suffix>` command in your input script.
+by including their suffix, or you can use the `-suffix command-line switch <Section_start.html#start_7>`_ when you invoke SPARTA.
 
 See the :doc:`Accelerating SPARTA <Section_accelerate>` section of the
 manual for more instructions on how to use the accelerated styles

@@ -9,7 +9,7 @@ compute dt/grid/kk command
 **Syntax:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    compute ID dt/grid group-ID tfraction cfraction tau temperature usq vsq wsq
 
@@ -28,10 +28,10 @@ compute dt/grid/kk command
 **Examples:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    compute 1 grid all mymixture nrho temp usq vsq wsq
-   fix 1 ave/grid all 10 50 500 c_1[\*]
+   fix 1 ave/grid all 10 50 500 c_1[*]
    compute mct lambda/grid f_1[1] f_1[2] tau
    compute tstep dt/grid all 0.25 0.1 c_mct f_1[2] f_1[3] f_1[4] f_1[5]
 
@@ -62,10 +62,10 @@ In practice, multiple transit-based timestep candidates are
 constructed based on the cell dimensions in each coordinate direction
 and the associated average particle velocity components in addition to
 the maximum most probable speed.  The selected cell timestep is the
-minumum of all candidate timesteps. The collision and transit
+minimum of all candidate timesteps. The collision and transit
 fractions simply provide a user-defined safety margin for the
 collision time and transit time estimates. In `(Bird2013) <#Bird2013>`_,
-Bird recomnmends setting the collision fraction to 0.2, which is
+Bird recommends setting the collision fraction to 0.2, which is
 likely a good starting point for the selection of both of these
 fractions.
 
@@ -138,8 +138,7 @@ These accelerated styles are part of the KOKKOS package. They are only
 enabled if SPARTA was built with that package.  See the `Making SPARTA <Section_start.html#start_3>`_ section for more info.
 
 You can specify the accelerated styles explicitly in your input script
-by including their suffix, or you can use the `-suffix command-line switch <Section_start.html#start_7>`_ when you invoke SPARTA, or you can
-use the :doc:`suffix <suffix>` command in your input script.
+by including their suffix, or you can use the `-suffix command-line switch <Section_start.html#start_7>`_ when you invoke SPARTA.
 
 See the :doc:`Accelerating SPARTA <Section_accelerate>` section of the
 manual for more instructions on how to use the accelerated styles

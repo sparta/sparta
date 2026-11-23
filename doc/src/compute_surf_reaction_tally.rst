@@ -6,7 +6,7 @@ compute surf/reaction/tally command
 **Syntax:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    compute ID surf/reaction/tally group-ID mix-ID value1 value2 ...
 
@@ -38,7 +38,7 @@ compute surf/reaction/tally command
 **Examples:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    compute 1 surf/reaction/tally all all reaction id/pre id1/post id2/post type/pre type1/post type2/post id/surf time xc yc zc
 
@@ -46,9 +46,9 @@ This command will dump the tallies in the previous command to a dump
 file every 10 steps:
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
-   dump 1 tally all 10 tmp.tally c_1[\*]
+   dump 1 tally all 10 tmp.tally c_1[*]
 
 **Description:**
 
@@ -119,7 +119,7 @@ was created by the reaction, otherwise it is the species index of the
 newly created particle.
 
 The *time* value is the point in time within the timestep when the
-collision occured.  Thus if the timestep size is DT, as set by the
+collision occurred.  Thus if the timestep size is DT, as set by the
 :doc:`timestep <timestep>` command, the *time* values will all be within
 the range of 0.0 to DT, for all collisions tallied by this compute on
 each timestep it is invoked.
@@ -132,7 +132,7 @@ the incident particle before it collides with the surface element.
 
 The *vx1/post*\ , *vy1/post*\ , *vz1/post* values are the velocity
 components of the incident particle after it collides with the surface
-element and has reacted.  These values will be zero if the paticle
+element and has reacted.  These values will be zero if the particle
 vanished in the reaction.
 
 If a 2nd particle was created by the reaction, the *vx2/post*\ ,
@@ -174,8 +174,7 @@ These accelerated styles are part of the KOKKOS package. They are only
 enabled if SPARTA was built with that package.  See the `Making SPARTA <Section_start.html#start_3>`_ section for more info.
 
 You can specify the accelerated styles explicitly in your input script
-by including their suffix, or you can use the `-suffix command-line switch <Section_start.html#start_7>`_ when you invoke SPARTA, or you can
-use the :doc:`suffix <suffix>` command in your input script.
+by including their suffix, or you can use the `-suffix command-line switch <Section_start.html#start_7>`_ when you invoke SPARTA.
 
 See the :doc:`Accelerating SPARTA <Section_accelerate>` section of the
 manual for more instructions on how to use the accelerated styles

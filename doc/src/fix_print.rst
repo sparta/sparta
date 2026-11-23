@@ -6,7 +6,7 @@ fix print command
 **Syntax:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    fix ID print N string keyword value ...
 
@@ -30,7 +30,7 @@ fix print command
 **Examples:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    fix extra print 100 "Coords of marker particle = $x $y $z"
    fix extra print 100 "Coords of marker particle = $x $y $z" file coord.txt

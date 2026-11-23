@@ -6,7 +6,7 @@ react command
 **Syntax:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    react style args
 
@@ -34,7 +34,7 @@ react command
 **Examples:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    react none
    react tce air.tce
@@ -132,7 +132,7 @@ fnum does not change the probability.
 The *qk* style is Bird's Quantum-Kinetic model (QK).  When this style
 is specified, all computed reactions will use the QK model.
 
-The QK model implemented is that of `(Bird09) <#Bird09>`_ as validated
+The QK model implemented is that of `(Bird09b) <#Bird09b>`_ as validated
 `(Gallis09) <#Gallis09>`_ and modified `(Gallis10) <#Gallis10>`_.
 
 The QK model depends solely on properties of the colliding molecules
@@ -143,7 +143,7 @@ vibrational energy levels.
 
 According to the QK model dissociation reactions take place when the 
 maximum obtainable vibrational energy after an inelastic energy exchange
-is higher than the dissociation level `(Bird09) <#Bird09>`_.
+is higher than the dissociation level `(Bird09b) <#Bird09b>`_.
 
 .. math::
 
@@ -232,7 +232,7 @@ SPARTA does not check for this, so there is no restriction on the
 species involved in the reaction.
 
 An ionization reaction with 3 products is typically a collision
-between a neutral R1 and an electon R2 which ejects an electron from
+between a neutral R1 and an electron R2 which ejects an electron from
 the neutral species, resulting in an ion P1 and a new electron P2.
 See the discussion on ambipolar reactions below.  Again, SPARTA does
 not check for this, so there is no restriction on the species involved
@@ -290,7 +290,7 @@ P2.
 
 IMPORTANT NOTE: If the ambipolar approximation is being used, via the
 :doc:`fix ambipolar <fix_ambipolar>` and :doc:`collide\_modify ambipolar yes <collide_modify>` commands, then reactions which involve either
-ambipolar ions or the ambipolar electron have more restricitve rules
+ambipolar ions or the ambipolar electron have more restrictive rules
 about the ordering of reactants and products.  See the next section
 for a discussion of these requirements.
 
@@ -320,11 +320,11 @@ explained above.
 
 
 If the ambipolar approximation is being used, via the :doc:`fix ambipolar <fix_ambipolar>` command, then reactions which involve
-either ambipolar ions or the ambipolar electron have more restricitve
+either ambipolar ions or the ambipolar electron have more restrictive
 rules about the ordering of reactants and products, than those
-described in the preceeding section.
+described in the preceding section.
 
-Note that ambipolar collisions are turned on via the :doc:`collide\_modify ambipolar yes <collide_modify>` commands, which in turn requries
+Note that ambipolar collisions are turned on via the :doc:`collide\_modify ambipolar yes <collide_modify>` commands, which in turn requires
 that the :doc:`fix ambipolar <fix_ambipolar>` is defined in your input
 script.  This fix defines a particular species as an ambipolar
 electron, written as "e" in the reactions that follow.  It also
@@ -406,8 +406,7 @@ These accelerated styles are part of the KOKKOS package. They are only
 enabled if SPARTA was built with that package.  See the `Making SPARTA <Section_start.html#start_3>`_ section for more info.
 
 You can specify the accelerated styles explicitly in your input script
-by including their suffix, or you can use the `-suffix command-line switch <Section_start.html#start_7>`_ when you invoke SPARTA, or you can
-use the :doc:`suffix <suffix>` command in your input script.
+by including their suffix, or you can use the `-suffix command-line switch <Section_start.html#start_7>`_ when you invoke SPARTA.
 
 See the :doc:`Accelerating SPARTA <Section_accelerate>` section of the
 manual for more instructions on how to use the accelerated styles
@@ -445,15 +444,19 @@ style = none
 **(Bird94)** G. A. Bird, Molecular Gas Dynamics and the Direct
 Simulation of Gas Flows, Clarendon Press, Oxford (1994).
 
-.. _Bird09:
-
 .. raw:: html
 
    <span id="Bird09"></span>
 
+.. _Bird09b:
+
+.. raw:: html
+
+   <span id="Bird09b"></span>
 
 
-**(Bird09)** G. A. Bird, Chemical Reactions in DSMC Rarefied Gas
+
+**(Bird09b)** G. A. Bird, Chemical Reactions in DSMC Rarefied Gas
 Dynamics, Editor T Abe, AIP Conference Proceedings (2009).
 
 .. _Bird11:

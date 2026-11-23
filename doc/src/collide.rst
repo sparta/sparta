@@ -6,7 +6,7 @@ collide command
 **Syntax:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    collide style args keyword value ...
 
@@ -35,7 +35,7 @@ collide command
 **Examples:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    collide none
    collide vss all ../data/air.vss
@@ -233,8 +233,7 @@ These accelerated styles are part of the KOKKOS package. They are only
 enabled if SPARTA was built with that package.  See the `Making SPARTA <Section_start.html#start_3>`_ section for more info.
 
 You can specify the accelerated styles explicitly in your input script
-by including their suffix, or you can use the `-suffix command-line switch <Section_start.html#start_7>`_ when you invoke SPARTA, or you can
-use the :doc:`suffix <suffix>` command in your input script.
+by including their suffix, or you can use the `-suffix command-line switch <Section_start.html#start_7>`_ when you invoke SPARTA.
 
 See the :doc:`Accelerating SPARTA <Section_accelerate>` section of the
 manual for more instructions on how to use the accelerated styles

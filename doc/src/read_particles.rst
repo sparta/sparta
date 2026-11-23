@@ -6,7 +6,7 @@ read\_particles command
 **Syntax:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    read_particles file Nstep
 
@@ -16,7 +16,7 @@ read\_particles command
 **Examples:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    read_particles dump.sphere 10500
 

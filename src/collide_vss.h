@@ -124,7 +124,7 @@ Self-explanatory.
 
 E: VSS parameters do not match current species
 
-Species cannot be added after VSS colision file is read.
+Species cannot be added after VSS collision file is read.
 
 E: Cannot open VSS parameter file %s
 

@@ -6,7 +6,7 @@ seed command
 **Syntax:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    seed Nvalue
 
@@ -15,7 +15,7 @@ seed command
 **Examples:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    seed 5838959
 

@@ -34,7 +34,7 @@ the first page of the manual (this page).
 SPARTA stands for Stochastic PArallel Rarefied-gas Time-accurate
 Analyzer.
 
-SPARTA is a Direct Simulation Montel Carlo (DSMC) simulator designed
+SPARTA is a Direct Simulation Monte Carlo (DSMC) simulator designed
 to run efficiently on parallel computers.  It was developed at Sandia
 National Laboratories, a US Department of Energy facility, with
 funding from the DOE.  It is an open-source code, distributed freely
@@ -150,6 +150,7 @@ it gives quick access to documentation for all SPARTA commands.
 * :doc:`Future and history <Section_history>`
   13.1 `Coming attractions <hist_1_>`_
   13.2 `Past versions <hist_2_>`_
+* :doc:`Bibliography <Bibliography>`
 
 
 
@@ -415,6 +416,7 @@ it gives quick access to documentation for all SPARTA commands.
    Section_python
    Section_errors
    Section_history
+   Bibliography
    adapt_grid
    balance_grid
    bound_modify
