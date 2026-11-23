@@ -127,8 +127,8 @@ html_show_sourcelink = False
 # the pages, listing each one under this URL, as the LAMMPS manual does,
 # and each page gets a <link rel="canonical"> to its published copy.  The
 # site's robots.txt, at the root of sparta.github.io, points to the
-# sitemap.  The search and index pages are not content.
-extensions.append('sphinx_sitemap')
+# sitemap.  The search and index pages are not content.  The extension
+# is loaded further below, only for the HTML builders.
 html_baseurl = 'https://sparta.github.io/doc/'
 sitemap_url_scheme = '{link}'
 sitemap_excludes = ['search.html', 'genindex.html']
@@ -218,6 +218,13 @@ def _requested_builder(argv):
         if arg.startswith('--builder='):
             return arg.split('=', 1)[1]
     return None
+
+
+# sphinx-sitemap (see above) only applies to the HTML builders.  With the
+# spelling or latex builder it finds no pages and warns, which -W makes an
+# error, so "make spelling" failed.
+if _requested_builder(None) in (None, 'html', 'dirhtml', 'singlehtml'):
+    extensions.append('sphinx_sitemap')
 
 
 if _requested_builder(None) == 'spelling':
