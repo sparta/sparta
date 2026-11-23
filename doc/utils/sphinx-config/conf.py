@@ -360,6 +360,59 @@ def sparta_commands():
     return names
 
 
+# -- Anchors in the PDF ----------------------------------------------------
+#
+# The manual keeps its published anchor names -- Bird94, start_3, cmd_5 --
+# as raw-HTML <span id="..."> beside each reST label (see "Anchor names" at
+# the top of this file), because docutils would turn the label itself into
+# "bird94" or "start-3".  The links to them say "#Bird94" and
+# "Section_start.html#start_3".  LaTeX drops raw HTML, so in the PDF those
+# anchors did not exist and every such link went nowhere (155 of them).
+#
+# For the LaTeX builder only, a target node with the same ids is put in
+# front of each raw-HTML node that holds nothing but such spans, and the
+# LaTeX writer turns it into the label the links already ask for.  The HTML build is not
+# touched: it keeps the raw spans exactly as before.
+RAW_ANCHOR = re.compile(r'<span id="([^"]+)"></span>')
+
+
+def latex_raw_anchors(app, doctree):
+    from docutils import nodes
+
+    if app.builder.format != 'latex':
+        return
+    # ids that become labels; an external link's own target node carries an
+    # id too ("stl2surf" for `stl2surf <...>`_) but is never a label
+    have = {i for n in doctree.findall(nodes.Element)
+            if not (isinstance(n, nodes.target) and 'refuri' in n)
+            for i in n.get('ids', [])}
+    for raw in list(doctree.findall(nodes.raw)):
+        if 'html' not in raw.get('format', '').split():
+            continue
+        text = raw.astext()
+        ids = RAW_ANCHOR.findall(text)
+        if not ids or RAW_ANCHOR.sub('', text).strip():
+            continue
+        new = [i for i in ids if i not in have]
+        if not new:
+            continue
+        have.update(new)
+        # inserted before the raw node rather than replacing it: the raw
+        # node may carry the ids of the reST label beside it, which the
+        # label already gives LaTeX by reference, and the LaTeX writer
+        # skips the raw node itself
+        #
+        # Right before a section heading the LaTeX writer skips targets,
+        # expecting the section to carry their ids, so there the ids go on
+        # the section.
+        following = raw.next_node(descend=False, siblings=True, ascend=True)
+        if isinstance(following, nodes.section):
+            following['ids'].extend(new)
+        else:
+            raw.parent.insert(raw.parent.index(raw),
+                              nodes.target('', '', ids=new))
+
+
 def setup(app):
     import sys
 
@@ -368,5 +421,6 @@ def setup(app):
 
     app.add_lexer('SPARTA', SPARTALexer.make_lexer(sparta_commands()))
     app.connect('source-read', fill_bibliography)
+    app.connect('doctree-read', latex_raw_anchors)
     app.connect('env-get-outdated', bibliography_always_outdated)
     app.connect('build-finished', copy_full_size_images)
