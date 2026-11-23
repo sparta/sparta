@@ -93,6 +93,14 @@ Grid::Grid(SPARTA *sparta) : Pointers(sparta)
   gnames[0] = new char[n];
   strcpy(gnames[0],"all");
 
+  // no grid yet, so not uniform: check_uniform() sets these once a grid
+  //   exists, but find_neighbors() reads them before that, via
+  //   update_halo_index(), when create_grid, read_grid or read_restart
+  //   builds the grid
+
+  uniform = 0;
+  unx = uny = unz = 0;
+
   halo_index = NULL;
   maxhalo = 0;
   halo_ilo = halo_jlo = halo_klo = 0;
