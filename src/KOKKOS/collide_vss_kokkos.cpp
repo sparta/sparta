@@ -1276,11 +1276,20 @@ template < int DIM, int GASTALLY > void CollideVSSKokkos::collisions_one_subcell
 
   ParticleKokkos* particle_kk = (ParticleKokkos*) particle;
   particle_kk->sync(Device,PARTICLE_MASK|SPECIES_MASK);
-  if (vibstyle == DISCRETE) particle_kk->sync(Device,CUSTOM_MASK);
+  if (vibstyle == DISCRETE || elecstyle == DISCRETE)
+    particle_kk->sync(Device,CUSTOM_MASK);
   d_particles = particle_kk->k_particles.view_device();
   d_species = particle_kk->k_species.view_device();
+  d_nelecstates = particle_kk->d_nelecstates;
+  d_elecstates = particle_kk->d_elecstates;
+  d_elec_default_rels = particle_kk->d_elec_default_rels;
+  d_elec_species_rels = particle_kk->d_elec_species_rels;
+  d_elec_wt = particle_kk->d_elec_wt;
+  d_enforce_spin_conservation = particle_kk->d_enforce_spin_conservation;
   d_ewhich = particle_kk->k_ewhich.view_device();
+  k_eivec = particle_kk->k_eivec;
   k_eiarray = particle_kk->k_eiarray;
+  k_edvec = particle_kk->k_edvec;
 
   GridKokkos* grid_kk = (GridKokkos*) grid;
   grid_kk->sync(Device,CINFO_MASK|CELL_MASK);
@@ -1334,7 +1343,9 @@ template < int DIM, int GASTALLY > void CollideVSSKokkos::collisions_one_subcell
     if ((bigint) d_particles.extent(0) < nlocal_extra) {
       particle->grow(nlocal_extra - particle->nlocal);
       d_particles = particle_kk->k_particles.view_device();
+      k_eivec = particle_kk->k_eivec;
       k_eiarray = particle_kk->k_eiarray;
+      k_edvec = particle_kk->k_edvec;
     }
   }
 
@@ -1459,7 +1470,9 @@ template < int DIM, int GASTALLY > void CollideVSSKokkos::collisions_one_subcell
       if (d_particles.extent(0) < nlocal_new) {
         particle->grow(nlocal_new - particle->nlocal);
         d_particles = particle_kk->k_particles.view_device();
+        k_eivec = particle_kk->k_eivec;
         k_eiarray = particle_kk->k_eiarray;
+        k_edvec = particle_kk->k_edvec;
       }
     }
   }
@@ -1475,7 +1488,8 @@ template < int DIM, int GASTALLY > void CollideVSSKokkos::collisions_one_subcell
 
   this->modified(Device,ALL_MASK);
   particle_kk->modify(Device,PARTICLE_MASK);
-  if (vibstyle == DISCRETE) particle_kk->modify(Device,CUSTOM_MASK);
+  if (vibstyle == DISCRETE || elecstyle == DISCRETE)
+    particle_kk->modify(Device,CUSTOM_MASK);
 
   d_particles = t_particle_1d(); // destroy reference to reduce memory use
   d_nn_last_partner = {};
@@ -1999,11 +2013,20 @@ void CollideVSSKokkos::collisions_group(COLLIDE_REDUCE &reduce)
 
   ParticleKokkos* particle_kk = (ParticleKokkos*) particle;
   particle_kk->sync(Device,PARTICLE_MASK|SPECIES_MASK);
-  if (vibstyle == DISCRETE) particle_kk->sync(Device,CUSTOM_MASK);
+  if (vibstyle == DISCRETE || elecstyle == DISCRETE)
+    particle_kk->sync(Device,CUSTOM_MASK);
   d_particles = particle_kk->k_particles.view_device();
   d_species = particle_kk->k_species.view_device();
+  d_nelecstates = particle_kk->d_nelecstates;
+  d_elecstates = particle_kk->d_elecstates;
+  d_elec_default_rels = particle_kk->d_elec_default_rels;
+  d_elec_species_rels = particle_kk->d_elec_species_rels;
+  d_elec_wt = particle_kk->d_elec_wt;
+  d_enforce_spin_conservation = particle_kk->d_enforce_spin_conservation;
   d_ewhich = particle_kk->k_ewhich.view_device();
+  k_eivec = particle_kk->k_eivec;
   k_eiarray = particle_kk->k_eiarray;
+  k_edvec = particle_kk->k_edvec;
 
   GridKokkos* grid_kk = (GridKokkos*) grid;
   grid_kk->sync(Device,CINFO_MASK);
@@ -2080,7 +2103,9 @@ void CollideVSSKokkos::collisions_group(COLLIDE_REDUCE &reduce)
     if ((bigint) d_particles.extent(0) < nlocal_extra) {
       particle->grow(nlocal_extra - particle->nlocal);
       d_particles = particle_kk->k_particles.view_device();
+      k_eivec = particle_kk->k_eivec;
       k_eiarray = particle_kk->k_eiarray;
+      k_edvec = particle_kk->k_edvec;
     }
   }
 
@@ -2185,7 +2210,9 @@ void CollideVSSKokkos::collisions_group(COLLIDE_REDUCE &reduce)
       if (d_particles.extent(0) < nlocal_new) {
         particle->grow(nlocal_new - particle->nlocal);
         d_particles = particle_kk->k_particles.view_device();
+        k_eivec = particle_kk->k_eivec;
         k_eiarray = particle_kk->k_eiarray;
+        k_edvec = particle_kk->k_edvec;
       }
     }
   }
@@ -2205,7 +2232,8 @@ void CollideVSSKokkos::collisions_group(COLLIDE_REDUCE &reduce)
 
   this->modified(Device,ALL_MASK);
   particle_kk->modify(Device,PARTICLE_MASK);
-  if (vibstyle == DISCRETE) particle_kk->modify(Device,CUSTOM_MASK);
+  if (vibstyle == DISCRETE || elecstyle == DISCRETE)
+    particle_kk->modify(Device,CUSTOM_MASK);
 
   d_particles = t_particle_1d(); // destroy reference to reduce memory use
 
@@ -2517,10 +2545,17 @@ void CollideVSSKokkos::collisions_group_ambipolar(COLLIDE_REDUCE &reduce)
   particle_kk->sync(Device,PARTICLE_MASK|SPECIES_MASK|CUSTOM_MASK);
   d_particles = particle_kk->k_particles.view_device();
   d_species = particle_kk->k_species.view_device();
+  d_nelecstates = particle_kk->d_nelecstates;
+  d_elecstates = particle_kk->d_elecstates;
+  d_elec_default_rels = particle_kk->d_elec_default_rels;
+  d_elec_species_rels = particle_kk->d_elec_species_rels;
+  d_elec_wt = particle_kk->d_elec_wt;
+  d_enforce_spin_conservation = particle_kk->d_enforce_spin_conservation;
   d_ewhich = particle_kk->k_ewhich.view_device();
   auto h_ewhich = particle_kk->k_ewhich.view_host();
   k_eivec = particle_kk->k_eivec;
   k_eiarray = particle_kk->k_eiarray;
+  k_edvec = particle_kk->k_edvec;
   k_edarray = particle_kk->k_edarray;
   d_ionambi = k_eivec.view_host()[h_ewhich[index_ionambi]].k_view.view_device();
   d_velambi = k_edarray.view_host()[h_ewhich[index_velambi]].k_view.view_device();
@@ -2605,6 +2640,7 @@ void CollideVSSKokkos::collisions_group_ambipolar(COLLIDE_REDUCE &reduce)
       auto h_ewhich = particle_kk->k_ewhich.view_host();
       k_eivec = particle_kk->k_eivec;
       k_eiarray = particle_kk->k_eiarray;
+      k_edvec = particle_kk->k_edvec;
       k_edarray = particle_kk->k_edarray;
       d_ionambi = k_eivec.view_host()[h_ewhich[index_ionambi]].k_view.view_device();
       d_velambi = k_edarray.view_host()[h_ewhich[index_velambi]].k_view.view_device();
@@ -2750,6 +2786,7 @@ void CollideVSSKokkos::collisions_group_ambipolar(COLLIDE_REDUCE &reduce)
         auto h_ewhich = particle_kk->k_ewhich.view_host();
         k_eivec = particle_kk->k_eivec;
         k_eiarray = particle_kk->k_eiarray;
+        k_edvec = particle_kk->k_edvec;
         k_edarray = particle_kk->k_edarray;
         d_ionambi = k_eivec.view_host()[h_ewhich[index_ionambi]].k_view.view_device();
         d_velambi = k_edarray.view_host()[h_ewhich[index_velambi]].k_view.view_device();
