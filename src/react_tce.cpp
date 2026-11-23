@@ -31,6 +31,9 @@ using namespace MathConst;
 enum{NONE,DISCRETE,SMOOTH};
 enum{DISSOCIATION,EXCHANGE,IONIZATION,RECOMBINATION};   // other files
 
+#define MAXCACHE 32     // channels per species pair whose first-pass
+                        //   probabilities attempt() keeps
+
 /* ---------------------------------------------------------------------- */
 
 ReactTCE::ReactTCE(SPARTA *sparta, int narg, char **arg) :
@@ -125,12 +128,19 @@ int ReactTCE::attempt(Particle::OnePart *ip, Particle::OnePart *jp,
   double total_prob = 0.0;
   int isel = -1;
 
+  // the capped channel probabilities are kept for the saturation pass
+  // below (channel_prob() is deterministic, so this is exact); a pair with
+  // more than MAXCACHE channels recomputes the rest there
+
+  double pcache[MAXCACHE];
+
   for (int i = 0; i < n; i++) {
     double p = channel_prob(list[i],ip,jp,pre_etrans,pre_erot,
                             pre_evib,pre_eelec,pre_ave_rotdof);
     if (p < 0.0) prob_neg_flag = 1;
     int over = 0;
     if (p > 1.0) { p = 1.0; over = 1; }
+    if (i < MAXCACHE) pcache[i] = p;
     double before = total_prob;
     total_prob += p;
     // record a channel whose own probability was capped, or the channel
@@ -146,15 +156,16 @@ int ReactTCE::attempt(Particle::OnePart *ip, Particle::OnePart *jp,
   // collision reacts with probability 1 and the channel must be selected
   // proportionally (P_i/total) to remove the ordering bias of the
   // sequential test above.  Re-walk the (deterministic) cumulative sum
-  // against u*total; this slow second pass runs only for saturated pairs.
+  // against u*total, from the probabilities of the first pass.
 
   if (total_prob > 1.0) {
     double target = random_prob*total_prob;
     double cum = 0.0;
     isel = -1;
     for (int i = 0; i < n; i++) {
-      double p = channel_prob(list[i],ip,jp,pre_etrans,pre_erot,
-                              pre_evib,pre_eelec,pre_ave_rotdof);
+      double p = (i < MAXCACHE) ? pcache[i] :
+        channel_prob(list[i],ip,jp,pre_etrans,pre_erot,
+                     pre_evib,pre_eelec,pre_ave_rotdof);
       if (p > 1.0) p = 1.0;
       cum += p;
       if (p > 0.0) isel = i;               // round-off fallback: last live channel

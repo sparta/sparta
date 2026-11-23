@@ -42,6 +42,9 @@ class ReactTCEKokkos : public ReactBirdKokkos {
 enum{NONE,DISCRETE,SMOOTH};
 enum{DISSOCIATION,EXCHANGE,IONIZATION,RECOMBINATION};   // other files
 enum{PROBBIG_NONE = 1073741824};                  // no d_probbig entry
+enum{MAXCACHE_KK = 32};          // channels per species pair whose first-pass
+                                 //   probabilities attempt_kk() keeps
+                                 //   (matches MAXCACHE in react_tce.cpp)
 
 KOKKOS_INLINE_FUNCTION
 int attempt_kk(Particle::OnePart *ip, Particle::OnePart *jp,
@@ -75,6 +78,11 @@ int attempt_kk(Particle::OnePart *ip, Particle::OnePart *jp,
   double total_prob = 0.0;
   int isel = -1;
 
+  // first-pass capped probabilities, reused by the saturation pass
+  // (matches ReactTCE::attempt)
+
+  double pcache[MAXCACHE_KK];
+
   for (int i = 0; i < n; i++) {
     double p = channel_prob_kk(d_list[i],ip,jp,pre_etrans,pre_erot,
                                pre_evib,pre_eelec,pre_ave_rotdof,
@@ -83,6 +91,7 @@ int attempt_kk(Particle::OnePart *ip, Particle::OnePart *jp,
     if (p < 0.0) Kokkos::atomic_max(&d_probneg(),1);
     int over = 0;
     if (p > 1.0) { p = 1.0; over = 1; }
+    if (i < MAXCACHE_KK) pcache[i] = p;
     const double before = total_prob;
     total_prob += p;
     // a channel whose own probability was capped, or the channel at which
@@ -94,18 +103,19 @@ int attempt_kk(Particle::OnePart *ip, Particle::OnePart *jp,
 
   // saturation: the pair reacts with probability 1 and the channel is
   // selected proportionally (P_i/total) by re-walking the deterministic
-  // cumulative sum against u*total; this slow second pass runs only for
-  // saturated pairs (matches ReactTCE::attempt)
+  // cumulative sum against u*total, from the first-pass probabilities
+  // (matches ReactTCE::attempt)
 
   if (total_prob > 1.0) {
     const double target = random_prob*total_prob;
     double cum = 0.0;
     isel = -1;
     for (int i = 0; i < n; i++) {
-      double p = channel_prob_kk(d_list[i],ip,jp,pre_etrans,pre_erot,
-                                 pre_evib,pre_eelec,pre_ave_rotdof,
-                                 recomb_species,recomb_density,recomb_part3,
-                                 recomb_p3_eelec,d_species,tgas_cell);
+      double p = (i < MAXCACHE_KK) ? pcache[i] :
+        channel_prob_kk(d_list[i],ip,jp,pre_etrans,pre_erot,
+                        pre_evib,pre_eelec,pre_ave_rotdof,
+                        recomb_species,recomb_density,recomb_part3,
+                        recomb_p3_eelec,d_species,tgas_cell);
       if (p > 1.0) p = 1.0;
       cum += p;
       if (p > 0.0) isel = i;               // round-off fallback: last live channel
