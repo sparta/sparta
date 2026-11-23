@@ -17,7 +17,7 @@ header:
 
 project:
   name: SPARTA
-  homepage: https://sparta.sandia.gov
+  homepage: https://sparta.github.io
   administrators:
     - name: SPARTA developers at Sandia National Laboratories
       primary: true

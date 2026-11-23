@@ -1,7 +1,7 @@
 from __future__ import print_function
 from __future__ import division
 #   SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
-#   http://sparta.sandia.gov
+#   https://sparta.github.io
 #   Steve Plimpton, sjplimp@gmail.com, Michael Gallis, magalli@sandia.gov,
 #   Thomas Otahal, tjotaha@sandia.gov
 #   Sandia National Laboratories
