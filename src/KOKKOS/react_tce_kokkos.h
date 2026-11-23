@@ -399,9 +399,15 @@ double channel_prob_kk(int rindex, Particle::OnePart *ip,
   // are only nonzero for reverse recombinations (3-body detailed
   // balance, see ReactBird::build_db3_table)
 
-  DAT::t_float_2d d_mtab;
-  DAT::t_float_2d d_mtab_num;
-  DAT::t_float_1d d_mtab_du;
+  // kept in double whatever SPA_PRECISION is: the entries span many
+  // decades (a recombination row holds N_F/V_3 and the pair density of
+  // states), and in single precision the small ones underflow to zero
+
+  typedef Kokkos::View<double**, DeviceType::array_layout, DeviceType> t_table_2d;
+  typedef Kokkos::View<double*, DeviceType::array_layout, DeviceType> t_table_1d;
+  t_table_2d d_mtab;
+  t_table_2d d_mtab_num;
+  t_table_1d d_mtab_du;
   DAT::t_int_1d d_mtab_n;
   DAT::t_int_1d d_mtab_num_flag;   // 1 if mtab_num row is a real 3-body
                                    //   detailed-balance table (mirrors the

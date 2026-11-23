@@ -71,9 +71,9 @@ void ReactTCEKokkos::init()
 
     int maxn = 0;
     for (int i = 0; i < mtab_nlist; i++) maxn = MAX(maxn,mtab_n[i]);
-    d_mtab = DAT::t_float_2d("react:d_mtab",mtab_nlist,MAX(maxn,1));
-    d_mtab_num = DAT::t_float_2d("react:d_mtab_num",mtab_nlist,MAX(maxn,1));
-    d_mtab_du = DAT::t_float_1d("react:d_mtab_du",mtab_nlist);
+    d_mtab = t_table_2d("react:d_mtab",mtab_nlist,MAX(maxn,1));
+    d_mtab_num = t_table_2d("react:d_mtab_num",mtab_nlist,MAX(maxn,1));
+    d_mtab_du = t_table_1d("react:d_mtab_du",mtab_nlist);
     d_mtab_n = DAT::t_int_1d("react:d_mtab_n",mtab_nlist);
     d_mtab_num_flag = DAT::t_int_1d("react:d_mtab_num_flag",mtab_nlist);
     auto h_mtab = Kokkos::create_mirror_view(d_mtab);
