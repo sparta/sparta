@@ -34,7 +34,8 @@ help:
 	@echo "  html          build the HTML manual in doc/html"
 	@echo "  pdf           build doc/html/Manual.pdf (needs a LaTeX installation)"
 	@echo "  fasthtml      quick per-page preview in doc/fasthtml (needs pandoc)"
-	@echo "  check         verify every internal link and anchor in doc/html"
+	@echo "  check         verify the command and style listings against src/,"
+	@echo "                and every internal link and anchor in doc/html"
 	@echo "  clean         remove the build tree, keep the virtualenv"
 	@echo "  clean-all     also remove the virtualenv and the MathJax copy"
 	@echo ""
@@ -44,8 +45,10 @@ help:
 # The one check that outlives the migration: parity-check.py and
 # equation-check.py both need a txt2html manual to compare against, and
 # there will not be one once doc/*.txt is gone from the release.
+# && so that a failure in either check fails the target.
 check: html
-	@$(PYTHON) $(BUILDDIR)/utils/link-check.py $(BUILDDIR)/html
+	@$(PYTHON) $(BUILDDIR)/utils/check-styles.py $(BUILDDIR)/../src $(BUILDDIR)/src && \
+	 $(PYTHON) $(BUILDDIR)/utils/link-check.py $(BUILDDIR)/html
 
 clean:
 	rm -rf $(BUILDDIR)/html $(BUILDDIR)/doctrees \

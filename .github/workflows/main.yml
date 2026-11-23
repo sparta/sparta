@@ -206,3 +206,10 @@ jobs:
 
     - name: Check every internal link and anchor resolves
       run: python3 doc/utils/link-check.py doc/html
+
+    # Every style and command the source defines is listed in
+    # Section_commands, in the right category, with "(k)" exactly when a
+    # KOKKOS variant exists -- and nothing is listed that the source
+    # does not define.
+    - name: Check the command and style listings against src/
+      run: python3 doc/utils/check-styles.py src doc/src

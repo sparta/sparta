@@ -188,7 +188,8 @@ def sparta_commands():
         with open(header) as f:
             names.update(re.findall(r'^CommandStyle\((\w+),', f.read(), re.M))
     with open(os.path.join(SPARTA_SOURCE_DIR, 'input.cpp')) as f:
-        names.update(re.findall(r'strcmp\(command,"(\w+)"\)', f.read()))
+        code = re.sub(r'//[^\n]*', '', f.read())
+        names.update(re.findall(r'strcmp\(command,"(\w+)"\)', code))
     if len(names) < 50:
         raise RuntimeError('found only %d SPARTA commands under %s; the '
                            'lexer would miss most of them'
