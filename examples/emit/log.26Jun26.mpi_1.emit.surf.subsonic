@@ -5,8 +5,8 @@ Running on 1 MPI task(s)
 # using the optional time-averaging window to damp statistical fluctuations
 #
 # Note:
-#  - The "comm/sort” option to the “global” command is used to match MPI runs.
-#  - The “twopass” option is used to match Kokkos runs.
+#  - The "comm/sort" option to the "global" command is used to match MPI runs.
+#  - The "twopass" option is used to match Kokkos runs.
 # The "comm/sort" and "twopass" options should not be used for production runs.
 #
 # The {window} value applies a moving average to the cell streaming velocity used

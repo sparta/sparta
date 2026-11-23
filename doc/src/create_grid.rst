@@ -166,7 +166,7 @@ exactly once via the *Ilevel* argument to either a *subset* or
 *region* keyword.  *Ilevel* can be specified as a single number or use
 a wildcard asterisk in place of or in conjunction with one or two
 integers to specify multiple levels at the same time.  This takes the
-form “\*” or “\*n” or “n\*” or “m\*n”.  An asterisk with no numeric values
+form "\*" or "\*n" or "n\*" or "m\*n".  An asterisk with no numeric values
 means all levels from 2 to Nlevels.  A leading asterisk means all
 levels from 2 to n (inclusive). A trailing asterisk means all levels
 from n to Nlevels (inclusive). A middle asterisk means all levels from
