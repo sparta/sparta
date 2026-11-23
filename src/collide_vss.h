@@ -117,8 +117,6 @@ class CollideVSS : public Collide {
   double sample_rot_discrete(RanKnuth *, int, double, double);
   double rotrel (int, double);
   double vibrel (int, double);
-  double eff_vib_dof(double, double);
-  double eff_elec_dof(int, double);
   double reacting_pool_temp(double, int, double *, int, int *, double);
   void reacting_disposal_exact(Particle::OnePart **, int, double);
 

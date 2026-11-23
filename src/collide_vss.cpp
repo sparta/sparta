@@ -727,43 +727,6 @@ void CollideVSS::EEXCHANGE_NonReactingEDisposal(Particle::OnePart *ip,
 }
 
 /* ----------------------------------------------------------------------
-   instantaneous effective DOF of a discrete (SHO) vibrational mode with
-   characteristic temperature theta at collision temperature tcoll:
-   zeta = 2*<e>/kT = 2x/(exp(x)-1) with x = theta/tcoll
-------------------------------------------------------------------------- */
-
-double CollideVSS::eff_vib_dof(double theta, double tcoll)
-{
-  if (theta <= 0.0 || tcoll <= 0.0) return 0.0;
-  double x = theta / tcoll;
-  return 2.0 * x / (exp(x) - 1.0);
-}
-
-/* ----------------------------------------------------------------------
-   instantaneous effective DOF of the discrete electronic ladder of
-   species sp at collision temperature tcoll:
-   zeta = 2*<e_el>(tcoll)/(kB*tcoll), the electronic analogue of
-   eff_vib_dof, computed from the elecfile ladder
-------------------------------------------------------------------------- */
-
-double CollideVSS::eff_elec_dof(int sp, double tcoll)
-{
-  if (tcoll <= 0.0) return 0.0;
-  const Particle::ElecState *states = particle->species[sp].elecdat->states;
-  const int nstate = particle->species[sp].elecdat->nelecstate;
-  double wsum = 0.0, esum = 0.0;
-  for (int s = 0; s < nstate; s++) {
-    double x = states[s].temp / tcoll;
-    if (x > 200.0) continue;               // unreachable state at this tcoll
-    double w = states[s].degen * exp(-x);
-    wsum += w;
-    esum += w * states[s].temp;
-  }
-  if (wsum <= 0.0) return 0.0;
-  return 2.0 * (esum/wsum) / tcoll;
-}
-
-/* ----------------------------------------------------------------------
    collision temperature of the reacting-disposal energy pool: solve
      E = shape_classical*kB*T + sum_m kB*theta_m/(exp(theta_m/T)-1)
          + sum_p <e_el>_p(T)
@@ -1088,13 +1051,12 @@ void CollideVSS::EEXCHANGE_ReactingEDisposal(Particle::OnePart *ip,
                                              Particle::OnePart *jp,
                                              Particle::OnePart *kp)
 {
-  double State_prob,Fraction_Rot,Fraction_Vib;
-  int i,numspecies,rotdof,vibdof,max_level,ivib;
-  double aveomega,pevib;
+  double Fraction_Rot,Fraction_Vib;
+  int i,numspecies,rotdof,vibdof;
+  double aveomega;
 
   Particle::OnePart *p;
   Particle::Species *species = particle->species;
-  double AdjustFactor = 0.99999999;
 
   // zero electronic state/energy of all products, not just those whose
   // species has electronic data: the reactant electronic energy is already
@@ -1129,105 +1091,53 @@ void CollideVSS::EEXCHANGE_ReactingEDisposal(Particle::OnePart *ip,
                 params[kp->ispecies][kp->ispecies].omega)/3;
   }
 
-  // Phase 1: total effective internal DOF competing for the shared energy
-  // pool, used to correct the Larsen-Borgnakke exponent for sequential
-  // sampling (Dirichlet stick-breaking).  A discrete vibrational mode holds
-  // less energy than a classical 2-DOF oscillator, so it is counted by its
-  // instantaneous effective DOF zeta = eff_vib_dof(theta,tcoll); a discrete
-  // electronic ladder likewise enters as zeta_el = eff_elec_dof(sp,tcoll).
-  // Both are evaluated at the collision temperature tcoll of the whole pool,
-  // found self-consistently from
-  //   E = (2.5-aveomega + sum_classical_dof/2)*kB*tcoll
-  //       + sum_m kB*theta_m/(exp(theta_m/tcoll)-1) + sum_p <e_el>_p(tcoll).
-  // Without the correction every mode draws against the bare exponent
-  // (1.5-aveomega) as if it were the only internal mode, so the early draws
-  // take too much and the last modes in the chain (electronic) are
-  // systematically starved: a reacting box then pumps electronic energy into
-  // the other modes and detailed balance across reaction events fails
-  // (measured as an electronic temperature pinned ~2800 K below a 15 kK
-  // thermostatted reservoir).  The non-reacting disposal deliberately omits
-  // this correction: it redraws one mode at a time against the full
-  // remaining pool, which preserves detailed balance on its own.
+  // a product with a discrete ladder (vibration, electronic states, or
+  // discrete rotation of a linear molecule): draw all product states at
+  // once from the exact microcanonical distribution (see
+  // reacting_disposal_exact).  Otherwise every internal mode is continuous
+  // and the sequential Larsen-Borgnakke draws below are exact: each draw's
+  // exponent is corrected for the DOF still waiting on the shared pool
+  // (Dirichlet stick-breaking).  The non-reacting disposal omits this
+  // correction: it redraws one mode at a time against the full remaining
+  // pool, which preserves detailed balance on its own.
 
   double E_Dispose = postcoln.etotal;
-  double boltz = update->boltz;
   Particle::OnePart *plist[3] = {ip,jp,kp};
 
-  double shape_classical = 2.5 - aveomega;   // translational shape (2.5-omega)
-  double remaining_dof = 0.0;                // effective internal DOF left to draw
-  double theta[3*Particle::MAXVIBMODE];      // discrete vib modes of products
-  int elecsp[3];                             // product species with elec ladders
-  int nvibflat = 0, nelecflat = 0;
+  double remaining_dof = 0.0;   // internal DOF left to draw
+  int ndiscrete = 0;            // discrete ladders among the products
 
   for (i = 0; i < numspecies; i++) {
     int sp = plist[i]->ispecies;
     if ((species[sp].rotdof > 0) && (rotstyle != NONE)) {
-      shape_classical += 0.5 * species[sp].rotdof;
+      if (rotstyle == DISCRETE && species[sp].rotdof == 2) ndiscrete++;
       remaining_dof += species[sp].rotdof;
     }
     if ((species[sp].vibdof > 0) && (vibstyle != NONE)) {
       if (vibstyle == DISCRETE) {
         for (int m = 0; m < species[sp].nvibmode; m++)
-          if (species[sp].vibtemp[m] > 0.0) theta[nvibflat++] = species[sp].vibtemp[m];
-      } else {
-        shape_classical += 0.5 * species[sp].vibdof;
-        remaining_dof += species[sp].vibdof;
-      }
+          if (species[sp].vibtemp[m] > 0.0) ndiscrete++;
+      } else remaining_dof += species[sp].vibdof;
     }
-    if (elecstyle == DISCRETE && species[sp].elecdat != NULL)
-      elecsp[nelecflat++] = sp;
+    if (elecstyle == DISCRETE && species[sp].elecdat != NULL) ndiscrete++;
   }
 
-  // collision temperature of the pool (classical unless discrete modes present)
-
-  double tcoll = (shape_classical > 0.0) ? E_Dispose/(boltz*shape_classical) : 0.0;
-
-  // a product with a discrete ladder (vibration, electronic states, or
-  // discrete rotation of a linear molecule): draw all product states at
-  // once from the exact microcanonical distribution (see
-  // reacting_disposal_exact); the sequential draws below remain for
-  // products whose internal modes are all continuous, for which they are
-  // exact
-
-  int ndiscrete_rot = 0;
-  if (rotstyle == DISCRETE)
-    for (i = 0; i < numspecies; i++)
-      if (species[plist[i]->ispecies].rotdof == 2) ndiscrete_rot++;
-  if (nvibflat || nelecflat || ndiscrete_rot) {
+  if (ndiscrete) {
     reacting_disposal_exact(plist,numspecies,aveomega);
     return;
   }
 
-  if ((nvibflat || nelecflat) && E_Dispose > 0.0) {
-    tcoll = reacting_pool_temp(shape_classical,nvibflat,theta,
-                               nelecflat,elecsp,E_Dispose);
-    for (int m = 0; m < nvibflat; m++)
-      remaining_dof += eff_vib_dof(theta[m],tcoll);
-    for (int e = 0; e < nelecflat; e++)
-      remaining_dof += eff_elec_dof(elecsp[e],tcoll);
-  }
-
-  // Phase 2: handle each kind of energy disposal for the products, each
-  // draw corrected for the effective DOF still waiting on the shared pool
+  // continuous internal modes of each product, each draw corrected for the
+  // DOF still waiting on the shared pool
 
   for (i = 0; i < numspecies; i++) {
-    if (i == 0) p = ip;
-    else if (i == 1) p = jp;
-    else p = kp;
-
+    p = plist[i];
     int sp = p->ispecies;
     rotdof = species[sp].rotdof;
 
     if (rotdof) {
       if (rotstyle == NONE) {
         p->erot = 0.0;
-      } else if (rotstyle == DISCRETE && rotdof == 2) {
-        // the sampler applies the exponent (1.5 - omega); shift omega so it
-        // becomes b_rot = (1.5-aveomega) + 0.5*(remaining_dof - rotdof)
-        double omega_eff = aveomega - 0.5 * (remaining_dof - rotdof);
-        p->erot = sample_rot_discrete(random,sp,E_Dispose,omega_eff);
-        E_Dispose -= p->erot;
-        remaining_dof -= rotdof;
 
       } else if (rotdof == 2) {
         double b_rot = (1.5 - aveomega) + 0.5 * (remaining_dof - rotdof);
@@ -1251,20 +1161,6 @@ void CollideVSS::EEXCHANGE_ReactingEDisposal(Particle::OnePart *ip,
     if (vibdof) {
       if (vibstyle == NONE) {
         p->evib = 0.0;
-      } else if (vibdof == 2 && vibstyle == DISCRETE) {
-        double zeta = eff_vib_dof(species[sp].vibtemp[0],tcoll);
-        double b_vib = (1.5 - aveomega) + 0.5 * (remaining_dof - zeta);
-        max_level = static_cast<int>
-          (E_Dispose / (boltz * species[sp].vibtemp[0]));
-        do {
-          ivib = static_cast<int>
-            (random->uniform()*(max_level+AdjustFactor));
-          p->evib = (double)
-            (ivib * boltz * species[sp].vibtemp[0]);
-          State_prob = pow((1.0 - p->evib / E_Dispose), b_vib);
-        } while (State_prob < random->uniform());
-        E_Dispose -= p->evib;
-        remaining_dof -= zeta;
 
       } else if (vibdof == 2 && vibstyle == SMOOTH) {
         double b_vib = (1.5 - aveomega) + 0.5 * (remaining_dof - vibdof);
@@ -1280,80 +1176,20 @@ void CollideVSS::EEXCHANGE_ReactingEDisposal(Particle::OnePart *ip,
         sample_bl(random,0.5*species[sp].vibdof-1.0, b_vib);
         E_Dispose -= p->evib;
         remaining_dof -= vibdof;
-      } else if (vibdof > 2 && vibstyle == DISCRETE && has_custom(p)) {
-        p->evib = 0.0;
-
-        int nmode = particle->species[sp].nvibmode;
-        int **vibmode = particle->eiarray[particle->ewhich[index_vibmode]];
-        int pindex = p - particle->particles;
-
-        // NOTE: unlike the non-reacting disposal, the per-mode quantum
-        // numbers are NOT added back to the pool here.  There the pool
-        // starts as precoln.etrans, so each mode's current energy must be
-        // returned before it is resampled; here the pool starts as
-        // postcoln.etotal, which already contains the reactants' full
-        // vibrational energy, and every product's evib was just zeroed.
-        // Re-adding the stale vibmode quanta (which belong to the
-        // pre-reaction particle, or to whatever particle last occupied a
-        // reused product slot) would count that energy twice and create
-        // energy from nothing.  Cf. sparta/sparta PR #654.
-
-        for (int imode = 0; imode < nmode; imode++) {
-          double zeta = eff_vib_dof(species[sp].vibtemp[imode],tcoll);
-          double b_vib = (1.5 - aveomega) + 0.5 * (remaining_dof - zeta);
-          max_level = static_cast<int>
-          (E_Dispose / (boltz * species[sp].vibtemp[imode]));
-          do {
-            ivib = static_cast<int>
-            (random->uniform()*(max_level+AdjustFactor));
-            pevib = ivib * boltz * species[sp].vibtemp[imode];
-            State_prob = pow((1.0 - pevib / E_Dispose), b_vib);
-          } while (State_prob < random->uniform());
-
-          vibmode[pindex][imode] = ivib;
-          p->evib += pevib;
-          E_Dispose -= pevib;
-          remaining_dof -= zeta;
-        }
       }
-    }
-
-    // the electronic ladder draws last within each product; correct its
-    // exponent for the effective DOF still waiting on the pool exactly like
-    // rot/vib above (the select_elec_state weight applies (1.5 - omega), so
-    // shift omega to b_el = (1.5-aveomega) + 0.5*(remaining_dof - zeta_el)).
-    // The (p,p) partner argument only matters for the relaxation-number
-    // lookup, which the reacting path skips.
-
-    if (elecstyle == DISCRETE && species[sp].elecdat != NULL && has_custom(p)) {
-      double zeta_el = eff_elec_dof(sp,tcoll);
-      double omega_eff = aveomega - 0.5 * (remaining_dof - zeta_el);
-      relax_electronic_mode(p, p, E_Dispose, omega_eff, true);
-      remaining_dof -= zeta_el;
     }
   }
 
-  // compute post-collision internal energies
+  // compute post-collision internal energies; no product has electronic
+  // states here (the exact disposal handles those)
 
   postcoln.erot = ip->erot + jp->erot;
   postcoln.evib = ip->evib + jp->evib;
   postcoln.eelec = 0.0;
-  if (elecstyle == DISCRETE) {
-    double *eelecs = particle->edvec[particle->ewhich[index_eelec]];
-    if (species[ip->ispecies].elecdat != NULL && has_custom(ip))
-      postcoln.eelec += eelecs[ip - particle->particles];
-    if (species[jp->ispecies].elecdat != NULL && has_custom(jp))
-      postcoln.eelec += eelecs[jp - particle->particles];
-  }
 
   if (kp) {
     postcoln.erot += kp->erot;
     postcoln.evib += kp->evib;
-    if (elecstyle == DISCRETE) {
-      double *eelecs = particle->edvec[particle->ewhich[index_eelec]];
-      if (species[kp->ispecies].elecdat != NULL && has_custom(kp))
-        postcoln.eelec += eelecs[kp - particle->particles];
-    }
   }
 
   // compute portion of energy left over for scattering

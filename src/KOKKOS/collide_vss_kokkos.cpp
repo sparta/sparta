@@ -4790,44 +4790,6 @@ double CollideVSSKokkos::cell_temperature_kk(int icell, int np) const
 }
 
 /* ----------------------------------------------------------------------
-   instantaneous effective DOF of a discrete (SHO) vibrational mode with
-   characteristic temperature theta at collision temperature tcoll:
-   zeta = 2*<e>/kT = 2x/(exp(x)-1) with x = theta/tcoll
-------------------------------------------------------------------------- */
-
-KOKKOS_INLINE_FUNCTION
-double CollideVSSKokkos::eff_vib_dof(double theta, double tcoll) const
-{
-  if (theta <= 0.0 || tcoll <= 0.0) return 0.0;
-  double x = theta / tcoll;
-  return 2.0 * x / (exp(x) - 1.0);
-}
-
-/* ----------------------------------------------------------------------
-   instantaneous effective DOF of the discrete electronic ladder of
-   species sp at collision temperature tcoll:
-   zeta = 2*<e_el>(tcoll)/(kB*tcoll), the electronic analogue of
-   eff_vib_dof, computed from the elecfile ladder
-------------------------------------------------------------------------- */
-
-KOKKOS_INLINE_FUNCTION
-double CollideVSSKokkos::eff_elec_dof(int sp, double tcoll) const
-{
-  if (tcoll <= 0.0) return 0.0;
-  const int nstate = d_nelecstates[sp];
-  double wsum = 0.0, esum = 0.0;
-  for (int s = 0; s < nstate; s++) {
-    double x = d_elecstates(sp,s).temp / tcoll;
-    if (x > 200.0) continue;               // unreachable state at this tcoll
-    double w = d_elecstates(sp,s).degen * exp(-x);
-    wsum += w;
-    esum += w * d_elecstates(sp,s).temp;
-  }
-  if (wsum <= 0.0) return 0.0;
-  return 2.0 * (esum/wsum) / tcoll;
-}
-
-/* ----------------------------------------------------------------------
    collision temperature of the reacting-disposal energy pool: solve
      E = shape_classical*kB*T + sum_m kB*theta_m/(exp(theta_m/T)-1)
          + sum_p <e_el>_p(T)
@@ -4894,12 +4856,11 @@ void CollideVSSKokkos::EEXCHANGE_ReactingEDisposal(int icell,
                                                    struct State &precoln, struct State &postcoln,
                                                    rand_type &rand_gen) const
 {
-  double State_prob,Fraction_Rot,Fraction_Vib;
-  int i,numspecies,rotdof,vibdof,max_level,ivib;
-  double aveomega,pevib;
+  double Fraction_Rot,Fraction_Vib;
+  int i,numspecies,rotdof,vibdof;
+  double aveomega;
 
   Particle::OnePart *p;
-  double AdjustFactor = 0.99999999;
 
   // zero electronic state/energy of all products, not just those whose
   // species has electronic data: the reactant electronic energy is already
@@ -4934,86 +4895,49 @@ void CollideVSSKokkos::EEXCHANGE_ReactingEDisposal(int icell,
                 d_params(kp->ispecies,kp->ispecies).omega)/3.0;
   }
 
-  // Phase 1: total effective internal DOF competing for the shared energy
-  // pool, used to correct the Larsen-Borgnakke exponent for sequential
-  // sampling (Dirichlet stick-breaking); see the CPU twin in collide_vss.cpp
-  // for the full derivation comment.  Kept line-for-line consistent with the
-  // CPU path for SPARTA_KOKKOS_EXACT parity.
+  // a product with a discrete ladder: exact microcanonical draw of all
+  // product states at once; otherwise every internal mode is continuous
+  // and the sequential draws below, corrected for the DOF still waiting on
+  // the shared pool, are exact.  See the CPU twin in collide_vss.cpp; kept
+  // line-for-line consistent with it for SPARTA_KOKKOS_EXACT parity.
 
   double E_Dispose = postcoln.etotal;
   Particle::OnePart *plist[3] = {ip,jp,kp};
 
-  double shape_classical = 2.5 - aveomega;   // translational shape (2.5-omega)
-  double remaining_dof = 0.0;                // effective internal DOF left to draw
-  double theta[3*Particle::MAXVIBMODE];      // discrete vib modes of products
-  int elecsp[3];                             // product species with elec ladders
-  int nvibflat = 0, nelecflat = 0;
+  double remaining_dof = 0.0;   // internal DOF left to draw
+  int ndiscrete = 0;            // discrete ladders among the products
 
   for (i = 0; i < numspecies; i++) {
     int sp = plist[i]->ispecies;
     if ((d_species[sp].rotdof > 0) && (rotstyle != NONE)) {
-      shape_classical += 0.5 * d_species[sp].rotdof;
+      if (rotstyle == DISCRETE && d_species[sp].rotdof == 2) ndiscrete++;
       remaining_dof += d_species[sp].rotdof;
     }
     if ((d_species[sp].vibdof > 0) && (vibstyle != NONE)) {
       if (vibstyle == DISCRETE) {
         for (int m = 0; m < d_species[sp].nvibmode; m++)
-          if (d_species[sp].vibtemp[m] > 0.0) theta[nvibflat++] = d_species[sp].vibtemp[m];
-      } else {
-        shape_classical += 0.5 * d_species[sp].vibdof;
-        remaining_dof += d_species[sp].vibdof;
-      }
+          if (d_species[sp].vibtemp[m] > 0.0) ndiscrete++;
+      } else remaining_dof += d_species[sp].vibdof;
     }
-    if (elecstyle == DISCRETE && d_nelecstates[sp] > 0)
-      elecsp[nelecflat++] = sp;
+    if (elecstyle == DISCRETE && d_nelecstates[sp] > 0) ndiscrete++;
   }
 
-  // collision temperature of the pool (classical unless discrete modes present)
-
-  double tcoll = (shape_classical > 0.0) ? E_Dispose/(boltz*shape_classical) : 0.0;
-
-  // a product with a discrete ladder: exact microcanonical draw of all
-  // product states at once (see the CPU twin in collide_vss.cpp)
-
-  int ndiscrete_rot = 0;
-  if (rotstyle == DISCRETE)
-    for (i = 0; i < numspecies; i++)
-      if (d_species[plist[i]->ispecies].rotdof == 2) ndiscrete_rot++;
-  if (nvibflat || nelecflat || ndiscrete_rot) {
+  if (ndiscrete) {
     reacting_disposal_exact(plist,numspecies,aveomega,postcoln,rand_gen);
     return;
   }
 
-  if ((nvibflat || nelecflat) && E_Dispose > 0.0) {
-    tcoll = reacting_pool_temp(shape_classical,nvibflat,theta,
-                               nelecflat,elecsp,E_Dispose);
-    for (int m = 0; m < nvibflat; m++)
-      remaining_dof += eff_vib_dof(theta[m],tcoll);
-    for (int e = 0; e < nelecflat; e++)
-      remaining_dof += eff_elec_dof(elecsp[e],tcoll);
-  }
-
-  // Phase 2: handle each kind of energy disposal for the products, each
-  // draw corrected for the effective DOF still waiting on the shared pool
+  // continuous internal modes of each product, each draw corrected for the
+  // DOF still waiting on the shared pool
 
   for (i = 0; i < numspecies; i++) {
-    if (i == 0) p = ip;
-    else if (i == 1) p = jp;
-    else p = kp;
-
+    p = plist[i];
     int sp = p->ispecies;
     rotdof = d_species[sp].rotdof;
 
     if (rotdof) {
       if (rotstyle == NONE) {
-        p->erot = 0.0 ;
-      } else if (rotstyle == DISCRETE && rotdof == 2) {
-        // the sampler applies the exponent (1.5 - omega); shift omega so it
-        // becomes b_rot = (1.5-aveomega) + 0.5*(remaining_dof - rotdof)
-        double omega_eff = aveomega - 0.5 * (remaining_dof - rotdof);
-        p->erot = sample_rot_discrete(rand_gen,sp,E_Dispose,omega_eff);
-        E_Dispose -= p->erot;
-        remaining_dof -= rotdof;
+        p->erot = 0.0;
 
       } else if (rotdof == 2) {
         double b_rot = (1.5 - aveomega) + 0.5 * (remaining_dof - rotdof);
@@ -5037,20 +4961,6 @@ void CollideVSSKokkos::EEXCHANGE_ReactingEDisposal(int icell,
     if (vibdof) {
       if (vibstyle == NONE) {
         p->evib = 0.0;
-      } else if (vibdof == 2 && vibstyle == DISCRETE) {
-        double zeta = eff_vib_dof(d_species[sp].vibtemp[0],tcoll);
-        double b_vib = (1.5 - aveomega) + 0.5 * (remaining_dof - zeta);
-        max_level = static_cast<int>
-          (E_Dispose / (boltz * d_species[sp].vibtemp[0]));
-        do {
-          ivib = static_cast<int>
-            (rand_gen.drand()*(max_level+AdjustFactor));
-          p->evib = (double)
-            (ivib * boltz * d_species[sp].vibtemp[0]);
-          State_prob = pow((1.0 - p->evib / E_Dispose), b_vib);
-        } while (State_prob < rand_gen.drand());
-        E_Dispose -= p->evib;
-        remaining_dof -= zeta;
 
       } else if (vibdof == 2 && vibstyle == SMOOTH) {
         double b_vib = (1.5 - aveomega) + 0.5 * (remaining_dof - vibdof);
@@ -5066,74 +4976,20 @@ void CollideVSSKokkos::EEXCHANGE_ReactingEDisposal(int icell,
           sample_bl(rand_gen,0.5*d_species[sp].vibdof-1.0, b_vib);
         E_Dispose -= p->evib;
         remaining_dof -= vibdof;
-      } else if (vibdof > 2 && vibstyle == DISCRETE && has_custom(p)) {
-        p->evib = 0.0;
-
-        int nmode = d_species[sp].nvibmode;
-        const auto &d_vibmode = k_eiarray.view_device()[d_ewhich[index_vibmode]].k_view.view_device();
-        int pindex = p - d_particles.data();
-
-        // the per-mode quanta are NOT added back to the pool here: the
-        // reacting pool starts as postcoln.etotal, which already holds the
-        // reactants' vibrational energy, and every product's evib was just
-        // zeroed (see the CPU twin in collide_vss.cpp for the full note)
-
-        for (int imode = 0; imode < nmode; imode++) {
-          double zeta = eff_vib_dof(d_species[sp].vibtemp[imode],tcoll);
-          double b_vib = (1.5 - aveomega) + 0.5 * (remaining_dof - zeta);
-          max_level = static_cast<int>
-          (E_Dispose / (boltz * d_species[sp].vibtemp[imode]));
-          do {
-            ivib = static_cast<int>
-            (rand_gen.drand()*(max_level+AdjustFactor));
-            pevib = ivib * boltz * d_species[sp].vibtemp[imode];
-            State_prob = pow((1.0 - pevib / E_Dispose), b_vib);
-          } while (State_prob < rand_gen.drand());
-
-          d_vibmode(pindex,imode) = ivib;
-          p->evib += pevib;
-          E_Dispose -= pevib;
-          remaining_dof -= zeta;
-        }
       }
-    }
-
-    // the electronic ladder draws last within each product; correct its
-    // exponent for the effective DOF still waiting on the pool exactly like
-    // rot/vib above (the select_elec_state weight applies (1.5 - omega), so
-    // shift omega to b_el = (1.5-aveomega) + 0.5*(remaining_dof - zeta_el)).
-    // The (p,p) partner argument only matters for the relaxation-number
-    // lookup, which the reacting path skips.
-
-    if (elecstyle == DISCRETE && d_nelecstates[sp] > 0 && has_custom(p)) {
-      double zeta_el = eff_elec_dof(sp,tcoll);
-      double omega_eff = aveomega - 0.5 * (remaining_dof - zeta_el);
-      relax_electronic_mode(p, p, E_Dispose, omega_eff, rand_gen, true);
-      remaining_dof -= zeta_el;
     }
   }
 
-  // compute post-collision internal energies
+  // compute post-collision internal energies; no product has electronic
+  // states here (the exact disposal handles those)
 
   postcoln.erot = ip->erot + jp->erot;
   postcoln.evib = ip->evib + jp->evib;
   postcoln.eelec = 0.0;
-  if (elecstyle == DISCRETE) {
-    auto &d_eelecs = k_edvec.view_device()[d_ewhich[index_eelec]].k_view.view_device();
-    if (d_nelecstates[ip->ispecies] > 0 && has_custom(ip))
-      postcoln.eelec += d_eelecs[ip - d_particles.data()];
-    if (d_nelecstates[jp->ispecies] > 0 && has_custom(jp))
-      postcoln.eelec += d_eelecs[jp - d_particles.data()];
-  }
 
   if (kp) {
     postcoln.erot += kp->erot;
     postcoln.evib += kp->evib;
-    if (elecstyle == DISCRETE) {
-      auto &d_eelecs = k_edvec.view_device()[d_ewhich[index_eelec]].k_view.view_device();
-      if (d_nelecstates[kp->ispecies] > 0 && has_custom(kp))
-        postcoln.eelec += d_eelecs[kp - d_particles.data()];
-    }
   }
 
   // compute portion of energy left over for scattering

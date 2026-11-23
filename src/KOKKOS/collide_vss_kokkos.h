@@ -467,10 +467,6 @@ class CollideVSSKokkos : public CollideVSS {
   KOKKOS_INLINE_FUNCTION
   double vibrel (int, double) const;
   KOKKOS_INLINE_FUNCTION
-  double eff_vib_dof(double, double) const;
-  KOKKOS_INLINE_FUNCTION
-  double eff_elec_dof(int, double) const;
-  KOKKOS_INLINE_FUNCTION
   double reacting_pool_temp(double, int, double *, int, int *, double) const;
   KOKKOS_INLINE_FUNCTION
   void reacting_disposal_exact(Particle::OnePart **, int, double,
