@@ -338,6 +338,7 @@ void CollideVSS::setup_collision(Particle::OnePart *ip, Particle::OnePart *jp)
   postcoln.eelec = 0.0;
   postcoln.eint = 0.0;
   postcoln.etotal = precoln.etotal;
+  postcoln.nc_p = NULL;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -838,6 +839,27 @@ void CollideVSS::relax_electronic_mode(Particle::OnePart *p, Particle::OnePart *
   eelecs[p - particle->particles] = species[p->ispecies].elecdat->states[estates[p - particle->particles]].temp*update->boltz;
 
   E_Dispose -= eelecs[p - particle->particles];
+}
+
+/* ----------------------------------------------------------------------
+   write the levels that reacting_disposal_exact() drew for a product
+   without custom storage (postcoln.nc_*) into particle index, which the
+   ambipolar collision loop has just created from that product's elist
+   slot (its custom data already zeroed); a no-op for any other slot
+------------------------------------------------------------------------- */
+
+void CollideVSS::ambi_product_levels(Particle::OnePart *slot, int index)
+{
+  if (postcoln.nc_p == NULL || postcoln.nc_p != slot) return;
+  if (postcoln.nc_elec >= 0 && index_elecstate >= 0 && index_eelec >= 0) {
+    particle->eivec[particle->ewhich[index_elecstate]][index] = postcoln.nc_elec;
+    particle->edvec[particle->ewhich[index_eelec]][index] = postcoln.nc_eelec;
+  }
+  if (postcoln.nc_nvib > 0 && index_vibmode >= 0) {
+    int **vibmode = particle->eiarray[particle->ewhich[index_vibmode]];
+    for (int m = 0; m < postcoln.nc_nvib; m++) vibmode[index][m] = postcoln.nc_vib[m];
+  }
+  postcoln.nc_p = NULL;
 }
 
 /* ----------------------------------------------------------------------
@@ -1379,6 +1401,17 @@ void CollideVSS::reacting_disposal_exact(Particle::OnePart **plist, int n,
   double boltz = update->boltz;
   double E = postcoln.etotal;
 
+  // a product without custom storage (an ambipolar electron's elist slot,
+  // e.g. the second product of a dissociative recombination) is drawn
+  // jointly with the others like any product; its levels go to postcoln
+  // (nc_*) and the ambipolar collision loop stores them in the particle the
+  // slot becomes (ambi_product_levels)
+
+  postcoln.nc_p = NULL;
+  postcoln.nc_elec = -1;
+  postcoln.nc_eelec = 0.0;
+  postcoln.nc_nvib = 0;
+
   int *estates = NULL;
   double *eelecs = NULL;
   if (elecstyle == DISCRETE) {
@@ -1406,16 +1439,15 @@ void CollideVSS::reacting_disposal_exact(Particle::OnePart **plist, int n,
     int vibdof = species[sp].vibdof;
     if (vibdof && vibstyle != NONE) {
       if (vibstyle == DISCRETE) {
-        if (vibdof == 2 || has_custom(p))
-          for (int m = 0; m < species[sp].nvibmode; m++)
-            if (species[sp].vibtemp[m] > 0.0)
-              theta[nvib++] = species[sp].vibtemp[m];
+        for (int m = 0; m < species[sp].nvibmode; m++)
+          if (species[sp].vibtemp[m] > 0.0)
+            theta[nvib++] = species[sp].vibtemp[m];
       } else {
         shape += 0.5*vibdof;
         classical_dof += vibdof;
       }
     }
-    if (elecstyle == DISCRETE && species[sp].elecdat != NULL && has_custom(p))
+    if (elecstyle == DISCRETE && species[sp].elecdat != NULL)
       elecsp[nelec++] = sp;
   }
   double s = 2.5 - aveomega + 0.5*classical_dof;
@@ -1448,8 +1480,7 @@ void CollideVSS::reacting_disposal_exact(Particle::OnePart **plist, int n,
     for (i = 0; i < n; i++) {
       zel[i] = zrot[i] = 0.0;
       int sp = plist[i]->ispecies;
-      if (elecstyle == DISCRETE && species[sp].elecdat != NULL &&
-          has_custom(plist[i])) {
+      if (elecstyle == DISCRETE && species[sp].elecdat != NULL) {
         const Particle::ElecState *st = species[sp].elecdat->states;
         for (int l = 0; l < species[sp].elecdat->nelecstate; l++)
           zel[i] += st[l].degen * exp(-beta*boltz*st[l].temp);
@@ -1471,8 +1502,7 @@ void CollideVSS::reacting_disposal_exact(Particle::OnePart **plist, int n,
         Particle::OnePart *p = plist[i];
         int sp = p->ispecies;
 
-        if (vibstyle == DISCRETE && species[sp].vibdof &&
-            (species[sp].vibdof == 2 || has_custom(p))) {
+        if (vibstyle == DISCRETE && species[sp].vibdof) {
           for (int m = 0; m < species[sp].nvibmode; m++) {
             double th = species[sp].vibtemp[m];
             if (th <= 0.0) { qvib[i][m] = 0; continue; }
@@ -1537,20 +1567,34 @@ void CollideVSS::reacting_disposal_exact(Particle::OnePart **plist, int n,
     if (vibstyle == DISCRETE && species[sp].vibdof) {
       if (species[sp].vibdof == 2) {
         p->evib = qvib[i][0]*boltz*species[sp].vibtemp[0];
-      } else if (has_custom(p)) {
-        int **vibmode = particle->eiarray[particle->ewhich[index_vibmode]];
-        int pindex = p - particle->particles;
+      } else {
         p->evib = 0.0;
-        for (int m = 0; m < species[sp].nvibmode; m++) {
-          vibmode[pindex][m] = qvib[i][m];
+        for (int m = 0; m < species[sp].nvibmode; m++)
           p->evib += qvib[i][m]*boltz*species[sp].vibtemp[m];
+        if (has_custom(p)) {
+          int **vibmode = particle->eiarray[particle->ewhich[index_vibmode]];
+          int pindex = p - particle->particles;
+          for (int m = 0; m < species[sp].nvibmode; m++)
+            vibmode[pindex][m] = qvib[i][m];
+        } else {
+          postcoln.nc_p = p;
+          postcoln.nc_nvib = species[sp].nvibmode;
+          for (int m = 0; m < species[sp].nvibmode; m++)
+            postcoln.nc_vib[m] = qvib[i][m];
         }
       }
     }
-    if (elecstyle == DISCRETE && species[sp].elecdat != NULL && has_custom(p)) {
-      int pindex = p - particle->particles;
-      estates[pindex] = qelec[i];
-      eelecs[pindex] = species[sp].elecdat->states[qelec[i]].temp*boltz;
+    if (elecstyle == DISCRETE && species[sp].elecdat != NULL) {
+      double ee = species[sp].elecdat->states[qelec[i]].temp*boltz;
+      if (has_custom(p)) {
+        int pindex = p - particle->particles;
+        estates[pindex] = qelec[i];
+        eelecs[pindex] = ee;
+      } else {
+        postcoln.nc_p = p;
+        postcoln.nc_elec = qelec[i];
+        postcoln.nc_eelec = ee;
+      }
     }
   }
 
@@ -1586,9 +1630,10 @@ void CollideVSS::reacting_disposal_exact(Particle::OnePart **plist, int n,
     Particle::OnePart *p = plist[i];
     postcoln.erot += p->erot;
     postcoln.evib += p->evib;
-    if (elecstyle == DISCRETE && species[p->ispecies].elecdat != NULL &&
-        has_custom(p))
-      postcoln.eelec += eelecs[p - particle->particles];
+    if (elecstyle == DISCRETE && species[p->ispecies].elecdat != NULL) {
+      if (has_custom(p)) postcoln.eelec += eelecs[p - particle->particles];
+      else postcoln.eelec += postcoln.nc_eelec;
+    }
   }
   postcoln.eint = postcoln.erot + postcoln.evib + postcoln.eelec;
   postcoln.etrans = C;

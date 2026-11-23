@@ -41,6 +41,7 @@ class CollideVSS : public Collide {
   virtual int perform_collision(Particle::OnePart *&, Particle::OnePart *&,
                                 Particle::OnePart *&);
   double extract(int, int, const char *);
+  void ambi_product_levels(Particle::OnePart *, int);
 
   struct State {      // two-particle state
     double vr2;
@@ -59,6 +60,17 @@ class CollideVSS : public Collide {
     double ucmf;
     double vcmf;
     double wcmf;
+
+    // levels the reacting disposal drew for a product with no custom
+    // storage: in ambipolar runs, the product written into the electron's
+    // elist slot by a dissociative recombination (e + AB+ -> A + B).  The
+    // ambipolar collision loop writes them into the particle that slot
+    // becomes (ambi_product_levels).  nc_p = NULL if there is none.
+    Particle::OnePart *nc_p;
+    int nc_elec;                       // electronic state, -1 if not drawn
+    double nc_eelec;                   // its energy
+    int nc_nvib;                       // # of vibrational modes drawn (vibdof > 2)
+    int nc_vib[Particle::MAXVIBMODE];  // their quanta
   };
 
   struct Params {             // VSS model parameters

@@ -58,6 +58,11 @@ class Collide : protected Pointers {
                                 Particle::OnePart *&) = 0;
   virtual double extract(int, int, const char *) {return 0.0;}
 
+  // write the internal levels the reacting disposal drew for a product
+  // that had no custom storage (an ambipolar electron's elist slot) into
+  // particle index, the particle that slot has become
+  virtual void ambi_product_levels(Particle::OnePart *, int) {}
+
   void modify_params(int, char **);
   void reset_vremax();
 

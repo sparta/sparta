@@ -476,6 +476,9 @@ class CollideVSSKokkos : public CollideVSS {
   void reacting_disposal_exact(Particle::OnePart **, int, double,
                                struct State &, rand_type &) const;
   KOKKOS_INLINE_FUNCTION
+  void ambi_product_levels_kokkos(const struct State &, Particle::OnePart *,
+                                  int) const;
+  KOKKOS_INLINE_FUNCTION
   double cell_temperature_kk(int, int) const;
 
   KOKKOS_INLINE_FUNCTION

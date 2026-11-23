@@ -3141,6 +3141,11 @@ void CollideVSSKokkos::operator()(TagCollideCollisionsGroupAmbipolar< GASTALLY, 
 
             d_particles[index] = *jpart;
             d_particles[index].id = MAXSMALLINT*rand_gen.drand();
+
+            // reset the custom data the slot inherits and store the
+            // reaction's levels for this product (as in the one-group kernel)
+
+            ambi_product_levels_kokkos(postcoln,jpart,index);
             d_ionambi[index] = 0;
 
             if (nelectron-1 != j) d_elist(icell,j) = d_elist(icell,nelectron-1);
@@ -3798,20 +3803,10 @@ void CollideVSSKokkos::operator()(TagCollideCollisionsOneAmbipolar< GASTALLY, AT
         // jpart was an ambipolar electron living in d_elist, so it has no
         // custom data of its own: the slot it lands in still holds the custom
         // values of whatever particle used it last, so reset the discrete
-        // internal-mode attributes (mirrors particle->zero_custom() in the
-        // CollideVSS twin; ionambi is set explicitly just below)
+        // internal-mode attributes, then store the reaction's levels for this
+        // product (drawn in the joint post-reaction disposal)
 
-        if (vibstyle == DISCRETE && index_vibmode >= 0) {
-          const auto &d_vibmode = k_eiarray.view_device()[d_ewhich[index_vibmode]].k_view.view_device();
-          for (int imode = 0; imode < (int) d_vibmode.extent(1); imode++)
-            d_vibmode(index,imode) = 0;
-        }
-        if (elecstyle == DISCRETE && index_elecstate >= 0 && index_eelec >= 0) {
-          auto &d_estates = k_eivec.view_device()[d_ewhich[index_elecstate]].k_view.view_device();
-          auto &d_eelecs = k_edvec.view_device()[d_ewhich[index_eelec]].k_view.view_device();
-          d_estates[index] = 0;
-          d_eelecs[index] = 0.0;
-        }
+        ambi_product_levels_kokkos(postcoln,jpart,index);
         d_ionambi[index] = 0;
 
         //if (nelectron-1 != j-np) memcpy(&d_elist(icell,j-np),&d_elist(icell,nelectron-1),nbytes);
@@ -4062,6 +4057,42 @@ void CollideVSSKokkos::setup_collision_kokkos(Particle::OnePart *ip, Particle::O
   postcoln.eelec = 0.0;
   postcoln.eint = 0.0;
   postcoln.etotal = precoln.etotal;
+  postcoln.nc_p = NULL;
+}
+
+/* ----------------------------------------------------------------------
+   particle index has just been created from an ambipolar electron's
+   d_elist slot jpart, which a reaction turned into a neutral: reset the
+   discrete internal-mode attributes the slot inherits from the particle
+   that used it last (mirrors particle->zero_custom() in the CollideVSS
+   twin; ionambi is set by the caller), then store the levels that
+   reacting_disposal_exact() drew for this product (postcoln.nc_*),
+   mirrors CollideVSS::ambi_product_levels()
+------------------------------------------------------------------------- */
+
+KOKKOS_INLINE_FUNCTION
+void CollideVSSKokkos::ambi_product_levels_kokkos(const struct State &postcoln,
+                                                  Particle::OnePart *jpart,
+                                                  int index) const
+{
+  const int mine = (postcoln.nc_p != NULL && postcoln.nc_p == jpart);
+  if (vibstyle == DISCRETE && index_vibmode >= 0) {
+    const auto &d_vibmode = k_eiarray.view_device()[d_ewhich[index_vibmode]].k_view.view_device();
+    for (int imode = 0; imode < (int) d_vibmode.extent(1); imode++)
+      d_vibmode(index,imode) = 0;
+    if (mine)
+      for (int m = 0; m < postcoln.nc_nvib; m++) d_vibmode(index,m) = postcoln.nc_vib[m];
+  }
+  if (elecstyle == DISCRETE && index_elecstate >= 0 && index_eelec >= 0) {
+    auto &d_estates = k_eivec.view_device()[d_ewhich[index_elecstate]].k_view.view_device();
+    auto &d_eelecs = k_edvec.view_device()[d_ewhich[index_eelec]].k_view.view_device();
+    d_estates[index] = 0;
+    d_eelecs[index] = 0.0;
+    if (mine && postcoln.nc_elec >= 0) {
+      d_estates[index] = postcoln.nc_elec;
+      d_eelecs[index] = postcoln.nc_eelec;
+    }
+  }
 }
 
 /* ---------------------------------------------------------------------- */
@@ -5126,6 +5157,16 @@ void CollideVSSKokkos::reacting_disposal_exact(Particle::OnePart **plist,
   double E = postcoln.etotal;
   int i;
 
+  // a product without custom storage (an ambipolar electron's elist slot)
+  // is drawn jointly like any product; its levels go to postcoln (nc_*),
+  // and the ambipolar kernels store them in the particle the slot becomes
+  // (mirrors CollideVSS::reacting_disposal_exact)
+
+  postcoln.nc_p = NULL;
+  postcoln.nc_elec = -1;
+  postcoln.nc_eelec = 0.0;
+  postcoln.nc_nvib = 0;
+
   // continuous shape of the pool and the discrete ladders of the products
 
   double shape = 2.5 - aveomega;
@@ -5145,16 +5186,15 @@ void CollideVSSKokkos::reacting_disposal_exact(Particle::OnePart **plist,
     int vibdof = d_species[sp].vibdof;
     if (vibdof && vibstyle != NONE) {
       if (vibstyle == DISCRETE) {
-        if (vibdof == 2 || has_custom(p))
-          for (int m = 0; m < d_species[sp].nvibmode; m++)
-            if (d_species[sp].vibtemp[m] > 0.0)
-              theta[nvib++] = d_species[sp].vibtemp[m];
+        for (int m = 0; m < d_species[sp].nvibmode; m++)
+          if (d_species[sp].vibtemp[m] > 0.0)
+            theta[nvib++] = d_species[sp].vibtemp[m];
       } else {
         shape += 0.5*vibdof;
         classical_dof += vibdof;
       }
     }
-    if (elecstyle == DISCRETE && d_nelecstates[sp] > 0 && has_custom(p))
+    if (elecstyle == DISCRETE && d_nelecstates[sp] > 0)
       elecsp[nelec++] = sp;
   }
   double s = 2.5 - aveomega + 0.5*classical_dof;
@@ -5179,7 +5219,7 @@ void CollideVSSKokkos::reacting_disposal_exact(Particle::OnePart **plist,
     for (i = 0; i < n; i++) {
       zel[i] = zrot[i] = 0.0;
       int sp = plist[i]->ispecies;
-      if (elecstyle == DISCRETE && d_nelecstates[sp] > 0 && has_custom(plist[i]))
+      if (elecstyle == DISCRETE && d_nelecstates[sp] > 0)
         for (int l = 0; l < d_nelecstates[sp]; l++)
           zel[i] += d_elecstates(sp,l).degen * exp(-beta*boltz*d_elecstates(sp,l).temp);
       if (rotstyle == DISCRETE && d_species[sp].rotdof == 2) {
@@ -5199,8 +5239,7 @@ void CollideVSSKokkos::reacting_disposal_exact(Particle::OnePart **plist,
         Particle::OnePart *p = plist[i];
         int sp = p->ispecies;
 
-        if (vibstyle == DISCRETE && d_species[sp].vibdof &&
-            (d_species[sp].vibdof == 2 || has_custom(p))) {
+        if (vibstyle == DISCRETE && d_species[sp].vibdof) {
           for (int m = 0; m < d_species[sp].nvibmode; m++) {
             double th = d_species[sp].vibtemp[m];
             if (th <= 0.0) { qvib[i][m] = 0; continue; }
@@ -5261,22 +5300,36 @@ void CollideVSSKokkos::reacting_disposal_exact(Particle::OnePart **plist,
     if (vibstyle == DISCRETE && d_species[sp].vibdof) {
       if (d_species[sp].vibdof == 2) {
         p->evib = qvib[i][0]*boltz*d_species[sp].vibtemp[0];
-      } else if (has_custom(p)) {
-        const auto &d_vibmode = k_eiarray.view_device()[d_ewhich[index_vibmode]].k_view.view_device();
-        int pindex = p - d_particles.data();
+      } else {
         p->evib = 0.0;
-        for (int m = 0; m < d_species[sp].nvibmode; m++) {
-          d_vibmode(pindex,m) = qvib[i][m];
+        for (int m = 0; m < d_species[sp].nvibmode; m++)
           p->evib += qvib[i][m]*boltz*d_species[sp].vibtemp[m];
+        if (has_custom(p)) {
+          const auto &d_vibmode = k_eiarray.view_device()[d_ewhich[index_vibmode]].k_view.view_device();
+          int pindex = p - d_particles.data();
+          for (int m = 0; m < d_species[sp].nvibmode; m++)
+            d_vibmode(pindex,m) = qvib[i][m];
+        } else {
+          postcoln.nc_p = p;
+          postcoln.nc_nvib = d_species[sp].nvibmode;
+          for (int m = 0; m < d_species[sp].nvibmode; m++)
+            postcoln.nc_vib[m] = qvib[i][m];
         }
       }
     }
-    if (elecstyle == DISCRETE && d_nelecstates[sp] > 0 && has_custom(p)) {
-      auto &d_estates = k_eivec.view_device()[d_ewhich[index_elecstate]].k_view.view_device();
-      auto &d_eelecs = k_edvec.view_device()[d_ewhich[index_eelec]].k_view.view_device();
-      int pindex = p - d_particles.data();
-      d_estates[pindex] = qelec[i];
-      d_eelecs[pindex] = d_elecstates(sp,qelec[i]).temp*boltz;
+    if (elecstyle == DISCRETE && d_nelecstates[sp] > 0) {
+      double ee = d_elecstates(sp,qelec[i]).temp*boltz;
+      if (has_custom(p)) {
+        auto &d_estates = k_eivec.view_device()[d_ewhich[index_elecstate]].k_view.view_device();
+        auto &d_eelecs = k_edvec.view_device()[d_ewhich[index_eelec]].k_view.view_device();
+        int pindex = p - d_particles.data();
+        d_estates[pindex] = qelec[i];
+        d_eelecs[pindex] = ee;
+      } else {
+        postcoln.nc_p = p;
+        postcoln.nc_elec = qelec[i];
+        postcoln.nc_eelec = ee;
+      }
     }
   }
 
@@ -5309,9 +5362,11 @@ void CollideVSSKokkos::reacting_disposal_exact(Particle::OnePart **plist,
     Particle::OnePart *p = plist[i];
     postcoln.erot += p->erot;
     postcoln.evib += p->evib;
-    if (elecstyle == DISCRETE && d_nelecstates[p->ispecies] > 0 && has_custom(p)) {
-      auto &d_eelecs = k_edvec.view_device()[d_ewhich[index_eelec]].k_view.view_device();
-      postcoln.eelec += d_eelecs[p - d_particles.data()];
+    if (elecstyle == DISCRETE && d_nelecstates[p->ispecies] > 0) {
+      if (has_custom(p)) {
+        auto &d_eelecs = k_edvec.view_device()[d_ewhich[index_eelec]].k_view.view_device();
+        postcoln.eelec += d_eelecs[p - d_particles.data()];
+      } else postcoln.eelec += postcoln.nc_eelec;
     }
   }
   postcoln.eint = postcoln.erot + postcoln.evib + postcoln.eelec;

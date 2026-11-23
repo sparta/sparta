@@ -1784,6 +1784,11 @@ template < int GASTALLY > void Collide::collisions_one_ambipolar()
           if (particle->ncustom) particle->zero_custom(index);
           ionambi[index] = 0;
 
+          // the reaction's levels for this product (drawn in the joint
+          // post-reaction disposal while it had no custom storage)
+
+          ambi_product_levels(jpart,index);
+
           if (nelectron-1 != j-np) memcpy(&elist[j-np],&elist[nelectron-1],nbytes);
           nelectron--;
 
@@ -2214,6 +2219,7 @@ template < int GASTALLY > void Collide::collisions_group_ambipolar()
 
             if (particle->ncustom) particle->zero_custom(index);
             ionambi[index] = 0;
+            ambi_product_levels(jpart,index);
 
             if (nelectron-1 != j) memcpy(&elist[j],&elist[nelectron-1],nbytes);
             nelectron--;
