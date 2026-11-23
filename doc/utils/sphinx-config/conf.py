@@ -110,6 +110,16 @@ html_static_path = ['_static']
 mathjax_path = 'mathjax/es5/tex-mml-chtml.js'
 html_show_sourcelink = False
 
+# Where the manual is published.  sphinx-sitemap writes sitemap.xml beside
+# the pages, listing each one under this URL, as the LAMMPS manual does,
+# and each page gets a <link rel="canonical"> to its published copy.  The
+# site's robots.txt, at the root of sparta.github.io, points to the
+# sitemap.  The search and index pages are not content.
+extensions.append('sphinx_sitemap')
+html_baseurl = 'https://sparta.github.io/doc/'
+sitemap_url_scheme = '{link}'
+sitemap_excludes = ['search.html', 'genindex.html']
+
 # Equations were pre-rendered images under doc/Eqs in the txt2html manual.
 # They are now typeset by MathJax from their LaTeX source, which is the one
 # rendering difference this migration introduces; see
