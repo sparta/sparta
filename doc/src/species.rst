@@ -6,7 +6,7 @@ species command
 **Syntax:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    species file ID1 ID2 ... keyword value ...
 
@@ -25,7 +25,7 @@ species command
 **Examples:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    species air.species air
    species ar.species Ar

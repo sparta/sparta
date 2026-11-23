@@ -9,7 +9,7 @@ compute surf/kk command
 **Syntax:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    compute ID surf group-ID mix-ID value1 value2 ... keyword setting ...
 
@@ -52,7 +52,7 @@ compute surf/kk command
 **Examples:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    compute 1 surf all all n press etot
    compute mine surf sphere species press shx shy shz
@@ -62,21 +62,21 @@ These commands will dump time averages for each species and each
 surface element to a dump file every 1000 steps:
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    compute 1 surf all species n press shx shy shz
-   fix 1 ave/surf all 10 100 1000 c_1[\*]
-   dump 1 surf all 1000 tmp.surf id f_1[\*]
+   fix 1 ave/surf all 10 100 1000 c_1[*]
+   dump 1 surf all 1000 tmp.surf id f_1[*]
 
 These commands will time-average the force on each surface element
 then sum them across element to compute drag (fx) and lift (fy) on the
 body:
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    compute 1 surf all all fx fy
-   fix 1 ave/surf all 10 100 1000 c_1[\*]
+   fix 1 ave/surf all 10 100 1000 c_1[*]
    compute 2 reduce sum f_1[1] f_1[2]
    stats 1000
    stats_style step cpu np c_2[1] c_2[2]

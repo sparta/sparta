@@ -9,7 +9,7 @@ compute property/surf/kk command
 **Syntax:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    compute ID property/surf group-ID input1 input2 ...
 
@@ -38,7 +38,7 @@ compute property/surf/kk command
 **Examples:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    compute 1 property/surf all id xc yc zc
 

@@ -6,7 +6,7 @@ fix field/particle command
 **Syntax:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    fix ID field/particle axvar ayvar azvar
 
@@ -17,7 +17,7 @@ axvar,ayvar,azvar = names of particle-style variables for acceleration component
 **Examples:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    fix 1 field/particle gradBx gradBy NULL
 
@@ -67,7 +67,7 @@ Note that the :doc:`global field <global>` command provides three
 alternatives for specifying an external field:
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    global field constant ...     # field is constant in space and time
    global field particle ...     # field is applied on a per particle basis

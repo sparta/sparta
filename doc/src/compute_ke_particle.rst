@@ -9,7 +9,7 @@ compute ke/particle/kk command
 **Syntax:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    compute ID ke/particle
 
@@ -19,7 +19,7 @@ compute ke/particle/kk command
 **Examples:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    compute 1 ke/particle
 

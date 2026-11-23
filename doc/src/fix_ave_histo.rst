@@ -15,7 +15,7 @@ fix ave/histo/weight/kk command
 **Syntax:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    fix ID style Nevery Nrepeat Nfreq lo hi Nbin value1 value2 ... keyword args ...
 
@@ -74,9 +74,9 @@ fix ave/histo/weight/kk command
 **Examples:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
-   fix 1 ave/histo 100 5 1000 0.5 1.5 50 c_myGrid[\*] file temp.histo ave running
+   fix 1 ave/histo 100 5 1000 0.5 1.5 50 c_myGrid[*] file temp.histo ave running
    fix 1 ave/histo 100 5 1000 0 5 100 c_kePart "My output values"
    fix 1 ave/histo/weight 1 100 1000 -2.0 2.0 18 vx vy ave running beyond extra
 
@@ -136,7 +136,7 @@ vector or columns of the array had been listed one by one.  E.g. these
 columns:
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    compute myGrid grid all all u v w
    fix 1 ave/histo 100 1 100 c_myGrid file tmp1.grid mode vector

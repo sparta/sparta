@@ -9,7 +9,7 @@ compute lambda/grid/kk command
 **Syntax:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    compute ID lambda/grid nrho temp value1 value2 ...
 
@@ -34,23 +34,23 @@ compute lambda/grid/kk command
 **Examples:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
-   compute 1 lambda/grid c_GR[\*] NULL lambda tau
-   compute 1 lambda/grid f_ave[\*] f_ave[3] lambda knall
+   compute 1 lambda/grid c_GR[*] NULL lambda tau
+   compute 1 lambda/grid f_ave[*] f_ave[3] lambda knall
 
 These commands will dump time averages for the mean free path and mean
 collision time for each grid cell to a dump file every 1000 steps:
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    compute 1 grid all species nrho
    compute 2 grid all all temp
-   fix 1 ave/grid all 10 100 1000 c_1[\*]
+   fix 1 ave/grid all 10 100 1000 c_1[*]
    fix 2 ave/grid all 10 100 1000 c_2
-   compute 3 lambda/grid f_1[\*] f_2 lambda tau
-   dump 1 grid all 1000 tmp.grid id c_3[\*]
+   compute 3 lambda/grid f_1[*] f_2 lambda tau
+   dump 1 grid all 1000 tmp.grid id c_3[*]
 
 **Description:**
 
@@ -154,7 +154,7 @@ Note that because the MFP and MFT formulas require a number density
 nrho for all species in the system, you should use a :doc:`compute grid <compute_grid>` command like this:
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    compute 1 grid all species nrho
 
@@ -171,7 +171,7 @@ For systems with a zero of small streaming velocity, this can be
 calculated using a command like this:
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    compute 2 grid all all temp
 
@@ -186,7 +186,7 @@ calculated.  The corresponding command to use with this compute would
 be:
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    compute 2 thermal/grid all all temp
 

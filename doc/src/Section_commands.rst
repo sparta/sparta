@@ -40,7 +40,7 @@ one line at a time and each command takes effect when it is read.
 Thus this sequence of commands:
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    timestep 0.5 
    run      100 
@@ -49,7 +49,7 @@ Thus this sequence of commands:
 does something different than this sequence:
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    run      100 
    timestep 0.5 
@@ -127,7 +127,7 @@ to use numeric formulas in an input script without having to assign
 them to variable names.  For example, these 3 input script lines:
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    variable X equal (xlo+xhi)/2+sqrt(v_area)
    region 1 block $X 2 INF INF EDGE EDGE
@@ -136,7 +136,7 @@ them to variable names.  For example, these 3 input script lines:
 can be replaced by
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    region 1 block $((xlo+xhi)/2+sqrt(v_area)) 2 INF INF EDGE EDGE
 
@@ -147,7 +147,7 @@ contain nested $ characters for other variables to substitute for.
 Thus you cannot do this:
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    variable        a equal 2
    variable        b2 equal 4

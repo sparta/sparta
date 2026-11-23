@@ -6,7 +6,7 @@ variable command
 **Syntax:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    variable name style args ...
 
@@ -69,14 +69,14 @@ variable command
 **Examples:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    variable x index run1 run2 run3 run4 run5 run6 run7 run8
    variable LoopVar loop $n
    variable beta equal vol/ngrid
    variable beta equal "vol / ngrid"
    variable b equal c_myTemp
-   variable b particle x\*y/vol
+   variable b particle x*y/vol
    variable foo string myfile
    variable myPy python increase
    variable foo internal 3.5
@@ -198,7 +198,7 @@ when breaking out of a loop via the :doc:`if <if>` and :doc:`jump <jump>`
 commands before the variable would become exhausted.  For example,
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    label	    loop
    variable    a loop 5
@@ -334,7 +334,7 @@ which returns a value to this variable as defined by its *return*
 keyword.  For example these two commands would be self-consistent:
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    variable foo python myMultiply
    python myMultiply return v_foo format f file funcs.py
@@ -409,9 +409,9 @@ various ways to build up formulas of arbitrary complexity.  For
 example, this is a valid (though strange) variable formula:
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
-   variable x equal "np + c_MyTemp / vol\^(1/3)"
+   variable x equal "np + c_MyTemp / vol^(1/3)"
 
 Specifically, a formula can contain numbers, stats keywords, math
 operators, math functions, Python function wrappers, particle vectors,
@@ -741,11 +741,11 @@ the grid cell index for each particle.
 An example of its usage is as follows:
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
-   variable     csq particle "vx\*vx + vy\*vy + vz\*vz"
+   variable     csq particle "vx*vx + vy*vy + vz*vz"
    compute      therm thermal/grid all all temp press
-   variable     csq_norm particle v_csq/grid2part(c_therm\ 1\ )
+   variable     csq_norm particle v_csq/grid2part(c_therm[1])
 
 The per-particle variable csq\_norm will calculate the kinetic energy
 for each particle, normalized by the thermal temperature of the full
@@ -784,10 +784,10 @@ grid for the wrong size; the mismatch then surfaces much later as a
 example, this computes a processor grid from the rank count itself:
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    variable nprocs equal extract_setting(world_size)
-   variable px equal 2\^floor(log(v_nprocs)/log(2)/3)
+   variable px equal 2^floor(log(v_nprocs)/log(2)/3)
 
 Two cautions.  A setting is read locally on each rank rather than
 through a collective, so nothing is added to the collective path and
@@ -1162,7 +1162,7 @@ As an example, suppose you use this command in your input script to
 define the variable "n" as
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    variable n equal np
 
@@ -1177,7 +1177,7 @@ If you want to store the initial particle count of the system, it
 can be done in this manner:
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    variable n equal np
    variable n0 equal $n
@@ -1187,7 +1187,7 @@ initial count) and assign that value to the variable "n0".  Thus the
 command
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    stats_style custom step v_n v_n0
 
@@ -1198,7 +1198,7 @@ Also note that it is a mistake to enclose a variable formula in quotes
 if it contains variables preceeded by $ signs.  For example,
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    variable nratio equal "${nfinal}/${n0}"
 

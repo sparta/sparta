@@ -6,7 +6,7 @@ adapt\_grid command
 **Syntax:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    adapt_grid group-ID action1 action2 style args ... keyword args ...
 
@@ -65,7 +65,7 @@ adapt\_grid command
 **Examples:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    adapt_grid all refine particle 50 10
    adapt_grid all coarsen particle 50 10
@@ -197,7 +197,7 @@ will be refined if its count > 25, and a parent cell coarsened if
 the sum of its children cell counts < 10.
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    compute 1 grid all n nrho
    adapt_grid refine coarsen value c_1[1] 25 10
@@ -205,7 +205,7 @@ the sum of its children cell counts < 10.
 The same thing could be accomplished with this command:
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    adapt_grid refine coarsen particle 25 10
 
@@ -213,7 +213,7 @@ These commands use a time-averaged particle count as an adaptation
 criterion in the same manner:
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    compute 1 grid all n nrho
    fix 1 ave/grid 10 100 1000 c_1[1]
@@ -226,7 +226,7 @@ adaptation criterion.  Note the use of "thresh less more" to refine
 when MFP is less than the specified threshold (0.05).
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    compute 1 lambda/grid f_1[2] NULL N2 kall
    adapt_grid refine coarsen value c_1[2] 0.05 0.1 &

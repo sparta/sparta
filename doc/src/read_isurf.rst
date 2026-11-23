@@ -6,7 +6,7 @@ read\_isurf command
 **Syntax:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    read_isurf group-ID Nx Ny Nz filename thresh ablateID keyword args ...
 
@@ -33,7 +33,7 @@ read\_isurf command
 **Examples:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    read_isurf portion 100 100 1 isurf.material.2d 180.5 fablate group mesh
    read_isurf subset 150 100 50 isurf.materials.3d 120.5 fablate type isurf.type

@@ -6,7 +6,7 @@ fix field/grid command
 **Syntax:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    fix ID field/grid axvar ayvar azvar
 
@@ -17,7 +17,7 @@ fix field/grid command
 **Examples:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    fix 1 field/grid gradBx gradBy NULL
 
@@ -71,7 +71,7 @@ Note that the :doc:`global field <global>` command provides three
 alternatives for specifying an external field:
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    global field constant ...     # field is constant in space and time
    global field particle ...     # field is applied on a per particle basis

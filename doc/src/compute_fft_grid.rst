@@ -9,7 +9,7 @@ compute fft/grid/kk command
 **Syntax:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    compute ID fft/grid value1 value2 ... keyword args ...
 
@@ -44,7 +44,7 @@ compute fft/grid/kk command
 **Examples:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    compute 1 fft/grid c_1
 
@@ -52,7 +52,7 @@ These commands will dump FFTs of instantaneous and time-averaged
 velocity components in each grid cell to a dump file every 1000 steps:
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    compute 1 grid all u v w
    fix 1 ave/grid 10 100 1000 c_1

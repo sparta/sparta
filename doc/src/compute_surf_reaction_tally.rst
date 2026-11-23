@@ -6,7 +6,7 @@ compute surf/reaction/tally command
 **Syntax:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    compute ID surf/reaction/tally group-ID mix-ID value1 value2 ...
 
@@ -38,7 +38,7 @@ compute surf/reaction/tally command
 **Examples:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    compute 1 surf/reaction/tally all all reaction id/pre id1/post id2/post type/pre type1/post type2/post id/surf time xc yc zc
 
@@ -46,9 +46,9 @@ This command will dump the tallies in the previous command to a dump
 file every 10 steps:
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
-   dump 1 tally all 10 tmp.tally c_1[\*]
+   dump 1 tally all 10 tmp.tally c_1[*]
 
 **Description:**
 

@@ -9,7 +9,7 @@ fix ave/grid/kk command
 **Syntax:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    fix ID ave/grid group-ID Nevery Nrepeat Nfreq value1 value2 ... keyword args ...
 
@@ -46,22 +46,22 @@ fix ave/grid/kk command
 **Examples:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    fix 1 ave/grid all 10 20 1000 c_mine
    fix 1 ave/grid all 1 100 100 c_2[1] ave running
-   fix 1 ave/grid all 1 100 100 c_2[\*] ave running
+   fix 1 ave/grid all 1 100 100 c_2[*] ave running
    fix 1 ave/grid section1 5 20 100 v_myEng
 
 These commands will dump averages for each species and each grid cell
 to a file every 1000 steps:
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    compute 1 grid species n u v w usq vsq wsq
-   fix 1 ave/grid 10 100 1000 c_1[\*]
-   dump 1 grid all 1000 tmp.grid id f_1[\*]
+   fix 1 ave/grid 10 100 1000 c_1[*]
+   dump 1 grid all 1000 tmp.grid id f_1[*]
 
 **Description:**
 
@@ -104,10 +104,10 @@ equivalent, since the :doc:`compute grid <compute_grid>` command creates
 a per-grid array with 3 columns:
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    compute myGrid all all u v w
-   fix 1 ave/grid all 10 20 1000 c_myGrid[\*]
+   fix 1 ave/grid all 10 20 1000 c_myGrid[*]
    fix 1 ave/grid all 10 20 1000 c_myGrid[1] c_myGrid[2] c_myGrid[3]
 
 

@@ -6,7 +6,7 @@ dump\_modify command
 **Syntax:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    dump_modify dump-ID keyword values ...
 
@@ -139,7 +139,7 @@ dump\_modify command
 **Examples:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    dump_modify 1 format line "%d %d %20.15g %g %g"
    dump_modify 1 format float %20.15g
@@ -230,7 +230,7 @@ For example, the following commands will
 write snapshots at timesteps 0,10,20,30,100,200,300,1000,2000,etc:
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    variable	        s equal logfreq(10,3,10)
    dump		1 particle all 100 tmp.dump id type x y z

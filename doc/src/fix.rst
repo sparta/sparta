@@ -6,7 +6,7 @@ fix command
 **Syntax:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    fix ID style args
 
@@ -17,7 +17,7 @@ fix command
 **Examples:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    fix 1 grid/check 100 warn
    fix 1 ave/time all 100 5 1000 c_myTemp c_thermo_temp file temp.profile

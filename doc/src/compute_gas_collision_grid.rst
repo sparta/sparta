@@ -6,7 +6,7 @@ compute gas/collision/grid command
 **Syntax:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    compute ID gas/collision/grid group-ID mix-ID
 
@@ -18,7 +18,7 @@ compute gas/collision/grid command
 **Examples:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    compute 1 gas/collision/grid all all
    compute 2 gas/collision/grid subset mymixture

@@ -9,7 +9,7 @@ fix adapt/kk command
 **Syntax:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    fix ID adapt Nfreq args ...
 
@@ -21,7 +21,7 @@ fix adapt/kk command
 **Examples:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    fix 1 adapt 1000 all refine particle 10 50
    fix 1 adapt 1000 all coarsen particle 10 50

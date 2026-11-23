@@ -6,7 +6,7 @@ fix controller command
 **Syntax:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    fix ID controller Nevery alpha Kp Ki Kd pv setpoint cv
 
@@ -34,7 +34,7 @@ fix controller command
 **Examples:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    compute myTemp all temp
    variable drive internal 0.0

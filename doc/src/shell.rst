@@ -6,7 +6,7 @@ shell command
 **Syntax:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    shell cmd args
 
@@ -34,7 +34,7 @@ shell command
 **Examples:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    shell cd sub1
    shell cd ..
@@ -91,7 +91,7 @@ one string, invoked by the C-library system() call.  For example,
 these lines in your input script:
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    variable n equal 10
    variable foo string file2

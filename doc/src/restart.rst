@@ -6,7 +6,7 @@ restart command
 **Syntax:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    restart 0
    restart N root keyword value ...
@@ -31,11 +31,11 @@ restart command
 **Examples:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    restart 0
    restart 1000 flow.restart
-   restart 1000 restart.\*.equil
+   restart 1000 restart.*.equil
    restart 10000 flow.%.1 flow.%.2 nfile 10
    restart v_mystep flow.restart
 
@@ -102,7 +102,7 @@ every step from 1100 to 1200, and could be useful for debugging
 a simulation where something goes wrong at step 1163:
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    variable	s equal stride(1100,1200,1)
    restart		v_s tmp.restart
@@ -154,7 +154,7 @@ next 3 processors and write it to a restart file.
 **Default:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    restart 0
 

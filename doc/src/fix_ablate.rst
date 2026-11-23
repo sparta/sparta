@@ -6,7 +6,7 @@ fix ablate command
 **Syntax:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    fix ID ablate group-ID Nevery scale source maxrandom keyword value ...
 
@@ -41,7 +41,7 @@ fix ablate command
 **Examples:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    fix 1 ablate surfcells 1000 10.0 c_tally
    fix 1 ablate surfcells 0 0.0 random 10
@@ -151,13 +151,13 @@ surfaces.  These lines are taken from the
 examples/ablation/in.ablation.3d.reactions input script:
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    surf_collide	    1 diffuse 300.0 1.0
    surf_react	      2 prob air.surf
 
    compute             10 react/isurf/grid all 2
-   fix                 10 ave/grid all 1 100 100 c_10[\*]
+   fix                 10 ave/grid all 1 100 100 c_10[*]
    dump                10 grid all 100 tmp.grid id c_10[1]
 
    global              surfs implicit

@@ -6,7 +6,7 @@ scale\_particles command
 **Syntax:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    scale_particles mix-ID factor
 
@@ -16,7 +16,7 @@ scale\_particles command
 **Examples:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    scale_particles air 0.5
    scale_particles air 4.0

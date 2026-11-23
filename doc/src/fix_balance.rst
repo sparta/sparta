@@ -9,7 +9,7 @@ fix balance/kk command
 **Syntax:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    fix ID balance Nfreq thresh bstyle args
 
@@ -40,7 +40,7 @@ fix balance/kk command
 **Examples:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    fix 1 balance 1000 1.1 rcb cell
    fix 2 balance 10000 1.0 random

@@ -6,7 +6,7 @@ log command
 **Syntax:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    log file keyword
 
@@ -17,7 +17,7 @@ log command
 **Examples:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    log log.equil
    log log.equil append

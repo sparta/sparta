@@ -6,7 +6,7 @@ if command
 **Syntax:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    if boolean then t1 t2 ... elif boolean f1 f2 ... elif boolean f1 f2 ... else e1 e2 ...
 
@@ -21,12 +21,12 @@ if command
 **Examples:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    if "${steps} > 1000" then quit
    if "${myString} == a10" then quit
    if "$x <= $y" then "print X is smaller = $x" else "print Y is smaller = $y"
-   if "(${eng} > 0.0) \|\| ($n < 1000)" then &
+   if "(${eng} > 0.0) || ($n < 1000)" then &
      "timestep 0.005" &
    elif $n<10000 &
      "timestep 0.01" &
@@ -74,7 +74,7 @@ Note that by using the line continuation character "&", the if command
 can be spread across many lines, though it is still a single command:
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    if "$a < $b" then &
      "print 'Minimum value = $a'" &
@@ -96,7 +96,7 @@ Here is an example of a double loop which uses the if and
 condition is met, then continues iterating thru the outer loop.
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    label	    loopa
    variable    a loop 5

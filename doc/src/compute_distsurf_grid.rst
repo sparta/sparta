@@ -9,7 +9,7 @@ compute distsurf/grid/kk command
 **Syntax:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    compute ID distsurf/grid group-ID surf-ID keyword args ...
 
@@ -30,7 +30,7 @@ compute distsurf/grid/kk command
 **Examples:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    compute 1 distsurf/grid all all
    compute 1 distsurf/grid subset sphere2 dir 1 0 0
@@ -92,7 +92,7 @@ refines again for grid cells within a distance of 0.1 from the surface
 elements.
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    compute 5 distsurf/grid all all dir 1 0 0
    adapt_grid all refine value c_5 0.3 0.0 thresh less more

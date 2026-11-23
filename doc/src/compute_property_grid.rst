@@ -9,7 +9,7 @@ compute property/grid/kk command
 **Syntax:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    compute ID property/grid group-ID input1 input2 ...
 
@@ -37,7 +37,7 @@ compute property/grid/kk command
 **Examples:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    compute 1 property/grid all id xc yc zc
 

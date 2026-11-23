@@ -6,7 +6,7 @@ compute command
 **Syntax:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    compute ID style args
 
@@ -17,7 +17,7 @@ compute command
 **Examples:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    compute 1 ke/particle 
    compute myGrid all n mass u usq temp

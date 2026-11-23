@@ -6,7 +6,7 @@ react command
 **Syntax:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    react style args
 
@@ -34,7 +34,7 @@ react command
 **Examples:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    react none
    react tce air.tce

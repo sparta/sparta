@@ -6,7 +6,7 @@ unfix command
 **Syntax:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    unfix fix-ID
 
@@ -15,7 +15,7 @@ unfix command
 **Examples:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    unfix 2
    unfix lower-boundary

@@ -9,7 +9,7 @@ fix emit/face/kk command
 **Syntax:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    fix ID emit/face mix-ID face1 face2 ... keyword value(s) ...
 
@@ -38,14 +38,14 @@ fix emit/face/kk command
 **Examples:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    fix in emit/face air all
    fix in emit/face mymix xlo yhi n 1000 nevery 10 region circle
    fix in emit/face air xlo subsonic 0.1 300
    fix in emit/face air xhi subsonic 0.05 NULL twopass
 
-   variable mod equal "1.0 + sin(step/10000\*2\*PI)"
+   variable mod equal "1.0 + sin(step/10000*2*PI)"
    fix in emit/face air all modulate v_mod
 
 **Description:**

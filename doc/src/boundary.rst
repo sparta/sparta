@@ -6,7 +6,7 @@ boundary command
 **Syntax:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    boundary x y z
 
@@ -25,7 +25,7 @@ boundary command
 **Examples:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    boundary o p p
    boundary os o o
@@ -88,7 +88,7 @@ For 2d simulations, the z dimension must be periodic.
 **Default:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    boundary p p p
 

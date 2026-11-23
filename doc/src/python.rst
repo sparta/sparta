@@ -6,7 +6,7 @@ python command
 **Syntax:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    python mode keyword args ...
 
@@ -99,7 +99,7 @@ variable.  Its specification must match the *mode* argument of the
 commands would be consistent:
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    variable foo python myMultiply
    python myMultiply return v_foo format f file funcs.py
@@ -359,7 +359,7 @@ consider this function loaded with two global variables defined
 outside the function:
 
 
-.. parsed-literal::
+.. code-block:: python
 
    nsteplast = -1
    nvaluelast = 0
@@ -446,7 +446,7 @@ Python a pointer to SPARTA.  The mechanism for doing this in your
 Python function is as follows:
 
 
-.. parsed-literal::
+.. code-block:: python
 
    def foo(handle,...):
       from SPARTA import SPARTA
@@ -526,7 +526,7 @@ the examples/python/in.circle.pyvar input script for more details.
 Assume the file truncate.py includes this Python code:
 
 
-.. parsed-literal::
+.. code-block:: python
 
    def truncate(x):
      return int(x)
@@ -552,11 +552,11 @@ by these to define grid-style variables which invoke the same Python
 "truncate" function:
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    compute         1 property/grid all xc yc
-   variable        xnew grid py_foo(c_1\ 1\ )
-   variable        ynew grid py_foo(c_1\ 2\ )
+   variable        xnew grid py_foo(c_1[1])
+   variable        ynew grid py_foo(c_1[2])
    dump            1 grid all 1000 dump.grid.pyvar id xc yc v_xnew v_ynew
 
 When the dump command invokes the 2 grid-style variables, their
@@ -586,7 +586,7 @@ variable formula or by *input* keyword to the *python command*\ .
 Assume the file mixedargs.py includes this Python code:
 
 
-.. parsed-literal::
+.. code-block:: python
 
    def mixedargs(a,b,x,y,z,flag):
      ...
@@ -595,16 +595,16 @@ Assume the file mixedargs.py includes this Python code:
 Now consider these (made up) commands:
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    variable        foo python mixedargs
    python          mixedargs return v_foo input 6 7.5 v_myValue iv_arg1 iv_argy iv_argz v_flag &
                    format fffffsf file mixedargs.pt
    variable        flag string optionABC
-   variable        myValue equal "2.0\*np"
+   variable        myValue equal "2.0*np"
    compute         1 property/grid all xc yc zc
    compute         2 grid all n
-   variable        field grid py_foo(c_1\ 1\ +3.0,sqrt(c_1\ 2\ ),(c_1\ 3\ -zlo)\*c_2\ 1\ )
+   variable        field grid py_foo(c_1[1]+3.0,sqrt(c_1[2]),(c_1[3]-zlo)*c_2[1])
 
 They define a Python "mixedargs" function with 6 arguments.  Three of
 them are internal-style variables, which the variable formula
@@ -672,7 +672,7 @@ If you put one (or more) statements inside a "try" statement,
 like this:
 
 
-.. parsed-literal::
+.. code-block:: python
 
    import exceptions
    print("Inside simple function")

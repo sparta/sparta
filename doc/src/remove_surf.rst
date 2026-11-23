@@ -6,7 +6,7 @@ remove\_surf command
 **Syntax:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    remove_surf surfID
 
@@ -15,7 +15,7 @@ remove\_surf command
 **Examples:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    remove_surf topsurf
 

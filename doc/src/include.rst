@@ -6,7 +6,7 @@ include command
 **Syntax:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    include file
 
@@ -15,7 +15,7 @@ include command
 **Examples:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    include newfile
    include in.run2

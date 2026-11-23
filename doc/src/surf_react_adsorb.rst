@@ -9,7 +9,7 @@ surf\_react adsorb/kk command
 **Syntax:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    surf_react ID adsorb model infile(s) Nsync type temp n_sites adsp1 adsp2 ...
 
@@ -58,7 +58,7 @@ file format below for details.
 **Examples:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    surf_react adsorb gs gs_react.surf nsync 10 surf 1000 6.022e18 O CO
    surf_react adsorb gs/ps gs_react.surf ps_react.surf nsync 1 face 300 3e9 O

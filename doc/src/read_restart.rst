@@ -6,7 +6,7 @@ read\_restart command
 **Syntax:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    read_restart file keyword args ...
 
@@ -25,11 +25,11 @@ read\_restart command
 **Examples:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    read_restart save.10000
-   read_restart restart.\*
-   read_restart flow.\*.%
+   read_restart restart.*
+   read_restart flow.*.%
    read_restart save.10000 gridcut -1.0
    read_restart save.10000 balance rcb cell
 

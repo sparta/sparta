@@ -6,7 +6,7 @@ compute gas/reaction/grid command
 **Syntax:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    compute ID gas/reaction/grid group-ID mix-ID mode value1 value2 ...
 
@@ -30,7 +30,7 @@ compute gas/reaction/grid command
 **Examples:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    compute 1 gas/reaction/grid all all all
    compute 2 gas/reaction/grid subset mymixture all

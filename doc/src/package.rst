@@ -6,7 +6,7 @@ package command
 **Syntax:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    package style args
 
@@ -35,7 +35,7 @@ package command
 **Examples:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    package kokkos comm serial
    package kokkos comm threaded react/retry yes

@@ -6,7 +6,7 @@ reset\_timestep command
 **Syntax:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    reset_timestep N
 
@@ -15,7 +15,7 @@ reset\_timestep command
 **Examples:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    reset_timestep 0
    reset_timestep 4000000

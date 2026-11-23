@@ -6,7 +6,7 @@ clear command
 **Syntax:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    clear
 

@@ -6,7 +6,7 @@ read\_surf command
 **Syntax:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    read_surf filename keyword args ...
 
@@ -57,7 +57,7 @@ read\_surf command
 **Examples:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    read_surf surf.sphere
    read_surf surf.sphere type custom temperature float 0
@@ -311,7 +311,7 @@ read\_surf command, 4 custom values must be added to the end of each
 line in the Lines section of the input file:
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    read_surf surf.sphere type custom temperature float 0 custom flags int 3
 
@@ -386,7 +386,7 @@ read\_surf command, 4 custom values should be added to the end of each
 triangle in the Triangles section:
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    read_surf surf.sphere type custom temperature float 0 custom flags int 3
 

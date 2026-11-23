@@ -6,7 +6,7 @@ jump command
 **Syntax:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    jump file label
 
@@ -16,7 +16,7 @@ jump command
 **Examples:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    jump newfile
    jump in.run2 runloop
@@ -72,7 +72,7 @@ iterations.  When the "a" variable has been incremented for the tenth
 time, it will cause the next jump command to be skipped.
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    variable a loop 10
    label loop
@@ -102,7 +102,7 @@ jump commands to break out of the inner loop when a condition is met,
 then continues iterating thru the outer loop.
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    label	    loopa
    variable    a loop 5

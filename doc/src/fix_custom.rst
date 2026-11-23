@@ -6,7 +6,7 @@ fix custom command
 **Syntax:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    fix ID custom Nfreq style action args ... action args ...
 
@@ -19,15 +19,15 @@ fix custom command
 **Examples:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    variable dvec particle (x+y)/2.0
    custom particle create dvec double 0
    custom surf create temp double 0 create vstream double 3
 
    fix 1 custom 1000 particle set dvec v_dvec air NULL
-   fix 1 custom 10000 surf file surf.temp.\* 1 temp file surf.vstream.\* 3 vstream[1] vstream[2] vstream[3]
-   fix 1 custom 10000 surf file surf.flow.\* 4 temp vstream[1] vstream[2] vstream[3]
+   fix 1 custom 10000 surf file surf.temp.* 1 temp file surf.vstream.* 3 vstream[1] vstream[2] vstream[3]
+   fix 1 custom 10000 surf file surf.flow.* 4 temp vstream[1] vstream[2] vstream[3]
 
 See examples using many of the :doc:`custom <custom>` and :doc:`fix custom <fix_custom>` command actions in examples/custom
 

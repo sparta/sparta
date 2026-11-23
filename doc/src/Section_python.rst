@@ -239,7 +239,7 @@ Pypar.  Pypar requires the ubiquitous `Numpy package <https://numpy.org>`_ be in
 launching python, type
 
 
-.. parsed-literal::
+.. code-block:: python
 
    import numpy
 
@@ -272,7 +272,7 @@ If you have successully installed Pypar, you should be able to run
 Python and type
 
 
-.. parsed-literal::
+.. code-block:: python
 
    import pypar
 
@@ -287,7 +287,7 @@ on a simple test script
 where test.py contains the lines
 
 
-.. parsed-literal::
+.. code-block:: python
 
    import pypar
    print "Proc %d out of %d procs" % (pypar.rank(),pypar.size())
@@ -324,7 +324,7 @@ To test if SPARTA is callable from Python, launch Python interactively
 and type:
 
 
-.. parsed-literal::
+.. code-block:: pycon
 
    >>> from sparta import sparta
    >>> spa = sparta()
@@ -347,7 +347,7 @@ You can also test the load directly in Python as follows, without
 first importing from the sparta.py file:
 
 
-.. parsed-literal::
+.. code-block:: pycon
 
    >>> from ctypes import CDLL
    >>> CDLL("libsparta.so")
@@ -363,7 +363,7 @@ To run a SPARTA test in serial, type these lines into Python
 interactively from the bench directory:
 
 
-.. parsed-literal::
+.. code-block:: pycon
 
    >>> from sparta import sparta
    >>> spa = sparta()
@@ -412,7 +412,7 @@ To run SPARTA in parallel, assuming you have installed the
 above, create a test.py file containing these lines:
 
 
-.. parsed-literal::
+.. code-block:: python
 
    import pypar
    from sparta import sparta
@@ -505,7 +505,7 @@ object.  The sample Python code below assumes you have first imported
 the "sparta" module in your Python script, as follows:
 
 
-.. parsed-literal::
+.. code-block:: python
 
    from sparta import sparta
 
@@ -564,7 +564,7 @@ Note that you can create multiple SPARTA objects in your Python
 script, and coordinate and run multiple simulations, e.g.
 
 
-.. parsed-literal::
+.. code-block:: python
 
    from sparta import sparta
    spa1 = sparta()

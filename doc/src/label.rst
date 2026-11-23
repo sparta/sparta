@@ -6,7 +6,7 @@ label command
 **Syntax:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    label ID
 
@@ -15,7 +15,7 @@ label command
 **Examples:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    label xyz
    label loop

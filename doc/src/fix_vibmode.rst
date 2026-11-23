@@ -6,7 +6,7 @@ fix vibmode command
 **Syntax:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    fix ID vibmode
 
@@ -16,7 +16,7 @@ fix vibmode command
 **Examples:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    fix 1 vibmode
 

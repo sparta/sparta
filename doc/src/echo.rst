@@ -6,7 +6,7 @@ echo command
 **Syntax:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    echo style
 
@@ -15,7 +15,7 @@ echo command
 **Examples:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    echo both
    echo log
@@ -37,7 +37,7 @@ in place of this command.
 **Default:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    echo log
 

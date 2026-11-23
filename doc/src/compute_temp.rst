@@ -9,7 +9,7 @@ compute temp/kk command
 **Syntax:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    compute ID temp
 
@@ -19,7 +19,7 @@ compute temp/kk command
 **Examples:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    compute 1 temp
    compute myTemp temp

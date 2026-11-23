@@ -6,7 +6,7 @@ timestep command
 **Syntax:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    timestep dt
 
@@ -15,7 +15,7 @@ timestep command
 **Examples:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    timestep 2.0 
    timestep 0.003
@@ -33,7 +33,7 @@ Set the timestep size for subsequent simulations.
 **Default:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    timestep 1.0
 

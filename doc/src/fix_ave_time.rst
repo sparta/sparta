@@ -6,7 +6,7 @@ fix ave/time command
 **Syntax:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    fix ID ave/time Nevery Nrepeat Nfreq value1 value2 ... keyword args ...
 
@@ -56,12 +56,12 @@ fix ave/time command
 **Examples:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    fix 1 ave/time 100 5 1000 c_myTemp c_thermo_temp file temp.profile
    fix 1 ave/time 100 5 1000 c_myCount[2] c_myCount[3] ave window 20 &
                                  title1 "My output values"
-   fix 1 ave/time 100 5 1000 c_myCount[\*] ave window 20
+   fix 1 ave/time 100 5 1000 c_myCount[*] ave window 20
    fix 1 ave/time 1 100 1000 f_indent f_indent[1] file temp.indent off 1
 
 **Description:**
@@ -118,7 +118,7 @@ vector or columns of the array had been listed one by one.  E.g. these
 vector with 3 values.
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    compute 1 count Ar He O
    fix 1 ave/time 100 1 100 c_1 file tmp.count

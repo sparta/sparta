@@ -9,7 +9,7 @@ fix grid/check/kk command
 **Syntax:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    fix ID grid/check N outflag keyword arg ...
 
@@ -29,7 +29,7 @@ fix grid/check/kk command
 **Examples:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    fix 1 grid/check 100 error
 

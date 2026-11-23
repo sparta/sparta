@@ -50,6 +50,14 @@ extensions = [
 # straight quotes throughout, so leave the characters as written.
 smartquotes = False
 
+# Blocks that do not name a language are not highlighted.  Sphinx's default
+# is to colour them as Python, so the hundreds of syntax descriptions and
+# file excerpts in "parsed-literal" blocks had words like "for", "with" and
+# "or" coloured as Python keywords.  Input scripts are marked
+# ".. code-block:: SPARTA" and real Python ".. code-block:: python" (or
+# pycon for interactive sessions), and only those are coloured.
+highlight_language = 'none'
+
 source_suffix = '.rst'
 master_doc = 'Manual'
 exclude_patterns = ['_build']
@@ -161,5 +169,38 @@ def copy_full_size_images(app, exception):
     shutil.copytree(src, os.path.join(app.outdir, 'JPG'), dirs_exist_ok=True)
 
 
+# -- SPARTA input-script highlighting --------------------------------------
+#
+# ".. code-block:: SPARTA" uses the lexer in SPARTALexer.py, modelled on the
+# one LAMMPS uses.  The command names come from the source tree rather than
+# a list kept by hand: every CommandStyle() in src/*.h, plus the commands
+# src/input.cpp handles itself.  (The /kk variants in src/KOKKOS are the same
+# commands with an accelerator suffix, so src/*.h is enough.)
+#
+# Any failure here stops the build.  A lexer that fails to load would
+# otherwise leave every block unhighlighted and the build would still pass.
+def sparta_commands():
+    import glob
+    import re
+
+    names = set()
+    for header in glob.glob(os.path.join(SPARTA_SOURCE_DIR, '*.h')):
+        with open(header) as f:
+            names.update(re.findall(r'^CommandStyle\((\w+),', f.read(), re.M))
+    with open(os.path.join(SPARTA_SOURCE_DIR, 'input.cpp')) as f:
+        names.update(re.findall(r'strcmp\(command,"(\w+)"\)', f.read()))
+    if len(names) < 50:
+        raise RuntimeError('found only %d SPARTA commands under %s; the '
+                           'lexer would miss most of them'
+                           % (len(names), SPARTA_SOURCE_DIR))
+    return names
+
+
 def setup(app):
+    import sys
+
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    import SPARTALexer
+
+    app.add_lexer('SPARTA', SPARTALexer.make_lexer(sparta_commands()))
     app.connect('build-finished', copy_full_size_images)

@@ -127,7 +127,7 @@ more timesteps, then you simply use the :doc:`run <run>` command
 multiple times.  For example, this script
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    read_grid data.grid
    create_particles 1000000
@@ -145,7 +145,7 @@ the :doc:`clear <clear>` command can be used in between them to
 re-initialize SPARTA.  For example, this script
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    read_grid data.grid
    create_particles 1000000
@@ -164,7 +164,7 @@ times with different settings.  For example, this script, named
 in.flow
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    variable d index run1 run2 run3 run4 run5 run6 run7 run8
    shell cd $d
@@ -1155,7 +1155,7 @@ directory of the SPARTA distribution to see the original script that
 this script is based on.  If that script had the line
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    restart	        50 tmp.restart
 
@@ -1167,7 +1167,7 @@ This script could be used to read the first restart file and re-run
 the last 80 timesteps:
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    read_restart	    tmp.restart.50
 
@@ -1298,7 +1298,7 @@ You can use the :doc:`mixture copy <mixture>` and :doc:`mixture delete <mixture>
 the ambipolar electron species, e.g.
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    mixture all copy noElectron
    mixture noElectron delete e
@@ -1326,7 +1326,7 @@ example these commands will include counts of ambipolar ions in
 statistical output:
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    compute myCount O+ N+ NO+ e
    stats_style step nsreact nsreactave cpu np c_myCount
@@ -1341,7 +1341,7 @@ attributes defined by the :doc:`fix ambipolar <fix_ambipolar>` command.
 E.g. this command
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    dump 1 particle 1000 tmp.dump id type x y z p_ionambi p_velambi[2]
 
@@ -1408,7 +1408,7 @@ attributes defined by the :doc:`fix vibmode <fix_vibmode>` command.
 E.g. this command
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    dump 1 particle 1000 tmp.dump id type x y z evib p_vibmode[1] p_vibmode[2] p_vibmode[3]
 

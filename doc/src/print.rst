@@ -22,7 +22,7 @@ print string keyword value:pre
 **Examples:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    print "Done with equilibration"
    print 'Done with equilibration'

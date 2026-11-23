@@ -6,7 +6,7 @@ region command
 **Syntax:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    region ID style args keyword value ...
 
@@ -49,7 +49,7 @@ region command
 **Examples:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    region 1 block -3.0 5.0 INF 10.0 INF INF
    region 2 sphere 0.0 0.0 0.0 5 side out

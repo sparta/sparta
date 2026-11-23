@@ -661,7 +661,7 @@ You can use the :doc:`suffix kk <suffix>` command, or you can explicitly add a
 "kk" suffix to individual styles in your input script, e.g.
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    collide vss/kk air ar.vss
 

@@ -6,7 +6,7 @@ dimension command
 **Syntax:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    dimension N
 
@@ -15,7 +15,7 @@ dimension command
 **Examples:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    dimension 2
    dimension 3
@@ -39,7 +39,7 @@ This command must be used before the simulation box is defined by a
 **Default:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    dimension 3
 

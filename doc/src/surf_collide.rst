@@ -6,7 +6,7 @@ surf\_collide command
 **Syntax:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    surf_collide ID style args keyword values ...
 
@@ -94,7 +94,7 @@ surf\_collide command
 **Examples:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    surf_collide 1 specular
    surf_collide 1 transparent

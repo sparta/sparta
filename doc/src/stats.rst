@@ -6,7 +6,7 @@ stats command
 **Syntax:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    stats N
 
@@ -15,7 +15,7 @@ stats command
 **Examples:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    stats 100
 
@@ -42,7 +42,7 @@ controlled by a :doc:`variable <variable>`.  See the :doc:`stats\_modify every <
 **Default:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    stats 0
 

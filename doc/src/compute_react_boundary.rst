@@ -9,7 +9,7 @@ compute react/boundary/kk command
 **Syntax:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    compute ID react/boundary reaction-ID value1 value2 ...
 
@@ -29,7 +29,7 @@ compute react/boundary/kk command
 **Examples:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    surf_react air prob air.surf
    compute 1 react/boundary air
@@ -39,12 +39,12 @@ These commands will time average the reaction tallies for each face
 and output the results as part of statistical output:
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    compute 2 react/boundary air r:N/O/N2/O2 p:N/O/NO
 
-   fix 1 ave/time all 10 100 1000 c_2[\*]
-   stats_style step np f_1[1][\*] f_1[2][\*] f_1[3][\*] f_1[4][\*]
+   fix 1 ave/time all 10 100 1000 c_2[*]
+   stats_style step np f_1[1][*] f_1[2][*] f_1[3][*] f_1[4][*]
 
 **Description:**
 

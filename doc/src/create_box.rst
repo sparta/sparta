@@ -17,7 +17,7 @@ create\_box command
 **Examples:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    create_box 0 1 0 1 0 1
    create_box 0 1 0 1 -0.5 0.5

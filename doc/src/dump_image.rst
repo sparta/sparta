@@ -9,7 +9,7 @@ dump movie command
 **Syntax:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    dump ID style mix-ID N file color diameter keyword value ...
 
@@ -101,9 +101,9 @@ dump movie command
 **Examples:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
-   dump myDump image all 100 dump.\*.jpg type type
+   dump myDump image all 100 dump.*.jpg type type
    dump myDump movie all 100 movie.mpg type type
 
 These commands will dump snapshot images of all particles whose

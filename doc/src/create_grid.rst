@@ -6,7 +6,7 @@ create\_grid command
 **Syntax:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    create_grid Nx Ny Nz keyword args ...
 
@@ -37,16 +37,16 @@ create\_grid command
 **Examples:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    create_grid 10 10 10
-   create_grid 10 10 10 block \* \* \*
+   create_grid 10 10 10 block * * *
    create_grid 10 10 10 block 4 2 5
-   create_grid 10 10 10 levels 4 subset 2\*4 \* \* \* 2 2 3
-   create_grid 20 10 1 levels 2 subset 2 10\*15 3\*7 1 2 2 1
+   create_grid 10 10 10 levels 4 subset 2*4 * * * 2 2 3
+   create_grid 20 10 1 levels 2 subset 2 10*15 3*7 1 2 2 1
    create_grid 20 10 1 levels 3 region 2 b2 2 2 1 region 3 b3 2 3 1 inside any
-   create_grid 20 10 1 levels 2 subset 2 10\*15 3\*7 1 2 2 1 region 3 b3 2 3 1
-   create_grid 8 8 10 levels 3 subset 2 5\* \* \* 4 4 4 subset 3 1 2\*3 3\* 2 2 1
+   create_grid 20 10 1 levels 2 subset 2 10*15 3*7 1 2 2 1 region 3 b3 2 3 1
+   create_grid 8 8 10 levels 3 subset 2 5* * * 4 4 4 subset 3 1 2*3 3* 2 2 1
 
 **Description:**
 
@@ -195,9 +195,9 @@ not have been partitioned into level 2 cells.
 For example this command creates a two-level grid:
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
-   create_grid 10 10 10 levels 2 subset 2 \* \* \* 2 2 3
+   create_grid 10 10 10 levels 2 subset 2 * * * 2 2 3
 
 The 1st level is 10x10x10.  Each of the 1000 level 1 cells is further
 partitioned into 2x2x3 cells.  This means the total number of
@@ -206,9 +206,9 @@ resulting grid cells is 1000 \* 12 = 12000.
 This command creates a 3-level grid:
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
-   create_grid 8 8 10 levels 3 subset 2 5\* \* \* 4 4 4 subset 3 1 2\*3 3\* 2 2 1
+   create_grid 8 8 10 levels 3 subset 2 5* * * 4 4 4 subset 3 1 2*3 3* 2 2 1
 
 The first level is 8x8x10.  The second level is 4x4x4 within each
 level 1 cell, but only half or 320 of the 640 level 1 cells are

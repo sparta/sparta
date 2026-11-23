@@ -6,7 +6,7 @@ collide\_modify command
 **Syntax:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    collide_modify keyword values ...
 
@@ -35,7 +35,7 @@ collide\_modify command
 **Examples:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    collide_modify vremax 1000 yes
    collide_modify vremax 0 no remain no

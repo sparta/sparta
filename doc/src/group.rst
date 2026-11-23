@@ -6,7 +6,7 @@ group command
 **Syntax:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    group ID which style args
 
@@ -43,7 +43,7 @@ group command
 **Examples:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    group sphere surf type 1 3
    group sphere surf id 50 100:150

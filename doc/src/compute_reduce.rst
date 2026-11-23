@@ -9,7 +9,7 @@ compute reduce/kk command
 **Syntax:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    compute ID reduce mode input1 input2 ... keyword args ...
 
@@ -51,9 +51,9 @@ compute reduce/kk command
 **Examples:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
-   compute 1 reduce sum c_grid[\*]
+   compute 1 reduce sum c_grid[*]
    compute 2 reduce min f_ave v_myKE subset trace_species
    compute 3 reduce max c_mine[1] c_mine[2] c_temp replace 1 3 replace 2 3
 
@@ -61,7 +61,7 @@ These commands will include the average grid cell temperature, across
 all grid cells, in the stats output:
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    compute 1 temp
    compute	2 grid all all temp
@@ -135,10 +135,10 @@ equivalent, since the :doc:`compute grid <compute_grid>` command creates
 a per-grid array with 3 columns:
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    compute myGrid grid all all u v w
-   compute 2 all reduce min c_myGrid[\*]
+   compute 2 all reduce min c_myGrid[*]
    compute 2 all reduce min c_myGrid[1] c_myGrid[2] c_myGrid[3]
 
 
@@ -218,7 +218,7 @@ Here is an example which prints out both the grid cell ID and number
 of particles for the grid cell with the maximum number of particles:
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    compute 1 property/grid id
    compute	2 grid all n

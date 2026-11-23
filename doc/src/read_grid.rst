@@ -6,7 +6,7 @@ read\_grid command
 **Syntax:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    read_grid filename keyword args ...
 
@@ -26,7 +26,7 @@ read\_grid command
 **Examples:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    read_grid data.grid
    read_grid data.grid custom temperature double 0
@@ -90,7 +90,7 @@ For example, for this read\_grid command, 4 custom values should be
 added to the end of each line in the Cells section of the input file:
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    read_grid grid.data custom temperature float 0 custom flags int 3
 

@@ -78,6 +78,15 @@ DELTAS = {
         'which is what they were written to mean, so four links the old page '
         'showed as raw markup are now real links.'
     ),
+    'script_text_restored': (
+        'Input-script examples that txt2html and the reST conversion both '
+        'garbled.  In txt2html markup [x] is bold and {x} italic, so '
+        '"c_1[1]" in an example was published as "c_1" plus a bold "1", '
+        'and "${myT}" as "$" plus an italic "myT": text that fails if a '
+        'reader types it in.  The examples are code blocks now, which have '
+        'no inline markup, and each affected line is taken verbatim from '
+        'its .txt source.  Listed individually in DECLARED.'
+    ),
     'markup_typos_fixed': (
         'Markup typos in the txt2html sources that made a page render '
         'wrongly, fixed in the reST.  Each one is listed individually in '
@@ -105,7 +114,23 @@ DECLARED = {
          'next line, so txt2html could not pair them and printed the URL as '
          'text.  It is a link now, and the URL is no longer duplicated.'),
     ],
+    'custom.html': [
+        ('garray1 garray2', 'garray[1] garray[2]', 'script_text_restored', 'custom.txt:56'),
+    ],
+    'python.html': [
+        ('py_foo(c_11)', 'py_foo(c_1[1])', 'script_text_restored', 'python.txt:515'),
+        ('py_foo(c_12)', 'py_foo(c_1[2])', 'script_text_restored', 'python.txt:516'),
+        ('py_foo(c_11+3.0,sqrt(c_12),(c_13-zlo)*c_21)',
+         'py_foo(c_1[1]+3.0,sqrt(c_1[2]),(c_1[3]-zlo)*c_2[1])', 'script_text_restored',
+         'python.txt:558'),
+    ],
+    'run.html': [
+        ("$myT'\"", "${myT}'\"", 'script_text_restored', 'run.txt'),
+        ('$myT"', '${myT}"', 'script_text_restored', 'run.txt'),
+    ],
     'variable.html': [
+        ('v_csq/grid2part(c_therm1)', 'v_csq/grid2part(c_therm[1])', 'script_text_restored',
+         'variable.txt'),
         (':doc:`python `', 'python', 'rst_markup_in_source', ''),
         (':doc:`clear `', 'clear', 'rst_markup_in_source', ''),
         ('**not**', 'not', 'rst_markup_in_source', ''),

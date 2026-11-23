@@ -6,7 +6,7 @@ compute tvib/grid command
 **Syntax:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    compute ID tvib/grid group-ID mix-ID keyword ...
 
@@ -26,7 +26,7 @@ compute tvib/grid command
 **Examples:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    compute 1 tvib/grid all species
    compute 1 tvib/grid subset all

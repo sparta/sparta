@@ -9,7 +9,7 @@ dump command
 **Syntax:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    dump ID style select-ID N file args
 
@@ -126,13 +126,13 @@ dump command
 **Examples:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
-   dump 1 particle all 100 dump.myforce.\* id type x y vx fx
+   dump 1 particle all 100 dump.myforce.* id type x y vx fx
    dump 2 particle inflow 100 dump.%.myforce id type c_myF[3] v_ke
    dump 3 grid all 1000 tmp.grid id proc xlo ylo zlo xhi yhi zhi
 
-   dump 4 tally all 10 tmp.tally c_surfTally[\*]
+   dump 4 tally all 10 tmp.tally c_surfTally[*]
 
 **Description:**
 
@@ -289,10 +289,10 @@ equivalent, since the :doc:`compute grid <compute_grid>` command creates
 a per-grid array with 3 columns:
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    compute myGrid all all u v w
-   dump 2 grid all 100 tmp.dump id c_myGrid[\*]
+   dump 2 grid all 100 tmp.dump id c_myGrid[*]
    dump 2 grid all 100 tmp.dump id c_myGrid[1] c_myGrid[2] c_myGrid[3]
 
 

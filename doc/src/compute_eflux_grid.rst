@@ -9,7 +9,7 @@ compute eflux/grid/kk command
 **Syntax:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    compute ID eflux/grid group-ID mix-ID value1 value2 ...
 
@@ -29,7 +29,7 @@ compute eflux/grid/kk command
 **Examples:**
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    compute 1 eflux/grid all species heatx heaty heatz
    compute 1 eflux/grid subset species heaty
@@ -38,11 +38,11 @@ These commands will dump time averaged energy flux densities for
 each species and each grid cell to a dump file every 1000 steps:
 
 
-.. parsed-literal::
+.. code-block:: SPARTA
 
    compute 1 eflux/grid all species heatx heaty heatz
-   fix 1 ave/grid 10 100 1000 c_1[\*]
-   dump 1 grid all 1000 tmp.grid id f_1[\*]
+   fix 1 ave/grid 10 100 1000 c_1[*]
+   dump 1 grid all 1000 tmp.grid id f_1[*]
 
 **Description:**
 
