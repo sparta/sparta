@@ -140,7 +140,7 @@ Then do the following:
 +-------------------------------------------------------------------------------------------------------------------------------------------+--------------------------------------------------------------------------------+
 | set any needed options for the package via "-pk" `command-line switch <Section_start.html#start_7>`_ or :doc:`package <package>` command, | only if defaults need to be changed, -pk kokkos react/retry yes                |
 +-------------------------------------------------------------------------------------------------------------------------------------------+--------------------------------------------------------------------------------+
-| use accelerated styles in your input via "-sf" `command-line switch <Section_start.html#start_7>`_ or :doc:`suffix <suffix>` command      | lmp\_kokkos\_cuda -in in.script -sf kk                                         |
+| use accelerated styles in your input via "-sf" `command-line switch <Section_start.html#start_7>`_                                        | lmp\_kokkos\_cuda -in in.script -sf kk                                         |
 +-------------------------------------------------------------------------------------------------------------------------------------------+--------------------------------------------------------------------------------+
 
 Note that the first 3 steps can be done as a single command with
@@ -152,8 +152,8 @@ accelerator packages.
 The last 4 steps can all be done from the command-line when SPARTA is
 launched, without changing your input script, as illustrated in the
 individual accelerator sections.  Or you can add
-:doc:`package <package>` and :doc:`suffix <suffix>` commands to your input
-script.
+:doc:`package <package>` commands to your input script, and name the
+accelerated variant of each style explicitly, e.g. "collide vss/kk".
 
 The `Benchmark page <https://sparta.github.io/bench.html>`_ of the SPARTA
 web site gives performance results for the various accelerator
@@ -647,8 +647,10 @@ by rebuilding.
 
 **Run with the KOKKOS package by editing an input script:**
 
-Alternatively the effect of the "-sf" or "-pk" switches can be
-duplicated by adding the :doc:`package kokkos <package>` or :doc:`suffix kk <suffix>` commands to your input script.
+Alternatively the effect of the "-pk" switch can be duplicated by
+adding a :doc:`package kokkos <package>` command to your input script,
+and the effect of the "-sf" switch by naming the "kk" variant of each
+style explicitly.
 
 The discussion above for building SPARTA with the KOKKOS package, the
 mpirun/mpiexec command, and setting appropriate thread are the same.
@@ -657,7 +659,7 @@ You must still use the "-k on" `command-line switch <Section_start.html#start_7>
 specify its additional arguments for hardware options appropriate to
 your system, as documented above.
 
-You can use the :doc:`suffix kk <suffix>` command, or you can explicitly add a
+You can use the "-sf kk" `command-line switch <Section_start.html#start_7>`_, or you can explicitly add a
 "kk" suffix to individual styles in your input script, e.g.
 
 

@@ -136,7 +136,7 @@ with the KOKKOS package.  See the `Making SPARTA <Section_start.html#start_3>`_ 
 
 **Related commands:**
 
-:doc:`suffix <suffix>`, "-pk" `command-line setting <Section_start.html#start_7>`_
+"-sf" and "-pk" `command-line settings <Section_start.html#start_7>`_
 
 **Default:**
 

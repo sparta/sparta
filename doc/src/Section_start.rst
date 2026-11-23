@@ -1928,7 +1928,7 @@ partition screen files file.N.
 
 .. parsed-literal::
 
-   -suffix style args
+   -suffix style
 
 Use variants of various styles if they exist.  The specified style can
 be *kk*\ .  This refers to optional KOKKOS package that SPARTA can be built with, as described
@@ -1940,7 +1940,7 @@ having to edit an input script.
 
 As an example, the KOKKOS package provides a :doc:`compute\_style temp <compute_temp>` variant, with style name temp/kk. A variant style
 can be specified explicitly in your input script, e.g. compute
-temp/kk. If the suffix command is used with the appropriate style,
+temp/kk. If this switch is used with the appropriate style,
 you do not need to modify your input script.  The specified suffix
 (kk) is automatically appended whenever your
 input script command creates a new :doc:`fix <fix>`,
@@ -1953,9 +1953,9 @@ the default KOKKOS settings, as if the command "package kokkos" were
 used at the top of your input script.  These settings can be changed
 by using the "-package kokkos" command-line switch or the :doc:`package kokkos <package>` command in your script.
 
-The :doc:`suffix <suffix>` command can also be used within an input
-script to set a suffix, or to turn off or back on any suffix setting
-made via the command line.
+There is no input-script command that does the same.  To use the
+variant for only some commands, leave out this switch and name the
+variant explicitly in your input script instead, e.g. "compute temp/kk".
 
 
 .. parsed-literal::
