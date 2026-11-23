@@ -214,6 +214,20 @@ void Collide::init()
               "temps for discrete model",flag);
       error->all(FLERR,str);
     }
+
+    // a zero (or negative) rotational temperature makes the rotational
+    // quantum zero, and the level sampling of sample_rot_discrete() and of
+    // the reacting disposal never terminates: reject it here
+
+    for (int isp = 0; isp < nspecies; isp++) {
+      if (species[isp].rotdof == 2 && !(species[isp].rottemp[0] > 0.0)) {
+        char str[128];
+        snprintf(str,sizeof(str),"Species %s has a non-positive rotational "
+                 "temperature in its rotfile, which the discrete rotational "
+                 "model cannot use",species[isp].id);
+        error->all(FLERR,str);
+      }
+    }
   }
 
   if (vibstyle == DISCRETE) {
