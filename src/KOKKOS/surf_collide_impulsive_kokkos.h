@@ -341,7 +341,10 @@ class SurfCollideImpulsiveKokkos : public SurfCollideImpulsive {
       // rotational component
 
       if (rotstyle == NONE || d_species[ispecies].rotdof < 2) p->erot = 0.0;
-      else p->erot += rot_frac*extra_energy;
+      else {
+        p->erot += rot_frac*extra_energy;
+        if (p->erot < 0.0) p->erot = 0.0;
+      }
 
       // vibrational component
 
@@ -352,6 +355,7 @@ class SurfCollideImpulsiveKokkos : public SurfCollideImpulsive {
       } else {
         double *vibtemp = d_species[ispecies].vibtemp;
         double evib_val = p->evib + vib_frac*extra_energy;
+        if (evib_val < 0.0) evib_val = 0.0;
 
         if (vibstyle == SMOOTH) {
           p->evib = evib_val;

@@ -1,0 +1,139 @@
+SPARTA (27 Aug 2026)
+Running on 1 MPI task(s)
+################################################################################
+# Ambipolar ions as third bodies in dissociation and recombination (issue #176)
+#
+# A closed, periodic box of hot O2 / O / O2+ (+ ambipolar electrons).  The
+# only reactions defined are an ion-third-body dissociation and an
+# ion-third-body recombination, so any gas reactions that occur exercise the
+# new functionality directly.
+#
+# A single-group mixture keeps the case focused on the third-body chemistry
+# rather than on group binning; the KOKKOS package runs multigroup ambipolar
+# collisions too.  The "comm/sort" and "twopass" options make MPI and Kokkos
+# runs reproducible and should not be used for production runs.
+################################################################################
+
+seed                12345
+dimension           3
+global              gridcut 0.0 comm/sort yes
+boundary            p p p
+
+create_box          0.0 0.001 0.0 0.001 0.0 0.001
+Created orthogonal box = (0 0 0) to (0.001 0.001 0.001)
+create_grid         10 10 10
+Created 1000 child grid cells
+  CPU time = 0.00107257 secs
+  create/ghost percent = 69.551 30.449
+balance_grid        rcb cell
+Balance grid migrated 0 cells
+  CPU time = 0.000265259 secs
+  reassign/sort/migrate/ghost percent = 54.892 2.45119 7.53716 35.1196
+
+global              nrho 1.0e22 fnum 1.0e8
+
+species             ambi_3body.species O2 O O2+ e
+
+# collide mixture: all species in one group
+mixture             plasma O2 O O2+ e temp 50000.0
+
+# create mixture: heavy species only (electrons are added by fix ambipolar)
+mixture             gas O2 O O2+ temp 50000.0
+mixture             gas O2 frac 0.5
+mixture             gas O frac 0.3
+mixture             gas O2+ frac 0.2
+
+fix                 ambi ambipolar e O2+
+
+collide             vss plasma ambi_3body.vss relax variable
+collide_modify      vremax 1000 yes vibrate discrete rotate smooth
+collide_modify      ambipolar yes
+react               tce ambi_3body.tce
+
+create_particles    gas n 0 twopass
+Created 100000 particles
+  CPU time = 0.0367914 secs
+
+timestep            1.0e-9
+
+compute             c count species
+stats_style         step cpu np nattempt ncoll nreact                     c_c[1] c_c[2] c_c[3] c_c[4]
+stats               50
+
+run                 500
+WARNING: Single-group ambipolar collisions are inefficient; grouping electrons separately (e.g. collide ... species) is recommended (/tmp/claude-0/-home-user-sparta/6123e18b-95dc-57b3-8d79-a474c7818aa8/scratchpad/v7/r3/F-mpi/src/collide.cpp:386)
+Memory usage per proc in Mbytes:
+  particles (ave,min,max) = 14 14 14
+  grid      (ave,min,max) = 1.51379 1.51379 1.51379
+  surf      (ave,min,max) = 0 0 0
+  modify    (ave,min,max) = 0 0 0
+  total     (ave,min,max) = 15.5138 15.5138 15.5138
+Step CPU Np Natt Ncoll Nreact c_c[1] c_c[2] c_c[3] c_c[4] 
+       0            0   100000        0        0        0        50060        29971        19969            0 
+      50    1.5989513   100499   221358    15138        9        49561        30969        19969            0 
+     100    3.5160322   100974   222952    15337        8        49086        31919        19969            0 
+     150    5.2600973   101443   224931    15419       12        48617        32857        19969            0 
+     200    7.5230748   101881   226552    15426       16        48179        33733        19969            0 
+     250    9.5015973   102337   228072    15355       11        47723        34645        19969            0 
+     300    11.348969   102771   230036    15086        6        47289        35513        19969            0 
+     350    13.217492   103230   231486    15266        8        46830        36431        19969            0 
+     400    15.239257   103683   233476    15078        5        46377        37337        19969            0 
+     450    17.204526   104127   234979    15315        8        45933        38225        19969            0 
+     500    19.223107   104561   236442    15140        6        45499        39093        19969            0 
+Loop time of 19.2232 on 1 procs for 500 steps with 104561 particles
+Performance: 26.010 timesteps/s, 2.720 Mparticle-step/s
+
+MPI task timing breakdown:
+Section |  min time  |  avg time  |  max time  |%varavg| %total
+---------------------------------------------------------------
+Move    | 0.94913    | 0.94913    | 0.94913    |   0.0 |  4.94
+Coll    | 17.77      | 17.77      | 17.77      |   0.0 | 92.44
+Sort    | 0.48948    | 0.48948    | 0.48948    |   0.0 |  2.55
+Comm    | 0.0017179  | 0.0017179  | 0.0017179  |   0.0 |  0.01
+Modify  | 0          | 0          | 0          |   0.0 |  0.00
+Output  | 0.010563   | 0.010563   | 0.010563   |   0.0 |  0.05
+MPI Sync| 0.0020425  | 0.0020425  | 0.0020425  |   0.0 |  0.01
+Other   |            | 0.0003287  |            |       |  0.00
+
+Particle moves    = 51156818 (51.2M)
+Cells touched     = 56145895 (56.1M)
+Particle comms    = 0 (0K)
+Boundary collides = 0 (0K)
+Boundary exits    = 0 (0K)
+SurfColl checks   = 0 (0K)
+SurfColl occurs   = 0 (0K)
+Surf reactions    = 0 (0K)
+Collide attempts  = 114087372 (114M)
+Collide occurs    = 7630993 (7.63M)
+Reactions         = 4573 (4.57K)
+Particles stuck   = 0
+Axisymm bad moves = 0
+
+Particle-moves/CPUsec/proc: 2.66121e+06
+Particle-moves/step: 102314
+Cell-touches/particle/step: 1.09753
+Particle comm iterations/step: 1
+Particle fraction communicated: 0
+Particle fraction colliding with boundary: 0
+Particle fraction exiting boundary: 0
+Surface-checks/particle/step: 0
+Surface-collisions/particle/step: 0
+Surf-reactions/particle/step: 0
+Collision-attempts/particle/step: 2.23015
+Collisions/particle/step: 0.149169
+Reactions/particle/step: 8.93918e-05
+
+Gas reaction tallies:
+  style tce #-of-reactions 2
+  reaction O2 + O2+ --> O + O2+ + O: 4567
+  reaction O + O --> O2 + O2+: 6
+
+Particles: 104561 ave 104561 max 104561 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+Cells:      1000 ave 1000 max 1000 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+GhostCell: 0 ave 0 max 0 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+EmptyCell: 0 ave 0 max 0 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+WARNING: Summed TCE reaction probability exceeded 1.0 during this run, e.g. at reaction O + O --> O2 + O2+: the Arrhenius rates exceed the collision rate at some collision energies, so this reaction and any listed after it for the same reactants are under-sampled; this is independent of timestep and fnum (/tmp/claude-0/-home-user-sparta/6123e18b-95dc-57b3-8d79-a474c7818aa8/scratchpad/v7/r3/F-mpi/src/react_tce.cpp:87)

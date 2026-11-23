@@ -1708,7 +1708,7 @@ void Cut3d::walk()
       iedge = vert->first;
       dir = vert->dirfirst;
 
-      for (i = 0; i < nedge; i++) {
+      for (int k = 0; k < nedge; k++) {
         edge = &edges[iedge];
         if (!used[edge->verts[0]]) {
           stack[nstack++] = edge->verts[0];
@@ -1901,7 +1901,7 @@ int Cut3d::split_point_implicit(int *surfmap, double *xsplit, int &xsub)
   // i = 1st surf with non-negative surfmap
 
   int i = 0;
-  while (surfmap[i] < 0 && i < nsurf) i++;
+  while (i < nsurf && surfmap[i] < 0) i++;
   if (i == nsurf) return 7;
 
   // xsplit = center point of triangle wholly contained in cell

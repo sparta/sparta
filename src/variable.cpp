@@ -43,10 +43,36 @@
 #include "error.h"
 
 using namespace SPARTA_NS;
+
+/* ----------------------------------------------------------------------
+   return 1 if str is a printf format with at most one double conversion
+   (flags incl ', width, precision, optional l; %% is literal %), else 0
+   a format with no conversion just prints the literal text
+------------------------------------------------------------------------- */
+
+static int valid_double_format(const char *str)
+{
+  int nconv = 0;
+  for (const char *p = str; *p; p++) {
+    if (*p != '%') continue;
+    p++;
+    if (*p == '%') continue;
+    while (*p && strchr("-+ #0'",*p)) p++;
+    while (*p && isdigit(*p)) p++;
+    if (*p == '.') {
+      p++;
+      while (*p && isdigit(*p)) p++;
+    }
+    if (*p == 'l') p++;    // l is a no-op for double conversions
+    if (!*p || !strchr("eEfFgGaA",*p)) return 0;
+    nconv++;
+  }
+  return (nconv <= 1);
+}
 using namespace MathConst;
 
 #define VARDELTA 4
-#define MAXLEVEL 4
+#define MAXLEVEL 32
 #define MAXLINE 256
 #define CHUNK 1024
 #define MAXFUNCARG 6
@@ -316,8 +342,8 @@ void Variable::set(int narg, char **arg)
 
   // GETENV
   // remove pre-existing var if also style GETENV (allows it to be reset)
-  // num = 1, which = 1st value
-  // data = 1 value, string to eval
+  // num = 2, which = 1st value
+  // data = 2 values, 1st is env var name, 2nd is filled on retrieval
 
   } else if (strcmp(arg[1],"getenv") == 0) {
     if (narg != 3) error->all(FLERR,"Illegal variable command");
@@ -328,7 +354,7 @@ void Variable::set(int narg, char **arg)
     }
     if (nvar == maxvar) grow();
     style[nvar] = GETENV;
-    num[nvar] = 1;
+    num[nvar] = 2;
     which[nvar] = 0;
     pad[nvar] = 0;
     data[nvar] = new char*[num[nvar]];
@@ -364,6 +390,9 @@ void Variable::set(int narg, char **arg)
     if (narg != 4) error->all(FLERR,"Illegal variable command");
     if (find(arg[0]) >= 0) return;
     if (nvar == maxvar) grow();
+    if (!valid_double_format(arg[3]))
+      error->all(FLERR,"Variable format must contain at most one "
+                 "floating point conversion (e.g. %g, %10.4f)");
     style[nvar] = FORMAT;
     num[nvar] = 3;
     which[nvar] = 0;
@@ -510,7 +539,7 @@ void Variable::set(int narg, char **arg)
     if (ivar >= 0) {
       if (style[ivar] != INTERNAL)
         error->all(FLERR,"Cannot redefine variable as a different style");
-      dvalue[nvar] = input->numeric(FLERR,arg[2]);
+      dvalue[ivar] = input->numeric(FLERR,arg[2]);
       replaceflag = 1;
     } else {
       if (nvar == maxvar) grow();
@@ -744,7 +773,7 @@ char *Variable::retrieve(char *name)
     if (jvar == -1) return NULL;
     if (!equal_style(jvar)) return NULL;
     double answer = compute_equal(jvar);
-    sprintf(data[ivar][2],data[ivar][1],answer);
+    snprintf(data[ivar][2],VALUELENGTH,data[ivar][1],answer);
     str = data[ivar][2];
 
   } else if (style[ivar] == GETENV) {
@@ -1144,8 +1173,12 @@ void Variable::remove(int n)
     pad[i-1] = pad[i];
     reader[i-1] = reader[i];
     data[i-1] = data[i];
+    dvalue[i-1] = dvalue[i];
+    pyindex[i-1] = pyindex[i];
+    eval_in_progress[i-1] = eval_in_progress[i];
   }
   nvar--;
+  reader[nvar] = NULL;
 }
 
 /* ----------------------------------------------------------------------
@@ -1220,8 +1253,8 @@ double Variable::evaluate(char *str, Tree **tree)
   char onechar;
   char *ptr;
 
-  double argstack[MAXLEVEL];
-  Tree *treestack[MAXLEVEL];
+  double argstack[MAXLEVEL+1];
+  Tree *treestack[MAXLEVEL+1];
   int opstack[MAXLEVEL];
   int nargstack = 0;
   int ntreestack = 0;
@@ -1467,7 +1500,8 @@ double Variable::evaluate(char *str, Tree **tree)
 
           Tree *newtree = new Tree();
           newtree->type = ARRAY;
-          newtree->array = &compute->array_particle[0][index1-1];
+          newtree->array = compute->array_particle ?
+            &compute->array_particle[0][index1-1] : NULL;
           newtree->nstride = compute->size_per_particle_cols;
           treestack[ntreestack++] = newtree;
 
@@ -1533,7 +1567,8 @@ double Variable::evaluate(char *str, Tree **tree)
             newtree->array = add_storage(compute->vector_grid);
             newtree->nstride = 1;
           } else {
-            newtree->array = &compute->array_grid[0][index1-1];
+            newtree->array = compute->array_grid ?
+              &compute->array_grid[0][index1-1] : NULL;
             newtree->nstride = compute->size_per_grid_cols;
           }
           treestack[ntreestack++] = newtree;
@@ -1585,7 +1620,8 @@ double Variable::evaluate(char *str, Tree **tree)
 
           Tree *newtree = new Tree();
           newtree->type = ARRAY;
-	  newtree->array = &compute->array_surf[0][index1-1];
+	  newtree->array = compute->array_surf ?
+            &compute->array_surf[0][index1-1] : NULL;
 	  newtree->nstride = compute->size_per_surf_cols;
           treestack[ntreestack++] = newtree;
 
@@ -1691,9 +1727,9 @@ double Variable::evaluate(char *str, Tree **tree)
         } else if (nbracket == 0 && fix->per_particle_flag &&
                    fix->size_per_particle_cols == 0) {
 
-          if (tree == NULL)
-            error->all(FLERR,
-                       "Per-particle fix in equal-style variable formula");
+          if (tree == NULL || treestyle != PARTICLE)
+            error->all(FLERR,"Per-particle fix in "
+                       "non particle-style variable formula");
           if (update->runflag > 0 &&
               update->ntimestep % fix->per_particle_freq)
             error->all(FLERR,"Fix in variable not computed at compatible time");
@@ -1709,9 +1745,9 @@ double Variable::evaluate(char *str, Tree **tree)
         } else if (nbracket == 1 && fix->per_particle_flag &&
                    fix->size_per_particle_cols > 0) {
 
-          if (tree == NULL)
-            error->all(FLERR,
-                       "Per-particle fix in equal-style variable formula");
+          if (tree == NULL || treestyle != PARTICLE)
+            error->all(FLERR,"Per-particle fix in "
+                       "non particle-style variable formula");
           if (index1 > fix->size_per_particle_cols)
             error->all(FLERR,
                        "Variable formula fix array is accessed out-of-range");
@@ -1721,7 +1757,8 @@ double Variable::evaluate(char *str, Tree **tree)
 
           Tree *newtree = new Tree();
           newtree->type = ARRAY;
-          newtree->array = &fix->array_particle[0][index1-1];
+          newtree->array = fix->array_particle ?
+            &fix->array_particle[0][index1-1] : NULL;
           newtree->nstride = fix->size_per_particle_cols;
           treestack[ntreestack++] = newtree;
 
@@ -1760,7 +1797,8 @@ double Variable::evaluate(char *str, Tree **tree)
 
           Tree *newtree = new Tree();
           newtree->type = ARRAY;
-          newtree->array = &fix->array_grid[0][index1-1];
+          newtree->array = fix->array_grid ?
+            &fix->array_grid[0][index1-1] : NULL;
           newtree->nstride = fix->size_per_grid_cols;
           treestack[ntreestack++] = newtree;
 
@@ -1799,7 +1837,8 @@ double Variable::evaluate(char *str, Tree **tree)
 
           Tree *newtree = new Tree();
           newtree->type = ARRAY;
-          newtree->array = &fix->array_surf[0][index1-1];
+          newtree->array = fix->array_surf ?
+            &fix->array_surf[0][index1-1] : NULL;
           newtree->nstride = fix->size_per_surf_cols;
           treestack[ntreestack++] = newtree;
 
@@ -1931,20 +1970,26 @@ double Variable::evaluate(char *str, Tree **tree)
 	    newtree->type = ARRAYINT;
 	    if (cwhich == PARTICLE_CUSTOM)
 	      newtree->iarray =
-		&particle->eiarray[particle->ewhich[icustom]][0][index1-1];
+		particle->eiarray[particle->ewhich[icustom]] ?
+            &particle->eiarray[particle->ewhich[icustom]][0][index1-1] : NULL;
 	    else if (cwhich == GRID_CUSTOM)
-	      newtree->iarray = &grid->eiarray[grid->ewhich[icustom]][0][index1-1];
+	      newtree->iarray = grid->eiarray[grid->ewhich[icustom]] ?
+            &grid->eiarray[grid->ewhich[icustom]][0][index1-1] : NULL;
 	    else if (cwhich == SURF_CUSTOM)
-	      newtree->iarray = &surf->eiarray[surf->ewhich[icustom]][0][index1-1];
+	      newtree->iarray = surf->eiarray[surf->ewhich[icustom]] ?
+            &surf->eiarray[surf->ewhich[icustom]][0][index1-1] : NULL;
 	  } else if (type == DOUBLE) {
 	    newtree->type = ARRAY;
 	    if (cwhich == PARTICLE_CUSTOM)
 	      newtree->array =
-		&particle->edarray[particle->ewhich[icustom]][0][index1-1];
+		particle->edarray[particle->ewhich[icustom]] ?
+            &particle->edarray[particle->ewhich[icustom]][0][index1-1] : NULL;
 	    else if (cwhich == GRID_CUSTOM)
-	      newtree->array = &grid->edarray[grid->ewhich[icustom]][0][index1-1];
+	      newtree->array = grid->edarray[grid->ewhich[icustom]] ?
+            &grid->edarray[grid->ewhich[icustom]][0][index1-1] : NULL;
 	    else if (cwhich == SURF_CUSTOM)
-	      newtree->array = &surf->edarray[surf->ewhich[icustom]][0][index1-1];
+	      newtree->array = surf->edarray[surf->ewhich[icustom]] ?
+            &surf->edarray[surf->ewhich[icustom]][0][index1-1] : NULL;
 	  }
 	  newtree->nstride = size;
 	  treestack[ntreestack++] = newtree;
@@ -2311,10 +2356,14 @@ double Variable::evaluate(char *str, Tree **tree)
       i++;
 
       if (op == SUBTRACT && expect == ARG) {
+        if (nopstack == MAXLEVEL)
+          error->all(FLERR,"Too many levels in variable formula");
         opstack[nopstack++] = UNARY;
         continue;
       }
       if (op == NOT && expect == ARG) {
+        if (nopstack == MAXLEVEL)
+          error->all(FLERR,"Too many levels in variable formula");
         opstack[nopstack++] = op;
         continue;
       }
@@ -2331,7 +2380,7 @@ double Variable::evaluate(char *str, Tree **tree)
         if (tree) {
           Tree *newtree = new Tree();
           newtree->type = opprevious;
-          if (opprevious == UNARY) {
+          if (opprevious == UNARY || opprevious == NOT) {
             newtree->first = treestack[--ntreestack];
           } else {
             newtree->second = treestack[--ntreestack];
@@ -2402,6 +2451,8 @@ double Variable::evaluate(char *str, Tree **tree)
 
       // push current operation onto stack
 
+      if (nopstack == MAXLEVEL)
+        error->all(FLERR,"Too many levels in variable formula");
       opstack[nopstack++] = op;
 
     } else error->all(FLERR,"Invalid syntax in variable formula");
@@ -3287,7 +3338,7 @@ int Variable::int_between_brackets(char *&ptr, int varallow, const char *caller)
 
   *ptr = ']';
 
-  if (index == 0) {
+  if (index <= 0) {
     char str[128];
     snprintf(str,sizeof(str),"Index between brackets must be positive in %s",caller);
     error->all(FLERR,str);
@@ -3473,7 +3524,7 @@ int Variable::math_function(char *word, char *contents, Tree **tree,
       if (randomequal == NULL) {
         randomequal = new RanKnuth(update->ranmaster->uniform());
         double seed = update->ranmaster->uniform();
-        randomequal->reset(seed,me,100);
+        randomequal->reset(seed,0,100);
       }
       argstack[nargstack++] = randomequal->uniform()*(value2-value1) + value1;
     }
@@ -3487,7 +3538,7 @@ int Variable::math_function(char *word, char *contents, Tree **tree,
       if (randomequal == NULL) {
         randomequal = new RanKnuth(update->ranmaster->uniform());
         double seed = update->ranmaster->uniform();
-        randomequal->reset(seed,me,100);
+        randomequal->reset(seed,0,100);
       }
       argstack[nargstack++] = value1 + value2*randomequal->gaussian();
     }
@@ -3599,7 +3650,7 @@ int Variable::math_function(char *word, char *contents, Tree **tree,
       error->all(FLERR,"Invalid math function in variable formula");
     if (update->runflag == 0)
       error->all(FLERR,"Cannot use swiggle in variable formula between runs");
-    if (tree) newtree->type = CWIGGLE;
+    if (tree) newtree->type = SWIGGLE;
     else {
       if (values[0] == 0.0)
         error->all(FLERR,"Invalid math function in variable formula");
@@ -3633,7 +3684,7 @@ int Variable::math_function(char *word, char *contents, Tree **tree,
     // pyvar = index of python-style variable which invokes Python function
 
     int pyvar = find(&word[3]);
-    if (style[pyvar] != PYTHON)
+    if (pyvar < 0 || style[pyvar] != PYTHON)
       error->all(FLERR,"Invalid python function variable name");
 
     // check that wrapper matches Python function
@@ -3846,7 +3897,8 @@ int Variable::special_function(char *word, char *contents, Tree **tree,
         }
         j += nstride;
       }
-      if (method == TRAP) value -= 0.5*vec[0] + 0.5*vec[nvec-1];
+      if (method == TRAP && nvec > 0)
+        value -= 0.5*vec[0] + 0.5*vec[(bigint) (nvec-1)*nstride];
     }
 
     if (fix) {
@@ -3868,7 +3920,7 @@ int Variable::special_function(char *word, char *contents, Tree **tree,
           sxy += xvalue*one;
         }
       }
-      if (method == TRAP) {
+      if (method == TRAP && nvec > 0) {
         if (index) value -= 0.5*fix->compute_array(0,index-1) +
                      0.5*fix->compute_array(nvec-1,index-1);
         else value -= 0.5*fix->compute_vector(0) +
@@ -3879,9 +3931,9 @@ int Variable::special_function(char *word, char *contents, Tree **tree,
     if (method == AVE) value /= nvec;
 
     if (method == SLOPE) {
-      double numerator = sxy - sx*sy;
-      double denominator = sxx - sx*sx;
-      if (denominator != 0.0) value = numerator/denominator / nvec;
+      double numerator = nvec*sxy - sx*sy;
+      double denominator = nvec*sxx - sx*sx;
+      if (denominator != 0.0) value = numerator/denominator / (nvec-1);
       else value = BIG;
     }
 
@@ -4003,7 +4055,8 @@ int Variable::special_function(char *word, char *contents, Tree **tree,
           newtree->array = add_storage(compute->vector_grid);
           newtree->nstride = 1;
         } else {
-          newtree->array = &compute->array_grid[0][index-1];
+          newtree->array = compute->array_grid ?
+            &compute->array_grid[0][index-1] : NULL;
           newtree->nstride = compute->size_per_grid_cols;
         }
         treestack[ntreestack++] = newtree;
@@ -4041,8 +4094,9 @@ int Variable::special_function(char *word, char *contents, Tree **tree,
           error->all(FLERR,"Variable formula fix array is accessed out-of-range");
 
         Tree *newtree = new Tree();
-        newtree->type = ARRAY;
-        newtree->array = &fix->array_grid[0][index-1];
+        newtree->type = PARTGRIDARRAY;
+        newtree->array = fix->array_grid ?
+          &fix->array_grid[0][index-1] : NULL;
         newtree->nstride = fix->size_per_grid_cols;
         treestack[ntreestack++] = newtree;
 
@@ -4152,38 +4206,54 @@ void Variable::particle_vector(char *word, Tree **tree,
   newtree->nstride = sizeof(Particle::OnePart);
   treestack[ntreestack++] = newtree;
 
+  // field addresses are taken from a template particle, since the
+  //   particle array may not exist yet (no particles created);
+  //   the tree is then evaluated over zero particles
+
+  Particle::OnePart tmpl;
+  memset(&tmpl,0,sizeof(Particle::OnePart));
+  char *base = (char *) &tmpl;
+  char *pbase = (char *) particles;
+  size_t offset;
+
   if (strcmp(word,"x") == 0)
-    newtree->carray = (char *) &particles[0].x[0];
+    offset = (char *) &tmpl.x[0] - base;
   else if (strcmp(word,"y") == 0)
-    newtree->carray = (char *) &particles[0].x[1];
+    offset = (char *) &tmpl.x[1] - base;
   else if (strcmp(word,"z") == 0)
-    newtree->carray = (char *) &particles[0].x[2];
+    offset = (char *) &tmpl.x[2] - base;
   else if (strcmp(word,"vx") == 0)
-    newtree->carray = (char *) &particles[0].v[0];
+    offset = (char *) &tmpl.v[0] - base;
   else if (strcmp(word,"vy") == 0)
-    newtree->carray = (char *) &particles[0].v[1];
+    offset = (char *) &tmpl.v[1] - base;
   else if (strcmp(word,"vz") == 0)
-    newtree->carray = (char *) &particles[0].v[2];
+    offset = (char *) &tmpl.v[2] - base;
 
   else if (strcmp(word,"id") == 0) {
     newtree->type = PARTARRAYINT;
-    newtree->carray = (char *) &particles[0].id;
+    offset = (char *) &tmpl.id - base;
   } else if (strcmp(word,"type") == 0) {
     newtree->type = PARTARRAYINT;
-    newtree->carray = (char *) &particles[0].ispecies;
+    offset = (char *) &tmpl.ispecies - base;
   } else if (strcmp(word,"mass") == 0) {
     newtree->type = SPECARRAY;
     newtree->nstride = sizeof(Particle::Species);
     newtree->carray = (char *) &species[0].mass;
+    return;
   } else if (strcmp(word,"q") == 0) {
     newtree->type = SPECARRAY;
     newtree->nstride = sizeof(Particle::Species);
     newtree->carray = (char *) &species[0].charge;
+    return;
   } else if (strcmp(word,"mu") == 0) {
     newtree->type = SPECARRAY;
     newtree->nstride = sizeof(Particle::Species);
     newtree->carray = (char *) &species[0].magmoment;
-  }
+    return;
+  } else return;
+
+  if (pbase) newtree->carray = pbase + offset;
+  else newtree->carray = NULL;
 }
 
 /* ----------------------------------------------------------------------
@@ -4333,7 +4403,7 @@ double *Variable::add_storage(double *cvec)
     memory->create(vec_storage[nvec_storage],n,"variable:vec_storage");
   }
 
-  memcpy(vec_storage[nvec_storage],cvec,n*sizeof(double));
+  if (n) memcpy(vec_storage[nvec_storage],cvec,n*sizeof(double));
   nvec_storage++;
 
   return vec_storage[nvec_storage-1];
@@ -4377,7 +4447,7 @@ double Variable::evaluate_boolean(char *str)
     char *str;         // stored string
   };
 
-  Arg argstack[MAXLEVEL];
+  Arg argstack[MAXLEVEL+1];
   int opstack[MAXLEVEL];
   int nargstack = 0;
   int nopstack = 0;
@@ -4504,6 +4574,8 @@ double Variable::evaluate_boolean(char *str)
       i++;
 
       if (op == NOT && expect == ARG) {
+        if (nopstack == MAXLEVEL)
+          error->all(FLERR,"Too many levels in variable formula");
         opstack[nopstack++] = op;
         continue;
       }
@@ -4558,27 +4630,33 @@ double Variable::evaluate_boolean(char *str)
             delete [] str2;
           }
         } else if (opprevious == LT) {
-          if (flag2) error->all(FLERR,"Invalid Boolean syntax in if command");
+          if (flag1 || flag2)
+            error->all(FLERR,"Invalid Boolean syntax in if command");
           if (value1 < value2) argstack[nargstack].value = 1.0;
           else argstack[nargstack].value = 0.0;
         } else if (opprevious == LE) {
-          if (flag2) error->all(FLERR,"Invalid Boolean syntax in if command");
+          if (flag1 || flag2)
+            error->all(FLERR,"Invalid Boolean syntax in if command");
           if (value1 <= value2) argstack[nargstack].value = 1.0;
           else argstack[nargstack].value = 0.0;
         } else if (opprevious == GT) {
-          if (flag2) error->all(FLERR,"Invalid Boolean syntax in if command");
+          if (flag1 || flag2)
+            error->all(FLERR,"Invalid Boolean syntax in if command");
           if (value1 > value2) argstack[nargstack].value = 1.0;
           else argstack[nargstack].value = 0.0;
         } else if (opprevious == GE) {
-          if (flag2) error->all(FLERR,"Invalid Boolean syntax in if command");
+          if (flag1 || flag2)
+            error->all(FLERR,"Invalid Boolean syntax in if command");
           if (value1 >= value2) argstack[nargstack].value = 1.0;
           else argstack[nargstack].value = 0.0;
         } else if (opprevious == AND) {
-          if (flag2) error->all(FLERR,"Invalid Boolean syntax in if command");
+          if (flag1 || flag2)
+            error->all(FLERR,"Invalid Boolean syntax in if command");
           if (value1 != 0.0 && value2 != 0.0) argstack[nargstack].value = 1.0;
           else argstack[nargstack].value = 0.0;
         } else if (opprevious == OR) {
-          if (flag2) error->all(FLERR,"Invalid Boolean syntax in if command");
+          if (flag1 || flag2)
+            error->all(FLERR,"Invalid Boolean syntax in if command");
           if (value1 != 0.0 || value2 != 0.0) argstack[nargstack].value = 1.0;
           else argstack[nargstack].value = 0.0;
         }
@@ -4592,6 +4670,8 @@ double Variable::evaluate_boolean(char *str)
 
       // push current operation onto stack
 
+      if (nopstack == MAXLEVEL)
+        error->all(FLERR,"Too many levels in variable formula");
       opstack[nopstack++] = op;
 
     } else error->all(FLERR,"Invalid Boolean syntax in if command");
@@ -4599,6 +4679,7 @@ double Variable::evaluate_boolean(char *str)
 
   if (nopstack) error->all(FLERR,"Invalid Boolean syntax in if command");
   if (nargstack != 1) error->all(FLERR,"Invalid Boolean syntax in if command");
+  if (argstack[0].flag) error->all(FLERR,"Invalid Boolean syntax in if command");
   return argstack[0].value;
 }
 

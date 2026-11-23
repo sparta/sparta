@@ -44,6 +44,11 @@ class Region : protected Pointers {
 
   virtual int inside(double *) = 0;
 
+  // called by Domain after a region is deleted, to re-resolve
+  //   indices of any other regions this region refers to
+
+  virtual void reset_region_indices() {}
+
  protected:
   void options(int, char **);
 };

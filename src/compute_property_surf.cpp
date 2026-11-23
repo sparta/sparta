@@ -135,7 +135,7 @@ void ComputePropertySurf::init()
 
   distributed = surf->distributed;
 
-  // one-time setup of cglobal, the local -> global index map for the elements
+  // setup of cglobal, the local -> global index map for the elements
   //   this proc owns
   // nsown = # of surf elements I own, and the number of output rows: the
   //   per-surf output is sized nsown below and every consumer reads
@@ -150,8 +150,16 @@ void ComputePropertySurf::init()
   int me = comm->me;
   int nprocs = comm->nprocs;
 
-  if (!firstflag) return;
+  // redo setup on every init(), since surfs may have been added or removed
+  //   (read_surf, remove_surf) since the previous run, changing surf->nown
+
   firstflag = 0;
+  memory->destroy(cglobal);
+  memory->destroy(vector_surf);
+  memory->destroy(array_surf);
+  cglobal = NULL;
+  vector_surf = NULL;
+  array_surf = NULL;
 
   Surf::Line *lines;
   Surf::Tri *tris;
@@ -424,7 +432,7 @@ void ComputePropertySurf::pack_v3y(int n)
   else tris = surf->tris;
   for (int i = 0; i < nsown; i++) {
     m = cglobal[i];
-    if (tris[m].mask & groupbit) buf[n] = tris[m].p1[1];
+    if (tris[m].mask & groupbit) buf[n] = tris[m].p3[1];
     else buf[n] = 0.0;
     n += nvalues;
   }
@@ -441,7 +449,7 @@ void ComputePropertySurf::pack_v3z(int n)
   else tris = surf->tris;
   for (int i = 0; i < nsown; i++) {
     m = cglobal[i];
-    if (tris[m].mask & groupbit) buf[n] = tris[m].p1[2];
+    if (tris[m].mask & groupbit) buf[n] = tris[m].p3[2];
     else buf[n] = 0.0;
     n += nvalues;
   }
@@ -555,7 +563,7 @@ void ComputePropertySurf::pack_area(int n)
       m = cglobal[i];
       if (tris[m].mask & groupbit) {
 	MathExtra::sub3(tris[m].p2,tris[m].p1,p12);
-	MathExtra::sub3(tris[m].p3,tris[m].p2,p12);
+	MathExtra::sub3(tris[m].p3,tris[m].p2,p23);
 	MathExtra::cross3(p12,p23,cross);
 	buf[n] = 0.5 * MathExtra::len3(cross);
       } else buf[n] = 0.0;

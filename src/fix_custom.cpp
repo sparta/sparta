@@ -30,6 +30,7 @@ FixCustom::FixCustom(SPARTA *sparta, int narg, char **arg) :
   if (narg < 5) error->all(FLERR,"Illegal fix custom command");
 
   nevery = atoi(arg[2]);
+  if (nevery <= 0) error->all(FLERR,"Illegal fix custom command");
 
   // instantiate Custom class for use by this fix
   // use Custom class to parse mode and list of SET and FILESTYLE actions

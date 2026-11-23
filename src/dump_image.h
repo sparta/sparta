@@ -66,6 +66,7 @@ class DumpImage : public DumpParticle {
   double *pdiamtype;               // per-type particle diameters
   double *ptranstype;              // per-type particle opacities
   double *pcolorproc;              // particle color for me
+  int ntypes_alloc;                // # of species the per-type arrays hold
 
   // grid drawing
 
@@ -134,6 +135,7 @@ class DumpImage : public DumpParticle {
   void box_bounds();
 
   void create_image();
+  void grow_types();
 };
 
 }

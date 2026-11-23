@@ -87,11 +87,11 @@ void Surf::redistribute_surfs(int n, Line *newlines, Tri *newtris,
     if (dim == 2) {
       lines_contig = (Line *)
 	memory->smalloc(bbytes,"surf:lines_contig");
-      memset(lines_contig,0,bbytes);
+      if (bbytes) memset(lines_contig,0,bbytes);
     } else {
       tris_contig = (Tri *)
 	memory->smalloc(bbytes,"surf:tris_contig");
-      memset(tris_contig,0,bbytes);
+      if (bbytes) memset(tris_contig,0,bbytes);
     }
   }
 
@@ -195,8 +195,9 @@ void Surf::redistribute_surfs(int n, Line *newlines, Tri *newtris,
 
   int nvalues_custom = 0;
   for (int ic = 0; ic < nc; ic++) {
-    if (esize[ic] == 0) nvalues_custom++;
-    else nvalues_custom += esize[ic];
+    int index = index_custom[ic];
+    if (esize[index] == 0) nvalues_custom++;
+    else nvalues_custom += esize[index];
   }
 
   // perform rendezvous operation
@@ -297,7 +298,6 @@ int Surf::rendezvous_redistribute_custom(int n, char *inbuf, int &flag,
   // generic Surf class variables
 
   int nprocs = sptr->nprocs;
-  int ncustom = sptr->ncustom;
   int *etype = sptr->etype;
   int *esize = sptr->esize;
   int *ewhich = sptr->ewhich;
@@ -323,7 +323,11 @@ int Surf::rendezvous_redistribute_custom(int n, char *inbuf, int &flag,
   int skip = 1 + nvalues_custom;
   int offset = 1;
 
-  for (int ic = 0; ic < ncustom; ic++) {
+  // index_custom only has entries for the nc new custom attributes,
+  //   not for all ncustom Surf attributes
+  // each attribute uses >= 1 value, so loop until all values consumed
+
+  for (int ic = 0; offset < skip; ic++) {
     index = index_custom[ic];
     type = etype[index];
     size = esize[index];
@@ -555,6 +559,7 @@ void Surf::compress_implicit()
 void Surf::spread_own2local(int n, int type, void *in, void *out)
 {
   if (!distributed) spread_own2local_reduce(n,type,in,out);
+  else if (implicit) spread_own2local_implicit(n,type,in,out);
   else spread_own2local_rendezvous(n,type,in,out);
 }
 
@@ -578,7 +583,7 @@ void Surf::spread_own2local_reduce(int n, int type, void *in, void *out)
     bigint bbytes = (bigint) nlocal * n * sizeof(int);
 
     memory->create(myvec,nlocal*n,"surf/spread:myvec");
-    memset(myvec,0,bbytes);
+    if (bbytes) memset(myvec,0,bbytes);
 
     if (n == 1) {
       for (i = 0; i < nown; i++) {
@@ -609,7 +614,7 @@ void Surf::spread_own2local_reduce(int n, int type, void *in, void *out)
     bigint bbytes = (bigint) nlocal * n * sizeof(double);
 
     memory->create(myvec,nlocal*n,"surf/spread:myvec");
-    memset(myvec,0,bbytes);
+    if (bbytes) memset(myvec,0,bbytes);
 
     if (n == 1) {
       for (i = 0; i < nown; i++) {
@@ -728,6 +733,187 @@ void Surf::spread_own2local_rendezvous(int n, int type, void *in, void *out)
   }
 
   memory->destroy(buf);
+}
+
+/* ----------------------------------------------------------------------
+   spread_own2local for implicit surfs
+   implicit surfs are owned by the proc that owns their grid cell:
+     owned surfs are lines/tris 0 to nlocal-1 (nown = nlocal), so the
+     owned data is also the data for the first nlocal surfs
+   ghost surfs nlocal to nlocal+nghost-1 are copies of the surfs of ghost
+     grid cells, in the order of the owning cell's csurfs list,
+     so the value of ghost surf csurfs[m] of ghost cell C is the owned
+     value of surf csurfs[m] of cell C on its owning proc
+   the surf ID of an implicit surf is its grid cell ID, so it cannot be
+     used to find the owning proc as for explicit distributed surfs
+------------------------------------------------------------------------- */
+
+namespace {
+  struct ImplicitRequest {
+    cellint cellID;      // ID of ghost grid cell
+    int m;               // index into the cell's csurfs list
+    int proc;            // requesting proc
+    int index;           // requester's local index of the ghost surf
+  };
+}
+
+void Surf::spread_own2local_implicit(int n, int type, void *in, void *out)
+{
+  int i,m;
+
+  // owned surfs: owned data = local data
+
+  int nbytes = (type == INT) ? n*sizeof(int) : n*sizeof(double);
+  if (nlocal) memcpy(out,in,(bigint) nlocal*nbytes);
+
+  // one request per ghost surf, sent to the proc that owns its grid cell
+  // only parent (unsplit or split) ghost cells list their surfs in csurfs
+  // nsurf = -1 flags an EMPTY ghost cell (no surf info was sent)
+
+  Grid::ChildCell *cells = grid->cells;
+  int nglocal = grid->nlocal;
+  int ngall = nglocal + grid->nghost;
+
+  int nrequest = 0;
+  for (i = nglocal; i < ngall; i++)
+    if (cells[i].nsplit >= 1 && cells[i].nsurf > 0) nrequest += cells[i].nsurf;
+
+  // each ghost surf is listed by exactly one ghost cell
+
+  if (nrequest != nghost)
+    error->one(FLERR,"Implicit ghost surfs do not match ghost grid cells");
+
+  int *proclist;
+  memory->create(proclist,nrequest,"spread/own2local:proclist");
+  ImplicitRequest *inbuf = (ImplicitRequest *)
+    memory->smalloc((bigint) nrequest*sizeof(ImplicitRequest),
+                    "spread/own2local:inbuf");
+
+  nrequest = 0;
+  for (i = nglocal; i < ngall; i++) {
+    if (cells[i].nsplit < 1 || cells[i].nsurf <= 0) continue;
+    for (m = 0; m < cells[i].nsurf; m++) {
+      proclist[nrequest] = cells[i].proc;
+      inbuf[nrequest].cellID = cells[i].id;
+      inbuf[nrequest].m = m;
+      inbuf[nrequest].proc = me;
+      inbuf[nrequest].index = cells[i].csurfs[m];
+      nrequest++;
+    }
+  }
+
+  // perform rendezvous operation
+  // owning procs return the per-surf values of the requested surfs
+
+  spread_type = type;
+  spread_size = n;
+  spread_data = in;
+
+  int outbytes;
+  if (type == INT) outbytes = (n+1) * sizeof(int);
+  else outbytes = (n+1) * sizeof(double);
+  char *buf;
+
+  int nreturn = comm->rendezvous(1,nrequest,(char *) inbuf,
+                                 sizeof(ImplicitRequest),0,proclist,
+                                 rendezvous_own2local_implicit,
+                                 0,buf,outbytes,(void *) this);
+
+  memory->destroy(proclist);
+  memory->sfree(inbuf);
+
+  // copy received per-surf values into out for my ghost surfs
+
+  int j,k,index;
+
+  m = 0;
+  if (type == INT) {
+    int *ibuf = (int *) buf;
+    int *ioutbuf = (int *) out;
+    for (i = 0; i < nreturn; i++) {
+      index = ibuf[m++];
+      k = index * n;
+      for (j = 0; j < n; j++) ioutbuf[k++] = ibuf[m++];
+    }
+  } else if (type == DOUBLE) {
+    double *dbuf = (double *) buf;
+    double *doutbuf = (double *) out;
+    for (i = 0; i < nreturn; i++) {
+      index = (int) ubuf(dbuf[m++]).i;
+      k = index * n;
+      for (j = 0; j < n; j++) doutbuf[k++] = dbuf[m++];
+    }
+  }
+
+  memory->destroy(buf);
+}
+
+/* ----------------------------------------------------------------------
+   callback from spread_own2local_implicit rendezvous operation
+   process requests for data of implicit surfs in grid cells I own
+------------------------------------------------------------------------- */
+
+int Surf::rendezvous_own2local_implicit(int n, char *inbuf,
+                                        int &flag, int *&proclist,
+                                        char *&outbuf, void *ptr)
+{
+  int i,j,k,isurf,icell;
+
+  Surf *sptr = (Surf *) ptr;
+  Memory *memory = sptr->memory;
+  Grid *grid = sptr->grid;
+  int type = sptr->spread_type;
+  int size = sptr->spread_size;
+  int *ibuf = NULL;
+  double *dbuf = NULL;
+  if (type == INT) ibuf = (int *) sptr->spread_data;
+  else dbuf = (double *) sptr->spread_data;
+
+  if (!grid->hashfilled) grid->rehash();
+  Grid::MyHash *hash = grid->hash;
+  Grid::ChildCell *cells = grid->cells;
+
+  memory->create(proclist,n,"spread:proclist");
+  int *iout = NULL;
+  double *dout = NULL;
+  if (type == INT) memory->create(iout,(size+1)*n,"spread:iout");
+  else memory->create(dout,(size+1)*n,"spread:dout");
+
+  ImplicitRequest *in_rvous = (ImplicitRequest *) inbuf;
+
+  int flagbad = 0;
+  k = 0;
+  for (i = 0; i < n; i++) {
+    proclist[i] = in_rvous[i].proc;
+    Grid::MyHash::iterator it = hash->find(in_rvous[i].cellID);
+    icell = (it == hash->end()) ? -1 : it->second;
+    if (icell < 0 || icell >= grid->nlocal ||
+        in_rvous[i].m >= cells[icell].nsurf) {
+      flagbad = 1;
+      isurf = -1;
+    } else isurf = cells[icell].csurfs[in_rvous[i].m];
+
+    if (type == INT) {
+      iout[k++] = in_rvous[i].index;
+      for (j = 0; j < size; j++)
+        iout[k++] = (isurf < 0) ? 0 : ibuf[isurf*size+j];
+    } else {
+      dout[k++] = ubuf(in_rvous[i].index).d;
+      for (j = 0; j < size; j++)
+        dout[k++] = (isurf < 0) ? 0.0 : dbuf[isurf*size+j];
+    }
+  }
+
+  if (flagbad)
+    sptr->error->one(FLERR,"Implicit surf of a ghost cell is not owned "
+                     "by the cell's owning proc");
+
+  // flag = 2: new outbuf
+
+  flag = 2;
+  if (type == INT) outbuf = (char *) iout;
+  else outbuf = (char *) dout;
+  return n;
 }
 
 /* ----------------------------------------------------------------------
@@ -926,7 +1112,7 @@ int Surf::rendezvous_unique(int n, char *inbuf,
   // count duplicates of each owned surf
 
   bigint bbytes = (bigint) nown * sizeof(int);
-  memset(duplicates,0,bbytes);
+  if (bbytes) memset(duplicates,0,bbytes);
 
   int *in_rvous = (int *) inbuf;
   int index;
@@ -947,7 +1133,7 @@ int Surf::rendezvous_unique(int n, char *inbuf,
   // recount to find selected duplicate of each owned surf
   // send ownflag datum back to owner of that duplicate
 
-  memset(duplicates,0,bbytes);
+  if (bbytes) memset(duplicates,0,bbytes);
 
   k = 0;
   m = 0;
@@ -970,8 +1156,11 @@ int Surf::rendezvous_unique(int n, char *inbuf,
   // flag = 2: new outbuf
 
   flag = 2;
+  // only k entries of proclist/ownflags were filled
+  //   owned surfs with no requests are not returned
+
   outbuf = (char *) ownflags;
-  return nown;
+  return k;
 }
 
 /* ----------------------------------------------------------------------
@@ -987,6 +1176,15 @@ int Surf::rendezvous_unique(int n, char *inbuf,
 void Surf::spread_local2own(int n, int type, void *in, void *out)
 {
   int i,j,k,idata;
+
+  // implicit surfs: the first nlocal local surfs are the owned surfs,
+  //   so the owned data is the local data for them
+
+  if (implicit) {
+    int nbytes = (type == INT) ? n*sizeof(int) : n*sizeof(double);
+    if (nown) memcpy(out,in,(bigint) nown*nbytes);
+    return;
+  }
   int *iinput,*ibuf;
   double *dinput,*dbuf;
 
@@ -1020,7 +1218,7 @@ void Surf::spread_local2own(int n, int type, void *in, void *out)
       if (n == 1)
 	ibuf[k++] = iinput[isurf];
       else {
-	idata = index * n;
+	idata = isurf * n;
 	for (j = 0; j < n; j++)
 	  ibuf[k++] = iinput[idata++];
       }
@@ -1029,7 +1227,7 @@ void Surf::spread_local2own(int n, int type, void *in, void *out)
       if (n == 1)
 	dbuf[k++] = dinput[isurf];
       else {
-	idata = index * n;
+	idata = isurf * n;
 	for (j = 0; j < n; j++)
 	  dbuf[k++] = dinput[idata++];
       }

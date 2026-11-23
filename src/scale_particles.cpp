@@ -82,7 +82,10 @@ void ScaleParticles::command(int narg, char **arg)
 
     ispecies = particles[i].ispecies;
     igroup = s2g[ispecies];
-    if (igroup < 0) continue;
+    if (igroup < 0) {
+      i++;
+      continue;
+    }
 
     // factor < 1.0 is candidate for deletion
     // if deleted and particle that takes its place is cloned (Nloc > Norig)
@@ -116,6 +119,10 @@ void ScaleParticles::command(int narg, char **arg)
     }
     i++;
   }
+
+  // particle list was reordered, deleted from, and added to
+
+  particle->sorted = 0;
 
   // nafter = new total # of particles
 

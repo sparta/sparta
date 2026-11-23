@@ -516,6 +516,12 @@ void Finish::end(int flag, double time_multiple_runs)
     }
   }
 
+  // end-of-run diagnostics of the gas reaction model
+  // called on all procs since it may perform collective operations,
+  //   after the stats output so its warnings do not interrupt it
+
+  if (react) react->end_of_run();
+
   if (logfile) fflush(logfile);
 }
 

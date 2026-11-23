@@ -48,6 +48,14 @@ void ReactTCEQK::init()
       error->all(FLERR,
                  "React tce/qk does not currently support recombination reactions");
 
+  // do not allow ionization reactions, attempt_tce() and attempt_qk()
+  //   only handle dissociation and exchange
+
+  for (int i = 0; i < nlist; i++)
+    if (rlist[i].active && rlist[i].type == IONIZATION)
+      error->all(FLERR,
+                 "React tce/qk does not currently support ionization reactions");
+
   if (computeChemRates)
     error->all(FLERR,
                "React tce/qk does not currently support the 'react_modify compute_chem_rates' option");
@@ -136,14 +144,19 @@ int ReactTCEQK::attempt_tce(Particle::OnePart *ip, Particle::OnePart *jp,
   if (e_excess <= 0.0) return 0;
 
   // compute probability of reaction
+  // same TCE expression as ReactTCE::attempt() with z = coeff[0],
+  //   consistent with coeff normalization in ReactBird::init()
+
+  double z = r->coeff[0];
 
   switch (r->type) {
   case DISSOCIATION:
   case EXCHANGE:
     {
-      react_prob += r->coeff[2] *
-        pow(ecc-r->coeff[1],r->coeff[3]) *
-        pow(1.0-r->coeff[1]/ecc,r->coeff[5]);
+      react_prob += r->coeff[2] * tgamma(z+2.5-r->coeff[5]) /
+        MAX(1.0e-6,tgamma(z+r->coeff[3]+1.5)) *
+        pow(ecc-r->coeff[1],r->coeff[3]-1+r->coeff[5]) *
+        pow(1.0-r->coeff[1]/ecc,z+1.5-r->coeff[5]);
       break;
     }
 
@@ -201,13 +214,26 @@ int ReactTCEQK::attempt_qk(Particle::OnePart *ip, Particle::OnePart *jp,
   if (e_excess <= 0.0) return 0;
 
   // compute probability of reaction
+  // QK model uses vibrational state of the molecule
+  // use R1 (dissociating species) if it vibrates, else the other reactant
+  // R1 may be either I or J since reaction list includes both orders
 
-  inverse_kT = 1.0 / (update->boltz * species[isp].vibtemp[0]);
+  Particle::OnePart *mp = ip;
+  Particle::OnePart *op = jp;
+  if (ip->ispecies != r->reactants[0]) {
+    mp = jp;
+    op = ip;
+  }
+  if (species[mp->ispecies].vibtemp[0] <= 0.0) mp = op;
+  int msp = mp->ispecies;
+  if (species[msp].vibtemp[0] <= 0.0) return 0;
+
+  inverse_kT = 1.0 / (update->boltz * species[msp].vibtemp[0]);
 
   switch (r->type) {
   case DISSOCIATION:
     {
-      ecc = pre_etrans + ip->evib;
+      ecc = pre_etrans + mp->evib;
       maxlev = static_cast<int> (ecc * inverse_kT);
       limlev = static_cast<int> (fabs(r->coeff[1]) * inverse_kT);
       if (maxlev > limlev) react_prob = 1.0;
@@ -215,11 +241,11 @@ int ReactTCEQK::attempt_qk(Particle::OnePart *ip, Particle::OnePart *jp,
     }
   case EXCHANGE:
     {
-      if (r->coeff[4] < 0.0 && species[isp].rotdof > 0) {
+      if (r->coeff[4] < 0.0 && species[msp].rotdof > 0) {
 
         // endothermic reaction
 
-        ecc = pre_etrans + ip->evib;
+        ecc = pre_etrans + mp->evib;
         maxlev = static_cast<int> (ecc * inverse_kT);
         if (ecc > r->coeff[1]) {
 
@@ -237,9 +263,9 @@ int ReactTCEQK::attempt_qk(Particle::OnePart *ip, Particle::OnePart *jp,
           if (iv >= ilevel) react_prob = 1.0;
         }
 
-       } else if (r->coeff[4] > 0.0 && species[isp].rotdof > 0) {
+       } else if (r->coeff[4] > 0.0 && species[msp].rotdof > 0) {
 
-        ecc = pre_etrans + ip->evib;
+        ecc = pre_etrans + mp->evib;
 
         // mspec = post-collision species of the particle
         // aspec = post-collision species of the atom

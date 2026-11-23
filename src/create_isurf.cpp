@@ -491,8 +491,8 @@ void CreateISurf::surface_edge2d()
 
         // need to take care of values near machine precision
 
-        if (param < EPSILON_GRID*mind) param = 0.0;
-        if ((1.0-param) < EPSILON_GRID*mind) param = 1.0;
+        if (param < EPSILON_GRID) param = 0.0;
+        if ((1.0-param) < EPSILON_GRID) param = 1.0;
         oparam = 1.0-param;
 
         // once a hit is found
@@ -640,8 +640,8 @@ void CreateISurf::surface_edge3d()
 
         // need to take care of values near machine precision
 
-        if (param < EPSILON_GRID*mind) param = 0.0;
-        if ((1.0-param) < EPSILON_GRID*mind) param = 1.0;
+        if (param < EPSILON_GRID) param = 0.0;
+        if ((1.0-param) < EPSILON_GRID) param = 1.0;
         oparam = 1.0-param;
 
         // once a hit is found
@@ -1540,17 +1540,27 @@ void CreateISurf::set_cvalues_voxel()
   Grid::ChildInfo *cinfo = grid->cinfo;
 
   double dx,dy,dz;
-  double cvol, sfrac;
+  double cvol, fullvol, sfrac;
+  double *lo,*hi;
 
   for (int icell = 0; icell < nglocal; icell++) {
     if (!(cinfo[icell].mask & groupbit)) continue;
     if (cells[icell].nsplit <= 0) continue;
 
     cvol = cinfo[icell].volume;
-    dx = cells[icell].hi[0] - cells[icell].lo[0];
-    dy = cells[icell].hi[1] - cells[icell].lo[1];
-    dz = cells[icell].hi[2] - cells[icell].lo[2];
-    sfrac = (dx*dy*dz - cvol) / (dx*dy*dz);
+    lo = cells[icell].lo;
+    hi = cells[icell].hi;
+    dx = hi[0] - lo[0];
+    dy = hi[1] - lo[1];
+    dz = hi[2] - lo[2];
+
+    // full cell volume computed same way as Grid::add_child_cell()
+
+    if (dim == 3) fullvol = dx*dy*dz;
+    else if (domain->axisymmetric)
+      fullvol = MY_PI * (hi[1]*hi[1]-lo[1]*lo[1]) * dx;
+    else fullvol = dx*dy;
+    sfrac = (fullvol - cvol) / fullvol;
 
     // use a small tolerance so that a cell which is essentially fully solid
     // or fully open is not rejected due to floating-point roundoff in the
@@ -1929,6 +1939,39 @@ void CreateISurf::remove_old()
     for (int icell = 0; icell < nglocal; icell++)
       if (cells[icell].nsplit > 1)
         grid->combine_split_cell_particles(icell,1);
+  }
+
+  // clear_surf() compresses out sub cells by moving the last cell
+  //   into each sub cell slot, sub cells can be interleaved (e.g. after
+  //   load balancing), so apply same compression to per-cell corner values
+  //   so they stay aligned with cell indices used by FixAblate
+
+  {
+    Grid::ChildCell *cells = grid->cells;
+    int n = grid->nlocal;
+    int *perm = new int[n];
+    for (int i = 0; i < n; i++) perm[i] = i;
+
+    int icell = 0;
+    while (icell < n) {
+      if (cells[perm[icell]].nsplit <= 0) {
+        if (icell != n-1) perm[icell] = perm[n-1];
+        n--;
+      } else icell++;
+    }
+
+    for (icell = 0; icell < n; icell++) {
+      int jcell = perm[icell];
+      if (jcell == icell) continue;
+      for (int ic = 0; ic < ncorner; ic++) {
+        if (cvalues) cvalues[icell][ic] = cvalues[jcell][ic];
+        if (mulvalues)
+          for (int k = 0; k < nmulti; k++)
+            mulvalues[icell][ic][k] = mulvalues[jcell][ic][k];
+      }
+    }
+
+    delete [] perm;
   }
 
   grid->clear_surf();

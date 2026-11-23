@@ -245,11 +245,13 @@ void ComputeTvibGrid::init()
                "fix vibmode defined");
 
   int *groupsize = particle->mixture[imix]->groupsize;
-  for (int i = 0; i < ngroup; i++)
-    if ((modeflag == 0 && 2*groupsize[i] != nmap[i]) ||
-        (modeflag > 0  && 2*groupsize[i]*maxmode != nmap[i]))
+  for (int i = 0; i < ngroup; i++) {
+    int idx = (modeflag == 2) ? i*maxmode : i;
+    if ((modeflag == 0 && 2*groupsize[i] != nmap[idx]) ||
+        (modeflag > 0  && 2*groupsize[i]*maxmode != nmap[idx]))
       error->all(FLERR,"Number of species in compute tvib/grid "
                  "group has changed");
+  }
 
   if (modeflag > 0) index_vibmode = particle->find_custom((char *) "vibmode");
 

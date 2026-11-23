@@ -273,6 +273,7 @@ class Surf : protected Pointers {
   void spread_own2local(int, int, void *, void *);
   void spread_own2local_reduce(int, int, void *, void *);
   void spread_own2local_rendezvous(int, int, void *, void *);
+  void spread_own2local_implicit(int, int, void *, void *);
   void assign_unique();
   void spread_local2own(int, int, void *, void *);
 
@@ -388,6 +389,8 @@ class Surf : protected Pointers {
   //                           int &, int *&, char *&, void *);
   static int rendezvous_own2local(int, char *,
 				  int &, int *&, char *&, void *);
+  static int rendezvous_own2local_implicit(int, char *,
+                                           int &, int *&, char *&, void *);
   static int rendezvous_unique(int, char *,
 			       int &, int *&, char *&, void *);
   static int rendezvous_local2own(int, char *,

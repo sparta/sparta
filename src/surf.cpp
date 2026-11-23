@@ -32,6 +32,18 @@
 #include "error.h"
 
 using namespace SPARTA_NS;
+
+/* ----------------------------------------------------------------------
+   hash N coords to pick a rendezvous proc
+   add 0.0 so -0.0 and 0.0 (equal via ==) hash identically
+------------------------------------------------------------------------- */
+
+static uint32_t hash_coords(const double *x, int n)
+{
+  double tmp[6];
+  for (int i = 0; i < n; i++) tmp[i] = x[i] + 0.0;
+  return hashlittle(tmp,n*sizeof(double),0);
+}
 using namespace MathConst;
 
 enum{TALLYAUTO,TALLYREDUCE,TALLYRVOUS};         // same as Update
@@ -45,6 +57,7 @@ enum{LT,LE,GT,GE,EQ,NEQ,BETWEEN};
 #define EPSILON_GRID 1.0e-3
 #define BIG 1.0e20
 #define MAXGROUP 32
+#define MAXRESTARTSTR 65536     // max length of a name string in restart file
 
 /* ---------------------------------------------------------------------- */
 
@@ -295,17 +308,35 @@ void Surf::init()
     if (comm->me == 0)
       error->warning(FLERR,"Surfs are distributed with infinite grid cutoff");
 
+  // surfs to check, so that each surf is counted exactly once on any # of procs
+  //   explicit all: every proc stores all nsurf surfs in nlocal lines/tris,
+  //     counted locally, not summed across procs
+  //   explicit distributed: nlocal+nghost lines/tris are copies of surfs in
+  //     my owned/ghost cells (a surf can be stored on several procs),
+  //     so check the nown mylines/mytris I uniquely own and sum across procs
+  //   implicit (distributed): nlocal = surfs in my owned cells (each surf
+  //     belongs to one cell), nghost = copies from ghost cells, so check nlocal
+
+  Line *clines = lines;
+  Tri *ctris = tris;
+  int ncheck = nlocal;
+  if (distributed && !implicit) {
+    clines = mylines;
+    ctris = mytris;
+    ncheck = nown;
+  }
+
   // check that surf element types are all values >= 1
 
   bigint flag,allflag;
 
   flag = 0;
   if (domain->dimension == 2) {
-    for (int i = 0; i < nlocal; i++)
-      if (lines[i].type <= 0) flag++;
+    for (int i = 0; i < ncheck; i++)
+      if (clines[i].type <= 0) flag++;
   } else {
-    for (int i = 0; i < nlocal; i++)
-      if (tris[i].type <= 0) flag++;
+    for (int i = 0; i < ncheck; i++)
+      if (ctris[i].type <= 0) flag++;
   }
 
   if (distributed)
@@ -325,11 +356,11 @@ void Surf::init()
   if (surf_collision_check) {
     flag = 0;
     if (domain->dimension == 2) {
-      for (int i = 0; i < nlocal+nghost; i++)
-        if (lines[i].isc < 0) flag++;
+      for (int i = 0; i < ncheck; i++)
+        if (clines[i].isc < 0) flag++;
     } else {
-      for (int i = 0; i < nlocal+nghost; i++)
-        if (tris[i].isc < 0) flag++;
+      for (int i = 0; i < ncheck; i++)
+        if (ctris[i].isc < 0) flag++;
     }
 
     if (distributed)
@@ -350,11 +381,11 @@ void Surf::init()
   if (surf_collision_check) {
     flag = 0;
     if (domain->dimension == 2) {
-      for (int i = 0; i < nlocal+nghost; i++)
-        if (lines[i].isr >= 0 && sc[lines[i].isc]->allowreact == 0) flag++;
+      for (int i = 0; i < ncheck; i++)
+        if (clines[i].isr >= 0 && sc[clines[i].isc]->allowreact == 0) flag++;
     } else {
-      for (int i = 0; i < nlocal+nghost; i++)
-        if (tris[i].isr >= 0 && sc[tris[i].isc]->allowreact == 0) flag++;
+      for (int i = 0; i < ncheck; i++)
+        if (ctris[i].isr >= 0 && sc[ctris[i].isc]->allowreact == 0) flag++;
     }
 
     if (distributed)
@@ -375,14 +406,14 @@ void Surf::init()
   if (surf_collision_check) {
     flag = 0;
     if (domain->dimension == 2) {
-      for (int i = 0; i < nlocal+nghost; i++) {
-        if (!lines[i].transparent) continue;
-        if (!sc[lines[i].isc]->transparent) flag++;
+      for (int i = 0; i < ncheck; i++) {
+        if (!clines[i].transparent) continue;
+        if (!sc[clines[i].isc]->transparent) flag++;
       }
     } else {
-      for (int i = 0; i < nlocal+nghost; i++) {
-        if (!tris[i].transparent) continue;
-        if (!sc[tris[i].isc]->transparent) flag++;
+      for (int i = 0; i < ncheck; i++) {
+        if (!ctris[i].transparent) continue;
+        if (!sc[ctris[i].isc]->transparent) flag++;
       }
     }
 
@@ -956,13 +987,21 @@ void Surf::hex_corner_point(int icorner, double *lo, double *hi, double *pt)
 
 /* ----------------------------------------------------------------------
    return vector of masks for my owned surfs
-   for distributed or non-distributed explicit surfs
+   for distributed or non-distributed explicit surfs or implicit surfs
    called by other classes which need to select owned surfs in surf group
 ------------------------------------------------------------------------- */
 
 void Surf::extract_masks(int *masks)
 {
-  if (distributed) {
+  if (implicit) {
+    if (domain->dimension == 2) {
+      for (int i = 0; i < nown; i++)
+        masks[i] = lines[i].mask;
+    } else {
+      for (int i = 0; i < nown; i++)
+	masks[i] = tris[i].mask;
+    }
+  } else if (distributed) {
     if (domain->dimension == 2) {
       for (int i = 0; i < nown; i++)
         masks[i] = mylines[i].mask;
@@ -1203,12 +1242,13 @@ void Surf::check_watertight_2d_distributed()
 
   int nrvous = 0;
   for (int i = 0; i < n; i++) {
-    proclist[nrvous] = hashlittle(lines_rvous[i].p1,2*sizeof(double),0) % nprocs;
+    if (lines_rvous[i].transparent) continue;
+    proclist[nrvous] = hash_coords(lines_rvous[i].p1,2) % nprocs;
     inpoint[nrvous].x[0] = lines_rvous[i].p1[0];
     inpoint[nrvous].x[1] = lines_rvous[i].p1[1];
     inpoint[nrvous].which = 1;
     nrvous++;
-    proclist[nrvous] = hashlittle(lines_rvous[i].p2,2*sizeof(double),0) % nprocs;
+    proclist[nrvous] = hash_coords(lines_rvous[i].p2,2) % nprocs;
     inpoint[nrvous].x[0] = lines_rvous[i].p2[0];
     inpoint[nrvous].x[1] = lines_rvous[i].p2[1];
     inpoint[nrvous].which = 2;
@@ -1461,13 +1501,14 @@ void Surf::check_watertight_3d_distributed()
 
   int nrvous = 0;
   for (int i = 0; i < n; i++) {
+    if (tris_rvous[i].transparent) continue;
     p1 = tris_rvous[i].p1;
     p2 = tris_rvous[i].p2;
     p3 = tris_rvous[i].p3;
 
     memcpy(&edge[0],p1,nbytes);
     memcpy(&edge[3],p2,nbytes);
-    proclist[nrvous] = hashlittle(edge,2*nbytes,0) % nprocs;
+    proclist[nrvous] = hash_coords(edge,6) % nprocs;
     memcpy(inedge[nrvous].x1,p1,nbytes);
     memcpy(inedge[nrvous].x2,p2,nbytes);
     inedge[nrvous].which = 1;
@@ -1475,7 +1516,7 @@ void Surf::check_watertight_3d_distributed()
 
     memcpy(&edge[0],p2,nbytes);
     memcpy(&edge[3],p1,nbytes);
-    proclist[nrvous] = hashlittle(edge,2*nbytes,0) % nprocs;
+    proclist[nrvous] = hash_coords(edge,6) % nprocs;
     memcpy(inedge[nrvous].x1,p2,nbytes);
     memcpy(inedge[nrvous].x2,p1,nbytes);
     inedge[nrvous].which = 2;
@@ -1483,7 +1524,7 @@ void Surf::check_watertight_3d_distributed()
 
     memcpy(&edge[0],p2,nbytes);
     memcpy(&edge[3],p3,nbytes);
-    proclist[nrvous] = hashlittle(edge,2*nbytes,0) % nprocs;
+    proclist[nrvous] = hash_coords(edge,6) % nprocs;
     memcpy(inedge[nrvous].x1,p2,nbytes);
     memcpy(inedge[nrvous].x2,p3,nbytes);
     inedge[nrvous].which = 1;
@@ -1491,7 +1532,7 @@ void Surf::check_watertight_3d_distributed()
 
     memcpy(&edge[0],p3,nbytes);
     memcpy(&edge[3],p2,nbytes);
-    proclist[nrvous] = hashlittle(edge,2*nbytes,0) % nprocs;
+    proclist[nrvous] = hash_coords(edge,6) % nprocs;
     memcpy(inedge[nrvous].x1,p3,nbytes);
     memcpy(inedge[nrvous].x2,p2,nbytes);
     inedge[nrvous].which = 2;
@@ -1499,7 +1540,7 @@ void Surf::check_watertight_3d_distributed()
 
     memcpy(&edge[0],p3,nbytes);
     memcpy(&edge[3],p1,nbytes);
-    proclist[nrvous] = hashlittle(edge,2*nbytes,0) % nprocs;
+    proclist[nrvous] = hash_coords(edge,6) % nprocs;
     memcpy(inedge[nrvous].x1,p3,nbytes);
     memcpy(inedge[nrvous].x2,p1,nbytes);
     inedge[nrvous].which = 1;
@@ -1507,7 +1548,7 @@ void Surf::check_watertight_3d_distributed()
 
     memcpy(&edge[0],p1,nbytes);
     memcpy(&edge[3],p3,nbytes);
-    proclist[nrvous] = hashlittle(edge,2*nbytes,0) % nprocs;
+    proclist[nrvous] = hash_coords(edge,6) % nprocs;
     memcpy(inedge[nrvous].x1,p1,nbytes);
     memcpy(inedge[nrvous].x2,p3,nbytes);
     inedge[nrvous].which = 2;
@@ -2362,7 +2403,7 @@ void Surf::group(int narg, char **arg)
                 if (mylines[i].type < bound1) mylines[i].mask |= bit;
           } else {
             for (i = 0; i < nlocal+nghost; i++)
-              if (tris[i].type < bound1) lines[i].mask |= bit;
+              if (tris[i].type < bound1) tris[i].mask |= bit;
             if (!implicit && distributed)
               for (int i = 0; i < nown; i++)
                 if (mytris[i].type < bound1) mytris[i].mask |= bit;
@@ -2377,7 +2418,7 @@ void Surf::group(int narg, char **arg)
                 if (mylines[i].type <= bound1) mylines[i].mask |= bit;
           } else {
             for (i = 0; i < nlocal+nghost; i++)
-              if (tris[i].type <= bound1) lines[i].mask |= bit;
+              if (tris[i].type <= bound1) tris[i].mask |= bit;
             if (!implicit && distributed)
               for (int i = 0; i < nown; i++)
                 if (mytris[i].type <= bound1) mytris[i].mask |= bit;
@@ -2392,7 +2433,7 @@ void Surf::group(int narg, char **arg)
                 if (mylines[i].type > bound1) mylines[i].mask |= bit;
           } else {
             for (i = 0; i < nlocal+nghost; i++)
-              if (tris[i].type > bound1) lines[i].mask |= bit;
+              if (tris[i].type > bound1) tris[i].mask |= bit;
             if (!implicit && distributed)
               for (int i = 0; i < nown; i++)
                 if (mytris[i].type > bound1) mytris[i].mask |= bit;
@@ -2407,7 +2448,7 @@ void Surf::group(int narg, char **arg)
                 if (mylines[i].type >= bound1) mylines[i].mask |= bit;
           } else {
             for (i = 0; i < nlocal+nghost; i++)
-              if (tris[i].type >= bound1) lines[i].mask |= bit;
+              if (tris[i].type >= bound1) tris[i].mask |= bit;
             if (!implicit && distributed)
               for (int i = 0; i < nown; i++)
                 if (mytris[i].type >= bound1) mytris[i].mask |= bit;
@@ -2422,7 +2463,7 @@ void Surf::group(int narg, char **arg)
                 if (mylines[i].type == bound1) mylines[i].mask |= bit;
           } else {
             for (i = 0; i < nlocal+nghost; i++)
-              if (tris[i].type == bound1) lines[i].mask |= bit;
+              if (tris[i].type == bound1) tris[i].mask |= bit;
             if (!implicit && distributed)
               for (int i = 0; i < nown; i++)
                 if (mytris[i].type == bound1) mytris[i].mask |= bit;
@@ -2437,7 +2478,7 @@ void Surf::group(int narg, char **arg)
                 if (mylines[i].type != bound1) mylines[i].mask |= bit;
           } else {
             for (i = 0; i < nlocal+nghost; i++)
-              if (tris[i].type != bound1) lines[i].mask |= bit;
+              if (tris[i].type != bound1) tris[i].mask |= bit;
             if (!implicit && distributed)
               for (int i = 0; i < nown; i++)
                 if (mytris[i].type != bound1) mytris[i].mask |= bit;
@@ -2868,13 +2909,13 @@ int Surf::add_group(const char *id)
     error->all(FLERR,"Cannot have more than 32 surface groups");
 
   int n = strlen(id) + 1;
-  gnames[ngroup] = new char[n];
-  strcpy(gnames[ngroup],id);
-
   for (int i = 0; i < n-1; i++)
     if (!isalnum(id[i]) && id[i] != '_')
       error->all(FLERR,"Group ID must be alphanumeric or "
                  "underscore characters");
+
+  gnames[ngroup] = new char[n];
+  strcpy(gnames[ngroup],id);
 
   ngroup++;
   return ngroup-1;
@@ -2929,16 +2970,30 @@ void Surf::read_restart(FILE *fp)
 
   for (int i = 0; i < ngroup; i++) delete [] gnames[i];
 
-  if (me == 0) tmp = fread(&ngroup,sizeof(int),1,fp);
+  if (me == 0) {
+    tmp = fread(&ngroup,sizeof(int),1,fp);
+    if (tmp != 1) error->one(FLERR,"Unexpected end of restart file");
+  }
   MPI_Bcast(&ngroup,1,MPI_INT,0,world);
+  if (ngroup < 0 || ngroup > MAXGROUP)
+    error->all(FLERR,"Invalid surf group count in restart file");
 
   int n;
   for (int i = 0; i < ngroup; i++) {
-    if (me == 0) tmp = fread(&n,sizeof(int),1,fp);
+    if (me == 0) {
+      tmp = fread(&n,sizeof(int),1,fp);
+      if (tmp != 1) error->one(FLERR,"Unexpected end of restart file");
+    }
     MPI_Bcast(&n,1,MPI_INT,0,world);
+    if (n <= 0 || n > MAXRESTARTSTR)
+      error->all(FLERR,"Invalid string length in restart file");
     gnames[i] = new char[n];
-    if (me == 0) tmp = fread(gnames[i],sizeof(char),n,fp);
+    if (me == 0) {
+      tmp = fread(gnames[i],sizeof(char),n,fp);
+      if (tmp != n) error->one(FLERR,"Unexpected end of restart file");
+    }
     MPI_Bcast(gnames[i],n,MPI_CHAR,0,world);
+    gnames[i][n-1] = '\0';
   }
 }
 

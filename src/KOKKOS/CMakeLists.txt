@@ -99,11 +99,18 @@ if(PKG_KOKKOS)
     CONFIGURE_DEPENDS *.cpp *.hpp *.h)
 
   if (NOT PKG_FFT)
-    list(FILTER SPARTA_PKG_KOKKOS_SRC_FILES EXCLUDE REGEX ".*fft.*kokkos.*")
-    list(FILTER SPARTA_PKG_KOKKOS_SRC_FILES EXCLUDE REGEX ".*pack.*kokkos.*")
-    list(FILTER SPARTA_PKG_KOKKOS_SRC_FILES EXCLUDE REGEX ".*remap.*kokkos.*")
-    list(REMOVE_ITEM style_files kokkos_base_fft.h)
+    list(FILTER SPARTA_PKG_KOKKOS_SRC_FILES EXCLUDE REGEX "/[^/]*(fft|pack|remap)[^/]*kokkos[^/]*$")
+    list(FILTER SPARTA_PKG_KOKKOS_SRC_FILES EXCLUDE REGEX "/kokkos_base_fft\\.h$")
   endif()
+
+  # compile the slowest sources first: for a GPU each takes several minutes,
+  # many times longer than any other source, and at their place in the sorted
+  # list they would run alone at the end of the build while other cores idle
+  set(SPARTA_PKG_KOKKOS_SLOW_SRC_FILES
+      ${CMAKE_CURRENT_SOURCE_DIR}/update_kokkos.cpp
+      ${CMAKE_CURRENT_SOURCE_DIR}/collide_vss_kokkos.cpp)
+  list(REMOVE_ITEM SPARTA_PKG_KOKKOS_SRC_FILES ${SPARTA_PKG_KOKKOS_SLOW_SRC_FILES})
+  list(PREPEND SPARTA_PKG_KOKKOS_SRC_FILES ${SPARTA_PKG_KOKKOS_SLOW_SRC_FILES})
 
   include(${SPARTA_CMAKE_COMMON_DIR}/set/style_file_glob.cmake)
 

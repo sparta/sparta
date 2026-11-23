@@ -31,10 +31,10 @@ and are read by the surf_react command.
 These are the doc pages for various commands which describe the format
 of the corresponding files:
 
-species = doc/species.html
-species.vib = doc/species.html
-vss/vhs/hs = doc/collide.html
-tce = doc/react.html
-sdata = doc/read_surf.html
-stl = doc/Section_tools.html#stl2surf
-surf = doc/surf_react.html
+species = doc/html/species.html
+species.vib = doc/html/species.html
+vss/vhs/hs = doc/html/collide.html
+tce = doc/html/react.html
+sdata = doc/html/read_surf.html
+stl = doc/html/Section_tools.html#stl2surf
+surf = doc/html/surf_react.html

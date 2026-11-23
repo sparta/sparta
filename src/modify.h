@@ -32,6 +32,11 @@ class Modify : protected Pointers {
   int ncompute,maxcompute;   // list of computes
   class Compute **compute;
 
+  int ndefine;               // incremented when a fix or compute is
+                             //   defined or deleted; every cached ptr to
+                             //   a fix or compute is stale when it changes
+  int ndefine_init;          // ndefine as of the last init()
+
   Modify(class SPARTA *);
   ~Modify();
   void init();
@@ -89,6 +94,7 @@ class Modify : protected Pointers {
 
   void list_init(int, int &, int *&);
   void list_init_end_of_step(int, int &, int *&);
+  void list_remove_fix(int, int &, int *, int *);
 };
 
 }

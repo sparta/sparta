@@ -90,6 +90,13 @@ class ComputePropertySurfKokkos : public ComputePropertySurf, public KokkosBase 
   void operator()(const int &i) const
   {
     int m = d_cglobal[i];
+    const int mask = (dim == 2) ? d_lines[m].mask : d_tris[m].mask;
+    if (!(mask & groupbit)) {
+      if (nvalues == 1) d_vector_surf[i] = 0.0;
+      else
+        for (int n = 0; n < nvalues; n++) d_array_surf(i,n) = 0.0;
+      return;
+    }
     if (nvalues == 1) d_vector_surf[i] = pack_one(m,d_index[0]);
     else
       for (int n = 0; n < nvalues; n++)

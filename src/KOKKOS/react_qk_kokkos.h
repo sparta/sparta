@@ -76,14 +76,29 @@ int attempt_kk(Particle::OnePart *ip, Particle::OnePart *jp,
     double e_excess = ecc - r->d_coeff[1];
     if (e_excess <= 0.0) continue;
 
-    const double inverse_kT = 1.0 / (boltz * d_species[isp].vibtemp[0]);
+    // QK model uses vibrational state of the molecule
+    // use R1 (dissociating species) if it vibrates, else the other reactant
+    // R1 may be either I or J since reaction list includes both orders
+    // mirrors ReactQK::attempt()
+
+    Particle::OnePart *mp = ip;
+    Particle::OnePart *op = jp;
+    if (ip->ispecies != r->d_reactants[0]) {
+      mp = jp;
+      op = ip;
+    }
+    if (d_species[mp->ispecies].vibtemp[0] <= 0.0) mp = op;
+    const int msp = mp->ispecies;
+    if (d_species[msp].vibtemp[0] <= 0.0) continue;
+
+    const double inverse_kT = 1.0 / (boltz * d_species[msp].vibtemp[0]);
 
     int iv = 0,ilevel,maxlev,limlev;
 
     switch (r->type) {
     case DISSOCIATION:
       {
-        ecc = pre_etrans + ip->evib;
+        ecc = pre_etrans + mp->evib;
         maxlev = static_cast<int> (ecc * inverse_kT);
         limlev = static_cast<int> (fabs(r->d_coeff[1]) * inverse_kT);
         if (maxlev > limlev) react_prob = 1.0;
@@ -91,11 +106,11 @@ int attempt_kk(Particle::OnePart *ip, Particle::OnePart *jp,
       }
     case EXCHANGE:
       {
-        if (r->d_coeff[4] < 0.0 && d_species[isp].rotdof > 0) {
+        if (r->d_coeff[4] < 0.0 && d_species[msp].rotdof > 0) {
 
           // endothermic reaction
 
-          ecc = pre_etrans + ip->evib;
+          ecc = pre_etrans + mp->evib;
           maxlev = static_cast<int> (ecc * inverse_kT);
           if (ecc > r->d_coeff[1]) {
             // sample into a local prob, not react_prob: react_prob is the
@@ -114,9 +129,9 @@ int attempt_kk(Particle::OnePart *ip, Particle::OnePart *jp,
             if (iv >= ilevel) react_prob = 1.0;
           }
 
-        } else if (r->d_coeff[4] > 0.0 && d_species[isp].rotdof > 0) {
+        } else if (r->d_coeff[4] > 0.0 && d_species[msp].rotdof > 0) {
 
-          ecc = pre_etrans + ip->evib;
+          ecc = pre_etrans + mp->evib;
 
           // mspec = post-collision molecular species
 

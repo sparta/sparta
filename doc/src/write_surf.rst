@@ -1,0 +1,165 @@
+.. index:: write\_surf
+
+write\_surf command
+===================
+
+**Syntax:**
+
+
+.. parsed-literal::
+
+   write_surf file
+
+* file = name of file to write surface element info to
+* zero or more keyword/args pairs may be appended
+* keyword = *points* or *type* or *custom* or *fileper* or *nfile*
+  
+  .. parsed-literal::
+  
+       points arg = yes or no to include a Points section in the file
+       type arg = none
+       custom arg = name
+         name = name of custom per-surf vector or array
+       fileper arg = Np
+         Np = write one file for every this many processors
+       nfile arg = Nf
+         Nf = write this many files, one from each of Nf processors
+
+
+
+**Examples:**
+
+
+.. parsed-literal::
+
+   write_surf data.surf
+   write_surf data.surf type custom temperature custom flags
+   write_surf data.surf points no
+   write_surf data.surf.% nfile 50
+
+**Description:**
+
+Write a surface file in text format describing the currently defined
+surface elements, whether they be explicit or implicit surfaces.  See
+the :doc:`read\_surf <read_surf>` and :doc:`read\_isurf <read_isurf>`
+commands for a definition of surface elements and how they are defined
+and used be SPARTA.  The surface file can be used for later input to a
+new simulation or for post-processing and visualization.
+
+Note that if surface objects were clipped when read in by the
+:doc:`read\_surf <read_surf>` command then some surface elements may have
+been deleted and new ones created.  Likewise for the points that
+define the end points or corner points of surface element lines (2d)
+or triangles (3d).  Similarly, if surface elements have been removed
+by the :doc:`remove\_surf <remove_surf>` command, then points may have
+also been deleted.  In either case, surface points and elements are
+renumbered by these operations to create compressed, contiguous lists.
+These lists of surface elements are what is output by this command.
+
+The output file is written as a text file in the same format as the
+file the :doc:`read\_surf <read_surf>` command reads for explicit
+surfaces.  See the :doc:`read\_surf <read_surf>` doc page for a
+description of its format.
+
+Similar to :doc:`dump <dump>` files, the surface filename can contain
+two wild-card characters.  If a "\*" appears in the filename, it is
+replaced with the current timestep value.  If a "%" character appears
+in the filename, then one file is written by each processor and the
+"%" character is replaced with the processor ID from 0 to P-1.  An
+additional file with the "%" replaced by "base" is also written, which
+contains global information, i.e. just the header information for the
+number of points and lines or triangles, as described on the
+:doc:`read\_surf <read_surf>` doc page.
+
+For example, the files written for filename data.% would be data.base,
+data.0, data.1, ..., data.P-1.  This creates smaller files and can be
+a fast mode of output and subsequent input on parallel machines that
+support parallel I/O.  The optional *fileper* and *nfile* keywords
+discussed below can alter the number of files written.
+
+Note that implicit surfaces read in by the
+:doc:`read\_isurf <read_isurf>` command can be written out by the
+write\_surf command, e.g. for visualization purposes or to start a
+second simulation treating implicit surfaces previously ablated via
+the :doc:`fix ablate <fix_ablate>` command as constant, unchanging
+explicit surfaces.  Because this command creates files in an explicit
+surface format, it can only be read back in to SPARTA via the
+:doc:`read\_surf <read_surf>` command.  It cannot be read back in via the
+:doc:`read\_isurf <read_isurf>` command.
+
+Also note, that implicit surfaces use the grid cell ID as the surface
+element ID for all line segments (2d) or triangles (3d) in the same
+grid cell.  When this command writes them to a file, the surface
+element IDs in the file become integers between 1 and N, where N is
+the total number of implicit surface elements.
+
+See the `Howto 6.13 <Section_howto.html#howto_13>`_ section of the manual
+for a discussion of explicit and implicit surfaces as well as
+distributed versus non-distributed storage of surface elements.  You
+cannot mix explicit and implicit surfaces in the same simulation.
+
+
+----------
+
+
+The following optional keywords can be used with this command.
+
+If the *points* keyword is specified with a value of *yes*\ , then a
+Points section is included in the written file.  The Lines or
+Triangles section will reference indices from the Points section.  If
+the *points* keyword is specified with a value of *no*\ , then a Points
+section is not included. The Lines or Triangles section will list the
+coordinates of line segment or trianges corners directly.
+
+If the *type* keyword is specified, then a surface element type is
+included for each line or triangle in the Lines or Triangles section.
+If it is not specified, element types are not incuded.
+
+If the *custom* keyword is specified along with the *name* of a custom
+per-surf vector or array, then the per-surf values for that vector or
+array are added to the end of the line of output for each line or
+triangle in the Lines or Triangles section.  A per-surf vector is a
+single value per element; a per-surf array is 1 or more values per
+element, depending on how it was defined.  If the *custom* keyword is
+used multiple times, then the value(s) for each *name* are appended in
+the order the *custom* keywords are specified.
+
+The *nfile* or *fileper* keywords can be used in conjunction
+with the "%" wildcard character in the specified surface file name.
+As explained above, the "%" character causes the surface file to be
+written in pieces, one piece for each of P processors.  By default P =
+the number of processors the simulation is running on.  The *nfile* or
+*fileper* keyword can be used to set P to a smaller value, which can
+be more efficient when running on a large number of processors.
+
+The *nfile* keyword sets P to the specified Nf value.  For example, if
+Nf = 4, and the simulation is running on 100 processors, 4 files will
+be written, by processors 0,25,50,75.  Each will collect information
+from itself and the next 24 processors and write it to a surface file.
+
+For the *fileper* keyword, the specified value of Np means write one
+file for every Np processors.  For example, if Np = 4, every 4th
+processor (0,4,8,12,etc) will collect information from itself and the
+next 3 processors and write it to a surface file.
+
+
+----------
+
+
+**Restrictions:**
+
+The *custom* keyword cannot be used with implicit surfaces.
+
+**Related commands:**
+
+:doc:`read\_surf <read_surf>`, :doc:`read\_isurf <read_isurf>`
+
+**Default:**
+
+The default is points = yes.  If the *fileper* or *nfile* keywords are
+not used, a single file is written.
+
+
+.. _sws: https://sparta.github.io
+.. _sd: Manual.html
+.. _sc: Section_commands.html

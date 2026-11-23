@@ -80,11 +80,12 @@ void FixVibmodeKokkos::update_custom_kokkos(int index, double temp_thermal,
 
   // single mode, evib already set by Particle::evib()
   // just convert evib back to mode level
+  // round to nearest, since evib = ivib*boltz*vibtemp suffers roundoff
 
   if (nmode == 1) {
     d_vibmode(index,0) = static_cast<int>
       (d_particles[index].evib / boltz /
-       d_species[isp].vibtemp[0]);
+       d_species[isp].vibtemp[0] + 0.5);
     return;
   }
 

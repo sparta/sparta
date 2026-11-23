@@ -88,6 +88,17 @@ void ComputeSurfKokkos::init()
 
 void ComputeSurfKokkos::init_normflux()
 {
+  // a tally cycle may be open (tallies on the device not yet used):
+  //   a grid change between the tallies and their output reaches here
+  //   via reallocate(), and the device index is replaced below; bring
+  //   the tallies to the host first, where their consumers read them
+  //   until the next clear()
+
+  if (!compressed && d_surf2tally.extent(0) > 0) {
+    surfint *dummy;
+    tallyinfo(dummy);
+  }
+
   ComputeSurf::init_normflux();
 
   int nsurf = surf->nlocal + surf->nghost;
@@ -99,12 +110,21 @@ void ComputeSurfKokkos::init_normflux()
   Kokkos::deep_copy(d_normflux,h_normflux);
 
   // Cannot realloc inside a Kokkos parallel region, so size tally2surf as nsurf
-  memoryKK->grow_kokkos(k_tally2surf,tally2surf,nsurf,"surf:tally2surf");
-  d_tally2surf = k_tally2surf.view_device();
-  d_surf2tally = DAT::t_int_1d("surf:surf2tally",nsurf);
-  Kokkos::deep_copy(d_surf2tally,-1);
+  // also called mid-cycle via reallocate() (e.g. fix balance) after tallies
+  //   were made but before they are consumed, so preserve surf2tally and
+  //   never shrink the tally storage, else the tallies would be lost
 
-  memoryKK->grow_kokkos(k_array_surf_tally,array_surf_tally,nsurf,ntotal,"surf:array_surf_tally");
+  int nold = d_surf2tally.extent(0);
+  int nalloc = MAX(nsurf,nold);
+  if (nalloc > nold) {
+    Kokkos::resize(d_surf2tally,nalloc);
+    Kokkos::deep_copy(Kokkos::subview(d_surf2tally,Kokkos::make_pair(nold,nalloc)),-1);
+  }
+
+  memoryKK->grow_kokkos(k_tally2surf,tally2surf,nalloc,"surf:tally2surf");
+  d_tally2surf = k_tally2surf.view_device();
+
+  memoryKK->grow_kokkos(k_array_surf_tally,array_surf_tally,nalloc,ntotal,"surf:array_surf_tally");
   d_array_surf_tally = k_array_surf_tally.view_device();
 }
 
@@ -177,7 +197,8 @@ void ComputeSurfKokkos::pre_surf_tally()
     for (int n = 0; n < surf->nsr; n++) {
       if (!surf->sr[n]->kokkosable)
         error->all(FLERR,"Must use Kokkos-enabled surface reaction method with Kokkos");
-      if (strcmp(surf->sr[n]->style,"global") == 0) {
+      if (strcmp(surf->sr[n]->style,"global") == 0 ||
+          strcmp(surf->sr[n]->style,"global/kk") == 0) {
 #ifdef SPARTA_KOKKOS_FIXED_LISTS
         if (nglob >= KOKKOS_MAX_SURF_REACT_PER_TYPE)
           error->all(FLERR,"Kokkos currently supports two instances of each surface reaction method");
@@ -189,7 +210,8 @@ void ComputeSurfKokkos::pre_surf_tally()
         KK_SR_H_TYPE(n) = 0;
         KK_SR_H_MAP(n) = nglob;
         nglob++;
-      } else if (strcmp(surf->sr[n]->style,"prob") == 0) {
+      } else if (strcmp(surf->sr[n]->style,"prob") == 0 ||
+          strcmp(surf->sr[n]->style,"prob/kk") == 0) {
 #ifdef SPARTA_KOKKOS_FIXED_LISTS
         if (nprob >= KOKKOS_MAX_SURF_REACT_PER_TYPE)
           error->all(FLERR,"Kokkos currently supports two instances of each surface reaction method");
@@ -265,7 +287,10 @@ int ComputeSurfKokkos::tallyinfo(surfint *&ptr)
 
   // compress array_surf_tally
 
-  int nsurf = surf->nlocal + surf->nghost;
+  // walk the index as allocated: the local+ghost surf count may have
+  //   changed since (a grid change between the tallies and their use)
+
+  int nsurf = (int) d_surf2tally.extent(0);
   int istart = 0;
   int iend = nsurf-1;
 
@@ -321,7 +346,7 @@ void ComputeSurfKokkos::grow_tally()
   // Cannot realloc inside a Kokkos parallel region, so size tally2surf the
   //  same as surf2tally
 
-  int nsurf = surf->nlocal + surf->nghost;
+  int nsurf = d_surf2tally.extent(0);
 
   memoryKK->grow_kokkos(k_tally2surf,tally2surf,nsurf,"surf:tally2surf");
   d_tally2surf = k_tally2surf.view_device();

@@ -34,14 +34,16 @@ SurfReact::SurfReact(SPARTA *sparta, int, char **arg) :
   // ID and style
   // ID must be all alphanumeric chars or underscores
 
-  int n = strlen(arg[0]) + 1;
-  id = new char[n];
-  strcpy(id,arg[0]);
+  // check ID before allocating, so an error leaves nothing to free
 
+  int n = strlen(arg[0]) + 1;
   for (int i = 0; i < n-1; i++)
-    if (!isalnum(id[i]) && id[i] != '_')
+    if (!isalnum(arg[0][i]) && arg[0][i] != '_')
       error->all(FLERR,"Surf_react ID must be alphanumeric or "
                  "underscore characters");
+
+  id = new char[n];
+  strcpy(id,arg[0]);
 
   n = strlen(arg[1]) + 1;
   style = new char[n];
@@ -54,6 +56,12 @@ SurfReact::SurfReact(SPARTA *sparta, int, char **arg) :
 
   nsingle = ntotal = 0;
   tally_two_flag = tally_single_flag = tally_total_flag = 0;
+
+  // set to NULL in case a child constructor errors before allocating them
+  // b/c the destructor frees them
+
+  tally_single = tally_total = NULL;
+  tally_single_all = tally_total_all = NULL;
 
   kokkosable = copy = copymode = 0;
 }

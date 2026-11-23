@@ -30,6 +30,7 @@ class ReactTCE : public ReactBird {
  public:
   ReactTCE(class SPARTA *, int, char **);
   void init();
+  void end_of_run();
   int attempt(Particle::OnePart *, Particle::OnePart *,
               double, double, double, double &, int &);
 
@@ -47,7 +48,11 @@ class ReactTCE : public ReactBird {
                  double Evib);
 
  protected:
-  int prob_warn_flag;      // 1 after warning once about an invalid react_prob
+  int prob_neg_flag;       // 1 if a react_prob < 0 occurred on this proc
+                           //   during the current run
+  int prob_big_index;      // rlist index of the first reaction whose summed
+                           //   react_prob exceeded 1 on this proc during
+                           //   the current run, -1 if none
 };
 
 }
@@ -76,6 +81,19 @@ E: Unknown outcome in reaction
 
 The specified type of the reaction is not encoded in the reaction
 style.
+
+W: ... TCE reaction(s) have a temperature exponent below the bound
+-(z+3/2) for which the TCE model can reproduce their Arrhenius rate ...
+
+For each listed reaction the Arrhenius rate cannot be represented by
+the TCE model for the energy and vibrational models in use: the
+argument of the gamma function in the TCE reaction probability is
+non-positive, so the gamma function is clamped and the reaction rate
+is incorrect.  With discrete vibration this only happens when the
+vibrational energy is small.  Use reaction coefficients whose
+temperature exponent is above the printed bound, e.g. by increasing
+the number of internal degrees of freedom z where that is physically
+valid.  This warning is printed once, on the first run.
 
 E: Cannot open reaction file %s
 

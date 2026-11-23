@@ -37,14 +37,16 @@ SurfCollide::SurfCollide(SPARTA *sparta, int, char **arg) :
   // ID and style
   // ID must be all alphanumeric chars or underscores
 
-  int n = strlen(arg[0]) + 1;
-  id = new char[n];
-  strcpy(id,arg[0]);
+  // check ID before allocating, so an error leaves nothing to free
 
+  int n = strlen(arg[0]) + 1;
   for (int i = 0; i < n-1; i++)
-    if (!isalnum(id[i]) && id[i] != '_')
+    if (!isalnum(arg[0][i]) && arg[0][i] != '_')
       error->all(FLERR,"Surf_collide ID must be alphanumeric or "
                  "underscore characters");
+
+  id = new char[n];
+  strcpy(id,arg[0]);
 
   n = strlen(arg[1]) + 1;
   style = new char[n];
@@ -59,6 +61,16 @@ SurfCollide::SurfCollide(SPARTA *sparta, int, char **arg) :
 
   nsingle = ntotal = 0;
   tname = NULL;
+
+  // defaults for styles that never call parse_tsurf()/check_tsurf()
+  // persurf_wrapper() reads persurf_temperature for any style
+
+  tmode = NUMERIC;
+  tsurf = 0.0;
+  tfreq = 1;
+  tindex_var = tindex_custom = -1;
+  persurf_temperature = 0;
+  t_persurf = NULL;
 
   n_owned = n_localghost = 0;
   t_owned = t_localghost = NULL;
@@ -181,9 +193,13 @@ void SurfCollide::check_tsurf()
     if (tindex_var < 0)
       error->all(FLERR,"Surf_collide tsurf variable name does not exist");
   } else if (tmode == CUSTOM) {
-    int tindex_custom = surf->find_custom(tname);
+    tindex_custom = surf->find_custom(tname);
     if (tindex_custom < 0)
       error->all(FLERR,"Surf_collide tsurf could not find custom attribute");
+    if (surf->etype[tindex_custom] != DOUBLE)
+      error->all(FLERR,"Surf_collide tsurf custom attribute is not a float");
+    if (surf->esize[tindex_custom] > 0)
+      error->all(FLERR,"Surf_collide tsurf custom attribute is not a vector");
   }
 
   persurf_temperature = 0;
@@ -203,8 +219,10 @@ void SurfCollide::dynamic()
   if (tmode == VAREQUAL) {
 
     // only evaluate variable if timestep is multiple of tfreq
+    // also evaluate at first step of a run so tsurf is always set
 
-    if (update->ntimestep % tfreq) return;
+    if (update->ntimestep % tfreq &&
+        update->ntimestep != update->firststep) return;
     tsurf = input->variable->compute_equal(tindex_var);
     if (tsurf <= 0.0) error->all(FLERR,"Surf_collide tsurf <= 0.0");
 
@@ -216,8 +234,12 @@ void SurfCollide::dynamic()
 
     // only evaluate variable if timestep is multiple of tfreq
 
+    // also evaluate at first step of a run (same on all procs),
+    //   so t_owned/t_persurf are always allocated and set
+
     int spreadflag = 0;
-    if (update->ntimestep % tfreq == 0) {
+    if (update->ntimestep % tfreq == 0 ||
+        update->ntimestep == update->firststep) {
       if (n_owned != surf->nown) {
 	memory->destroy(t_owned);
 	n_owned = surf->nown;

@@ -23,6 +23,7 @@
 #ifndef SPARTA_FFT_KISSFFT
 #define SPARTA_FFT_KISSFFT
 
+#include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
@@ -458,6 +459,13 @@ static void kf_factor(int n, int *facbuf)
 static kiss_fft_cfg kiss_fft_alloc(int nfft, int inverse_fft, void *mem, size_t *lenmem)
 {
   kiss_fft_cfg st = nullptr;
+
+  // reject sizes for which memneeded would overflow size_t (possible on
+  // 32-bit platforms), as in upstream kissfft commit 1b08316
+  if (nfft <= 0 ||
+      (size_t) nfft >= (SIZE_MAX - 2 * sizeof(struct kiss_fft_state)) / sizeof(FFT_DATA))
+    return nullptr;
+
   size_t memneeded =
       sizeof(struct kiss_fft_state) + sizeof(FFT_DATA) * (nfft - 1); /* twiddle factors */
 

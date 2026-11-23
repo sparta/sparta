@@ -90,9 +90,15 @@ int attempt_kk(Particle::OnePart *ip, Particle::OnePart *jp,
         switch (r->type) {
         case DISSOCIATION:
         case EXCHANGE:
-          react_prob += r->d_coeff[2] *
-            pow(ecc2-r->d_coeff[1],r->d_coeff[3]) *
-            pow(1.0-r->d_coeff[1]/ecc2,r->d_coeff[5]);
+          {
+            const double z = r->d_coeff[0];
+            const double eta = r->d_coeff[3];
+            const double omega = r->d_coeff[5];
+            react_prob += r->d_coeff[2] *
+              tgamma(z+2.5-omega) / MAX(1.0e-6,tgamma(z+eta+1.5)) *
+              pow(ecc2-r->d_coeff[1],eta-1.0+omega) *
+              pow(1.0-r->d_coeff[1]/ecc2,z+1.5-omega);
+          }
           break;
         default:
           Kokkos::abort("ReactTCEQKKokkos: Unknown outcome in reaction\n");
@@ -101,58 +107,75 @@ int attempt_kk(Particle::OnePart *ip, Particle::OnePart *jp,
         if (react_prob > random_prob) fired = 1;
 
       } else {                                     // attempt_qk
-        const double inverse_kT = 1.0 / (boltz * d_species[isp].vibtemp[0]);
+
+        // QK model uses vibrational state of the molecule
+        // use R1 (dissociating species) if it vibrates, else the other reactant
+        // R1 may be either I or J since reaction list includes both orders
+        // if neither vibrates, no reaction (mirrors ReactTCEQK::attempt_qk())
+
+        Particle::OnePart *mp = ip;
+        Particle::OnePart *op = jp;
+        if (ip->ispecies != r->d_reactants[0]) {
+          mp = jp;
+          op = ip;
+        }
+        if (d_species[mp->ispecies].vibtemp[0] <= 0.0) mp = op;
+        const int msp = mp->ispecies;
+        const double inverse_kT = (d_species[msp].vibtemp[0] > 0.0) ?
+          1.0 / (boltz * d_species[msp].vibtemp[0]) : 0.0;
         int iv = 0,ilevel,maxlev,limlev;
         double eccq;
-        switch (r->type) {
-        case DISSOCIATION:
-          {
-            eccq = pre_etrans + ip->evib;
-            maxlev = static_cast<int> (eccq * inverse_kT);
-            limlev = static_cast<int> (fabs(r->d_coeff[1]) * inverse_kT);
-            if (maxlev > limlev) react_prob = 1.0;
-            break;
-          }
-        case EXCHANGE:
-          {
-            if (r->d_coeff[4] < 0.0 && d_species[isp].rotdof > 0) {
-              eccq = pre_etrans + ip->evib;
+        if (d_species[msp].vibtemp[0] > 0.0) {
+          switch (r->type) {
+          case DISSOCIATION:
+            {
+              eccq = pre_etrans + mp->evib;
               maxlev = static_cast<int> (eccq * inverse_kT);
-              if (eccq > r->d_coeff[1]) {
-                // sample into a local prob, not react_prob: react_prob feeds
-                //   the "fired" test below, and a rejected draw must not leave
-                //   a fractional value in it.  Mirrors ReactTCEQK::attempt()
+              limlev = static_cast<int> (fabs(r->d_coeff[1]) * inverse_kT);
+              if (maxlev > limlev) react_prob = 1.0;
+              break;
+            }
+          case EXCHANGE:
+            {
+              if (r->d_coeff[4] < 0.0 && d_species[msp].rotdof > 0) {
+                eccq = pre_etrans + mp->evib;
+                maxlev = static_cast<int> (eccq * inverse_kT);
+                if (eccq > r->d_coeff[1]) {
+                  // sample into a local prob, not react_prob: react_prob feeds
+                  //   the "fired" test below, and a rejected draw must not leave
+                  //   a fractional value in it.  Mirrors ReactTCEQK::attempt()
+                  double prob = 0.0;
+                  do {
+                    iv = static_cast<int> (rand_gen.drand()*(maxlev+0.99999999));
+                    double evib = static_cast<double> (iv / inverse_kT);
+                    if (evib < eccq) prob = pow(1.0-evib/eccq,1.5-omega);
+                    else prob = 0.0;
+                  } while (rand_gen.drand() < prob);
+                  ilevel = static_cast<int> (fabs(r->d_coeff[4]) * inverse_kT);
+                  if (iv >= ilevel) react_prob = 1.0;
+                }
+              } else if (r->d_coeff[4] > 0.0 && d_species[msp].rotdof > 0) {
+                eccq = pre_etrans + mp->evib;
+                int mspec = r->d_products[0];
+                if (d_species[mspec].rotdof < 2.0) mspec = r->d_products[1];
+                eccq += r->d_coeff[4];
+                maxlev = static_cast<int> (eccq * inverse_kT);
                 double prob = 0.0;
                 do {
-                  iv = static_cast<int> (rand_gen.drand()*(maxlev+0.99999999));
-                  double evib = static_cast<double> (iv / inverse_kT);
-                  if (evib < eccq) prob = pow(1.0-evib/eccq,1.5-omega);
+                  iv = rand_gen.drand()*(maxlev+0.99999999);
+                  double evib = static_cast<double> (iv * boltz*d_species[mspec].vibtemp[0]);
+                  if (evib < eccq) prob = pow(1.0-evib/eccq,1.5 - r->d_coeff[6]);
                   else prob = 0.0;
                 } while (rand_gen.drand() < prob);
-                ilevel = static_cast<int> (fabs(r->d_coeff[4]) * inverse_kT);
+                ilevel = static_cast<int> (fabs(r->d_coeff[4]/boltz/d_species[mspec].vibtemp[0]));
                 if (iv >= ilevel) react_prob = 1.0;
               }
-            } else if (r->d_coeff[4] > 0.0 && d_species[isp].rotdof > 0) {
-              eccq = pre_etrans + ip->evib;
-              int mspec = r->d_products[0];
-              if (d_species[mspec].rotdof < 2.0) mspec = r->d_products[1];
-              eccq += r->d_coeff[4];
-              maxlev = static_cast<int> (eccq * inverse_kT);
-              double prob = 0.0;
-              do {
-                iv = rand_gen.drand()*(maxlev+0.99999999);
-                double evib = static_cast<double> (iv * boltz*d_species[mspec].vibtemp[0]);
-                if (evib < eccq) prob = pow(1.0-evib/eccq,1.5 - r->d_coeff[6]);
-                else prob = 0.0;
-              } while (rand_gen.drand() < prob);
-              ilevel = static_cast<int> (fabs(r->d_coeff[4]/boltz/d_species[mspec].vibtemp[0]));
-              if (iv >= ilevel) react_prob = 1.0;
+              break;
             }
+          default:
+            Kokkos::abort("ReactTCEQKKokkos: Unknown outcome in reaction\n");
             break;
           }
-        default:
-          Kokkos::abort("ReactTCEQKKokkos: Unknown outcome in reaction\n");
-          break;
         }
         if (react_prob > random_prob) fired = 1;
       }

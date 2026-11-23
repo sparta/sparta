@@ -148,6 +148,10 @@ void ComputeSurfCollisionTally::surf_tally(double dtremain, int isurf,
 
   if (reaction) return;
 
+  // skip if no original particle, e.g. emission by FixEmitSurf
+
+  if (!iorig) return;
+
   // skip if isurf not in surface group
 
   if (dim == 2) {

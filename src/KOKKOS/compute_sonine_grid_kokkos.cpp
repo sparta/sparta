@@ -133,12 +133,11 @@ void ComputeSonineGridKokkos::compute_per_grid_kokkos()
       Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagComputeSonineGrid_compute_vcom_init_atomic<1> >(0,nlocal),*this);
     else
       Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagComputeSonineGrid_compute_vcom_init_atomic<0> >(0,nlocal),*this);
+    if (need_dup) {
+      Kokkos::Experimental::contribute(d_vcom, dup_vcom_tally);
+      dup_vcom_tally = {}; // free duplicated memory
+    }
     Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagComputeSonineGrid_normalize_vcom>(0,nglocal),*this);
-  }
-
-  if (need_dup) {
-    Kokkos::Experimental::contribute(d_vcom, dup_vcom_tally);
-    dup_vcom_tally = {}; // free duplicated memory
   }
 
   // tally sonine moments
@@ -305,6 +304,7 @@ void ComputeSonineGridKokkos::operator()(TagComputeSonineGrid_compute_per_grid, 
     double *v = d_particles[i].v;
 
     int k = igroup*npergroup;
+    d_tally(icell,k++) += mass;
 
     double vthermal[3];
     double csq;
@@ -417,4 +417,10 @@ void ComputeSonineGridKokkos::reallocate()
   memoryKK->create_kokkos(k_tally,tally,nglocal,ntotal,"sonine/grid:tally");
   d_tally = k_tally.view_device();
   d_vcom = DAT::t_float_3d ("d_vcom",nglocal,ngroup,4);
+
+  // host vcom is also allocated (freed by ~ComputeSonineGrid), since the
+  //   host ComputeSonineGrid::compute_per_grid() runs while prewrap is set
+
+  memory->destroy(vcom);
+  memory->create(vcom,nglocal,ngroup,4,"sonine/grid:vcom");
 }

@@ -1,0 +1,121 @@
+.. index:: read\_grid
+
+read\_grid command
+==================
+
+**Syntax:**
+
+
+.. parsed-literal::
+
+   read_grid filename keyword args ...
+
+* filename = name of grid file
+* zero or more keyword/args pairs may be appended
+* keyword = *custom*
+  
+  .. parsed-literal::
+  
+       custom args = name datatype Nc
+         name = name of custom per-grid vector or array
+         datatype = int or float = for integer or floating point values
+         Nc = 0 for a vector (single value), Nc >= 1 for an array (one or more values)
+
+
+
+**Examples:**
+
+
+.. parsed-literal::
+
+   read_grid data.grid
+   read_grid data.grid custom temperature double 0
+
+**Description:**
+
+Read a grid file in text format which lists the grid cell IDs to be
+used to construct a hierarchical grid that overalys the simulation
+domain defined by the :doc:`create\_box <create_box>` command.  The grid
+can also be defined by the :doc:`create\_grid <create_grid>` command.
+
+The grid file can be written by the :doc:`write\_grid <write_grid>`
+command in a previous simulation, or be created by some pre-processing
+tool.  See `Section 6.8 <Section_howto.html#howto_8>`_ of the manual for
+a definition of hierarchical grids and grid cell IDs as used by
+SPARTA.  Note that if the grid is hierarchical, grid cell IDs are not
+simply numbered from 1 to N.  They also encode the cell's logical
+position within the grid hierarchy.
+
+The specified file can be a text file or a gzipped text file (detected
+by a .gz suffix).  See the :doc:`write\_grid <write_grid>` command for a
+description of the format of the file.
+
+The grid cell IDs read from the file (one per line) are assigned to
+processors in a round-robin fashion, which means in general the set of
+cells a processor owns will not be contiguous in a geometric sense.
+They are thus assumed to be a "dispersed" assignment of grid cells to
+each processor.
+
+IMPORTANT NOTE: See `Section 6.8 <Section_howto.html#howto_8>`_ of the
+manual for an explanation of clumped and dispersed grid cell
+assignments and their relative performance trade-offs.  The
+:doc:`balance\_grid <balance_grid>` command can be used after the grid is
+read, to assign child cells to processors in different ways.  The "fix
+balance" command can be used to re-assign them in a load-balanced
+manner periodically during a running simulation.
+
+The *custom* keyword allows for the creation of custom per-grid
+attributes and specification of their values.  See the `Section 6.17 <Section_howto.html#howto_17>`_ doc page for an explanation of
+custom per-grid attributes.  Custom vectors or arrays associate a
+single value or multiple values with each grid cell.  They can be
+output by the :doc:`dump grid <dump>` command and used as inputs by
+other commands.  For example, the
+:doc:`create\_particles <create_particles>` command can use per-grid
+values to influence the creation of particles in each grid cell and
+their properties.
+
+The *name* argument is the name assigned to the new custom vector or
+array.  The *datatytpe* argument is *int* or *float* which determines
+whether the vector/array stores integer or floating point values.  The
+*Nc* argument is 0 for a per-grid vector and an integer >= 1 for an
+array with *Nc* columns.  A per-grid vector stores a single value per
+grid cell; a per-grid array stores Nc values per grid cell.
+
+Each use of the *custom* keyword determines how many values are
+appended to each line following the grid cell ID.  For a custom
+per-grid vector, a single value is appended.  For a custom per-grid
+array, Nc values are appended.  The values are assigned to custom
+vectors or arrays in the order the *custom* keywords are specified.
+For example, for this read\_grid command, 4 custom values should be
+added to the end of each line in the Cells section of the input file:
+
+
+.. parsed-literal::
+
+   read_grid grid.data custom temperature float 0 custom flags int 3
+
+The first floating-point value will be the assigned to a custom
+per-grid vector named temperature which stores a single value per grid
+cell.  The next 3 integers will be assigned to a custom per-grid array
+named flags which stores 3 values per grid cell.
+
+**Restrictions:**
+
+This command can only be used after the simulation box is defined by
+the :doc:`create\_box <create_box>` command.
+
+To read gzipped grid files, you must compile SPARTA with the
+-DSPARTA\_GZIP option - see `Section 2.2 <Section_start.html#start_2>`_ of
+the manual for details.
+
+**Related commands:**
+
+:doc:`create\_box <create_box>`, :doc:`create\_grid <create_grid>`,
+:doc:`write\_grid <write_grid>`
+
+**Default:** none
+
+
+.. _sws: https://sparta.github.io
+.. _sd: Manual.html
+.. _sc: Section_commands.html

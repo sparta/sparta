@@ -65,6 +65,8 @@ AdaptGrid::AdaptGrid(SPARTA *sparta) : Pointers(sparta)
 
   valueID = NULL;
   file = NULL;
+  region = NULL;
+  idregion = NULL;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -73,6 +75,7 @@ AdaptGrid::~AdaptGrid()
 {
   delete [] valueID;
   delete [] file;
+  delete [] idregion;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -81,6 +84,11 @@ void AdaptGrid::command(int narg, char **arg)
 {
   if (!grid->exist)
     error->all(FLERR,"Cannot adapt grid when grid is not defined");
+
+  // see doc/read_isurf.txt: implicit surf simulations cannot adapt the grid
+
+  if (surf->exist && surf->implicit)
+    error->all(FLERR,"Cannot adapt grid with implicit surfaces");
 
   if (narg < 1) error->all(FLERR,"Illegal adapt_grid command");
 
@@ -239,6 +247,7 @@ void AdaptGrid::process_args(int narg, char **arg)
   } else action2 = NONE;
 
   if (action1 == action2) error->all(FLERR,"Illegal adapt command");
+  if (iarg >= narg) error->all(FLERR,"Illegal adapt command");
 
   // define style
 
@@ -308,6 +317,8 @@ void AdaptGrid::process_args(int narg, char **arg)
   nx = ny = nz = 2;
   if (domain->dimension == 2) nz = 1;
   region = NULL;
+  delete [] idregion;
+  idregion = NULL;
   sdir[0] = sdir[1] = sdir[2] = 0.0;
   file = NULL;
 
@@ -366,6 +377,9 @@ void AdaptGrid::process_args(int narg, char **arg)
       if (iregion == -1)
         error->all(FLERR,"Adapt region ID does not exist");
       region = domain->regions[iregion];
+      delete [] idregion;
+      idregion = new char[strlen(arg[iarg+1])+1];
+      strcpy(idregion,arg[iarg+1]);
       if (strcmp(arg[iarg+2],"all") == 0) regstyle = REGION_ALL;
       else if (strcmp(arg[iarg+2],"one") == 0) regstyle = REGION_ONE;
       else if (strcmp(arg[iarg+2],"center") == 0) regstyle = REGION_CENTER;
@@ -510,6 +524,15 @@ void AdaptGrid::check_args(int nevery)
 
 void AdaptGrid::setup(int iter)
 {
+  // re-resolve region, since region delete can free or move regions
+  //   between adaptations done by fix adapt
+
+  if (idregion) {
+    int iregion = domain->find_region(idregion);
+    if (iregion == -1) error->all(FLERR,"Adapt region ID does not exist");
+    region = domain->regions[iregion];
+  }
+
   // create RNG for style = RANDOM
 
   if (style == RANDOM) {
@@ -519,12 +542,13 @@ void AdaptGrid::setup(int iter)
   } else random = NULL;
 
   // list of new cell indices for one refined cell
-  // refinement may occur between minlevel and maxlevel-1 inclusive
+  // refinement may occur at any child level between 1 and maxlevel-1 inclusive
+  // minlevel only limits coarsening
 
   Grid::ParentLevel *plevels = grid->plevels;
 
   int nmax = 0;
-  for (int i = minlevel; i < maxlevel; i++)
+  for (int i = 1; i < maxlevel; i++)
     nmax = MAX(nmax,plevels[i].nx * plevels[i].ny * plevels[i].nz);
   childlist = new int[nmax];
 
@@ -1133,13 +1157,13 @@ double AdaptGrid::coarsen_surf_cell(int icell)
 
   for (int i = 0; i < nsurf; i++) {
     if (dim == 2) {
-      if (!(lines[i].mask & sgroupbit)) continue;
+      if (!(lines[csurfs[i]].mask & sgroupbit)) continue;
     } else {
-      if (!(tris[i].mask & sgroupbit)) continue;
+      if (!(tris[csurfs[i]].mask & sgroupbit)) continue;
     }
     if (dim == 2) norm = lines[csurfs[i]].norm;
     else norm = tris[csurfs[i]].norm;
-    if (MathExtra::dot3(norm,sdir) < 0.0) {
+    if (MathExtra::dot3(norm,sdir) <= 0.0) {
       anysurf = 1;
       break;
     }
@@ -1168,6 +1192,8 @@ double AdaptGrid::coarsen_value_cell(int icell)
 
   int jcell;
   double value = 0.0;
+  if (combine == MINIMUM) value = BIG;
+  else if (combine == MAXIMUM) value = -BIG;
 
   for (int i = 0; i < nsplit; i++) {
     jcell = csubs[i];

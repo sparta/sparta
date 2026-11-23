@@ -117,6 +117,7 @@ class ParticleKokkos : public Particle {
   void unpack_custom_kokkos(char *, int) const;
 
   void wrap_kokkos();
+  void update_species2group();
   void sync(ExecutionSpace, unsigned int);
   void sync_device_async(const DeviceType &, unsigned int);
   template<class... Exec>

@@ -318,7 +318,7 @@ void SurfCollideCLL::cll(Particle::OnePart *p, double *norm)
         dot /= vrm;
         do {
           do {
-            beta_un = (6.0*random->gaussian() - 3.0);
+            beta_un = (6.0*random->uniform() - 3.0);
           } while (beta_un + dot < 0.0);
           normalized_distbn_fn = 2.0 * (beta_un + dot) /
             (dot + sqrt(dot*dot + 2.0)) *

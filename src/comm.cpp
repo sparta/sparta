@@ -357,10 +357,21 @@ void Comm::migrate_cells(int nmigrate)
   igrid->exchange_variable(sbuf,gsize,rbuf);
 
   // unpack received grid cells with their particles
+  // for explicit distributed surfs, unpack_one() uses surf hash to skip
+  //   received surfs this proc already owns, so hash my owned surfs first
+  //   compress_explicit() clears the hash, so rehash after it
+
+  int distexplicit = surf->distributed && !surf->implicit;
+  if (distexplicit) surf->rehash();
 
   offset = 0;
   for (i = 0; i < nrecv; i++)
     offset += grid->unpack_one(&rbuf[offset],1,1,1);
+
+  if (distexplicit) {
+    surf->hash->clear();
+    surf->hashfilled = 0;
+  }
 }
 
 /* ----------------------------------------------------------------------
@@ -391,6 +402,14 @@ void Comm::migrate_cells_less_memory(int nmigrate)
   int icell_end = grid->nlocal;
   int not_done = 1;
   int nglocal = grid->nlocal;
+
+  // for explicit distributed surfs, unpack_one() uses surf hash to skip
+  //   received surfs this proc already owns, so hash my owned surfs first
+  // unpack_one() adds each newly received surf to the hash
+  // compress_explicit() at the end clears the hash
+
+  int distexplicit = surf->distributed && !surf->implicit;
+  if (distexplicit) surf->rehash();
 
   while (not_done) {
     Grid::ChildCell *cells = grid->cells;
@@ -496,6 +515,11 @@ void Comm::migrate_cells_less_memory(int nmigrate)
     if (surf->implicit) surf->compress_implicit();
     grid->compress();
     if (surf->distributed && !surf->implicit) surf->compress_explicit();
+  }
+
+  if (distexplicit) {
+    surf->hash->clear();
+    surf->hashfilled = 0;
   }
 }
 
@@ -696,7 +720,7 @@ void Comm::ring(int n, int nper, void *inbuf, int messtag,
   char *buf,*bufcopy;
   memory->create(buf,maxbytes,"comm:buf");
   memory->create(bufcopy,maxbytes,"comm:bufcopy");
-  memcpy(buf,inbuf,nbytes);
+  if (nbytes) memcpy(buf,inbuf,nbytes);
 
   int next = me + 1;
   int prev = me - 1;
@@ -709,12 +733,12 @@ void Comm::ring(int n, int nper, void *inbuf, int messtag,
       MPI_Send(buf,nbytes,MPI_CHAR,next,messtag,world);
       MPI_Wait(&request,&status);
       MPI_Get_count(&status,MPI_CHAR,&nbytes);
-      memcpy(buf,bufcopy,nbytes);
+      if (nbytes) memcpy(buf,bufcopy,nbytes);
     }
     if (self || loop != nprocs-1) callback(nbytes/nper,buf,ptr);
   }
 
-  if (outbuf) memcpy(outbuf,buf,nbytes);
+  if (outbuf && nbytes) memcpy(outbuf,buf,nbytes);
 
   memory->destroy(buf);
   memory->destroy(bufcopy);
@@ -1026,7 +1050,7 @@ rendezvous_all2all(int n, char *inbuf, int insize, int inorder, int *procs,
   // means that individual sdispls or rdispls values overflow
 
   overflow = 0;
-  if ((bigint) nrvous*outsize > MAXSMALLINT) overflow = 1;
+  if ((bigint) nrvous_out*outsize > MAXSMALLINT) overflow = 1;
   if ((bigint) nout*outsize > MAXSMALLINT) overflow = 1;
   MPI_Allreduce(&overflow,&overflowall,1,MPI_INT,MPI_MAX,world);
   if (overflowall) error->all(FLERR,"Overflow output in rendezvous_a2a");
@@ -1109,7 +1133,7 @@ void Comm::rendezvous_stats(int n, int insize, int nout, int outsize,
   MPI_Allreduce(&size,&size_inrvous_max,1,MPI_SPARTA_BIGINT,MPI_MAX,world);
   MPI_Allreduce(&size,&size_inrvous_min,1,MPI_SPARTA_BIGINT,MPI_MIN,world);
 
-  size = (bigint) nrvous_out*insize;
+  size = (bigint) nrvous_out*outsize;
   MPI_Allreduce(&size,&size_outrvous_all,1,MPI_SPARTA_BIGINT,MPI_SUM,world);
   MPI_Allreduce(&size,&size_outrvous_max,1,MPI_SPARTA_BIGINT,MPI_MAX,world);
   MPI_Allreduce(&size,&size_outrvous_min,1,MPI_SPARTA_BIGINT,MPI_MIN,world);

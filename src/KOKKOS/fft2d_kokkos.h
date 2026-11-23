@@ -73,6 +73,7 @@ struct fft_plan_2d_kokkos {
   kiss_fft_state_kokkos<DeviceType> cfg_fast_backward;
   kiss_fft_state_kokkos<DeviceType> cfg_slow_forward;
   kiss_fft_state_kokkos<DeviceType> cfg_slow_backward;
+  typename FFT_AT::t_FFT_DATA_1d d_kissscr;   // kf_bfly_generic scratch, all stages
 #endif
 };
 

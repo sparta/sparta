@@ -49,6 +49,13 @@ SurfReactProbKokkos::SurfReactProbKokkos(SPARTA *sparta, int narg, char **arg) :
   d_tally_single = k_tally_single.view_device();
   h_tally_single = k_tally_single.view_host();
 
+  // allocate the backup() snapshots on the real class instance: backup() is
+  //  only invoked on a blitted/KKCopy image of this class, so views allocated
+  //  there would be orphaned by the next copy of the original over it
+
+  d_nsingle_backup = DAT::t_int_scalar("surf_react:nsingle_backup");
+  d_tally_single_backup = DAT::t_bigint_1d("surf_react:tally_single_backup",nlist);
+
   random_backup = NULL;
 
 #ifdef SPARTA_KOKKOS_EXACT
@@ -208,15 +215,9 @@ void SurfReactProbKokkos::backup()
   ParticleKokkos* particle_kk = (ParticleKokkos*) particle;
   d_particles = particle_kk->k_particles.view_device();
 
-  if (!d_nsingle_backup.data())
-    d_nsingle_backup = DAT::t_int_scalar(
-      Kokkos::view_alloc("surf_react:nsingle_backup",Kokkos::WithoutInitializing));
-  Kokkos::deep_copy(d_nsingle_backup,d_nsingle);
+  // backup views are allocated in the constructor (see comment there)
 
-  if (d_tally_single_backup.extent(0) != d_tally_single.extent(0))
-    d_tally_single_backup = DAT::t_bigint_1d(
-      Kokkos::view_alloc("surf_react:tally_single_backup",Kokkos::WithoutInitializing),
-      d_tally_single.extent(0));
+  Kokkos::deep_copy(d_nsingle_backup,d_nsingle);
   Kokkos::deep_copy(d_tally_single_backup,d_tally_single);
 
 #ifdef SPARTA_KOKKOS_EXACT

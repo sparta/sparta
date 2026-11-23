@@ -75,7 +75,7 @@ void Surf::collate_vector_reduce(int nrow, surfint *tally2surf,
   // zero all values and add in values I accumulated
 
   bigint bbytes = (bigint) nglobal * sizeof(double);
-  memset(one,0,bbytes);
+  if (bbytes) memset(one,0,bbytes);
 
   j = 0;
   for (i = 0; i < nrow; i++) {
@@ -168,7 +168,7 @@ int Surf::rendezvous_vector(int n, char *inbuf, int &flag, int *&proclist,
   // zero my owned surf values
 
   bigint bbytes = (bigint) nown * sizeof(double);
-  memset(out,0,bbytes);
+  if (bbytes) memset(out,0,bbytes);
 
   // accumulate per-surf values from different procs to my owned surfs
 
@@ -237,7 +237,7 @@ void Surf::collate_array_reduce(int nrow, int ncol, surfint *tally2surf,
   // zero all values and set values I accumulated
 
   bigint bbytes = (bigint) nglobal * ncol * sizeof(double);
-  memset(&one[0][0],0,bbytes);
+  if (bbytes) memset(&one[0][0],0,bbytes);
 
   for (i = 0; i < nrow; i++) {
     m = (int) tally2surf[i] - 1;
@@ -335,7 +335,7 @@ int Surf::rendezvous_array(int n, char *inbuf,
   // zero my owned surf values
 
   bigint bbytes = (bigint) nown * ncol * sizeof(double);
-  memset(out,0,bbytes);
+  if (bbytes) memset(out,0,bbytes);
 
   // accumulate per-surf values from different procs to my owned surfs
 

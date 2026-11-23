@@ -131,13 +131,15 @@ void SurfCollideTDKokkos::init()
   vfix_kk = NULL;
 
   for (int ifix = 0; ifix < modify->nfix; ifix++) {
-    if (strcmp(modify->fix[ifix]->style,"ambipolar") == 0) {
+    if (strcmp(modify->fix[ifix]->style,"ambipolar") == 0 ||
+        strcmp(modify->fix[ifix]->style,"ambipolar/kk") == 0) {
       ambi_flag = 1;
       FixAmbipolar *afix = (FixAmbipolar *) modify->fix[ifix];
       if (!afix->kokkos_flag)
         error->all(FLERR,"Must use fix ambipolar/kk when Kokkos is enabled");
       afix_kk = (FixAmbipolarKokkos*)afix;
-    } else if (strcmp(modify->fix[ifix]->style,"vibmode") == 0) {
+    } else if (strcmp(modify->fix[ifix]->style,"vibmode") == 0 ||
+               strcmp(modify->fix[ifix]->style,"vibmode/kk") == 0) {
       vibmode_flag = 1;
       FixVibmode *vfix = (FixVibmode *) modify->fix[ifix];
       if (!vfix->kokkos_flag)
@@ -160,8 +162,10 @@ void SurfCollideTDKokkos::dynamic()
   if (tmode == VAREQUAL) {
 
     // only evaluate variable if timestep is multiple of tfreq
+    // also evaluate at first step of a run so tsurf is always set
 
-    if (update->ntimestep % tfreq) return;
+    if (update->ntimestep % tfreq &&
+        update->ntimestep != update->firststep) return;
     tsurf = input->variable->compute_equal(tindex_var);
     if (tsurf <= 0.0) error->all(FLERR,"Surf_collide tsurf <= 0.0");
 
@@ -172,9 +176,12 @@ void SurfCollideTDKokkos::dynamic()
   } else if (tmode == VARSURF) {
 
     // only evaluate variable if timestep is multiple of tfreq
+    // also evaluate at first step of a run (same on all procs),
+    //   so t_owned/t_persurf are always allocated and set
 
     int spreadflag = 0;
-    if (update->ntimestep % tfreq == 0) {
+    if (update->ntimestep % tfreq == 0 ||
+        update->ntimestep == update->firststep) {
       if (n_owned != surf->nown) {
         memory->destroy(t_owned);
         n_owned = surf->nown;
@@ -265,7 +272,8 @@ void SurfCollideTDKokkos::pre_collide()
     for (int n = 0; n < surf->nsr; n++) {
       if (!surf->sr[n]->kokkosable)
         error->all(FLERR,"Must use Kokkos-enabled surface reaction method with Kokkos");
-      if (strcmp(surf->sr[n]->style,"global") == 0) {
+      if (strcmp(surf->sr[n]->style,"global") == 0 ||
+          strcmp(surf->sr[n]->style,"global/kk") == 0) {
 #ifdef SPARTA_KOKKOS_FIXED_LISTS
         if (nglob >= KOKKOS_MAX_SURF_REACT_PER_TYPE)
           error->all(FLERR,"Kokkos currently supports two instances of each surface reaction method");
@@ -277,7 +285,8 @@ void SurfCollideTDKokkos::pre_collide()
         KK_SR_H_TYPE(n) = 0;
         KK_SR_H_MAP(n) = nglob;
         nglob++;
-      } else if (strcmp(surf->sr[n]->style,"prob") == 0) {
+      } else if (strcmp(surf->sr[n]->style,"prob") == 0 ||
+          strcmp(surf->sr[n]->style,"prob/kk") == 0) {
 #ifdef SPARTA_KOKKOS_FIXED_LISTS
         if (nprob >= KOKKOS_MAX_SURF_REACT_PER_TYPE)
           error->all(FLERR,"Kokkos currently supports two instances of each surface reaction method");
@@ -289,7 +298,8 @@ void SurfCollideTDKokkos::pre_collide()
         KK_SR_H_TYPE(n) = 1;
         KK_SR_H_MAP(n) = nprob;
         nprob++;
-      } else if (strcmp(surf->sr[n]->style,"adsorb") == 0) {
+      } else if (strcmp(surf->sr[n]->style,"adsorb") == 0 ||
+          strcmp(surf->sr[n]->style,"adsorb/kk") == 0) {
 #ifdef SPARTA_KOKKOS_FIXED_LISTS
         if (nadsorb >= KOKKOS_MAX_SURF_REACT_PER_TYPE)
           error->all(FLERR,"Kokkos currently supports two instances of each surface reaction method");
@@ -382,17 +392,36 @@ void SurfCollideTDKokkos::backup()
   ParticleKokkos* particle_kk = (ParticleKokkos*) particle;
   d_particles = particle_kk->k_particles.view_device();
 
+  // the fix copies hold views into the particle list and into the custom
+  //  attribute arrays, and a retry which ran out of room grows the particle
+  //  list, reallocating both.  pre_collide() runs once per move(), before
+  //  the retry loop, so refresh them here as well: backup() runs at the top
+  //  of every retry attempt, and is the same point d_particles is refreshed
+
+  if (ambi_flag) {
+    afix_kk->pre_update_custom_kokkos();
+    fix_ambi_kk_copy.copy(afix_kk);
+  }
+
+  if (vibmode_flag) {
+    vfix_kk->pre_update_custom_kokkos();
+    fix_vibmode_kk_copy.copy(vfix_kk);
+  }
+
   if (surf->nsr > 0) {
     int nglob,nprob,nadsorb;
     nglob = nprob = nadsorb = 0;
     for (int n = 0; n < surf->nsr; n++) {
-      if (strcmp(surf->sr[n]->style,"global") == 0) {
+      if (strcmp(surf->sr[n]->style,"global") == 0 ||
+          strcmp(surf->sr[n]->style,"global/kk") == 0) {
         KK_SR_H_GLOBAL(nglob).backup();
         nglob++;
-      } else if (strcmp(surf->sr[n]->style,"prob") == 0) {
+      } else if (strcmp(surf->sr[n]->style,"prob") == 0 ||
+          strcmp(surf->sr[n]->style,"prob/kk") == 0) {
         KK_SR_H_PROB(nprob).backup();
         nprob++;
-      } else if (strcmp(surf->sr[n]->style,"adsorb") == 0) {
+      } else if (strcmp(surf->sr[n]->style,"adsorb") == 0 ||
+          strcmp(surf->sr[n]->style,"adsorb/kk") == 0) {
         KK_SR_H_ADSORB(nadsorb).backup();
         nadsorb++;
       }
@@ -425,13 +454,16 @@ void SurfCollideTDKokkos::restore()
     int nglob,nprob,nadsorb;
     nglob = nprob = nadsorb = 0;
     for (int n = 0; n < surf->nsr; n++) {
-      if (strcmp(surf->sr[n]->style,"global") == 0) {
+      if (strcmp(surf->sr[n]->style,"global") == 0 ||
+          strcmp(surf->sr[n]->style,"global/kk") == 0) {
         KK_SR_H_GLOBAL(nglob).restore();
         nglob++;
-      } else if (strcmp(surf->sr[n]->style,"prob") == 0) {
+      } else if (strcmp(surf->sr[n]->style,"prob") == 0 ||
+          strcmp(surf->sr[n]->style,"prob/kk") == 0) {
         KK_SR_H_PROB(nprob).restore();
         nprob++;
-      } else if (strcmp(surf->sr[n]->style,"adsorb") == 0) {
+      } else if (strcmp(surf->sr[n]->style,"adsorb") == 0 ||
+          strcmp(surf->sr[n]->style,"adsorb/kk") == 0) {
         KK_SR_H_ADSORB(nadsorb).restore();
         nadsorb++;
       }

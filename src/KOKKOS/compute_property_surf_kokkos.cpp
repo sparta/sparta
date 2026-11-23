@@ -72,11 +72,12 @@ void ComputePropertySurfKokkos::init()
 {
   ComputePropertySurf::init();
 
-  // copy cglobal (owned-in-group surf indices) to device
+  // copy cglobal (index of every owned surf element, nsown entries) to device
+  // as in the host compute, rows of elements outside the group are zeroed
 
-  d_cglobal = DAT::t_int_1d("property/surf:cglobal",MAX(nchoose,1));
+  d_cglobal = DAT::t_int_1d("property/surf:cglobal",MAX(nsown,1));
   auto h_cglobal = Kokkos::create_mirror_view(d_cglobal);
-  for (int i = 0; i < nchoose; i++) h_cglobal(i) = cglobal[i];
+  for (int i = 0; i < nsown; i++) h_cglobal(i) = cglobal[i];
   Kokkos::deep_copy(d_cglobal,h_cglobal);
 
   // device output storage (sized nsown to match host vector_surf/array_surf)
@@ -138,6 +139,6 @@ void ComputePropertySurfKokkos::compute_per_surf_kokkos()
   else Kokkos::deep_copy(d_array_surf,0.0);
 
   copymode = 1;
-  Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType>(0,nchoose),*this);
+  Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType>(0,nsown),*this);
   copymode = 0;
 }

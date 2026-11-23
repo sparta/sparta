@@ -223,8 +223,13 @@ void FixEmitFaceFile::init()
 
   // reallocate fraction and cummulative for each task
   // b/c nspecies count of mixture may have changed
+  // Kokkos subclass aliases these vectors to DualView rows, reallocates
+  //   them itself and sets ntask = 0 before calling this init(),
+  //   so only loop over ntask in that case
 
-  for (int i = 0; i < ntask; i++) {
+  int nrealloc = kokkos_flag ? ntask : ntaskmax;
+
+  for (int i = 0; i < nrealloc; i++) {
     delete [] tasks[i].fraction;
     delete [] tasks[i].cummulative;
     delete [] tasks[i].vscale;
@@ -237,7 +242,7 @@ void FixEmitFaceFile::init()
   // b/c nspecies count of mixture may have changed
 
   if (perspecies) {
-    for (int i = 0; i < ntask; i++) {
+    for (int i = 0; i < nrealloc; i++) {
       delete [] tasks[i].ntargetsp;
       tasks[i].ntargetsp = new double[nspecies];
     }
@@ -246,6 +251,8 @@ void FixEmitFaceFile::init()
   // per-species vectors for mesh setting of species fractions
   // initialize to mixture settings
 
+  delete [] fflag;
+  delete [] fuser;
   fflag = new int[nspecies];
   fuser = new double[nspecies];
   for (isp = 0; isp < nspecies; isp++) {
@@ -372,7 +379,23 @@ void FixEmitFaceFile::perform_task_onepass()
   double *lo,*hi,*vstream,*cummulative,*vscale;
   Particle::OnePart *p;
 
-  double dt = update->dt;
+  // if global timestep was reset since tasks were created (e.g. fix dt/reset),
+  //   rescale non-subsonic insertion counts which are proportional to dt
+  // subsonic_inflow() recomputes counts using current dt
+
+  if (!subsonic && update->dt != dt) {
+    double dtratio = update->dt / dt;
+    for (int i = 0; i < ntask; i++) {
+      tasks[i].ntarget *= dtratio;
+      if (perspecies)
+        for (isp = 0; isp < nspecies; isp++) tasks[i].ntargetsp[isp] *= dtratio;
+      if (tasks[i].ntarget >= MAXSMALLINT)
+        error->one(FLERR,
+                   "Fix emit/face/file insertion count exceeds 32-bit int");
+    }
+  }
+
+  dt = update->dt;
   int *species = particle->mixture[imix]->species;
 
   // if subsonic, re-compute particle inflow counts for each task
@@ -538,7 +561,23 @@ void FixEmitFaceFile::perform_task_twopass()
   double *lo,*hi,*vstream,*cummulative,*vscale;
   Particle::OnePart *p;
 
-  double dt = update->dt;
+  // if global timestep was reset since tasks were created (e.g. fix dt/reset),
+  //   rescale non-subsonic insertion counts which are proportional to dt
+  // subsonic_inflow() recomputes counts using current dt
+
+  if (!subsonic && update->dt != dt) {
+    double dtratio = update->dt / dt;
+    for (int i = 0; i < ntask; i++) {
+      tasks[i].ntarget *= dtratio;
+      if (perspecies)
+        for (isp = 0; isp < nspecies; isp++) tasks[i].ntargetsp[isp] *= dtratio;
+      if (tasks[i].ntarget >= MAXSMALLINT)
+        error->one(FLERR,
+                   "Fix emit/face/file insertion count exceeds 32-bit int");
+    }
+  }
+
+  dt = update->dt;
   int *species = particle->mixture[imix]->species;
 
   // if subsonic, re-compute particle inflow counts for each task
@@ -745,11 +784,14 @@ void FixEmitFaceFile::read_file(char *file, char *section)
 
     tmp = fgets(line,MAXLINE,fp);               // no match, read NIJ or NI
     word = strtok(line," \t\n\r");              // skip 2d or 3d section
+    if (word == NULL) error->one(FLERR,"Misformatted section in inflow file");
     int nskip;
     if (strcmp(word,"NIJ") == 0) {
       word = strtok(NULL," \t\n\r");
+      if (word == NULL) error->one(FLERR,"Misformatted section in inflow file");
       nskip = atoi(word);
       word = strtok(NULL," \t\n\r");
+      if (word == NULL) error->one(FLERR,"Misformatted section in inflow file");
       nskip *= atoi(word);
       tmp = fgets(line,MAXLINE,fp);                   // NV line
       tmp = fgets(line,MAXLINE,fp);                   // values line
@@ -757,6 +799,7 @@ void FixEmitFaceFile::read_file(char *file, char *section)
       tmp = fgets(line,MAXLINE,fp);                   // jmesh line
     } else if (strcmp(word,"NI") == 0) {
       word = strtok(NULL," \t\n\r");
+      if (word == NULL) error->one(FLERR,"Misformatted section in inflow file");
       nskip = atoi(word);
       tmp = fgets(line,MAXLINE,fp);                   // NV line
       tmp = fgets(line,MAXLINE,fp);                   // values line
@@ -771,20 +814,24 @@ void FixEmitFaceFile::read_file(char *file, char *section)
 
   tmp = fgets(line,MAXLINE,fp);                       // read NIJ or NI
   word = strtok(line," \t\n\r");
+  if (word == NULL) error->one(FLERR,"Misformatted section in inflow file");
   if (strcmp(word,"NIJ") == 0) {
     if (dimension != 3)
-      error->all(FLERR,"Misformatted section in inflow file");
+      error->one(FLERR,"Misformatted section in inflow file");
     word = strtok(NULL," \t\n\r");
+    if (word == NULL) error->one(FLERR,"Misformatted section in inflow file");
     mesh.ni = atoi(word);
     word = strtok(NULL," \t\n\r");
+    if (word == NULL) error->one(FLERR,"Misformatted section in inflow file");
     mesh.nj = atoi(word);
   } else if (strcmp(word,"NI") == 0) {
     if (dimension != 2)
-      error->all(FLERR,"Misformatted section in inflow file");
+      error->one(FLERR,"Misformatted section in inflow file");
     word = strtok(NULL," \t\n\r");
+    if (word == NULL) error->one(FLERR,"Misformatted section in inflow file");
     mesh.ni = atoi(word);
     mesh.nj = 1;
-  }
+  } else error->one(FLERR,"Misformatted section in inflow file");
 
   if (mesh.ni < 2 || (dimension == 3 && mesh.nj < 2))
     error->one(FLERR,"Inflow file grid is too small");
@@ -793,9 +840,11 @@ void FixEmitFaceFile::read_file(char *file, char *section)
 
   tmp = fgets(line,MAXLINE,fp);
   word = strtok(line," \t\n\r");
+  if (word == NULL) error->one(FLERR,"Misformatted section in inflow file");
   if (strcmp(word,"NV") != 0)
     error->one(FLERR,"Misformatted section in inflow file");
   word = strtok(NULL," \t\n\r");
+  if (word == NULL) error->one(FLERR,"Misformatted section in inflow file");
   mesh.nvalues = atoi(word);
   if (mesh.nvalues <= 0)
     error->one(FLERR,"Misformatted section in inflow file");
@@ -805,8 +854,10 @@ void FixEmitFaceFile::read_file(char *file, char *section)
   mesh.which = new int[mesh.nvalues];
   tmp = fgets(line,MAXLINE,fp);
   word = strtok(line," \t\n\r");
+  if (word == NULL) error->one(FLERR,"Misformatted section in inflow file");
   for (i = 0; i < mesh.nvalues; i++) {
     word = strtok(NULL," \t\n\r");
+    if (word == NULL) error->one(FLERR,"Misformatted section in inflow file");
     if (strcmp(word,"nrho") == 0) mesh.which[i] = NRHO;
     else if (strcmp(word,"temp") == 0) mesh.which[i] = TEMP_THERMAL;
     else if (strcmp(word,"trot") == 0) mesh.which[i] = TEMP_ROT;
@@ -829,10 +880,12 @@ void FixEmitFaceFile::read_file(char *file, char *section)
 
   tmp = fgets(line,MAXLINE,fp);
   word = strtok(line," \t\n\r");
+  if (word == NULL) error->one(FLERR,"Misformatted section in inflow file");
   if (strcmp(word,"IMESH") != 0)
     error->one(FLERR,"Misformatted section in inflow file");
   for (i = 0; i < mesh.ni; i++) {
     word = strtok(NULL," \t\n\r");
+    if (word == NULL) error->one(FLERR,"Misformatted section in inflow file");
     mesh.imesh[i] = atof(word);
     if (i && mesh.imesh[i] <= mesh.imesh[i-1])
       error->one(FLERR,"Misformatted section in inflow file");
@@ -843,10 +896,12 @@ void FixEmitFaceFile::read_file(char *file, char *section)
   if (dimension == 3) {
     tmp = fgets(line,MAXLINE,fp);
     word = strtok(line," \t\n\r");
+    if (word == NULL) error->one(FLERR,"Misformatted section in inflow file");
     if (strcmp(word,"JMESH") != 0)
       error->one(FLERR,"Misformatted section in inflow file");
     for (i = 0; i < mesh.nj; i++) {
       word = strtok(NULL," \t\n\r");
+      if (word == NULL) error->one(FLERR,"Misformatted section in inflow file");
       mesh.jmesh[i] = atof(word);
       if (i && mesh.jmesh[i] <= mesh.jmesh[i-1])
         error->one(FLERR,"Misformatted section in inflow file");
@@ -866,9 +921,11 @@ void FixEmitFaceFile::read_file(char *file, char *section)
   for (i = 0; i < n; i++) {
     tmp = fgets(line,MAXLINE,fp);
     word = strtok(line," \t\n\r");
+    if (word == NULL) error->one(FLERR,"Misformatted section in inflow file");
     ii = atoi(word);
     if (dimension == 3) {
       word = strtok(NULL," \t\n\r");
+      if (word == NULL) error->one(FLERR,"Misformatted section in inflow file");
       jj = atoi(word);
     } else jj = 1;
     if (ii < 1 || ii > mesh.ni || jj < 1 || jj > mesh.nj)
@@ -876,6 +933,7 @@ void FixEmitFaceFile::read_file(char *file, char *section)
     offset = (jj-1)*mesh.ni + (ii-1);
     for (m = 0; m < mesh.nvalues; m++) {
       word = strtok(NULL," \t\n\r");
+      if (word == NULL) error->one(FLERR,"Misformatted section in inflow file");
       mesh.values[offset][m] = atof(word);
     }
   }
@@ -955,6 +1013,10 @@ void FixEmitFaceFile::check_mesh_values()
       continue;
     for (int i = 0; i < n; i++) {
       if (mesh.values[i][m] < 0.0) flag = 1;
+    }
+    if (mesh.which[m] == TEMP_THERMAL) {
+      for (int i = 0; i < n; i++)
+        if (mesh.values[i][m] <= 0.0) flag = 1;
     }
     if (mesh.which[m] < 0) {
       for (int i = 0; i < n; i++)
@@ -1055,7 +1117,7 @@ int FixEmitFaceFile::interpolate(int icell)
         newtemp = tasks[ntask].temp_thermal =
           linear_interpolation(xc[0],m,plo,phi);
         if (newtemp <= 0.0 && subsonic_style == PTBOTH)
-          error->all(FLERR,"Subsonic temperature cannot be <= 0.0");
+          error->one(FLERR,"Subsonic temperature cannot be <= 0.0");
         for (isp = 0; isp < nspecies; isp++)
           tasks[ntask].vscale[isp] =
             vscale_mix[isp] * sqrt(newtemp/temp_thermal_mix);
@@ -1419,14 +1481,17 @@ void FixEmitFaceFile::subsonic_grid()
       temp_thermal_cell = tasks[i].temp_thermal;
 
     } else {
-      nrho_cell = np * fnum / cinfo[icell].volume;
-      massrho_cell = masstot * fnum / cinfo[icell].volume;
+      nrho_cell = np * fnum * cinfo[icell].weight / cinfo[icell].volume;
+      massrho_cell = masstot * fnum * cinfo[icell].weight / cinfo[icell].volume;
       if (np > 1) {
         ke = mv[3]/np - (mv[0]*mv[0] + mv[1]*mv[1] + mv[2]*mv[2])/np/masstot;
         temp_thermal_cell = tprefactor * ke;
+        // thermal ke negligible vs total ke (all particles at COM velocity):
+        // ke is pure roundoff of either sign, treat cell as cold
+        if (ke <= 1.0e-10 * mv[3]/np) temp_thermal_cell = 0.0;
       } else temp_thermal_cell = particle->mixture[imix]->temp_thermal;
       press_cell = nrho_cell * boltz * temp_thermal_cell;
-      if (np) {
+      if (np && temp_thermal_cell > 0.0) {
         mass_cell = masstot / np;
         gamma_cell = gamma / np;
         soundspeed_cell = sqrt(gamma_cell*boltz*temp_thermal_cell / mass_cell);

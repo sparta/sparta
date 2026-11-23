@@ -54,7 +54,7 @@ void CreateParticles::command(int narg, char **arg)
 
   particle->exist = 1;
 
-  if (narg < 1) error->all(FLERR,"Illegal create_particles command");
+  if (narg < 2) error->all(FLERR,"Illegal create_particles command");
 
   imix = particle->find_mixture(arg[0]);
   if (imix < 0) error->all(FLERR,"Create_particles mixture ID does not exist");
@@ -613,9 +613,12 @@ void CreateParticles::create_local()
   // loop over procs insures sum of nme = Np
 
   bigint nstart,nstop;
-  if (me > 0) nstart = static_cast<bigint> (np * (vols[me-1]/vols[nprocs-1]));
-  else nstart = 0;
-  nstop = static_cast<bigint> (np * (vols[me]/vols[nprocs-1]));
+  if (vols[nprocs-1] == 0.0) nstart = nstop = 0;
+  else {
+    if (me > 0) nstart = static_cast<bigint> (np * (vols[me-1]/vols[nprocs-1]));
+    else nstart = 0;
+    nstop = static_cast<bigint> (np * (vols[me]/vols[nprocs-1]));
+  }
   bigint nme = nstop-nstart;
 
   memory->destroy(vols);
@@ -909,15 +912,19 @@ void CreateParticles::create_local_twopass()
   // loop over procs insures sum of nme = Np
 
   bigint nstart,nstop;
-  if (me > 0) nstart = static_cast<bigint> (np * (vols[me-1]/vols[nprocs-1]));
-  else nstart = 0;
-  nstop = static_cast<bigint> (np * (vols[me]/vols[nprocs-1]));
+  if (vols[nprocs-1] == 0.0) nstart = nstop = 0;
+  else {
+    if (me > 0) nstart = static_cast<bigint> (np * (vols[me-1]/vols[nprocs-1]));
+    else nstart = 0;
+    nstop = static_cast<bigint> (np * (vols[me]/vols[nprocs-1]));
+  }
   bigint nme = nstop-nstart;
 
   memory->destroy(vols);
 
   // nfix_update_custom = # of fixes with update_custom() method
 
+  particle->error_custom();
   modify->list_init_fixes();
   int nfix_update_custom = modify->n_update_custom;
 
@@ -1155,14 +1162,14 @@ void CreateParticles::create_local_twopass()
 
 int CreateParticles::outside_region(int dim, double *lo, double *hi)
 {
-  int flag = 1;
-  if (hi[0] > region->extent_xlo &&
-      lo[0] < region->extent_xhi) flag = 0;
-  if (hi[1] > region->extent_ylo &&
-      lo[1] < region->extent_yhi) flag = 0;
+  int flag = 0;
+  if (hi[0] <= region->extent_xlo ||
+      lo[0] >= region->extent_xhi) flag = 1;
+  if (hi[1] <= region->extent_ylo ||
+      lo[1] >= region->extent_yhi) flag = 1;
   if (dim == 3) {
-    if (hi[2] > region->extent_zlo &&
-        lo[2] < region->extent_zhi) flag = 0;
+    if (hi[2] <= region->extent_zlo ||
+        lo[2] >= region->extent_zhi) flag = 1;
   }
   return flag;
 }
@@ -1259,6 +1266,11 @@ void CreateParticles::fractions_to_cummulative(int nspecies,
     if (fractions[i] >= 0.0) sum += fractions[i];
     else nimplicit++;
   }
+
+  // same tolerance as Mixture::init_fraction()
+
+  if (sum > 1.0 + 1.0e-6)
+    error->one(FLERR,"Create_particles custom fractions sum to more than 1.0");
 
   // fraction for each unset species = equal portion of unset remainder
   // cummulative = cummulative fraction across species

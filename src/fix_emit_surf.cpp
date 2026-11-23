@@ -43,6 +43,7 @@ enum{FLOW,CONSTANT,VARIABLE};
 enum{INT,DOUBLE};                                        // several files
 
 #define DELTATASK 256
+#define SMALL 1.0e-6
 #define TEMPLIMIT 1.0e5
 
 /* ---------------------------------------------------------------------- */
@@ -70,6 +71,7 @@ FixEmitSurf::FixEmitSurf(SPARTA *sparta, int narg, char **arg) :
   subsonic = 0;
   subsonic_style = NOSUBSONIC;
   subsonic_warning = 0;
+  nspecies = 0;
   subsonic_window = 0;
   nmodekeyword = 0;
   twopass = 0;
@@ -296,35 +298,6 @@ void FixEmitSurf::init()
                  "with columns = # of species in mixture");
   }
 
-  // if custom fractions is set, reset any fractions which are less than zero
-  // do this for owned custom surfs, grid_changed() will propagate to nlocal+nghost surfs
-
-  if (fractions_custom_flag) {
-    double **fractions = surf->edarray[surf->ewhich[fractions_custom_index]];
-
-    int isp,nunset;
-    double sum,newfrac;
-
-    int nsown = surf->nown;
-    for (int i = 0; i < nsown; i++) {
-      nunset = 0;
-      sum = 0.0;
-      for (isp = 0; isp < nspecies; isp++) {
-        if (fractions[i][isp] >= 0.0) sum += fractions[i][isp];
-        else nunset++;
-      }
-
-      if (nunset == 0) {
-        if (sum != 1.0) error->all(FLERR,"Fix emit/surf custom fractions do not sum to 1.0");
-      } else {
-        newfrac = (1.0 - sum) / nunset;
-        for (isp = 0; isp < nspecies; isp++) {
-          if (fractions[i][isp] < 0.0) fractions[i][isp] = newfrac;
-        }
-      }
-    }
-  }
-
   // create tasks for all grid cells
 
   grid_changed();
@@ -350,8 +323,15 @@ void FixEmitSurf::grid_changed()
     surf->spread_custom(vstream_custom_index);
   if (speed_custom_flag && surf->estatus[speed_custom_index] == 0)
     surf->spread_custom(speed_custom_index);
-  if (fractions_custom_flag && surf->estatus[fractions_custom_index] == 0)
+  // for custom fractions, owned values which are new (not yet spread)
+  //   are first checked and any negative values reset, see reset_fractions()
+  // this happens on the first init(), after a restart, after a rebalance
+  //   of distributed surfs, and after a fix custom changes the values
+
+  if (fractions_custom_flag && surf->estatus[fractions_custom_index] == 0) {
+    reset_fractions();
     surf->spread_custom(fractions_custom_index);
+  }
 
   // create tasks for grid cell / surf pairs
 
@@ -371,12 +351,16 @@ void FixEmitSurf::grid_changed()
     double **fractions = surf->edarray_local[surf->ewhich[fractions_custom_index]];
     int isp;
 
+    // set final cummulative value to exactly 1.0, same as Mixture does,
+    //   so roundoff in the sum cannot leave a gap a random number falls in
+
     for (int isurf = 0; isurf < nslocal; isurf++) {
       for (isp = 0; isp < nspecies; isp++) {
         if (isp) cummulative_custom[isurf][isp] =
                    cummulative_custom[isurf][isp-1] + fractions[isurf][isp];
         else cummulative_custom[isurf][isp] = fractions[isurf][isp];
       }
+      if (nspecies) cummulative_custom[isurf][nspecies-1] = 1.0;
     }
   }
 
@@ -405,6 +389,62 @@ void FixEmitSurf::grid_changed()
 void FixEmitSurf::custom_surf_changed()
 {
   grid_changed();
+}
+
+/* ----------------------------------------------------------------------
+   check and reset owned values of custom per-surf fractions array
+   called by grid_changed() when owned values are new,
+     i.e. before they are spread to nlocal+nghost surfs
+   for each owned surf, fractions must sum to 1.0, except that
+     any fractions < 0.0 are reset to an equal portion of the unset remainder
+   use a small tolerance when checking the sum against 1.0, so that
+     fractions which were reset by a previous call, or read from a restart file,
+     are not rejected due to floating-point roundoff in the sum,
+     which is more likely as the number of species grows
+------------------------------------------------------------------------- */
+
+void FixEmitSurf::reset_fractions()
+{
+  // nspecies is not set until init(), do nothing if grid_changed()
+  //   is invoked before then, init() will invoke it again
+
+  if (nspecies == 0) return;
+
+  double **fractions = surf->edarray[surf->ewhich[fractions_custom_index]];
+
+  int isp,nunset;
+  double sum,newfrac;
+
+  // flag errors locally so that error->all() is invoked by all procs,
+  //   a bad value may be owned by only some of them
+
+  int flag = 0;
+  int nsown = surf->nown;
+  for (int i = 0; i < nsown; i++) {
+    nunset = 0;
+    sum = 0.0;
+    for (isp = 0; isp < nspecies; isp++) {
+      if (fractions[i][isp] >= 0.0) sum += fractions[i][isp];
+      else nunset++;
+    }
+
+    if (nunset == 0) {
+      if (fabs(sum-1.0) > SMALL) flag = MAX(flag,1);
+    } else {
+      if (sum > 1.0 + SMALL) flag = 2;
+      newfrac = MAX(0.0,(1.0 - sum) / nunset);
+      for (isp = 0; isp < nspecies; isp++) {
+        if (fractions[i][isp] < 0.0) fractions[i][isp] = newfrac;
+      }
+    }
+  }
+
+  int flagall;
+  MPI_Allreduce(&flag,&flagall,1,MPI_INT,MPI_MAX,world);
+  if (flagall == 2)
+    error->all(FLERR,"Fix emit/surf custom fractions sum to more than 1.0");
+  if (flagall == 1)
+    error->all(FLERR,"Fix emit/surf custom fractions do not sum to 1.0");
 }
 
 /* ----------------------------------------------------------------------
@@ -669,6 +709,24 @@ void FixEmitSurf::create_task(int icell)
 
 void FixEmitSurf::perform_task()
 {
+  // if global timestep was reset since tasks were created (e.g. fix dt/reset),
+  //   rescale non-subsonic FLOW insertion counts which are proportional to dt
+  // for n = constant or variable, ntarget is an area fraction, not dt dependent
+
+  if (!subsonic && npmode == FLOW && update->dt != dt) {
+    double dtratio = update->dt / dt;
+    for (int i = 0; i < ntask; i++) {
+      tasks[i].ntarget *= dtratio;
+      if (perspecies)
+        for (int isp = 0; isp < nspecies; isp++)
+          tasks[i].ntargetsp[isp] *= dtratio;
+      if (tasks[i].ntarget >= MAXSMALLINT)
+        error->one(FLERR,"Fix emit/surf insertion count exceeds 32-bit int");
+    }
+  }
+
+  dt = update->dt;
+
   if (!twopass) perform_task_onepass();
   else perform_task_twopass();
 }
@@ -1497,14 +1555,17 @@ void FixEmitSurf::subsonic_grid()
       temp_thermal_cell = tsubsonic;
 
     } else {
-      nrho_cell = np * fnum / cinfo[icell].volume;
-      massrho_cell = masstot * fnum / cinfo[icell].volume;
+      nrho_cell = np * fnum * cinfo[icell].weight / cinfo[icell].volume;
+      massrho_cell = masstot * fnum * cinfo[icell].weight / cinfo[icell].volume;
       if (np > 1) {
         ke = mv[3]/np - (mv[0]*mv[0] + mv[1]*mv[1] + mv[2]*mv[2])/np/masstot;
         temp_thermal_cell = tprefactor * ke;
+        // thermal ke negligible vs total ke (all particles at COM velocity):
+        // ke is pure roundoff of either sign, treat cell as cold
+        if (ke <= 1.0e-10 * mv[3]/np) temp_thermal_cell = 0.0;
       } else temp_thermal_cell = particle->mixture[imix]->temp_thermal;
       press_cell = nrho_cell * boltz * temp_thermal_cell;
-      if (np) {
+      if (np && temp_thermal_cell > 0.0) {
         mass_cell = masstot / np;
         gamma_cell = gamma / np;
         soundspeed_cell = sqrt(gamma_cell*boltz*temp_thermal_cell / mass_cell);
@@ -1735,13 +1796,13 @@ void FixEmitSurf::grow_task()
 void FixEmitSurf::realloc_nspecies()
 {
   if (perspecies) {
-    for (int i = 0; i < ntask; i++) {
+    for (int i = 0; i < ntaskmax; i++) {
       delete [] tasks[i].ntargetsp;
       tasks[i].ntargetsp = new double[nspecies];
     }
   }
   if (subsonic_style == PONLY || subsonic_style == MFLOW || temp_custom_flag) {
-    for (int i = 0; i < ntask; i++) {
+    for (int i = 0; i < ntaskmax; i++) {
       delete [] tasks[i].vscale;
       tasks[i].vscale = new double[nspecies];
     }
@@ -1774,6 +1835,7 @@ int FixEmitSurf::option(int narg, char **arg)
     if (strstr(arg[1],"v_") == arg[1]) {
       npmode = VARIABLE;
       int n = strlen(&arg[1][2]) + 1;
+      delete [] npstr;
       npstr = new char[n];
       strcpy(npstr,&arg[1][2]);
     } else {

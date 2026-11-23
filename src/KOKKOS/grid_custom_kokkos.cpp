@@ -212,11 +212,17 @@ void GridKokkos::reallocate_custom(int /*nold*/, int nnew)
 {
   // modifies the inner part of eivec,eiarray,edvec,edarray on host, and the outer view on device
 
-  if (sparta->kokkos->prewrap) {
-    sync(Host,CUSTOM_MASK);
-    modify(Host,CUSTOM_MASK);
-  } else
-    sync(Device,CUSTOM_MASK);
+  // resize on the host, as SurfKokkos::reallocate_custom() does: claim the
+  //   host first (after taking any copy it is owed) so DualView::resize()
+  //   keeps the host contents.  Resizing on the device instead left the host
+  //   half a freshly allocated mirror -- zeros, or garbage on a GPU -- behind
+  //   a device claim, while the host pointers handed out below are read and
+  //   written by host code (Grid::add_child_cell during refine, read_restart),
+  //   and the auto_sync refresh in sync() then copied the device over those
+  //   writes.  After the wrap, copy them back down so both halves are valid
+
+  sync(Host,CUSTOM_MASK);
+  modify(Host,CUSTOM_MASK);
 
   for (int ic = 0; ic < ncustom; ic++) {
     if (ename[ic] == NULL) continue;
@@ -262,6 +268,8 @@ void GridKokkos::reallocate_custom(int /*nold*/, int nnew)
   k_eiarray.sync_device();
   k_edvec.sync_device();
   k_edarray.sync_device();
+
+  if (!sparta->kokkos->prewrap) sync(Device,CUSTOM_MASK);
 }
 
 /* ----------------------------------------------------------------------
@@ -275,6 +283,7 @@ void GridKokkos::remove_custom(int index)
 {
   // modifies the outer host view, deletes the inner dual view
 
+  if (index < 0 || index >= ncustom) return;
   if (!ename || !ename[index]) return;
 
   delete [] ename[index];
@@ -346,6 +355,17 @@ void GridKokkos::remove_custom(int index)
   k_eiarray.sync_device();
   k_edvec.sync_device();
   k_edarray.sync_device();
+
+  // ewhich,eicol,edcol were compacted above on the host, so sync here
+
+  k_ewhich.modify_host();
+  k_ewhich.sync_device();
+
+  k_eicol.modify_host();
+  k_eicol.sync_device();
+
+  k_edcol.modify_host();
+  k_edcol.sync_device();
 }
 
 /* ----------------------------------------------------------------------

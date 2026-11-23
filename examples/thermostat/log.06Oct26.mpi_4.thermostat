@@ -1,0 +1,196 @@
+SPARTA (27 Aug 2026)
+Running on 4 MPI task(s)
+################################################################################
+# thermal gas in a 3d box with collisions
+# the fix temp/rescale command is used to ramp and cool the temperature
+# the compute thermal/grid command is used to measure the temperature
+
+# Note:
+#  - The "comm/sort” option to the “global” command is used to match MPI runs.
+#  - The “twopass” option is used to match Kokkos runs.
+# The "comm/sort" and "twopass" options should not be used for production runs.
+################################################################################
+
+seed	    	    12345
+dimension   	    3
+global              gridcut 1.0e-5 comm/sort yes
+
+boundary	    rr rr rr
+
+create_box  	    0 0.0001 0 0.0001 0 0.0001
+Created orthogonal box = (0 0 0) to (0.0001 0.0001 0.0001)
+create_grid 	    10 10 10
+WARNING: Could not acquire nearby ghost cells b/c grid partition is not clumped (/home/ci/w/C/src/grid.cpp:486)
+Created 1000 child grid cells
+  CPU time = 0.00117542 secs
+  create/ghost percent = 94.9829 5.01711
+
+balance_grid        rcb part
+Balance grid migrated 740 cells
+  CPU time = 0.000825747 secs
+  reassign/sort/migrate/ghost percent = 54.2489 0.192432 22.7038 22.8548
+
+species		    ar.species Ar
+mixture		    air Ar vstream 0.0 0.0 0.0 temp 300.0
+
+global              nrho 7.07043E22
+global              fnum 7.07043E6
+
+collide		    vss air ar.vss
+
+create_particles    air n 10000 twopass
+Created 10000 particles
+  CPU time = 0.00144677 secs
+
+compute             1 thermal/grid all air temp
+compute             2 reduce ave c_1[1]
+
+stats		    100
+compute             temp temp
+stats_style	    step cpu np nattempt ncoll c_temp c_2
+
+timestep 	    7.00E-9
+
+fix                 tstat temp/rescale 200 300 600
+run 		    1000
+Memory usage per proc in Mbytes:
+  particles (ave,min,max) = 1.5625 1.5625 1.5625
+  grid      (ave,min,max) = 1.51379 1.51379 1.51379
+  surf      (ave,min,max) = 0 0 0
+  modify    (ave,min,max) = 0.0133514 0.0133514 0.0133514
+  total     (ave,min,max) = 3.08965 3.08965 3.08965
+Step CPU Np Natt Ncoll c_temp c_2 
+       0            0    10000        0        0    297.86736    267.57161 
+     100  0.014573165    10000      982      693    297.86736     263.5601 
+     200  0.029262905    10000     1012      702    389.08774          360 
+     300  0.044836483    10000     1042      742    389.08774    346.49501 
+     400  0.061902189    10000     1072      742     457.9104       419.16 
+     500  0.078851413    10000     1074      747     457.9104    405.44067 
+     600  0.096042646    10000     1085      795     526.2803          480 
+     700   0.11994074    10000     1142      823     526.2803    463.60695 
+     800      0.13378    10000     1129      803    593.01577       539.46 
+     900   0.14767883    10000     1146      797    593.01577    524.96869 
+    1000   0.16633013    10000     1182      823    661.93796        597.6 
+Loop time of 0.166422 on 4 procs for 1000 steps with 10000 particles
+Performance: 6008.806 timesteps/s, 60.088 Mparticle-step/s
+
+MPI task timing breakdown:
+Section |  min time  |  avg time  |  max time  |%varavg| %total
+---------------------------------------------------------------
+Move    | 0.056966   | 0.060479   | 0.06393    |   1.1 | 36.34
+Coll    | 0.046285   | 0.049402   | 0.05211    |   0.9 | 29.68
+Sort    | 0.0041541  | 0.0043969  | 0.0048897  |   0.4 |  2.64
+Comm    | 0.018418   | 0.019241   | 0.019991   |   0.4 | 11.56
+Modify  | 0.00019444 | 0.00019755 | 0.00020219 |   0.0 |  0.12
+Output  | 0.0005691  | 0.001152   | 0.0015756  |   1.1 |  0.69
+MPI Sync| 0.024071   | 0.031505   | 0.038915   |   3.0 | 18.93
+Other   |            | 4.936e-05  |            |       |  0.03
+
+Particle moves    = 10000000 (10M)
+Cells touched     = 14602205 (14.6M)
+Particle comms    = 337833 (0.338M)
+Boundary collides = 511474 (0.511M)
+Boundary exits    = 0 (0K)
+SurfColl checks   = 0 (0K)
+SurfColl occurs   = 0 (0K)
+Surf reactions    = 0 (0K)
+Collide attempts  = 1081962 (1.08M)
+Collide occurs    = 774081 (0.774M)
+Reactions         = 0 (0K)
+Particles stuck   = 0
+Axisymm bad moves = 0
+
+Particle-moves/CPUsec/proc: 1.5022e+07
+Particle-moves/step: 10000
+Cell-touches/particle/step: 1.46022
+Particle comm iterations/step: 1.001
+Particle fraction communicated: 0.0337833
+Particle fraction colliding with boundary: 0.0511474
+Particle fraction exiting boundary: 0
+Surface-checks/particle/step: 0
+Surface-collisions/particle/step: 0
+Surf-reactions/particle/step: 0
+Collision-attempts/particle/step: 0.108196
+Collisions/particle/step: 0.0774081
+Reactions/particle/step: 0
+
+Particles: 2500 ave 2595 max 2419 min
+Histogram: 1 0 0 0 2 0 0 0 0 1
+Cells:      250 ave 250 max 250 min
+Histogram: 4 0 0 0 0 0 0 0 0 0
+GhostCell: 110 ave 110 max 110 min
+Histogram: 4 0 0 0 0 0 0 0 0 0
+EmptyCell: 0 ave 0 max 0 min
+Histogram: 4 0 0 0 0 0 0 0 0 0
+
+fix                 tstat temp/rescale 200 600 100
+run 		    1000
+Memory usage per proc in Mbytes:
+  particles (ave,min,max) = 1.5625 1.5625 1.5625
+  grid      (ave,min,max) = 1.51379 1.51379 1.51379
+  surf      (ave,min,max) = 0 0 0
+  modify    (ave,min,max) = 0.0133514 0.0133514 0.0133514
+  total     (ave,min,max) = 3.08965 3.08965 3.08965
+Step CPU Np Natt Ncoll c_temp c_2 
+    1000            0    10000     1182      823    661.93796        597.6 
+    1100  0.016060084    10000     1172      851    661.93796    588.66458 
+    1200  0.030727868    10000     1184      855    564.63392          500 
+    1300  0.044735091    10000     1200      842    564.63392    499.45316 
+    1400  0.064437122    10000     1210      819    457.13066        399.6 
+    1500  0.080593661    10000     1165      780    457.13066    406.09252 
+    1600  0.096722857    10000     1204      816    346.22828        299.4 
+    1700    0.1089926    10000     1188      744    346.22828    309.14805 
+    1800   0.12410739    10000     1184      726    235.23273        199.6 
+    1900   0.13532698    10000     1175      678    235.23273    208.86701 
+    2000   0.14675746    10000     1185      662    122.63748          100 
+Loop time of 0.146831 on 4 procs for 1000 steps with 10000 particles
+Performance: 6810.547 timesteps/s, 68.105 Mparticle-step/s
+
+MPI task timing breakdown:
+Section |  min time  |  avg time  |  max time  |%varavg| %total
+---------------------------------------------------------------
+Move    | 0.053009   | 0.055368   | 0.05795    |   1.0 | 37.71
+Coll    | 0.044973   | 0.047844   | 0.051431   |   1.3 | 32.58
+Sort    | 0.0039746  | 0.0045641  | 0.0059883  |   1.2 |  3.11
+Comm    | 0.016317   | 0.016532   | 0.016926   |   0.2 | 11.26
+Modify  | 0.00017836 | 0.00018628 | 0.0001923  |   0.0 |  0.13
+Output  | 0.00069893 | 0.00087366 | 0.0013012  |   0.0 |  0.60
+MPI Sync| 0.0152     | 0.021417   | 0.027052   |   3.8 | 14.59
+Other   |            | 4.603e-05  |            |       |  0.03
+
+Particle moves    = 10000000 (10M)
+Cells touched     = 14564900 (14.6M)
+Particle comms    = 334903 (0.335M)
+Boundary collides = 507001 (0.507M)
+Boundary exits    = 0 (0K)
+SurfColl checks   = 0 (0K)
+SurfColl occurs   = 0 (0K)
+Surf reactions    = 0 (0K)
+Collide attempts  = 1181225 (1.18M)
+Collide occurs    = 770201 (0.77M)
+Reactions         = 0 (0K)
+Particles stuck   = 0
+Axisymm bad moves = 0
+
+Particle-moves/CPUsec/proc: 1.70264e+07
+Particle-moves/step: 10000
+Cell-touches/particle/step: 1.45649
+Particle comm iterations/step: 1.004
+Particle fraction communicated: 0.0334903
+Particle fraction colliding with boundary: 0.0507001
+Particle fraction exiting boundary: 0
+Surface-checks/particle/step: 0
+Surface-collisions/particle/step: 0
+Surf-reactions/particle/step: 0
+Collision-attempts/particle/step: 0.118123
+Collisions/particle/step: 0.0770201
+Reactions/particle/step: 0
+
+Particles: 2500 ave 2532 max 2427 min
+Histogram: 1 0 0 0 0 0 0 0 1 2
+Cells:      250 ave 250 max 250 min
+Histogram: 4 0 0 0 0 0 0 0 0 0
+GhostCell: 110 ave 110 max 110 min
+Histogram: 4 0 0 0 0 0 0 0 0 0
+EmptyCell: 0 ave 0 max 0 min
+Histogram: 4 0 0 0 0 0 0 0 0 0

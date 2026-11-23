@@ -94,6 +94,10 @@ class ComputeSurfCollisionTallyKokkos : public ComputeSurfCollisionTally, public
 
     if (reaction) return;
 
+    // skip if no original particle, e.g. emission by FixEmitSurf
+
+    if (!iorig) return;
+
     if (dim == 2) {
       if (!(d_lines(isurf).mask & groupbit)) return;
     } else {

@@ -94,6 +94,10 @@ class ComputeSurfReactionTallyKokkos : public ComputeSurfReactionTally, public K
 
     if (!reaction) return;
 
+    // skip if no original particle, e.g. on-surf reaction by SurfReactAdsorb
+
+    if (!iorig) return;
+
     if (dim == 2) {
       if (!(d_lines(isurf).mask & groupbit)) return;
     } else {

@@ -954,12 +954,7 @@ void ParticleKokkos::wrap_kokkos()
 
   // mixtures
 
-  k_species2group = DAT::tdual_int_2d("particle:species2group",nmixture,nspecies);
-  for (int i = 0; i < nmixture; i++)
-    for (int j = 0; j < nspecies; j++)
-      k_species2group.view_host()(i,j) = mixture[i]->species2group[j];
-  k_species2group.modify_host();
-  k_species2group.sync_device();
+  update_species2group();
 
   //if (mixtures != k_mixtures.view_host().data()) {
   //  memoryKK->wrap_kokkos(k_mixtures,mixture,nmixture,"particle:mixture");
@@ -968,6 +963,21 @@ void ParticleKokkos::wrap_kokkos()
   //  memory->sfree(mixtures);
   //  mixtures = k_mixtures.view_host().data();
   //}
+}
+
+/* ----------------------------------------------------------------------
+   (re)build device copy of mixture species2group
+   must be called every run since mixtures/species can change between runs
+------------------------------------------------------------------------- */
+
+void ParticleKokkos::update_species2group()
+{
+  k_species2group = DAT::tdual_int_2d("particle:species2group",nmixture,nspecies);
+  for (int i = 0; i < nmixture; i++)
+    for (int j = 0; j < nspecies; j++)
+      k_species2group.view_host()(i,j) = mixture[i]->species2group[j];
+  k_species2group.modify_host();
+  k_species2group.sync_device();
 }
 
 /* ---------------------------------------------------------------------- */
@@ -982,8 +992,23 @@ void ParticleKokkos::wrap_kokkos()
 template<class... Exec>
 void ParticleKokkos::sync_device_views(unsigned int mask, const Exec &... exec)
 {
-  if (sparta->kokkos->auto_sync)
+  if (sparta->kokkos->auto_sync) {
+    // Automatic syncing exists because non-Kokkos code may have written the
+    // host side through the plain pointers, so the host is declared modified
+    // and copied down.  Declaring it while the device still holds a claim is
+    // both a lie -- the host copy is the older one -- and fatal: Kokkos
+    // aborts a DualView claimed on both sides at once.  A device claim
+    // survives into an auto_sync region without any modify(Device) call:
+    // grow_custom() resizes each custom vector on the device, which leaves
+    // it claimed there, so the next sync(Device,CUSTOM_MASK) -- the next
+    // grow_custom() of the same grow(), or UpdateKokkos::setup() -- aborted
+    // after any particle growth between runs with custom attributes.
+    // Refresh the host first, as AtomKokkos::sync() does in LAMMPS and
+    // CollideVSSKokkos::sync() does here: a no-op when the device is clean,
+    // and the copy the host is owed when it is not.
+    sync(Host,mask);
     modify(Host,mask);
+  }
   if (mask & PARTICLE_MASK) k_particles.sync_device(exec...);
   if (mask & SPECIES_MASK) k_species.sync_device(exec...);
   if (mask & CUSTOM_MASK) {

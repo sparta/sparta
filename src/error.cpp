@@ -164,7 +164,7 @@ void Error::one(const char *file, int line, const char *str)
     fprintf(screen,"Last command: %s\n",lastcmd.c_str());
     fflush(screen);
   }
-  if (universe->nworlds > 1) {
+  if (universe->nworlds > 1 && universe->uscreen) {
     fprintf(universe->uscreen,"ERROR on proc %d: %s (%s:%d)\n",
             universe->me,str,file,line);
     fprintf(universe->uscreen,"Last command: %s\n",lastcmd.c_str());

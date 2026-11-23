@@ -61,6 +61,10 @@ FixFieldParticle::FixFieldParticle(SPARTA *sparta, int narg, char **arg) :
   per_particle_freq = 1;
   per_particle_field = 1;
 
+  // end_of_step() re-evaluates the field every step for output
+
+  nevery = 1;
+
   field_active[0] = field_active[1] = field_active[2] = 0;
   if (axstr) field_active[0] = 1;
   if (aystr) field_active[1] = 1;
@@ -88,6 +92,7 @@ FixFieldParticle::~FixFieldParticle()
 int FixFieldParticle::setmask()
 {
   int mask = 0;
+  mask |= END_OF_STEP;
   return mask;
 }
 
@@ -130,6 +135,20 @@ void FixFieldParticle::init()
 
   bigint nbytes = (bigint) particle->nlocal * size_per_particle_cols;
   if (nbytes) memset(&array_particle[0][0],0,nbytes*sizeof(double));
+}
+
+/* ----------------------------------------------------------------------
+   re-evaluate the field for the current owned particles
+   compute_field() is invoked at the start of the move, but particles are
+     then deleted, migrated, and received, so array_particle rows no longer
+     match (and may be fewer than) the owned particles at end of step
+     when output commands (dump, compute reduce, variables) access them
+   explicit base-class call, so a derived compute_field() is not re-invoked
+------------------------------------------------------------------------- */
+
+void FixFieldParticle::end_of_step()
+{
+  FixFieldParticle::compute_field();
 }
 
 /* ---------------------------------------------------------------------- */

@@ -370,7 +370,7 @@ void SurfReactProb::readfile(char *fname)
           strcpy(r->id_reactants[r->nreactant],word);
           r->nreactant++;
         } else {
-          if (r->nreactant == MAXPRODUCT)
+          if (r->nproduct == MAXPRODUCT)
             error->all(FLERR,"Too many products in a reaction formula");
           n = strlen(word) + 1;
           r->id_products[r->nproduct] = new char[n];
@@ -437,6 +437,9 @@ void SurfReactProb::readfile(char *fname)
         r->coeff[i] = input->numeric(FLERR,word);
       }
     }
+
+    if (r->coeff[0] < 0.0)
+      error->all(FLERR,"Invalid reaction coefficients in file");
 
     word = strtok(NULL," \t\n");
     if (word) error->all(FLERR,"Too many coefficients in a reaction formula");

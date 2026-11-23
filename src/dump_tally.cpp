@@ -79,6 +79,8 @@ DumpTally::DumpTally(SPARTA *sparta, int narg, char **arg) :
   id_compute = NULL;
   compute = NULL;
 
+  ntally = 0;
+
   // process attributes
   // ioptional = start of additional optional args in expanded args
 
@@ -100,7 +102,7 @@ DumpTally::DumpTally(SPARTA *sparta, int narg, char **arg) :
 
   vformat = new char*[nfield];
 
-  format_default = new char[4*nfield+1];
+  format_default = new char[8*nfield+1];
   format_default[0] = '\0';
 
   for (int i = 0; i < nfield; i++) {
@@ -234,16 +236,17 @@ int DumpTally::count()
   int flag = 0;
 
   if (ncompute) {
-    for (int i = 0; i < ncompute; i++)
+    for (int i = 0; i < ncompute; i++) {
       if (!(compute[i]->invoked_flag & INVOKED_PER_TALLY)) {
         compute[i]->compute_per_tally();
         compute[i]->invoked_flag |= INVOKED_PER_TALLY;
-
-        surfint *dummy;
-        int ntally_one = compute[i]->tallyinfo(dummy);
-        if (i == 0) ntally = ntally_one;
-        else if (ntally_one != ntally) flag = 1;
       }
+
+      surfint *dummy;
+      int ntally_one = compute[i]->tallyinfo(dummy);
+      if (i == 0) ntally = ntally_one;
+      else if (ntally_one != ntally) flag = 1;
+    }
   }
 
   int flagall;
@@ -276,14 +279,14 @@ void DumpTally::write_binary(int n, double *mybuf)
 {
   n *= size_one;
   fwrite(&n,sizeof(int),1,fp);
-  fwrite(mybuf,sizeof(double),n,fp);
+  if (n) fwrite(mybuf,sizeof(double),n,fp);
 }
 
 /* ---------------------------------------------------------------------- */
 
 void DumpTally::write_string(int n, double *mybuf)
 {
-  fwrite(mybuf,sizeof(char),n,fp);
+  if (n) fwrite(mybuf,sizeof(char),n,fp);
 }
 
 /* ---------------------------------------------------------------------- */

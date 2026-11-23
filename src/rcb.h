@@ -112,6 +112,7 @@ class RCB : protected Pointers {
   int reuse;        // 1/0 to use/not use previous cuts
   int dottop;       // dots >= this index are new
   BBox rcbbox;      // bounding box of final RCB sub-domain
+  double fliplo[3],fliphi[3];  // un-flipped rcbbox when flip = 1
   Tree *tree;       // tree of RCB cuts, used by reuse()
   bigint counters[7];  // diagnostic counts
                     // 0 = # of median iterations

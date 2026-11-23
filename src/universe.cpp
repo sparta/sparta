@@ -19,6 +19,7 @@
 #include "universe.h"
 #include "version.h"
 #include "memory.h"
+#include "error.h"
 
 using namespace SPARTA_NS;
 
@@ -81,6 +82,9 @@ void Universe::add_world(char *str)
     n = 1;
     nper = atoi(str);
   }
+
+  if (n < 1 || nper < 1)
+    error->universe_all(FLERR,"Invalid command-line argument");
 
   memory->grow(procs_per_world,nworlds+n,"universe:procs_per_world");
   memory->grow(root_proc,(nworlds+n),"universe:root_proc");

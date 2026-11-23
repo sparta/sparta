@@ -23,9 +23,17 @@ set(CMAKE_C_COMPILER
 set(CMAKE_CXX_COMPILER
     "g++"
     CACHE STRING "")
-set(CMAKE_CXX_FLAGS
-    "-g -O3"
-    CACHE STRING "") # -Wunused
+# optimization and debug flags come with the build type, as in LAMMPS: -g only
+# for RelWithDebInfo (the default here) and Debug builds, not for Release
+set(CMAKE_BUILD_TYPE
+    RelWithDebInfo
+    CACHE STRING "")
+set(CMAKE_CXX_FLAGS_RELWITHDEBINFO
+    "-g -O3 -DNDEBUG"
+    CACHE STRING "")
+set(CMAKE_CXX_FLAGS_RELEASE
+    "-O3 -DNDEBUG"
+    CACHE STRING "")
 set(CMAKE_AR
     "ar"
     CACHE STRING "")

@@ -32,6 +32,7 @@ class FixFieldParticle : public Fix {
   ~FixFieldParticle();
   int setmask();
   void init();
+  void end_of_step();
   void compute_field();
 
  private:

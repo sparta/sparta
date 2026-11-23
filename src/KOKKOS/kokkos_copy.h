@@ -74,6 +74,12 @@ class KKCopy {
     obj.copy = 1;
   }
 
+  // drop a previous copy(), e.g. when the original object was deleted:
+  //   obj gets back its own constructed state, so copying or destroying
+  //   this KKCopy no longer touches the original's (freed) Views
+
+  void uncopy() { restore(); }
+
  private:
   void* ptr_temp;
 

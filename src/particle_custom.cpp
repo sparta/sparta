@@ -24,6 +24,8 @@ using namespace SPARTA_NS;
 enum{NONE,DISCRETE,SMOOTH};            // several files
 enum{INT,DOUBLE};                      // several files
 
+#define MAXRESTARTSTR 65536     // max length of a name string in restart file
+
 // per particle custom attributes
 
 /* ----------------------------------------------------------------------
@@ -185,6 +187,7 @@ void Particle::grow_custom(int index, int nold, int nnew)
 
 void Particle::remove_custom(int index)
 {
+  if (index < 0 || index >= ncustom) return;
   if (!ename || !ename[index]) return;
 
   delete [] ename[index];
@@ -365,8 +368,13 @@ void Particle::read_restart_custom(FILE *fp)
   // will be incremented as add_custom() for each nactive
 
   int nactive;
-  if (me == 0) tmp = fread(&nactive,sizeof(int),1,fp);
+  if (me == 0) {
+    tmp = fread(&nactive,sizeof(int),1,fp);
+    if (tmp != 1) error->one(FLERR,"Unexpected end of restart file");
+  }
   MPI_Bcast(&nactive,1,MPI_INT,0,world);
+  if (nactive < 0)
+    error->all(FLERR,"Invalid custom particle attribute count in restart file");
   if (nactive == 0) return;
 
   // order that custom vectors/arrays are in restart file
@@ -376,15 +384,32 @@ void Particle::read_restart_custom(FILE *fp)
   char *name;
 
   for (int i = 0; i < nactive; i++) {
-    if (me == 0) tmp = fread(&n,sizeof(int),1,fp);
+    if (me == 0) {
+      tmp = fread(&n,sizeof(int),1,fp);
+      if (tmp != 1) error->one(FLERR,"Unexpected end of restart file");
+    }
     MPI_Bcast(&n,1,MPI_INT,0,world);
+    if (n <= 0 || n > MAXRESTARTSTR)
+      error->all(FLERR,"Invalid string length in restart file");
     name = new char[n];
-    if (me == 0) tmp = fread(name,sizeof(char),n,fp);
+    if (me == 0) {
+      tmp = fread(name,sizeof(char),n,fp);
+      if (tmp != n) error->one(FLERR,"Unexpected end of restart file");
+    }
     MPI_Bcast(name,n,MPI_CHAR,0,world);
-    if (me == 0) tmp = fread(&type,sizeof(int),1,fp);
+    name[n-1] = '\0';
+    if (me == 0) {
+      tmp = fread(&type,sizeof(int),1,fp);
+      if (tmp != 1) error->one(FLERR,"Unexpected end of restart file");
+    }
     MPI_Bcast(&type,1,MPI_INT,0,world);
-    if (me == 0) tmp = fread(&size,sizeof(int),1,fp);
+    if (me == 0) {
+      tmp = fread(&size,sizeof(int),1,fp);
+      if (tmp != 1) error->one(FLERR,"Unexpected end of restart file");
+    }
     MPI_Bcast(&size,1,MPI_INT,0,world);
+    if ((type != INT && type != DOUBLE) || size < 0)
+      error->all(FLERR,"Invalid custom particle attribute in restart file");
 
     // create the custom attribute
 

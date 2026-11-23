@@ -156,13 +156,16 @@ int ComputeReactSurfKokkos::tallyinfo(surfint *&ptr)
   auto h_surf2tally = Kokkos::create_mirror_view(d_surf2tally);
   Kokkos::deep_copy(h_surf2tally,d_surf2tally);
 
-  int nsurf = surf->nlocal + surf->nghost;
+  // scan full tally storage, nlocal+nghost may have changed since
+  //   the tallies were made (e.g. fix balance), rows beyond are -1
+
+  int nsurf = nsurf_tally_alloc;
   int istart = 0;
   int iend = nsurf-1;
 
   while (1) {
     while (istart < nsurf && h_surf2tally[istart] != -1) istart++;
-    while (h_surf2tally[iend] == -1 && iend > 0) iend--;
+    while (iend > 0 && h_surf2tally[iend] == -1) iend--;
     if (istart >= iend) {
       ntally = istart;
       break;

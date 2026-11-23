@@ -11,6 +11,7 @@ if(PKG_FFT)
   include(${SPARTA_CMAKE_COMMON_DIR}/set/style_file_glob.cmake)
 
   add_library(${TARGET_SPARTA_PKG_FFT} STATIC ${SPARTA_PKG_FFT_SRC_FILES})
+  sparta_kokkos_host_only_sources(${TARGET_SPARTA_PKG_FFT})
   set_target_properties(${TARGET_SPARTA_PKG_FFT} PROPERTIES LINKER_LANGUAGE CXX)
 
   # Get MPI header files

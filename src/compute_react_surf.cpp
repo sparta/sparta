@@ -127,25 +127,42 @@ void ComputeReactSurf::init()
 
   // warn if any surfs in group are assigned to different surf react model
 
+  // count each surf exactly once, independent of # of procs:
+  //   explicit all: every proc stores all nsurf surfs in lines/tris,
+  //     so count them locally and do not sum across procs
+  //   explicit distributed: lines/tris = nlocal+nghost copies of surfs
+  //     overlapping my owned/ghost cells, so a surf can be stored on
+  //     several procs; instead count mylines/mytris (nown surfs I uniquely
+  //     own, union over procs = all surfs) and sum across procs
+
   lines = surf->lines;
   tris = surf->tris;
-  int nslocal = surf->nlocal;
+  int distributed = surf->distributed;
+
+  Surf::Line *slines = lines;
+  Surf::Tri *stris = tris;
+  int ncount = surf->nlocal;
+  if (distributed) {
+    slines = surf->mylines;
+    stris = surf->mytris;
+    ncount = surf->nown;
+  }
 
   bigint flag = 0;
   if (dim == 2) {
-    for (int i = 0; i < nslocal; i++) {
-      if (!(lines[i].mask & groupbit)) return;
-      if (lines[i].isr != isr) flag++;
+    for (int i = 0; i < ncount; i++) {
+      if (!(slines[i].mask & groupbit)) continue;
+      if (slines[i].isr != isr) flag++;
     }
   } else {
-    for (int i = 0; i < nslocal; i++) {
-      if (!(tris[i].mask & groupbit)) return;
-      if (tris[i].isr != isr) flag++;
+    for (int i = 0; i < ncount; i++) {
+      if (!(stris[i].mask & groupbit)) continue;
+      if (stris[i].isr != isr) flag++;
     }
   }
 
   bigint flagall;
-  if (surf->distributed) {
+  if (distributed) {
     MPI_Allreduce(&flag,&flagall,1,MPI_SPARTA_BIGINT,MPI_SUM,world);
   } else flagall = flag;
 

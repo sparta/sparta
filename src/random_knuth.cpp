@@ -61,6 +61,7 @@ void RanKnuth::reset(double rseed, int offset, int warmup)
   seed = static_cast<int> (fmod(rseed*IM+offset,IM));
   if (seed < 0) seed = -seed;
   if (seed == 0) seed = 1;
+  save = 0;
   initflag = 0;
   for (int i = 0; i < warmup; i++) uniform();
 }

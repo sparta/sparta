@@ -66,6 +66,11 @@ class SPARTA {
 
   void print_styles();
   void print_help();
+
+  // git commit and branch of the sources, empty if unknown
+
+  static const char *git_commit();
+  static const char *git_branch();
 };
 
 }

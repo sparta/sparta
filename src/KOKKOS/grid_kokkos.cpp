@@ -114,12 +114,12 @@ void GridKokkos::grow_cells(int n, int m)
     if (nlocal+nghost+n >= maxcell) {
       const int oldmax = maxcell;
       while (maxcell < nlocal+nghost+n) maxcell += DELTA;
-      if (cells == NULL)
+      if (cells == NULL) {
         MemKK::realloc_kokkos(k_cells,"grid:cells",maxcell);
-      else {
+        memset(k_cells.view_host().data(),0,maxcell*sizeof(ChildCell));
+      } else {
         this->sync(Device,CELL_MASK); // force resize on device
-        Kokkos::resize(Kokkos::view_alloc(Kokkos::WithoutInitializing),
-                       k_cells,maxcell);
+        Kokkos::resize(k_cells,maxcell);
         this->modify(Device,CELL_MASK); // needed for auto sync
       }
       cells = k_cells.view_host().data();
@@ -129,12 +129,12 @@ void GridKokkos::grow_cells(int n, int m)
 
     if (nlocal+m >= maxlocal) {
       while (maxlocal < nlocal+m) maxlocal += DELTA;
-      if (cinfo == NULL)
+      if (cinfo == NULL) {
         MemKK::realloc_kokkos(k_cinfo,"grid:cinfo",maxlocal);
-      else {
+        memset(k_cinfo.view_host().data(),0,maxlocal*sizeof(ChildInfo));
+      } else {
         this->sync(Device,CINFO_MASK); // force resize on device
-        Kokkos::resize(Kokkos::view_alloc(Kokkos::WithoutInitializing),
-                       k_cinfo,maxlocal);
+        Kokkos::resize(k_cinfo,maxlocal);
         this->modify(Device,CINFO_MASK); // needed for auto sync
       }
       cinfo = k_cinfo.view_host().data();
@@ -177,12 +177,12 @@ void GridKokkos::grow_sinfo(int n)
 
     if (nsplitlocal+nsplitghost+n >= maxsplit) {
       while (maxsplit < nsplitlocal+nsplitghost+n) maxsplit += DELTA;
-      if (sinfo == NULL)
+      if (sinfo == NULL) {
         MemKK::realloc_kokkos(k_sinfo,"grid:sinfo",maxsplit);
-      else {
+        memset(k_sinfo.view_host().data(),0,maxsplit*sizeof(SplitInfo));
+      } else {
         this->sync(Device,SINFO_MASK); // force resize on device
-        Kokkos::resize(Kokkos::view_alloc(Kokkos::WithoutInitializing),
-                       k_sinfo,maxsplit);
+        Kokkos::resize(k_sinfo,maxsplit);
         this->modify(Device,SINFO_MASK); // needed for auto sync
       }
       sinfo = k_sinfo.view_host().data();
@@ -354,8 +354,23 @@ void GridKokkos::resync_after_host_change()
 template<class... Exec>
 void GridKokkos::sync_device_views(unsigned int mask, const Exec &... exec)
 {
-  if (sparta->kokkos->auto_sync)
+  if (sparta->kokkos->auto_sync) {
+    // Automatic syncing exists because non-Kokkos code may have written the
+    // host side through the plain pointers, so the host is declared modified
+    // and copied down.  Declaring it while the device still holds a claim is
+    // both a lie -- the host copy is the older one -- and fatal: Kokkos
+    // aborts a DualView claimed on both sides at once.  A device claim
+    // survives into an auto_sync region without any modify(Device) call:
+    // reallocate_custom() resizes each custom vector on the device, which
+    // leaves it claimed there, so the next sync(Device,CUSTOM_MASK) (a
+    // later add_custom() or grow, or compute reduce on g_ at setup)
+    // aborted after the grid grew with custom attributes defined.
+    // Refresh the host first, as AtomKokkos::sync() does in LAMMPS and
+    // CollideVSSKokkos::sync() does here: a no-op when the device is clean,
+    // and the copy the host is owed when it is not.
+    sync(Host,mask);
     modify(Host,mask);
+  }
   if (mask & CELL_MASK) k_cells.sync_device(exec...);
   if (mask & CINFO_MASK) k_cinfo.sync_device(exec...);
   if (mask & PCELL_MASK) k_pcells.sync_device(exec...);
@@ -386,11 +401,20 @@ void GridKokkos::sync_device_views(unsigned int mask, const Exec &... exec)
 
 void GridKokkos::sync(ExecutionSpace space, unsigned int mask)
 {
+  // before wrap_kokkos() the cell arrays are plain memory and there is
+  //   nothing to sync, but the custom vectors are DualViews from the start.
+  //   Let a host sync of those through: reallocate_custom() and
+  //   allocate_custom() claim the host before resizing so the resize happens
+  //   on the host.  Dropping that claim left the resize on the device, which
+  //   marks the device modified, and the restart values then written to the
+  //   host were never claimed -- the first sync(Device,CUSTOM_MASK) after the
+  //   wrap either aborted or, with the auto_sync refresh below, discarded them
+
   if (sparta->kokkos->prewrap) {
     if (space == Device)
       error->one(FLERR,"Sync Device before wrap");
-    else
-      return;
+    mask &= CUSTOM_MASK;
+    if (!mask) return;
   }
 
   if (space == Device) {
@@ -435,11 +459,13 @@ void GridKokkos::sync_device_async(const DeviceType &exec, unsigned int mask)
 
 void GridKokkos::modify(ExecutionSpace space, unsigned int mask)
 {
+  // as in sync(): before wrap only the custom vectors have a host side to claim
+
   if (sparta->kokkos->prewrap) {
     if (space == Device)
       error->one(FLERR,"Modify Device before wrap");
-    else
-      return;
+    mask &= CUSTOM_MASK;
+    if (!mask) return;
   }
 
   if (space == Device) {

@@ -137,6 +137,7 @@ FixController::FixController(SPARTA *sparta, int narg, char **arg) :
   control = input->variable->compute_equal(ivariable);
 
   firsttime = 1;
+  err = olderr = deltaerr = sumerr = 0.0;
 
   // this fix reads one global value and sets an internal variable; it never
   //   writes particle data, so the Kokkos wrapper need not push particles

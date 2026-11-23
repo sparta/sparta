@@ -1,0 +1,144 @@
+SPARTA (27 Aug 2026)
+Running on 1 MPI task(s)
+################################################################################
+# thermal gas in a 3d box with collisions
+# particles reflect off global box boundaries
+#
+# Note:
+#  - The "comm/sort” option to the “global” command is used to match MPI runs.
+#  - The “twopass” option is used to match Kokkos runs.
+# The "comm/sort" and "twopass" options should not be used for production runs.
+################################################################################
+
+seed	    	    12345
+dimension   	    3
+global              gridcut 1.0e-5 comm/sort yes
+
+boundary	    rr rr rr
+
+create_box  	    0 0.0001 0 0.0001 0 0.0001
+Created orthogonal box = (0 0 0) to (0.0001 0.0001 0.0001)
+create_grid 	    10 10 10
+Created 1000 child grid cells
+  CPU time = 0.000976315 secs
+  create/ghost percent = 80.3069 19.6931
+
+balance_grid        rcb part
+Balance grid migrated 0 cells
+  CPU time = 0.00031215 secs
+  reassign/sort/migrate/ghost percent = 63.2952 0.59811 7.05334 29.0533
+
+species		    ar.species Ar
+mixture		    air Ar vstream 0.0 0.0 0.0 temp 273.15
+
+global              nrho 7.07043E22
+global              fnum 7.07043E6
+
+collide		    vss air ar.vss
+
+create_particles    air n 10000 twopass
+Created 10000 particles
+  CPU time = 0.00190544 secs
+
+stats		    100
+compute             temp temp
+stats_style	    step cpu np nattempt ncoll c_temp
+
+#compute             1 grid all n
+#region              slab block INF INF INF INF 4.5e-5 5.5e-5
+#dump                2 image all 100 image.*.ppm type type pdiam 3.0e-6 #		    size 512 512 gline yes 0.005 gridx 0.00005 c_1[1]
+#dump_modify	    2 pad 4 region slab
+
+# ---------------------------------------
+# added lines for external field
+
+species_modify      Ar mu 1e-18
+variable Rmax equal 0.0001
+variable eps equal 1e-6
+
+variable Bx particle "sqrt(x*x + y*y) * sin(x/v_Rmax)"
+variable BxEps particle "sqrt((x+v_eps)*(x+v_eps) + y*y) * sin((x+v_eps)/v_Rmax)"
+variable gradBx particle "mu/mass * (v_BxEps - v_Bx) / v_eps"
+
+variable By particle "sqrt(x*x + y*y) * sin(y/v_Rmax)"
+variable ByEps particle "sqrt(x*x + (y+v_eps)*(y+v_eps)) * sin((y+v_eps)/v_Rmax)"
+variable gradBy particle "mu/mass * (v_ByEps - v_By) / v_eps"
+
+fix      1 field/particle gradBx gradBy NULL
+global   field particle 1
+
+#dump                10 particle all 1000 tmp.dump.* id type f_1[*]
+
+# ---------------------------------------
+
+timestep 	    7.00E-9
+run 		    1000
+Memory usage per proc in Mbytes:
+  particles (ave,min,max) = 1.5625 1.5625 1.5625
+  grid      (ave,min,max) = 1.51379 1.51379 1.51379
+  surf      (ave,min,max) = 0 0 0
+  modify    (ave,min,max) = 0 0 0
+  total     (ave,min,max) = 3.07629 3.07629 3.07629
+Step CPU Np Natt Ncoll c_temp 
+       0            0    10000        0        0    273.11556 
+     100   0.35227631    10000      938      657    273.15034 
+     200    0.7130486    10000      994      710    273.16111 
+     300    1.0566622    10000     1004      690    273.13275 
+     400    1.4468722    10000     1003      698    273.18016 
+     500    1.7813601    10000     1042      743    273.17774 
+     600    2.1145095    10000     1020      714    273.18981 
+     700    2.4542225    10000     1042      705    273.16318 
+     800    2.7973298    10000     1062      726     273.1602 
+     900    3.1664893    10000     1049      713    273.15359 
+    1000     3.518702    10000     1033      682    273.21969 
+Loop time of 3.5188 on 1 procs for 1000 steps with 10000 particles
+Performance: 284.188 timesteps/s, 2.842 Mparticle-step/s
+
+MPI task timing breakdown:
+Section |  min time  |  avg time  |  max time  |%varavg| %total
+---------------------------------------------------------------
+Move    | 3.3044     | 3.3044     | 3.3044     |   0.0 | 93.91
+Coll    | 0.19027    | 0.19027    | 0.19027    |   0.0 |  5.41
+Sort    | 0.020646   | 0.020646   | 0.020646   |   0.0 |  0.59
+Comm    | 0.00090901 | 0.00090901 | 0.00090901 |   0.0 |  0.03
+Modify  | 0          | 0          | 0          |   0.0 |  0.00
+Output  | 0.0011553  | 0.0011553  | 0.0011553  |   0.0 |  0.03
+MPI Sync| 0.0012677  | 0.0012677  | 0.0012677  |   0.0 |  0.04
+Other   |            | 0.0001028  |            |       |  0.00
+
+Particle moves    = 10000000 (10M)
+Cells touched     = 13594196 (13.6M)
+Particle comms    = 0 (0K)
+Boundary collides = 399923 (0.4M)
+Boundary exits    = 0 (0K)
+SurfColl checks   = 0 (0K)
+SurfColl occurs   = 0 (0K)
+Surf reactions    = 0 (0K)
+Collide attempts  = 1012399 (1.01M)
+Collide occurs    = 706590 (0.707M)
+Reactions         = 0 (0K)
+Particles stuck   = 0
+Axisymm bad moves = 0
+
+Particle-moves/CPUsec/proc: 2.84188e+06
+Particle-moves/step: 10000
+Cell-touches/particle/step: 1.35942
+Particle comm iterations/step: 1
+Particle fraction communicated: 0
+Particle fraction colliding with boundary: 0.0399923
+Particle fraction exiting boundary: 0
+Surface-checks/particle/step: 0
+Surface-collisions/particle/step: 0
+Surf-reactions/particle/step: 0
+Collision-attempts/particle/step: 0.10124
+Collisions/particle/step: 0.070659
+Reactions/particle/step: 0
+
+Particles: 10000 ave 10000 max 10000 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+Cells:      1000 ave 1000 max 1000 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+GhostCell: 0 ave 0 max 0 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+EmptyCell: 0 ave 0 max 0 min
+Histogram: 1 0 0 0 0 0 0 0 0 0

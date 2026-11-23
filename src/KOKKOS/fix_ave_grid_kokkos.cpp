@@ -162,8 +162,19 @@ void FixAveGridKokkos::init()
     error->all(FLERR,"Variable name for fix ave/grid does not exist");
       value2index[m] = ivariable;
 
+    } else if (which[m] == CUSTOM) {
+      int icustom = grid->find_custom(ids[m]);
+      if (icustom < 0)
+    error->all(FLERR,"Custom attribute for fix ave/grid does not exist");
+      value2index[m] = icustom;
+
     } else value2index[m] = -1;
   }
+
+  // reallocate per-grid data if necessary
+
+  nglocal = grid->nlocal;
+  grow_percell(0);
 }
 
 /* ----------------------------------------------------------------------
@@ -224,7 +235,7 @@ void FixAveGridKokkos::end_of_step()
 
     if (which[m] == COMPUTE) {
       Compute *compute = modify->compute[n];
-      if (!compute->kokkos_flag)
+      if (!compute->kokkos_flag || !dynamic_cast<KokkosBase*>(compute))
         error->all(FLERR,"Cannot (yet) use non-Kokkos computes with fix ave/grid/kk");
     }
 
@@ -340,7 +351,9 @@ void FixAveGridKokkos::end_of_step()
       //   stale values and the push-back would clobber the device work
 
       tally_to_host();
-      input->variable->compute_grid(n,&tally[0][k],ntotal,1);
+      double *tptr = NULL;
+      if (tally) tptr = &tally[0][k];
+      input->variable->compute_grid(n,tptr,ntotal,1);
 
     // access custom attribute
 
@@ -418,8 +431,8 @@ void FixAveGridKokkos::end_of_step()
         } else {
           if (grid->etype[n] == INT) {
             auto h_ewhich = gridKK->k_ewhich.view_host();
-            auto h_edarray = gridKK->k_edarray.view_host();
-            auto d_custom_array = h_edarray[h_ewhich[n]].k_view.view_device();
+            auto h_eiarray = gridKK->k_eiarray.view_host();
+            auto d_custom_array = h_eiarray[h_ewhich[n]].k_view.view_device();
 
             Kokkos::parallel_for(nglocal, SPARTA_CLASS_LAMBDA(int i) {
               d_tally(i,k) += d_custom_array(i,jm1);
@@ -620,7 +633,7 @@ void FixAveGridKokkos::grow_percell(int nnew)
   }
 
   if (nglocal+nnew < maxgrid) return;
-  maxgrid += DELTAGRID;
+  while (maxgrid < nglocal+nnew) maxgrid += DELTAGRID;
   int n = maxgrid;
 
   // resize with the device as the source of truth, then refresh the host

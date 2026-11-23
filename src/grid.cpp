@@ -44,6 +44,7 @@ using namespace MathConst;
 #define BIG 1.0e20
 #define MAXGROUP 32
 #define MAXLEVEL 32
+#define MAXRESTARTSTR 65536     // max length of a name string in restart file
 
 // default values, can be overridden by global command
 
@@ -253,6 +254,8 @@ void Grid::remove()
   cells = NULL;
   cinfo = NULL;
   sinfo = NULL;
+  pcells = NULL;
+  nparent = maxparent = 0;
 
   csurfs = NULL; csplits = NULL; csubs = NULL;
   allocate_surf_arrays();
@@ -1660,15 +1663,55 @@ void Grid::set_inout()
   ParentCell *pcell;
   Connect *sbuf,*rbuf;
 
-  if (!exist_ghost)
+  if (!exist_ghost) {
+    if (cutoff >= 0.0 && !clumped)
+      error->all(FLERR,"Cannot mark grid cells as inside/outside surfs "
+                 "because ghost cells do not exist: nearby ghost cells "
+                 "cannot be acquired for a grid partition which is not "
+                 "clumped, so use a clumped balance or adapt style, or "
+                 "global gridcut -1 to store all cells on every proc");
     error->all(FLERR,"Cannot mark grid cells as inside/outside surfs because "
                "ghost cells do not exist");
+  }
 
   // if all surfs are transparent, just mark all cells as OUTSIDE
 
   if (surf->all_transparent()) {
     for (icell = 0; icell < nlocal; icell++) cinfo[icell].type = OUTSIDE;
     return;
+  }
+
+  // if no cell overlaps a surf, the flood fill below has no OVERLAP cell
+  //   to seed from, so handle that case here
+  // can occur when a mobile rigid body (fix rigid) has moved entirely
+  //   outside the domain, so its surfs no longer overlap any grid cell
+  // every cell is then OUTSIDE, unless the surfs enclose the entire
+  //   domain, in which case every cell is INSIDE instead
+  // if no cell overlaps any surf, every cell is OUTSIDE:
+  // static surfs always overlap some cell (every surf point must lie
+  //   inside the box when read, and the cells cover the box), so this
+  //   arises only when the surfs are those of a mobile rigid body which
+  //   has left the box through a non-periodic boundary; a body that was
+  //   inside the box cannot enclose it, so INSIDE is not possible
+  // explicit surfs only: implicit surfs always overlap cells, so the
+  //   case does not arise for them and the reduction is skipped
+  // collective: overlap_any and surf->implicit are the same on all procs
+
+  if (!surf->implicit) {
+    int overlap_mine = 0;
+    for (icell = 0; icell < nlocal; icell++)
+      if (cinfo[icell].type == OVERLAP) overlap_mine = 1;
+    int overlap_any;
+    MPI_Allreduce(&overlap_mine,&overlap_any,1,MPI_INT,MPI_MAX,world);
+
+    if (!overlap_any) {
+      int nc = (domain->dimension == 3) ? 8 : 4;
+      for (icell = 0; icell < nlocal; icell++) {
+        cinfo[icell].type = OUTSIDE;
+        for (int j = 0; j < nc; j++) cinfo[icell].corner[j] = OUTSIDE;
+      }
+      return;
+    }
   }
 
   // set dimensional dependent quantities
@@ -2180,7 +2223,7 @@ void Grid::type_check(int outflag)
   }
   int volzeroall;
   MPI_Allreduce(&volzero,&volzeroall,1,MPI_INT,MPI_SUM,world);
-  if (outsideall) {
+  if (volzeroall) {
     char str[128];
     snprintf(str,sizeof(str),"Grid cells marked outside, but with zero volume = %d",
             volzeroall);
@@ -2272,7 +2315,8 @@ void Grid::grow_cells(int n, int m)
     cells = (ChildCell *)
       memory->srealloc(cells,maxcell*sizeof(ChildCell),"grid:cells",
                        SPARTA_GET_ALIGN(ChildCell));
-    memset(&cells[oldmax],0,(maxcell-oldmax)*sizeof(ChildCell));
+    if (maxcell > oldmax)
+      memset(&cells[oldmax],0,(maxcell-oldmax)*sizeof(ChildCell));
     if (ncustom) reallocate_custom(oldmax,maxcell);
   }
 
@@ -2281,7 +2325,8 @@ void Grid::grow_cells(int n, int m)
     while (maxlocal < nlocal+m) maxlocal += DELTA;
     cinfo = (ChildInfo *)
       memory->srealloc(cinfo,maxlocal*sizeof(ChildInfo),"grid:cinfo");
-    memset(&cinfo[oldmax],0,(maxlocal-oldmax)*sizeof(ChildInfo));
+    if (maxlocal > oldmax)
+      memset(&cinfo[oldmax],0,(maxlocal-oldmax)*sizeof(ChildInfo));
   }
 }
 
@@ -2308,7 +2353,8 @@ void Grid::grow_sinfo(int n)
     while (maxsplit < nsplitlocal+nsplitghost+n) maxsplit += DELTA;
     sinfo = (SplitInfo *)
       memory->srealloc(sinfo,maxsplit*sizeof(SplitInfo),"grid:sinfo");
-    memset(&sinfo[oldmax],0,(maxsplit-oldmax)*sizeof(SplitInfo));
+    if (maxsplit > oldmax)
+      memset(&sinfo[oldmax],0,(maxsplit-oldmax)*sizeof(SplitInfo));
   }
 }
 
@@ -2557,7 +2603,8 @@ void Grid::group(int narg, char **arg)
     int inversebits = inversemask[igroup];
 
     for (i = 0; i < nlocal; i++) cinfo[i].mask &= inversebits;
-  }
+
+  } else error->all(FLERR,"Illegal group command");
 
   // print final count for group
 
@@ -2747,25 +2794,45 @@ void Grid::read_restart(FILE *fp)
 
   if (me == 0) {
     tmp = fread(&maxlevel,sizeof(int),1,fp);
-    tmp = fread(plevels,sizeof(ParentLevel),maxlevel,fp);
+    if (tmp != 1) error->one(FLERR,"Unexpected end of restart file");
   }
   MPI_Bcast(&maxlevel,1,MPI_INT,0,world);
+  if (maxlevel < 0 || maxlevel > MAXLEVEL)
+    error->all(FLERR,"Invalid grid level count in restart file");
+  if (me == 0) {
+    tmp = fread(plevels,sizeof(ParentLevel),maxlevel,fp);
+    if (tmp != maxlevel) error->one(FLERR,"Unexpected end of restart file");
+  }
   MPI_Bcast(plevels,maxlevel*sizeof(ParentLevel),MPI_CHAR,0,world);
 
   // if any exist, clear existing group names, before reading new ones
 
   for (int i = 0; i < ngroup; i++) delete [] gnames[i];
 
-  if (me == 0) tmp = fread(&ngroup,sizeof(int),1,fp);
+  if (me == 0) {
+    tmp = fread(&ngroup,sizeof(int),1,fp);
+    if (tmp != 1) error->one(FLERR,"Unexpected end of restart file");
+  }
   MPI_Bcast(&ngroup,1,MPI_INT,0,world);
+  if (ngroup < 0 || ngroup > MAXGROUP)
+    error->all(FLERR,"Invalid grid group count in restart file");
 
   int n;
   for (int i = 0; i < ngroup; i++) {
-    if (me == 0) tmp = fread(&n,sizeof(int),1,fp);
+    if (me == 0) {
+      tmp = fread(&n,sizeof(int),1,fp);
+      if (tmp != 1) error->one(FLERR,"Unexpected end of restart file");
+    }
     MPI_Bcast(&n,1,MPI_INT,0,world);
+    if (n <= 0 || n > MAXRESTARTSTR)
+      error->all(FLERR,"Invalid string length in restart file");
     gnames[i] = new char[n];
-    if (me == 0) tmp = fread(gnames[i],sizeof(char),n,fp);
+    if (me == 0) {
+      tmp = fread(gnames[i],sizeof(char),n,fp);
+      if (tmp != n) error->one(FLERR,"Unexpected end of restart file");
+    }
     MPI_Bcast(gnames[i],n,MPI_CHAR,0,world);
+    gnames[i][n-1] = '\0';
   }
 }
 

@@ -200,8 +200,10 @@ int attempt_kk(Particle::OnePart *ip, Particle::OnePart *jp,
        else if (vibstyle == DISCRETE) {
             //Instantaneous z for diatomic molecules
             if (d_species[isp].nvibmode == 1) {
+                // discrete evib = level*boltz*vibtemp, round to nearest
+                //   so roundoff does not drop a level
                 avei = static_cast<int>
-                        (ievib / (boltz * d_species[isp].vibtemp[0]));
+                        (ievib / (boltz * d_species[isp].vibtemp[0]) + 0.5);
                 if (avei > 0) zi = 2.0 * avei * log(1.0 / avei + 1.0);
                 else zi = 0.0;
             } else if (d_species[isp].nvibmode > 1) {
@@ -214,8 +216,10 @@ int attempt_kk(Particle::OnePart *ip, Particle::OnePart *jp,
             } else zi = 0.0;
 
             if (d_species[jsp].nvibmode == 1) {
+                // discrete evib = level*boltz*vibtemp, round to nearest
+                //   so roundoff does not drop a level
                 avej = static_cast<int>
-                        (jevib / (boltz * d_species[jsp].vibtemp[0]));
+                        (jevib / (boltz * d_species[jsp].vibtemp[0]) + 0.5);
                 if (avej > 0) zj = 2.0 * avej * log(1.0 / avej + 1.0);
                 else zj = 0.0;
             } else if (d_species[jsp].nvibmode > 1) {
@@ -232,6 +236,10 @@ int attempt_kk(Particle::OnePart *ip, Particle::OnePart *jp,
     }
 
     // compute probability of reaction
+    // gamma function denominator is non-positive if the temperature
+    //   exponent is below the TCE bound, then it is clamped to 1.0e-6
+    //   and the reaction rate is incorrect, warned about at init by
+    //   ReactBird::check_tce_bounds()
 
     switch (r->type) {
     case DISSOCIATION:
@@ -265,15 +273,18 @@ int attempt_kk(Particle::OnePart *ip, Particle::OnePart *jp,
         break;
       }
 
-      //if (react_prob < 0) error->warning(FLERR,"Negative reaction probability");
-      //else if (react_prob > 1) error->warning(FLERR,"Reaction probability greater than 1");
-
     default:
       //error->one(FLERR,"Unknown outcome in reaction");
       //d_error_flag() = 1;
       Kokkos::abort("ReactTCEKokkos: Unknown outcome in reaction\n");
       break;
     }
+
+    // sum of reaction probabilities should be < 1 for a valid TCE scheme
+    // flag it for a once-per-run host warning, see react_tce.cpp
+
+    if (react_prob < 0.0) Kokkos::atomic_or(&d_prob_warn(),1);
+    else if (react_prob > 1.0) Kokkos::atomic_or(&d_prob_warn(),2);
 
     // test against random number to see if this reaction occurs
     // if it does, reset species of I,J and optional K to product species

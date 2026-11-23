@@ -56,6 +56,7 @@ FixSurfTemp::FixSurfTemp(SPARTA *sparta, int narg, char **arg) :
   groupbit = surf->bitmask[igroup];
 
   nevery = atoi(arg[3]);
+  if (nevery <= 0) error->all(FLERR,"Illegal fix surf/temp command");
 
   if (strncmp(arg[4],"c_",2) == 0) {
     source = COMPUTE;
@@ -74,8 +75,8 @@ FixSurfTemp::FixSurfTemp(SPARTA *sparta, int narg, char **arg) :
     // error checks
 
     icompute = modify->find_compute(id_qw);
-    cqw = modify->compute[icompute];
     if (icompute < 0) error->all(FLERR,"Could not find fix surf/temp compute ID");
+    cqw = modify->compute[icompute];
     if (cqw->per_surf_flag == 0)
       error->all(FLERR,"Fix surf/temp compute does not compute per-surf info");
     if (qwindex == 0 && cqw->size_per_surf_cols > 0)
@@ -102,8 +103,8 @@ FixSurfTemp::FixSurfTemp(SPARTA *sparta, int narg, char **arg) :
     // error checks
 
     ifix = modify->find_fix(id_qw);
-    fqw = modify->fix[ifix];
     if (ifix < 0) error->all(FLERR,"Could not find fix surf/temp fix ID");
+    fqw = modify->fix[ifix];
     if (fqw->per_surf_flag == 0)
       error->all(FLERR,"Fix surf/temp fix does not compute per-surf info");
     if (qwindex == 0 && fqw->size_per_surf_cols > 0)
@@ -131,8 +132,13 @@ FixSurfTemp::FixSurfTemp(SPARTA *sparta, int narg, char **arg) :
   // check if custom attribute already exists, due to restart file
   // else create per-surf temperature vector
 
+  // trigger one-time initialization of custom per-surf temperatures
+  // unless values already exist, e.g. restored from a restart file
+
+  firstflag = 1;
   tindex = surf->find_custom(id_custom);
-  if (tindex < 0) tindex = surf->add_custom(id_custom,DOUBLE,0);
+  if (tindex >= 0) firstflag = 0;
+  else tindex = surf->add_custom(id_custom,DOUBLE,0);
   delete [] id_custom;
 
   // prefactor and threshold in Stefan/Boltzmann equation
@@ -146,10 +152,6 @@ FixSurfTemp::FixSurfTemp(SPARTA *sparta, int narg, char **arg) :
     prefactor = 1.0 / (emi * SB_CGS);
     threshold = 1.0e-3;
   } else error->all(FLERR,"Fix surf/temp requires si or cgs units");
-
-  // trigger one-time initialization of custom per-surf temperatures
-
-  firstflag = 1;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -177,6 +179,12 @@ void FixSurfTemp::init()
     icompute = modify->find_compute(id_qw);
     if (icompute < 0) error->all(FLERR,"Could not find fix surf/temp compute ID");
     cqw = modify->compute[icompute];
+
+    // compute which tallies only on requested steps (e.g. compute surf)
+    // must be told to tally on the next step this fix uses it
+
+    if (cqw->timeflag)
+      cqw->addstep((update->ntimestep/nevery)*nevery + nevery);
   } else if (source == FIX) {
     ifix = modify->find_fix(id_qw);
     if (ifix < 0) error->all(FLERR,"Could not find fix surf/temp fix ID");
@@ -270,6 +278,11 @@ void FixSurfTemp::end_of_step()
       }
     }
   }
+
+  // schedule source compute to tally on next step this fix uses it
+
+  if (source == COMPUTE && cqw->timeflag)
+    cqw->addstep(update->ntimestep + nevery);
 
   // flag custom attribute as updated
 
