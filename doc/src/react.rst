@@ -117,6 +117,14 @@ below) are used to calculate terms in equation 6.10 of
 The C2, C3, C4 values are the Arrhenius activation energy Ea,
 prefactor A, and exponent b, used in the rate formula above.
 
+A negative activation energy is allowed, but the TCE model then
+reproduces the Arrhenius rate only approximately.  The probability is
+proportional to (Ec - Ea)\^(b-1+omega) (1 - Ea/Ec)\^(z+3/2-omega).  Its
+thermal average over collision energies Ec > 0 misses the part of the
+Arrhenius integral below Ec = 0, a fraction that grows with \|Ea\|/kT.
+The probability also diverges as Ec approaches 0, so it is capped (see
+below).
+
 The TCE model can only reproduce the Arrhenius rate of a reaction if
 its exponent b is greater than -(z+3/2), where z is the number of
 internal degrees of freedom contributing to the collision energy:

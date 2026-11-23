@@ -2360,8 +2360,15 @@ void ReactBird::build_micro_tables()
     }
     if (nladder == 0) continue;
 
-    double ea = r->coeff[1] > 0.0 ? r->coeff[1] : 0.0;
-    double umax = ea + ev60;   // + 60 eV: Boltzmann tail to ~1e5 K
+    // threshold of the numerator: the signed activation energy, as in the
+    // analytic factor tce_efactor() (a negative Ea shifts the numerator,
+    // (u - Ea)^a = (u + |Ea|)^a, rather than removing the barrier; the
+    // derived-reverse tables seed their numerators unclamped likewise);
+    // the grid extent uses Ea clamped at 0
+
+    double ea = r->coeff[1];
+    double eaP = ea > 0.0 ? ea : 0.0;
+    double umax = eaP + ev60;   // + 60 eV: Boltzmann tail to ~1e5 K
     double du;
     if (theta_min > 0.0) du = boltz*theta_min/16.0;
     else du = umax/20000.0;
