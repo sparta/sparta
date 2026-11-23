@@ -41,6 +41,7 @@ ReactTCE::ReactTCE(SPARTA *sparta, int narg, char **arg) :
 {
   prob_neg_flag = 0;
   prob_big_index = -1;
+  prob_big_rev_index = -1;
   tce_style = 1;
 }
 
@@ -53,6 +54,7 @@ void ReactTCE::init()
 
   prob_neg_flag = 0;
   prob_big_index = -1;
+  prob_big_rev_index = -1;
 
   ReactBird::init();
 
@@ -87,9 +89,10 @@ void ReactTCE::init()
 
 void ReactTCE::end_of_run()
 {
-  report_tce_prob_flags(prob_neg_flag,prob_big_index);
+  report_tce_prob_flags(prob_neg_flag,prob_big_index,prob_big_rev_index);
   prob_neg_flag = 0;
   prob_big_index = -1;
+  prob_big_rev_index = -1;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -134,6 +137,12 @@ int ReactTCE::attempt(Particle::OnePart *ip, Particle::OnePart *jp,
 
   double pcache[MAXCACHE];
 
+  // lowest rlist index of a channel whose own probability was capped
+  // (over) and of a channel with a nonzero probability (live), for the
+  // forward and the detailed-balance reverse channels separately
+
+  int fwd_over = -1, fwd_live = -1, rev_over = -1, rev_live = -1;
+
   for (int i = 0; i < n; i++) {
     double p = channel_prob(list[i],ip,jp,pre_etrans,pre_erot,
                             pre_evib,pre_eelec,pre_ave_rotdof);
@@ -141,15 +150,33 @@ int ReactTCE::attempt(Particle::OnePart *ip, Particle::OnePart *jp,
     int over = 0;
     if (p > 1.0) { p = 1.0; over = 1; }
     if (i < MAXCACHE) pcache[i] = p;
-    double before = total_prob;
     total_prob += p;
-    // record a channel whose own probability was capped, or the channel
-    // at which the pair's summed probability crossed 1 (end_of_run()
-    // names the lowest such reaction index)
-    if ((over || (before <= 1.0 && total_prob > 1.0)) &&
-        (prob_big_index < 0 || list[i] < prob_big_index))
-      prob_big_index = list[i];
+    if (p > 0.0) {
+      const int ri = list[i];
+      if (rlist[ri].reverse) {
+        if (over && (rev_over < 0 || ri < rev_over)) rev_over = ri;
+        if (rev_live < 0 || ri < rev_live) rev_live = ri;
+      } else {
+        if (over && (fwd_over < 0 || ri < fwd_over)) fwd_over = ri;
+        if (fwd_live < 0 || ri < fwd_live) fwd_live = ri;
+      }
+    }
     if (isel < 0 && total_prob > random_prob) isel = i;
+  }
+
+  // record the capped channels for end_of_run(): a channel whose own
+  // probability was capped, or, when the pair is saturated (summed
+  // probability above 1, so every channel is scaled by 1/total below),
+  // every live channel; the forward and the reverse channels are reported
+  // separately, by their lowest reaction index
+
+  {
+    const int fwd = (total_prob > 1.0) ? fwd_live : fwd_over;
+    const int rev = (total_prob > 1.0) ? rev_live : rev_over;
+    if (fwd >= 0 && (prob_big_index < 0 || fwd < prob_big_index))
+      prob_big_index = fwd;
+    if (rev >= 0 && (prob_big_rev_index < 0 || rev < prob_big_rev_index))
+      prob_big_rev_index = rev;
   }
 
   // saturation: the pair's total reaction probability exceeds 1, so the

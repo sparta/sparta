@@ -1288,22 +1288,27 @@ void ReactBird::check_tce_bounds()
    warn once, over all procs, about invalid TCE reaction probabilities
      recorded on this proc during the run by the tce styles
    negflag = 1 if a negative probability occurred
-   bigindex = rlist index of the first reaction at which a species pair's
-     summed probability exceeded 1, -1 if none
+   bigindex = lowest rlist index of a forward reaction whose probability
+     was capped at 1 (its own, or its species pair's summed probability
+     exceeded 1), -1 if none
+   revindex = the same for detailed-balance reverse (B-style) reactions
    called on all procs by ReactTCE::end_of_run() and
      ReactTCEKokkos::end_of_run()
 ------------------------------------------------------------------------- */
 
-void ReactBird::report_tce_prob_flags(int negflag, int bigindex)
+void ReactBird::report_tce_prob_flags(int negflag, int bigindex, int revindex)
 {
   int negall;
   MPI_Allreduce(&negflag,&negall,1,MPI_INT,MPI_MAX,world);
 
   // report the lowest-index reaction flagged by any proc
 
-  int mine = (bigindex >= 0) ? bigindex : nlist;
-  int bigall;
-  MPI_Allreduce(&mine,&bigall,1,MPI_INT,MPI_MIN,world);
+  int mine[2],all[2];
+  mine[0] = (bigindex >= 0) ? bigindex : nlist;
+  mine[1] = (revindex >= 0) ? revindex : nlist;
+  MPI_Allreduce(mine,all,2,MPI_INT,MPI_MIN,world);
+  int bigall = all[0];
+  int revall = all[1];
 
   if (comm->me == 0) {
     if (negall)
@@ -1317,6 +1322,16 @@ void ReactBird::report_tce_prob_flags(int negflag, int bigindex)
         "reactions of that species pair are limited to the collision rate "
         "(each selected in proportion to its probability), so their rates "
         "are under-predicted; this is independent of timestep and fnum";
+      error->warning(FLERR,mesg.c_str());
+    }
+    if (revall < nlist) {
+      std::string mesg = "Detailed-balance reverse reaction probability "
+        "exceeded 1.0 during this run, e.g. at reaction " +
+        std::string(rlist[revall].id) + ": where the cap acts the reverse "
+        "rate is below its detailed-balance value, so the equilibrium of "
+        "the forward/reverse pair is shifted toward the products of the "
+        "forward reaction; this happens mainly at low temperature (see the "
+        "react command doc page) and is independent of timestep and fnum";
       error->warning(FLERR,mesg.c_str());
     }
   }

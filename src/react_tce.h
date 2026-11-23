@@ -44,9 +44,13 @@ class ReactTCE : public ReactBird {
                       double, double, double, double, double);
   int prob_neg_flag;       // 1 if a react_prob < 0 occurred on this proc
                            //   during the current run
-  int prob_big_index;      // lowest rlist index of a reaction at which a
-                           //   pair's summed react_prob exceeded 1 on this
-                           //   proc during the current run, -1 if none
+  int prob_big_index;      // lowest rlist index of a forward reaction
+                           //   whose react_prob was capped at 1 (its own,
+                           //   or its pair's summed probability exceeded
+                           //   1) on this proc during the current run,
+                           //   -1 if none
+  int prob_big_rev_index;  // the same for detailed-balance reverse
+                           //   (B-style) reactions
 };
 
 }

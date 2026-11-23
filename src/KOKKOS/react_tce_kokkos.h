@@ -78,10 +78,12 @@ int attempt_kk(Particle::OnePart *ip, Particle::OnePart *jp,
   double total_prob = 0.0;
   int isel = -1;
 
-  // first-pass capped probabilities, reused by the saturation pass
-  // (matches ReactTCE::attempt)
+  // first-pass capped probabilities, reused by the saturation pass; lowest
+  // rlist index of a capped (over) and of a live channel, forward and
+  // reverse separately (matches ReactTCE::attempt)
 
   double pcache[MAXCACHE_KK];
+  int fwd_over = -1, fwd_live = -1, rev_over = -1, rev_live = -1;
 
   for (int i = 0; i < n; i++) {
     double p = channel_prob_kk(d_list[i],ip,jp,pre_etrans,pre_erot,
@@ -92,13 +94,28 @@ int attempt_kk(Particle::OnePart *ip, Particle::OnePart *jp,
     int over = 0;
     if (p > 1.0) { p = 1.0; over = 1; }
     if (i < MAXCACHE_KK) pcache[i] = p;
-    const double before = total_prob;
     total_prob += p;
-    // a channel whose own probability was capped, or the channel at which
-    // the pair's summed probability crossed 1 (matches ReactTCE::attempt)
-    if (over || (before <= 1.0 && total_prob > 1.0))
-      Kokkos::atomic_min(&d_probbig(),d_list[i]);
+    if (p > 0.0) {
+      const int ri = d_list[i];
+      if (d_rlist[ri].reverse) {
+        if (over && (rev_over < 0 || ri < rev_over)) rev_over = ri;
+        if (rev_live < 0 || ri < rev_live) rev_live = ri;
+      } else {
+        if (over && (fwd_over < 0 || ri < fwd_over)) fwd_over = ri;
+        if (fwd_live < 0 || ri < fwd_live) fwd_live = ri;
+      }
+    }
     if (isel < 0 && total_prob > random_prob) isel = i;
+  }
+
+  // a capped channel, or every live channel of a saturated pair, for
+  // end_of_run() (matches ReactTCE::attempt)
+
+  {
+    const int fwd = (total_prob > 1.0) ? fwd_live : fwd_over;
+    const int rev = (total_prob > 1.0) ? rev_live : rev_over;
+    if (fwd >= 0) Kokkos::atomic_min(&d_probbig(),fwd);
+    if (rev >= 0) Kokkos::atomic_min(&d_probbigrev(),rev);
   }
 
   // saturation: the pair reacts with probability 1 and the channel is
@@ -430,9 +447,11 @@ double channel_prob_kk(int rindex, Particle::OnePart *ip,
   // invalid reaction probabilities recorded during the run, reported by
   //   end_of_run() (match ReactTCE::prob_neg_flag and prob_big_index):
   //   d_probneg = 1 if a negative probability occurred,
-  //   d_probbig = lowest rlist index at which a pair's summed probability
-  //     exceeded 1, PROBBIG_NONE if none
-  DAT::t_int_scalar d_probneg,d_probbig;
+  //   d_probbig = lowest rlist index of a forward reaction whose
+  //     probability was capped at 1 (its own, or its pair's summed
+  //     probability exceeded 1), PROBBIG_NONE if none
+  //   d_probbigrev = the same for detailed-balance reverse reactions
+  DAT::t_int_scalar d_probneg,d_probbig,d_probbigrev;
 };
 
 }

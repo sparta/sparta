@@ -230,7 +230,7 @@ class ReactBird : public React {
   int reverse_modes_checked;       // 1 if check_reverse_modes() already ran
   void check_reverse_modes();
   double tce_eta_bound(OneReaction *);
-  void report_tce_prob_flags(int, int);
+  void report_tce_prob_flags(int, int, int);
   virtual void grow_tallies();
   double partition_function(int, double);
   void forward_cap(OneReaction *, double, int, double *);

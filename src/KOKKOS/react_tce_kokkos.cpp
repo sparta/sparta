@@ -56,8 +56,10 @@ void ReactTCEKokkos::init()
 
   d_probneg = DAT::t_int_scalar("react:probneg");
   d_probbig = DAT::t_int_scalar("react:probbig");
+  d_probbigrev = DAT::t_int_scalar("react:probbigrev");
   Kokkos::deep_copy(d_probneg,0);
   Kokkos::deep_copy(d_probbig,PROBBIG_NONE);
+  Kokkos::deep_copy(d_probbigrev,PROBBIG_NONE);
 
   // with partial_energy no, build the host microcanonical energy-factor
   // tables (shared ReactBird machinery) and mirror them into flat device
@@ -114,10 +116,13 @@ void ReactTCEKokkos::init()
 
 void ReactTCEKokkos::end_of_run()
 {
-  int negflag,bigindex;
+  int negflag,bigindex,revindex;
   Kokkos::deep_copy(negflag,d_probneg);
   Kokkos::deep_copy(bigindex,d_probbig);
-  report_tce_prob_flags(negflag,bigindex == PROBBIG_NONE ? -1 : bigindex);
+  Kokkos::deep_copy(revindex,d_probbigrev);
+  report_tce_prob_flags(negflag,bigindex == PROBBIG_NONE ? -1 : bigindex,
+                        revindex == PROBBIG_NONE ? -1 : revindex);
   Kokkos::deep_copy(d_probneg,0);
   Kokkos::deep_copy(d_probbig,PROBBIG_NONE);
+  Kokkos::deep_copy(d_probbigrev,PROBBIG_NONE);
 }

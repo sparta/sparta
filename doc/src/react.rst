@@ -78,7 +78,8 @@ does not depend on the order in which reactions are listed in the
 reaction file.  A warning is printed at the end of each run in which
 either condition occurred, naming a reaction at which it did, since
 the simulated rate then saturates at the collision rate and no longer
-follows the input Arrhenius rate.  The probability is per collision,
+follows the input Arrhenius rate; reverse (B-style) reactions get a
+warning of their own (see below).  The probability is per collision,
 so the timestep, fnum and grid do not change it.
 
 The format of the reaction file is the same for all three of the
@@ -141,12 +142,8 @@ Above the bound, the TCE reaction probability reproduces the Arrhenius
 rate on average, but it is a per-collision probability and can exceed
 1 for some collision energies, e.g. when the Arrhenius rate approaches
 the collision rate, or near the activation energy when b < -(z+1/2).
-Probabilities above 1 are clipped: where the summed probability of the
-reactions of a species pair exceeds 1, that pair reacts at the
-collision rate and each of its reactions is selected in proportion to
-its probability, so their rates are under-predicted.  SPARTA warns
-once per run when this happens.  Reducing the timestep or fnum does
-not change the probability.
+It is then capped as described above, and the rates of the capped
+reactions are under-predicted.
 
 ----------
 
@@ -491,7 +488,20 @@ relax, so they must leave the reaction with the distribution that the
 reverse samples (see below).  The limit works in one direction only: a
 cap on the reverse reaction itself (three-body recombination in dense
 gas, or a barrierless reverse at low collision energy) is not carried
-back into its forward reaction.
+back into its forward reaction.  Where it acts, the reverse rate falls
+below its detailed-balance value and the equilibrium of the pair is
+shifted toward the products of the forward reaction.  SPARTA prints a
+separate warning at the end of each run in which a reverse reaction's
+probability was capped.  This is mainly a low-temperature limit.  With
+the *data/air.tce* set, NO + N -> N2 + O (the reverse of N2 + O -> NO +
+N) reaches 0.74 of its detailed-balance rate at 1000 K and 0.90 at
+2000 K.  The dissociative recombinations NO+ + e -> N + O, N2+ + e ->
+N + N and O2+ + e -> O + O would need average probabilities of 11, 15
+and 23 at 2000 K; they reach 0.54-0.69 of their detailed-balance rates
+at 10000 K and 0.72-0.87 at 15000 K, so their ionization equilibria are
+shifted toward the ions below about 15000 K.  (Rates of the reverse
+reaction averaged over a thermal reverse pair, from
+examples/tce\_air/tce\_ref.py.)
 
 After a reaction the products' discrete levels (vibration, electronic
 states, discrete rotation) are drawn jointly from the conditional, at
