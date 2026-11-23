@@ -454,12 +454,14 @@ def main():
         "needs the rotational temperature",
         edits=(("rotfile air.rot ",""),))
     # a zero rotational temperature would hang the discrete rotational
-    # sampler (zero rotational quantum): rejected at init
+    # sampler (zero rotational quantum): rejected at init.  Forward-only, so
+    # the collision-model check is reached (a B line stops earlier, at the
+    # reverse reaction's own rotfile check)
     rot0 = "".join(l.replace(" 2.88 "," 0.0 ") if l.startswith("N2 ") else l
                    for l in open(os.path.join(HERE,"air.rot")))
+    assert " 0.0 " in [l for l in rot0.splitlines() if l.startswith("N2 ")][0]
     expect_error("rottemp0",
-        "N2 + O --> NO + N\nE A 0.0 5.175e-19 1.069e-12 -1.0 -5.175e-19\n"
-        "\nNO + N --> N2 + O\nE B 0.0 0.0 0.0 0.0 0.0\n",
+        "N2 + O --> NO + N\nE A 0.0 5.175e-19 1.069e-12 -1.0 -5.175e-19\n",
         "non-positive rotational temperature",
         edits=(("rotfile air.rot ","rotfile zero.rot "),),
         files={"zero.rot":rot0})
