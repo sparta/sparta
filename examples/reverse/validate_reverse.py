@@ -417,13 +417,15 @@ def main():
     print("check 6: error paths reject invalid B-style inputs; unsupported "
           "styles switch B lines off")
     def expect_error(tag, tce_text, msg_frag, deck="in.reverse_rate",
-                     react_style_line=None, edits=()):
+                     react_style_line=None, edits=(), files=None):
         wd = os.path.join(HERE,"work_validate","err_"+tag)
         os.makedirs(wd, exist_ok=True)
         for f in ("air.species","air.vss","air.rot","air.elec",
                   "in.reverse_rate"):
             shutil.copy(os.path.join(HERE,f), wd)
         open(os.path.join(wd,"rev.tce"),"w").write(tce_text)
+        for name, text in (files or {}).items():
+            open(os.path.join(wd,name),"w").write(text)
         dk = open(os.path.join(wd,deck)).read()
         if react_style_line:
             dk = dk.replace("react           tce rev.tce", react_style_line)
@@ -451,6 +453,16 @@ def main():
         "\nNO + N --> N2 + O\nE B 0.0 0.0 0.0 0.0 0.0\n",
         "needs the rotational temperature",
         edits=(("rotfile air.rot ",""),))
+    # a zero rotational temperature would hang the discrete rotational
+    # sampler (zero rotational quantum): rejected at init
+    rot0 = "".join(l.replace(" 2.88 "," 0.0 ") if l.startswith("N2 ") else l
+                   for l in open(os.path.join(HERE,"air.rot")))
+    expect_error("rottemp0",
+        "N2 + O --> NO + N\nE A 0.0 5.175e-19 1.069e-12 -1.0 -5.175e-19\n"
+        "\nNO + N --> N2 + O\nE B 0.0 0.0 0.0 0.0 0.0\n",
+        "non-positive rotational temperature",
+        edits=(("rotfile air.rot ","rotfile zero.rot "),),
+        files={"zero.rot":rot0})
     # reverse auto is an explicit request: error with the partial-energy model
     expect_error("autopartial",
         "N2 + O --> NO + N\nE A 0.0 5.175e-19 1.069e-12 -1.0 -5.175e-19\n",
@@ -568,6 +580,67 @@ def main():
     sig = math.sqrt(1.0/max(d,1)+1.0/max(r,1))
     dev = abs(ratio/keqd - 1.0)
     check("T=%6.0fK  (d/r)*n_N=%.3e  Keq=%.3e (dev %.1f%%, stat %.1f%%)"
+          % (T, ratio, keqd, 100*dev, 100*sig),
+          dev < max(3*sig, 0.05) and d > 500 and r > 500)
+
+    print("check 9b: the same external Keq fit under units cgs")
+    # the keq_file fit stays in SI (1/m^3) and SPARTA converts it to 1/cm^3:
+    # the same reservoir in cgs units (masses in g, diameters in cm, energies
+    # in erg, the dissociation prefactor in cm^3/s) must reproduce the same
+    # Keq; without the conversion the recombination is 1e6 times too slow
+    def cgs_species(text):
+        out = []
+        for l in text.splitlines():
+            w = l.split()
+            if w and not l.lstrip().startswith("#") and len(w) >= 10:
+                w[2] = "%.6e" % (float(w[2])*1.0e3); l = "  ".join(w)
+            out.append(l)
+        return "\n".join(out) + "\n"
+    def cgs_vss(text):
+        out = []
+        for l in text.splitlines():
+            w = l.split()
+            if w and not l.lstrip().startswith("#") and len(w) >= 5:
+                w[1] = "%.6e" % (float(w[1])*1.0e2); l = "  ".join(w)
+            out.append(l)
+        return "\n".join(out) + "\n"
+    def cgs_tce(text):
+        out = []
+        for l in text.splitlines():
+            w = l.split()
+            if len(w) == 7 and w[0] in "DEIR" and w[1] == "A":
+                avol = 1.0e12 if w[0] == "R" else 1.0e6
+                w[3] = "%.6e" % (float(w[3])*1.0e7)      # Ea, J -> erg
+                w[4] = "%.6e" % (float(w[4])*avol)       # A, m^3/s -> cm^3/s
+                w[6] = "%.6e" % (float(w[6])*1.0e7)      # dE, J -> erg
+                l = " ".join(w)
+            out.append(l)
+        return "\n".join(out) + "\n"
+    log = run(exe,"in.reverse_rate",
+              {"T":T,"RB":1.0,"NRHO":NRHO_HI*1.0e-6,"FNUM":FNUM_HI},
+              "keqrecomb_cgs%d"%T,extra,
+              subs={"seed            12345":
+                    "units           cgs\nseed            12345",
+                    "gridcut 1.0e-5":"gridcut 1.0e-3",
+                    "create_box      0 0.0001 0 0.0001 0 0.0001":
+                    "create_box      0 0.01 0 0.01 0 0.01",
+                    "react           tce rev.tce":
+                    "react           tce fwd.tce",
+                    "rboost ${RB}":
+                    "rboost ${RB} reverse auto keq_file park.keq",
+                    "run             2000":"run             6000"},
+              extra_files={"fwd.tce":cgs_tce(FWD_TCE),"park.keq":PARKD,
+                           "air.species":cgs_species(
+                               open(os.path.join(HERE,"air.species")).read()),
+                           "air.vss":cgs_vss(
+                               open(os.path.join(HERE,"air.vss")).read())})
+    t = tallies(log)
+    d = t.get("N2 + N --> N + N + N",0.0)
+    r = t.get("N + N --> N2 + N",0.0)
+    ratio = (d/r)*nN if r else float("inf")
+    sig = math.sqrt(1.0/max(d,1)+1.0/max(r,1))
+    dev = abs(ratio/keqd - 1.0)
+    check("cgs: T=%6.0fK  (d/r)*n_N=%.3e  Keq=%.3e (dev %.1f%%, stat %.1f%%)"
           % (T, ratio, keqd, 100*dev, 100*sig),
           dev < max(3*sig, 0.05) and d > 500 and r > 500)
 
