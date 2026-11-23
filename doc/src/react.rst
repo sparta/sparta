@@ -132,7 +132,7 @@ fnum does not change the probability.
 The *qk* style is Bird's Quantum-Kinetic model (QK).  When this style
 is specified, all computed reactions will use the QK model.
 
-The QK model implemented is that of `(Bird09) <#Bird09>`_ as validated
+The QK model implemented is that of `(Bird09b) <#Bird09b>`_ as validated
 `(Gallis09) <#Gallis09>`_ and modified `(Gallis10) <#Gallis10>`_.
 
 The QK model depends solely on properties of the colliding molecules
@@ -143,7 +143,7 @@ vibrational energy levels.
 
 According to the QK model dissociation reactions take place when the 
 maximum obtainable vibrational energy after an inelastic energy exchange
-is higher than the dissociation level `(Bird09) <#Bird09>`_.
+is higher than the dissociation level `(Bird09b) <#Bird09b>`_.
 
 .. math::
 
@@ -444,15 +444,19 @@ style = none
 **(Bird94)** G. A. Bird, Molecular Gas Dynamics and the Direct
 Simulation of Gas Flows, Clarendon Press, Oxford (1994).
 
-.. _Bird09:
-
 .. raw:: html
 
    <span id="Bird09"></span>
 
+.. _Bird09b:
+
+.. raw:: html
+
+   <span id="Bird09b"></span>
 
 
-**(Bird09)** G. A. Bird, Chemical Reactions in DSMC Rarefied Gas
+
+**(Bird09b)** G. A. Bird, Chemical Reactions in DSMC Rarefied Gas
 Dynamics, Editor T Abe, AIP Conference Proceedings (2009).
 
 .. _Bird11:

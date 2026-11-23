@@ -1,6 +1,8 @@
 # SPARTA documentation build configuration file.
 
+import glob
 import os
+import re
 
 from sphinx.util import logging as sphinx_logging
 
@@ -215,6 +217,95 @@ if _requested_builder(None) == 'spelling':
     # matching the text a user is shown.
 
 
+# -- Bibliography -------------------------------------------------------------
+#
+# Bibliography.rst lists every work the manual cites, once, as LAMMPS's
+# manual does.  The pages keep their own references -- their #Bird94-style
+# anchors are published URLs -- so the list is generated from them when the
+# manual is built rather than kept by hand.  A reference on a page is:
+#
+#     .. _Bird94:
+#
+#     .. raw:: html
+#
+#        <span id="Bird94"></span>
+#
+#     **(Bird94)** G. A. Bird, Molecular Gas Dynamics ...
+#
+# Copies that differ only in punctuation are one work.  A key used for two
+# different works gives two entries, each linking to the pages that mean
+# it -- but should be split into two keys, as Bird09 was into Bird09a and
+# Bird09b.
+BIB_MARKER = '.. sparta-bibliography-entries'
+BIB_LABEL = re.compile(r'^\.\. _([A-Z][A-Za-z-]*\d\d(?:\d\d)?[a-z]?):', re.M)
+BIB_ENTRY = re.compile(
+    r'^\.\. _(?P<key>[A-Z][A-Za-z-]*\d\d(?:\d\d)?[a-z]?):\n\n'
+    r'\.\. raw:: html\n\n   <span id="(?P=key)"></span>\n\n+'
+    r'\*\*\((?P=key)\)\*\* (?P<text>.+?)\n\n', re.M | re.S)
+
+
+def bibliography_entries(src_dir):
+    """[(key, text, [page, ...])], one per distinct work, sorted by key."""
+    works = {}
+    for path in sorted(glob.glob(os.path.join(src_dir, '*.rst'))):
+        page = os.path.basename(path)[:-4]
+        if page == 'Bibliography':
+            continue
+        with open(path) as f:
+            text = f.read()
+        labels = BIB_LABEL.findall(text)
+        found = [(m.group('key'), ' '.join(m.group('text').split()))
+                 for m in BIB_ENTRY.finditer(text)]
+        if sorted(labels) != sorted(k for k, _t in found):
+            raise RuntimeError(
+                'Bibliography: %s.rst has citation labels %s but readable '
+                'references only for %s; each label must be followed by its '
+                'raw-html span and a "**(Key)** text" paragraph'
+                % (page, sorted(labels), sorted(k for k, _t in found)))
+        for key, body in found:
+            same = (key, re.sub(r'\W+', '', body).lower())
+            work = works.setdefault(same, [key, body, []])
+            if len(body) > len(work[1]):
+                work[1] = body
+            work[2].append(page)
+    return sorted(works.values(), key=lambda w: (w[0].lower(), w[1]))
+
+
+def bibliography_rst(src_dir):
+    entries = bibliography_entries(src_dir)
+    per_key = {}
+    for key, _body, _pages in entries:
+        per_key[key] = per_key.get(key, 0) + 1
+    out, used = [], {}
+    for key, body, pages in entries:
+        used[key] = used.get(key, 0) + 1
+        anchor = key if per_key[key] == 1 else '%s-%d' % (key, used[key])
+        # anonymous links (__): the same page name links to a different
+        # anchor in each entry, which docutils < 0.22 rejects for named ones
+        cites = ', '.join('`%s <%s.html#%s>`__' % (p.replace('_', '\\_'), p, key)
+                          for p in pages)
+        out += ['.. raw:: html', '', '   <span id="%s"></span>' % anchor, '',
+                '**(%s)** %s' % (key, body), '',
+                '   Cited on: %s' % cites, '']
+    return '\n'.join(out)
+
+
+def bibliography_always_outdated(app, env, added, changed, removed):
+    # Generated from the other pages, so an incremental build has to
+    # re-read it whenever any of them could have changed.
+    return ['Bibliography'] if 'Bibliography' in env.found_docs else []
+
+
+def fill_bibliography(app, docname, source):
+    if docname != 'Bibliography':
+        return
+    if BIB_MARKER not in source[0]:
+        raise RuntimeError('Bibliography.rst has lost its "%s" line, so '
+                           'the generated entries have nowhere to go'
+                           % BIB_MARKER)
+    source[0] = source[0].replace(BIB_MARKER, bibliography_rst(app.srcdir))
+
+
 # -- SPARTA input-script highlighting --------------------------------------
 #
 # ".. code-block:: SPARTA" uses the lexer in SPARTALexer.py, modelled on the
@@ -250,4 +341,6 @@ def setup(app):
     import SPARTALexer
 
     app.add_lexer('SPARTA', SPARTALexer.make_lexer(sparta_commands()))
+    app.connect('source-read', fill_bibliography)
+    app.connect('env-get-outdated', bibliography_always_outdated)
     app.connect('build-finished', copy_full_size_images)

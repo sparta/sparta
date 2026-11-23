@@ -135,7 +135,7 @@ Note that choosing *Nlimit* judiciously will avoid costly searches
 when there are large numbers of particles in some or all grid cells.
 
 If *subcell* is specified, the transient adaptive subcell method of
-Bird `(Bird09) <#Bird09>`_ is used.  Each timestep the particles in a grid
+Bird `(Bird09a) <#Bird09a>`_ is used.  Each timestep the particles in a grid
 cell are binned into a transient grid of subcells within the cell, with
 Nsub subcells in each dimension.  Nsub is chosen as the largest integer
 such that the number of subcells does not exceed the number of
@@ -170,7 +170,7 @@ separation distance between colliding particles, which reduces the
 spatial discretization error associated with the grid cell size.  This
 can allow accurate simulations with grid cells comparable to the local
 mean free path, instead of the usual recommendation of 1/3 or smaller,
-as described in `(Bird09) <#Bird09>`_ and `(Gallis11) <#Gallis11>`_.  The
+as described in `(Bird09a) <#Bird09a>`_ and `(Gallis11) <#Gallis11>`_.  The
 cost of selecting a partner does not depend on a user-chosen search
 limit as with *nearcp*\ ; for cells with many particles the subcell
 method is typically faster than *nearcp* with a large *Nlimit*\ .
@@ -269,15 +269,19 @@ ambipolar no, nearcp no, subcell no, rotate smooth, and vibrate = no.
 **(Bird94)** G. A. Bird, Molecular Gas Dynamics and the Direct
 Simulation of Gas Flows, Clarendon Press, Oxford (1994).
 
-.. _Bird09:
-
 .. raw:: html
 
    <span id="Bird09"></span>
 
+.. _Bird09a:
+
+.. raw:: html
+
+   <span id="Bird09a"></span>
 
 
-**(Bird09)** G. A. Bird, M. A. Gallis, J. R. Torczynski, D. J. Rader,
+
+**(Bird09a)** G. A. Bird, M. A. Gallis, J. R. Torczynski, D. J. Rader,
 "Accuracy and efficiency of the sophisticated direct simulation Monte
 Carlo algorithm for simulating noncontinuum gas flows," Physics of
 Fluids, 21, 017103 (2009).
