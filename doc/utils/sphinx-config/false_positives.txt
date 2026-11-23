@@ -161,6 +161,7 @@ desorbed
 desorbs
 Desorption
 desorption
+desul
 Dihedral
 dimensionality
 dimgray
@@ -301,6 +302,7 @@ isurf
 Ith
 Ivanov
 Jaiswal
+Jewett
 jpeg
 jpeglib
 jpg
@@ -329,6 +331,7 @@ lavenderblush
 lawngreen
 ld
 lemonchiffon
+Lewiner
 libdir
 libjpeg
 libmpi
@@ -378,6 +381,7 @@ maxlevel
 maxrandom
 MByte
 MBytes
+mdspan
 mediumaquamarine
 mediumblue
 mediumorchid

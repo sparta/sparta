@@ -106,9 +106,26 @@ projects:
 
 * The Kokkos library is bundled in the ``lib/kokkos`` folder and is used
   by the KOKKOS package.  The copy is updated by the SPARTA developers
-  from releases of Kokkos.
-* A copy of the KISS FFT library is part of the source code of the FFT
-  package (``src/FFT`` and ``src/KOKKOS``).
+  from releases of Kokkos.  Kokkos itself bundles two more libraries in
+  ``lib/kokkos/tpls``: mdspan and desul.  The files
+  ``mdspan-hash.txt`` and ``desul-hash.txt`` there record the git commit
+  of each copy.
+* A stripped down copy of the KISS FFT library (version 1.2.9) is part
+  of the source code of the FFT package (``src/FFT/kissfft.h``) and of
+  the KOKKOS package (``src/KOKKOS/kissfft_kokkos.h``).
+* Code from other projects is also part of the core source code in
+  ``src``:
+
+  * the 3d Marching Cubes code (``marching_cubes.cpp``), which is
+    adapted from the Marching Cubes 33 implementation by Thomas Lewiner,
+    and its lookup tables (``lookup_table.h`` and
+    ``decrement_lookup_table.h``)
+  * the public domain lookup3 hash function by Bob Jenkins
+    (``hashlittle.cpp``)
+  * a regular expression matcher adapted from the public domain
+    tiny-regex-c library (``utils.cpp``)
+  * the Jacobi eigenvalue solver from the ``jacobi_pd`` library by
+    Andrew Jewett (``math_eigen.cpp`` and ``math_eigen_impl.h``)
 
 Since these copies are part of the SPARTA source code, they are part of
 what is downloaded when you obtain SPARTA.  Nothing else is needed to
@@ -161,7 +178,7 @@ This downloads software into the ``doc`` folder:
   Python package index into a virtual environment (``doc/docenv``),
   using the version ranges in ``doc/utils/requirements.txt``.  These
   downloads are **not** checked against fixed checksums.
-* The MathJax package is downloaded from the npm registry over https.
+* The MathJax package is downloaded from the npm registry over HTTPS.
   Its version is fixed in ``doc/Makefile`` together with its SHA-256
   checksum.  The checksum is compared before the archive is unpacked and
   the manual build stops with an error if it does not match.
@@ -215,7 +232,7 @@ SPARTA releases are dated versions of the source code with a tag in the
 git repository.  Currently there are no signed tags, no lists of
 checksums, and no other cryptographic attestations for SPARTA releases.
 If you want to make sure that the source code that you have is the same
-as what is on GitHub, the most reliable way is to use git over https:
+as what is on GitHub, the most reliable way is to use git over HTTPS:
 
 .. code-block:: bash
 
