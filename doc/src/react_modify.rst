@@ -170,7 +170,11 @@ defining ln Keq = c0/Z + c1 + c2 ln(Z) + c3 Z + c4 Z^2 with Z = 10000
 K / T (the form used by Park's chemistry reviews).  Keq = k\_f/k\_b must
 be in SI units: dimensionless for an exchange pair, 1/m^3 for a
 dissociation/recombination pair; published fits in molar or cgs units
-must be converted.  A reverse reaction matched by an entry keeps its
+must be converted.  The fit stays in SI under :doc:`units cgs <units>`:
+SPARTA converts it to 1/cm^3 itself.  SPARTA warns if the fit and the
+statistical-mechanics Keq differ by more than a factor of 10 at every
+temperature of the fitting window (1000-60000 K), the signature of a fit
+in the wrong units.  A reverse reaction matched by an entry keeps its
 energy-resolved detailed-balance table (which by itself reproduces the
 statistical-mechanics equilibrium constant Keq\_sm) and multiplies the
 per-collision probability by the residual factor R(T) =

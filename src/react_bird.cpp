@@ -915,7 +915,8 @@ void ReactBird::grow_tallies()
        park c0 c1 c2 c3 c4
      ln Keq = c0/Z + c1 + c2 ln(Z) + c3 Z + c4 Z^2,  Z = 10000 K / T,
      with Keq = k_f/k_b in SI units (dimensionless for an exchange pair,
-     1/m^3 for a dissociation/recombination pair)
+     1/m^3 for a dissociation/recombination pair), also under units cgs:
+     fit_keq_residual() converts it to the run's units
    entries whose species are not all defined are skipped, like reaction
      files; called every init so react_modify changes take effect
 ------------------------------------------------------------------------- */
@@ -1087,6 +1088,16 @@ void ReactBird::fit_keq_residual(int i)
   const int NP = 16;
   const double Tlo = 1000.0, Thi = 60000.0;
   double ata[5][5], atb[5];
+
+  // the external fit is in SI (Keq in 1/m^3 for a dissociation/recombination
+  // pair), the partition functions are in the run's units (per cm^3 in cgs):
+  // convert the fit, one factor 1e-6 per net number-density power dn of the
+  // forward reaction (dn = 1 for dissociation, 0 for exchange/ionization)
+
+  const int cgs = (strcmp(update->unit_style,"cgs") == 0);
+  const int dn = f->nproduct - f->nreactant;
+  const double keq_units = cgs ? pow(1.0e-6,dn) : 1.0;
+  double lnr_min = HUGE_VAL;
   for (int a = 0; a < 5; a++) {
     atb[a] = 0.0;
     for (int c = 0; c < 5; c++) ata[a][c] = 0.0;
@@ -1101,7 +1112,8 @@ void ReactBird::fit_keq_residual(int i)
     for (int j = 0; j < f->nreactant; j++)
       keq_sm /= partition_function(f->reactants[j],T);
 
-    double lnR = log(keq_sm) - log(keq_eval(b->keq_coeff,T));
+    double lnR = log(keq_sm) - log(keq_units*keq_eval(b->keq_coeff,T));
+    if (fabs(lnR) < lnr_min) lnr_min = fabs(lnR);
 
     double Z = 10000.0/T;
     double basis[5] = {1.0/Z, 1.0, log(Z), Z, Z*Z};
@@ -1174,12 +1186,29 @@ void ReactBird::fit_keq_residual(int i)
       keq_sm *= partition_function(f->products[j],T);
     for (int j = 0; j < f->nreactant; j++)
       keq_sm /= partition_function(f->reactants[j],T);
-    double lnR = log(keq_sm) - log(keq_eval(b->keq_coeff,T));
+    double lnR = log(keq_sm) - log(keq_units*keq_eval(b->keq_coeff,T));
     double err = fabs(keq_eval(b->keq_resid_coeff,T)/exp(lnR) - 1.0);
     // NOTE: written so that a NaN err is caught (NaN fails every ordered
     // comparison, so "err > maxerr" alone would silently ignore it)
     if (!(err <= maxerr)) maxerr = err;
   }
+  // the residual fit absorbs any constant factor between the two Keq (a
+  // units mismatch, e.g. a fit not in SI, would vanish into coefficient 1),
+  // so check its size separately: the external and partition-function Keq
+  // of the same pair agree somewhere in the window to well within a factor
+  // of ten (they part only where a fit is extrapolated), while a units
+  // mismatch is a constant factor at every temperature
+
+  if (!(lnr_min <= log(10.0)) && comm->me == 0) {
+    char str[MAXLINE+192];
+    snprintf(str,sizeof(str),"Reverse reaction %s: the keq_file fit and the "
+             "partition-function Keq differ by more than a factor of %g at "
+             "every temperature in %g-%g K; check that the fit is in SI units "
+             "and the species partition-function data",b->id,exp(lnr_min),
+             Tlo,Thi);
+    error->warning(FLERR,str);
+  }
+
   if (!(maxerr <= 0.02) && comm->me == 0) {
     char str[MAXLINE+128];
     sprintf(str,"Reverse reaction %s: external-Keq residual fit is off by "
