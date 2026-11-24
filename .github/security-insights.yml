@@ -1,0 +1,104 @@
+# OpenSSF Security Insights file for the SPARTA project.
+#
+# This is a self-description of the project in a format that automated
+# tools can read.  Only statements that are true today are listed here.
+#
+# Format specification: https://github.com/ossf/security-insights
+# The file name and its location (repository root or .github folder) are
+# fixed by that specification and must not be changed.
+#
+# Please update "last-updated" when changing this file.
+
+header:
+  schema-version: 2.2.0
+  last-updated: '2026-11-18'
+  last-reviewed: '2026-11-18'
+  url: https://raw.githubusercontent.com/sparta/sparta/master/.github/security-insights.yml
+
+project:
+  name: SPARTA
+  homepage: https://sparta.github.io
+  administrators:
+    - name: SPARTA developers at Sandia National Laboratories
+      primary: true
+  documentation:
+    detailed-guide: https://sparta.github.io/doc/Manual.html
+    support-policy: https://github.com/sparta/sparta/blob/master/SECURITY.md
+  repositories:
+    - name: sparta
+      url: https://github.com/sparta/sparta
+      comment: |
+        Main repository with the SPARTA source code, manual, tests, and examples.
+  vulnerability-reporting:
+    reports-accepted: true
+    bug-bounty-available: false
+    # Reports are made privately with the "Report a vulnerability" button
+    # on https://github.com/sparta/sparta/security.  This requires private
+    # vulnerability reporting to be enabled in the repository settings.
+    policy: https://github.com/sparta/sparta/blob/master/SECURITY.md
+
+repository:
+  url: https://github.com/sparta/sparta
+  status: active
+  accepts-change-request: true
+  accepts-automated-change-request: true
+  documentation:
+    security-policy: https://github.com/sparta/sparta/blob/master/SECURITY.md
+  license:
+    url: https://github.com/sparta/sparta/blob/master/LICENSE
+  release:
+    automated-pipeline: false
+    distribution-points:
+      - uri: https://github.com/sparta/sparta
+        comment: Source code in the git repository, with a tag for each dated release
+  security:
+    assessments:
+      self:
+        evidence: https://github.com/sparta/sparta/blob/master/SECURITY.md
+        comment: |
+          No formal security review has been done.  SPARTA is a simulation
+          program that is run by its users with their own permissions on
+          their own input.  The resulting limitations are described in
+          the security policy.
+    tools:
+      # The type of the following entry must be "secret-scanning" because
+      # that is the value the LFX Insights scanner looks for.  The entry may
+      # only be listed while "Secret Protection" is switched on in the
+      # settings of the repository on GitHub.  Mention push protection in
+      # the name and comment only while that is switched on as well.
+      - name: GitHub secret scanning
+        type: secret-scanning
+        rulesets:
+          - default
+        integration:
+          adhoc: false
+          ci: true
+          release: false
+        results: {}
+        comment: |
+          Searches the repository for known kinds of passwords and access
+          keys.
+      - name: Dependabot
+        type: SCA
+        rulesets:
+          - default
+        integration:
+          adhoc: false
+          ci: true
+          release: false
+        results: {}
+        comment: |
+          Proposes updates for the GitHub Actions used by the workflows
+          (see .github/dependabot.yml).
+      - name: CodeQL
+        type: SAST
+        rulesets:
+          - default
+        integration:
+          adhoc: false
+          ci: true
+          release: false
+        results: {}
+        comment: |
+          Runs for C++ with the GitHub code scanning "default setup" on
+          pushes to the master branch, on pull requests, and weekly.

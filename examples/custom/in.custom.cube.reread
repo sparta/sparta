@@ -5,9 +5,9 @@
 ## and data.cube.out.2 should match data.cube.custom.2
 ##
 ## Notes:
-##  - The "comm/sort” option to the “global” command is used to match
+##  - The "comm/sort" option to the "global" command is used to match
 #MPI runs.
-##  - The “twopass” option is used to match Kokkos runs.
+##  - The "twopass" option is used to match Kokkos runs.
 ## The "comm/sort" and "twopass" options should not be used for
 #production runs.
 #################################################################################

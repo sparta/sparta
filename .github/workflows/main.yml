@@ -1,10 +1,26 @@
 name: CI
 
+# Runs on pushes to master as well as on pull requests, as LAMMPS's CI
+# does: GitHub shares a cache saved on master with every pull request,
+# while one saved in a pull request is seen by that pull request only.
+# Without the master runs every new pull request started cold.
 on:
-#  push:
-#    branches: [ master ]
+  push:
+    branches: [ master ]
   pull_request:
     branches: [ master ]
+  workflow_dispatch:
+
+# A newer push to a pull request cancels that pull request's older run.
+# Runs on master always finish, so the caches they save are complete.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+# The jobs only need to read the repository.  Jobs that need more must ask
+# for it themselves.
+permissions:
+  contents: read
 
 # Run JavaScript actions on Node 24 to silence the Node 20 deprecation
 # warning. upload-artifact has no Node 24 release yet, so this runtime
@@ -19,15 +35,29 @@ env:
 # ("-k on -sf kk") using the Serial backend and SPARTA_KOKKOS_EXACT so results
 # match the non-KOKKOS gold-standard logs. It uses a real MPI build so the
 # tests run with both 1 and 4 MPI ranks.
+#
+# Caching, after LAMMPS's CI:
+#   - ccache keeps compiled objects between runs.  Each job saves its cache
+#     under a key that changes with every commit and restores the newest
+#     earlier one, so a run only recompiles what changed.  Each cache is
+#     capped at 1 GB and entries unused for 14 days are evicted.
+#   - The apt packages are cached where the mirror makes them slow: libvtk9
+#     pulls in a full Java JDK.  Each key names its package list, so
+#     changing the list starts a fresh cache.
 jobs:
   mpi:
     runs-on: ubuntu-24.04
+    env:
+      CCACHE_DIR: ${{ github.workspace }}/.ccache
     steps:
     - uses: actions/checkout@v4
+      with:
+        persist-credentials: false
 
     # Make the apt download cache writable so actions/cache can restore .deb
     # files into it before "apt install" runs. libvtk9-dev pulls in a large
-    # dependency tree; caching the debs avoids re-downloading them each run.
+    # dependency tree, a Java JDK among it; caching the debs avoids
+    # re-downloading them each run.
     - name: Prepare apt cache
       run: sudo chmod -R a+rwx /var/cache/apt/archives
 
@@ -35,7 +65,14 @@ jobs:
       uses: actions/cache@v4
       with:
         path: /var/cache/apt/archives
-        key: apt-archives-ubuntu-24.04-vtk
+        key: apt-archives-ubuntu-24.04-openmpi-vtk9-python3-ccache
+
+    - name: Cache ccache
+      uses: actions/cache@v4
+      with:
+        path: ${{ github.workspace }}/.ccache
+        key: ccache-mpi-${{ github.sha }}
+        restore-keys: ccache-mpi-
 
     - name: Install Dependencies
       run: |
@@ -45,7 +82,7 @@ jobs:
         # sudo resets the environment, so set DEBIAN_FRONTEND on the command
         sudo DEBIAN_FRONTEND=noninteractive apt-get update
         sudo DEBIAN_FRONTEND=noninteractive apt-get install -y \
-          openmpi-bin libopenmpi-dev libvtk9-dev python3-dev
+          openmpi-bin libopenmpi-dev libvtk9-dev python3-dev ccache
 
     - name: Configure
       run: |
@@ -53,6 +90,8 @@ jobs:
         cd build
         cmake -C ../cmake/presets/mpi.cmake \
           -DSPARTA_ENABLE_TESTING=ON \
+          -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
+          -DCMAKE_C_COMPILER_LAUNCHER=ccache \
           -DPKG_FFT=ON \
           -DPKG_PYTHON=ON \
           -DPKG_VTK=ON \
@@ -60,7 +99,12 @@ jobs:
           ../cmake
 
     - name: Build
-      run: cd build; make -j4
+      run: |
+        cd build
+        ccache -z -M 1G
+        make -j4
+        ccache -s
+        ccache --evict-older-than 14d
 
     - name: Test
       run: |
@@ -77,13 +121,24 @@ jobs:
         path: 'build/examples/'
   mpi-stubs:
     runs-on: ubuntu-24.04
+    env:
+      CCACHE_DIR: ${{ github.workspace }}/.ccache
     steps:
     - uses: actions/checkout@v4
+      with:
+        persist-credentials: false
+
+    - name: Cache ccache
+      uses: actions/cache@v4
+      with:
+        path: ${{ github.workspace }}/.ccache
+        key: ccache-mpi-stubs-${{ github.sha }}
+        restore-keys: ccache-mpi-stubs-
 
     - name: Install Dependencies
       run: |
         sudo DEBIAN_FRONTEND=noninteractive apt-get update
-        sudo DEBIAN_FRONTEND=noninteractive apt-get install -y python3-dev
+        sudo DEBIAN_FRONTEND=noninteractive apt-get install -y python3-dev ccache
 
     - name: Configure
       run: |
@@ -91,12 +146,19 @@ jobs:
         cd build
         cmake -C ../cmake/presets/serial.cmake \
           -DSPARTA_ENABLE_TESTING=ON \
+          -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
+          -DCMAKE_C_COMPILER_LAUNCHER=ccache \
           -DPKG_FFT=ON \
           -DPKG_PYTHON=ON \
            ../cmake
 
     - name: Build
-      run: cd build; make -j4
+      run: |
+        cd build
+        ccache -z -M 1G
+        make -j4
+        ccache -s
+        ccache --evict-older-than 14d
 
     - name: Test
       run: |
@@ -113,14 +175,39 @@ jobs:
     #    path: 'build/examples/'
   mpi-kokkos-exact:
     runs-on: ubuntu-24.04
+    env:
+      CCACHE_DIR: ${{ github.workspace }}/.ccache
     steps:
     - uses: actions/checkout@v4
+      with:
+        persist-credentials: false
+
+    # Make the apt download cache writable so actions/cache can restore .deb
+    # files into it before "apt install" runs.
+    - name: Prepare apt cache
+      run: sudo chmod -R a+rwx /var/cache/apt/archives
+
+    - name: Cache apt packages
+      uses: actions/cache@v4
+      with:
+        path: /var/cache/apt/archives
+        key: apt-archives-ubuntu-24.04-openmpi-python3-ccache
+
+    - name: Cache ccache
+      uses: actions/cache@v4
+      with:
+        path: ${{ github.workspace }}/.ccache
+        key: ccache-mpi-kokkos-exact-${{ github.sha }}
+        restore-keys: ccache-mpi-kokkos-exact-
 
     - name: Install Dependencies
       run: |
+        # Keep downloaded .deb files so actions/cache can save them for reuse.
+        echo 'Binary::apt::APT::Keep-Downloaded-Packages "true";' \
+          | sudo tee /etc/apt/apt.conf.d/99keep-debs
         sudo DEBIAN_FRONTEND=noninteractive apt-get update
         sudo DEBIAN_FRONTEND=noninteractive apt-get install -y \
-          openmpi-bin libopenmpi-dev python3-dev
+          openmpi-bin libopenmpi-dev python3-dev ccache
 
     - name: Configure
       # Build the KOKKOS package with the Serial backend and SPARTA_KOKKOS_EXACT
@@ -135,6 +222,8 @@ jobs:
         cd build
         cmake -C ../cmake/presets/kokkos_mpi_only.cmake \
           -DSPARTA_ENABLE_TESTING=ON \
+          -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
+          -DCMAKE_C_COMPILER_LAUNCHER=ccache \
           -DSPARTA_KOKKOS_EXACT=ON \
           -DKokkos_ENABLE_SERIAL=ON \
           -DKokkos_ENABLE_OPENMP=OFF \
@@ -144,7 +233,12 @@ jobs:
           ../cmake
 
     - name: Build
-      run: cd build; make -j4
+      run: |
+        cd build
+        ccache -z -M 1G
+        make -j4
+        ccache -s
+        ccache --evict-older-than 14d
 
     - name: Test
       run: |
@@ -155,27 +249,59 @@ jobs:
         ctest --output-on-failure -j4
   bigbig:
     runs-on: ubuntu-24.04
+    env:
+      CCACHE_DIR: ${{ github.workspace }}/.ccache
     steps:
     - uses: actions/checkout@v4
+      with:
+        persist-credentials: false
+
+    # Make the apt download cache writable so actions/cache can restore .deb
+    # files into it before "apt install" runs.
+    - name: Prepare apt cache
+      run: sudo chmod -R a+rwx /var/cache/apt/archives
+
+    - name: Cache apt packages
+      uses: actions/cache@v4
+      with:
+        path: /var/cache/apt/archives
+        key: apt-archives-ubuntu-24.04-openmpi-python3-ccache
+
+    - name: Cache ccache
+      uses: actions/cache@v4
+      with:
+        path: ${{ github.workspace }}/.ccache
+        key: ccache-bigbig-${{ github.sha }}
+        restore-keys: ccache-bigbig-
 
     - name: Install Dependencies
       run: |
+        # Keep downloaded .deb files so actions/cache can save them for reuse.
+        echo 'Binary::apt::APT::Keep-Downloaded-Packages "true";' \
+          | sudo tee /etc/apt/apt.conf.d/99keep-debs
         sudo DEBIAN_FRONTEND=noninteractive apt-get update
         sudo DEBIAN_FRONTEND=noninteractive apt-get install -y \
-          openmpi-bin libopenmpi-dev python3-dev
+          openmpi-bin libopenmpi-dev python3-dev ccache
 
     - name: Configure
       run: |
         mkdir build
         cd build
         cmake -C ../cmake/presets/kokkos_omp.cmake \
+          -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
+          -DCMAKE_C_COMPILER_LAUNCHER=ccache \
           -DPKG_FFT=ON \
           -DPKG_PYTHON=ON \
           -DSPARTA_DEFAULT_CXX_COMPILE_FLAGS='-DSPARTA_BIGBIG' \
           ../cmake
 
     - name: Build
-      run: cd build; make -j4
+      run: |
+        cd build
+        ccache -z -M 1G
+        make -j4
+        ccache -s
+        ccache --evict-older-than 14d
 
   # The manual is Sphinx now, and nothing else in this workflow would notice
   # if it stopped building.  -W turns Sphinx's warnings into errors, so a
@@ -196,6 +322,8 @@ jobs:
         python-version: ['3.9', '3.11']
     steps:
     - uses: actions/checkout@v4
+      with:
+        persist-credentials: false
 
     - uses: actions/setup-python@v5
       with:

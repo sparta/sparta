@@ -29,9 +29,9 @@ import numpy as np
 
 def gentris(p1,p2,p3,nslice):
   for j in range(nslice):
-    
+
     # p4 = 1st point on line between p2 and p3
-    
+
     x = p2[0] + (j+0.0)/nslice * (p3[0]-p2[0])
     y = p2[1] + (j+0.0)/nslice * (p3[1]-p2[1])
     z = p2[2] + (j+0.0)/nslice * (p3[2]-p2[2])
@@ -44,11 +44,11 @@ def gentris(p1,p2,p3,nslice):
     z = p2[2] + (j+1.0)/nslice * (p3[2]-p2[2])
     if j == nslice-1: p5 = p3
     else: p5 = (x,y,z)
-    
+
     for i in range(nxlayer):
-      
+
       if i == 0:     # one tri per slice
-        
+
         x1 = p1[0]
         y1 = p1[1]
         z1 = p1[2]
@@ -58,7 +58,7 @@ def gentris(p1,p2,p3,nslice):
         x3 = p1[0] + (i+1.0)/nxlayer * (p5[0]-p1[0])
         y3 = p1[1] + (i+1.0)/nxlayer * (p5[1]-p1[1])
         z3 = p1[2] + (i+1.0)/nxlayer * (p5[2]-p1[2])
-        
+
         if i == nxlayer-1:
           x2 = p4[0]; y2 = p4[1]; z2 = p4[2]
           x3 = p5[0]; y3 = p5[1]; z3 = p5[2]
@@ -67,7 +67,7 @@ def gentris(p1,p2,p3,nslice):
         pts.append((x2,y2,z2))
         pts.append((x3,y3,z3))
         tris.append((len(pts)-3,len(pts)-2,len(pts)-1))
-        
+
       else:     # one quad per slice = 2 tris
 
         x1 = p1[0] + (i+0.0)/nxlayer * (p4[0]-p1[0])
@@ -82,7 +82,7 @@ def gentris(p1,p2,p3,nslice):
         x4 = p1[0] + (i+0.0)/nxlayer * (p5[0]-p1[0])
         y4 = p1[1] + (i+0.0)/nxlayer * (p5[1]-p1[1])
         z4 = p1[2] + (i+0.0)/nxlayer * (p5[2]-p1[2])
-        
+
         if i == nxlayer-1:
           x2 = p4[0]; y2 = p4[1]; z2 = p4[2]
           x3 = p5[0]; y3 = p5[1]; z3 = p5[2]
@@ -93,14 +93,14 @@ def gentris(p1,p2,p3,nslice):
         pts.append((x4,y4,z4))
         tris.append((len(pts)-4,len(pts)-3,len(pts)-2))  # pts 1,2,3
         tris.append((len(pts)-4,len(pts)-2,len(pts)-1))  # pts 1,3,4
-        
+
 # main program
-    
+
 args = sys.argv[1:]
 if len(args) != 7:
   print("Syntax: jagged3d.py Nyspike Nzspike Nxlayer Nyslice Nzslice delta sfile")
   sys.exit()
-  
+
 nyspike = int(args[0])
 nzspike = int(args[1])
 nxlayer = int(args[2])
@@ -119,7 +119,7 @@ for iz in range(nzspike):
   for iy in range(nyspike):
 
     # 5 pts in spike
-    
+
     p1 = (0.0,(iy+0.5)/nyspike,(iz+0.5)/nzspike)   # tip at x = 0
     p2 = (1.0,(iy+0.0)/nyspike,(iz+0.0)/nzspike)
     p3 = (1.0,(iy+1.0)/nyspike,(iz+0.0)/nzspike)
@@ -127,7 +127,7 @@ for iz in range(nzspike):
     p5 = (1.0,(iy+1.0)/nyspike,(iz+1.0)/nzspike)
 
     # avoid round-off for pts at upper boundaries
-    
+
     if iy == nyspike-1: p3 = (1.0,1.0,(iz+0.0)/nzspike)
     if iz == nzspike-1: p4 = (1.0,(iy+0.0)/nyspike,1.0)
     if iy == nyspike-1 and iz == nzspike-1: p5 = (1.0,1.0,1.0)
@@ -135,7 +135,7 @@ for iz in range(nzspike):
     elif iz == nzspike-1: p5 = (1.0,(iy+1.0)/nyspike,1.0)
 
     # 4 large tris per spike
-    
+
     gentris(p1,p2,p4,nzslice)    # lower y triangle
     gentris(p1,p5,p3,nzslice)    # upper y triangle
     gentris(p1,p3,p2,nyslice)    # lower z triangle
@@ -176,7 +176,7 @@ for y in [0.0,1.0]:
       pts.append(p1); pts.append(p2); pts.append(p3); pts.append(p4)
       tris.append((len(pts)-4,len(pts)-3,len(pts)-2))  # pts 1,2,3
       tris.append((len(pts)-4,len(pts)-2,len(pts)-1))  # pts 1,3,4
-    
+
 # z = 0 face and z = 1 face
 
 for z in [0.0,1.0]:
@@ -235,7 +235,7 @@ for iz in range(nzspike):
         pts.append(p1); pts.append(p2); pts.append(p3); pts.append(p4)
         tris.append((len(pts)-4,len(pts)-3,len(pts)-2))  # pts 1,2,3
         tris.append((len(pts)-4,len(pts)-2,len(pts)-1))  # pts 1,3,4
-    
+
 # write out surf file
 
 print("Writing %s with %d points, %d tris" % (datafile,len(pts),len(tris)))
@@ -254,5 +254,5 @@ print(file=fp)
 print("Triangles\n", file=fp)
 for i,tri in enumerate(tris):
   print(i+1,1,tri[0]+1,tri[1]+1,tri[2]+1, file=fp)
-    
+
 fp.close()

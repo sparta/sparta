@@ -54,9 +54,9 @@ ComputePropertySurf::ComputePropertySurf(SPARTA *sparta, int narg, char **arg) :
 
     if (dimension == 2)
       if ((strcmp(arg[iarg],"v1z") == 0) || (strcmp(arg[iarg],"v2z") == 0) ||
-	  (strcmp(arg[iarg],"v3x") == 0) || (strcmp(arg[iarg],"v3y") == 0) ||
-	  (strcmp(arg[iarg],"v3z") == 0) || (strcmp(arg[iarg],"zc") == 0) ||
-	  (strcmp(arg[iarg],"normz") == 0))
+          (strcmp(arg[iarg],"v3x") == 0) || (strcmp(arg[iarg],"v3y") == 0) ||
+          (strcmp(arg[iarg],"v3z") == 0) || (strcmp(arg[iarg],"zc") == 0) ||
+          (strcmp(arg[iarg],"normz") == 0))
         error->all(FLERR,"Invalid compute property/surf field for 2d simulation");
 
     if (strcmp(arg[iarg],"id") == 0) {
@@ -468,7 +468,7 @@ void ComputePropertySurf::pack_xc(int n)
     for (int i = 0; i < nsown; i++) {
       m = cglobal[i];
       if (lines[m].mask & groupbit)
-	buf[n] = 0.5 * (lines[m].p1[0] + lines[m].p2[0]);
+        buf[n] = 0.5 * (lines[m].p1[0] + lines[m].p2[0]);
       else buf[n] = 0.0;
       n += nvalues;
     }
@@ -479,7 +479,7 @@ void ComputePropertySurf::pack_xc(int n)
     for (int i = 0; i < nsown; i++) {
       m = cglobal[i];
       if (tris[m].mask & groupbit)
-	buf[n] = THIRD * (tris[m].p1[0] + tris[m].p2[0] + tris[m].p3[0]);
+        buf[n] = THIRD * (tris[m].p1[0] + tris[m].p2[0] + tris[m].p3[0]);
       else buf[n] = 0.0;
       n += nvalues;
     }
@@ -499,7 +499,7 @@ void ComputePropertySurf::pack_yc(int n)
     for (int i = 0; i < nsown; i++) {
       m = cglobal[i];
       if (lines[m].mask & groupbit)
-	buf[n] = 0.5 * (lines[m].p1[1] + lines[m].p2[1]);
+        buf[n] = 0.5 * (lines[m].p1[1] + lines[m].p2[1]);
       else buf[n] = 0.0;
       n += nvalues;
     }
@@ -510,7 +510,7 @@ void ComputePropertySurf::pack_yc(int n)
     for (int i = 0; i < nsown; i++) {
       m = cglobal[i];
       if (tris[m].mask & groupbit)
-	buf[n] = THIRD * (tris[m].p1[1] + tris[m].p2[1] + tris[m].p3[1]);
+        buf[n] = THIRD * (tris[m].p1[1] + tris[m].p2[1] + tris[m].p3[1]);
       else buf[n] = 0.0;
       n += nvalues;
     }
@@ -549,8 +549,8 @@ void ComputePropertySurf::pack_area(int n)
     for (int i = 0; i < nsown; i++) {
       m = cglobal[i];
       if (lines[m].mask & groupbit) {
-	MathExtra::sub3(lines[m].p2,lines[m].p1,p12);
-	buf[n] = MathExtra::len3(p12);
+        MathExtra::sub3(lines[m].p2,lines[m].p1,p12);
+        buf[n] = MathExtra::len3(p12);
       } else buf[n] = 0.0;
       n += nvalues;
     }
@@ -562,10 +562,10 @@ void ComputePropertySurf::pack_area(int n)
     for (int i = 0; i < nsown; i++) {
       m = cglobal[i];
       if (tris[m].mask & groupbit) {
-	MathExtra::sub3(tris[m].p2,tris[m].p1,p12);
-	MathExtra::sub3(tris[m].p3,tris[m].p2,p23);
-	MathExtra::cross3(p12,p23,cross);
-	buf[n] = 0.5 * MathExtra::len3(cross);
+        MathExtra::sub3(tris[m].p2,tris[m].p1,p12);
+        MathExtra::sub3(tris[m].p3,tris[m].p2,p23);
+        MathExtra::cross3(p12,p23,cross);
+        buf[n] = 0.5 * MathExtra::len3(cross);
       } else buf[n] = 0.0;
       n += nvalues;
     }

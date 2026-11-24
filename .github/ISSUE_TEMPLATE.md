@@ -1,3 +1,5 @@
+**Security problems** (e.g. a way to get malicious changes into SPARTA, or credentials that became public) should **not** be reported here, but privately as described in [SECURITY.md](https://github.com/sparta/sparta/blob/master/SECURITY.md).
+
 ## Summary
 
 _Please provide a brief description of the issue_

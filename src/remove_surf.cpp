@@ -91,7 +91,7 @@ void RemoveSurf::command(int narg, char **arg)
   }
 
   if (nremove) surf->add_surfs(1,nsurf,lines,tris,
-			       ncustom,index_custom,cvalues);
+                               ncustom,index_custom,cvalues);
 
   memory->sfree(lines);
   memory->sfree(tris);
@@ -203,7 +203,7 @@ bigint RemoveSurf::remove(int groupbit)
       int nslocal = surf->nlocal;
       m = 0;
       for (int i = me; i < nslocal; i += nprocs)
-	memcpy(&lines[m++],&surf->lines[i],nbytes);
+        memcpy(&lines[m++],&surf->lines[i],nbytes);
     }
   } else {
     tris = (Surf::Tri *) memory->smalloc((bigint) nsurf*nbytes,"remove/surf:tris");
@@ -212,7 +212,7 @@ bigint RemoveSurf::remove(int groupbit)
       int nslocal = surf->nlocal;
       m = 0;
       for (int i = me; i < nslocal; i += nprocs)
-	memcpy(&tris[m++],&surf->tris[i],nbytes);
+        memcpy(&tris[m++],&surf->tris[i],nbytes);
     }
   }
 
@@ -263,16 +263,16 @@ bigint RemoveSurf::remove(int groupbit)
 
     if (dim == 2)
       for (i = 0; i < nsurf; i++)
-	lines[i].id = static_cast<surfint> (offset + i + 1);
+        lines[i].id = static_cast<surfint> (offset + i + 1);
     else
       for (i = 0; i < nsurf; i++)
-	tris[i].id = static_cast<surfint> (offset + i + 1);
+        tris[i].id = static_cast<surfint> (offset + i + 1);
 
     surfint id;
     if (ncustom)
       for (i = 0; i < nsurf; i++) {
-	id = static_cast<surfint> (offset + i + 1);
-	cvalues[i][0] = ubuf(id).d;
+        id = static_cast<surfint> (offset + i + 1);
+        cvalues[i][0] = ubuf(id).d;
       }
   }
 

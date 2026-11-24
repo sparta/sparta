@@ -271,7 +271,7 @@ def visible_text(markup):
     # Icon glyphs live in the Unicode private use area; the theme uses one
     # for the permalink marker.  They are decoration, not words.
     t = ''.join(' ' if '\ue000' <= c <= '\uf8ff' else c for c in t)
-    t = t.replace('¶', ' ')
+    t = t.replace('\u00b6', ' ')
     return [w for w in t.split() if w]
 
 

@@ -10,6 +10,19 @@ if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CXX_FLAGS)
   set(CMAKE_BUILD_TYPE RelWithDebInfo CACHE STRING "Choose the type of build, options are: None Debug Release RelWithDebInfo MinSizeRel." FORCE)
 endif()
 
+# compiling, installing, or running SPARTA as superuser (root) is strongly
+# discouraged, so warn about it.  Adapted from LAMMPS.
+if(CMAKE_HOST_UNIX)
+  execute_process(COMMAND id -u OUTPUT_VARIABLE _SPARTA_USER_ID
+                  OUTPUT_STRIP_TRAILING_WHITESPACE ERROR_QUIET)
+  if(_SPARTA_USER_ID STREQUAL "0")
+    message(WARNING "SPARTA is being configured as superuser (root). Compiling, "
+      "installing, or running SPARTA as superuser is strongly discouraged.\n"
+      "For more information see the section \"Security considerations\" of "
+      "the SPARTA manual (doc/src/Section_security.rst).")
+  endif()
+endif()
+
 set(SPARTA_BUILD_VER "1.0.0")
 set(SPARTA_API_VER "1")
 

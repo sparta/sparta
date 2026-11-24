@@ -13,11 +13,11 @@ from __future__ import print_function
 oneline = "Read, create, manipulate SPARTA/LAMMPS surf files"
 
 docstr = """
-s = sdata()			   create a surf data object
+s = sdata()                        create a surf data object
 s = sdata(ID,"mem.surf")           read in one or more surf files
 s = sdata(ID,"mem.part.gz mem.surf")  can be gzipped
-s = sdata(ID,"mem.*")		   wildcard expands to multiple files
-s.read(ID,"mem.surf")		   read in one or more data files
+s = sdata(ID,"mem.*")              wildcard expands to multiple files
+s.read(ID,"mem.surf")              read in one or more data files
 
   all surf data in files becomes one surf with ID
   surf files contain the following kinds of entries in SPARTA or LAMMPS format
@@ -29,7 +29,7 @@ s.seed = 48379                     set random # seed (def = 12345)
 s.circle(ID,x,y,r,n)               create a 2d circle with N lines and ID
 s.rect(ID,x1,y1,x2,y2,nx,ny)       create a 2d rect, 2 corner pts, Nx,Ny segs
 s.tri(ID,x1,y1,x2,y2,x3,y3,n1,n2,n3)  create a 2d tri, 3 pts, N1,N2,N3 segs
-s.sphere(ID,x,y,z,r,n)		   create a 3d sphere with NxN sqs per face
+s.sphere(ID,x,y,z,r,n)             create a 3d sphere with NxN sqs per face
 s.box(ID,x1,y1,z1,x2,y2,z2,nx,ny,nz)  3d box, 2 corner pts, Nx,Ny,Nz per face
 s.spikycircle(ID,x,y,rmin,rmax,n)  2d circle, N lines, Rmin <= rad <= Rmax
 s.spikysphere(ID,x,y,z,rmin,rmax,n)  3d sphere, NxN sqs, Rmin <= rad <= Rmax
@@ -46,16 +46,16 @@ s.surf3d(ID,plist,tlist)           create a custom 3d surf
   each triangle in tlist is (i,j,k) for C-style indices into plist
 
 s.center(ID,x,y,z)                 set center point of surf
-s.trans(ID,dx,dy,dz)   	 	   translate surf and its center point
+s.trans(ID,dx,dy,dz)     	   translate surf and its center point
 s.rotate(ID,theta,Rx,Ry,Rz)        rotate surf by theta around R vector
-s.scale(ID,sx,sy,sz)		   scale a surf around center point
-s.invert(ID) 	                   invert normal direction of surf
+s.scale(ID,sx,sy,sz)               scale a surf around center point
+s.invert(ID)                       invert normal direction of surf
 
   default center for created surfs is the x,y,z or geometric center
   default center for read-in surf is center of bounding box of all points
   rotation and scaling of surf are relative to its center point
 
-s.join(ID,id1,id2,...)		   combine id1,id2,etc into new surf with ID
+s.join(ID,id1,id2,...)             combine id1,id2,etc into new surf with ID
 
   join does not delete id1,id2,etc
   center for joined surf becomes center of bounding box of all points
@@ -68,7 +68,7 @@ s.refine(ID,size)                  refine surf to lines/tris less than size
 
 s.delete(id1,id2,...)              delete one or more surfs
 s.rename(ID,IDnew)                 rename a surf
-s.copy(ID,IDnew) 	           create a new surf as copy of old surf
+s.copy(ID,IDnew)                   create a new surf as copy of old surf
 
 s.select(id1,id2,...)              select one or more surfs
 s.select()                         select all surfs
@@ -78,7 +78,7 @@ s.unselect()                       unselect all surfs
   selection applies to write() and viz()
   surfs are selected by default when read or created
 
-s.write("file",pflag=1,nfile=0,ids=[])	    write all selected surfs to file
+s.write("file",pflag=1,nfile=0,ids=[])      write all selected surfs to file
 s.write("file",pflag=1,nfile=0,ids=[id1,id2,...])  write only listed & selected
 
   pflag = 1/0 to include/exclude Points section, default = 1

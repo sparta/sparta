@@ -114,9 +114,9 @@ namespace MathEigen {
     int n;            //!< the size of the matrices you want to diagonalize
     Scalar **M;       //!< local copy of the current matrix being analyzed
     // Precomputed cosine, sine, and tangent of the most recent rotation angle:
-    Scalar c;         //!< = cos(θ)
-    Scalar s;         //!< = sin(θ)
-    Scalar t;         //!< = tan(θ),  (note |t|<=1)
+    Scalar c;         //!< = cos(theta)
+    Scalar s;         //!< = sin(theta)
+    Scalar t;         //!< = tan(theta),  (note |t|<=1)
     int *max_idx_row; //!< = keep track of the the maximum element in row i (>i)
 
   public:
@@ -384,10 +384,10 @@ Diagonalize(ConstMatrix mat,    // the matrix you wish to diagonalize (size n)
 
 
 /// brief  Calculate the components of a rotation matrix which performs a
-///        rotation in the i,j plane by an angle (θ) that (when multiplied on
+///        rotation in the i,j plane by an angle (theta) that (when multiplied on
 ///        both sides) will zero the ij'th element of M, so that afterwards
 ///        M[i][j] = 0.  The results will be stored in c, s, and t
-///        (which store cos(θ), sin(θ), and tan(θ), respectively).
+///        (which store cos(theta), sin(theta), and tan(theta), respectively).
 
 template<typename Scalar,typename Vector,typename Matrix,typename ConstMatrix>
 void Jacobi<Scalar, Vector, Matrix, ConstMatrix>::
@@ -395,7 +395,7 @@ CalcRot(Scalar const *const *M,    //!< matrix
         int i,       //!< row index
         int j)       //!< column index
 {
-  t = 1.0; // = tan(θ)
+  t = 1.0; // = tan(theta)
   Scalar M_jj_ii = (M[j][j] - M[i][i]);
   if (M_jj_ii != 0.0) {
     // kappa = (M[j][j] - M[i][i]) / (2*M[i][j])
@@ -420,7 +420,7 @@ CalcRot(Scalar const *const *M,    //!< matrix
 /// brief   Perform a similarity transformation by multiplying matrix M on both
 ///         sides by a rotation matrix (and its transpose) to eliminate M[i][j].
 /// details This rotation matrix performs a rotation in the i,j plane by
-///         angle θ.  This function assumes that c=cos(θ). s=som(θ), t=tan(θ)
+///         angle theta.  This function assumes that c=cos(theta). s=som(theta), t=tan(theta)
 ///         have been calculated previously (using the CalcRot() function).
 ///         It also assumes that i<j.  The max_idx_row[] array is also updated.
 ///         To save time, since the matrix is symmetric, the elements
@@ -450,7 +450,7 @@ CalcRot(Scalar const *const *M,    //!< matrix
 ///
 /// Let M' denote the matrix M after multiplication by R^T and R.
 /// The components of M' are:
-///   M'_uv =  Σ_w  Σ_z   R_wu * M_wz * R_zv
+///   M'_uv =  Sigma_w  Sigma_z   R_wu * M_wz * R_zv
 ///
 /// note
 /// The rotation at location i,j will modify all of the matrix
@@ -469,7 +469,7 @@ ApplyRot(Scalar **M,  // matrix
          int i,       // row index
          int j)       // column index
 {
-  // Recall that c = cos(θ), s = sin(θ), t = tan(θ) (and t <= 1.0)
+  // Recall that c = cos(theta), s = sin(theta), t = tan(theta) (and t <= 1.0)
 
   // Compute the diagonal elements of M which have changed:
   M[i][i] -= t * M[i][j];
@@ -525,11 +525,11 @@ ApplyRot(Scalar **M,  // matrix
 ///
 /// details
 /// Multiply matrix M on the LEFT side by a transposed rotation matrix, R^T.
-/// This matrix performs a rotation in the i,j plane by angle θ
-/// (where the arguments "s" and "c" refer to cos(θ) and sin(θ), respectively).
+/// This matrix performs a rotation in the i,j plane by angle theta
+/// (where the arguments "s" and "c" refer to cos(theta) and sin(theta), respectively).
 ///
 /// verbatim
-///   E'_uv = Σ_w  R_wu * E_wv
+///   E'_uv = Sigma_w  R_wu * E_wv
 /// endverbatim
 
 template<typename Scalar,typename Vector,typename Matrix,typename ConstMatrix>
@@ -538,7 +538,7 @@ ApplyRotLeft(Matrix E,  // matrix
              int i,     // row index
              int j)     // column index
 {
-  // recall that c = cos(θ) and s = sin(θ)
+  // recall that c = cos(theta) and s = sin(theta)
   for (int v = 0; v < n; v++) {
     Scalar Eiv = E[i][v]; //backup E[i][v]
     E[i][v] = c*E[i][v] - s*E[j][v];

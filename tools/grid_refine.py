@@ -55,7 +55,7 @@ def error(str):
 # check a list of surfs for intersection with box
 # slist = indices of surfs that intersected with parent cell of this box
 # return new sub-list of elements that intersect box
-  
+
 def intersect(box,slist):
   newlist = []
   if dim == 2:
@@ -75,7 +75,7 @@ def intersect(box,slist):
 
 # convert ID list into SPARTA ID string
 # root is special case
-  
+
 def id2str(id):
   if len(id) == 1: return "0"
   string = ""
@@ -86,7 +86,7 @@ def id2str(id):
 
 # convert ID list into SPARTA numeric ID
 # root is special case
-  
+
 def id2number(id):
   if len(id) == 1: return 0
   number = 0
@@ -213,15 +213,15 @@ while iarg < narg:
     outfile = arg[iarg+1]
     iarg += 2
   else: error("")
-  
+
 # error check
 
 if not surffile: error("No surface file specified")
 if delta < 0.0: error("")
 if delta == 0 and maxlevel == 0: error("Delta = 0.0 requires maxlevel > 0")
-  
+
 # read surf file via sdata
-  
+
 s = sdata(0,surffile)
 dim = s.dim
 pts = s.surfs[0].points
@@ -229,13 +229,13 @@ lines = s.surfs[0].lines
 tris = s.surfs[0].triangles
 
 if dim == 2: nz = mz = 1
-  
+
 # more error checks
 
 if boxxlo >= boxxhi or boxylo >= boxyhi: error("Bad box size")
 if dim == 3 and boxzlo >= boxzhi: error("Bad box size")
 if dim == 2 and fz != 0.0: error("Bad Fz value for 2d")
-  
+
 # compute size of each surf element
 # for tri, size = minimum edge length
 
@@ -288,7 +288,7 @@ if dim == 3:
 #   only used to count parent cells at end
 # clist = list of child cell IDs (as numbers)
 # nlevels = largest level with child cells (<= user-specified maxlevel)
-      
+
 nbits_coarse = id_bits(nx*ny*nz)
 nbits_level = id_bits(mx*my*mz)
 
@@ -306,7 +306,7 @@ while len(queue):
   nnx = parent[3]
   nny = parent[4]
   nnz = parent[5]
-  
+
   index = 0
   for k in range(nnz):
     for j in range(nny):
@@ -320,7 +320,7 @@ while len(queue):
         zlo = k*(bbox[5]-bbox[4])/nnz + bbox[4]
         zhi = (k+1)*(bbox[5]-bbox[4])/nnz + bbox[4]
         if k+1 == nnz: zhi = bbox[5]
-        
+
         newbox = (xlo,xhi,ylo,yhi,zlo,zhi)
         slistnew = intersect(newbox,slist)
 
@@ -331,7 +331,7 @@ while len(queue):
             cellsize = min(xhi-xlo,yhi-ylo)
             if dim == 3: cellsize = min(cellsize,zhi-zlo)
             for m in slistnew:
-              if cellsize/sizes[m] > delta: adaptflag = 1 
+              if cellsize/sizes[m] > delta: adaptflag = 1
 
         nlevels = max(nlevels,len(id))
         newid = id + [index]
@@ -344,11 +344,11 @@ while len(queue):
             queue.append((newid,newbox,slistnew,mx,my,mz))
         else:
           clist.append(id2number(newid))
-        
+
         index += 1
 
 # write out SPARTA grid file
-        
+
 print("writing grid file %s ..." % outfile)
 fp = open(outfile,"w")
 
@@ -365,7 +365,7 @@ print(file=fp)
 print("Cells", file=fp)
 print(file=fp)
 for i in range(len(clist)): print(clist[i], file=fp)
-  
+
 fp.close()
 
 # final stats

@@ -149,8 +149,8 @@ void ReadSurf::command(int narg, char **arg)
       if (iarg+4 > narg) error->all(FLERR,"Invalid read_surf command");
 
       name_custom = (char **)
-	memory->srealloc(name_custom,(ncustom+1)*sizeof(char *),
-			 "readsurf:name_custom");
+        memory->srealloc(name_custom,(ncustom+1)*sizeof(char *),
+                         "readsurf:name_custom");
       memory->grow(type_custom,ncustom+1,"readsurf:type_custom");
       memory->grow(size_custom,ncustom+1,"readsurf:size_custom");
       memory->grow(index_custom,ncustom+1,"readsurf:index_custom");
@@ -163,7 +163,7 @@ void ReadSurf::command(int narg, char **arg)
       else error->all(FLERR,"Invalid read_surf command");
       size_custom[ncustom] = input->inumeric(FLERR,arg[iarg+3]);
       if (size_custom[ncustom] < 0)
-	error->all(FLERR,"Invalid read_surf command");
+        error->all(FLERR,"Invalid read_surf command");
       ncustom++;
 
       iarg += 4;
@@ -182,16 +182,16 @@ void ReadSurf::command(int narg, char **arg)
     for (int ic = 0; ic < ncustom; ic++) {
       int index = surf->find_custom(name_custom[ic]);
       if (index >= 0) {
-	int flag = 0;
-	if (type_custom[ic] != surf->etype[index]) flag = 1;
-	if (size_custom[ic] != surf->esize[index]) flag = 1;
-	if (flag) error->all(FLERR,"Read_surf custom attributes do not match "
-	 		     "already existing custom data");
-	index_custom[ic] = index;
+        int flag = 0;
+        if (type_custom[ic] != surf->etype[index]) flag = 1;
+        if (size_custom[ic] != surf->esize[index]) flag = 1;
+        if (flag) error->all(FLERR,"Read_surf custom attributes do not match "
+         		     "already existing custom data");
+        index_custom[ic] = index;
         surf->estatus[index] = 0;
       } else {
-	index_custom[ic] =
-	  surf->add_custom(name_custom[ic],type_custom[ic],size_custom[ic]);
+        index_custom[ic] =
+          surf->add_custom(name_custom[ic],type_custom[ic],size_custom[ic]);
       }
 
       if (size_custom[ic] == 0) nvalues_custom++;
@@ -578,7 +578,7 @@ void ReadSurf::read_multiple(char *file)
     bigint nsurf_onefile = 0;
     if (filereader) nsurf_onefile = nsurf_file;
     MPI_Allreduce(&nsurf_onefile,&nsurf_allfiles,1,MPI_SPARTA_BIGINT,
-		  MPI_SUM,world);
+                  MPI_SUM,world);
 
   // if nprocs <= files, each proc reads one or more files
 
@@ -603,7 +603,7 @@ void ReadSurf::read_multiple(char *file)
     }
 
     MPI_Allreduce(&nsurf_oneproc,&nsurf_allfiles,1,MPI_SPARTA_BIGINT,
-		  MPI_SUM,world);
+                  MPI_SUM,world);
   }
 
   delete [] procfile;
@@ -991,34 +991,34 @@ void ReadSurf::read_lines()
         if (p1 < 1 || p1 > npoint_file || p2 < 1 || p2 > npoint_file || p1 == p2)
           error->one(FLERR,"Invalid point index in Lines section");
 
-	if (ncustom) {
-	  icvalue = 0;
-	  for (ic = 0; ic < ncustom; ic++) {
-	    if (type_custom[ic] == 0) {
-	      if (size_custom[ic] == 0) {
+        if (ncustom) {
+          icvalue = 0;
+          for (ic = 0; ic < ncustom; ic++) {
+            if (type_custom[ic] == 0) {
+              if (size_custom[ic] == 0) {
                 custom[icvalue++] =
                   inumeric_one(strtok(NULL," \t\n\r\f"));
-	      } else
-		for (iv = 0; iv < size_custom[ic]; iv++)
-		  custom[icvalue++] =
+              } else
+                for (iv = 0; iv < size_custom[ic]; iv++)
+                  custom[icvalue++] =
                     inumeric_one(strtok(NULL," \t\n\r\f"));
-	    } else {
+            } else {
               if (size_custom[ic] == 0)
-		custom[icvalue++] =
+                custom[icvalue++] =
                   numeric_one(strtok(NULL," \t\n\r\f"));
               else
-		for (iv = 0; iv < size_custom[ic]; iv++)
-		  custom[icvalue++] =
+                for (iv = 0; iv < size_custom[ic]; iv++)
+                  custom[icvalue++] =
                     numeric_one(strtok(NULL," \t\n\r\f"));
             }
           }
-	}
+        }
 
-	if ((nread+i) % nprocs_file == me_file) {
-	  add_line(id,type,pts[p1-1].x,pts[p2-1].x);
-	  if (ncustom) add_custom(id,custom);
-	  nsurf++;
-	}
+        if ((nread+i) % nprocs_file == me_file) {
+          add_line(id,type,pts[p1-1].x,pts[p2-1].x);
+          if (ncustom) add_custom(id,custom);
+          nsurf++;
+        }
 
         buf = next + 1;
       }
@@ -1036,35 +1036,35 @@ void ReadSurf::read_lines()
         x1[1] = numeric_one(strtok(NULL," \t\n\r\f"));
         x2[0] = numeric_one(strtok(NULL," \t\n\r\f"));
         x2[1] = numeric_one(strtok(NULL," \t\n\r\f"));
-	
-	if (ncustom) {
-	  icvalue = 0;
-	  for (ic = 0; ic < ncustom; ic++) {
-	    if (type_custom[ic] == 0) {
-	      if (size_custom[ic] == 0)
-		custom[icvalue++] =
+
+        if (ncustom) {
+          icvalue = 0;
+          for (ic = 0; ic < ncustom; ic++) {
+            if (type_custom[ic] == 0) {
+              if (size_custom[ic] == 0)
+                custom[icvalue++] =
                   inumeric_one(strtok(NULL," \t\n\r\f"));
-	      else
-		for (iv = 0; iv < size_custom[ic]; iv++)
-		  custom[icvalue++] =
+              else
+                for (iv = 0; iv < size_custom[ic]; iv++)
+                  custom[icvalue++] =
                     inumeric_one(strtok(NULL," \t\n\r\f"));
-	    } else {
-	      if (size_custom[ic] == 0)
-		custom[icvalue++] =
+            } else {
+              if (size_custom[ic] == 0)
+                custom[icvalue++] =
                   numeric_one(strtok(NULL," \t\n\r\f"));
-	      else
-		for (iv = 0; iv < size_custom[ic]; iv++)
-		  custom[icvalue++] =
+              else
+                for (iv = 0; iv < size_custom[ic]; iv++)
+                  custom[icvalue++] =
                     numeric_one(strtok(NULL," \t\n\r\f"));
             }
           }
-	}
+        }
 
-	if ((nread+i) % nprocs_file == me_file) {
-	  add_line(id,type,x1,x2);
-	  if (ncustom) add_custom(id,custom);
-	  nsurf++;
-	}
+        if ((nread+i) % nprocs_file == me_file) {
+          add_line(id,type,x1,x2);
+          if (ncustom) add_custom(id,custom);
+          nsurf++;
+        }
 
         buf = next + 1;
       }
@@ -1148,35 +1148,35 @@ void ReadSurf::read_tris()
             p3 < 1 || p3 > npoint_file || p1 == p2 || p2 == p3 || p1 == p3)
           error->one(FLERR,"Invalid point index in Triangles section");
 
-	if (ncustom) {
-	  icvalue = 0;
-	  for (ic = 0; ic < ncustom; ic++) {
-	    if (type_custom[ic] == 0) {
-	      if (size_custom[ic] == 0)
-		custom[icvalue++] =
+        if (ncustom) {
+          icvalue = 0;
+          for (ic = 0; ic < ncustom; ic++) {
+            if (type_custom[ic] == 0) {
+              if (size_custom[ic] == 0)
+                custom[icvalue++] =
                   inumeric_one(strtok(NULL," \t\n\r\f"));
-	      else
-		for (iv = 0; iv < size_custom[ic]; iv++)
+              else
+                for (iv = 0; iv < size_custom[ic]; iv++)
                   custom[icvalue++] =
                     inumeric_one(strtok(NULL," \t\n\r\f"));
-	    } else {
+            } else {
               if (size_custom[ic] == 0)
-		custom[icvalue++] =
+                custom[icvalue++] =
                   numeric_one(strtok(NULL," \t\n\r\f"));
-	      else
-		for (iv = 0; iv < size_custom[ic]; iv++)
-		  custom[icvalue++] =
+              else
+                for (iv = 0; iv < size_custom[ic]; iv++)
+                  custom[icvalue++] =
                     numeric_one(strtok(NULL," \t\n\r\f"));
             }
-	  }
-	}
+          }
+        }
 
-	if ((nread+i) % nprocs_file == me_file) {
-	  add_tri(id,type,pts[p1-1].x,pts[p2-1].x,pts[p3-1].x);
-	  if (ncustom) add_custom(id,custom);
-	  nsurf++;
-	}
-	
+        if ((nread+i) % nprocs_file == me_file) {
+          add_tri(id,type,pts[p1-1].x,pts[p2-1].x,pts[p3-1].x);
+          if (ncustom) add_custom(id,custom);
+          nsurf++;
+        }
+
         buf = next + 1;
       }
 
@@ -1199,31 +1199,31 @@ void ReadSurf::read_tris()
         x3[1] = numeric_one(strtok(NULL," \t\n\r\f"));
         x3[2] = numeric_one(strtok(NULL," \t\n\r\f"));
 
-	if (ncustom) {
-	  icvalue = 0;
-	  for (ic = 0; ic < ncustom; ic++) {
-	    if (type_custom[ic] == 0) {
-	      if (size_custom[ic] == 0)
-		custom[icvalue++] = inumeric_one(strtok(NULL," \t\n\r\f"));
-	      else
-		for (iv = 0; iv < size_custom[ic]; iv++)
-		  custom[icvalue++] = inumeric_one(strtok(NULL," \t\n\r\f"));
-	    } else {
-	      if (size_custom[ic] == 0)
-		custom[icvalue++] = numeric_one(strtok(NULL," \t\n\r\f"));
-	      else
-		for (iv = 0; iv < size_custom[ic]; iv++)
-		  custom[icvalue++] = numeric_one(strtok(NULL," \t\n\r\f"));
+        if (ncustom) {
+          icvalue = 0;
+          for (ic = 0; ic < ncustom; ic++) {
+            if (type_custom[ic] == 0) {
+              if (size_custom[ic] == 0)
+                custom[icvalue++] = inumeric_one(strtok(NULL," \t\n\r\f"));
+              else
+                for (iv = 0; iv < size_custom[ic]; iv++)
+                  custom[icvalue++] = inumeric_one(strtok(NULL," \t\n\r\f"));
+            } else {
+              if (size_custom[ic] == 0)
+                custom[icvalue++] = numeric_one(strtok(NULL," \t\n\r\f"));
+              else
+                for (iv = 0; iv < size_custom[ic]; iv++)
+                  custom[icvalue++] = numeric_one(strtok(NULL," \t\n\r\f"));
             }
           }
-	}
+        }
 
-	if ((nread+i) % nprocs_file == me_file) {
-	  add_tri(id,type,x1,x2,x3);
-	  if (ncustom) add_custom(id,custom);
-	  nsurf++;
-	}
-	
+        if ((nread+i) % nprocs_file == me_file) {
+          add_tri(id,type,x1,x2,x3);
+          if (ncustom) add_custom(id,custom);
+          nsurf++;
+        }
+
         buf = next + 1;
       }
     }
@@ -1944,11 +1944,11 @@ void ReadSurf::clip3d()
         in1_copy[1] = in1[1];
         in1_copy[2] = in1[2];
 
-	add_tri(tris[i].id,tris[i].type,in1_copy,x2,x1);
-	if (ncustom)
-	  memcpy(cvalues[nsurf],cvalues[i],(1+nvalues_custom)*sizeof(double));
+        add_tri(tris[i].id,tris[i].type,in1_copy,x2,x1);
+        if (ncustom)
+          memcpy(cvalues[nsurf],cvalues[i],(1+nvalues_custom)*sizeof(double));
         discard[nsurf] = 0;
-	nsurf++;
+        nsurf++;
         addflag = 1;
       }
     }

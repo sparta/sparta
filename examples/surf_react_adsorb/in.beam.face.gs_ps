@@ -3,7 +3,7 @@
 # free molecular flow (no collisions)
 #
 # Note:
-#  - The "comm/sort” option to the “global” command is used to match MPI runs.
+#  - The "comm/sort" option to the "global" command is used to match MPI runs.
 # The "comm/sort" option should not be used for production runs.
 ################################################################################
 

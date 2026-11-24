@@ -24,7 +24,7 @@ def clip(cell,p0,p1,p2):
       s = e
     path = newpath
     if not path: return []
-    
+
     iface += 1
     value = cell[iface]
 
@@ -43,7 +43,7 @@ def clip(cell,p0,p1,p2):
 
 # return intersection pt of line segment a,b in dim with coord value
 # guaranteed to intersect by caller
-  
+
 def between(a,b,dim,value):
   if dim == 0:
     y = a[1] + (value-a[dim])/(b[dim]-a[dim]) * (b[1]-a[1])

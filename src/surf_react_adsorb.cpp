@@ -478,7 +478,7 @@ void SurfReactAdsorb::create_per_surf_state()
   memory->create(surf_species_delta,nall,nspecies_surf,
                  "react/adsorb:surf_species_delta");
   if (nall) memset(&surf_species_delta[0][0],0,
-		   (bigint) nall*nspecies_surf*sizeof(int));
+                   (bigint) nall*nspecies_surf*sizeof(int));
 
   species_delta = surf_species_delta;
 
@@ -539,7 +539,7 @@ void SurfReactAdsorb::init()
     } else if (mode == SURF) {
       tau_index = surf->find_custom((char *) "tau");
       if (tau_index < 0)
-	tau_index = surf->add_custom((char *) "tau",DOUBLE,nactive_ps);
+        tau_index = surf->add_custom((char *) "tau",DOUBLE,nactive_ps);
       else if (surf->esize[tau_index] != nactive_ps)
         error->all(FLERR,"Surf react/adsorb custom attribute tau "
                    "has wrong number of PS reactions");
@@ -571,41 +571,41 @@ void SurfReactAdsorb::init()
     if (domain->dimension == 2) {
       int m = 0;
       for (int isurf = me; isurf < nslocal; isurf += nprocs) {
-	isr = lines[isurf].isr;
-	if (isr >= 0 && surf->sr[isr] == this) {
-	  area[m] = surf->line_size(&lines[isurf]);
-	  weight[m] = 1.0;
-	}
-	m++;
+        isr = lines[isurf].isr;
+        if (isr >= 0 && surf->sr[isr] == this) {
+          area[m] = surf->line_size(&lines[isurf]);
+          weight[m] = 1.0;
+        }
+        m++;
       }
     } else {
       double tmp;
       int m = 0;
       for (int isurf = me; isurf < nslocal; isurf += nprocs) {
-	isr = tris[isurf].isr;
-	if (isr >= 0 && surf->sr[isr] == this) {
-	  area[m] = surf->tri_size(&tris[isurf],tmp);
-	  weight[m] = 1.0;
-	}
-	m++;
+        isr = tris[isurf].isr;
+        if (isr >= 0 && surf->sr[isr] == this) {
+          area[m] = surf->tri_size(&tris[isurf],tmp);
+          weight[m] = 1.0;
+        }
+        m++;
       }
     }
 
   } else if (distributed) {
     if (domain->dimension == 2) {
       for (int isurf = 0; isurf < nsown; isurf++) {
-	isr = mylines[isurf].isr;
-	if (isr < 0 || surf->sr[isr] != this) continue;
-	area[isurf] = surf->line_size(&mylines[isurf]);
-	weight[isurf] = 1.0;
+        isr = mylines[isurf].isr;
+        if (isr < 0 || surf->sr[isr] != this) continue;
+        area[isurf] = surf->line_size(&mylines[isurf]);
+        weight[isurf] = 1.0;
       }
     } else {
       double tmp;
       for (int isurf = 0; isurf < nsown; isurf++) {
-	isr = mytris[isurf].isr;
-	if (isr < 0 || surf->sr[isr] != this) continue;
-	area[isurf] = surf->tri_size(&mytris[isurf],tmp);
-	weight[isurf] = 1.0;
+        isr = mytris[isurf].isr;
+        if (isr < 0 || surf->sr[isr] != this) continue;
+        area[isurf] = surf->tri_size(&mytris[isurf],tmp);
+        weight[isurf] = 1.0;
       }
     }
   }
@@ -1246,7 +1246,7 @@ void SurfReactAdsorb::grid_changed()
 
   if (update->ntimestep % nsync)
     error->all(FLERR,"Grid changed on timestep when "
-	       "surf_react adsorb sync did not occur");
+               "surf_react adsorb sync did not occur");
 
   // realloc species_delta and mark, init to zeroes
 
@@ -1255,7 +1255,7 @@ void SurfReactAdsorb::grid_changed()
   memory->create(surf_species_delta,nall,nspecies_surf,
                  "react/adsorb:surf_species_delta");
   if (nall) memset(&surf_species_delta[0][0],0,
-		   (bigint) nall*nspecies_surf*sizeof(int));
+                   (bigint) nall*nspecies_surf*sizeof(int));
   species_delta = surf_species_delta;
 
   memory->destroy(mark);
@@ -1323,8 +1323,8 @@ void SurfReactAdsorb::PS_chemistry()
     if (me == 0) {
       for (int iface = 0; iface < nface; iface++) {
         if (domain->surf_react[iface] != this_index) continue;
-	isc = domain->surf_collide[iface];
-	PS_react(iface,isc,face_norm[iface]);
+        isc = domain->surf_collide[iface];
+        PS_react(iface,isc,face_norm[iface]);
       }
     }
 
@@ -1332,19 +1332,19 @@ void SurfReactAdsorb::PS_chemistry()
     if (!distributed) {
       int nslocal = surf->nlocal;
       if (domain->dimension == 2) {
-	for (int isurf = me; isurf < nslocal; isurf += nprocs) {
-	  if (lines[isurf].isr != this_index) continue;
-	  isc = lines[isurf].isc;
-	  PS_react(isurf,isc,lines[isurf].norm);
-	  mark[isurf] = 1;
-	}
+        for (int isurf = me; isurf < nslocal; isurf += nprocs) {
+          if (lines[isurf].isr != this_index) continue;
+          isc = lines[isurf].isc;
+          PS_react(isurf,isc,lines[isurf].norm);
+          mark[isurf] = 1;
+        }
       } else {
-	for (int isurf = me; isurf < nslocal; isurf += nprocs) {
-	  if (tris[isurf].isr != this_index) continue;
-	  isc = tris[isurf].isc;
-	  PS_react(isurf,isc,tris[isurf].norm);
-	  mark[isurf] = 1;
-	}
+        for (int isurf = me; isurf < nslocal; isurf += nprocs) {
+          if (tris[isurf].isr != this_index) continue;
+          isc = tris[isurf].isc;
+          PS_react(isurf,isc,tris[isurf].norm);
+          mark[isurf] = 1;
+        }
       }
 
     } else {
@@ -1353,21 +1353,21 @@ void SurfReactAdsorb::PS_chemistry()
       int isurf;
 
       if (domain->dimension == 2) {
-	for (int m = 0; m < nunique; m++) {
-	  isurf = unique[m];
-	  if (lines[isurf].isr != this_index) continue;
-	  isc = lines[isurf].isc;
-	  PS_react(isurf,isc,lines[isurf].norm);
-	  mark[isurf] = 1;
-	}
+        for (int m = 0; m < nunique; m++) {
+          isurf = unique[m];
+          if (lines[isurf].isr != this_index) continue;
+          isc = lines[isurf].isc;
+          PS_react(isurf,isc,lines[isurf].norm);
+          mark[isurf] = 1;
+        }
       } else {
-	for (int m = 0; m < nunique; m++) {
-	  isurf = unique[m];
-	  if (tris[isurf].isr != this_index) continue;
-	  isc = tris[isurf].isc;
-	  PS_react(isurf,isc,tris[isurf].norm);
-	  mark[isurf] = 1;
-	}
+        for (int m = 0; m < nunique; m++) {
+          isurf = unique[m];
+          if (tris[isurf].isr != this_index) continue;
+          isc = tris[isurf].isc;
+          PS_react(isurf,isc,tris[isurf].norm);
+          mark[isurf] = 1;
+        }
       }
     }
   }
@@ -1503,7 +1503,7 @@ void SurfReactAdsorb::update_state_surf()
         maxtally += DELTA_TALLY;
         memory->grow(tally2surf,maxtally,"react/adsorb:tally2surf");
         memory->grow(incollate,maxtally,nspecies_surf,
-		     "react/adsorb:incollate");
+                     "react/adsorb:incollate");
       }
 
       tally2surf[ntally] = lines[i].id;

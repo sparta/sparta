@@ -50,7 +50,7 @@ ComputePropertyGrid::ComputePropertyGrid(SPARTA *sparta, int narg, char **arg) :
 
     if (dimension == 2)
       if ((strcmp(arg[iarg],"zlo") == 0) || (strcmp(arg[iarg],"zhi") == 0) ||
-	  (strcmp(arg[iarg],"zc") == 0))
+          (strcmp(arg[iarg],"zc") == 0))
         error->all(FLERR,"Invalid compute property/grid field for 2d simulation");
 
     if (strcmp(arg[iarg],"id") == 0) {

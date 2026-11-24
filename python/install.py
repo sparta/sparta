@@ -61,6 +61,6 @@ setup(name = "sparta",
       version = "2Jul14",
       author = "Steve Plimpton",
       author_email = "sjplimp@gmail.com",
-      url = "http://sparta.sandia.gov",
+      url = "https://sparta.github.io",
       description = "SPARTA DSMC library",
       py_modules = ["sparta"])

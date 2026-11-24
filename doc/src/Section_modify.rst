@@ -22,6 +22,20 @@ think it will be of general interest to users, please submit it to the
 `developers <https://sparta.github.io/authors.html>`_ for inclusion in
 the released version of SPARTA.
 
+Before submitting new or changed files, please run ``make check`` in
+the ``src`` directory.  It runs the coding style checks in
+``tools/coding_standard``, which report tab characters and trailing
+whitespace, source and data files with executable permissions, outdated
+SPARTA homepage URLs, and non-ASCII characters.  It also runs ``make
+check-docs``, which compares the command and style listings of the
+manual with the ``src`` directory and reports incorrectly formatted
+``:doc:`` and ``:ref:`` roles.  A single check can be run with ``make
+check-whitespace`` or the other ``make check-<name>`` targets, and
+``make fix-whitespace``, ``make fix-permissions``, ``make
+fix-homepage``, and ``make fix-unicode`` correct most of the problems
+automatically.  The same checks are run for every pull request on
+GitHub.
+
 The best way to add a new feature is to find a similar feature in
 SPARTA and look at the corresponding source and header files to figure
 out what it does. You will need some knowledge of C++ to be able to

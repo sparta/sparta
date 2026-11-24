@@ -825,7 +825,7 @@ specular scattering in the H-LiF (001) system, Surface Science, (1974).
 
 **(Mohammadzadeh16)** A. Mohammadzadeh, A. Rana, and H. Struchtrup,
 DSMC and R13 modeling of the adiabatic surface, International Journal
-of Thermal Sciences, vol. 101, pp. 9–23, March (2016).
+of Thermal Sciences, vol. 101, pp. 9-23, March (2016).
 
 
 .. _sws: https://sparta.github.io

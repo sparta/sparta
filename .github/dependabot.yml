@@ -1,0 +1,11 @@
+version: 2
+updates:
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    # combine the updates for all actions into a single pull request
+    groups:
+      github-actions:
+        patterns:
+          - "*"

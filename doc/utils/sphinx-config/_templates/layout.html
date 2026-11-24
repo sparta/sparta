@@ -1,0 +1,8 @@
+{#- The theme's page layout, with the small SPARTA logo beside the project
+    name in the top bar shown on phones, where the sidebar (and its logo)
+    is folded away behind the menu button. -#}
+{%- extends "!layout.html" %}
+{%- block mobile_nav %}
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="{{ pathto(master_doc) }}"><img src="{{ pathto('_static/sparta-logo-small.png', 1) }}" class="sparta-mobile-logo" alt="">{{ project }}</a>
+{%- endblock %}

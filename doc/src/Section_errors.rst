@@ -1988,6 +1988,27 @@ Warnings:
    re-balance the grid cells and particles across processors.  This can
    be done using the balance or fix balance commands.
 
+*SPARTA is run with superuser or administrator privileges*
+   The SPARTA executable prints this warning, from MPI rank 0 to stderr,
+   when it is started from the "root" account on Linux or macOS (this
+   includes using sudo), or with "Run as administrator" on Windows.
+   SPARTA does not need such privileges for anything, and running it
+   that way is strongly discouraged.  An input script can read, change,
+   and delete files and run other programs (see :doc:`Section_security`).
+   For a regular user the damage from a mistake in an input script, a
+   bug in SPARTA or in a library it uses, or an input script with
+   malicious content is limited to what that user is allowed to access.
+   With superuser or administrator privileges it can affect the entire
+   machine, including the operating system and the files of all other
+   users.  To avoid the warning, run SPARTA from a regular user account.
+   The same applies to compiling SPARTA; CMake prints a similar warning
+   when it is run as superuser.  Programs in containers often run as
+   "root" by default; create a regular user inside the container or tell
+   the container software to run as a regular user, e.g. with the
+   ``--user`` flag of ``docker run``.  SPARTA continues after printing
+   the warning.  The warning is only printed by the SPARTA executable and
+   not when SPARTA is used as a library, e.g. from Python.
+
 *Surface check found %d nearly infinitely thin line pairs*
    Two adjacent lines have normals in nearly opposite directions
    indicating the lines nearly overlay each other.

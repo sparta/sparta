@@ -17,7 +17,8 @@ MATHJAXSHA     = 1b9c0a1c44df864e915690558e72adb9cc5203360daefd385084ced3b6c64c0
 PYTHON         = python3
 SPHINXEXTRA    =
 
-.PHONY: help clean clean-all html pdf fasthtml fasthtml-init check spelling
+.PHONY: help clean clean-all html pdf fasthtml fasthtml-init check spelling \
+        style_check role_check
 
 HAS_PDFLATEX   = $(shell command -v latexmk > /dev/null 2>&1 && \
                          command -v pdflatex > /dev/null 2>&1 && echo YES || echo NO)
@@ -37,6 +38,8 @@ help:
 	@echo "  check         verify the command and style listings against src/,"
 	@echo "                and every internal link and anchor in doc/html"
 	@echo "  spelling      spell-check the manual (needs enchant and an English dictionary)"
+	@echo "  style_check   verify the command and style listings against src/ (no build)"
+	@echo "  role_check    check for misformatted :doc: and :ref: roles (no build)"
 	@echo "  clean         remove the build tree, keep the virtualenv"
 	@echo "  clean-all     also remove the virtualenv and the MathJax copy"
 	@echo ""
@@ -56,6 +59,22 @@ spelling: $(VENV)
 	   -c $(SPHINXCONFIG) -d $(BUILDDIR)/doctrees-spelling \
 	   $(RSTDIR) $(BUILDDIR)/spelling && \
 	 echo "Spell check passed."
+
+# Checks that need no Sphinx build, also run by "make check" in src/.
+# style_check: every command and style in src/ is listed once in the
+# manual.  role_check: misformatted :doc: and :ref: roles and directives
+# without a space after the "::", adapted from the LAMMPS doc/Makefile.
+
+style_check:
+	@$(PYTHON) $(BUILDDIR)/utils/check-styles.py $(BUILDDIR)/../src $(RSTDIR)
+
+role_check:
+	@( env LC_ALL=C grep -n ' :[a-z]\+`' $(RSTDIR)/*.rst && exit 1 || : )
+	@( env LC_ALL=C grep -n ' `[^`]\+<[a-z][^`]\+`[^_]' $(RSTDIR)/*.rst && exit 1 || : )
+	@( env LC_ALL=C grep -n ':\(ref\|doc\):[^`]' $(RSTDIR)/*.rst && exit 1 || : )
+	@( env LC_ALL=C grep -n '\(ref\|doc\)`[^`]' $(RSTDIR)/*.rst && exit 1 || : )
+	@( env LC_ALL=C grep -n -E '^ *\.\. [a-z0-9]+:(\s+.*|)$$' \
+		$(RSTDIR)/*.rst ../src/*.{cpp,h} ../src/*/*.{cpp,h} && exit 1 || : )
 
 # && so that a failure in either check fails the target.
 check: html

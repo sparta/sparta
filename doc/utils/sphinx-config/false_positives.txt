@@ -77,6 +77,7 @@ Ceyer
 cfg
 cfile
 cfraction
+checksums
 chemisorbed
 CMake
 cmake
@@ -96,6 +97,7 @@ cornsilk
 cp
 cpp
 cpu
+cryptographic
 csh
 cshrc
 Csq
@@ -106,6 +108,7 @@ Ctypes
 CUDA
 cuda
 cueing
+Custodio
 cv
 cwiggle
 Cx
@@ -153,12 +156,14 @@ deltaerr
 delx
 dely
 delz
+Dependabot
 depthcue
 desorb
 desorbed
 desorbs
 Desorption
 desorption
+desul
 Dihedral
 dimensionality
 dimgray
@@ -275,6 +280,7 @@ histogrammed
 histogramming
 hotpink
 html
+hwloc
 Hypersonic
 hyperthermal
 hyperthreading
@@ -298,6 +304,7 @@ isurf
 Ith
 Ivanov
 Jaiswal
+Jewett
 jpeg
 jpeglib
 jpg
@@ -326,6 +333,7 @@ lavenderblush
 lawngreen
 ld
 lemonchiffon
+Lewiner
 libdir
 libjpeg
 libmpi
@@ -349,6 +357,7 @@ lightsteelblue
 lightyellow
 limegreen
 Liou
+Lis
 lmp
 ln
 lobular
@@ -358,6 +367,7 @@ logicals
 logplot
 LoopVar
 lossy
+macOS
 macports
 macroscopically
 magalli
@@ -368,11 +378,14 @@ Makefiles
 makefiles
 malloc
 Masstotal
+matcher
+MathJax
 Matsumoto
 maxlevel
 maxrandom
 MByte
 MBytes
+mdspan
 mediumaquamarine
 mediumblue
 mediumorchid
@@ -412,6 +425,7 @@ mpiexec
 mpirun
 mplayer
 Mth
+multibuild
 multicore
 multipoint
 multivalue
@@ -461,6 +475,7 @@ normals
 np
 Nparticles
 npernode
+npm
 Nprevious
 Nprocs
 nratio
@@ -632,6 +647,7 @@ Smallint
 smallint
 Sonine
 sonine
+Spack
 sparta
 spatype
 Specular
@@ -649,6 +665,7 @@ ssao
 ssaosamples
 Startstep
 startstep
+stderr
 stdin
 steelblue
 stereolithography

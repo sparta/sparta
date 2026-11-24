@@ -209,18 +209,18 @@ void WriteGrid::write()
         if (ncustom && (bigint) nmax*nvalues_custom > MAXSMALLINT)
           error->one(FLERR,"Too much custom grid data to communicate");
         MPI_Irecv(idbuf,nmax,MPI_SPARTA_BIGINT,iproc,0,world,&request);
-	if (ncustom) MPI_Irecv(&cbuf[0][0],nmax*nvalues_custom,MPI_DOUBLE,
-			       iproc,0,world,&crequest);
+        if (ncustom) MPI_Irecv(&cbuf[0][0],nmax*nvalues_custom,MPI_DOUBLE,
+                               iproc,0,world,&crequest);
         MPI_Send(&tmp,0,MPI_INT,iproc,0,world);
         MPI_Wait(&request,&status);
         MPI_Get_count(&status,MPI_SPARTA_BIGINT,&nlines);
-	if (ncustom) MPI_Wait(&crequest,&cstatus);
+        if (ncustom) MPI_Wait(&crequest,&cstatus);
       } else nlines = nme;
 
       for (i = 0; i < nlines; i++) {
         fprintf(fp,BIGINT_FORMAT,idbuf[i]);
-	if (ncustom) write_custom(cbuf[i]);
-	fprintf(fp,"\n");
+        if (ncustom) write_custom(cbuf[i]);
+        fprintf(fp,"\n");
       }
     }
 
@@ -250,21 +250,21 @@ void WriteGrid::pack_custom(int i, double *vec)
   for (int ic = 0; ic < ncustom; ic++) {
     if (type_custom[ic] == 0) {
       if (size_custom[ic] == 0) {
-	int *ivector = grid->eivec[grid->ewhich[index_custom[ic]]];
-	vec[m++] = ivector[i];
+        int *ivector = grid->eivec[grid->ewhich[index_custom[ic]]];
+        vec[m++] = ivector[i];
       } else {
-	int **iarray = grid->eiarray[grid->ewhich[index_custom[ic]]];
-	for (int j = 0; j < size_custom[ic]; j++)
-	  vec[m++] = iarray[i][j];
+        int **iarray = grid->eiarray[grid->ewhich[index_custom[ic]]];
+        for (int j = 0; j < size_custom[ic]; j++)
+          vec[m++] = iarray[i][j];
       }
     } else {
       if (size_custom[ic] == 0) {
-	double *dvector = grid->edvec[grid->ewhich[index_custom[ic]]];
-	vec[m++] = dvector[i];
+        double *dvector = grid->edvec[grid->ewhich[index_custom[ic]]];
+        vec[m++] = dvector[i];
       } else {
-	double **darray = grid->edarray[grid->ewhich[index_custom[ic]]];
-	for (int j = 0; j < size_custom[ic]; j++)
-	  vec[m++] = darray[i][j];
+        double **darray = grid->edarray[grid->ewhich[index_custom[ic]]];
+        for (int j = 0; j < size_custom[ic]; j++)
+          vec[m++] = darray[i][j];
       }
     }
   }
@@ -282,17 +282,17 @@ void WriteGrid::write_custom(double *vec)
   for (int ic = 0; ic < ncustom; ic++) {
     if (type_custom[ic] == 0) {
       if (size_custom[ic] == 0) {
-	fprintf(fp," %d",(int) vec[m++]);
+        fprintf(fp," %d",(int) vec[m++]);
       } else {
-	for (int j = 0; j < size_custom[ic]; j++)
-	  fprintf(fp," %d",(int) vec[m++]);
+        for (int j = 0; j < size_custom[ic]; j++)
+          fprintf(fp," %d",(int) vec[m++]);
       }
     } else {
       if (size_custom[ic] == 0) {
-	fprintf(fp," %g",vec[m++]);
+        fprintf(fp," %g",vec[m++]);
       } else {
-	for (int j = 0; j < size_custom[ic]; j++)
-	  fprintf(fp," %g",vec[m++]);
+        for (int j = 0; j < size_custom[ic]; j++)
+          fprintf(fp," %g",vec[m++]);
       }
     }
   }

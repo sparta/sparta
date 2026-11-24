@@ -9,3 +9,23 @@
 .sparta-breadcrumbs-logo {
   vertical-align: text-bottom;
 }
+
+/* The logo in the top bar on phones.  The theme styles ".wy-nav-top img"
+   as a 45px badge on a blue disc, sized for a larger logo; this one is
+   small and already round. */
+.wy-nav-top img.sparta-mobile-logo {
+  height: 30px;
+  width: 30px;
+  padding: 0;
+  margin-right: 8px;
+  background: none;
+  vertical-align: middle;
+}
+
+/* The theme hides the breadcrumbs' right-hand side on phones; keep the
+   logo and the "Commands" link, which are as useful there. */
+@media screen and (max-width: 480px) {
+  .wy-breadcrumbs li.wy-breadcrumbs-aside {
+    display: block;
+  }
+}

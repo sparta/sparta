@@ -296,19 +296,19 @@ void WriteSurf::write_file_all_points(char *file)
 
     if (typeflag)
       for (int i = istart; i < istop; i++) {
-	fprintf(fp,SURFINT_FORMAT " %d " BIGINT_FORMAT " " BIGINT_FORMAT,
-		lines[i].id,lines[i].type,m+1,m+2);
-	if (ncustom) write_custom_all(i);
-	fprintf(fp,"\n");
-	m += 2;
+        fprintf(fp,SURFINT_FORMAT " %d " BIGINT_FORMAT " " BIGINT_FORMAT,
+                lines[i].id,lines[i].type,m+1,m+2);
+        if (ncustom) write_custom_all(i);
+        fprintf(fp,"\n");
+        m += 2;
       }
     else
       for (int i = istart; i < istop; i++) {
-	fprintf(fp,SURFINT_FORMAT " " BIGINT_FORMAT " " BIGINT_FORMAT,
-		lines[i].id,m+1,m+2);
-	if (ncustom) write_custom_all(i);
-	fprintf(fp,"\n");
-	m += 2;
+        fprintf(fp,SURFINT_FORMAT " " BIGINT_FORMAT " " BIGINT_FORMAT,
+                lines[i].id,m+1,m+2);
+        if (ncustom) write_custom_all(i);
+        fprintf(fp,"\n");
+        m += 2;
       }
   }
 
@@ -321,21 +321,21 @@ void WriteSurf::write_file_all_points(char *file)
 
     if (typeflag)
       for (int i = istart; i < istop; i++) {
-	fprintf(fp,SURFINT_FORMAT " %d " BIGINT_FORMAT " "
-		BIGINT_FORMAT " " BIGINT_FORMAT,
-		tris[i].id,tris[i].type,m+1,m+2,m+3);
-	if (ncustom) write_custom_all(i);
-	fprintf(fp,"\n");
-	m += 3;
+        fprintf(fp,SURFINT_FORMAT " %d " BIGINT_FORMAT " "
+                BIGINT_FORMAT " " BIGINT_FORMAT,
+                tris[i].id,tris[i].type,m+1,m+2,m+3);
+        if (ncustom) write_custom_all(i);
+        fprintf(fp,"\n");
+        m += 3;
       }
     else
       for (int i = istart; i < istop; i++) {
-	fprintf(fp,SURFINT_FORMAT " " BIGINT_FORMAT " "
-		BIGINT_FORMAT " " BIGINT_FORMAT,
-		tris[i].id,m+1,m+2,m+3);
-	if (ncustom) write_custom_all(i);
-	fprintf(fp,"\n");
-	m += 3;
+        fprintf(fp,SURFINT_FORMAT " " BIGINT_FORMAT " "
+                BIGINT_FORMAT " " BIGINT_FORMAT,
+                tris[i].id,m+1,m+2,m+3);
+        if (ncustom) write_custom_all(i);
+        fprintf(fp,"\n");
+        m += 3;
       }
 
   }
@@ -385,22 +385,22 @@ void WriteSurf::write_file_all_nopoints(char *file)
 
     if (typeflag)
       for (int i = istart; i < istop; i++) {
-	fprintf(fp,SURFINT_FORMAT " %d %20.15g %20.15g %20.15g %20.15g",
-		lines[i].id,lines[i].type,
-		lines[i].p1[0],lines[i].p1[1],
-		lines[i].p2[0],lines[i].p2[1]);
-	if (ncustom) write_custom_all(i);
-	fprintf(fp,"\n");
+        fprintf(fp,SURFINT_FORMAT " %d %20.15g %20.15g %20.15g %20.15g",
+                lines[i].id,lines[i].type,
+                lines[i].p1[0],lines[i].p1[1],
+                lines[i].p2[0],lines[i].p2[1]);
+        if (ncustom) write_custom_all(i);
+        fprintf(fp,"\n");
       }
 
     else
       for (int i = istart; i < istop; i++) {
-	fprintf(fp,SURFINT_FORMAT " %20.15g %20.15g %20.15g %20.15g",
-		lines[i].id,
-		lines[i].p1[0],lines[i].p1[1],
-		lines[i].p2[0],lines[i].p2[1]);
-	if (ncustom) write_custom_all(i);
-	fprintf(fp,"\n");
+        fprintf(fp,SURFINT_FORMAT " %20.15g %20.15g %20.15g %20.15g",
+                lines[i].id,
+                lines[i].p1[0],lines[i].p1[1],
+                lines[i].p2[0],lines[i].p2[1]);
+        if (ncustom) write_custom_all(i);
+        fprintf(fp,"\n");
       }
   }
 
@@ -412,25 +412,25 @@ void WriteSurf::write_file_all_nopoints(char *file)
 
     if (typeflag)
       for (int i = istart; i < istop; i++) {
-	fprintf(fp,SURFINT_FORMAT " %d %20.15g %20.15g %20.15g "
-		"%20.15g %20.15g %20.15g %20.15g %20.15g %20.15g",
-		tris[i].id,tris[i].type,
-		tris[i].p1[0],tris[i].p1[1],tris[i].p1[2],
-		tris[i].p2[0],tris[i].p2[1],tris[i].p2[2],
-		tris[i].p3[0],tris[i].p3[1],tris[i].p3[2]);
-	if (ncustom) write_custom_all(i);
-	fprintf(fp,"\n");
+        fprintf(fp,SURFINT_FORMAT " %d %20.15g %20.15g %20.15g "
+                "%20.15g %20.15g %20.15g %20.15g %20.15g %20.15g",
+                tris[i].id,tris[i].type,
+                tris[i].p1[0],tris[i].p1[1],tris[i].p1[2],
+                tris[i].p2[0],tris[i].p2[1],tris[i].p2[2],
+                tris[i].p3[0],tris[i].p3[1],tris[i].p3[2]);
+        if (ncustom) write_custom_all(i);
+        fprintf(fp,"\n");
       }
     else
       for (int i = istart; i < istop; i++) {
-	fprintf(fp,SURFINT_FORMAT " %20.15g %20.15g %20.15g "
-		"%20.15g %20.15g %20.15g %20.15g %20.15g %20.15g",
-		tris[i].id,
-		tris[i].p1[0],tris[i].p1[1],tris[i].p1[2],
-		tris[i].p2[0],tris[i].p2[1],tris[i].p2[2],
-		tris[i].p3[0],tris[i].p3[1],tris[i].p3[2]);
-	if (ncustom) write_custom_all(i);
-	fprintf(fp,"\n");
+        fprintf(fp,SURFINT_FORMAT " %20.15g %20.15g %20.15g "
+                "%20.15g %20.15g %20.15g %20.15g %20.15g %20.15g",
+                tris[i].id,
+                tris[i].p1[0],tris[i].p1[1],tris[i].p1[2],
+                tris[i].p2[0],tris[i].p2[1],tris[i].p2[2],
+                tris[i].p3[0],tris[i].p3[1],tris[i].p3[2]);
+        if (ncustom) write_custom_all(i);
+        fprintf(fp,"\n");
       }
   }
 
@@ -571,7 +571,7 @@ void WriteSurf::write_file_distributed_points(char *file)
           fprintf(fp,BIGINT_FORMAT " %20.15g %20.15g\n",
                   index,pbuf[m],pbuf[m+1]);
           m += 2;
-	}
+        }
       } else {
         for (int i = 0; i < ncount; i++) {
           index++;
@@ -667,43 +667,43 @@ void WriteSurf::write_file_distributed_points(char *file)
 
       ncount = recv_size/nper;
       if (dim == 2) {
-	if (typeflag)
-	  for (int i = 0; i < ncount; i++) {
-	    fprintf(fp,SURFINT_FORMAT " %d " BIGINT_FORMAT " " BIGINT_FORMAT,
-		    sbuf[i].id,sbuf[i].type,m+1,m+2);
+        if (typeflag)
+          for (int i = 0; i < ncount; i++) {
+            fprintf(fp,SURFINT_FORMAT " %d " BIGINT_FORMAT " " BIGINT_FORMAT,
+                    sbuf[i].id,sbuf[i].type,m+1,m+2);
             if (ncustom) write_custom_distributed(i,cvalues);
             fprintf(fp,"\n");
-	    m += 2;
-	  }
-	else {
-	  for (int i = 0; i < ncount; i++) {
-	    fprintf(fp,SURFINT_FORMAT " " BIGINT_FORMAT " " BIGINT_FORMAT,
-		    sbuf[i].id,m+1,m+2);
+            m += 2;
+          }
+        else {
+          for (int i = 0; i < ncount; i++) {
+            fprintf(fp,SURFINT_FORMAT " " BIGINT_FORMAT " " BIGINT_FORMAT,
+                    sbuf[i].id,m+1,m+2);
             if (ncustom) write_custom_distributed(i,cvalues);
             fprintf(fp,"\n");
-	    m += 2;
-	  }
-	}
-	
+            m += 2;
+          }
+        }
+
       } else {
-	if (typeflag)
-	  for (int i = 0; i < ncount; i++) {
-	    fprintf(fp,SURFINT_FORMAT " %d " BIGINT_FORMAT " " BIGINT_FORMAT " "
-		    BIGINT_FORMAT,
-		    sbuf[i].id,sbuf[i].type,m+1,m+2,m+3);
+        if (typeflag)
+          for (int i = 0; i < ncount; i++) {
+            fprintf(fp,SURFINT_FORMAT " %d " BIGINT_FORMAT " " BIGINT_FORMAT " "
+                    BIGINT_FORMAT,
+                    sbuf[i].id,sbuf[i].type,m+1,m+2,m+3);
             if (ncustom) write_custom_distributed(i,cvalues);
             fprintf(fp,"\n");
-	    m += 3;
-	  }
+            m += 3;
+          }
         else
-	  for (int i = 0; i < ncount; i++) {
-	    fprintf(fp,SURFINT_FORMAT " " BIGINT_FORMAT " " BIGINT_FORMAT " "
-		    BIGINT_FORMAT,
-		    sbuf[i].id,m+1,m+2,m+3);
+          for (int i = 0; i < ncount; i++) {
+            fprintf(fp,SURFINT_FORMAT " " BIGINT_FORMAT " " BIGINT_FORMAT " "
+                    BIGINT_FORMAT,
+                    sbuf[i].id,m+1,m+2,m+3);
             if (ncustom) write_custom_distributed(i,cvalues);
             fprintf(fp,"\n");
-	    m += 3;
-	  }
+            m += 3;
+          }
       }
     }
     fclose(fp);
@@ -860,55 +860,55 @@ void WriteSurf::write_file_distributed_nopoints(char *file)
       ncount = recv_size/nper;
       if (dim == 2) {
         lines = (Surf::Line *) buf;
-	
-	if (typeflag)
-	  for (int i = 0; i < ncount; i++) {
+
+        if (typeflag)
+          for (int i = 0; i < ncount; i++) {
             surfint id = lines[i].id;
-	    fprintf(fp,SURFINT_FORMAT " %d %20.15g %20.15g %20.15g %20.15g",
-		    id,lines[i].type,
-		    lines[i].p1[0],lines[i].p1[1],
-		    lines[i].p2[0],lines[i].p2[1]);
+            fprintf(fp,SURFINT_FORMAT " %d %20.15g %20.15g %20.15g %20.15g",
+                    id,lines[i].type,
+                    lines[i].p1[0],lines[i].p1[1],
+                    lines[i].p2[0],lines[i].p2[1]);
             if (ncustom) write_custom_distributed(i,cvalues);
             fprintf(fp,"\n");
-	  }
-	else
-	  for (int i = 0; i < ncount; i++) {
+          }
+        else
+          for (int i = 0; i < ncount; i++) {
             surfint id = lines[i].id;
-	    fprintf(fp,SURFINT_FORMAT " %20.15g %20.15g %20.15g %20.15g",
-		    id,
-		    lines[i].p1[0],lines[i].p1[1],
-		    lines[i].p2[0],lines[i].p2[1]);
+            fprintf(fp,SURFINT_FORMAT " %20.15g %20.15g %20.15g %20.15g",
+                    id,
+                    lines[i].p1[0],lines[i].p1[1],
+                    lines[i].p2[0],lines[i].p2[1]);
             if (ncustom) write_custom_distributed(i,cvalues);
             fprintf(fp,"\n");
-	  }
+          }
 
       } else {
         tris = (Surf::Tri *) buf;
-	
-	if (typeflag)
-	  for (int i = 0; i < ncount; i++) {
+
+        if (typeflag)
+          for (int i = 0; i < ncount; i++) {
             surfint id = tris[i].id;
-	    fprintf(fp,SURFINT_FORMAT " %d %20.15g %20.15g %20.15g "
-		    "%20.15g %20.15g %20.15g %20.15g %20.15g %20.15g",
-		    id,tris[i].type,
-		    tris[i].p1[0],tris[i].p1[1],tris[i].p1[2],
-		    tris[i].p2[0],tris[i].p2[1],tris[i].p2[2],
-		    tris[i].p3[0],tris[i].p3[1],tris[i].p3[2]);
+            fprintf(fp,SURFINT_FORMAT " %d %20.15g %20.15g %20.15g "
+                    "%20.15g %20.15g %20.15g %20.15g %20.15g %20.15g",
+                    id,tris[i].type,
+                    tris[i].p1[0],tris[i].p1[1],tris[i].p1[2],
+                    tris[i].p2[0],tris[i].p2[1],tris[i].p2[2],
+                    tris[i].p3[0],tris[i].p3[1],tris[i].p3[2]);
             if (ncustom) write_custom_distributed(i,cvalues);
             fprintf(fp,"\n");
-	  }
-	else
-	  for (int i = 0; i < ncount; i++) {
+          }
+        else
+          for (int i = 0; i < ncount; i++) {
             surfint id = tris[i].id;
-	    fprintf(fp,SURFINT_FORMAT " %20.15g %20.15g %20.15g "
-		    "%20.15g %20.15g %20.15g %20.15g %20.15g %20.15g",
-		    id,
-		    tris[i].p1[0],tris[i].p1[1],tris[i].p1[2],
-		    tris[i].p2[0],tris[i].p2[1],tris[i].p2[2],
-		    tris[i].p3[0],tris[i].p3[1],tris[i].p3[2]);
+            fprintf(fp,SURFINT_FORMAT " %20.15g %20.15g %20.15g "
+                    "%20.15g %20.15g %20.15g %20.15g %20.15g %20.15g",
+                    id,
+                    tris[i].p1[0],tris[i].p1[1],tris[i].p1[2],
+                    tris[i].p2[0],tris[i].p2[1],tris[i].p2[2],
+                    tris[i].p3[0],tris[i].p3[1],tris[i].p3[2]);
             if (ncustom) write_custom_distributed(i,cvalues);
             fprintf(fp,"\n");
-	  }
+          }
       }
     }
     fclose(fp);
@@ -1054,13 +1054,13 @@ void WriteSurf::pack_custom(int nmine, double **cvalues)
   for (int ic = 0; ic < ncustom; ic++) {
     if (type_custom[ic] == 0) {
       if (size_custom[ic] == 0) {
-	int *ivector = surf->eivec[surf->ewhich[index_custom[ic]]];
+        int *ivector = surf->eivec[surf->ewhich[index_custom[ic]]];
         for (int i = 0; i < nmine; i++)
           cvalues[i][m] = ubuf(ivector[i]).d;
         m++;
       } else {
-	int **iarray = surf->eiarray[surf->ewhich[index_custom[ic]]];
-	for (int j = 0; j < size_custom[ic]; j++) {
+        int **iarray = surf->eiarray[surf->ewhich[index_custom[ic]]];
+        for (int j = 0; j < size_custom[ic]; j++) {
           for (int i = 0; i < nmine; i++)
             cvalues[i][m] = ubuf(iarray[i][j]).d;
           m++;
@@ -1068,13 +1068,13 @@ void WriteSurf::pack_custom(int nmine, double **cvalues)
       }
     } else {
       if (size_custom[ic] == 0) {
-	double *dvector = surf->edvec[surf->ewhich[index_custom[ic]]];
+        double *dvector = surf->edvec[surf->ewhich[index_custom[ic]]];
         for (int i = 0; i < nmine; i++)
           cvalues[i][m] = dvector[i];
         m++;
       } else {
-	double **darray = surf->edarray[surf->ewhich[index_custom[ic]]];
-	for (int j = 0; j < size_custom[ic]; j++) {
+        double **darray = surf->edarray[surf->ewhich[index_custom[ic]]];
+        for (int j = 0; j < size_custom[ic]; j++) {
           for (int i = 0; i < nmine; i++)
             cvalues[i][m] = darray[i][j];
           m++;
@@ -1094,21 +1094,21 @@ void WriteSurf::write_custom_all(int i)
   for (int ic = 0; ic < ncustom; ic++) {
     if (type_custom[ic] == 0) {
       if (size_custom[ic] == 0) {
-	int *ivector = surf->eivec_local[surf->ewhich[index_custom[ic]]];
-	fprintf(fp," %d",ivector[i]);
+        int *ivector = surf->eivec_local[surf->ewhich[index_custom[ic]]];
+        fprintf(fp," %d",ivector[i]);
       } else {
-	int **iarray = surf->eiarray_local[surf->ewhich[index_custom[ic]]];
-	for (int j = 0; j < size_custom[ic]; j++)
-	  fprintf(fp," %d",iarray[i][j]);
+        int **iarray = surf->eiarray_local[surf->ewhich[index_custom[ic]]];
+        for (int j = 0; j < size_custom[ic]; j++)
+          fprintf(fp," %d",iarray[i][j]);
       }
     } else {
       if (size_custom[ic] == 0) {
-	double *dvector = surf->edvec_local[surf->ewhich[index_custom[ic]]];
-	fprintf(fp," %.15g",dvector[i]);
+        double *dvector = surf->edvec_local[surf->ewhich[index_custom[ic]]];
+        fprintf(fp," %.15g",dvector[i]);
       } else {
-	double **darray = surf->edarray_local[surf->ewhich[index_custom[ic]]];
-	for (int j = 0; j < size_custom[ic]; j++)
-	  fprintf(fp," %.15g",darray[i][j]);
+        double **darray = surf->edarray_local[surf->ewhich[index_custom[ic]]];
+        for (int j = 0; j < size_custom[ic]; j++)
+          fprintf(fp," %.15g",darray[i][j]);
       }
     }
   }
@@ -1125,17 +1125,17 @@ void WriteSurf::write_custom_distributed(int i, double **cvalues)
   for (int ic = 0; ic < ncustom; ic++) {
     if (type_custom[ic] == 0) {
       if (size_custom[ic] == 0) {
-	fprintf(fp," %d",(int) ubuf(cvalues[i][m++]).i);
+        fprintf(fp," %d",(int) ubuf(cvalues[i][m++]).i);
       } else {
-	for (int j = 0; j < size_custom[ic]; j++)
-	  fprintf(fp," %d",(int) ubuf(cvalues[i][m++]).i);
+        for (int j = 0; j < size_custom[ic]; j++)
+          fprintf(fp," %d",(int) ubuf(cvalues[i][m++]).i);
       }
     } else {
       if (size_custom[ic] == 0) {
-	fprintf(fp," %.15g",cvalues[i][m++]);
+        fprintf(fp," %.15g",cvalues[i][m++]);
       } else {
-	for (int j = 0; j < size_custom[ic]; j++)
-	  fprintf(fp," %.15g",cvalues[i][m++]);
+        for (int j = 0; j < size_custom[ic]; j++)
+          fprintf(fp," %.15g",cvalues[i][m++]);
       }
     }
   }

@@ -28,7 +28,7 @@ nvec = o.nvec                        # of vectors of thermo info
 nlen = o.nlen                        length of each vectors
 names = o.names                      list of vector names
 a,b,... = o.get("A","B",...)         return one or more vectors of values
-o.write("file.txt")	 	     write all vectors to a file
+o.write("file.txt")                  write all vectors to a file
 o.write("file.txt","A","B",...)      write listed vectors to a file
 
   get and write allow abbreviated (uniquely) vector names
@@ -272,7 +272,7 @@ class olog:
         eof -= len(txt) - s2
       elif s1 == -1 and s2 == -1:            # found neither
                                              # could be end-of-file section
-        				     # or entire read was one chunk
+                                             # or entire read was one chunk
 
         if txt.find("Loop time of",start) == start:   # end of file, so exit
           eof -= len(txt) - start                     # reset eof to "Loop"
