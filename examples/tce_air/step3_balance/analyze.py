@@ -220,7 +220,7 @@ def analyze(size="quick"):
         mech[T] = _mechanism(D, sel, sel[0].variables["NRHO"])
         lines = ["%-28s %7s %8s %8s %7s %6s" % ("pair (forward)", "type",
                                                  "f", "b", "ratio", "2sd")]
-        nin = nall = 0
+        nin = nall = nini = nalli = 0
         for lab, typ, F, B, ratio, e in mech[T]:
             if ratio is None:
                 lines.append("%-28s %7s %8d %8d   (too few tallies)"
@@ -231,13 +231,19 @@ def analyze(size="quick"):
             if typ in ("D", "E"):
                 nall += 1
                 nin += abs(ratio - 1) <= 3 * e + 0.01
+            else:
+                nalli += 1
+                nini += abs(ratio - 1) <= 3 * e + 0.01
         open(os.path.join(out, "mechanism_%dK.txt" % T), "w").write(
             "\n".join(lines) + "\n")
         num["mech_%d_within" % T] = [nin, nall]
+        num["mech_%d_ionization_within" % T] = [nini, nalli]
         rep.info("mechanism at %5d K (measured %.0f K): %d of %d "
                  "dissociation/exchange pairs within 3 sd of detailed "
-                 "balance (see mechanism_%dK.txt)"
-                 % (T, np.mean([run_T(q) for q in sel]), nin, nall, T))
+                 "balance, %d of %d associative-ionization pairs with the "
+                 "capped recombination (see mechanism_%dK.txt)"
+                 % (T, np.mean([run_T(q) for q in sel]), nin, nall, nini,
+                    nalli, T))
 
     _fig7(out, zel, D, fwd, lf, lb)
     _table7(out, rec)
@@ -257,7 +263,9 @@ def _mechanism(D, sel, ntot):
     exchange f/b = K_eq(T) x_A x_B/(x_C x_D); dissociation (per third
     body) f/b = K_eq(T) x_AB/(x_a x_b ntot), K_eq in number-density
     units, ntot the total number density.  The measured/predicted ratio is
-    sum(f)/sum(b * prediction); its error is the counting error."""
+    sum(f)/sum(b * prediction); its error is the counting error.  For the
+    associative-ionization pairs the prediction includes the cap of the
+    dissociative recombination (ExchangeReverse, capped fraction)."""
     fwd = [r for r in D.rx_all if r["style"] == "A"]
     rev = [r for r in D.rx_all if r["style"] == "B"]
     per = [(pkg.tallies(q.log), composition(q, MECH_SPC), run_T(q))
@@ -275,7 +283,15 @@ def _mechanism(D, sel, ntot):
                  and sorted(x["prod"]) == sorted(f["reac"])]
             A, B = f["reac"]
             C, Dd = f["prod"][0], f["prod"][1]
-            pred = lambda n, T: D.keq(f, T) * n[A] * n[B] / (n[C] * n[Dd])
+            capr = lambda T: 1.0
+            if f["type"] == "I":
+                # dissociative recombination is capped at these
+                # temperatures (its forward never is): the reverse runs at
+                # the capped fraction of k_f/K_eq, so f/b is K_eq / capf
+                rv = R.ExchangeReverse(D, f)
+                capr = lambda T, rv=rv: rv.mean_p(T) / rv.mean_p(T, cap=False)
+            pred = lambda n, T, A=A, B=B, C=C, Dd=Dd, f=f, capr=capr: (
+                D.keq(f, T) * n[A] * n[B] / (n[C] * n[Dd]) / capr(T))
         else:
             continue
         if not r:
