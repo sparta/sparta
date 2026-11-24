@@ -18,6 +18,7 @@
 #include "stdlib.h"
 #include "string.h"
 #include "stats.h"
+#include "sparta_masks.h"
 #include "update.h"
 #include "particle.h"
 #include "collide.h"
@@ -125,6 +126,16 @@ Stats::~Stats()
   delete [] format_float_user;
   delete [] format_int_user;
   delete [] format_bigint_user;
+}
+
+/* ----------------------------------------------------------------------
+   Stats keywords are self-contained; delegated compute/fix/variable fields
+   can read arbitrary host data and therefore require the conservative mask.
+------------------------------------------------------------------------- */
+
+unsigned int Stats::sync_mask() const
+{
+  return (ncompute || nfix || nvariable) ? ALL_MASK : EMPTY_MASK;
 }
 
 /* ---------------------------------------------------------------------- */

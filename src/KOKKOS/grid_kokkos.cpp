@@ -344,6 +344,61 @@ void GridKokkos::resync_after_host_change()
 
 /* ---------------------------------------------------------------------- */
 
+/* ----------------------------------------------------------------------
+   copy the views in mask to the device if they were modified on the host
+   with no execution space, as sync(Device,mask): DualView::sync_device()
+     fences the whole device before and after each copy
+   with one, as sync_device_async(): each copy is ordered on that instance
+------------------------------------------------------------------------- */
+
+template<class... Exec>
+void GridKokkos::sync_device_views(unsigned int mask, const Exec &... exec)
+{
+  if (sparta->kokkos->auto_sync) {
+    // Automatic syncing exists because non-Kokkos code may have written the
+    // host side through the plain pointers, so the host is declared modified
+    // and copied down.  Declaring it while the device still holds a claim is
+    // both a lie -- the host copy is the older one -- and fatal: Kokkos
+    // aborts a DualView claimed on both sides at once.  A device claim
+    // survives into an auto_sync region without any modify(Device) call:
+    // reallocate_custom() resizes each custom vector on the device, which
+    // leaves it claimed there, so the next sync(Device,CUSTOM_MASK) (a
+    // later add_custom() or grow, or compute reduce on g_ at setup)
+    // aborted after the grid grew with custom attributes defined.
+    // Refresh the host first, as AtomKokkos::sync() does in LAMMPS and
+    // CollideVSSKokkos::sync() does here: a no-op when the device is clean,
+    // and the copy the host is owed when it is not.
+    sync(Host,mask);
+    modify(Host,mask);
+  }
+  if (mask & CELL_MASK) k_cells.sync_device(exec...);
+  if (mask & CINFO_MASK) k_cinfo.sync_device(exec...);
+  if (mask & PCELL_MASK) k_pcells.sync_device(exec...);
+  if (mask & SINFO_MASK) k_sinfo.sync_device(exec...);
+  if (mask & PLEVEL_MASK) k_plevels.sync_device(exec...);
+  if (mask & CUSTOM_MASK) {
+    if (ncustom) {
+      if (ncustom_ivec)
+        for (int i = 0; i < ncustom_ivec; i++)
+          k_eivec.view_host()[i].k_view.sync_device(exec...);
+
+      if (ncustom_iarray)
+        for (int i = 0; i < ncustom_iarray; i++)
+          k_eiarray.view_host()[i].k_view.sync_device(exec...);
+
+      if (ncustom_dvec)
+        for (int i = 0; i < ncustom_dvec; i++)
+          k_edvec.view_host()[i].k_view.sync_device(exec...);
+
+      if (ncustom_darray)
+        for (int i = 0; i < ncustom_darray; i++)
+          k_edarray.view_host()[i].k_view.sync_device(exec...);
+    }
+  }
+}
+
+/* ---------------------------------------------------------------------- */
+
 void GridKokkos::sync(ExecutionSpace space, unsigned int mask)
 {
   // before wrap_kokkos() the cell arrays are plain memory and there is
@@ -363,47 +418,7 @@ void GridKokkos::sync(ExecutionSpace space, unsigned int mask)
   }
 
   if (space == Device) {
-    if (sparta->kokkos->auto_sync) {
-      // Automatic syncing exists because non-Kokkos code may have written the
-      // host side through the plain pointers, so the host is declared modified
-      // and copied down.  Declaring it while the device still holds a claim is
-      // both a lie -- the host copy is the older one -- and fatal: Kokkos
-      // aborts a DualView claimed on both sides at once.  A device claim
-      // survives into an auto_sync region without any modify(Device) call:
-      // reallocate_custom() resizes each custom vector on the device, which
-      // leaves it claimed there, so the next sync(Device,CUSTOM_MASK) (a
-      // later add_custom() or grow, or compute reduce on g_ at setup)
-      // aborted after the grid grew with custom attributes defined.
-      // Refresh the host first, as AtomKokkos::sync() does in LAMMPS and
-      // CollideVSSKokkos::sync() does here: a no-op when the device is clean,
-      // and the copy the host is owed when it is not.
-      sync(Host,mask);
-      modify(Host,mask);
-    }
-    if (mask & CELL_MASK) k_cells.sync_device();
-    if (mask & CINFO_MASK) k_cinfo.sync_device();
-    if (mask & PCELL_MASK) k_pcells.sync_device();
-    if (mask & SINFO_MASK) k_sinfo.sync_device();
-    if (mask & PLEVEL_MASK) k_plevels.sync_device();
-    if (mask & CUSTOM_MASK) {
-      if (ncustom) {
-        if (ncustom_ivec)
-          for (int i = 0; i < ncustom_ivec; i++)
-            k_eivec.view_host()[i].k_view.sync_device();
-
-        if (ncustom_iarray)
-          for (int i = 0; i < ncustom_iarray; i++)
-            k_eiarray.view_host()[i].k_view.sync_device();
-
-        if (ncustom_dvec)
-          for (int i = 0; i < ncustom_dvec; i++)
-            k_edvec.view_host()[i].k_view.sync_device();
-
-        if (ncustom_darray)
-          for (int i = 0; i < ncustom_darray; i++)
-            k_edarray.view_host()[i].k_view.sync_device();
-      }
-    }
+    sync_device_views(mask);
   } else {
     if (mask & CELL_MASK) k_cells.sync_host();
     if (mask & CINFO_MASK) k_cinfo.sync_host();
@@ -428,6 +443,16 @@ void GridKokkos::sync(ExecutionSpace space, unsigned int mask)
           k_edarray.view_host()[i].k_view.sync_host();
     }
   }
+}
+
+/* ---------------------------------------------------------------------- */
+
+void GridKokkos::sync_device_async(const DeviceType &exec, unsigned int mask)
+{
+  if (sparta->kokkos->prewrap)
+    error->one(FLERR,"Sync Device before wrap");
+
+  sync_device_views(mask,exec);
 }
 
 /* ---------------------------------------------------------------------- */

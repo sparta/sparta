@@ -12,6 +12,12 @@
    See the README file in the top-level SPARTA directory.
 ------------------------------------------------------------------------- */
 
+/* ----------------------------------------------------------------------
+   Optimizations contributed by Matt Bettencourt (NVIDIA) are:
+    Copyright (c) 2025 NVIDIA CORPORATION & AFFILIATES. All rights
+    reserved.
+------------------------------------------------------------------------- */
+
 #include "math.h"
 #include "string.h"
 #include "stdlib.h"
@@ -795,7 +801,6 @@ void CollideVSSKokkos::clear_gas_tally()
 /* ----------------------------------------------------------------------
    NTC algorithm for a single group
 ------------------------------------------------------------------------- */
-
 template < int NEARCP, int GASTALLY > void CollideVSSKokkos::collisions_one(COLLIDE_REDUCE &reduce)
 {
   // loop over cells I own
@@ -819,7 +824,6 @@ template < int NEARCP, int GASTALLY > void CollideVSSKokkos::collisions_one(COLL
   if (NEARCP) {
     if (int(d_nn_last_partner.extent(0)) < nglocal || int(d_nn_last_partner.extent(1)) < d_plist.extent(1))
       MemKK::realloc_kokkos(d_nn_last_partner,"collide:nn_last_partner",nglocal,d_plist.extent(1));
-    //Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagCollideZeroNN>(0,nglocal),*this);
   }
 
   /* ATOMIC_REDUCTION: 1 = use atomics
@@ -1013,7 +1017,12 @@ template < int NEARCP, int GASTALLY > void CollideVSSKokkos::collisions_one(COLL
   if (vibstyle == DISCRETE) particle_kk->modify(Device,CUSTOM_MASK);
 
   d_particles = t_particle_1d(); // destroy reference to reduce memory use
-  d_nn_last_partner = {};
+
+  // d_plist is only a reference to grid_kk->d_plist, retaken every call, so
+  //   drop it: holding it would keep the old buffer alive when sort_kokkos()
+  //   reallocates the plist.  d_nn_last_partner is owned here and kept
+  //   between steps to avoid reallocating it every step
+
   d_plist = {};
 }
 
@@ -1064,6 +1073,7 @@ void CollideVSSKokkos::operator()(TagCollideCollisionsOne< NEARCP, GASTALLY, ATO
     rand_pool.free_state(rand_gen);
     return;
   }
+
   if (ATOMIC_REDUCTION == 1)
     Kokkos::atomic_add(&d_nattempt_one(),nattempt);
   else if (ATOMIC_REDUCTION == 0)

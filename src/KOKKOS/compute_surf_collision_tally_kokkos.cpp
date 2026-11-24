@@ -172,7 +172,7 @@ void ComputeSurfCollisionTallyKokkos::grow_tally_kokkos(int n)
   // resize, not realloc: MemKK::realloc_kokkos drops the old allocation and
   //   allocates WithoutInitializing, so every existing row becomes garbage.
   //   The rows below ntally_mark were written by earlier migration iterations
-  //   of this same step and must survive -- rewind_ntally() only takes the
+  //   of this same step and must survive -- rewind_ntally_async() only takes the
   //   count back to the mark, and the re-run appends from there, so a
   //   discarded prefix would be published as uninitialized tally output.
   //   DualView::resize preserves contents, as memoryKK->grow_kokkos does.

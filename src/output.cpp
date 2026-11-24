@@ -16,6 +16,7 @@
 #include "stdlib.h"
 #include "string.h"
 #include "output.h"
+#include "accelerator_kokkos.h"
 #include "style_dump.h"
 #include "comm.h"
 #include "input.h"
@@ -31,6 +32,7 @@
 #include "write_restart.h"
 #include "memory.h"
 #include "error.h"
+#include "sparta_masks.h"
 
 using namespace SPARTA_NS;
 
@@ -141,6 +143,8 @@ void Output::init()
 void Output::setup(int memflag)
 {
   bigint ntimestep = update->ntimestep;
+
+  reset_sync_mask_for_output();
 
   // perform dump at start of run only if:
   //   current timestep is multiple of every and last dump not >= this step
@@ -602,6 +606,23 @@ void Output::delete_dump(char *id)
     ivar_dump[i-1] = ivar_dump[i];
   }
   ndump--;
+}
+
+/* ----------------------------------------------------------------------
+   set the Kokkos particle data that output needs on the host at an output
+   step, from the dumps, restart and stats styles of this run
+   called from setup() at the start of every run, so it always matches
+   what is defined, including after a clear command
+   lets stats-only output skip the particle copy to the host
+------------------------------------------------------------------------- */
+
+void Output::reset_sync_mask_for_output()
+{
+  if (sparta->kokkos == NULL || !sparta->kokkos->kokkos_exists) return;
+
+  unsigned int mask = restart_flag ? ALL_MASK : stats->sync_mask();
+  for (int i = 0; i < ndump; i++) mask |= dump[i]->sync_mask();
+  sparta->kokkos->sync_mask_for_output = mask;
 }
 
 /* ----------------------------------------------------------------------

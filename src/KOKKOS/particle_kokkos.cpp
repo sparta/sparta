@@ -116,18 +116,12 @@ static int cellcount_target(int need, int nlocal_in, int ngrid_in,
 
 ParticleKokkos::ParticleKokkos(SPARTA *sparta) : Particle(sparta)
 {
-  // NOTE: the weight_rand_pool seed cannot be set here.  Every other Kokkos
-  //   class seeds its pool in the constructor initializer list with
-  //   12345 + comm->me, but those are all styles the input script creates,
-  //   long after SPARTA::create() has finished.  ParticleKokkos is built by
-  //   create() itself, at sparta.cpp:484, three lines BEFORE comm exists
-  //   (:487), and comm is not NULL-initialized -- so reading comm->me there
-  //   dereferences an uninitialized pointer.  Seed on first use instead.
 
+  // ParticleKokkos is built before comm exists, so this pool is seeded on
+  // first use rather than from comm->me in the constructor.
 #ifndef SPARTA_KOKKOS_EXACT
   weight_rand_pool_seeded = 0;
 #endif
-
 
   d_resize = DAT::t_int_scalar("particle:resize");
   h_resize = HAT::t_int_scalar("particle:resize_mirror");
@@ -361,13 +355,11 @@ void ParticleKokkos::sort_kokkos()
 
     if (resize) {
       Kokkos::deep_copy(d_cellcount,0);
-
       // grow with headroom, not to exactly what this step needed
 
       maxcellcount =
         MAX(cellcount_target(resize,nlocal,ngrid,cell_contiguous),
             static_cast<int> (maxcellcount*CELLCOUNT_GROWTH));
-
       d_plist = {};
       MemKK::realloc_kokkos(grid_kk->d_plist,"particle:plist",ngrid,maxcellcount);
       d_plist = grid_kk->d_plist;
@@ -990,47 +982,62 @@ void ParticleKokkos::update_species2group()
 
 /* ---------------------------------------------------------------------- */
 
+/* ----------------------------------------------------------------------
+   copy the views in mask to the device if they were modified on the host
+   with no execution space, as sync(Device,mask): DualView::sync_device()
+     fences the whole device before and after each copy
+   with one, as sync_device_async(): each copy is ordered on that instance
+------------------------------------------------------------------------- */
+
+template<class... Exec>
+void ParticleKokkos::sync_device_views(unsigned int mask, const Exec &... exec)
+{
+  if (sparta->kokkos->auto_sync) {
+    // Automatic syncing exists because non-Kokkos code may have written the
+    // host side through the plain pointers, so the host is declared modified
+    // and copied down.  Declaring it while the device still holds a claim is
+    // both a lie -- the host copy is the older one -- and fatal: Kokkos
+    // aborts a DualView claimed on both sides at once.  A device claim
+    // survives into an auto_sync region without any modify(Device) call:
+    // grow_custom() resizes each custom vector on the device, which leaves
+    // it claimed there, so the next sync(Device,CUSTOM_MASK) -- the next
+    // grow_custom() of the same grow(), or UpdateKokkos::setup() -- aborted
+    // after any particle growth between runs with custom attributes.
+    // Refresh the host first, as AtomKokkos::sync() does in LAMMPS and
+    // CollideVSSKokkos::sync() does here: a no-op when the device is clean,
+    // and the copy the host is owed when it is not.
+    sync(Host,mask);
+    modify(Host,mask);
+  }
+  if (mask & PARTICLE_MASK) k_particles.sync_device(exec...);
+  if (mask & SPECIES_MASK) k_species.sync_device(exec...);
+  if (mask & CUSTOM_MASK) {
+    if (ncustom) {
+      if (ncustom_ivec)
+        for (int i = 0; i < ncustom_ivec; i++)
+          k_eivec.view_host()[i].k_view.sync_device(exec...);
+
+      if (ncustom_iarray)
+        for (int i = 0; i < ncustom_iarray; i++)
+          k_eiarray.view_host()[i].k_view.sync_device(exec...);
+
+      if (ncustom_dvec)
+        for (int i = 0; i < ncustom_dvec; i++)
+          k_edvec.view_host()[i].k_view.sync_device(exec...);
+
+      if (ncustom_darray)
+        for (int i = 0; i < ncustom_darray; i++)
+          k_edarray.view_host()[i].k_view.sync_device(exec...);
+    }
+  }
+}
+
+/* ---------------------------------------------------------------------- */
+
 void ParticleKokkos::sync(ExecutionSpace space, unsigned int mask)
 {
   if (space == Device) {
-    if (sparta->kokkos->auto_sync) {
-      // Automatic syncing exists because non-Kokkos code may have written the
-      // host side through the plain pointers, so the host is declared modified
-      // and copied down.  Declaring it while the device still holds a claim is
-      // both a lie -- the host copy is the older one -- and fatal: Kokkos
-      // aborts a DualView claimed on both sides at once.  A device claim
-      // survives into an auto_sync region without any modify(Device) call:
-      // grow_custom() resizes each custom vector on the device, which leaves
-      // it claimed there, so the next sync(Device,CUSTOM_MASK) -- the next
-      // grow_custom() of the same grow(), or UpdateKokkos::setup() -- aborted
-      // after any particle growth between runs with custom attributes.
-      // Refresh the host first, as AtomKokkos::sync() does in LAMMPS and
-      // CollideVSSKokkos::sync() does here: a no-op when the device is clean,
-      // and the copy the host is owed when it is not.
-      sync(Host,mask);
-      modify(Host,mask);
-    }
-    if (mask & PARTICLE_MASK) k_particles.sync_device();
-    if (mask & SPECIES_MASK) k_species.sync_device();
-    if (mask & CUSTOM_MASK) {
-      if (ncustom) {
-        if (ncustom_ivec)
-          for (int i = 0; i < ncustom_ivec; i++)
-            k_eivec.view_host()[i].k_view.sync_device();
-
-        if (ncustom_iarray)
-          for (int i = 0; i < ncustom_iarray; i++)
-            k_eiarray.view_host()[i].k_view.sync_device();
-
-        if (ncustom_dvec)
-          for (int i = 0; i < ncustom_dvec; i++)
-            k_edvec.view_host()[i].k_view.sync_device();
-
-        if (ncustom_darray)
-          for (int i = 0; i < ncustom_darray; i++)
-            k_edarray.view_host()[i].k_view.sync_device();
-      }
-    }
+    sync_device_views(mask);
   } else {
     if (mask & PARTICLE_MASK) k_particles.sync_host();
     if (mask & SPECIES_MASK) k_species.sync_host();
@@ -1052,6 +1059,14 @@ void ParticleKokkos::sync(ExecutionSpace space, unsigned int mask)
           k_edarray.view_host()[i].k_view.sync_host();
     }
   }
+}
+
+/* ---------------------------------------------------------------------- */
+
+void ParticleKokkos::sync_device_async(const DeviceType &exec,
+                                       unsigned int mask)
+{
+  sync_device_views(mask,exec);
 }
 
 /* ---------------------------------------------------------------------- */

@@ -48,12 +48,21 @@ class ComputeSurfCollisionTallyKokkos : public ComputeSurfCollisionTally, public
   void post_surf_tally();
   void grow_tally_kokkos(int);
 
+  // counter operations UpdateKokkos uses to batch the transfers of all
+  //   tally computes behind a single fence: copy_ntally_to_host_async()
+  //   queues the read of the device counter, and the caller must fence
+  //   exec before calling a *_from_host() method, which reads h_ntally
+
+  void copy_ntally_to_host_async(const DeviceType &exec)
+  {
+    Kokkos::deep_copy(exec,h_ntally,d_ntally);
+  }
+
   // grow to what the overflowed attempt actually needed; the device counter
   //   kept counting past the end of the buffer, so it is that number
 
-  void grow_after_overflow()
+  void grow_after_overflow_from_host()
   {
-    Kokkos::deep_copy(h_ntally,d_ntally);
     grow_tally_kokkos(h_ntally());
   }
 
@@ -61,15 +70,17 @@ class ComputeSurfCollisionTallyKokkos : public ComputeSurfCollisionTally, public
   //   aborted attempt appended have to be taken back before the next one.
   //   Not by zeroing: the move kernel runs once per migration iteration and
   //   the tally accumulates across all of them, so an attempt rewinds to
-  //   where its own pass started, which mark_ntally() records.
+  //   where its own pass started, which mark_ntally_from_host() records.
 
-  void mark_ntally()
+  void mark_ntally_from_host()
   {
-    Kokkos::deep_copy(h_ntally,d_ntally);
     ntally_mark = h_ntally();
   }
 
-  void rewind_ntally() { Kokkos::deep_copy(d_ntally,ntally_mark); }
+  void rewind_ntally_async(const DeviceType &exec)
+  {
+    Kokkos::deep_copy(exec,d_ntally,ntally_mark);
+  }
 
   DAT::t_int_scalar d_overflow;         // set by UpdateKokkos each step
 

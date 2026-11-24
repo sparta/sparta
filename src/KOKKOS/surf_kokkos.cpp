@@ -228,6 +228,69 @@ void SurfKokkos::grow_own(int old)
 
 /* ---------------------------------------------------------------------- */
 
+/* ----------------------------------------------------------------------
+   copy the views in mask to the device if they were modified on the host
+   with no execution space, as sync(Device,mask): DualView::sync_device()
+     fences the whole device before and after each copy
+   with one, as sync_device_async(): each copy is ordered on that instance
+------------------------------------------------------------------------- */
+
+template<class... Exec>
+void SurfKokkos::sync_device_views(unsigned int mask, const Exec &... exec)
+{
+  if (sparta->kokkos->auto_sync) {
+    // Automatic syncing exists because non-Kokkos code may have written the
+    // host side through the plain pointers, so the host is declared modified
+    // and copied down.  Declaring it while the device still holds a claim is
+    // both a lie -- the host copy is the older one -- and fatal: Kokkos
+    // aborts a DualView claimed on both sides at once.  No current
+    // caller is known to leave surf data claimed on the device here; the
+    // guard keeps this in step with the other classes.
+    // Refresh the host first, as AtomKokkos::sync() does in LAMMPS and
+    // CollideVSSKokkos::sync() does here: a no-op when the device is clean,
+    // and the copy the host is owed when it is not.
+    sync(Host,mask);
+    modify(Host,mask);
+  }
+  if (mask & LINE_MASK) k_lines.sync_device(exec...);
+  if (mask & TRI_MASK) k_tris.sync_device(exec...);
+  if (mask & MYLINE_MASK) k_mylines.sync_device(exec...);
+  if (mask & MYTRI_MASK) k_mytris.sync_device(exec...);
+  if (mask & CUSTOM_MASK) {
+    if (ncustom) {
+      if (ncustom_ivec) {
+        for (int i = 0; i < ncustom_ivec; i++) {
+          k_eivec.view_host()[i].k_view.sync_device(exec...);
+          k_eivec_local.view_host()[i].k_view.sync_device(exec...);
+        }
+      }
+
+      if (ncustom_iarray) {
+        for (int i = 0; i < ncustom_iarray; i++) {
+          k_eiarray.view_host()[i].k_view.sync_device(exec...);
+          k_eiarray_local.view_host()[i].k_view.sync_device(exec...);
+        }
+      }
+
+      if (ncustom_dvec) {
+        for (int i = 0; i < ncustom_dvec; i++) {
+          k_edvec.view_host()[i].k_view.sync_device(exec...);
+          k_edvec_local.view_host()[i].k_view.sync_device(exec...);
+        }
+      }
+
+      if (ncustom_darray) {
+        for (int i = 0; i < ncustom_darray; i++) {
+          k_edarray.view_host()[i].k_view.sync_device(exec...);
+          k_edarray_local.view_host()[i].k_view.sync_device(exec...);
+        }
+      }
+    }
+  }
+}
+
+/* ---------------------------------------------------------------------- */
+
 void SurfKokkos::sync(ExecutionSpace space, unsigned int mask)
 {
   if (sparta->kokkos->prewrap)
@@ -235,55 +298,7 @@ void SurfKokkos::sync(ExecutionSpace space, unsigned int mask)
       error->one(FLERR,"Sync Device before wrap");
 
   if (space == Device) {
-    if (sparta->kokkos->auto_sync) {
-      // Automatic syncing exists because non-Kokkos code may have written the
-      // host side through the plain pointers, so the host is declared modified
-      // and copied down.  Declaring it while the device still holds a claim is
-      // both a lie -- the host copy is the older one -- and fatal: Kokkos
-      // aborts a DualView claimed on both sides at once.  No current
-      // caller is known to leave surf data claimed on the device here; the
-      // guard keeps this in step with the other classes.
-      // Refresh the host first, as AtomKokkos::sync() does in LAMMPS and
-      // CollideVSSKokkos::sync() does here: a no-op when the device is clean,
-      // and the copy the host is owed when it is not.
-      sync(Host,mask);
-      modify(Host,mask);
-    }
-    if (mask & LINE_MASK) k_lines.sync_device();
-    if (mask & TRI_MASK) k_tris.sync_device();
-    if (mask & MYLINE_MASK) k_mylines.sync_device();
-    if (mask & MYTRI_MASK) k_mytris.sync_device();
-    if (mask & CUSTOM_MASK) {
-      if (ncustom) {
-        if (ncustom_ivec) {
-          for (int i = 0; i < ncustom_ivec; i++) {
-            k_eivec.view_host()[i].k_view.sync_device();
-            k_eivec_local.view_host()[i].k_view.sync_device();
-          }
-        }
-
-        if (ncustom_iarray) {
-          for (int i = 0; i < ncustom_iarray; i++) {
-            k_eiarray.view_host()[i].k_view.sync_device();
-            k_eiarray_local.view_host()[i].k_view.sync_device();
-          }
-        }
-
-        if (ncustom_dvec) {
-          for (int i = 0; i < ncustom_dvec; i++) {
-            k_edvec.view_host()[i].k_view.sync_device();
-            k_edvec_local.view_host()[i].k_view.sync_device();
-          }
-        }
-
-        if (ncustom_darray) {
-          for (int i = 0; i < ncustom_darray; i++) {
-            k_edarray.view_host()[i].k_view.sync_device();
-            k_edarray_local.view_host()[i].k_view.sync_device();
-          }
-        }
-      }
-    }
+    sync_device_views(mask);
   } else {
     if (mask & LINE_MASK) k_lines.sync_host();
     if (mask & TRI_MASK) k_tris.sync_host();
@@ -319,6 +334,16 @@ void SurfKokkos::sync(ExecutionSpace space, unsigned int mask)
       }
     }
   }
+}
+
+/* ---------------------------------------------------------------------- */
+
+void SurfKokkos::sync_device_async(const DeviceType &exec, unsigned int mask)
+{
+  if (sparta->kokkos->prewrap)
+    error->one(FLERR,"Sync Device before wrap");
+
+  sync_device_views(mask,exec);
 }
 
 /* ---------------------------------------------------------------------- */
