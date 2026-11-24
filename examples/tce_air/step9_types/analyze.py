@@ -196,6 +196,24 @@ def _table(out, rows):
     open(os.path.join(out, "table_types.txt"), "w").write("\n".join(T) + "\n")
 
 
+def chem(label):
+    """'N2+ + O --> O+ + N2' in mathtext: N$_2^+$ + O -> O$^+$ + N$_2$"""
+    import re
+
+    def sp(t):
+        m = re.fullmatch(r"([A-Za-z]+?)(\d*)(\+?)", t)
+        if not m:
+            return t
+        n, d, q = m.groups()
+        if not d and not q:
+            return n
+        return "%s$%s%s$" % (n, "_%s" % d if d else "",
+                             "^+" if q else "")
+    lhs, rhs = label.split(" --> ")
+    return " \u2192 ".join(" + ".join(sp(t) for t in side.split(" + "))
+                            for side in (lhs, rhs))
+
+
 def _fig(out, rows, refs):
     import matplotlib
     matplotlib.use("Agg")
@@ -222,7 +240,7 @@ def _fig(out, rows, refs):
                         mfc="white", capsize=1.5, lw=0, elinewidth=0.9,
                         label=lab)
         ax.axhline(1.0, color=ps.GRAY, lw=0.7, ls=":")
-        flab = PAIRS[pair][2].replace(" --> ", " → ")
+        flab = chem(PAIRS[pair][2])
         ax.set_title("%s\n%s" % (PAIRS[pair][4], flab), fontsize=7.5)
         if j == 0:
             ax.set_ylabel("$k/k_{\\mathrm{Arr}}$ (forward)")
@@ -234,16 +252,24 @@ def _fig(out, rows, refs):
                     mfc="white", capsize=1.5, lw=0, elinewidth=0.9,
                     label="SPARTA (2 sd)")
         bx.axhline(1.0, color=ps.GRAY, lw=0.7, ls=":")
-        blab = PAIRS[pair][3].replace(" --> ", " → ")
-        bx.text(0.04, 0.06, "reverse " + blab, transform=bx.transAxes,
+        blab = chem(PAIRS[pair][3])
+        bx.text(0.04, 0.93, "reverse " + blab, transform=bx.transAxes, va="top",
                 fontsize=6.5)
         bx.set_xlabel("$T$ (kK)")
         if j == 0:
             bx.set_ylabel("$k_b/(k_f/K_{eq})$ (derived reverse)")
         ps.panel(ax, "(%s)" % "abc"[j], loc="ne")
         ps.panel(bx, "(%s)" % "def"[j], loc="ne")
-    axs[0, 0].legend(loc="upper left", fontsize=6)
-    axs[1, 0].legend(loc="center left", fontsize=6)
+    # legends where the panels are empty: forward in (b), reverse in (e)
+    h, l = [], []
+    for ax in axs[0]:
+        for hh, ll in zip(*ax.get_legend_handles_labels()):
+            if ll not in l:
+                h.append(hh)
+                l.append(ll)
+    axs[0, 1].legend(h, l, loc="lower left", bbox_to_anchor=(0.0, 0.18),
+                     fontsize=6)
+    axs[1, 1].legend(loc="lower right", fontsize=6)
     fig.tight_layout()
     fig.savefig(os.path.join(out, "fig_types.pdf"))
     plt.close(fig)
