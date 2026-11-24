@@ -267,6 +267,24 @@ So the average restarts after :doc:`fix balance <fix_balance>` or
 balancing, or use a window much shorter than the rebalance interval,
 if a converged average matters.
 
+For a *subsonic* inlet with prescribed pressure and temperature, the
+number density is ``Psub/(kB*Tsub)``, and Tsub is used for both the
+insertion count and the translational thermal velocities. The mixture
+temperature can differ from Tsub. Option *normal* = *yes* uses the signed
+projection of the extrapolated cell velocity onto the local surface normal.
+Both tangential bulk components are zero. This supplies the planar inlet
+velocity prescription of `(Fang02) <#Fang02>`_. With *normal* = *no*, all
+extrapolated bulk components are retained. The moving average stores the
+cell velocity before this projection.
+
+When Tsub is NULL, the adjacent cell's measured translational temperature
+is used to compute cell pressure and sound speed. For fewer than two
+particles, or a nonpositive or non-finite temperature estimate, the
+mixture temperature is used as a fallback. The velocity correction uses the
+inward boundary normal and the extrapolated tangential bulk velocity is
+retained. A *normal* = *yes* setting is accepted with a
+warning and has the same effect as *normal* = *no* in this mode.
+
 IMPORTANT NOTE: Caution must be exercised when using the subsonic
 boundary condition without specifying an inlet temperature. In this
 case the code tries to estimate the temperature of the flow from the

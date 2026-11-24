@@ -146,7 +146,10 @@ void FixEmitFaceKokkos::init()
   auto h_fraction = k_fraction.view_host();
 
   for (int isp = 0; isp < nspecies; ++isp) {
-    h_mix_vscale(isp) = particle->mixture[imix]->vscale[isp];
+    if (subsonic_style == PTBOTH) {
+      const int ispecies = particle->mixture[imix]->species[isp];
+      h_mix_vscale(isp) = sqrt(2.0*update->boltz*tsubsonic / particle->species[ispecies].mass);
+    } else h_mix_vscale(isp) = particle->mixture[imix]->vscale[isp];
     h_cummulative(isp) = particle->mixture[imix]->cummulative[isp];
     h_mspecies(isp) = particle->mixture[imix]->species[isp];
     h_fraction(isp) = particle->mixture[imix]->fraction[isp];
@@ -830,6 +833,10 @@ void FixEmitFaceKokkos::operator()(TagFixEmitFace_subsonic_grid, const int &i) c
   if (subsonic_style == PTBOTH) {
     d_tasks(i).nrho = nsubsonic;
     temp_thermal_cell = tsubsonic;
+    if (normalflag) {
+      vstream[d_tasks(i).pdim] = 0.0;
+      vstream[d_tasks(i).qdim] = 0.0;
+    }
 
   } else {
     const double nrho_cell = np * fnum * d_cinfo[icell].weight / d_cinfo[icell].volume;
@@ -842,17 +849,20 @@ void FixEmitFaceKokkos::operator()(TagFixEmitFace_subsonic_grid, const int &i) c
       // ke is pure roundoff of either sign, treat cell as cold
       if (ke <= 1.0e-10 * mv[3]/np) temp_thermal_cell = 0.0;
     } else temp_thermal_cell = temp_thermal_mix;
+    // Use mixture temperature when cell moments cannot supply a valid value.
+    if (!(temp_thermal_cell > 0.0) || !Kokkos::isfinite(temp_thermal_cell))
+      temp_thermal_cell = temp_thermal_mix;
 
     const double press_cell = nrho_cell * boltz * temp_thermal_cell;
     double soundspeed_cell;
+    const double mass_cell = np ? masstot / np : avemass_mixture;
     if (np && temp_thermal_cell > 0.0) {
-      const double mass_cell = masstot / np;
       const double gamma_cell = gamma / np;
       soundspeed_cell = sqrt(gamma_cell*boltz*temp_thermal_cell / mass_cell);
     } else soundspeed_cell = soundspeed_mixture;
 
     d_tasks(i).nrho = nrho_cell +
-      (psubsonic - press_cell) / (soundspeed_cell*soundspeed_cell);
+      (psubsonic - press_cell) / (mass_cell*soundspeed_cell*soundspeed_cell);
     temp_thermal_cell = psubsonic / (boltz * d_tasks(i).nrho);
     if (!subsonic_warning && temp_thermal_cell > TEMPLIMIT)
       Kokkos::atomic_max(&d_tempmax(),temp_thermal_cell);

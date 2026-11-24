@@ -212,7 +212,10 @@ void FixEmitSurfKokkos::init()
   auto h_fraction = k_fraction.view_host();
 
   for (int isp = 0; isp < nspecies; ++isp) {
-    h_vscale_mix(isp) = particle->mixture[imix]->vscale[isp];
+    if (subsonic_style == PTBOTH) {
+      const int ispecies = particle->mixture[imix]->species[isp];
+      h_vscale_mix(isp) = sqrt(2.0*update->boltz*tsubsonic / particle->species[ispecies].mass);
+    } else h_vscale_mix(isp) = particle->mixture[imix]->vscale[isp];
 
     if (!(fractions_custom_flag && !perspecies))
       h_cummulative_mix(isp) = particle->mixture[imix]->cummulative[isp];
@@ -973,7 +976,7 @@ void FixEmitSurfKokkos::operator()(TagFixEmitSurf_subsonic_inflow, const int &i)
   // depends on normalflag, same as FixEmitSurf::subsonic_inflow()
 
   double indot;
-  if (normalflag) indot = magvstream;
+  if (normalflag) indot = d_tasks(i).magvstream;
   else {
     const surfint isurf = d_tasks(i).isurf;
     double *normal = (dimension == 2) ? d_lines[isurf].norm : d_tris[isurf].norm;
@@ -1189,6 +1192,16 @@ void FixEmitSurfKokkos::operator()(TagFixEmitSurf_subsonic_grid, const int &i) c
   if (subsonic_style == PTBOTH) {
     d_tasks(i).nrho = nsubsonic;
     temp_thermal_cell = tsubsonic;
+    // Project the inlet drift after updating the cell-velocity average.
+    if (normalflag) {
+      const surfint isurf = d_tasks(i).isurf;
+      const double *normal = (dimension == 2) ? d_lines[isurf].norm : d_tris[isurf].norm;
+      const double un = MathExtraKokkos::dot3(vstream,normal);
+      d_tasks(i).magvstream = un;
+      vstream[0] = un*normal[0];
+      vstream[1] = un*normal[1];
+      vstream[2] = un*normal[2];
+    }
 
   } else {
     const double nrho_cell = np * fnum * d_cinfo[icell].weight / d_cinfo[icell].volume;
@@ -1201,30 +1214,30 @@ void FixEmitSurfKokkos::operator()(TagFixEmitSurf_subsonic_grid, const int &i) c
       // ke is pure roundoff of either sign, treat cell as cold
       if (ke <= 1.0e-10 * mv[3]/np) temp_thermal_cell = 0.0;
     } else temp_thermal_cell = temp_thermal_mix;
+    // Use mixture temperature when cell moments cannot supply a valid value.
+    if (!(temp_thermal_cell > 0.0) || !Kokkos::isfinite(temp_thermal_cell))
+      temp_thermal_cell = temp_thermal_mix;
 
     const double press_cell = nrho_cell * boltz * temp_thermal_cell;
     double soundspeed_cell;
+    const double mass_cell = np ? masstot / np : avemass_mixture;
     if (np && temp_thermal_cell > 0.0) {
-      const double mass_cell = masstot / np;
       const double gamma_cell = gamma / np;
       soundspeed_cell = sqrt(gamma_cell*boltz*temp_thermal_cell / mass_cell);
     } else soundspeed_cell = soundspeed_mixture;
 
     d_tasks(i).nrho = nrho_cell +
-      (psubsonic - press_cell) / (soundspeed_cell*soundspeed_cell);
+      (psubsonic - press_cell) / (mass_cell*soundspeed_cell*soundspeed_cell);
     temp_thermal_cell = psubsonic / (boltz * d_tasks(i).nrho);
     if (!subsonic_warning && temp_thermal_cell > TEMPLIMIT)
       Kokkos::atomic_max(&d_tempmax(),temp_thermal_cell);
 
     // adjust COM vstream by difference between
     //   cell pressure and subsonic target pressure
-    // normal = direction of difference, depends on normalflag
+    // use the surface normal pointing into the flow region
 
-    const double *normal;
-    if (normalflag) {
-      const surfint isurf = d_tasks(i).isurf;
-      normal = (dimension == 2) ? d_lines[isurf].norm : d_tris[isurf].norm;
-    } else normal = norm_vstream;
+    const surfint isurf = d_tasks(i).isurf;
+    const double *normal = (dimension == 2) ? d_lines[isurf].norm : d_tris[isurf].norm;
 
     if (np && massrho_cell*soundspeed_cell > 0.0) {
       const double vsmag = (psubsonic - press_cell) / (massrho_cell*soundspeed_cell);
