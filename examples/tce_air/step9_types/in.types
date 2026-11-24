@@ -1,0 +1,48 @@
+# Frozen-composition reservoir of one forward/reverse pair (step 9): the four
+# species of the pair at fixed fractions, every reaction tallied but not
+# performed (compute_chem_rates yes), so the tallies measure the forward rate
+# coefficient and that of its derived reverse at fixed temperature.  All
+# modes at T; rotation continuous, vibration and electronic states discrete.
+# Electrons, where present, are an ordinary species (no ambipolar treatment).
+#
+# Variables: DATA, SEED, T, S1-S4 (species), X1-X4 (mole fractions), TCE
+# (reaction file), NRHO, NP, NSTEP
+
+seed                ${SEED}
+dimension           3
+global              gridcut 1.0e-5 comm/sort yes
+boundary            rr rr rr
+create_box          0 1.0e-4 0 1.0e-4 0 1.0e-4
+create_grid         2 2 2
+balance_grid        rcb part
+
+species             ${DATA}/air.species ${S1} ${S2} ${S3} ${S4} &
+                    rotfile ${DATA}/air.rot elecfile ${DATA}/air.elec
+mixture             gas ${S1} ${S2} ${S3} ${S4} vstream 0.0 0.0 0.0 &
+                    temp ${T} trot ${T} tvib ${T} telec ${T}
+mixture             gas ${S1} frac ${X1}
+mixture             gas ${S2} frac ${X2}
+mixture             gas ${S3} frac ${X3}
+mixture             gas ${S4} frac ${X4}
+# one collision group per species (electrons: see step3_balance/in.mech)
+mixture             gas group SELF
+
+variable            fn equal ${NRHO}*1.0e-12/${NP}
+global              nrho ${NRHO}
+global              fnum ${fn}
+
+collide             vss gas ${DATA}/air.vss relax constant
+collide_modify      rotate smooth vibrate discrete electronic discrete
+fix                 electronic elecmode
+collide_modify      remain no
+
+react               tce ${TCE}
+react_modify        partial_energy no compute_chem_rates yes
+
+create_particles    gas n ${NP} twopass
+compute             temp temp
+compute             spc count ${S1} ${S2} ${S3} ${S4}
+stats               20
+stats_style         step cpu np nattempt ncoll c_temp c_spc[*]
+timestep            1.0e-9
+run                 ${NSTEP}

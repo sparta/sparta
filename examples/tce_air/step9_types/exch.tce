@@ -1,0 +1,7 @@
+# exchange, from data/air.tce: the forward fit and its derived reverse
+
+N2 + O --> NO + N
+E A 0.0 5.2273e-19 1.069e-12 -1.0 -5.2273e-19
+
+NO + N --> N2 + O
+E B 0.0 0.0 0.0 0.0 0.0

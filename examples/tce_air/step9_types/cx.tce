@@ -1,0 +1,7 @@
+# charge exchange, from data/air.tce: the forward fit and its derived reverse
+
+O+ + N2 --> O + N2+
+E A 0.0 3.148e-19 1.5111e-18 0.00 -3.14452e-19
+
+N2+ + O --> O+ + N2
+E B 0.0 0.0 0.0 0.0 0.0

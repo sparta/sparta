@@ -1,0 +1,7 @@
+# associative ionization (reverse: dissociative recombination), from data/air.tce: the forward fit and its derived reverse
+
+O + N --> NO+ + e
+I A 0.0 4.4338e-19 8.766e-18 0.0 -4.4338e-19
+
+NO+ + e --> O + N
+E B 0.0 0.0 0.0 0.0 0.0

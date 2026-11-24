@@ -62,6 +62,7 @@ outcome.
 | `step6_noneq_reverse` | Sec. VII E; Table X | The reverse rate responds to the internal temperature with no cell temperature in the model, mode by mode, and recombination responds to the electronic populations, as the microcanonical tables predict. |
 | `step7_cap` | Secs. IV D, VII G; Table XI | Where fitted rates exceed the collision rate, the capped forward rate and its reverse follow the capped fraction of the microcanonical probability, and a reacting gas still reaches the partition-function equilibrium. |
 | `step8_thermo` | Sec. VII F; Fig. 9 | The equilibrium constants of the data files against the NASA Glenn (CEA) database; no SPARTA runs. |
+| `step9_types` | Sec. VII (other reaction types); Fig. 9 | Exchange (N2 + O), associative ionization (O + N) and charge exchange (O+ + N2): the forward rate reproduces its Arrhenius fit with the microcanonical factor while the earlier treatments miss it by the amounts their quadratures give, and each derived reverse (NO + N, dissociative recombination NO+ + e, N2+ + O) runs at k_f/K_eq, or at its capped fraction where the cap acts. |
 
 Figure and table numbers are those of the draft of 2026-11-24.
 
@@ -88,7 +89,8 @@ against the pass window (gray).  `checks.json` has the same numbers.
 | `step5_energy` | `table_energy.tex/.txt`, `fig_energy.pdf` | Table IX (and as a figure) |
 | `step6_noneq_reverse` | `table_cellT.tex/.txt`, `fig_cellT.pdf` | Table X (and as a figure) |
 | `step7_cap` | `table_captest.tex/.txt`, `fig_cap.pdf` | Table XI; the frozen-reservoir numbers of Sec. VII G |
-| `step8_thermo` | `fig_keq_cea.pdf` | Fig. 9 |
+| `step8_thermo` | `fig_keq_cea.pdf` | Fig. 10 |
+| `step9_types` | `fig_types.pdf`, `table_types.tex/.txt` | Fig. 9 |
 
 The figures are made from the results already on disk:
 `./tce_air.py analyze all` redraws them without running SPARTA, so a
