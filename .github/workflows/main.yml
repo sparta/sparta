@@ -50,7 +50,7 @@ jobs:
     env:
       CCACHE_DIR: ${{ github.workspace }}/.ccache
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v7
       with:
         persist-credentials: false
 
@@ -62,13 +62,13 @@ jobs:
       run: sudo chmod -R a+rwx /var/cache/apt/archives
 
     - name: Cache apt packages
-      uses: actions/cache@v4
+      uses: actions/cache@v6
       with:
         path: /var/cache/apt/archives
         key: apt-archives-ubuntu-24.04-openmpi-vtk9-python3-ccache
 
     - name: Cache ccache
-      uses: actions/cache@v4
+      uses: actions/cache@v6
       with:
         path: ${{ github.workspace }}/.ccache
         key: ccache-mpi-${{ github.sha }}
@@ -114,7 +114,7 @@ jobs:
         sudo ln -s /bin/bash /bin/sh
         ctest --output-on-failure -j4
 
-    - uses: actions/upload-artifact@v4
+    - uses: actions/upload-artifact@v7
       if: always()
       with:
         name: 'mpi-Artifacts'
@@ -124,12 +124,12 @@ jobs:
     env:
       CCACHE_DIR: ${{ github.workspace }}/.ccache
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v7
       with:
         persist-credentials: false
 
     - name: Cache ccache
-      uses: actions/cache@v4
+      uses: actions/cache@v6
       with:
         path: ${{ github.workspace }}/.ccache
         key: ccache-mpi-stubs-${{ github.sha }}
@@ -168,7 +168,7 @@ jobs:
         sudo ln -s /bin/bash /bin/sh
         ctest --output-on-failure -j4
 
-    #- uses: actions/upload-artifact@v4
+    #- uses: actions/upload-artifact@v7
     #  if: '!cancelled()'
     #  with:
     #    name: 'mpi-stubs-Artifacts'
@@ -178,7 +178,7 @@ jobs:
     env:
       CCACHE_DIR: ${{ github.workspace }}/.ccache
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v7
       with:
         persist-credentials: false
 
@@ -188,13 +188,13 @@ jobs:
       run: sudo chmod -R a+rwx /var/cache/apt/archives
 
     - name: Cache apt packages
-      uses: actions/cache@v4
+      uses: actions/cache@v6
       with:
         path: /var/cache/apt/archives
         key: apt-archives-ubuntu-24.04-openmpi-python3-ccache
 
     - name: Cache ccache
-      uses: actions/cache@v4
+      uses: actions/cache@v6
       with:
         path: ${{ github.workspace }}/.ccache
         key: ccache-mpi-kokkos-exact-${{ github.sha }}
@@ -252,7 +252,7 @@ jobs:
     env:
       CCACHE_DIR: ${{ github.workspace }}/.ccache
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v7
       with:
         persist-credentials: false
 
@@ -262,13 +262,13 @@ jobs:
       run: sudo chmod -R a+rwx /var/cache/apt/archives
 
     - name: Cache apt packages
-      uses: actions/cache@v4
+      uses: actions/cache@v6
       with:
         path: /var/cache/apt/archives
         key: apt-archives-ubuntu-24.04-openmpi-python3-ccache
 
     - name: Cache ccache
-      uses: actions/cache@v4
+      uses: actions/cache@v6
       with:
         path: ${{ github.workspace }}/.ccache
         key: ccache-bigbig-${{ github.sha }}
@@ -321,11 +321,11 @@ jobs:
       matrix:
         python-version: ['3.9', '3.11']
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v7
       with:
         persist-credentials: false
 
-    - uses: actions/setup-python@v5
+    - uses: actions/setup-python@v7
       with:
         python-version: ${{ matrix.python-version }}
 
