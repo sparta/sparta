@@ -22,6 +22,13 @@ References (tce_ref.py, from the data files only):
                   (the low-temperature limit of the paper)
 Every reference is evaluated at the run's measured mean temperature, and
 the rates use the composition the sample actually has.
+
+The error of each mean is the counting error or the spread over seeds,
+whichever is larger.  For the ionization pair the spread wins by an order
+of magnitude (1-1.5% against 0.1%): as in step7_cap, a frozen reservoir
+keeps its initial sample of spin states (non-reacting collisions conserve
+spin and no reaction is performed), for example the NO+ triplets, about 7%
+of NO+ at 20 kK, which carry their own share of the recombination.
 """
 import json
 import math
