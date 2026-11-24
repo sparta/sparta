@@ -192,11 +192,34 @@ def start_cpu(run, np=None):
 
 
 # ------------------------------------------------------------ log parsing
+def _canon(label):
+    """a reaction label without its species order: (reactants, products)"""
+    lhs, rhs = label.split("-->")
+    side = lambda x: tuple(sorted(t.strip() for t in x.strip().split(" + ")))
+    return side(lhs), side(rhs)
+
+
+class Tallies(dict):
+    """{label: count}; get() also finds a label written with its reactants
+    or products in another order (data/air.tce reordered seven charge-
+    exchange reverses for the ambipolar model on 2026-11-24, so logs from
+    before and after carry different labels for the same reaction)"""
+
+    def get(self, key, default=None):
+        if key in self:
+            return self[key]
+        c = _canon(key)
+        for k, v in self.items():
+            if _canon(k) == c:
+                return v
+        return default
+
+
 def tallies(log):
     """reaction tallies printed at the end of a run: {label: count}.
     SPARTA prints counts of a million and more in %g format (1.0273e+06,
     six significant digits), so the count is parsed as a float."""
-    out = {}
+    out = Tallies()
     for line in open(log):
         m = re.match(r"\s*reaction (.*): ([0-9.eE+-]+)\s*$", line)
         if m:

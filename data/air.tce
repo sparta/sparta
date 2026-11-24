@@ -23,6 +23,12 @@
 # the table for any reaction added to this file.  For the same reason the
 # species masses must be conserved by every reaction (see air.species).
 #
+# SPECIES ORDER: with ambipolar electrons (fix ambipolar) SPARTA accepts an
+# exchange involving ions only in the forms AB+ + e -> A + B,
+# AB+ + C -> A + BC+ and C + AB+ -> A + BC+: the ion product comes second.
+# The reverse (B-style) lines are written that way; the order does not
+# matter for matching a reverse to its forward reaction.
+#
 # ACTIVATION ENERGIES: a dissociation's activation energy is its 0-K
 # dissociation energy (within 0.2% of the published values).  An
 # endothermic reaction cannot proceed below its endothermicity, so where
@@ -238,7 +244,7 @@ E B 0.0 0.0 0.0 0.0 0.0
 NO+ + N --> O + N2+
 E A 0.0 4.89303e-19 1.1956e-16 0.0 -4.89303e-19
 
-N2+ + O --> NO+ + N
+N2+ + O --> N + NO+
 E B 0.0 0.0 0.0 0.0 0.0
 
 # published eta = 0.5 exceeds the upper bound 1 - omega = 0.23 of the
@@ -274,31 +280,31 @@ E B 0.0 0.0 0.0 0.0 0.0
 O2+ + NO --> O2 + NO+
 E A 0.0 0.0 3.005e-16 0.2 4.50256e-19
 
-NO+ + O2 --> O2+ + NO
+NO+ + O2 --> NO + O2+
 E B 0.0 0.0 0.0 0.0 0.0
 
 O2+ + N --> O2 + N+
 E A 0.0 3.949e-19 1.4447e-16 0.14 -3.94098e-19
 
-O2 + N+ --> O2+ + N
+O2 + N+ --> N + O2+
 E B 0.0 0.0 0.0 0.0 0.0
 
 O2+ + O --> O2 + O+
 E A 0.0 2.485e-19 6.6422e-18 -0.09 -2.47325e-19
 
-O2 + O+ --> O2+ + O
+O2 + O+ --> O + O2+
 E B 0.0 0.0 0.0 0.0 0.0
 
 O2+ + N2 --> O2 + N2+
 E A 0.0 5.619e-19 1.6439e-17 0.00 -5.61777e-19
 
-N2+ + O2 --> O2+ + N2
+N2+ + O2 --> N2 + O2+
 E B 0.0 0.0 0.0 0.0 0.0
 
 O+ + N2 --> O + N2+
 E A 0.0 3.148e-19 1.5111e-18 0.00 -3.14452e-19
 
-N2+ + O --> O+ + N2
+N2+ + O --> N2 + O+
 E B 0.0 0.0 0.0 0.0 0.0
 
 # published eta = 1.90 far exceeds the upper bound 1 - omega = 0.2 of the
@@ -311,7 +317,7 @@ E B 0.0 0.0 0.0 0.0 0.0
 O+ + NO --> O2 + N+
 E A 0.0 3.68057e-19 3.217e-18 0.19 -3.68057e-19
 
-N+ + O2 --> O+ + NO
+N+ + O2 --> NO + O+
 E B 0.0 0.0 0.0 0.0 0.0
 
 # ------------------------------------------- electron-impact ionization

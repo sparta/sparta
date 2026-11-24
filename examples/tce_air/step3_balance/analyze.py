@@ -34,7 +34,7 @@ def sums(rl, prefix):
     sel = [r for r in rl if r.tag.startswith(prefix + "_s") and r.done()]
     if not sel:
         return None, []
-    tot = {}
+    tot = pkg.Tallies()
     for r in sel:
         for k, v in pkg.tallies(r.log).items():
             tot[k] = tot.get(k, 0) + v
