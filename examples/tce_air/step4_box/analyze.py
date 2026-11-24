@@ -1,7 +1,7 @@
 """Step 4 analysis: closed reacting box with the Zeldovich pair.
 
 Produces, in results/step4_box/:
-  fig09_closedbox.pdf  Fig. 9: NO fraction of the NO + N2 pool against time,
+  fig_closedbox.pdf  NO fraction of the NO + N2 pool against time,
                        (a) thermostatted at 15 kK, (b) adiabatic, from both
                        sides, with the equilibrium values
   numbers.json, results.txt (with the mode temperatures of each species)
@@ -158,7 +158,8 @@ def analyze(size="quick"):
                 rep.check(abs(m - ref) <= 3 * e + 0.003,
                           "thermostatted, from %.3f: NO fraction %.4f +/- "
                           "%.4f (2 sd), equilibrium %.4f"
-                          % (x0, m, 2 * e, ref))
+                          % (x0, m, 2 * e, ref),
+                          meas=m, ref=ref, sd=e, tol=0.003)
             else:
                 num["adi_%s_T" % side] = [float(np.mean(Tm)),
                                           float(np.mean(Teq))]
@@ -166,7 +167,8 @@ def analyze(size="quick"):
                           "adiabatic, from %.3f: NO fraction %.4f +/- %.4f "
                           "(2 sd), energy-conserving equilibrium %.4f "
                           "(T %.0f K measured, %.0f K predicted)"
-                          % (x0, m, 2 * e, ref, np.mean(Tm), np.mean(Teq)))
+                          % (x0, m, 2 * e, ref, np.mean(Tm), np.mean(Teq)),
+                          meas=m, ref=ref, sd=e, tol=0.005)
     _fig(out, curves, num)
     with open(os.path.join(out, "numbers.json"), "w") as fh:
         json.dump(num, fh, indent=1, default=float)
@@ -200,7 +202,7 @@ def _fig(out, curves, num):
     ps.panel(axs[0], "(a)", "nw")
     ps.panel(axs[1], "(b)", "nw")
     fig.tight_layout()
-    fig.savefig(os.path.join(out, "fig09_closedbox.pdf"))
+    fig.savefig(os.path.join(out, "fig_closedbox.pdf"))
     plt.close(fig)
 
 

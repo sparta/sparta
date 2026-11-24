@@ -1,11 +1,10 @@
 """Step 1 analysis: equilibrium rates of the O2 + N2 test case.
 
 Produces, in results/step1_rates/:
-  fig03_progression.pdf     Fig. 1 of the paper (treatments of electronic
-                            energy; electronically driven channel)
-  fig05_eq_discretevib.pdf  Fig. 3 (discrete vibration)
-  table6.tex, table6.txt    Table VI (equilibrium rows and frozen-electronic
-                            rows)
+  fig_progression.pdf     treatments of electronic energy; electronically
+                            driven channel
+  fig_eq_discretevib.pdf  discrete vibration
+  table_reservoir.tex/.txt  equilibrium rows and frozen-electronic rows
   numbers.json              every number the paper quotes from this step
   results.txt               PASS/FAIL checks against independent references
 """
@@ -102,7 +101,9 @@ def analyze(size="quick"):
             num["fig1_%s_%d" % (tr, T)] = [r, 2 * e, ref]
             rep.check(abs(r - ref) <= 3 * e + 0.01 * ref,
                       "%-9s T=%5d K: measured %.3f +/- %.3f (2 sd), "
-                      "quadrature %.3f" % (tr, T, r, 2 * e, ref))
+                      "quadrature %.3f" % (tr, T, r, 2 * e, ref),
+                      meas=r, ref=ref, sd=e, tol=0.01 * ref,
+                      label="no vibration, %s, %d K" % (tr, T))
 
     # ---------------- Fig. 1 right: electronically driven channel
     rep.info("Fig. 1 right: Ttr = 2000 K, electronic populations frozen at "
@@ -132,7 +133,10 @@ def analyze(size="quick"):
             rep.check(abs(meas_n - exp_n) <= 3 * math.sqrt(exp_n / c["nseed"])
                       + 0.01 * exp_n,
                       "%-5s %.0f reactions per seed, predicted %.0f (%+.2f%%)"
-                      % (tr, meas_n, exp_n, 100 * (meas_n / exp_n - 1)))
+                      % (tr, meas_n, exp_n, 100 * (meas_n / exp_n - 1)),
+                      meas=meas_n, ref=exp_n,
+                      sd=math.sqrt(exp_n / c["nseed"]), tol=0.01 * exp_n,
+                      label="2000 K, T_el 40 000 K channel, %s" % tr)
 
     # ---------------- Table VI top and Fig. 3: discrete vibration
     rep.info("Table VI: k/k_Arr with discrete vibration")
@@ -158,7 +162,8 @@ def analyze(size="quick"):
                 r, e = tab6[(tr, T)]
                 rep.check(abs(r - ref) <= 3 * e + 0.01 * ref,
                           "T=%5d K %s: %.3f +/- %.3f, expected %.3f"
-                          % (T, what, r, 2 * e, ref))
+                          % (T, what, r, 2 * e, ref),
+                          meas=r, ref=ref, sd=e, tol=0.01 * ref)
         if ("microel", T) in tab6 and ("inst", T) in tab6:
             r = tab6[("microel", T)][0] / tab6[("inst", T)][0]
             rep.info("T=%5d K microcanonical electronic factor alone / "
@@ -168,7 +173,8 @@ def analyze(size="quick"):
         r, e = c["k"] / kref(15000), c["err"] / kref(15000)
         num["tab6_micro_rot_15000"] = [r, 2 * e]
         rep.check(abs(r - 1) <= 3 * e + 0.01, "discrete rotation, joint "
-                  "factor at 15 kK: %.3f +/- %.3f, expected 1" % (r, 2 * e))
+                  "factor at 15 kK: %.3f +/- %.3f, expected 1" % (r, 2 * e),
+                  meas=r, ref=1.0, sd=e, tol=0.01)
 
     # ---------------- Table VI bottom: frozen electronic populations
     rep.info("Table VI bottom: Ttr = 15 kK, electronic populations frozen, "
@@ -191,11 +197,13 @@ def analyze(size="quick"):
         if ("excl", TE) in frz:
             r, e = frz[("excl", TE)]
             rep.check(abs(r - 1) <= 3 * e + 0.01, "TE=%5d K electronic energy "
-                      "left out: %.3f +/- %.3f, expected 1" % (TE, r, 2 * e))
+                      "left out: %.3f +/- %.3f, expected 1" % (TE, r, 2 * e),
+                      meas=r, ref=1.0, sd=e, tol=0.01)
     if ("incl", 100) in frz:
         r, e = frz[("incl", 100)]
         rep.check(abs(r - 1) <= 3 * e + 0.01, "TE=100 K inclusion (ground "
-                  "states only): %.3f +/- %.3f, expected 1" % (r, 2 * e))
+                  "states only): %.3f +/- %.3f, expected 1" % (r, 2 * e),
+                  meas=r, ref=1.0, sd=e, tol=0.01)
 
     _write_table6(out, tab6, frz)
     _fig1(out, fig1, chan, curves)
@@ -232,8 +240,8 @@ def _write_table6(out, tab6, frz):
                      ("electronic energy excluded", "excl")):
         L.append("%s & %s & & %s \\\\" % (name, _fmt(frz, (tr, 100)),
                                           _fmt(frz, (tr, 40000))))
-    open(os.path.join(out, "table6.tex"), "w").write("\n".join(L) + "\n")
-    open(os.path.join(out, "table6.txt"), "w").write(
+    open(os.path.join(out, "table_reservoir.tex"), "w").write("\n".join(L) + "\n")
+    open(os.path.join(out, "table_reservoir.txt"), "w").write(
         "\n".join(l.replace("\\\\", "").replace("&", "|") for l in L) + "\n")
 
 
@@ -280,7 +288,7 @@ def _fig1(out, fig1, chan, curves):
     b.grid(axis="x", visible=False)
     ps.panel(b, "(b)", "ne")
     fig.tight_layout()
-    fig.savefig(os.path.join(out, "fig03_progression.pdf"))
+    fig.savefig(os.path.join(out, "fig_progression.pdf"))
     plt.close(fig)
 
 
@@ -312,7 +320,7 @@ def _fig3(out, tab6, th, z0, om, eta, Ea):
     a.set_ylabel("$k/k_{\\mathrm{Arr}}$")
     a.legend(loc="upper right", fontsize=7)
     fig.tight_layout()
-    fig.savefig(os.path.join(out, "fig05_eq_discretevib.pdf"))
+    fig.savefig(os.path.join(out, "fig_eq_discretevib.pdf"))
     plt.close(fig)
 
 

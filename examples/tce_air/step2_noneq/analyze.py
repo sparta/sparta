@@ -1,15 +1,15 @@
 """Step 2 analysis: non-equilibrium response (Sec. VII B).
 
 Produces, in results/step2_noneq/:
-  fig06_noneq.pdf        Fig. 4: rate relative to the input rate, (a)
+  fig_noneq.pdf        rate relative to the input rate, (a)
                          electronic populations frozen at TE, (b) vibrational
                          populations frozen at TV; one normalization
-  fig07_reservoir.pdf    Fig. 5: (a) equilibrium checks of the factor (from
+  fig_reservoir.pdf    (a) equilibrium checks of the factor (from
                          step 1), (b) measured against analytic frozen-ladder
                          factors
-  fig04_qk_compare.pdf   Fig. 6: microcanonical factor, quantum-kinetic model
+  fig_qk_compare.pdf   microcanonical factor, quantum-kinetic model
                          and Park's two-temperature forms
-  table5_qct.tex/.txt    Table V: model against QCT (Bender et al. 2015)
+  table_qct.tex/.txt    model against QCT (Bender et al. 2015)
   numbers.json, results.txt
 """
 import csv
@@ -77,7 +77,8 @@ def analyze(size="quick"):
             num["vib_micro_%d" % TV] = [r, 2 * e, ref]
             rep.check(abs(r - ref) <= 3 * e + 0.01 * ref,
                       "TV=%5d K microcanonical: %.3f +/- %.3f, analytic %.3f"
-                      % (TV, r, 2 * e, ref))
+                      % (TV, r, 2 * e, ref),
+                      meas=r, ref=ref, sd=e, tol=0.01 * ref)
         refi = R.R_instdof(T, th[0], th[1], z0, om, eta, rx["Ea"], Tvib=TV)
         c = collect(rl, "vib_inst_TV%d" % TV)
         if c:
@@ -86,7 +87,8 @@ def analyze(size="quick"):
             num["vib_inst_%d" % TV] = [r, 2 * e, refi]
             rep.check(abs(r - refi) <= 3 * e + 0.01 * refi,
                       "TV=%5d K instantaneous DOF: %.3f +/- %.3f, quadrature "
-                      "%.3f" % (TV, r, 2 * e, refi))
+                      "%.3f" % (TV, r, 2 * e, refi),
+                      meas=r, ref=refi, sd=e, tol=0.01 * refi)
 
     # ---------------- frozen electronic
     el = {}
@@ -99,7 +101,8 @@ def analyze(size="quick"):
             num["el_micro_%d" % TE] = [r, 2 * e, ref]
             rep.check(abs(r - ref) <= 3 * e + 0.01 * ref,
                       "TE=%5d K microcanonical: %.3f +/- %.3f, analytic %.3f"
-                      % (TE, r, 2 * e, ref))
+                      % (TE, r, 2 * e, ref),
+                      meas=r, ref=ref, sd=e, tol=0.01 * ref)
         c = collect(rl, "el_incl_TE%d" % TE)
         if c:
             el[("incl", TE)] = (c["k"] / ka, c["err"] / ka)
@@ -180,8 +183,8 @@ def _table5(out, tab):
             else:
                 cells += ["--", "--"]
         L.append("%g & %s \\\\" % (Tv, " & ".join(cells)))
-    open(os.path.join(out, "table5_qct.tex"), "w").write("\n".join(L) + "\n")
-    open(os.path.join(out, "table5_qct.txt"), "w").write(
+    open(os.path.join(out, "table_qct.tex"), "w").write("\n".join(L) + "\n")
+    open(os.path.join(out, "table_qct.txt"), "w").write(
         "\n".join(l.replace("\\\\", "").replace("&", "|") for l in L) + "\n")
 
 
@@ -225,7 +228,7 @@ def _fig4(out, vib, el, J, th, z0, om, eta, Ea):
     b.legend(fontsize=6.8, loc="upper left")
     ps.panel(b, "(b)", "se")
     fig.tight_layout()
-    fig.savefig(os.path.join(out, "fig06_noneq.pdf"))
+    fig.savefig(os.path.join(out, "fig_noneq.pdf"))
     plt.close(fig)
 
 
@@ -289,7 +292,7 @@ def _fig5(out, vib, el, size):
     b.legend(fontsize=7, loc="upper left")
     ps.panel(b, "(b)", "se")
     fig.tight_layout()
-    fig.savefig(os.path.join(out, "fig07_reservoir.pdf"))
+    fig.savefig(os.path.join(out, "fig_reservoir.pdf"))
     plt.close(fig)
 
 
@@ -315,7 +318,7 @@ def _fig6(out, vib, J, Jv, qk, eta, Ea_K):
     a.set_ylabel("$k(T, T_{\\mathrm{vib}})/k(T)$")
     a.legend(fontsize=6.8, loc="lower right")
     fig.tight_layout()
-    fig.savefig(os.path.join(out, "fig04_qk_compare.pdf"))
+    fig.savefig(os.path.join(out, "fig_qk_compare.pdf"))
     plt.close(fig)
 
 

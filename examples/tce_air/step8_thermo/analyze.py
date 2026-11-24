@@ -1,5 +1,5 @@
 """Step 8 analysis: equilibrium constants of the data files against the
-NASA Glenn (CEA) database (Sec. VII F, Fig. 10).  No SPARTA runs.
+NASA Glenn (CEA) database (Sec. VII F).  No SPARTA runs.
 
 K_eq of the data files: tce_ref.Data.keq, the partition functions of
 data/air.* with every mode (translation, rigid rotor with symmetry number,
@@ -11,7 +11,7 @@ Also: a Morse vibrational ladder truncated at the dissociation energy
 activation energy as the reaction energy.
 
 Produces, in results/step8_thermo/:
-  fig10_keq_cea.pdf, keq_cea.txt, numbers.json, results.txt
+  fig_keq_cea.pdf, keq_cea.txt, numbers.json, results.txt
 """
 import json
 import math
@@ -138,7 +138,8 @@ def analyze(size="quick"):
         dev = -r["C5"] / d0 - 1
         rep.check(abs(dev) < 5e-4, "%-24s reaction energy of data/air.tce "
                   "%.5e J, CEA 0-K value %.5e J (%+.3f%%)"
-                  % (lab, -r["C5"], d0, 100 * dev))
+                  % (lab, -r["C5"], d0, 100 * dev),
+                  meas=-r["C5"], ref=d0, sd=0.0, tol=5e-4 * abs(d0))
     Tf = np.arange(2000.0, 20000.1, 50.0)
     curves = {}
     lines = ["%-24s" % "K_eq(files)/K_eq(CEA)" + "".join("%8d" % T
@@ -208,7 +209,7 @@ def _fig(out, Tf, curves, leg):
                   "K_{\\mathrm{eq}}^{\\mathrm{CEA}}$")
     ax.legend(fontsize=6.5, loc="upper left")
     fig.tight_layout()
-    fig.savefig(os.path.join(out, "fig10_keq_cea.pdf"))
+    fig.savefig(os.path.join(out, "fig_keq_cea.pdf"))
     plt.close(fig)
 
 

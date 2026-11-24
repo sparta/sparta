@@ -1,11 +1,14 @@
 """Step 6 analysis: reverse rates without a cell temperature.
 
 Produces, in results/step6_noneq_reverse/:
-  table11_cellT.tex/.txt  Table XI: rate relative to its value at
+  table_cellT.tex/.txt  rate relative to its value at
                           T_int = T_tr = 8000 K, measured and predicted, for
                           the reverse of each configuration (and the forward
                           of data/air.tce), and the value of a model
                           evaluated at the translational cell temperature
+  fig_cellT.pdf           the same as a figure: (a) all internal modes at
+                          T_int; (b) one mode at a time, and three-body
+                          recombination against T_el
   numbers.json, results.txt
 
 References (tce_ref.py): ExchangeReverse, the derived reverse probability
@@ -124,11 +127,15 @@ def analyze(size="quick"):
             rep.check(abs(mr / pr - 1) <= 3 * er / pr + 0.005,
                       "%s T_int=%5d K: reverse %-18s x%.3f +/- %.3f, "
                       "predicted x%.3f" % (pair, Ti, LAB[pair][1], mr,
-                                           2 * er, pr))
+                                           2 * er, pr),
+                      meas=mr, ref=pr, sd=er, tol=0.005 * pr,
+                      label="%s, T_int %d K, reverse" % (pair, Ti))
             rep.check(abs(mf / pf - 1) <= 3 * ef / pf + 0.005,
                       "%s T_int=%5d K: forward %-18s x%.3f +/- %.3f, "
                       "predicted x%.3f" % (pair, Ti, LAB[pair][0], mf,
-                                           2 * ef, pf))
+                                           2 * ef, pf),
+                      meas=mf, ref=pf, sd=ef, tol=0.005 * pf,
+                      label="%s, T_int %d K, forward" % (pair, Ti))
 
     # ---- one mode at a time (rel pair)
     rev, fw = refs["rel"]
@@ -146,7 +153,8 @@ def analyze(size="quick"):
             rep.check(abs(mr / pr - 1) <= 3 * er / pr + 0.005,
                       "%-4s at %5d K, others at %d K: reverse x%.3f +/- "
                       "%.3f, predicted x%.3f" % (mode, Tm, TTR, mr, 2 * er,
-                                                 pr))
+                                                 pr),
+                      meas=mr, ref=pr, sd=er, tol=0.005 * pr)
 
     # ---- recombination with the electronic ladders at T_el
     rc = R.Recombination3(D, D.reaction("N2 + N --> N + N + N"))
@@ -161,11 +169,84 @@ def analyze(size="quick"):
         num["recel_%d" % Te] = [mr, 2 * er, pr]
         rep.check(abs(mr / pr - 1) <= 3 * er / pr + 0.005,
                   "recombination N + N + N, T_el=%5d K: x%.3f +/- %.3f, "
-                  "three-body quadrature x%.4f" % (Te, mr, 2 * er, pr))
+                  "three-body quadrature x%.4f" % (Te, mr, 2 * er, pr),
+                  meas=mr, ref=pr, sd=er, tol=0.005 * pr)
     _table(out, table)
+    _fig(out, table, num, refs)
     with open(os.path.join(out, "numbers.json"), "w") as fh:
         json.dump(num, fh, indent=1, default=float)
     return rep.write()
+
+
+def _fig(out, table, num, refs):
+    """fig_cellT.pdf: (a) reverse and forward rate against T_int, all
+    internal modes at T_int and translation at T_tr; (b) one mode at a
+    time, and three-body recombination against T_el.  Symbols: SPARTA
+    with 2 sd; lines and bars: tce_ref.  A cell-temperature model gives 1
+    everywhere (dashed)."""
+    if not table:
+        return
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+    import paper_style as ps
+    ps.apply()
+    fig, (ax, bx) = plt.subplots(1, 2, figsize=ps.DOUBLE,
+                                 gridspec_kw=dict(width_ratios=(1.15, 1)))
+    Tg = np.linspace(3000.0, 22000.0, 20)
+    series = (("rel", 1, ps.BLUE, "o", "derived NO + N \u2192 N$_2$ + O"),
+              ("rel", 0, ps.ORANGE, "s", "fitted N$_2$ + O \u2192 NO + N"),
+              ("bar", 1, ps.GREEN, "^", "derived N$_2$ + O \u2192 NO + N"),
+              ("bar", 0, ps.PURPLE, "v", "fitted NO + N \u2192 N$_2$ + O"))
+    for pair, isrev, col, mk, lab in series:
+        rev, fw = refs[pair]
+        ref = rev if isrev else fw
+        base = ref.mean_p(TTR)
+        ax.plot(Tg, [ref.mean_p(TTR, Trot=t, Tvib=t, Telec=t) / base
+                     for t in Tg], color=col, lw=1.2)
+        pts = [(Ti, mr, er) if isrev else (Ti, mf, ef)
+               for p_, Ti, mr, er, pr, mf, ef, pf in table if p_ == pair]
+        ax.errorbar([x[0] for x in pts], [x[1] for x in pts],
+                    yerr=[2 * x[2] for x in pts], fmt=mk, color=col,
+                    mfc="white", capsize=1.5, lw=0, elinewidth=0.9,
+                    label=lab)
+    ax.axhline(1.0, color=ps.GRAY, lw=0.9, ls="--",
+               label="cell-temperature $k_f/K_{eq}(T_{tr})$")
+    ax.axvline(TTR, color=ps.GRAY, lw=0.5, ls=":")
+    ax.set_yscale("log")
+    ax.set_xlabel("$T_{int}$ (K), all internal modes; $T_{tr}$ = %d K"
+                  % TTR)
+    ax.set_ylabel("rate / rate at $T_{int} = T_{tr}$")
+    ax.legend(loc="upper left", fontsize=6.5)
+    ps.panel(ax, "(a)", loc="se")
+    cats, meas, err, pred = [], [], [], []
+    for mode in MODES:
+        for lab in MODE_T:
+            k = "mode_%s_%s" % (mode, lab)
+            if k in num:
+                cats.append("%s %s" % (mode, lab))
+                meas.append(num[k][0]); err.append(num[k][1])
+                pred.append(num[k][2])
+    for Te in TEL:
+        k = "recel_%d" % Te
+        if k in num:
+            cats.append("recomb.\n$T_{el}$ %d" % Te)
+            meas.append(num[k][0]); err.append(num[k][1])
+            pred.append(num[k][2])
+    x = np.arange(len(cats))
+    bx.bar(x, pred, width=0.6, color="0.85", label="tce_ref")
+    bx.errorbar(x, meas, yerr=err, fmt="o", color=ps.BLUE, mfc="white",
+                capsize=1.5, lw=0, elinewidth=0.9, label="SPARTA (2 sd)")
+    bx.axhline(1.0, color=ps.GRAY, lw=0.9, ls="--")
+    bx.set_xticks(x)
+    bx.set_xticklabels(cats, rotation=60, fontsize=6.5)
+    bx.minorticks_off()
+    bx.set_ylabel("reverse rate / rate at $T_{tr}$")
+    bx.legend(loc="upper left", fontsize=6.5)
+    ps.panel(bx, "(b)", loc="ne")
+    fig.tight_layout()
+    fig.savefig(os.path.join(out, "fig_cellT.pdf"))
+    plt.close(fig)
 
 
 def _table(out, table):
@@ -181,8 +262,8 @@ def _table(out, table):
                     mf, pf))
         T.append("%-4s %8d %10.3f %8.3f %10.3f %8.3f %6.3f"
                  % (pair, Ti, mr, pr, mf, pf, 1.0))
-    open(os.path.join(out, "table11_cellT.tex"), "w").write("\n".join(L) + "\n")
-    open(os.path.join(out, "table11_cellT.txt"), "w").write("\n".join(T) + "\n")
+    open(os.path.join(out, "table_cellT.tex"), "w").write("\n".join(L) + "\n")
+    open(os.path.join(out, "table_cellT.txt"), "w").write("\n".join(T) + "\n")
 
 
 if __name__ == "__main__":

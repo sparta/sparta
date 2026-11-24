@@ -1,9 +1,11 @@
 """Step 7 analysis: the probability cap with reverse reactions.
 
 Produces, in results/step7_cap/:
-  table10_captest.tex/.txt  Table X: realized equilibrium constant of
+  table_captest.tex/.txt  realized equilibrium constant of
                             NO <-> N + O relative to the partition-function
                             value, per reactor configuration
+  fig_cap.pdf               (a) frozen-reservoir rates against the capped
+                            fraction; (b) the reactors of table_captest
   numbers.json, results.txt
 
 The frozen-reservoir rates vary from seed to seed by several times the
@@ -183,7 +185,8 @@ def analyze(size="quick"):
                 rep.check(abs(m - 1) <= 3 * e + 0.02,
                           "%s, capped %sfraction %.3f: ratio %.3f +/- %.3f "
                           "(%d seeds)" % (what, "forward " if kind == "rec"
-                                          else "", capf, m, 2 * e, len(y)))
+                                          else "", capf, m, 2 * e, len(y)),
+                          meas=m, ref=1.0, sd=e, tol=0.02)
 
     # ---- reactors
     tab = []
@@ -237,11 +240,68 @@ def analyze(size="quick"):
         if key in ("cap", "lown", "slow", "fast"):
             rep.check(abs(m - 1) <= 3 * e + 0.02,
                       "%s: realized/partition-function K_eq %.3f +/- %.3f "
-                      "(2 sd)" % (lab, m, 2 * e))
+                      "(2 sd)" % (lab, m, 2 * e),
+                      meas=m, ref=1.0, sd=e, tol=0.02)
     _table(out, tab)
+    _fig(out, num, refs, tab)
     with open(os.path.join(out, "numbers.json"), "w") as fh:
         json.dump(num, fh, indent=1, default=float)
     return rep.write()
+
+
+def _fig(out, num, refs, tab):
+    """fig_cap.pdf: (a) frozen reservoirs, the measured rate relative to
+    its Arrhenius fit (dissociation, T >= 8000 K) or to k_fit/K_eq
+    (recombination, below), against the capped fraction <min(P,1)>/<P>
+    of tce_ref (lines); (b) reactors, the realized equilibrium constant
+    relative to its partition-function value, per configuration (the
+    seeds as small dots)."""
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+    import paper_style as ps
+    ps.apply()
+    fig, (ax, bx) = plt.subplots(1, 2, figsize=ps.DOUBLE,
+                                 gridspec_kw=dict(width_ratios=(1.1, 1)))
+    Tg = np.linspace(min(FRZ_T) * 0.9, max(FRZ_T) * 1.05, 24)
+    for lab, col, mk in ((FWD[0], ps.BLUE, "o"), (FWD[1], ps.ORANGE, "s")):
+        M = lab.split()[2]
+        ax.plot(Tg, [refs[lab].mean_p(t) / refs[lab].mean_p(t, cap=False)
+                     for t in Tg], color=col, lw=1.2)
+        for kind, mfc in (("fwd", "white"), ("rec", col)):
+            pts = sorted((v["T"], v["fraction"], v["ratio"][1] *
+                          v["capped_fraction"])
+                         for k, v in num.items()
+                         if k.startswith("frz_%s_%s_" % (kind, M)))
+            if not pts:
+                continue
+            name = (lab if kind == "fwd" else REV[lab]).replace(
+                " --> ", " \u2192 ")
+            ax.errorbar([p[0] for p in pts], [p[1] for p in pts],
+                        yerr=[p[2] for p in pts], fmt=mk, color=col,
+                        mfc=mfc, capsize=1.5, lw=0, elinewidth=0.9,
+                        label=name)
+    ax.axhline(1.0, color=ps.GRAY, lw=0.8, ls=":")
+    ax.set_xlabel("$T$ (K)")
+    ax.set_ylabel("rate / fit  (recombination: / $k_{fit}/K_{eq}$)")
+    ax.legend(loc="lower left", fontsize=6.5)
+    ps.panel(ax, "(a)", loc="ne")
+    if tab:
+        x = np.arange(len(tab))
+        bx.bar(x, [m for _, m, _ in tab], width=0.6, color=ps.SKY)
+        for i, (_, m, rs) in enumerate(tab):
+            bx.plot([i] * len(rs), rs, ".", color=ps.BLACK, ms=3)
+        bx.axhline(1.0, color=ps.GRAY, lw=0.8, ls=":")
+        bx.set_xticks(x)
+        import textwrap
+        bx.set_xticklabels(["\n".join(textwrap.wrap(lab, 16))
+                            for lab, _, _ in tab], rotation=0, fontsize=5.5)
+        bx.minorticks_off()
+        bx.set_ylabel("realized / partition-function $K_{eq}$")
+        ps.panel(bx, "(b)", loc="ne")
+    fig.tight_layout()
+    fig.savefig(os.path.join(out, "fig_cap.pdf"))
+    plt.close(fig)
 
 
 def _table(out, tab):
@@ -252,8 +312,8 @@ def _table(out, tab):
             m, ", ".join("%.2f" % x for x in rs))
         L.append("%s & %s \\\\" % (lab.replace("(capnum)", "(\\ref{eq:capnum})"), s))
         T.append("%-55s %s" % (lab, s))
-    open(os.path.join(out, "table10_captest.tex"), "w").write("\n".join(L) + "\n")
-    open(os.path.join(out, "table10_captest.txt"), "w").write("\n".join(T) + "\n")
+    open(os.path.join(out, "table_captest.tex"), "w").write("\n".join(L) + "\n")
+    open(os.path.join(out, "table_captest.txt"), "w").write("\n".join(T) + "\n")
 
 
 if __name__ == "__main__":

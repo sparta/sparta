@@ -102,10 +102,25 @@ def cmd_run(a):
         sys.exit(1)
 
 
+# figure and table names written by earlier versions of the package (numbered after
+# an old draft of the paper); removed when a step is analyzed again
+OLD_FIGS = ("fig03_progression.pdf", "fig05_eq_discretevib.pdf",
+            "fig06_noneq.pdf", "fig07_reservoir.pdf", "fig04_qk_compare.pdf",
+            "fig02_zeldovich.pdf", "fig09_closedbox.pdf", "fig10_keq_cea.pdf",
+            "table6.tex", "table6.txt", "table5_qct.tex", "table5_qct.txt",
+            "table7_recomb.tex", "table7_recomb.txt", "table8_energy.tex",
+            "table8_energy.txt", "table11_cellT.tex", "table11_cellT.txt",
+            "table10_captest.tex", "table10_captest.txt")
+
+
 def cmd_analyze(a):
     nfail = 0
     for st in steps(a.step):
         print("== %s" % st)
+        for f in OLD_FIGS:
+            old = os.path.join(pkg.results_dir(), st, f)
+            if os.path.exists(old):
+                os.remove(old)
         nfail += load(st, "analyze").analyze(a.size)
     sys.exit(min(nfail, 255))
 

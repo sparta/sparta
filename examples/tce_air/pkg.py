@@ -235,6 +235,7 @@ class Report:
         """step: the step's directory name, optionally followed by a
         label such as "(quick)" for the report's first line"""
         self.step, self.lines, self.nfail = step, [], 0
+        self.items = []
         self.path = os.path.join(results_dir(), step.split()[0],
                                  "results.txt")
 
@@ -242,18 +243,85 @@ class Report:
         self.lines.append("  " + text)
         print("  " + text)
 
-    def check(self, ok, text):
+    def check(self, ok, text, meas=None, ref=None, sd=None, tol=None,
+              label=None):
+        """one PASS/FAIL line.  A quantitative check also passes its
+        measured value, the reference, the standard deviation of the
+        measurement and the allowance added to 3 sd (all in the same
+        units); these go into checks.json and the step's summary figure.
+        label is the short name in that figure (default: the text up to
+        its first colon)."""
         line = "  [%s] %s" % ("PASS" if ok else "FAIL", text)
         self.lines.append(line)
         print(line)
         self.nfail += 0 if ok else 1
+        self.items.append(dict(
+            ok=bool(ok), text=" ".join(text.split()),
+            label=label or " ".join(text.split(":")[0].split()),
+            meas=_f(meas), ref=_f(ref), sd=_f(sd), tol=_f(tol)))
 
     def write(self):
         os.makedirs(os.path.dirname(self.path), exist_ok=True)
         with open(self.path, "w") as fh:
             fh.write("%s\n%s\nfailed checks: %d\n"
                      % (self.step, "\n".join(self.lines), self.nfail))
+        out = os.path.dirname(self.path)
+        with open(os.path.join(out, "checks.json"), "w") as fh:
+            json.dump(self.items, fh, indent=1)
+        try:
+            plot_summary(self.step.split()[0], self.items,
+                         os.path.join(out, "summary.pdf"))
+        except ImportError:
+            pass
         return self.nfail
+
+
+def _f(x):
+    return None if x is None else float(x)
+
+
+def plot_summary(step, items, path):
+    """one row per check: the measured value relative to its reference
+    with its 2-sd bar, against the pass window (3 sd plus the allowance,
+    gray).  Checks without numbers (file and data consistency) are counted
+    in the title line."""
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+    sys.path.insert(0, HERE)
+    import paper_style as ps
+    ps.apply()
+    q = [c for c in items if c["meas"] is not None and c["ref"]]
+    other = [c for c in items if not (c["meas"] is not None and c["ref"])]
+    if not q:
+        return
+    n = len(q)
+    fig, ax = plt.subplots(figsize=(7.0, 0.9 + 0.21 * n))
+    for i, c in enumerate(q):
+        y = n - 1 - i
+        r, sd = c["meas"] / c["ref"], (c["sd"] or 0.0) / abs(c["ref"])
+        win = 3 * sd + (c["tol"] or 0.0) / abs(c["ref"])
+        ax.barh(y, 2 * win, left=1 - win, height=0.6, color="0.88",
+                lw=0, zorder=1)
+        col = ps.BLUE if c["ok"] else ps.VERM
+        ax.errorbar(r, y, xerr=2 * sd, fmt="o", color=col, mfc="white",
+                    ms=3.5, capsize=1.5, lw=0.9, zorder=3)
+    ax.axvline(1.0, color=ps.GRAY, lw=0.8, ls=":", zorder=2)
+    ax.set_yticks(range(n))
+    ax.set_yticklabels([c["label"] for c in reversed(q)], fontsize=6)
+    ax.set_ylim(-0.7, n - 0.3)
+    ax.minorticks_off()
+    ax.grid(axis="y", visible=False)
+    ax.set_xlabel("measured / reference  (bar: 2 sd; gray: pass window)")
+    npass = sum(c["ok"] for c in items)
+    ax.set_title("%s: %d of %d checks pass%s" % (
+        step, npass, len(items),
+        "; %d further check%s not numerical"
+        % (len(other), " is" if len(other) == 1 else "s are") if other
+        else ""), fontsize=8)
+    fig.tight_layout()
+    fig.savefig(path)
+    plt.close(fig)
 
 
 def mean_err_corr(x):

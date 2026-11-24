@@ -1,7 +1,7 @@
 """Step 5 analysis: energy conservation of the reaction cycles.
 
 Produces, in results/step5_energy/:
-  table8_energy.tex/.txt  Table VIII: drift of total energy per 100 steps
+  table_energy.tex/.txt  drift of total energy per 100 steps
                           between steps 100 and 300, relative to the initial
                           energy, for the combinations of reaction energies
                           and species masses
@@ -119,12 +119,12 @@ def _table(out, tab):
          "\\hline"]
     for lab_e, lab_m, d, mx in tab:
         L.append("%s & %s & %s \\\\" % (lab_e, lab_m, _fmt(d)))
-    open(os.path.join(out, "table8_energy.tex"), "w").write("\n".join(L) + "\n")
+    open(os.path.join(out, "table_energy.tex"), "w").write("\n".join(L) + "\n")
     T = ["%-40s %-14s %12s %12s" % ("reaction energies", "masses",
                                      "drift/100", "max |dE/E0|")]
     for lab_e, lab_m, d, mx in tab:
         T.append("%-40s %-14s %+12.2e %12.2e" % (lab_e, lab_m, d, mx))
-    open(os.path.join(out, "table8_energy.txt"), "w").write("\n".join(T) + "\n")
+    open(os.path.join(out, "table_energy.txt"), "w").write("\n".join(T) + "\n")
 
 
 def _fig(out, curves):

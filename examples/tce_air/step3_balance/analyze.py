@@ -1,12 +1,12 @@
 """Step 3 analysis: detailed balance of the derived reverse reactions.
 
 Produces, in results/step3_balance/:
-  fig02_zeldovich.pdf   Fig. 7: (a) reverse rate of NO + N -> N2 + O
+  fig_zeldovich.pdf   (a) reverse rate of NO + N -> N2 + O
                         (derived, legacy fit, SPARTA); (b) K_eq implied by
                         the legacy forward/reverse fits relative to the
                         partition-function K_eq; (c) forward/reverse tally
                         ratio relative to K_eq
-  table7_recomb.tex/.txt  Table VII (recombination configurations)
+  table_recomb.tex/.txt  (recombination configurations)
   fig_mechanism.pdf     the 28 dissociation and exchange pairs (and the 3
                         associative-ionization pairs) of the full mechanism
                         at 15 and 8 kK
@@ -148,11 +148,16 @@ def analyze(size="quick"):
                   "Zeldovich T=%5.0f K: (f/b)/K_eq = %.3f +/- %.3f (%d/%d "
                   "tallies, realized composition), expected %.4f (reverse "
                   "capped to %.4f of k_f/K_eq)" % (T, r / keq, 2 * e / keq,
-                                                   F, B, 1 / capf, capf))
+                                                   F, B, 1 / capf, capf),
+                  meas=r / keq * capf, ref=1.0, sd=e / keq, tol=0.005,
+                  label="Zeldovich %.0f K: (f/b) capf / K_eq" % T)
         rep.check(abs(kb / (kd * capf) - 1) <= 3 * kb_e / kd + 0.005,
                   "Zeldovich T=%5.0f K: reverse rate %.4e +/- %.1e, derived "
                   "k_f/K_eq x capped fraction %.4e" % (T, kb, 2 * kb_e,
-                                                       kd * capf))
+                                                       kd * capf),
+                  meas=kb, ref=kd * capf, sd=kb_e * capf,
+                  tol=0.005 * kd * capf,
+                  label="Zeldovich %.0f K: reverse rate" % T)
     # legacy published pair
     leg = R.parse_tce(open(os.path.join(HERE, "legacy_air.tce")).read(),
                       keep_reverse=True)
@@ -202,7 +207,9 @@ def analyze(size="quick"):
         rep.check(abs(dev) <= 3 * res + 0.01,
                   "recombination %-9s T=%5.0f K: K_eq measured/partition "
                   "function = %.3f +/- %.3f (%d/%d tallies)"
-                  % (name, T, 1 + dev, 2 * res, F, B))
+                  % (name, T, 1 + dev, 2 * res, F, B),
+                  meas=1 + dev, ref=1.0, sd=res, tol=0.01,
+                  label="recombination %s, %.0f K" % (name, T))
 
     # ---------------- full mechanism
     mech = {}
@@ -234,6 +241,8 @@ def analyze(size="quick"):
 
     _fig7(out, zel, D, fwd, lf, lb)
     _table7(out, rec)
+    if rec:
+        _figrec(out, rec)
     if mech:
         _figmech(out, mech)
     with open(os.path.join(out, "numbers.json"), "w") as fh:
@@ -329,7 +338,7 @@ def _fig7(out, zel, D, fwd, lf, lb):
     c.set_ylabel("$(N_f/N_r)/K_{\\mathrm{eq}}$")
     ps.panel(c, "(c)", "se")
     fig.tight_layout()
-    fig.savefig(os.path.join(out, "fig02_zeldovich.pdf"))
+    fig.savefig(os.path.join(out, "fig_zeldovich.pdf"))
     plt.close(fig)
 
 
@@ -346,9 +355,34 @@ def _table7(out, rec):
             dev, res, F, B, T = rec[k]
             L.append("%s & %d & %.1f\\%% & %.1f\\%% \\\\"
                      % (lab, T, 100 * abs(dev), 200 * res))
-    open(os.path.join(out, "table7_recomb.tex"), "w").write("\n".join(L) + "\n")
-    open(os.path.join(out, "table7_recomb.txt"), "w").write(
+    open(os.path.join(out, "table_recomb.tex"), "w").write("\n".join(L) + "\n")
+    open(os.path.join(out, "table_recomb.txt"), "w").write(
         "\n".join(l.replace("\\\\", "").replace("&", "|") for l in L) + "\n")
+
+
+def _figrec(out, rec):
+    """fig_recomb.pdf: the recombination table as a figure, the measured equilibrium
+    constant (dissociation over recombination tallies) relative to the
+    partition-function value, with 2 sd"""
+    plt, ps = _setup()
+    names = (("atom", "atomic M"), ("atom6765", "atomic M, 6765 K"),
+             ("keq", "K$_{eq}$ fit"), ("mol", "N$_2$ as M"),
+             ("molsmooth", "N$_2$ as M,\ncontinuous vib."))
+    rows = [(lab, rec[k]) for k, lab in names if k in rec]
+    fig, ax = plt.subplots(figsize=ps.SINGLE)
+    x = np.arange(len(rows))
+    ax.errorbar(x, [1 + r[0] for _, r in rows],
+                yerr=[2 * r[1] for _, r in rows], fmt="o", color=ps.BLUE,
+                mfc="white", capsize=2, lw=0, elinewidth=0.9)
+    ax.axhline(1.0, color=ps.GRAY, lw=0.8, ls=":")
+    ax.set_xticks(x)
+    ax.set_xticklabels(["%s\n%.0f K" % (lab, r[4]) if "K" not in lab
+                        else lab for lab, r in rows], fontsize=6.5)
+    ax.minorticks_off()
+    ax.set_ylabel("measured / partition-function $K_{eq}$")
+    fig.tight_layout()
+    fig.savefig(os.path.join(out, "fig_recomb.pdf"))
+    plt.close(fig)
 
 
 def _figmech(out, mech):

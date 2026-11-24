@@ -55,13 +55,47 @@ outcome.
 | step | paper | what is checked |
 |---|---|---|
 | `step1_rates` | Secs. III-IV, VII A; Figs. 1, 3; Table VI | The equilibrium dissociation rate of O2 + N2 reproduces the input Arrhenius rate with the microcanonical factor, for vibrational, electronic and joint ladders and discrete rotation; the earlier treatments (adding electronic energy to the collision energy, leaving it out, instantaneous vibrational DOF) miss it by the amounts the paper derives. |
-| `step2_noneq` | Sec. VII B; Figs. 4-6; Table V | With vibrational or electronic populations frozen away from the translational temperature, the rate follows an independent quadrature of the ladder average; comparison with Bird's QK model, Park's two-temperature model and QCT data for N2 + N2. |
-| `step3_balance` | Secs. V, VII C; Fig. 7; Table VII | Derived reverse reactions balance their forward partners: the Zeldovich exchange, three-body recombination with atomic and molecular third bodies, with an equilibrium-constant fit, and the full 11-species mechanism. |
-| `step4_box` | Sec. VII C; Fig. 9 | A closed reacting box with the Zeldovich pair relaxes to the equilibrium composition from both sides, thermostatted and adiabatic, and the internal modes of every species stay at the translational temperature. |
-| `step5_energy` | Sec. VII D; Table VIII | Total energy is conserved through dense reaction cycling only when reaction energies close around cycles and species masses are conserved; each defect alone makes the energy drift. |
-| `step6_noneq_reverse` | Sec. VII E; Table XI | The reverse rate responds to the internal temperature with no cell temperature in the model, mode by mode, and recombination responds to the electronic populations, as the microcanonical tables predict. |
-| `step7_cap` | Secs. IV D, VII G; Table X | Where fitted rates exceed the collision rate, the capped forward rate and its reverse follow the capped fraction of the microcanonical probability, and a reacting gas still reaches the partition-function equilibrium. |
-| `step8_thermo` | Sec. VII F; Fig. 10 | The equilibrium constants of the data files against the NASA Glenn (CEA) database; no SPARTA runs. |
+| `step2_noneq` | Sec. VII B; Figs. 4-6; Table VII | With vibrational or electronic populations frozen away from the translational temperature, the rate follows an independent quadrature of the ladder average; comparison with Bird's QK model, Park's two-temperature model and QCT data for N2 + N2. |
+| `step3_balance` | Secs. V, VII C; Fig. 7; Table VIII | Derived reverse reactions balance their forward partners: the Zeldovich exchange, three-body recombination with atomic and molecular third bodies, with an equilibrium-constant fit, and the full 11-species mechanism. |
+| `step4_box` | Sec. VII C; Fig. 8 | A closed reacting box with the Zeldovich pair relaxes to the equilibrium composition from both sides, thermostatted and adiabatic, and the internal modes of every species stay at the translational temperature. |
+| `step5_energy` | Sec. VII D; Table IX | Total energy is conserved through dense reaction cycling only when reaction energies close around cycles and species masses are conserved; each defect alone makes the energy drift. |
+| `step6_noneq_reverse` | Sec. VII E; Table X | The reverse rate responds to the internal temperature with no cell temperature in the model, mode by mode, and recombination responds to the electronic populations, as the microcanonical tables predict. |
+| `step7_cap` | Secs. IV D, VII G; Table XI | Where fitted rates exceed the collision rate, the capped forward rate and its reverse follow the capped fraction of the microcanonical probability, and a reacting gas still reaches the partition-function equilibrium. |
+| `step8_thermo` | Sec. VII F; Fig. 9 | The equilibrium constants of the data files against the NASA Glenn (CEA) database; no SPARTA runs. |
+
+Figure and table numbers are those of the draft of 2026-11-24.
+
+## Figures and tables
+
+Each step writes its figures and tables to `results/<step>/`, named by
+content.  Every step except `step5_energy` also writes `summary.pdf`: one
+row per check, the measured value over its reference with the 2-sd bar,
+against the pass window (gray).  `checks.json` has the same numbers.
+
+| step | file | in the paper |
+|---|---|---|
+| `step1_rates` | `fig_progression.pdf` | Fig. 1 |
+| | `fig_eq_discretevib.pdf` | Fig. 3 |
+| | `table_reservoir.tex/.txt` | Table VI |
+| `step2_noneq` | `fig_noneq.pdf` | Fig. 4 |
+| | `fig_reservoir.pdf` | Fig. 5 |
+| | `fig_qk_compare.pdf` | Fig. 6 |
+| | `table_qct.tex/.txt` | Table VII |
+| `step3_balance` | `fig_zeldovich.pdf` | Fig. 7 |
+| | `table_recomb.tex/.txt`, `fig_recomb.pdf` | Table VIII (and as a figure) |
+| | `fig_mechanism.pdf`, `mechanism_*K.txt` | the 11-species reservoir (supplement) |
+| `step4_box` | `fig_closedbox.pdf` | Fig. 8 |
+| `step5_energy` | `table_energy.tex/.txt`, `fig_energy.pdf` | Table IX (and as a figure) |
+| `step6_noneq_reverse` | `table_cellT.tex/.txt`, `fig_cellT.pdf` | Table X (and as a figure) |
+| `step7_cap` | `table_captest.tex/.txt`, `fig_cap.pdf` | Table XI; the frozen-reservoir numbers of Sec. VII G |
+| `step8_thermo` | `fig_keq_cea.pdf` | Fig. 9 |
+
+The figures are made from the results already on disk:
+`./tce_air.py analyze all` redraws them without running SPARTA, so a
+`results/` directory from an earlier version of the package gets the new
+figures this way.  Earlier versions numbered the files after an older
+draft (`fig03_progression.pdf`, `table7_recomb.tex`, ...); the analysis
+removes those.
 
 ## Reading the results
 
@@ -77,7 +111,7 @@ the measurement agrees with the reference within three standard
 deviations plus a small allowance stated in the analysis.  Lines without
 PASS or FAIL are information (numbers the paper quotes, or values a check
 does not need).  Each step also writes its figures (`fig*.pdf`), tables
-(`table*.tex`, `.txt`) and `numbers.json`.
+(`table*.tex`, `.txt`) and `numbers.json` (see "Figures and tables").
 
 The quick size of the package resolves the claims at the few-percent
 level.  The paper's numbers come from the same decks at larger sizes,
