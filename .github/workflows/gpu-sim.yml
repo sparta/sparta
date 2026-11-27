@@ -1,0 +1,84 @@
+name: GPU Simulator
+
+# Builds SPARTA with the kokkos_hip preset (gfx90a) and runs a subset of the
+# example regression tests with "-k on -sf kk" on a simulated AMD MI250X
+# (https://github.com/pantheongpu/pantheonsim), so the Kokkos HIP kernels
+# are compiled and run on every pull request that touches them. A simulator
+# cannot reproduce hardware-specific behavior or timing, so it complements
+# real-GPU testing and does not replace it.
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: [ master ]
+    paths:
+      - "src/**"
+      - "lib/kokkos/**"
+      - "cmake/**"
+      - "examples/**"
+      - "tools/testing/**"
+      - ".github/workflows/gpu-sim.yml"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  kokkos-hip:
+    name: "regression subset (Kokkos HIP and simulated MI250X)"
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+
+      - name: Set up the simulated GPU and ROCm
+        uses: pantheongpu/setup-pantheonsim@656f502ef4782d94d34d8ddd368e333960609639 # v0.1.8
+        with:
+          gpu: amd/mi250x
+          cuda-toolkit: none
+          rocm: "7.1"
+
+      # comgr and the HSA runtime for HIP, rocThrust/rocPRIM for Kokkos
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y comgr hsa-rocr rocprim-dev rocthrust-dev
+
+      # The kokkos_hip preset, built with hipcc as a single rank with the MPI
+      # stubs (no MPI on the simulated GPU), so "gpu/aware no" is passed: the
+      # stubs' MPI_Allreduce cannot read device memory. FFT is off so hipFFT
+      # is not needed. GPU runs do not reproduce the CPU gold logs exactly
+      # (the Kokkos device RNG differs from the host one), so the thermo
+      # columns are compared with a 5% relative L1 tolerance.
+      - name: Configure
+        run: |
+          mkdir build
+          cd build
+          cmake -C ../cmake/presets/kokkos_hip.cmake \
+            -DCMAKE_CXX_COMPILER=hipcc \
+            -DCMAKE_C_COMPILER=gcc \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DBUILD_MPI=OFF \
+            -DPKG_MPI_STUBS=ON \
+            -DPKG_FFT=OFF \
+            -DSPARTA_ENABLE_TESTING=ON \
+            -DSPARTA_SPA_ARGS='-k on g 1 -sf kk -pk kokkos gpu/aware no' \
+            -DSPARTA_DSMC_TESTING_DRIVER_ARGS='-tolerance 0.05 -relative_error True -error_norm L1' \
+            ../cmake
+
+      - name: Build
+        run: cd build; make -j3
+
+      # Small examples that run on the simulator in under two minutes each
+      # and match the gold logs within the tolerance above.
+      - name: Test
+        run: |
+          cd build
+          sudo rm /bin/sh
+          sudo ln -s /bin/bash /bin/sh
+          vgpu run ctest --output-on-failure -j3 --timeout 900 -R '^kokkos_hip\.in\.(free|collide_2D|collide_2D_nn|collide_2D_sub|collideInterspecies|collide\.group|gas\.collision\.tally|bfield|bfield\.grid|custom\.collide\.create|flowfile|optmove\.flow|optmove\.surf|beam\.adiabatic|beam\.cll|beam\.diffuse|beam\.impulsive|beam\.specular|beam\.td|beam\.face\.gs|beam\.face\.ps|beam\.face\.gs_ps|beam\.surf\.gs|emit\.surf\.flow\.region|emit\.surf\.normal\.region)$'
